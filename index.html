@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Sève</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="tree"></canvas>
+
+  <header id="hud">
+    <div class="sap">
+      <div class="sap-amount" id="sap">0</div>
+      <div class="sap-rate"><span id="rate">0</span> sève/s</div>
+    </div>
+    <div class="meta">
+      <div>Graines : <b id="seeds">0</b> <span class="dim" id="seedBonus"></span></div>
+      <div>Givre à l'anneau <b id="frontier">6</b> · Hiver n°<b id="winters">0</b></div>
+      <div>Nœuds : <b id="owned">1</b> / <span id="total">0</span></div>
+    </div>
+  </header>
+
+  <div id="actions">
+    <button id="harvest" class="primary" title="Raccourci : Espace">Récolter <span id="clickVal"></span></button>
+    <button id="winter" title="Réinitialise l'arbre contre des graines et repousse le givre">Hiver <span id="winterGain"></span></button>
+    <button id="center" title="Recentrer la vue">◎</button>
+    <button id="help" title="Aide">?</button>
+  </div>
+
+  <div id="tooltip" hidden></div>
+  <div id="toast" hidden></div>
+
+  <dialog id="helpDialog">
+    <h2>Sève</h2>
+    <p>Tout le jeu tient dans cet arbre. Il compte plus de 1 500 nœuds répartis en six branches.</p>
+    <ul>
+      <li><b>Glisser</b> pour se déplacer, <b>molette</b> ou <b>pincer</b> pour zoomer.</li>
+      <li><b>Cliquer</b> un nœud lumineux voisin de ta zone pour l'acheter avec de la sève.</li>
+      <li>Chaque nœud acheté rend les suivants un peu plus chers : l'ordre compte.</li>
+      <li>Les <b>nœuds notables</b> (moyens) sont puissants ; les <b>nœuds clés</b> (grands) changent les règles.</li>
+      <li>Le <b>givre</b> bloque les anneaux extérieurs. Déclenche un <b>Hiver</b> : l'arbre repart de zéro, tu gagnes des graines (+10 % de production chacune) et le givre recule de 3 anneaux.</li>
+    </ul>
+    <p class="branches" id="branchList"></p>
+    <div class="dialog-actions">
+      <button id="resetBtn" class="danger">Effacer la sauvegarde</button>
+      <button id="closeHelp" class="primary">Jouer</button>
+    </div>
+  </dialog>
+
+  <script src="src/tree.js"></script>
+  <script src="src/game.js"></script>
+  <script src="src/render.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
