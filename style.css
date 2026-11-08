@@ -6,6 +6,7 @@
   --dim: #8fa398;
   --accent: #8bd17c;
   --frost: #9fd8ff;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -34,9 +35,9 @@ html, body {
 
 #hud {
   position: fixed;
-  top: 12px;
-  left: 12px;
-  right: 12px;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: max(12px, env(safe-area-inset-left, 0px));
+  right: max(12px, env(safe-area-inset-right, 0px));
   display: flex;
   gap: 16px;
   justify-content: space-between;
@@ -65,7 +66,7 @@ html, body {
 
 #actions {
   position: fixed;
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex;

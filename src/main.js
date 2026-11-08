@@ -164,17 +164,40 @@
   }
   $('harvest').addEventListener('click', harvest);
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' && !$('helpDialog').open) { e.preventDefault(); harvest(); }
+    if (e.code === 'Space' && !$('helpDialog').open && !$('confirmDialog').open) { e.preventDefault(); harvest(); }
   });
+
+  // Confirmation dans la page (les fenêtres natives confirm() sont bloquées dans certains contextes).
+  const confirmDlg = $('confirmDialog');
+  let confirmAction = null;
+  function ask(title, text, okLabel, action) {
+    $('confirmTitle').textContent = title;
+    $('confirmText').textContent = text;
+    $('confirmOk').textContent = okLabel;
+    confirmAction = action;
+    confirmDlg.showModal();
+  }
+  $('confirmOk').addEventListener('click', () => {
+    confirmDlg.close();
+    const a = confirmAction;
+    confirmAction = null;
+    if (a) a();
+  });
+  $('confirmCancel').addEventListener('click', () => { confirmAction = null; confirmDlg.close(); });
 
   $('winter').addEventListener('click', () => {
     const g = game.seedsOnWinter();
     if (g < 1) return;
-    const msg = `Déclencher l'hiver ?\n\nL'arbre et la sève repartent de zéro.\nTu gagnes ${fmt(g)} graine(s) et le givre recule jusqu'à l'anneau ${Math.min(tree.rings, game.frontier() + 3)}.`;
-    if (!confirm(msg)) return;
-    game.winter();
-    game.save();
-    toast(`Hiver n°${game.state.winters} : +${fmt(g)} graines. Le printemps revient.`);
+    ask(
+      "Déclencher l'hiver ?",
+      `L'arbre et la sève repartent de zéro. Tu gagnes ${fmt(g)} graine(s) et le givre recule jusqu'à l'anneau ${Math.min(tree.rings, game.frontier() + 3)}.`,
+      "Déclencher l'hiver",
+      () => {
+        const got = game.winter();
+        game.save();
+        toast(`Hiver n°${game.state.winters} : +${fmt(got)} graines. Le printemps revient.`);
+      }
+    );
   });
 
   $('center').addEventListener('click', () => {
@@ -188,10 +211,11 @@
   $('help').addEventListener('click', () => help.showModal());
   $('closeHelp').addEventListener('click', () => help.close());
   $('resetBtn').addEventListener('click', () => {
-    if (!confirm('Effacer définitivement la partie ?')) return;
-    game.reset();
     help.close();
-    toast('Nouvelle partie.');
+    ask('Effacer la partie ?', 'Toute ta progression, graines comprises, sera perdue.', 'Effacer', () => {
+      game.reset();
+      toast('Nouvelle partie.');
+    });
   });
 
   // --- Démarrage ---
