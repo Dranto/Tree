@@ -18,7 +18,7 @@ var t := 0.0
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	visible = false
 	focus_mode = Control.FOCUS_NONE
 	font = ThemeDB.fallback_font

@@ -43,7 +43,7 @@ func _draw() -> void:
 		var p: Vector2 = tree_data["pos"]
 		var s: float = tree_data["size"]
 		var alive: bool = ground.life_at(p) > 0.45
-		var trunk := Color("5a4636") if alive else Color("3a3532")
+		var trunk := Color("5a4636") if alive else Color("1e1a18")
 		draw_line(p, p + Vector2(0, -34) * s, trunk, 6.0 * s)
 		var r := RandomNumberGenerator.new()
 		r.seed = tree_data["seed"]
@@ -55,7 +55,7 @@ func _draw() -> void:
 			for i in 4:
 				var a := -PI / 2.0 + r.randf_range(-1.0, 1.0)
 				var start := p + Vector2(0, -r.randf_range(14, 32)) * s
-				draw_line(start, start + Vector2.from_angle(a) * r.randf_range(12, 22) * s, trunk, 2.5 * s)
+				draw_line(start, start + Vector2.from_angle(a) * r.randf_range(14, 26) * s, trunk, 3.5 * s)
 	for f in flowers:
 		var p: Vector2 = f["pos"]
 		var sz: float = f["size"]

@@ -17,6 +17,7 @@ var still_time := 0.0
 var immortal_cd := 0.0
 var hurt_flash := 0.0
 var aim := Vector2.RIGHT
+var aim_point := Vector2.ZERO
 var skill_cd: Dictionary = SKILL_CD
 var cds := {"nova": 0.0, "cloud": 0.0, "bloom": 0.0}
 var t := 0.0
@@ -39,11 +40,27 @@ func _process(delta: float) -> void:
 		cds[k] = maxf(0.0, cds[k] - delta)
 
 	var mv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	var to_mouse := get_global_mouse_position() - global_position
-	if to_mouse.length() > 1.0:
-		aim = to_mouse.normalized()
+	aim_point = get_global_mouse_position()
+	var want_attack := Input.is_action_pressed("attack")
+	var want_dash := Input.is_action_just_pressed("dash")
+	var want := {
+		"nova": Input.is_action_just_pressed("skill_nova"),
+		"cloud": Input.is_action_just_pressed("skill_cloud"),
+		"bloom": Input.is_action_just_pressed("skill_bloom"),
+	}
+	if main.autotest:
+		var bot: Dictionary = main.bot_input(self)
+		mv = bot["move"]
+		aim_point = bot["aim"]
+		want_attack = true
+		want_dash = bot["dash"]
+		for k in want:
+			want[k] = true
+	var to_aim := aim_point - global_position
+	if to_aim.length() > 1.0:
+		aim = to_aim.normalized()
 
-	if Input.is_action_just_pressed("dash") and dash_cd <= 0.0:
+	if want_dash and dash_cd <= 0.0:
 		dash_dir = mv.normalized() if mv.length() > 0.1 else aim
 		dash_time = DASH_TIME
 		dash_cd = s["dash_cd"]
@@ -65,15 +82,15 @@ func _process(delta: float) -> void:
 		regen *= 3.0
 	heal(regen * delta)
 
-	if Input.is_action_pressed("attack") and fire_cd <= 0.0:
+	if want_attack and fire_cd <= 0.0:
 		_shoot(s)
 		fire_cd = 1.0 / s["fire_rate"]
 
-	if Game.has_key("nova") and Input.is_action_just_pressed("skill_nova") and cds["nova"] <= 0.0:
+	if Game.has_key("nova") and want["nova"] and cds["nova"] <= 0.0:
 		_cast_nova(s)
-	if Game.has_key("cloud") and Input.is_action_just_pressed("skill_cloud") and cds["cloud"] <= 0.0:
+	if Game.has_key("cloud") and want["cloud"] and cds["cloud"] <= 0.0:
 		_cast_cloud(s)
-	if Game.has_key("bloom") and Input.is_action_just_pressed("skill_bloom") and cds["bloom"] <= 0.0:
+	if Game.has_key("bloom") and want["bloom"] and cds["bloom"] <= 0.0:
 		_cast_bloom(s)
 
 	queue_redraw()
@@ -105,7 +122,7 @@ func _cast_nova(s: Dictionary) -> void:
 
 func _cast_cloud(s: Dictionary) -> void:
 	cds["cloud"] = SKILL_CD["cloud"]
-	var target := get_global_mouse_position()
+	var target := aim_point
 	var off := target - position
 	if off.length() > 420.0:
 		target = position + off.normalized() * 420.0

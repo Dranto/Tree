@@ -12,7 +12,7 @@ var hint_time := 12.0
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	font = ThemeDB.fallback_font
 
@@ -22,13 +22,24 @@ func banner(s: String) -> void:
 	banner_time = 3.0
 
 
+var _labels := {}
+
+
+## Nom de la touche selon la disposition du clavier du joueur (Z sur AZERTY pour « avancer »).
 func key_label(action: String) -> String:
+	if _labels.has(action):
+		return _labels[action]
+	var label := "?"
 	for ev in InputMap.action_get_events(action):
 		var key_ev := ev as InputEventKey
 		if key_ev:
-			var kc := DisplayServer.keyboard_get_keycode_from_physical(key_ev.physical_keycode)
-			return OS.get_keycode_string(kc)
-	return "?"
+			var kc := key_ev.physical_keycode
+			if DisplayServer.get_name() != "headless":
+				kc = DisplayServer.keyboard_get_keycode_from_physical(kc)
+			label = OS.get_keycode_string(kc)
+			break
+	_labels[action] = label
+	return label
 
 
 func _process(delta: float) -> void:

@@ -30,11 +30,20 @@ var enemies: Array = []
 var spawn_timer := 1.5
 var elapsed := 0.0
 var rng := RandomNumberGenerator.new()
+## Mode de test automatique (lancer avec « -- --autotest ») : un robot joue, apprend des nœuds
+## et enregistre des captures dans godot/autotest/ avant de quitter.
+var autotest := false
+var autotest_time := 0.0
+var autotest_shots := [3.0, 25.0, 55.0]
+var autotest_done := false
 
 
 func _ready() -> void:
 	rng.randomize()
 	_setup_input()
+	autotest = "--autotest" in OS.get_cmdline_user_args()
+	if autotest:
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://autotest"))
 
 	ground = Ground.new()
 	add_child(ground)
@@ -111,6 +120,8 @@ func _keys(action: String, list: Array) -> void:
 
 func _process(delta: float) -> void:
 	elapsed += delta
+	if autotest:
+		_autotest_step(delta)
 	enemies = enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
 	_separate()
 
@@ -184,7 +195,7 @@ func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, bi
 func player_hit_enemy(e, base: float, can_explode := true) -> void:
 	var s: Dictionary = Game.stats
 	var dmg := base
-	var crit := rng.randf() < s["crit"]
+	var crit: bool = rng.randf() < s["crit"]
 	if crit:
 		dmg *= s["crit_mult"]
 	e.take_damage(dmg, crit)
@@ -260,3 +271,56 @@ func _on_level_up(lvl: int) -> void:
 	fx.ring(player.position, 20.0, 160.0, 0.6, Color("f0e6b4"), 5.0)
 	hud.banner("Niveau %d : un point à placer dans l'Arbre de vie (Tab)" % lvl)
 	player.heal(Game.stats["max_hp"] * 0.25)
+
+
+# --- Mode de test automatique ---
+
+## Commandes du robot : tourne autour de la graine en visant le Flétri le plus proche.
+func bot_input(p) -> Dictionary:
+	var target: Vector2 = p.position + Vector2.RIGHT * 100.0
+	var best := INF
+	for e in enemies:
+		if is_instance_valid(e) and not e.dead:
+			var d: float = e.position.distance_squared_to(p.position)
+			if d < best:
+				best = d
+				target = e.position
+	var orbit := Vector2.from_angle(elapsed * 0.35) * minf(900.0, 200.0 + elapsed * 20.0)
+	var mv: Vector2 = orbit - p.position
+	mv = mv.normalized() if mv.length() > 40.0 else Vector2.ZERO
+	return {"move": mv, "aim": target, "dash": best < 50.0 * 50.0}
+
+
+func _autotest_step(delta: float) -> void:
+	autotest_time += delta
+	Game.add_xp(delta * 6.0)
+	while Game.points > 0:
+		var options: Array = []
+		for n in Game.tree.nodes:
+			if Game.can_allocate(n["id"]):
+				options.append(n)
+		if options.is_empty():
+			break
+		options.sort_custom(func(a, b): return a["type"] == "keystone" and b["type"] != "keystone")
+		var pick: Dictionary = options[0] if options[0]["type"] == "keystone" else options[rng.randi() % options.size()]
+		Game.allocate(pick["id"])
+	if autotest_shots.size() > 0 and autotest_time >= autotest_shots[0]:
+		_capture("play_%02d" % int(autotest_shots.pop_front()))
+	if autotest_time >= 60.0 and not autotest_done:
+		autotest_done = true
+		_finish_autotest()
+
+
+func _capture(shot_name: String) -> void:
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	img.save_png("res://autotest/%s.png" % shot_name)
+	print("AUTOTEST capture %s  niveau=%d  noeuds=%d  ennemis=%d  monde=%.1f%%  vie=%d  fps=%d" % [shot_name, Game.level, Game.allocated.size(), enemies.size(), minf(100.0, ground.ratio() / 0.67 * 100.0), int(player.hp), Engine.get_frames_per_second()])
+
+
+func _finish_autotest() -> void:
+	tree_ui.toggle()
+	await get_tree().create_timer(0.5).timeout
+	await _capture("tree")
+	print("AUTOTEST fini : tués=%d" % Game.kills)
+	get_tree().quit()

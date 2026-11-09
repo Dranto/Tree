@@ -35,8 +35,10 @@ void fragment() {
 	// Terre morte : cendre, poussière et fissures.
 	vec3 dead = mix(vec3(0.16, 0.145, 0.14), vec3(0.30, 0.27, 0.24), n);
 	dead = mix(dead, vec3(0.36, 0.33, 0.30), smoothstep(0.55, 0.75, n2) * 0.35);
-	float crack = smoothstep(0.035, 0.0, abs(noise(w / 70.0) - 0.5));
-	dead = mix(dead, vec3(0.07, 0.06, 0.06), crack * 0.75);
+	// Fissures fines, seulement par endroits.
+	float crack = smoothstep(0.014, 0.0, abs(noise(w / 55.0) - 0.5));
+	float crack_mask = smoothstep(0.45, 0.65, fbm(w / 400.0 + 17.0));
+	dead = mix(dead, vec3(0.09, 0.08, 0.075), crack * crack_mask * 0.8);
 
 	// Terre vivante : herbe, mousse et touches de fleurs.
 	vec3 alive = mix(vec3(0.13, 0.33, 0.13), vec3(0.30, 0.55, 0.20), n);

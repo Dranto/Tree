@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tools/godot.sh:*)",
+      "Bash(./tools/godot.sh:*)"
+    ]
+  }
+}

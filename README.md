@@ -20,6 +20,15 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 
 Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer.
 
+### Tester sans écran (Linux, sessions Claude)
+
+`tools/godot.sh` télécharge Godot 4.3 une fois puis le lance sur le projet :
+
+- `tools/godot.sh --headless --editor --quit` : importe le projet et affiche les erreurs de script.
+- `tools/godot.sh --xvfb -- --autotest` : un robot joue une minute, apprend des nœuds et enregistre des captures dans `godot/autotest/`.
+
+La règle dans `.claude/settings.json` autorise ce script pour les sessions Claude.
+
 ## Ce que contient le prototype
 
 - **Arbre de vie** : 6 branches (Ronce, Spore, Sève, Vent, Aube, Racine), environ 600 nœuds, des nœuds notables et 18 nœuds clés qui changent les règles ou donnent des compétences (Couronne d'épines, Nuage de spores, Floraison).
