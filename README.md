@@ -1,35 +1,39 @@
 # Sève
 
-Jeu incrémental dont tout le gameplay tient dans un **arbre de compétences géant** : 1 567 nœuds répartis en six branches et 18 anneaux concentriques, à explorer en zoomant et en se déplaçant.
+Action-RPG en vue de dessus dans un monde fantastique désolé. Tu incarnes le Porte-Graine, et la vie revient au fil de ton aventure.
+L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géant d'environ 600 nœuds. Chaque nœud appris renforce le personnage **et ravive la région du monde située dans sa direction** : la carte du monde et l'arbre ne font qu'un.
 
-## Jouer
+## Lancer le prototype Godot
 
-Ouvrir `index.html` dans un navigateur. Aucune installation ni étape de build.
+1. Installer [Godot 4.3 ou plus récent](https://godotengine.org/download) (version standard, pas .NET).
+2. Dans Godot : **Importer**, choisir `godot/project.godot`, puis **F5** pour lancer.
 
-- Glisser pour se déplacer, molette ou pincement pour zoomer.
-- Cliquer un nœud voisin de ta zone pour l'acheter avec de la sève.
-- `Espace` ou le bouton **Récolter** pour gagner de la sève à la main.
-- **Hiver** : l'arbre repart de zéro contre des graines (+10 % de production chacune) et le givre recule de 3 anneaux.
+### Commandes
 
-## Les branches
-
-| Branche | Rôle |
+| Action | Clavier / souris |
 | --- | --- |
-| Racines | Production de sève brute |
-| Feuilles | Multiplicateurs de production |
-| Fleurs | Puissance de récolte manuelle |
-| Écorce | Réduction des coûts |
-| Mycélium | Synergie : chaque nœud possédé renforce la production |
-| Fruits | Graines, saisons et gains hors ligne |
+| Se déplacer | Z Q S D (AZERTY) ou W A S D (QWERTY), ou flèches |
+| Lancer des graines | Clic gauche maintenu (vise la souris) |
+| Esquive | Espace ou Maj |
+| Compétences débloquées par l'arbre | A, E, R (AZERTY) / Q, E, R (QWERTY) |
+| Arbre de vie | Tab ou T (le jeu se met en pause) |
 
-Chaque branche a des **nœuds notables** (plus puissants) et trois **nœuds clés** (losanges, anneaux 5, 10 et 15) qui changent les règles.
-Chaque achat augmente légèrement le prix des suivants, donc l'ordre dans lequel on explore compte.
+Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer.
 
-## Code
+## Ce que contient le prototype
 
-- `src/tree.js` : génération procédurale et déterministe de l'arbre (positions, liens, effets).
-- `src/game.js` : état, économie, hivers (prestige), sauvegarde locale et gains hors ligne.
-- `src/render.js` : rendu Canvas, caméra, état visuel des nœuds.
-- `src/main.js` : boucle de jeu, interface, contrôles souris et tactiles.
+- **Arbre de vie** : 6 branches (Ronce, Spore, Sève, Vent, Aube, Racine), environ 600 nœuds, des nœuds notables et 18 nœuds clés qui changent les règles ou donnent des compétences (Couronne d'épines, Nuage de spores, Floraison).
+- **Le monde reprend vie** : le sol passe de la cendre craquelée à la prairie, les arbres morts reverdissent et des fleurs éclosent. Trois sources de vie : les nœuds de l'arbre, chaque Flétri purifié et la compétence Floraison.
+- **La vie a un effet en jeu** : sur l'herbe, ta régénération est triplée, les Flétris ralentissent et ils naissent plutôt en terre morte.
+- **Ennemis** : Flétris, Cendreux (rapides) et Colosses (massifs), de plus en plus forts avec ton niveau et le temps.
+- **Progression** : chaque Flétri laisse une essence de vie, et chaque niveau donne un point d'arbre.
 
-Les constantes d'équilibrage sont en tête de `src/game.js` et dans `nodeEffects` de `src/tree.js`.
+## Structure
+
+- `godot/` : le jeu (Godot 4, GDScript). Les scènes sont construites par le code, dans `godot/scripts/`.
+  - `skill_tree.gd` : génération de l'arbre, effets et nœuds clés.
+  - `game.gd` : état global (niveau, points, statistiques).
+  - `main.gd`, `player.gd`, `enemy.gd`, `projectile.gd`, `orb.gd` : le jeu.
+  - `ground.gd` + `shaders/ground.gdshader` : la carte de vie et le rendu du sol.
+  - `flora.gd`, `fx.gd`, `hud.gd`, `tree_ui.gd` : décor, effets et interface.
+- `prototype-web/` : le premier prototype (jeu incrémental dans le navigateur), conservé pour référence.
