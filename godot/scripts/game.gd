@@ -18,6 +18,9 @@ var stats: Dictionary = {}
 var keys: Dictionary = {}
 ## Graine imposée par « -- --seed=N » pour rejouer une partie à l'identique (tests visuels), -1 sinon.
 var forced_seed := -1
+## Drapeaux de l'aventure (quêtes, rencontres, fin…) : sauvegardés tels quels.
+## Valeurs simples uniquement (bool, nombre, texte) pour rester sérialisables en JSON.
+var flags: Dictionary = {}
 
 
 func _ready() -> void:
@@ -27,8 +30,57 @@ func _ready() -> void:
 			seed(forced_seed)
 	tree = SkillTree.new()
 	tree.build()
-	allocated[0] = true
+	reset()
+
+
+## Remet la progression à zéro (nouvelle partie).
+func reset() -> void:
+	allocated = {0: true}
+	points = 1
+	level = 1
+	xp = 0.0
+	kills = 0
+	flags = {}
 	recompute()
+	tree_changed.emit()
+
+
+## Recharge les nœuds appris à partir de leurs identifiants stables.
+## Les nœuds disparus de l'arbre ou qui ne sont plus reliés à la graine sont
+## ignorés et leur point est rendu. Renvoie le nombre de points rendus.
+func restore_allocation(uids: Array) -> int:
+	var wanted := {}
+	var refunded := 0
+	for uid in uids:
+		var id: int = tree.id_for_uid(str(uid))
+		if id < 0:
+			refunded += 1
+		elif id != 0:
+			wanted[id] = true
+	# On ne garde que ce qui reste relié à la graine.
+	var kept := {0: true}
+	var stack: Array = [0]
+	while stack.size() > 0:
+		var n: int = stack.pop_back()
+		for m in tree.nodes[n]["neighbors"]:
+			if wanted.has(m) and not kept.has(m):
+				kept[m] = true
+				stack.append(m)
+	refunded += wanted.size() - (kept.size() - 1)
+	allocated = kept
+	points += refunded
+	recompute()
+	tree_changed.emit()
+	return refunded
+
+
+func allocated_uids() -> Array:
+	var out: Array = []
+	for id in allocated:
+		if id != 0:
+			out.append(tree.nodes[id]["uid"])
+	out.sort()
+	return out
 
 
 ## Initialise un générateur : graine imposée si elle existe (décalée de « salt »), sinon aléatoire.

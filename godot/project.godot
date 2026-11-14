@@ -11,6 +11,7 @@ config/features=PackedStringArray("4.3", "GL Compatibility")
 [autoload]
 
 Game="*res://scripts/game.gd"
+SaveGame="*res://scripts/save_game.gd"
 
 [display]
 

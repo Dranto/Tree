@@ -63,3 +63,26 @@ func life_at(world_pos: Vector2) -> float:
 ## Part du monde ravivée, de 0 à 1.
 func ratio() -> float:
 	return total / float(RES * RES)
+
+
+## Carte de vie encodée en PNG (pour la sauvegarde).
+func export_map() -> PackedByteArray:
+	return img.save_png_to_buffer()
+
+
+## Restaure une carte de vie sauvegardée, redimensionnée si la résolution a changé.
+func import_map(png: PackedByteArray) -> bool:
+	var loaded := Image.new()
+	if loaded.load_png_from_buffer(png) != OK:
+		return false
+	loaded.convert(Image.FORMAT_R8)
+	if loaded.get_width() != RES or loaded.get_height() != RES:
+		loaded.resize(RES, RES, Image.INTERPOLATE_BILINEAR)
+	img = loaded
+	total = 0.0
+	for y in RES:
+		for x in RES:
+			total += img.get_pixel(x, y).r
+	tex.update(img)
+	painted.emit()
+	return true
