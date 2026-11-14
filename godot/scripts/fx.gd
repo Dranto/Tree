@@ -6,6 +6,8 @@ var rings: Array = []
 var texts: Array = []
 var clouds: Array = []
 var font: Font
+## Vrai si la dernière image dessinait quelque chose (pour l'effacer une fois tout fini).
+var drawn_something := false
 
 
 func _ready() -> void:
@@ -24,19 +26,30 @@ func cloud(pos: Vector2, radius: float, dur: float, dps: float) -> void:
 	clouds.append({"pos": pos, "radius": radius, "t": 0.0, "dur": dur, "dps": dps})
 
 
+## Ondes et textes : purement visuels, ils suivent la fréquence d'affichage.
 func _process(delta: float) -> void:
-	for list in [rings, texts, clouds]:
+	for list in [rings, texts]:
 		for e in list:
 			e["t"] += delta
 	rings = rings.filter(func(e): return e["t"] < e["dur"])
 	texts = texts.filter(func(e): return e["t"] < e["dur"])
+	# Redessiné tant qu'il y a un effet, puis une dernière fois pour effacer le dernier.
+	var busy := not (rings.is_empty() and texts.is_empty() and clouds.is_empty())
+	if busy or drawn_something:
+		queue_redraw()
+	drawn_something = busy
+
+
+## Nuages de spores : ils infligent des dégâts, donc avancent à pas fixe (grille spatiale).
+func _physics_process(delta: float) -> void:
+	for c in clouds:
+		c["t"] += delta
 	clouds = clouds.filter(func(e): return e["t"] < e["dur"])
 	for c in clouds:
-		for e in main.enemies:
-			if is_instance_valid(e) and not e.dead and e.position.distance_to(c["pos"]) < c["radius"] + e.radius:
+		for e in main.enemies_near(c["pos"], c["radius"]):
+			if not e.dead:
 				e.take_damage(c["dps"] * delta, false, true)
 				e.apply_poison(c["dps"] * 0.3, 1.0)
-	queue_redraw()
 
 
 func _draw() -> void:

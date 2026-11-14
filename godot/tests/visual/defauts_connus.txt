@@ -1,0 +1,2 @@
+# Défauts d'interface constatés sur la version actuelle (voir README, « Tests visuels »).
+# Format : résolution|écran|type|libellé. Retirer une ligne quand le défaut est corrigé.

@@ -14,6 +14,7 @@ Game="*res://scripts/game.gd"
 SaveGame="*res://scripts/save_game.gd"
 Settings="*res://scripts/settings.gd"
 Flow="*res://scripts/flow.gd"
+UiAudit="*res://scripts/ui_audit.gd"
 
 [display]
 
@@ -27,3 +28,8 @@ window/stretch/aspect="expand"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.05, 0.05, 0.05, 1)
+
+[physics]
+
+common/physics_ticks_per_second=60
+common/physics_interpolation=true

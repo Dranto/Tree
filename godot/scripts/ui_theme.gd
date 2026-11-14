@@ -5,6 +5,18 @@ const INK := Color("e9e2c8")
 const LEAF := Color("7fd36b")
 const GOLD := Color("f2d06b")
 const PANEL_BG := Color(0.06, 0.08, 0.07, 0.92)
+const FONT_REGULAR := "res://assets/fonts/Inter-Regular.otf"
+const FONT_BOLD := "res://assets/fonts/Inter-Bold.otf"
+
+static var _fonts := {}
+
+
+## Police du jeu (Inter, licence OFL, dans assets/fonts) : l'interface ne dépend jamais de la police du moteur.
+static func font(bold := false) -> Font:
+	var path := FONT_BOLD if bold else FONT_REGULAR
+	if not _fonts.has(path):
+		_fonts[path] = load(path)
+	return _fonts[path]
 
 
 static func box(bg: Color, border: Color, width := 1, radius := 6) -> StyleBoxFlat:
@@ -22,6 +34,7 @@ static func box(bg: Color, border: Color, width := 1, radius := 6) -> StyleBoxFl
 
 static func make() -> Theme:
 	var t := Theme.new()
+	t.default_font = font()
 	t.default_font_size = 20
 	t.set_color("font_color", "Button", INK)
 	t.set_color("font_hover_color", "Button", Color.WHITE)
