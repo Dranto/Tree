@@ -115,6 +115,8 @@ func _state(id: int) -> String:
 func _draw() -> void:
 	var tree = Game.tree
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.03, 0.045, 0.04, 0.95))
+	UiAudit.begin("arbre")
+	var tx := Transform2D(0.0, Vector2(zoom, zoom), 0.0, size / 2.0 - cam * zoom)
 
 	draw_set_transform(size / 2.0 - cam * zoom, 0.0, Vector2(zoom, zoom))
 	for r in range(1, SkillTree.RINGS + 1):
@@ -176,7 +178,7 @@ func _draw() -> void:
 				draw_circle(p, r * 0.4, Color(1, 1, 1, 0.75) if st == "owned" else Color(col.r, col.g, col.b, 0.4))
 		if n["type"] == "keystone" or n["type"] == "root":
 			var label_col := Color(1, 1, 1, 0.9) if st == "owned" else Color(0.85, 0.9, 0.85, 0.55)
-			draw_string(font, p + Vector2(-150, r + 22), n["name"], HORIZONTAL_ALIGNMENT_CENTER, 300, 16, label_col)
+			UiAudit.draw_text(self, "arbre", font, p + Vector2(-150, r + 22), n["name"], HORIZONTAL_ALIGNMENT_CENTER, 300, 16, label_col, tx)
 		if n["id"] == hover:
 			draw_arc(p, r + 6.0, 0.0, TAU, 32, Color.WHITE, 2.0 / zoom)
 
@@ -185,17 +187,17 @@ func _draw() -> void:
 	for bi in SkillTree.BRANCHES.size():
 		var a := (bi + 0.5) * sector - PI / 2.0
 		var pos := Vector2.from_angle(a) * (SkillTree.RINGS + 1.3) * SkillTree.RING_GAP
-		draw_string(font, pos + Vector2(-200, 0), SkillTree.BRANCHES[bi]["name"], HORIZONTAL_ALIGNMENT_CENTER, 400, 44, tree.branch_color(bi))
+		UiAudit.draw_text(self, "arbre", font, pos + Vector2(-200, 0), SkillTree.BRANCHES[bi]["name"], HORIZONTAL_ALIGNMENT_CENTER, 400, 44, tree.branch_color(bi), tx, "", true)
 
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	# En-tête
 	draw_rect(Rect2(0, 0, size.x, 64), Color(0.05, 0.07, 0.06, 0.9))
-	draw_string(font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e9e2c8"))
+	UiAudit.draw_text(self, "arbre", font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e9e2c8"), Transform2D.IDENTITY, "entete", true)
 	var pts_col := Color("f2d06b") if Game.points > 0 else Color(0.7, 0.75, 0.7)
-	draw_string(font, Vector2(24, 54), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col)
-	draw_string(font, Vector2(0, 30), "Clic : apprendre   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.7, 0.78, 0.72))
-	draw_string(font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.6, 0.8, 0.6))
+	UiAudit.draw_text(self, "arbre", font, Vector2(24, 54), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col, Transform2D.IDENTITY, "entete", true)
+	UiAudit.draw_text(self, "arbre", font, Vector2(0, 30), "Clic : apprendre   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.7, 0.78, 0.72), Transform2D.IDENTITY, "entete", true)
+	UiAudit.draw_text(self, "arbre", font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.6, 0.8, 0.6), Transform2D.IDENTITY, "entete", true)
 
 	if hover >= 0:
 		_draw_tooltip(tree.nodes[hover], states[hover])
@@ -239,5 +241,5 @@ func _draw_tooltip(n: Dictionary, st: String) -> void:
 	var y := pos.y + 8.0
 	for l in lines:
 		y += l[1] + 4.0
-		draw_string(font, Vector2(pos.x + 14, y), l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, l[1], l[2])
+		UiAudit.draw_text(self, "arbre", font, Vector2(pos.x + 14, y), l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, l[1], l[2], Transform2D.IDENTITY, "infobulle")
 		y += 4.0
