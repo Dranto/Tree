@@ -25,6 +25,7 @@ Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se dé
 `tools/godot.sh` télécharge Godot 4.3 une fois puis le lance sur le projet :
 
 - `tools/godot.sh --headless --editor --quit` : importe le projet et affiche les erreurs de script.
+- `tools/godot.sh --headless -s res://scripts/check_data.gd` : vérifie les fichiers de données de l'arbre.
 - `tools/godot.sh --xvfb -- --autotest` : un robot joue une minute, apprend des nœuds et enregistre des captures dans `godot/autotest/`.
 
 La règle dans `.claude/settings.json` autorise ce script pour les sessions Claude.
@@ -40,9 +41,11 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 ## Structure
 
 - `godot/` : le jeu (Godot 4, GDScript). Les scènes sont construites par le code, dans `godot/scripts/`.
-  - `skill_tree.gd` : génération de l'arbre, effets et nœuds clés.
+  - `skill_tree.gd` : génération de la forme de l'arbre.
+  - `content.gd`, `effects.gd`, `effect_actions.gd` : lecture des données et moteur d'effets des nœuds.
   - `game.gd` : état global (niveau, points, statistiques).
   - `main.gd`, `player.gd`, `enemy.gd`, `projectile.gd`, `orb.gd` : le jeu.
   - `ground.gd` + `shaders/ground.gdshader` : la carte de vie et le rendu du sol.
   - `flora.gd`, `fx.gd`, `hud.gd`, `tree_ui.gd` : décor, effets et interface.
+- `godot/data/` : ce que font les nœuds (statistiques, branches, nœuds clés, compétences), en fichiers JSON. Le format est décrit dans [`godot/data/README.md`](godot/data/README.md).
 - `prototype-web/` : le premier prototype (jeu incrémental dans le navigateur), conservé pour référence.

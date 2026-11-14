@@ -7,6 +7,8 @@ signal leveled_up(level: int)
 signal node_allocated(node: Dictionary)
 
 const SkillTree = preload("res://scripts/skill_tree.gd")
+const Content = preload("res://scripts/content.gd")
+const Effects = preload("res://scripts/effects.gd")
 
 var tree = null
 var allocated: Dictionary = {}
@@ -16,9 +18,13 @@ var xp: float = 0.0
 var kills: int = 0
 var stats: Dictionary = {}
 var keys: Dictionary = {}
+## Moteur d'effets : statistiques, compétences et réactions des nœuds appris (voir effects.gd).
+var effects = Effects.new()
 
 
 func _ready() -> void:
+	for err in Content.validate(int(SkillTree.RINGS / 4.0)):
+		push_error("Données : " + err)
 	tree = SkillTree.new()
 	tree.build()
 	allocated[0] = true
@@ -87,75 +93,35 @@ func refund(id: int) -> bool:
 	return true
 
 
+func _process(delta: float) -> void:
+	effects.tick(delta)
+
+
+## Signale un évènement du jeu (« kill », « crit », « lethal_hit ») aux effets des nœuds appris.
+## Renvoie true si un effet l'a pris en charge.
+func fire(event: String, ctx: Dictionary = {}) -> bool:
+	return effects.fire(event, ctx)
+
+
+## Met à jour un état dont dépendent des effets conditionnels (par exemple « immobile »).
+func set_state(state: String, value: float) -> void:
+	if effects.set_state(state, value):
+		stats = effects.stats
+		stats_changed.emit()
+
+
+## Recalcule les statistiques à partir des effets des nœuds appris.
+## Les valeurs de base et les formules sont dans res://data/stats.json.
 func recompute() -> void:
-	var s := {
-		"damage": 0.0, "attack_speed": 0.0, "pierce": 0.0, "crit": 0.0, "crit_mult": 0.0,
-		"max_hp": 0.0, "regen": 0.0, "move_speed": 0.0, "armor": 0.0, "dash_cd": 0.0,
-		"pickup": 0.0, "poison": 0.0, "thorns": 0.0, "lifesteal": 0.0, "area": 0.0,
-	}
+	var learned: Array = []
 	keys = {}
 	for id in allocated:
 		var n: Dictionary = tree.nodes[id]
+		learned.append(n)
 		if n["key"] != "":
 			keys[n["key"]] = true
-		var effects: Dictionary = n["effects"]
-		for k in effects:
-			s[k] += effects[k]
-
-	var damage: float = 12.0 * (1.0 + s["damage"])
-	var fire_rate: float = 2.2 * (1.0 + s["attack_speed"])
-	var projectiles := 1
-	var crit: float = 0.05 + s["crit"]
-	var max_hp: float = 100.0 + s["max_hp"]
-	var move_speed: float = 230.0 * (1.0 + s["move_speed"])
-	var armor: float = s["armor"]
-	var armor_cap := 0.75
-	var poison: float = s["poison"]
-	var thorns: float = s["thorns"]
-	var lifesteal: float = s["lifesteal"]
-
-	if has_key("sanguinaire"):
-		damage *= 1.4
-		max_hp *= 0.8
-	if has_key("ecorce_vive"):
-		thorns = thorns * 3.0 + 15.0
-	if has_key("mycose"):
-		poison = poison * 2.0 + 0.15
-	if has_key("racine_de_vie"):
-		lifesteal += 0.03
-	if has_key("rafale"):
-		projectiles += 2
-		damage *= 0.85
-	if has_key("tempete"):
-		fire_rate *= 1.5
-	if has_key("zenith"):
-		crit *= 2.0
-	if has_key("lumiere_lente"):
-		damage *= 1.6
-		fire_rate *= 0.8
-	if has_key("coeur_pierre"):
-		max_hp *= 1.5
-		move_speed *= 0.9
-	if has_key("bastion"):
-		armor += 0.15
-		armor_cap = 0.85
-
-	stats = {
-		"damage": damage,
-		"fire_rate": fire_rate,
-		"projectiles": projectiles,
-		"pierce": int(floor(s["pierce"])),
-		"crit": minf(crit, 1.0),
-		"crit_mult": 1.5 + s["crit_mult"],
-		"max_hp": max_hp,
-		"regen": 0.5 + s["regen"],
-		"move_speed": move_speed,
-		"armor": minf(armor, armor_cap),
-		"dash_cd": 1.6 * (1.0 - minf(0.6, s["dash_cd"])),
-		"pickup": 90.0 * (1.0 + s["pickup"]),
-		"poison": poison,
-		"thorns": thorns,
-		"lifesteal": lifesteal,
-		"area": 1.0 + s["area"],
-	}
+	effects.rebuild(learned)
+	for k in effects.skills:
+		keys[k] = true
+	stats = effects.stats
 	stats_changed.emit()
