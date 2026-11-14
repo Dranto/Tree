@@ -15,6 +15,7 @@ const Projectile = preload("res://scripts/projectile.gd")
 const Orb = preload("res://scripts/orb.gd")
 const Hud = preload("res://scripts/hud.gd")
 const TreeUI = preload("res://scripts/tree_ui.gd")
+const PauseMenu = preload("res://scripts/pause_menu.gd")
 
 var world_half := WORLD_HALF
 var ground
@@ -23,6 +24,7 @@ var fx
 var player
 var hud
 var tree_ui
+var pause_menu
 var orbs_layer: Node2D
 var enemies_layer: Node2D
 var projectiles_layer: Node2D
@@ -82,6 +84,14 @@ func _ready() -> void:
 	add_child(tree_layer)
 	tree_ui = TreeUI.new()
 	tree_layer.add_child(tree_ui)
+
+	var pause_layer := CanvasLayer.new()
+	pause_layer.layer = 20
+	pause_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(pause_layer)
+	pause_menu = PauseMenu.new()
+	pause_menu.main = self
+	pause_layer.add_child(pause_menu)
 
 	Game.node_allocated.connect(_on_node_allocated)
 	Game.leveled_up.connect(_on_level_up)
@@ -319,6 +329,10 @@ func _capture(shot_name: String) -> void:
 
 
 func _finish_autotest() -> void:
+	pause_menu.open()
+	await get_tree().create_timer(0.4).timeout
+	await _capture("pause")
+	pause_menu.close()
 	tree_ui.toggle()
 	await get_tree().create_timer(0.5).timeout
 	await _capture("tree")

@@ -25,6 +25,17 @@ func _ready() -> void:
 	recompute()
 
 
+## Remet l'état à zéro pour une nouvelle partie (l'arbre lui-même est conservé).
+func reset() -> void:
+	allocated = {0: true}
+	points = 1
+	level = 1
+	xp = 0.0
+	kills = 0
+	recompute()
+	tree_changed.emit()
+
+
 func xp_to_next() -> float:
 	return 10.0 * pow(float(level), 1.5)
 
