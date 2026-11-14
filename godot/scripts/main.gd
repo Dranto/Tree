@@ -90,6 +90,10 @@ func _ready() -> void:
 	add_child(tree_layer)
 	tree_ui = TreeUI.new()
 	tree_layer.add_child(tree_ui)
+	# L'arbre couvre tout l'écran : le monde et le HUD ne sont plus dessinés tant qu'il est ouvert.
+	tree_ui.toggled.connect(func(open: bool):
+		visible = not open
+		hud_layer.visible = not open)
 
 	var pause_layer := CanvasLayer.new()
 	pause_layer.layer = 20
