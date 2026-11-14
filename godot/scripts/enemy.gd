@@ -8,7 +8,12 @@ const KINDS := [
 	{"hp": 130.0, "speed": 52.0, "damage": 22.0, "radius": 25.0, "xp": 12.0, "color": "4e4656"},
 ]
 
+## Rayon du plus gros Flétri (Colosse) : marge des recherches dans la grille spatiale.
+const MAX_RADIUS := 25.0
+
 var main
+## Rang dans main.enemies au dernier pas de jeu (sert à ne traiter chaque paire qu'une fois).
+var index := -1
 var kind := 0
 var hp := 30.0
 var max_hp := 30.0
@@ -37,10 +42,16 @@ func setup(k: int, power: float) -> void:
 	t = randf() * 10.0
 
 
+## Animation seulement (ondulation de la silhouette) : suit la fréquence d'affichage.
 func _process(delta: float) -> void:
+	t += delta
+	queue_redraw()
+
+
+## Logique à pas fixe : poursuite, contact avec le joueur, poison.
+func _physics_process(delta: float) -> void:
 	if dead:
 		return
-	t += delta
 	hit_flash -= delta
 	var p = main.player
 	var to: Vector2 = p.position - position
@@ -56,7 +67,6 @@ func _process(delta: float) -> void:
 	if poison_time > 0.0:
 		poison_time -= delta
 		take_damage(poison_dps * delta, false, true)
-	queue_redraw()
 
 
 func apply_poison(dps: float, duration: float) -> void:

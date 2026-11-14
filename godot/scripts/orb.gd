@@ -6,8 +6,14 @@ var value := 3.0
 var t := 0.0
 
 
+## Animation seulement (pulsation).
 func _process(delta: float) -> void:
 	t += delta
+	queue_redraw()
+
+
+## Logique à pas fixe : attirée par le joueur, ramassée au contact.
+func _physics_process(delta: float) -> void:
 	var p = main.player
 	var to: Vector2 = p.position - position
 	var d := to.length()
@@ -16,8 +22,6 @@ func _process(delta: float) -> void:
 	if d < 20.0:
 		Game.add_xp(value)
 		queue_free()
-		return
-	queue_redraw()
 
 
 func _draw() -> void:

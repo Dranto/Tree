@@ -36,8 +36,8 @@ static func _spread_poison(p: Dictionary, ctx: Dictionary) -> bool:
 	var e = ctx["enemy"]
 	var radius: float = p["radius"]
 	main.fx.ring(e.position, 10.0, radius, 0.4, Color(p.get("color", "#ffffff")), 4.0)
-	for other in main.enemies:
-		if other != e and is_instance_valid(other) and not other.dead and other.position.distance_to(e.position) < radius:
+	for other in main.enemies_near(e.position, radius, false):
+		if other != e:
 			other.apply_poison(e.poison_dps, p["duration"])
 	return true
 
@@ -48,8 +48,8 @@ static func _explode(p: Dictionary, ctx: Dictionary) -> bool:
 	var e = ctx["enemy"]
 	var radius: float = p["radius"] * ctx["stats"]["area"]
 	main.fx.ring(e.position, 10.0, radius, 0.3, Color(p.get("color", "#ffffff")), 4.0)
-	for other in main.enemies:
-		if other != e and is_instance_valid(other) and not other.dead and other.position.distance_to(e.position) < radius:
+	for other in main.enemies_near(e.position, radius, false):
+		if other != e and not other.dead:
 			main.player_hit_enemy(other, ctx["base"] * p["factor"], false)
 	return true
 

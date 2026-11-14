@@ -10,24 +10,26 @@ var radius := 6.0
 var hit := {}
 
 
-func _process(delta: float) -> void:
+func _ready() -> void:
+	queue_redraw()
+
+
+## Logique à pas fixe ; seuls les Flétris des cases voisines sont testés (grille spatiale).
+func _physics_process(delta: float) -> void:
 	position += vel * delta
 	life -= delta
 	if life <= 0.0:
 		queue_free()
 		return
-	for e in main.enemies:
-		if not is_instance_valid(e) or e.dead or hit.has(e.get_instance_id()):
+	for e in main.enemies_near(position, radius):
+		if e.dead or hit.has(e.get_instance_id()):
 			continue
-		var r: float = radius + e.radius
-		if position.distance_squared_to(e.position) < r * r:
-			hit[e.get_instance_id()] = true
-			main.player_hit_enemy(e, damage)
-			if pierce <= 0:
-				queue_free()
-				return
-			pierce -= 1
-	queue_redraw()
+		hit[e.get_instance_id()] = true
+		main.player_hit_enemy(e, damage)
+		if pierce <= 0:
+			queue_free()
+			return
+		pierce -= 1
 
 
 func _draw() -> void:
