@@ -20,12 +20,18 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 
 Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer.
 
+### Sauvegarde
+
+La partie se sauvegarde toute seule (montée de niveau, nœud appris ou oublié, toutes les 60 s et à la fermeture) et reprend au lancement suivant. Pour repartir de zéro : lancer avec `-- --new-game`.
+Le fichier est un JSON lisible dans le dossier de données de Godot (`user://saves/partie.json`, sous Windows `%APPDATA%\Godot\app_userdata\Sève\saves\`), avec la sauvegarde précédente en `.bak`.
+
 ### Tester sans écran (Linux, sessions Claude)
 
 `tools/godot.sh` télécharge Godot 4.3 une fois puis le lance sur le projet :
 
 - `tools/godot.sh --headless --editor --quit` : importe le projet et affiche les erreurs de script.
-- `tools/godot.sh --xvfb -- --autotest` : un robot joue une minute, apprend des nœuds et enregistre des captures dans `godot/autotest/`.
+- `tools/godot.sh --xvfb -- --autotest` : un robot joue une minute, apprend des nœuds et enregistre des captures dans `godot/autotest/` (sans lire ni écrire de sauvegarde).
+- `tools/godot.sh --headless -s res://tests/save_test.gd -- --new-game` : teste la sauvegarde (aller-retour, nœuds disparus, formats anciens ou trop récents).
 
 La règle dans `.claude/settings.json` autorise ce script pour les sessions Claude.
 
@@ -41,7 +47,8 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 
 - `godot/` : le jeu (Godot 4, GDScript). Les scènes sont construites par le code, dans `godot/scripts/`.
   - `skill_tree.gd` : génération de l'arbre, effets et nœuds clés.
-  - `game.gd` : état global (niveau, points, statistiques).
+  - `game.gd` : état global (niveau, points, statistiques, drapeaux d'aventure).
+  - `save_game.gd` : sauvegarde versionnée. Les nœuds y sont notés par identifiant stable (`uid`), pour qu'une sauvegarde survive aux changements de l'arbre.
   - `main.gd`, `player.gd`, `enemy.gd`, `projectile.gd`, `orb.gd` : le jeu.
   - `ground.gd` + `shaders/ground.gdshader` : la carte de vie et le rendu du sol.
   - `flora.gd`, `fx.gd`, `hud.gd`, `tree_ui.gd` : décor, effets et interface.

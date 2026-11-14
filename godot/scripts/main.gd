@@ -36,6 +36,11 @@ var autotest := false
 var autotest_time := 0.0
 var autotest_shots := [3.0, 25.0, 55.0]
 var autotest_done := false
+## Sauvegarde automatique (désactivée en autotest) : périodique et après chaque changement.
+const AUTOSAVE_EVERY := 60.0
+var autosave_enabled := true
+var autosave_timer := AUTOSAVE_EVERY
+var autosave_pending := false
 
 
 func _ready() -> void:
@@ -90,6 +95,41 @@ func _ready() -> void:
 	ground.paint(Vector2.ZERO, 260.0, 1.0)
 	flora.spawn_patch(Vector2.ZERO, 200.0, 14, Color("7fd36b"))
 
+	# Reprise de la partie sauvegardée (« -- --new-game » pour repartir de zéro).
+	autosave_enabled = not autotest
+	var loaded := false
+	if not autotest and not "--new-game" in OS.get_cmdline_user_args():
+		loaded = SaveGame.load_into(self)
+		if not loaded and SaveGame.last_error != "aucune sauvegarde":
+			hud.banner("Sauvegarde illisible (%s) : nouvelle partie." % SaveGame.last_error)
+	if not loaded:
+		Game.reset()
+	else:
+		hud.banner("Partie reprise : niveau %d" % Game.level)
+	Game.tree_changed.connect(request_autosave)
+	Game.leveled_up.connect(func(_l): request_autosave())
+
+
+## Demande une sauvegarde automatique, regroupée sur une seconde (fonctionne aussi en pause).
+func request_autosave() -> void:
+	if not autosave_enabled or autosave_pending:
+		return
+	autosave_pending = true
+	await get_tree().create_timer(1.0, true).timeout
+	autosave_pending = false
+	save_game()
+
+
+func save_game() -> void:
+	autosave_timer = AUTOSAVE_EVERY
+	if autosave_enabled:
+		SaveGame.save_now(self)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		save_game()
+
 
 func _setup_input() -> void:
 	_keys("move_up", [KEY_W, KEY_UP])
@@ -120,6 +160,9 @@ func _keys(action: String, list: Array) -> void:
 
 func _process(delta: float) -> void:
 	elapsed += delta
+	autosave_timer -= delta
+	if autosave_timer <= 0.0:
+		save_game()
 	if autotest:
 		_autotest_step(delta)
 	enemies = enemies.filter(func(e): return is_instance_valid(e) and not e.dead)

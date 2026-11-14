@@ -81,6 +81,9 @@ const NOTABLE_WORDS := {
 
 var nodes: Array = []
 var edges: Array = []  # Vector2i(a, b)
+## Identifiant stable (uid) -> index dans nodes. Les sauvegardes utilisent les uid,
+## qui ne changent pas si l'ordre de génération des nœuds évolue.
+var by_uid: Dictionary = {}
 
 
 func branch_color(bi: int) -> Color:
@@ -94,6 +97,7 @@ func build() -> void:
 	rng.seed = SEED
 	nodes = []
 	edges = []
+	by_uid = {}
 	var edge_set := {}
 	nodes.append(_make(0, 0, -1, "root", Vector2.ZERO, "Graine de l'Arbre-Monde", "", "Le cœur de l'arbre. Tout part d'ici.", {}))
 
@@ -142,7 +146,9 @@ func build() -> void:
 					var st: String = effects.keys()[0]
 					nm = STAT_LABEL[st][0]
 				var id := nodes.size()
-				nodes.append(_make(id, r, bi, kind, Vector2.from_angle(ang) * rad, nm, key, desc, effects))
+				var node := _make(id, r, bi, kind, Vector2.from_angle(ang) * rad, nm, key, desc, effects)
+				node["uid"] = "key:" + key if key != "" else "%s:%d:%d" % [bid, r, i]
+				nodes.append(node)
 				row.append(id)
 			rows[bi].append(row)
 
@@ -167,12 +173,20 @@ func build() -> void:
 				var a: Array = rows[bi][r]
 				var c: Array = rows[(bi + 1) % BRANCHES.size()][r]
 				_link(a[a.size() - 1], c[0], edge_set)
+	for n in nodes:
+		by_uid[n["uid"]] = n["id"]
+
+
+## Index du nœud portant cet identifiant stable, ou -1 s'il n'existe plus.
+func id_for_uid(uid: String) -> int:
+	return int(by_uid.get(uid, -1))
 
 
 func _make(id: int, ring: int, branch: int, kind: String, pos: Vector2, nm: String, key: String, desc: String, effects: Dictionary) -> Dictionary:
 	return {
 		"id": id, "ring": ring, "branch": branch, "type": kind, "pos": pos,
 		"name": nm, "key": key, "desc": desc, "effects": effects, "neighbors": [],
+		"uid": "root" if id == 0 else "",
 	}
 
 
