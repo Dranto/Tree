@@ -1,6 +1,7 @@
 # Tests visuels : rejoue des parties à l'identique et compare les captures du jeu
 # et de l'arbre aux références (godot/tests/visual/reference/).
-# En cas d'échec, l'artefact « tests-visuels » contient les captures, les écarts et rapport.html.
+# L'artefact « tests-visuels » contient toujours les captures, les écarts et rapport.html ;
+# le résumé du job (onglet Summary) liste chaque capture et chaque défaut d'interface détecté.
 name: Tests visuels
 
 on:
@@ -12,6 +13,7 @@ on:
 jobs:
   visual:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -28,6 +30,20 @@ jobs:
 
       - name: Comparer les captures
         run: tools/visual-tests.sh
+
+      - name: Résumé du job
+        if: always()
+        run: |
+          if [ -f godot/tests/visual/out/resume.md ]; then
+            cat godot/tests/visual/out/resume.md >> "$GITHUB_STEP_SUMMARY"
+            echo "Le rapport HTML complet est dans l'artefact « tests-visuels » (rapport.html)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Durée sous 5 minutes
+        run: |
+          total=$(awk '{s+=$3} END{print s}' godot/tests/visual/out/durees.txt)
+          echo "Durée des scénarios : ${total} s"
+          [ "$total" -le 300 ] || { echo "Plus de 5 minutes : alléger les scénarios"; exit 1; }
 
       - name: Publier les captures et le rapport
         if: always()

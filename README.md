@@ -39,21 +39,22 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 
 ### Tests visuels
 
-`tools/visual-tests.sh` rejoue deux parties à l'identique (graine fixe, pas de temps fixe, rendu logiciel) et compare six captures du jeu et de l'Arbre de vie aux images de référence de `godot/tests/visual/reference/` :
+`tools/visual-tests.sh` rejoue des parties à l'identique (graine fixe, pas de temps fixe, rendu logiciel), compare les captures aux images de `godot/tests/visual/reference/` et fait des contrôles sans image. Une exécution complète dure environ 2 minutes (limite en CI : 5).
 
-| Capture | Ce qu'elle montre |
+| Scénario | Captures |
 | --- | --- |
-| `jeu_depart` | le jeu après 1 s : oasis de départ, joueur, interface |
-| `jeu_combat` | le jeu après 30 s de partie jouée par le robot : Flétris, sol ravivé, fleurs |
-| `arbre_depart` | l'arbre ouvert en début de partie |
-| `arbre_survol` | l'infobulle d'un nœud survolé |
-| `arbre_ensemble` | l'arbre entier dézoomé |
-| `arbre_progression` | l'arbre après 30 s, avec des nœuds appris |
+| `depart` | `jeu_depart`, `arbre_depart`, `arbre_survol`, `arbre_ensemble` (zoom 0,15), `arbre_zoom_proche` (zoom 1,6) ; l'arbre ouvert (`arbre_depart`) montre le zoom par défaut |
+| `combat` | `jeu_combat` après 30 s de partie jouée par le robot, `arbre_progression` |
+| `galerie` | `galerie_ennemis_fx` (3 ennemis × 4 états, ondes, textes flottants, nuage) et `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable) |
+| `resolution` | `jeu_`, `arbre_` et `titre_` en 1280x720, 1920x1080, 2560x1440 et 3440x1440 (un processus par résolution) |
 
-- `tools/visual-tests.sh` : compare. Échoue si plus de 0,05 % des pixels d'une capture ont changé. Les captures, les écarts en rouge (`*.diff.png`) et `rapport.html` sont dans `godot/tests/visual/out/`.
+- `tools/visual-tests.sh` : compare. Échoue si plus de 0,05 % des pixels d'une capture ont changé, ou si un défaut d'interface nouveau est détecté. Résultats, écarts en rouge (`*.diff.png`), `rapport.html` et `resume.md` dans `godot/tests/visual/out/`.
 - `tools/visual-tests.sh --update` : remplace les références après un changement graphique voulu. Vérifier les nouvelles images, puis les committer avec le changement.
+- `TEST_ONLY=galerie tools/visual-tests.sh` : ne joue qu'un scénario.
 
-La CI (GitHub Actions, workflow « Tests visuels ») lance la comparaison sur chaque pull request et publie les captures et le rapport en artefact. Les scénarios sont dans `godot/tests/visual/runner.gd`.
+**Contrôles sans image (`UiAudit`).** L'autoload `ui_audit.gd` est un registre où les écrans déclarent les rectangles de texte qu'ils dessinent : `UiAudit.draw_text(...)` à la place de `draw_string` pour un écran dessiné à la main (voir `tree_ui.gd`), ou `UiAudit.scan_controls("écran", racine)` pour des nœuds Control (Label, Button…). Le banc vérifie qu'aucun texte n'est coupé par le bord de l'écran, qu'aucun texte « requis » (noms des branches, en-têtes) n'est hors écran, et qu'aucun libellé n'en recouvre un autre. Hors tests le registre est inactif. Les défauts déjà présents sont listés dans `godot/tests/visual/defauts_connus.txt` : un défaut qui n'y figure pas fait échouer le banc, un défaut listé qui a disparu est signalé « CORRIGÉ » (retirer alors la ligne). Pas encore couvert : le HUD dessiné à la main (`hud.gd`) et l'écran titre dessiné ; la tâche C les branchera.
+
+La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écrit le résultat dans le résumé du job et publie captures et rapport en artefact. Les scénarios sont dans `godot/tests/visual/runner.gd`.
 
 ## Ce que contient le prototype
 
