@@ -3,6 +3,7 @@
 extends Control
 
 const SkillTree = preload("res://scripts/skill_tree.gd")
+const TreePanels = preload("res://scripts/tree_panels.gd")
 
 const RADIUS := {"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0}
 const KIND_LABEL := {"root": "Origine", "small": "Nœud", "notable": "Nœud notable", "keystone": "Nœud clé"}
@@ -15,6 +16,8 @@ var hover := -1
 var mouse := Vector2.ZERO
 var font: Font
 var t := 0.0
+## Outils de planification (recherche, chemins, plan, résumé) : voir tree_panels.gd.
+var panels
 
 
 func _ready() -> void:
@@ -23,9 +26,14 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	font = ThemeDB.fallback_font
 	Game.tree_changed.connect(queue_redraw)
+	panels = TreePanels.new()
+	panels.ui = self
+	add_child(panels)
 
 
 func _input(event: InputEvent) -> void:
+	if panels.captures_keys():
+		return
 	if event.is_action_pressed("toggle_tree"):
 		toggle()
 		get_viewport().set_input_as_handled()
@@ -86,11 +94,11 @@ func _gui_input(event: InputEvent) -> void:
 				if drag_moved < 6.0:
 					var id := pick(mb.position)
 					if id >= 0:
-						Game.allocate(id)
+						panels.click(id)
 		elif mb.button_index == MOUSE_BUTTON_RIGHT and not mb.pressed:
 			var id := pick(mb.position)
 			if id >= 0:
-				Game.refund(id)
+				panels.right_click(id)
 		queue_redraw()
 		return
 	var mm := event as InputEventMouseMotion
@@ -180,6 +188,8 @@ func _draw() -> void:
 		if n["id"] == hover:
 			draw_arc(p, r + 6.0, 0.0, TAU, 32, Color.WHITE, 2.0 / zoom)
 
+	panels.draw_overlay()
+
 	# Noms des branches au bord de l'arbre
 	var sector := TAU / SkillTree.BRANCHES.size()
 	for bi in SkillTree.BRANCHES.size():
@@ -194,7 +204,7 @@ func _draw() -> void:
 	draw_string(font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("e9e2c8"))
 	var pts_col := Color("f2d06b") if Game.points > 0 else Color(0.7, 0.75, 0.7)
 	draw_string(font, Vector2(24, 54), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col)
-	draw_string(font, Vector2(0, 30), "Clic : apprendre   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.7, 0.78, 0.72))
+	draw_string(font, Vector2(0, 30), "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.7, 0.78, 0.72))
 	draw_string(font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.6, 0.8, 0.6))
 
 	if hover >= 0:
@@ -212,16 +222,7 @@ func _draw_tooltip(n: Dictionary, st: String) -> void:
 	lines.append([sub, 13, Color(0.65, 0.72, 0.68)])
 	for d in SkillTree.describe(n):
 		lines.append(["• " + d, 14, Color(0.92, 0.95, 0.92)])
-	if st == "owned":
-		var ok: bool = Game.can_refund(n["id"])
-		lines.append(["Appris" + ("  ·  clic droit pour l'oublier" if ok else ""), 13, Color("7fd36b")])
-	elif st == "available":
-		if Game.points > 0:
-			lines.append(["Clic pour apprendre (1 point)", 13, Color("f2d06b")])
-		else:
-			lines.append(["Pas de point disponible : monte de niveau", 13, Color("e0675e")])
-	else:
-		lines.append(["Apprends d'abord un nœud voisin", 13, Color(0.6, 0.6, 0.6)])
+	lines.append_array(panels.tooltip_lines(n, st))
 
 	var w := 0.0
 	var h := 16.0
