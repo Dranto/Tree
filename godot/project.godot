@@ -5,12 +5,15 @@ config_version=5
 
 config/name="Sève"
 config/description="Action-RPG : un monde désolé reprend vie au rythme de ton arbre de compétences."
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/title.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 
 [autoload]
 
 Game="*res://scripts/game.gd"
+SaveGame="*res://scripts/save_game.gd"
+Settings="*res://scripts/settings.gd"
+Flow="*res://scripts/flow.gd"
 
 [display]
 

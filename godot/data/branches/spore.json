@@ -1,0 +1,31 @@
+{
+  "id": "spore",
+  "name": "Spore",
+  "color": "#b48ae0",
+  "blurb": "Poison et zones",
+  "small": [
+    {"stat": "poison", "op": "add", "value": 0.06},
+    {"stat": "area", "op": "inc", "value": 0.05}
+  ],
+  "notable": {
+    "effects": [{"stat": "poison", "op": "add", "value": 0.1}],
+    "names": [
+      ["Hyphe", "Spore", "Moisissure", "Filament", "Sporée", "Trame"],
+      ["sombre", "tissée", "fertile", "muette", "rampante", "violette"]
+    ]
+  },
+  "keystones": [
+    {"key": "cloud", "name": "Nuage de spores", "effects": [{"skill": "cloud"}]},
+    {"key": "mycose", "name": "Mycose", "effects": [
+      {"stat": "poison", "op": "more", "value": 2},
+      {"stat": "poison", "op": "flat", "value": 0.15}
+    ]},
+    {"key": "contagion", "name": "Contagion", "effects": [
+      {
+        "on": "kill", "if": {"state": "cible_empoisonnee"},
+        "do": "spread_poison", "radius": 110, "duration": 3, "color": "#b48ae0",
+        "text": "Un ennemi empoisonné qui meurt transmet son poison autour de lui."
+      }
+    ]}
+  ]
+}

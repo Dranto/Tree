@@ -17,7 +17,7 @@ func _ready() -> void:
 		if p.length() < 180.0:
 			continue
 		trees.append({"pos": p, "size": rng.randf_range(0.8, 1.6), "seed": rng.randi()})
-	rng.randomize()
+	Game.seed_rng(rng, 1)
 	ground.painted.connect(queue_redraw)
 
 
@@ -63,3 +63,24 @@ func _draw() -> void:
 		for i in n:
 			draw_circle(p + Vector2.from_angle(TAU * i / n) * sz, sz * 0.8, f["color"])
 		draw_circle(p, sz * 0.6, Color("fff3c4"))
+
+
+## Fleurs sous forme de listes simples [x, y, couleur, taille, pétales] (pour la sauvegarde).
+func export_flowers() -> Array:
+	var out: Array = []
+	for f in flowers:
+		var p: Vector2 = f["pos"]
+		var c: Color = f["color"]
+		out.append([snappedf(p.x, 0.1), snappedf(p.y, 0.1), c.to_html(false), snappedf(f["size"], 0.01), f["petals"]])
+	return out
+
+
+func import_flowers(list: Array) -> void:
+	flowers = []
+	for e in list:
+		if not (e is Array) or e.size() < 5:
+			continue
+		flowers.append({"pos": Vector2(float(e[0]), float(e[1])), "color": Color.from_string(str(e[2]), Color.WHITE), "size": float(e[3]), "petals": int(e[4])})
+	if flowers.size() > MAX_FLOWERS:
+		flowers = flowers.slice(flowers.size() - MAX_FLOWERS)
+	queue_redraw()

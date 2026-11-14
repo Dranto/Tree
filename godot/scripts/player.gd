@@ -3,7 +3,7 @@ extends Node2D
 
 const DASH_SPEED := 950.0
 const DASH_TIME := 0.16
-const SKILL_CD := {"nova": 6.0, "cloud": 9.0, "bloom": 18.0}
+const Content = preload("res://scripts/content.gd")
 
 var main
 var radius := 14.0
@@ -14,16 +14,19 @@ var dash_time := 0.0
 var dash_dir := Vector2.RIGHT
 var invuln := 0.0
 var still_time := 0.0
-var immortal_cd := 0.0
 var hurt_flash := 0.0
 var aim := Vector2.RIGHT
 var aim_point := Vector2.ZERO
-var skill_cd: Dictionary = SKILL_CD
+## Réglages des compétences actives, lus dans res://data/skills.json.
+var skills: Dictionary = Content.skills()
+var skill_cd: Dictionary = {}
 var cds := {"nova": 0.0, "cloud": 0.0, "bloom": 0.0}
 var t := 0.0
 
 
 func _ready() -> void:
+	for k in cds:
+		skill_cd[k] = skills[k]["cooldown"]
 	hp = Game.stats["max_hp"]
 	Game.stats_changed.connect(func(): hp = minf(hp, Game.stats["max_hp"]))
 
@@ -34,7 +37,6 @@ func _process(delta: float) -> void:
 	fire_cd -= delta
 	dash_cd -= delta
 	invuln -= delta
-	immortal_cd -= delta
 	hurt_flash -= delta
 	for k in cds:
 		cds[k] = maxf(0.0, cds[k] - delta)
@@ -75,6 +77,8 @@ func _process(delta: float) -> void:
 	position = position.clamp(Vector2(-h, -h), Vector2(h, h))
 
 	still_time = still_time + delta if mv.length() < 0.1 else 0.0
+	Game.set_state("immobile", still_time)
+	s = Game.stats
 
 	# La terre vivante soigne : régénération triplée sur l'herbe.
 	var regen: float = s["regen"]
@@ -97,46 +101,45 @@ func _process(delta: float) -> void:
 
 
 func current_damage() -> float:
-	var d: float = Game.stats["damage"]
-	if Game.has_key("enracine") and still_time > 0.5:
-		d *= 1.4
-	return d
+	return Game.stats["damage"]
 
 
 func _shoot(s: Dictionary) -> void:
 	var n: int = s["projectiles"]
 	var spread := 0.14
-	var big := Game.has_key("lumiere_lente")
 	for i in n:
 		var a := aim.angle() + (i - (n - 1) / 2.0) * spread
 		var dir := Vector2.from_angle(a)
-		main.spawn_projectile(position + dir * 18.0, dir * 640.0, current_damage(), s["pierce"], big)
+		main.spawn_projectile(position + dir * 18.0, dir * 640.0, current_damage(), s["pierce"], s["projectile_size"])
 
 
 func _cast_nova(s: Dictionary) -> void:
-	cds["nova"] = SKILL_CD["nova"]
-	var r: float = 170.0 * s["area"]
-	main.fx.ring(position, 20.0, r, 0.4, Color("e0675e"), 8.0)
-	main.damage_area(position, r, current_damage() * 2.5, 70.0)
+	var k: Dictionary = skills["nova"]
+	cds["nova"] = skill_cd["nova"]
+	var r: float = k["radius"] * s["area"]
+	main.fx.ring(position, 20.0, r, 0.4, Color(k["color"]), 8.0)
+	main.damage_area(position, r, current_damage() * k["damage"], k["knockback"])
 
 
 func _cast_cloud(s: Dictionary) -> void:
-	cds["cloud"] = SKILL_CD["cloud"]
+	var k: Dictionary = skills["cloud"]
+	cds["cloud"] = skill_cd["cloud"]
 	var target := aim_point
 	var off := target - position
-	if off.length() > 420.0:
-		target = position + off.normalized() * 420.0
-	main.fx.cloud(target, 120.0 * s["area"], 5.0, current_damage() * (1.2 + s["poison"]))
+	if off.length() > k["range"]:
+		target = position + off.normalized() * k["range"]
+	main.fx.cloud(target, k["radius"] * s["area"], k["duration"], current_damage() * (k["damage"] + s["poison"]))
 
 
 func _cast_bloom(s: Dictionary) -> void:
-	cds["bloom"] = SKILL_CD["bloom"]
-	heal(s["max_hp"] * 0.35)
-	var r: float = 150.0 * s["area"]
-	main.fx.ring(position, 20.0, r, 0.6, Color("7fd36b"), 8.0)
-	main.damage_area(position, r, current_damage() * 0.5, 110.0)
-	main.ground.paint(position, r, 0.8)
-	main.flora.spawn_patch(position, r * 0.8, 10, Color("7fd36b"))
+	var k: Dictionary = skills["bloom"]
+	cds["bloom"] = skill_cd["bloom"]
+	heal(s["max_hp"] * k["heal"])
+	var r: float = k["radius"] * s["area"]
+	main.fx.ring(position, 20.0, r, 0.6, Color(k["color"]), 8.0)
+	main.damage_area(position, r, current_damage() * k["damage"], k["knockback"])
+	main.ground.paint(position, r, k["life"])
+	main.flora.spawn_patch(position, r * 0.8, 10, Color(k["color"]))
 
 
 func heal(v: float) -> void:
@@ -147,21 +150,13 @@ func take_hit(amount: float, source) -> void:
 	if invuln > 0.0 or hp <= 0.0:
 		return
 	var s: Dictionary = Game.stats
-	var armor: float = s["armor"]
-	if Game.has_key("enracine") and still_time > 0.5:
-		armor = minf(0.85, armor + 0.2)
-	hp -= amount * (1.0 - armor)
+	hp -= amount * (1.0 - s["armor"])
 	hurt_flash = 0.15
 	invuln = 0.35
 	if s["thorns"] > 0.0 and is_instance_valid(source) and not source.dead:
 		source.take_damage(s["thorns"], false)
 	if hp <= 0.0:
-		if Game.has_key("immortel") and immortal_cd <= 0.0:
-			hp = 1.0
-			invuln = 2.0
-			immortal_cd = 60.0
-			main.fx.text(position + Vector2(0, -50), "Graine immortelle !", Color("7fd36b"), 22, 1.5)
-		else:
+		if not Game.fire("lethal_hit", {"main": main}):
 			main.player_died()
 
 

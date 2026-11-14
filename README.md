@@ -20,14 +20,40 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 
 Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer.
 
+### Sauvegarde
+
+Le jeu s'ouvre sur l'écran titre : **Continuer** reprend la partie sauvegardée, **Nouvelle partie** repart de zéro (la sauvegarde précédente est remplacée dès la première sauvegarde automatique, l'avant-dernière reste en `.bak`). La partie se sauvegarde toute seule : montée de niveau, nœud appris ou oublié, toutes les 60 s, en revenant au titre et en quittant.
+Le fichier est un JSON lisible dans le dossier de données de Godot (`user://saves/partie.json`, sous Windows `%APPDATA%\Godot\app_userdata\Sève\saves\`), avec la sauvegarde précédente en `.bak`.
+
 ### Tester sans écran (Linux, sessions Claude)
 
 `tools/godot.sh` télécharge Godot 4.3 une fois puis le lance sur le projet :
 
 - `tools/godot.sh --headless --editor --quit` : importe le projet et affiche les erreurs de script.
-- `tools/godot.sh --xvfb -- --autotest` : un robot joue une minute, apprend des nœuds et enregistre des captures dans `godot/autotest/`.
+- `tools/godot.sh --headless -s res://scripts/check_data.gd` : vérifie les fichiers de données de l'arbre.
+- `tools/godot.sh --xvfb -- --autotest` : un robot joue une minute, apprend des nœuds et enregistre des captures dans `godot/autotest/` (sans lire ni écrire de sauvegarde).
+- `tools/godot.sh --headless -s res://tests/save_test.gd -- --new-game` : teste la sauvegarde (aller-retour, nœuds disparus, formats anciens ou trop récents).
+- `tools/godot.sh --headless -s res://tests/flow_test.gd` : teste le parcours des menus (Nouvelle partie, Retour au titre qui sauvegarde, Continuer qui reprend). Remplace la sauvegarde par défaut.
 
 La règle dans `.claude/settings.json` autorise ce script pour les sessions Claude.
+
+### Tests visuels
+
+`tools/visual-tests.sh` rejoue deux parties à l'identique (graine fixe, pas de temps fixe, rendu logiciel) et compare six captures du jeu et de l'Arbre de vie aux images de référence de `godot/tests/visual/reference/` :
+
+| Capture | Ce qu'elle montre |
+| --- | --- |
+| `jeu_depart` | le jeu après 1 s : oasis de départ, joueur, interface |
+| `jeu_combat` | le jeu après 30 s de partie jouée par le robot : Flétris, sol ravivé, fleurs |
+| `arbre_depart` | l'arbre ouvert en début de partie |
+| `arbre_survol` | l'infobulle d'un nœud survolé |
+| `arbre_ensemble` | l'arbre entier dézoomé |
+| `arbre_progression` | l'arbre après 30 s, avec des nœuds appris |
+
+- `tools/visual-tests.sh` : compare. Échoue si plus de 0,05 % des pixels d'une capture ont changé. Les captures, les écarts en rouge (`*.diff.png`) et `rapport.html` sont dans `godot/tests/visual/out/`.
+- `tools/visual-tests.sh --update` : remplace les références après un changement graphique voulu. Vérifier les nouvelles images, puis les committer avec le changement.
+
+La CI (GitHub Actions, workflow « Tests visuels ») lance la comparaison sur chaque pull request et publie les captures et le rapport en artefact. Les scénarios sont dans `godot/tests/visual/runner.gd`.
 
 ## Ce que contient le prototype
 
@@ -40,9 +66,12 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 ## Structure
 
 - `godot/` : le jeu (Godot 4, GDScript). Les scènes sont construites par le code, dans `godot/scripts/`.
-  - `skill_tree.gd` : génération de l'arbre, effets et nœuds clés.
-  - `game.gd` : état global (niveau, points, statistiques).
+  - `skill_tree.gd` : génération de la forme de l'arbre.
+  - `content.gd`, `effects.gd`, `effect_actions.gd` : lecture des données et moteur d'effets des nœuds.
+  - `game.gd` : état global (niveau, points, statistiques, drapeaux d'aventure).
+  - `save_game.gd` : sauvegarde versionnée. Les nœuds y sont notés par identifiant stable (`uid`), pour qu'une sauvegarde survive aux changements de l'arbre.
   - `main.gd`, `player.gd`, `enemy.gd`, `projectile.gd`, `orb.gd` : le jeu.
   - `ground.gd` + `shaders/ground.gdshader` : la carte de vie et le rendu du sol.
   - `flora.gd`, `fx.gd`, `hud.gd`, `tree_ui.gd` : décor, effets et interface.
+- `godot/data/` : ce que font les nœuds (statistiques, branches, nœuds clés, compétences), en fichiers JSON. Le format est décrit dans [`godot/data/README.md`](godot/data/README.md).
 - `prototype-web/` : le premier prototype (jeu incrémental dans le navigateur), conservé pour référence.

@@ -1,0 +1,32 @@
+{
+  "id": "racine",
+  "name": "Racine",
+  "color": "#c49a6c",
+  "blurb": "Armure et robustesse",
+  "small": [
+    {"stat": "armor", "op": "add", "value": 0.015},
+    {"stat": "max_hp", "op": "add", "value": 10}
+  ],
+  "notable": {
+    "effects": [{"stat": "max_hp", "op": "add", "value": 20}],
+    "names": [
+      ["Souche", "Pivot", "Rhizome", "Écorce", "Cerne", "Tronc"],
+      ["ancien", "tenace", "profond", "patient", "massif", "scellé"]
+    ]
+  },
+  "keystones": [
+    {"key": "enracine", "name": "Enraciné", "effects": [
+      {"stat": "damage", "op": "more", "value": 1.4, "if": {"state": "immobile", "min": 0.5}},
+      {"stat": "armor", "op": "add", "value": 0.2, "if": {"state": "immobile", "min": 0.5}},
+      {"stat": "armor_cap", "op": "add", "value": 0.1, "if": {"state": "immobile", "min": 0.5}, "hidden": true}
+    ]},
+    {"key": "coeur_pierre", "name": "Cœur de pierre", "effects": [
+      {"stat": "max_hp", "op": "more", "value": 1.5},
+      {"stat": "move_speed", "op": "more", "value": 0.9}
+    ]},
+    {"key": "bastion", "name": "Bastion", "effects": [
+      {"stat": "armor", "op": "add", "value": 0.15},
+      {"stat": "armor_cap", "op": "add", "value": 0.1}
+    ]}
+  ]
+}

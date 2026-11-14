@@ -1,0 +1,35 @@
+{
+  "id": "vent",
+  "name": "Vent",
+  "color": "#7fd0e0",
+  "blurb": "Vitesse d'attaque et de déplacement",
+  "small": [
+    {"stat": "fire_rate", "op": "inc", "value": 0.04},
+    {"stat": "move_speed", "op": "inc", "value": 0.025}
+  ],
+  "notable": {
+    "effects": [
+      {"stat": "pickup", "op": "inc", "value": 0.2},
+      {"stat": "dash_cd", "op": "inc", "value": -0.05}
+    ],
+    "names": [
+      ["Souffle", "Bourrasque", "Pollen", "Brise", "Plume", "Envol"],
+      ["léger", "vif", "errant", "frais", "agile", "libre"]
+    ]
+  },
+  "keystones": [
+    {"key": "rafale", "name": "Rafale", "effects": [
+      {"stat": "projectiles", "op": "add", "value": 2},
+      {"stat": "damage", "op": "more", "value": 0.85}
+    ]},
+    {"key": "pas_du_vent", "name": "Pas du vent", "effects": [
+      {
+        "on": "kill", "do": "reduce_cooldown", "target": "dash", "value": 0.3,
+        "text": "Chaque ennemi vaincu réduit la recharge de l'esquive de 0,3 s."
+      }
+    ]},
+    {"key": "tempete", "name": "Tempête", "effects": [
+      {"stat": "fire_rate", "op": "more", "value": 1.5}
+    ]}
+  ]
+}

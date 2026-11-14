@@ -15,6 +15,7 @@ const Projectile = preload("res://scripts/projectile.gd")
 const Orb = preload("res://scripts/orb.gd")
 const Hud = preload("res://scripts/hud.gd")
 const TreeUI = preload("res://scripts/tree_ui.gd")
+const PauseMenu = preload("res://scripts/pause_menu.gd")
 
 var world_half := WORLD_HALF
 var ground
@@ -23,6 +24,7 @@ var fx
 var player
 var hud
 var tree_ui
+var pause_menu
 var orbs_layer: Node2D
 var enemies_layer: Node2D
 var projectiles_layer: Node2D
@@ -36,12 +38,18 @@ var autotest := false
 var autotest_time := 0.0
 var autotest_shots := [3.0, 25.0, 55.0]
 var autotest_done := false
+## Sauvegarde automatique (désactivée en autotest) : périodique et après chaque changement.
+const AUTOSAVE_EVERY := 60.0
+var autosave_enabled := true
+var autosave_timer := AUTOSAVE_EVERY
+var autosave_pending := false
 
 
 func _ready() -> void:
-	rng.randomize()
+	Game.seed_rng(rng)
 	_setup_input()
-	autotest = "--autotest" in OS.get_cmdline_user_args()
+	# Un banc de test peut activer le robot avant d'ajouter la scène (pas de sauvegarde dans ce mode).
+	autotest = autotest or "--autotest" in OS.get_cmdline_user_args()
 	if autotest:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://autotest"))
 
@@ -83,12 +91,62 @@ func _ready() -> void:
 	tree_ui = TreeUI.new()
 	tree_layer.add_child(tree_ui)
 
+	var pause_layer := CanvasLayer.new()
+	pause_layer.layer = 20
+	pause_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(pause_layer)
+	pause_menu = PauseMenu.new()
+	pause_menu.main = self
+	pause_layer.add_child(pause_menu)
+
 	Game.node_allocated.connect(_on_node_allocated)
 	Game.leveled_up.connect(_on_level_up)
 
 	# Une oasis de départ autour de la graine.
 	ground.paint(Vector2.ZERO, 260.0, 1.0)
 	flora.spawn_patch(Vector2.ZERO, 200.0, 14, Color("7fd36b"))
+
+	# Reprise de la partie sauvegardée : seulement si l'écran titre l'a demandé (« Continuer »).
+	# « Nouvelle partie » repart de zéro, et la première sauvegarde automatique remplace l'ancienne.
+	autosave_enabled = not autotest
+	var loaded := false
+	if not autotest and Flow.continue_requested and not "--new-game" in OS.get_cmdline_user_args():
+		loaded = SaveGame.load_into(self)
+		if not loaded and SaveGame.last_error != "aucune sauvegarde":
+			hud.banner("Sauvegarde illisible (%s) : nouvelle partie." % SaveGame.last_error)
+	if not loaded:
+		Game.reset()
+	else:
+		hud.banner("Partie reprise : niveau %d" % Game.level)
+	Flow.continue_requested = false
+	Game.tree_changed.connect(request_autosave)
+
+
+## Demande une sauvegarde automatique, regroupée sur une seconde (fonctionne aussi en pause).
+func request_autosave() -> void:
+	if not autosave_enabled or autosave_pending:
+		return
+	autosave_pending = true
+	await get_tree().create_timer(1.0, true).timeout
+	autosave_pending = false
+	if is_inside_tree():
+		save_game()
+
+
+func save_game() -> void:
+	autosave_timer = AUTOSAVE_EVERY
+	if autosave_enabled:
+		SaveGame.save_now(self)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		save_game()
+
+
+## Quitter la scène (« Retour au titre » ou « Quitter » du menu pause) sauvegarde la partie.
+func _exit_tree() -> void:
+	save_game()
 
 
 func _setup_input() -> void:
@@ -120,6 +178,9 @@ func _keys(action: String, list: Array) -> void:
 
 func _process(delta: float) -> void:
 	elapsed += delta
+	autosave_timer -= delta
+	if autosave_timer <= 0.0:
+		save_game()
 	if autotest:
 		_autotest_step(delta)
 	enemies = enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
@@ -179,19 +240,18 @@ func _spawn_enemy() -> void:
 	enemies.append(e)
 
 
-func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, big: bool) -> void:
+func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, size := 1.0) -> void:
 	var p = Projectile.new()
 	p.main = self
 	p.position = pos
 	p.vel = vel
 	p.damage = damage
 	p.pierce = pierce
-	if big:
-		p.radius = 13.0
+	p.radius *= size
 	projectiles_layer.add_child(p)
 
 
-## Applique un coup du joueur : critique, poison, vol de vie, éclat d'aube.
+## Applique un coup du joueur : critique, poison, vol de vie, effets déclenchés par un critique.
 func player_hit_enemy(e, base: float, can_explode := true) -> void:
 	var s: Dictionary = Game.stats
 	var dmg := base
@@ -203,12 +263,8 @@ func player_hit_enemy(e, base: float, can_explode := true) -> void:
 		e.apply_poison(dmg * s["poison"], 3.0)
 	if s["lifesteal"] > 0.0:
 		player.heal(dmg * s["lifesteal"])
-	if crit and can_explode and Game.has_key("eclat"):
-		var r: float = 80.0 * s["area"]
-		fx.ring(e.position, 10.0, r, 0.3, Color("f2d06b"), 4.0)
-		for o in enemies:
-			if o != e and is_instance_valid(o) and not o.dead and o.position.distance_to(e.position) < r:
-				player_hit_enemy(o, base * 0.6, false)
+	if crit and can_explode:
+		Game.fire("crit", {"main": self, "enemy": e, "base": base})
 
 
 func damage_area(center: Vector2, radius: float, amount: float, knockback: float) -> void:
@@ -233,13 +289,7 @@ func on_enemy_killed(e) -> void:
 	if rng.randf() < 0.6:
 		flora.add_flower(e.position + Vector2(rng.randf_range(-14, 14), rng.randf_range(-14, 14)))
 	fx.ring(e.position, e.radius, e.radius * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
-	if Game.has_key("contagion") and e.poison_time > 0.0:
-		fx.ring(e.position, 10.0, 110.0, 0.4, Color("b48ae0"), 4.0)
-		for other in enemies:
-			if other != e and is_instance_valid(other) and not other.dead and other.position.distance_to(e.position) < 110.0:
-				other.apply_poison(e.poison_dps, 3.0)
-	if Game.has_key("pas_du_vent"):
-		player.dash_cd = maxf(0.0, player.dash_cd - 0.3)
+	Game.fire("kill", {"main": self, "enemy": e, "cible_empoisonnee": e.poison_time})
 
 
 func player_died() -> void:
@@ -270,6 +320,7 @@ func _on_node_allocated(node: Dictionary) -> void:
 func _on_level_up(lvl: int) -> void:
 	fx.ring(player.position, 20.0, 160.0, 0.6, Color("f0e6b4"), 5.0)
 	hud.banner("Niveau %d : un point à placer dans l'Arbre de vie (Tab)" % lvl)
+	request_autosave()
 	player.heal(Game.stats["max_hp"] * 0.25)
 
 
@@ -319,6 +370,10 @@ func _capture(shot_name: String) -> void:
 
 
 func _finish_autotest() -> void:
+	pause_menu.open()
+	await get_tree().create_timer(0.4).timeout
+	await _capture("pause")
+	pause_menu.close()
 	tree_ui.toggle()
 	await get_tree().create_timer(0.5).timeout
 	await _capture("tree")
