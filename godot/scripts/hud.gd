@@ -107,7 +107,7 @@ func _draw() -> void:
 		draw_string(font, Vector2(0, 160), banner_text, HORIZONTAL_ALIGNMENT_CENTER, w, 24, Color(0.95, 0.92, 0.75, a))
 
 	# Aide de départ
-	if hint_time > 0.0:
+	if hint_time > 0.0 and Settings.show_hints:
 		var a := clampf(hint_time / 2.0, 0.0, 1.0)
 		var lines := [
 			"%s %s %s %s : se déplacer   ·   Clic gauche : lancer des graines   ·   %s : esquive" % [key_label("move_up"), key_label("move_left"), key_label("move_down"), key_label("move_right"), key_label("dash")],

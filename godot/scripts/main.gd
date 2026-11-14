@@ -15,6 +15,7 @@ const Projectile = preload("res://scripts/projectile.gd")
 const Orb = preload("res://scripts/orb.gd")
 const Hud = preload("res://scripts/hud.gd")
 const TreeUI = preload("res://scripts/tree_ui.gd")
+const PauseMenu = preload("res://scripts/pause_menu.gd")
 
 var world_half := WORLD_HALF
 var ground
@@ -23,6 +24,7 @@ var fx
 var player
 var hud
 var tree_ui
+var pause_menu
 var orbs_layer: Node2D
 var enemies_layer: Node2D
 var projectiles_layer: Node2D
@@ -89,6 +91,14 @@ func _ready() -> void:
 	tree_ui = TreeUI.new()
 	tree_layer.add_child(tree_ui)
 
+	var pause_layer := CanvasLayer.new()
+	pause_layer.layer = 20
+	pause_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(pause_layer)
+	pause_menu = PauseMenu.new()
+	pause_menu.main = self
+	pause_layer.add_child(pause_menu)
+
 	Game.node_allocated.connect(_on_node_allocated)
 	Game.leveled_up.connect(_on_level_up)
 
@@ -96,10 +106,11 @@ func _ready() -> void:
 	ground.paint(Vector2.ZERO, 260.0, 1.0)
 	flora.spawn_patch(Vector2.ZERO, 200.0, 14, Color("7fd36b"))
 
-	# Reprise de la partie sauvegardée (« -- --new-game » pour repartir de zéro).
+	# Reprise de la partie sauvegardée : seulement si l'écran titre l'a demandé (« Continuer »).
+	# « Nouvelle partie » repart de zéro, et la première sauvegarde automatique remplace l'ancienne.
 	autosave_enabled = not autotest
 	var loaded := false
-	if not autotest and not "--new-game" in OS.get_cmdline_user_args():
+	if not autotest and Flow.continue_requested and not "--new-game" in OS.get_cmdline_user_args():
 		loaded = SaveGame.load_into(self)
 		if not loaded and SaveGame.last_error != "aucune sauvegarde":
 			hud.banner("Sauvegarde illisible (%s) : nouvelle partie." % SaveGame.last_error)
@@ -107,8 +118,8 @@ func _ready() -> void:
 		Game.reset()
 	else:
 		hud.banner("Partie reprise : niveau %d" % Game.level)
+	Flow.continue_requested = false
 	Game.tree_changed.connect(request_autosave)
-	Game.leveled_up.connect(func(_l): request_autosave())
 
 
 ## Demande une sauvegarde automatique, regroupée sur une seconde (fonctionne aussi en pause).
@@ -118,7 +129,8 @@ func request_autosave() -> void:
 	autosave_pending = true
 	await get_tree().create_timer(1.0, true).timeout
 	autosave_pending = false
-	save_game()
+	if is_inside_tree():
+		save_game()
 
 
 func save_game() -> void:
@@ -130,6 +142,11 @@ func save_game() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		save_game()
+
+
+## Quitter la scène (« Retour au titre » ou « Quitter » du menu pause) sauvegarde la partie.
+func _exit_tree() -> void:
+	save_game()
 
 
 func _setup_input() -> void:
@@ -303,6 +320,7 @@ func _on_node_allocated(node: Dictionary) -> void:
 func _on_level_up(lvl: int) -> void:
 	fx.ring(player.position, 20.0, 160.0, 0.6, Color("f0e6b4"), 5.0)
 	hud.banner("Niveau %d : un point à placer dans l'Arbre de vie (Tab)" % lvl)
+	request_autosave()
 	player.heal(Game.stats["max_hp"] * 0.25)
 
 
@@ -352,6 +370,10 @@ func _capture(shot_name: String) -> void:
 
 
 func _finish_autotest() -> void:
+	pause_menu.open()
+	await get_tree().create_timer(0.4).timeout
+	await _capture("pause")
+	pause_menu.close()
 	tree_ui.toggle()
 	await get_tree().create_timer(0.5).timeout
 	await _capture("tree")
