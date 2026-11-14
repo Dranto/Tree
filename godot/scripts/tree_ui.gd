@@ -14,6 +14,7 @@ extends Control
 signal toggled(open: bool)
 
 const SkillTree = preload("res://scripts/skill_tree.gd")
+const TreePanels = preload("res://scripts/tree_panels.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const RADIUS := {"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0}
@@ -21,6 +22,9 @@ const KIND_LABEL := {"root": "Origine", "small": "Nœud", "notable": "Nœud nota
 
 const BG := Color(0.03, 0.045, 0.04)
 const HEADER_H := 64.0
+## Hauteur de la barre d'outils sous l'en-tête (recherche, plan, résumé : tree_panels.gd),
+## que l'arbre cadré et ses libellés ne doivent pas recouvrir.
+const TOOLBAR_H := 46.0
 ## Marge entre le bord de l'écran (ou l'en-tête) et tout ce qui est dessiné.
 const MARGIN := 14.0
 const ZOOM_MAX := 2.5
@@ -83,6 +87,8 @@ var dragging := false
 var drag_moved := 0.0
 var font: Font
 var t := 0.0
+## Outils de planification (recherche, chemins, plan, résumé) : voir tree_panels.gd.
+var panels
 
 ## Rectangles (à l'écran) des textes dessinés par la couche des libellés, pour les contrôles automatiques.
 var label_rects: Array[Rect2] = []
@@ -134,6 +140,10 @@ func _ready() -> void:
 	_world.add_child(_anim)
 	_labels = _make_overlay("labels")
 	_overlay = _make_overlay("overlay")
+	# Les outils passent au-dessus des couches dessinées, pour recevoir les clics de leurs boutons.
+	panels = TreePanels.new()
+	panels.ui = self
+	add_child(panels)
 	Game.tree_changed.connect(_on_tree_changed)
 	resized.connect(_on_resized)
 
@@ -149,6 +159,8 @@ func _make_overlay(kind: String) -> Control:
 
 
 func _input(event: InputEvent) -> void:
+	if panels.captures_keys():
+		return
 	if event.is_action_pressed("toggle_tree"):
 		toggle()
 		get_viewport().set_input_as_handled()
@@ -259,7 +271,8 @@ func _extent() -> float:
 
 ## Zone de l'écran où l'arbre et les libellés peuvent être dessinés (sous l'en-tête, avec une marge).
 func _view_area() -> Rect2:
-	return Rect2(MARGIN, HEADER_H + MARGIN, size.x - 2.0 * MARGIN, size.y - HEADER_H - 2.0 * MARGIN)
+	var top := HEADER_H + TOOLBAR_H
+	return Rect2(MARGIN, top + MARGIN, size.x - 2.0 * MARGIN, size.y - top - 2.0 * MARGIN)
 
 
 ## Rayon d'un nœud tel que dessiné : les nœuds importants gardent une taille minimale à l'écran.
@@ -347,11 +360,11 @@ func _gui_input(event: InputEvent) -> void:
 				if drag_moved < 6.0:
 					var id := pick(mb.position)
 					if id >= 0:
-						Game.allocate(id)
+						panels.click(id)
 		elif mb.button_index == MOUSE_BUTTON_RIGHT and not mb.pressed:
 			var id := pick(mb.position)
 			if id >= 0:
-				Game.refund(id)
+				panels.right_click(id)
 		hover = pick(mb.position)
 		return
 	var mm := event as InputEventMouseMotion
@@ -543,6 +556,8 @@ func _draw_anim(c: CanvasItem) -> void:
 	if hover >= 0:
 		var n: Dictionary = tree.nodes[hover]
 		c.draw_arc(n["pos"], _radius(n, zoom) + 6.0 * maxf(1.0, w), 0.0, TAU, 32, Color.WHITE, 2.0 * w)
+	# Plan, chemin vers le nœud survolé et résultats de la recherche.
+	panels.draw_overlay(c)
 
 
 # --- Libellés ---
@@ -645,7 +660,7 @@ func _draw_overlay(c: CanvasItem) -> void:
 	c.draw_string(font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.INK)
 	var pts_col := UiTheme.GOLD if Game.points > 0 else Color(0.7, 0.75, 0.7)
 	c.draw_string(font, Vector2(24, 54), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col)
-	c.draw_string(font, Vector2(0, 30), "Clic : apprendre   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.7, 0.78, 0.72))
+	c.draw_string(font, Vector2(0, 30), "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.7, 0.78, 0.72))
 	c.draw_string(font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.6, 0.8, 0.6))
 	if hover >= 0:
 		_draw_tooltip(c, tree.nodes[hover], _states.get(hover, _state(hover)))
@@ -667,7 +682,7 @@ func _audit_texts() -> void:
 	var tree = Game.tree
 	UiAudit.text_at("arbre", font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Transform2D.IDENTITY, "entete", true)
 	UiAudit.text_at("arbre", font, Vector2(24, 54), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Transform2D.IDENTITY, "entete", true)
-	UiAudit.text_at("arbre", font, Vector2(0, 30), "Clic : apprendre   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
+	UiAudit.text_at("arbre", font, Vector2(0, 30), "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
 	UiAudit.text_at("arbre", font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
 	if hover >= 0:
 		var lines := tooltip_lines(tree.nodes[hover], _states.get(hover, _state(hover)))
@@ -691,16 +706,7 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 	raw.append([sub, 13, Color(0.65, 0.72, 0.68)])
 	for d in SkillTree.describe(n):
 		raw.append(["• " + d, 14, Color(0.92, 0.95, 0.92)])
-	if st == "owned":
-		var ok: bool = Game.can_refund(n["id"])
-		raw.append(["Appris" + ("  ·  clic droit pour l'oublier" if ok else ""), 13, UiTheme.LEAF])
-	elif st == "available":
-		if Game.points > 0:
-			raw.append(["Clic pour apprendre (1 point)", 13, UiTheme.GOLD])
-		else:
-			raw.append(["Pas de point disponible : monte de niveau", 13, Color("e0675e")])
-	else:
-		raw.append(["Apprends d'abord un nœud voisin", 13, Color(0.6, 0.6, 0.6)])
+	raw.append_array(panels.tooltip_lines(n, st))
 	var maxw := minf(TOOLTIP_MAX_W, size.x - 2.0 * MARGIN - 28.0)
 	var lines: Array = []
 	for l in raw:

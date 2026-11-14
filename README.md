@@ -20,6 +20,14 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 
 Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer. L'arbre s'ouvre en vue d'ensemble ; en zoomant apparaissent tous les nœuds, puis les icônes et les noms des notables.
 
+Outils de l'arbre (barre sous l'en-tête) :
+
+- **Recherche** (Ctrl+F) : un mot du nom, d'une statistique ou d'un effet. Les nœuds trouvés sont entourés, Entrée passe au suivant.
+- **Chemin** : survoler un nœud éloigné montre le chemin le plus court, son coût et les statistiques avant → après. Un clic apprend tout le chemin si les points suffisent.
+- **Mode plan** : tracer un chemin sans dépenser de points, puis « Valider le plan » quand les points sont là. Le plan est sauvegardé avec la partie.
+- **Annuler** (Ctrl+Z) : défait le dernier choix (nœud appris, oublié, ou modification du plan).
+- **Résumé** : statistiques finales, compétences, nœuds clés et nombre de nœuds par branche, plan compris.
+
 ### Sauvegarde
 
 Le jeu s'ouvre sur l'écran titre : **Continuer** reprend la partie sauvegardée, **Nouvelle partie** repart de zéro (la sauvegarde précédente est remplacée dès la première sauvegarde automatique, l'avant-dernière reste en `.bak`). La partie se sauvegarde toute seule : montée de niveau, nœud appris ou oublié, toutes les 60 s, en revenant au titre et en quittant.
@@ -35,6 +43,8 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --headless -s res://tests/save_test.gd -- --new-game` : teste la sauvegarde (aller-retour, nœuds disparus, formats anciens ou trop récents).
 - `tools/godot.sh --xvfb -s res://tests/tree_ui_test.gd` : vérifie la lisibilité de l'Arbre de vie à la résolution choisie (`--resolution 1280x720` avant `-s`) : aucun libellé hors de l'écran ni sur un autre, les six branches visibles à l'ouverture, infobulle dans l'écran. `-- --shots=DOSSIER` enregistre les captures.
 - `tools/godot.sh --xvfb -s res://tests/tree_bench.gd` : mesure le temps par image de l'écran de l'arbre (immobile, survol, déplacement et zoom).
+- `tools/godot.sh --headless -s res://tests/planner_test.gd` : teste les outils de l'arbre (plus court chemin, simulation sans effet de bord, annulation, recherche, plan sauvegardé et rechargé).
+- `tools/godot.sh --xvfb -s res://tests/planner_captures.gd` : enregistre une capture de chaque outil de l'arbre dans `godot/tests/visual/out/`.
 - `tools/godot.sh --headless -s res://tests/flow_test.gd` : teste le parcours des menus (Nouvelle partie, Retour au titre qui sauvegarde, Continuer qui reprend). Remplace la sauvegarde par défaut.
 - `tools/godot.sh --xvfb -- --benchmark` : banc de performance. Le robot joue face à 120 Flétris pendant 30 s, puis le temps moyen, le 99e centile et le pire temps par image s'affichent.
 
@@ -78,5 +88,6 @@ La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écr
   - `spatial_grid.gd` : grille spatiale des Flétris (collisions, séparation, zones de dégâts), via `main.enemies_near()`.
   - `ground.gd` + `shaders/ground.gdshader` : la carte de vie et le rendu du sol (bruit précalculé en texture, même rendu sur toutes les cartes graphiques).
   - `flora.gd`, `fx.gd`, `hud.gd`, `tree_ui.gd` : décor, effets et interface.
+  - `tree_planner.gd`, `tree_panels.gd` : outils de planification de l'arbre (logique pure, puis interface).
 - `godot/data/` : ce que font les nœuds (statistiques, branches, nœuds clés, compétences), en fichiers JSON. Le format est décrit dans [`godot/data/README.md`](godot/data/README.md).
 - `prototype-web/` : le premier prototype (jeu incrémental dans le navigateur), conservé pour référence.
