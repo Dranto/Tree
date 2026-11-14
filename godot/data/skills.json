@@ -1,0 +1,17 @@
+{
+  "nova": {
+    "name": "Couronne d'épines", "short": "Épines", "color": "#e0675e", "cooldown": 6,
+    "desc": "Nouvelle compétence : une onde d'épines blesse et repousse les ennemis autour de toi.",
+    "radius": 170, "damage": 2.5, "knockback": 70
+  },
+  "cloud": {
+    "name": "Nuage de spores", "short": "Spores", "color": "#b48ae0", "cooldown": 9,
+    "desc": "Nouvelle compétence : un nuage toxique ronge les ennemis à l'endroit visé.",
+    "range": 420, "radius": 120, "duration": 5, "damage": 1.2
+  },
+  "bloom": {
+    "name": "Floraison", "short": "Floraison", "color": "#7fd36b", "cooldown": 18,
+    "desc": "Nouvelle compétence : soigne 35 % de ta vie et fait renaître le sol autour de toi.",
+    "heal": 0.35, "radius": 150, "damage": 0.5, "knockback": 110, "life": 0.8
+  }
+}

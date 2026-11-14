@@ -223,19 +223,18 @@ func _spawn_enemy() -> void:
 	enemies.append(e)
 
 
-func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, big: bool) -> void:
+func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, size := 1.0) -> void:
 	var p = Projectile.new()
 	p.main = self
 	p.position = pos
 	p.vel = vel
 	p.damage = damage
 	p.pierce = pierce
-	if big:
-		p.radius = 13.0
+	p.radius *= size
 	projectiles_layer.add_child(p)
 
 
-## Applique un coup du joueur : critique, poison, vol de vie, éclat d'aube.
+## Applique un coup du joueur : critique, poison, vol de vie, effets déclenchés par un critique.
 func player_hit_enemy(e, base: float, can_explode := true) -> void:
 	var s: Dictionary = Game.stats
 	var dmg := base
@@ -247,12 +246,8 @@ func player_hit_enemy(e, base: float, can_explode := true) -> void:
 		e.apply_poison(dmg * s["poison"], 3.0)
 	if s["lifesteal"] > 0.0:
 		player.heal(dmg * s["lifesteal"])
-	if crit and can_explode and Game.has_key("eclat"):
-		var r: float = 80.0 * s["area"]
-		fx.ring(e.position, 10.0, r, 0.3, Color("f2d06b"), 4.0)
-		for o in enemies:
-			if o != e and is_instance_valid(o) and not o.dead and o.position.distance_to(e.position) < r:
-				player_hit_enemy(o, base * 0.6, false)
+	if crit and can_explode:
+		Game.fire("crit", {"main": self, "enemy": e, "base": base})
 
 
 func damage_area(center: Vector2, radius: float, amount: float, knockback: float) -> void:
@@ -277,13 +272,7 @@ func on_enemy_killed(e) -> void:
 	if rng.randf() < 0.6:
 		flora.add_flower(e.position + Vector2(rng.randf_range(-14, 14), rng.randf_range(-14, 14)))
 	fx.ring(e.position, e.radius, e.radius * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
-	if Game.has_key("contagion") and e.poison_time > 0.0:
-		fx.ring(e.position, 10.0, 110.0, 0.4, Color("b48ae0"), 4.0)
-		for other in enemies:
-			if other != e and is_instance_valid(other) and not other.dead and other.position.distance_to(e.position) < 110.0:
-				other.apply_poison(e.poison_dps, 3.0)
-	if Game.has_key("pas_du_vent"):
-		player.dash_cd = maxf(0.0, player.dash_cd - 0.3)
+	Game.fire("kill", {"main": self, "enemy": e, "cible_empoisonnee": e.poison_time})
 
 
 func player_died() -> void:

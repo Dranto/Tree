@@ -1,0 +1,28 @@
+{
+  "id": "ronce",
+  "name": "Ronce",
+  "color": "#e0675e",
+  "blurb": "Dégâts bruts et épines",
+  "small": [
+    {"stat": "damage", "op": "inc", "value": 0.05},
+    {"stat": "thorns", "op": "add", "value": 3}
+  ],
+  "notable": {
+    "effects": [{"stat": "pierce", "op": "add", "value": 0.5}],
+    "names": [
+      ["Épine", "Ronceraie", "Dard", "Aiguillon", "Haie", "Griffe"],
+      ["vorace", "rouge", "acérée", "sauvage", "cruelle", "noueuse"]
+    ]
+  },
+  "keystones": [
+    {"key": "nova", "name": "Couronne d'épines", "effects": [{"skill": "nova"}]},
+    {"key": "ecorce_vive", "name": "Écorce vive", "effects": [
+      {"stat": "thorns", "op": "more", "value": 3},
+      {"stat": "thorns", "op": "flat", "value": 15}
+    ]},
+    {"key": "sanguinaire", "name": "Ronce sanguinaire", "effects": [
+      {"stat": "damage", "op": "more", "value": 1.4},
+      {"stat": "max_hp", "op": "more", "value": 0.8}
+    ]}
+  ]
+}

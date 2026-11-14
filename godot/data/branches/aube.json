@@ -1,0 +1,33 @@
+{
+  "id": "aube",
+  "name": "Aube",
+  "color": "#f2d06b",
+  "blurb": "Coups critiques",
+  "small": [
+    {"stat": "crit", "op": "add", "value": 0.012},
+    {"stat": "crit_mult", "op": "add", "value": 0.07}
+  ],
+  "notable": {
+    "effects": [{"stat": "damage", "op": "inc", "value": 0.08}],
+    "names": [
+      ["Rayon", "Éclat", "Aurore", "Lueur", "Zénith", "Prisme"],
+      ["doré", "aveuglant", "pâle", "ardent", "premier", "nacré"]
+    ]
+  },
+  "keystones": [
+    {"key": "eclat", "name": "Éclat d'aube", "effects": [
+      {
+        "on": "crit", "do": "explode", "radius": 80, "factor": 0.6, "color": "#f2d06b",
+        "text": "Les coups critiques explosent et touchent les ennemis proches."
+      }
+    ]},
+    {"key": "zenith", "name": "Zénith", "effects": [
+      {"stat": "crit", "op": "more", "value": 2}
+    ]},
+    {"key": "lumiere_lente", "name": "Lumière lente", "effects": [
+      {"stat": "projectile_size", "op": "more", "value": 2.1667},
+      {"stat": "damage", "op": "more", "value": 1.6},
+      {"stat": "fire_rate", "op": "more", "value": 0.8}
+    ]}
+  ]
+}

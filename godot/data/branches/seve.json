@@ -1,0 +1,30 @@
+{
+  "id": "seve",
+  "name": "Sève",
+  "color": "#7fd36b",
+  "blurb": "Vie, régénération, vol de vie",
+  "small": [
+    {"stat": "max_hp", "op": "add", "value": 10},
+    {"stat": "regen", "op": "add", "value": 0.35}
+  ],
+  "notable": {
+    "effects": [{"stat": "lifesteal", "op": "add", "value": 0.01}],
+    "names": [
+      ["Source", "Bourgeon", "Pousse", "Sève", "Rosée", "Floraison"],
+      ["tendre", "vive", "pure", "claire", "fraîche", "vernale"]
+    ]
+  },
+  "keystones": [
+    {"key": "bloom", "name": "Floraison", "effects": [{"skill": "bloom"}]},
+    {"key": "racine_de_vie", "name": "Racine de vie", "effects": [
+      {"stat": "lifesteal", "op": "add", "value": 0.03}
+    ]},
+    {"key": "immortel", "name": "Graine immortelle", "effects": [
+      {
+        "on": "lethal_hit", "cooldown": 60,
+        "do": "survive", "hp": 1, "invuln": 2, "label": "Graine immortelle !", "color": "#7fd36b",
+        "text": "Une fois par minute, un coup mortel te laisse à 1 point de vie."
+      }
+    ]}
+  ]
+}

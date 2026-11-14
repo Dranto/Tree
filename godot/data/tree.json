@@ -1,0 +1,10 @@
+{
+  "branches": ["ronce", "spore", "seve", "vent", "aube", "racine"],
+  "ring_scale": 0.06,
+  "notable_factor": 2.5,
+  "root": {
+    "name": "Graine de l'Arbre-Monde",
+    "desc": "Le cœur de l'arbre. Tout part d'ici.",
+    "effects": []
+  }
+}

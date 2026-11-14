@@ -1,0 +1,20 @@
+{
+  "damage": {"label": "Dégâts", "base": 12},
+  "fire_rate": {"label": "Vitesse d'attaque", "base": 2.2},
+  "projectiles": {"label": "Projectiles", "base": 1, "round": "floor"},
+  "projectile_size": {"label": "Taille des projectiles", "base": 1},
+  "pierce": {"label": "Perforation", "base": 0, "round": "floor"},
+  "crit": {"label": "Chance de critique", "base": 0.05, "percent": true, "max": 1},
+  "crit_mult": {"label": "Multiplicateur de critique", "base": 1.5, "percent": true},
+  "max_hp": {"label": "Vie maximale", "base": 100},
+  "regen": {"label": "Régénération /s", "base": 0.5},
+  "move_speed": {"label": "Vitesse de déplacement", "base": 230},
+  "armor_cap": {"label": "Plafond d'armure", "base": 0.75, "percent": true, "max": 0.85},
+  "armor": {"label": "Armure (réduction des dégâts)", "base": 0, "percent": true, "max": "armor_cap"},
+  "dash_cd": {"label": "Recharge de l'esquive", "base": 1.6, "inc_min": -0.6},
+  "pickup": {"label": "Rayon de collecte", "base": 90},
+  "poison": {"label": "Poison (dégâts du coup par seconde)", "base": 0, "percent": true},
+  "thorns": {"label": "Épines (dégâts renvoyés)", "base": 0},
+  "lifesteal": {"label": "Vol de vie", "base": 0, "percent": true},
+  "area": {"label": "Taille des zones", "base": 1}
+}
