@@ -16,6 +16,7 @@ const Orb = preload("res://scripts/orb.gd")
 const Hud = preload("res://scripts/hud.gd")
 const TreeUI = preload("res://scripts/tree_ui.gd")
 const PauseMenu = preload("res://scripts/pause_menu.gd")
+const SpatialGrid = preload("res://scripts/spatial_grid.gd")
 
 var world_half := WORLD_HALF
 var ground
@@ -28,6 +29,10 @@ var pause_menu
 var orbs_layer: Node2D
 var enemies_layer: Node2D
 var projectiles_layer: Node2D
+## Calque trié en profondeur (Y-sort) : arbres du décor, Flétris et joueur.
+var actors_layer: Node2D
+## Flétris rangés par cases, reconstruite à chaque pas de jeu (voir enemies_near).
+var grid = SpatialGrid.new()
 var enemies: Array = []
 var spawn_timer := 1.5
 var elapsed := 0.0
@@ -73,18 +78,28 @@ func _ready() -> void:
 
 	ground = Ground.new()
 	add_child(ground)
+	# Les arbres du décor, les Flétris et le joueur partagent un calque trié en profondeur :
+	# un personnage plus haut à l'écran qu'un arbre passe derrière lui.
+	actors_layer = Node2D.new()
+	actors_layer.y_sort_enabled = true
+	var trees_layer := Node2D.new()
+	trees_layer.y_sort_enabled = true
+	actors_layer.add_child(trees_layer)
 	flora = Flora.new()
 	flora.ground = ground
+	flora.trees_parent = trees_layer
 	add_child(flora)
 	orbs_layer = Node2D.new()
 	add_child(orbs_layer)
+	add_child(actors_layer)
 	enemies_layer = Node2D.new()
-	add_child(enemies_layer)
-	projectiles_layer = Node2D.new()
-	add_child(projectiles_layer)
+	enemies_layer.y_sort_enabled = true
+	actors_layer.add_child(enemies_layer)
 	player = Player.new()
 	player.main = self
-	add_child(player)
+	actors_layer.add_child(player)
+	projectiles_layer = Node2D.new()
+	add_child(projectiles_layer)
 	fx = Fx.new()
 	fx.main = self
 	add_child(fx)
@@ -136,6 +151,8 @@ func _ready() -> void:
 		Game.reset()
 	else:
 		hud.banner("Partie reprise : niveau %d" % Game.level)
+		player.reset_physics_interpolation()
+		cam.reset_smoothing()
 	Flow.continue_requested = false
 	Game.tree_changed.connect(request_autosave)
 
@@ -194,16 +211,28 @@ func _keys(action: String, list: Array) -> void:
 		InputMap.action_add_event(action, ev)
 
 
+## Mesure du banc de performance : une fois par image affichée.
 func _process(delta: float) -> void:
+	if benchmark:
+		_benchmark_frame(delta)
+
+
+## Logique de jeu à pas fixe (60 pas par seconde, quelle que soit la machine).
+## Le joueur, les Flétris, les graines, les essences et les nuages avancent aussi dans
+## leur _physics_process ; l'affichage est interpolé entre deux pas (project.godot).
+func _physics_process(delta: float) -> void:
 	elapsed += delta
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
 		save_game()
 	if autotest:
 		_autotest_step(delta)
-	if benchmark:
-		_benchmark_frame(delta)
 	enemies = enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
+	if benchmark:
+		player.invuln = maxf(player.invuln, 1.0)
+		while enemies.size() < BENCH_ENEMIES:
+			_spawn_enemy()
+	_rebuild_grid()
 	_separate()
 
 	spawn_timer -= delta
@@ -216,13 +245,33 @@ func _process(delta: float) -> void:
 				_spawn_enemy()
 
 
-## Évite que les Flétris s'empilent en un seul point.
+func _rebuild_grid() -> void:
+	grid.clear()
+	for i in enemies.size():
+		var e = enemies[i]
+		e.index = i
+		grid.insert(e, e.position)
+
+
+## Flétris vivants dont le corps touche le disque donné (centre, rayon), trouvés par la grille.
+## Avec touch_body = false, c'est leur centre qui doit être dans le disque.
+func enemies_near(center: Vector2, radius: float, touch_body := true) -> Array:
+	var out: Array = []
+	# Marge : les Flétris ont pu bouger depuis la reconstruction de la grille.
+	for e in grid.query(center, radius + Enemy.MAX_RADIUS + 8.0):
+		if is_instance_valid(e) and not e.dead:
+			var r: float = radius + (e.radius if touch_body else 0.0)
+			if e.position.distance_squared_to(center) < r * r:
+				out.append(e)
+	return out
+
+
+## Évite que les Flétris s'empilent en un seul point (voisins trouvés par la grille).
 func _separate() -> void:
-	var n := enemies.size()
-	for i in n:
-		var a = enemies[i]
-		for j in range(i + 1, n):
-			var b = enemies[j]
+	for a in enemies:
+		for b in grid.query(a.position, a.radius + Enemy.MAX_RADIUS):
+			if b.index <= a.index:
+				continue
 			var d: Vector2 = b.position - a.position
 			var min_d: float = a.radius + b.radius
 			var l2 := d.length_squared()
@@ -288,13 +337,13 @@ func player_hit_enemy(e, base: float, can_explode := true) -> void:
 
 
 func damage_area(center: Vector2, radius: float, amount: float, knockback: float) -> void:
-	for e in enemies:
-		if is_instance_valid(e) and not e.dead:
-			var d: Vector2 = e.position - center
-			if d.length() < radius + e.radius:
-				player_hit_enemy(e, amount)
-				if knockback > 0.0 and d.length() > 0.1:
-					e.position += d.normalized() * knockback
+	for e in enemies_near(center, radius):
+		if e.dead:
+			continue
+		var d: Vector2 = e.position - center
+		player_hit_enemy(e, amount)
+		if knockback > 0.0 and d.length() > 0.1:
+			e.position += d.normalized() * knockback
 
 
 func on_enemy_killed(e) -> void:
@@ -321,6 +370,7 @@ func player_died() -> void:
 		p.queue_free()
 	Game.xp = 0.0
 	player.respawn()
+	player.reset_physics_interpolation()
 	fx.text(player.position + Vector2(0, -60), "Tu t'es flétri… L'Arbre te fait renaître.", Color("f0e6b4"), 22, 3.0)
 
 
@@ -403,12 +453,9 @@ func _finish_autotest() -> void:
 
 # --- Banc de performance ---
 
-## Appelé à chaque image : garde 120 Flétris en jeu, rend le joueur invulnérable
-## (pas de mort qui viderait l'écran) et mesure le temps écoulé depuis l'image précédente.
+## Appelé à chaque image : mesure le temps écoulé depuis l'image précédente. À chaque pas de jeu,
+## _physics_process garde 120 Flétris en jeu et rend le joueur invulnérable (pas de mort qui viderait l'écran).
 func _benchmark_frame(delta: float) -> void:
-	player.invuln = maxf(player.invuln, 1.0)
-	while enemies.size() < BENCH_ENEMIES:
-		_spawn_enemy()
 	var now := Time.get_ticks_usec()
 	bench_clock += delta
 	if bench_clock > BENCH_WARMUP and bench_last_usec > 0:

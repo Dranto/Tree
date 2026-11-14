@@ -27,3 +27,8 @@ window/stretch/aspect="expand"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.05, 0.05, 0.05, 1)
+
+[physics]
+
+common/physics_ticks_per_second=60
+common/physics_interpolation=true
