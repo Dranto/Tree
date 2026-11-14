@@ -46,7 +46,8 @@ var autosave_pending := false
 func _ready() -> void:
 	Game.seed_rng(rng)
 	_setup_input()
-	autotest = "--autotest" in OS.get_cmdline_user_args()
+	# Un banc de test peut activer le robot avant d'ajouter la scène (pas de sauvegarde dans ce mode).
+	autotest = autotest or "--autotest" in OS.get_cmdline_user_args()
 	if autotest:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://autotest"))
 

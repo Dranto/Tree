@@ -47,11 +47,12 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(REFERENCE_DIR))
 
 	main = MainScene.instantiate()
-	add_child(main)
 	# Le robot du mode autotest joue à la place de la souris, sans ses captures ni sa fin de partie.
+	# Activé avant l'ajout à la scène : la partie ne lit ni n'écrit aucune sauvegarde.
 	main.autotest = true
 	main.autotest_shots = []
 	main.autotest_done = true
+	add_child(main)
 
 	match scenario:
 		"depart":
