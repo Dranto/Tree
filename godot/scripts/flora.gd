@@ -17,7 +17,7 @@ func _ready() -> void:
 		if p.length() < 180.0:
 			continue
 		trees.append({"pos": p, "size": rng.randf_range(0.8, 1.6), "seed": rng.randi()})
-	rng.randomize()
+	Game.seed_rng(rng, 1)
 	ground.painted.connect(queue_redraw)
 
 

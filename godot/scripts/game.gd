@@ -16,13 +16,27 @@ var xp: float = 0.0
 var kills: int = 0
 var stats: Dictionary = {}
 var keys: Dictionary = {}
+## Graine imposée par « -- --seed=N » pour rejouer une partie à l'identique (tests visuels), -1 sinon.
+var forced_seed := -1
 
 
 func _ready() -> void:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--seed="):
+			forced_seed = int(arg.get_slice("=", 1))
+			seed(forced_seed)
 	tree = SkillTree.new()
 	tree.build()
 	allocated[0] = true
 	recompute()
+
+
+## Initialise un générateur : graine imposée si elle existe (décalée de « salt »), sinon aléatoire.
+func seed_rng(rng: RandomNumberGenerator, salt := 0) -> void:
+	if forced_seed >= 0:
+		rng.seed = forced_seed + salt
+	else:
+		rng.randomize()
 
 
 func xp_to_next() -> float:

@@ -39,7 +39,7 @@ var autotest_done := false
 
 
 func _ready() -> void:
-	rng.randomize()
+	Game.seed_rng(rng)
 	_setup_input()
 	autotest = "--autotest" in OS.get_cmdline_user_args()
 	if autotest:
