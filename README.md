@@ -28,6 +28,15 @@ Outils de l'arbre (barre sous l'en-tête) :
 - **Annuler** (Ctrl+Z) : défait le dernier choix (nœud appris, oublié, ou modification du plan).
 - **Résumé** : statistiques finales, compétences, nœuds clés et nombre de nœuds par branche, plan compris.
 
+### Son et musique
+
+Rien n'est enregistré : tous les sons sont **calculés par le code** (`godot/scripts/synth.gd`, synthèse façon sfxr : oscillateurs, glissandos, bruit filtré, enveloppes) et écrits en `.wav` dans `godot/assets/sounds/` et `godot/assets/music/` par `tools/gen-sounds.sh`. Pas d'échantillon externe, donc aucune licence à créditer. Pour changer un son, modifier son réglage dans `synth.gd` (tableau `SOUNDS`), relancer `tools/gen-sounds.sh` et commiter les `.wav` (le test `sound_test.gd` échoue si les `.wav` ne correspondent plus au code).
+
+- **Bruitages** (`Sfx.play("nom", position)`, autoload `sfx.gd`) : tir, impact, critique, mort, nœud appris, niveau, esquive, dégâts reçus, nova, nuage, floraison, clics et survol des menus. Déjà prêts pour la suite, à brancher quand les compétences et le boss arriveront : `fouet`, `racines`, `haie`, `annonce` (attaque annoncée du boss), `coeur` (Cœur purifié). Au plus 3 sons identiques par 50 ms, hauteur variée de ±6 %, volume atténué avec la distance au joueur.
+- **Musique** (`Music.set_mood(vie)`, autoload `music.gd`) : deux couches de 12 s jouées ensemble en boucle, l'une sombre (accords mineurs, vent), l'autre lumineuse (accords majeurs, arpèges). Le jeu appelle `set_mood` à chaque pas avec la vie du sol sous le joueur ; le fondu entre couches dure environ 2 s.
+- **Options** : volume général, musique et effets (bus `Musique` et `Effets`, créés au démarrage).
+- **En test** : sans écran, dans le banc visuel (graine fixe) ou avec `-- --silent`, plus rien n'est joué.
+
 ### Sauvegarde
 
 Le jeu s'ouvre sur l'écran titre : **Continuer** reprend la partie sauvegardée, **Nouvelle partie** repart de zéro (la sauvegarde précédente est remplacée dès la première sauvegarde automatique, l'avant-dernière reste en `.bak`). La partie se sauvegarde toute seule : montée de niveau, nœud appris ou oublié, toutes les 60 s, en revenant au titre et en quittant.
@@ -43,6 +52,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --headless -s res://tests/save_test.gd -- --new-game` : teste la sauvegarde (aller-retour, nœuds disparus, formats anciens ou trop récents).
 - `tools/godot.sh --xvfb -s res://tests/tree_ui_test.gd` : vérifie la lisibilité de l'Arbre de vie à la résolution choisie (`--resolution 1280x720` avant `-s`) : aucun libellé hors de l'écran ni sur un autre, les six branches visibles à l'ouverture, infobulle dans l'écran. `-- --shots=DOSSIER` enregistre les captures.
 - `tools/godot.sh --xvfb -s res://tests/tree_bench.gd` : mesure le temps par image de l'écran de l'arbre (immobile, survol, déplacement et zoom).
+- `tools/godot.sh --headless -s res://tests/sound_test.gd` : teste le son (synthèse, boucle de musique, `.wav` à jour, limite de sons identiques, mélange selon la vie du sol, volumes).
 - `tools/godot.sh --headless -s res://tests/planner_test.gd` : teste les outils de l'arbre (plus court chemin, simulation sans effet de bord, annulation, recherche, plan sauvegardé et rechargé).
 - `tools/godot.sh --xvfb -s res://tests/planner_captures.gd` : enregistre une capture de chaque outil de l'arbre dans `godot/tests/visual/out/`.
 - `tools/godot.sh --headless -s res://tests/flow_test.gd` : teste le parcours des menus (Nouvelle partie, Retour au titre qui sauvegarde, Continuer qui reprend). Remplace la sauvegarde par défaut.
@@ -88,6 +98,7 @@ La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écr
   - `spatial_grid.gd` : grille spatiale des Flétris (collisions, séparation, zones de dégâts), via `main.enemies_near()`.
   - `ground.gd` + `shaders/ground.gdshader` : la carte de vie et le rendu du sol (bruit précalculé en texture, même rendu sur toutes les cartes graphiques).
   - `flora.gd`, `fx.gd`, `hud.gd`, `tree_ui.gd` : décor, effets et interface.
+  - `sfx.gd`, `music.gd`, `synth.gd` : le son (voir « Son et musique »).
   - `tree_planner.gd`, `tree_panels.gd` : outils de planification de l'arbre (logique pure, puis interface).
 - `godot/data/` : ce que font les nœuds (statistiques, branches, nœuds clés, compétences), en fichiers JSON. Le format est décrit dans [`godot/data/README.md`](godot/data/README.md).
 - `prototype-web/` : le premier prototype (jeu incrémental dans le navigateur), conservé pour référence.
