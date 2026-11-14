@@ -21,6 +21,6 @@ cd "$(dirname "$0")/../godot"
 # --xvfb : lance Godot dans un écran virtuel (rendu réel sans fenêtre, utile pour les captures).
 if [ "${1:-}" = "--xvfb" ]; then
   shift
-  exec xvfb-run -a -s "-screen 0 1600x900x24" "$BIN" "$@"
+  exec xvfb-run -a -s "-screen 0 3440x1440x24" "$BIN" "$@"
 fi
 exec "$BIN" "$@"

@@ -11,7 +11,9 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/godot/tests/visual/out"
 SEED=1234
-SCENARIOS=(depart combat)
+# Scénarios : « nom » ou « nom:LARGEURxHAUTEUR » (résolution de la fenêtre, 1600x900 par défaut).
+# Seul le premier est joué si TEST_ONLY est défini (ex. TEST_ONLY=galerie tools/visual-tests.sh).
+SCENARIOS=(depart combat galerie resolution:1280x720 resolution:1920x1080 resolution:2560x1440 resolution:3440x1440)
 
 EXTRA=()
 if [ "${1:-}" = "--update" ]; then
@@ -27,16 +29,25 @@ export LIBGL_ALWAYS_SOFTWARE=1
 # Importe le projet (ressources, cache de scripts) avant de lancer les scénarios.
 "$ROOT/tools/godot.sh" --headless --editor --quit >/dev/null 2>&1
 
+START=$SECONDS
 status=0
-for scenario in "${SCENARIOS[@]}"; do
-  echo "== Scénario $scenario"
+for entry in "${SCENARIOS[@]}"; do
+  scenario="${entry%%:*}"
+  res=1600x900
+  [[ "$entry" == *:* ]] && res="${entry#*:}"
+  [ -n "${TEST_ONLY:-}" ] && [ "$TEST_ONLY" != "$scenario" ] && continue
+  echo "== Scénario $scenario ($res)"
+  t0=$SECONDS
   # --fixed-fps : chaque image avance de 1/60 s quelle que soit la vitesse de la machine.
-  "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0 \
+  "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy --fixed-fps 60 --resolution "$res" --position 0,0 \
     res://tests/visual/runner.tscn -- --scenario="$scenario" --seed="$SEED" "${EXTRA[@]}" \
     2>&1 | grep -E "VISUEL|ERROR|SCRIPT ERROR" | sed 's/^/   /'
   code=${PIPESTATUS[0]}
   [ "$code" -ne 0 ] && status=1
+  echo "$scenario $res $((SECONDS - t0))" >> "$OUT/durees.txt"
 done
+TOTAL=$((SECONDS - START))
+echo "Durée totale : ${TOTAL} s"
 
 # Rapport HTML : une ligne par capture, avec la référence, la capture et les écarts.
 {
@@ -57,7 +68,38 @@ done
     fi
     echo "</div>"
   done < "$OUT/results.txt"
+  echo "<h2>Contrôles sans image (textes hors écran, libellés qui se recouvrent)</h2>"
+  if [ -s "$OUT/audit.txt" ]; then
+    echo "<table border=1 cellpadding=4><tr><th>Statut</th><th>Défaut</th></tr>"
+    while IFS='|' read -r st res screen kind rest; do
+      echo "<tr><td>$st</td><td>$res $screen : $kind $rest</td></tr>"
+    done < "$OUT/audit.txt"
+    echo "</table>"
+  else
+    echo "<p class=ok>Aucun défaut.</p>"
+  fi
+  echo "<p>Durée totale : ${TOTAL} s</p>"
 } > "$OUT/rapport.html" 2>/dev/null
+
+# Résumé Markdown (résumé du job GitHub Actions).
+{
+  echo "## Tests visuels"
+  echo
+  echo "| Capture | Résultat | Pixels différents |"
+  echo "| --- | --- | --- |"
+  while read -r name result ratio; do
+    echo "| $name | $result | $(awk -v r="$ratio" 'BEGIN{printf "%.3f %%", r*100}') |"
+  done < "$OUT/results.txt"
+  echo
+  echo "### Contrôles sans image"
+  if [ -s "$OUT/audit.txt" ]; then
+    while IFS='|' read -r st res screen kind msg; do echo "- **$st** ($res, $screen) $msg"; done < "$OUT/audit.txt"
+  else
+    echo "Aucun défaut."
+  fi
+  echo
+  echo "Durée totale : ${TOTAL} s"
+} > "$OUT/resume.md" 2>/dev/null
 
 echo
 if [ "${1:-}" = "--update" ]; then

@@ -14,6 +14,7 @@ Game="*res://scripts/game.gd"
 SaveGame="*res://scripts/save_game.gd"
 Settings="*res://scripts/settings.gd"
 Flow="*res://scripts/flow.gd"
+UiAudit="*res://scripts/ui_audit.gd"
 
 [display]
 

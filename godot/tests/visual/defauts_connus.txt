@@ -1,0 +1,30 @@
+# Défauts d'interface constatés sur la version actuelle (voir README, « Tests visuels »).
+# Format : résolution|écran|type|libellé. Retirer une ligne quand le défaut est corrigé.
+1600x900|arbre|hors-ecran|Ronce
+1600x900|arbre|coupe|Spore
+1600x900|arbre|hors-ecran|Sève
+1600x900|arbre|hors-ecran|Vent
+1600x900|arbre|coupe|Aube
+1600x900|arbre|hors-ecran|Racine
+1280x720|arbre|hors-ecran|Ronce
+1280x720|arbre|coupe|Spore
+1280x720|arbre|hors-ecran|Sève
+1280x720|arbre|hors-ecran|Vent
+1280x720|arbre|coupe|Aube
+1280x720|arbre|hors-ecran|Racine
+1920x1080|arbre|hors-ecran|Ronce
+1920x1080|arbre|coupe|Spore
+1920x1080|arbre|hors-ecran|Sève
+1920x1080|arbre|hors-ecran|Vent
+1920x1080|arbre|coupe|Aube
+1920x1080|arbre|hors-ecran|Racine
+2560x1440|arbre|hors-ecran|Ronce
+2560x1440|arbre|coupe|Spore
+2560x1440|arbre|hors-ecran|Sève
+2560x1440|arbre|hors-ecran|Vent
+2560x1440|arbre|coupe|Aube
+2560x1440|arbre|hors-ecran|Racine
+3440x1440|arbre|hors-ecran|Ronce
+3440x1440|arbre|hors-ecran|Sève
+3440x1440|arbre|hors-ecran|Vent
+3440x1440|arbre|hors-ecran|Racine
