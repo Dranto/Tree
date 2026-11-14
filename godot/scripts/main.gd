@@ -43,6 +43,16 @@ const AUTOSAVE_EVERY := 60.0
 var autosave_enabled := true
 var autosave_timer := AUTOSAVE_EVERY
 var autosave_pending := false
+## Banc de performance (« -- --benchmark ») : le robot joue face à 120 Flétris pendant
+## BENCH_TIME secondes (après BENCH_WARMUP de mise en route), puis le temps par image s'affiche.
+const BENCH_ENEMIES := 120
+const BENCH_WARMUP := 3.0
+const BENCH_TIME := 30.0
+var benchmark := false
+var bench_clock := 0.0
+var bench_last_usec := 0
+var bench_frames: PackedFloat32Array = PackedFloat32Array()
+var bench_cpu := {"process": 0.0, "physics": 0.0, "samples": 0}
 
 
 func _ready() -> void:
@@ -50,6 +60,14 @@ func _ready() -> void:
 	_setup_input()
 	# Un banc de test peut activer le robot avant d'ajouter la scène (pas de sauvegarde dans ce mode).
 	autotest = autotest or "--autotest" in OS.get_cmdline_user_args()
+	benchmark = "--benchmark" in OS.get_cmdline_user_args()
+	if benchmark:
+		# Le robot joue, sans captures ni fin de partie, et rien n'est sauvegardé.
+		autotest = true
+		autotest_shots = []
+		autotest_done = true
+		if Game.forced_seed < 0:
+			rng.seed = 1
 	if autotest:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://autotest"))
 
@@ -183,6 +201,8 @@ func _process(delta: float) -> void:
 		save_game()
 	if autotest:
 		_autotest_step(delta)
+	if benchmark:
+		_benchmark_frame(delta)
 	enemies = enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
 	_separate()
 
@@ -378,4 +398,43 @@ func _finish_autotest() -> void:
 	await get_tree().create_timer(0.5).timeout
 	await _capture("tree")
 	print("AUTOTEST fini : tués=%d" % Game.kills)
+	get_tree().quit()
+
+
+# --- Banc de performance ---
+
+## Appelé à chaque image : garde 120 Flétris en jeu, rend le joueur invulnérable
+## (pas de mort qui viderait l'écran) et mesure le temps écoulé depuis l'image précédente.
+func _benchmark_frame(delta: float) -> void:
+	player.invuln = maxf(player.invuln, 1.0)
+	while enemies.size() < BENCH_ENEMIES:
+		_spawn_enemy()
+	var now := Time.get_ticks_usec()
+	bench_clock += delta
+	if bench_clock > BENCH_WARMUP and bench_last_usec > 0:
+		bench_frames.append((now - bench_last_usec) / 1000.0)
+		bench_cpu["process"] += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+		bench_cpu["physics"] += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+		bench_cpu["samples"] += 1
+	bench_last_usec = now
+	if bench_clock >= BENCH_WARMUP + BENCH_TIME:
+		_finish_benchmark()
+
+
+func _finish_benchmark() -> void:
+	benchmark = false
+	var sorted := bench_frames.duplicate()
+	sorted.sort()
+	var n := sorted.size()
+	var total := 0.0
+	for v in sorted:
+		total += v
+	var avg := total / maxf(1.0, n)
+	var p99: float = sorted[mini(n - 1, int(n * 0.99))] if n > 0 else 0.0
+	var worst: float = sorted[n - 1] if n > 0 else 0.0
+	var k: float = maxf(1.0, bench_cpu["samples"])
+	print("BENCHMARK %d Flétris, %.0f s, %d images" % [BENCH_ENEMIES, BENCH_TIME, n])
+	print("BENCHMARK temps par image : moyen %.2f ms (%.1f images/s), 99e centile %.2f ms, pire %.2f ms" % [avg, 1000.0 / maxf(avg, 0.001), p99, worst])
+	print("BENCHMARK scripts par image : _process %.2f ms, _physics_process %.2f ms" % [bench_cpu["process"] / k, bench_cpu["physics"] / k])
+	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
 	get_tree().quit()
