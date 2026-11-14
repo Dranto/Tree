@@ -4,6 +4,9 @@ extends Control
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const OptionsPanel = preload("res://scripts/options_panel.gd")
 
+## Position horizontale (part de la largeur) de la colonne du titre et des boutons.
+const MENU_X := 0.08
+
 var menu: VBoxContainer
 var continue_button: Button
 var new_button: Button
@@ -18,14 +21,13 @@ var menutest := false
 
 
 func _ready() -> void:
-	font = ThemeDB.fallback_font
+	font = UiTheme.font(true)
 	if Flow.skip_title:
 		Flow.new_game.call_deferred()
 		set_process(false)
 		return
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = UiTheme.make()
-	font = ThemeDB.fallback_font
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
 	for i in 70:
@@ -33,10 +35,13 @@ func _ready() -> void:
 
 	menu = VBoxContainer.new()
 	menu.add_theme_constant_override("separation", 14)
-	menu.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	menu.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	# Colonne de gauche (8 % de la largeur), centrée sous le titre : l'arbre décoratif occupe la droite.
+	menu.anchor_left = MENU_X
+	menu.anchor_right = MENU_X
+	menu.anchor_top = 0.6
+	menu.anchor_bottom = 0.6
+	menu.grow_horizontal = Control.GROW_DIRECTION_END
 	menu.grow_vertical = Control.GROW_DIRECTION_BOTH
-	menu.position.y += 90
 	add_child(menu)
 	continue_button = UiTheme.button("Continuer")
 	continue_button.pressed.connect(Flow.continue_game)
@@ -101,19 +106,25 @@ func _draw() -> void:
 		var c := Color("0b1410").lerp(Color("1d2f22"), k)
 		draw_rect(Rect2(0, h * k, w, h / steps + 1.0), c)
 	# Arbre de vie stylisé : branches qui se divisent, nœuds lumineux.
-	var base := Vector2(w * 0.5, h * 0.93)
-	_branch(base, -PI / 2.0, 100.0, 7, 0)
+	var base := Vector2(maxf(w * 0.72, w - h * 0.55), h * 0.95)
+	_branch(base, -PI / 2.0, h * 0.11, 7, 0)
 	# Spores qui montent.
 	for m in motes:
 		var y := fmod(m["y"] - t * m["s"] + 10.0, 1.0)
 		var x: float = m["x"] + sin(t * 0.5 + m["p"]) * 0.015
 		var a := 0.25 + 0.2 * sin(t * 1.3 + m["p"])
 		draw_circle(Vector2(x * w, y * h), m["r"], Color(0.5, 0.85, 0.45, a))
-	# Titre.
+	# Titre, aligné à gauche sur la colonne des boutons.
+	var x := w * MENU_X
 	var glow := 0.75 + 0.25 * sin(t * 1.2)
-	draw_string(font, Vector2(0, h * 0.16 + 3), "SÈVE", HORIZONTAL_ALIGNMENT_CENTER, w, 96, Color(0, 0, 0, 0.5))
-	draw_string(font, Vector2(0, h * 0.16), "SÈVE", HORIZONTAL_ALIGNMENT_CENTER, w, 96, UiTheme.INK.lerp(UiTheme.LEAF, 1.0 - glow))
-	draw_string(font, Vector2(0, h * 0.16 + 40), "Un monde désolé reprend vie au rythme de ton arbre", HORIZONTAL_ALIGNMENT_CENTER, w, 20, Color(0.75, 0.85, 0.75, 0.8))
+	var title_size := clampi(roundi(h * 0.105), 48, 140)
+	var ty := h * 0.2
+	draw_string(font, Vector2(x, ty + 3), "SÈVE", HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, Color(0, 0, 0, 0.5))
+	draw_string(font, Vector2(x, ty), "SÈVE", HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, UiTheme.INK.lerp(UiTheme.LEAF, 1.0 - glow))
+	var sub_font := UiTheme.font()
+	var sub_col := Color(0.75, 0.85, 0.75, 0.8)
+	draw_string(sub_font, Vector2(x, ty + 40), "Un monde désolé reprend vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, sub_col)
+	draw_string(sub_font, Vector2(x, ty + 66), "au rythme de ton arbre", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, sub_col)
 
 
 func _branch(p: Vector2, ang: float, length: float, depth: int, seed_i: int) -> void:
