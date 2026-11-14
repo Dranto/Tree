@@ -21,6 +21,10 @@ class MainStub:
 	var player := PlayerStub.new()
 	var enemies: Array = []
 
+	## La galerie fige la logique ; ces réponses neutres évitent toute erreur si elle tourne quand même.
+	func enemies_near(_center: Vector2, _radius: float, _touch_body := true) -> Array:
+		return []
+
 
 func _ready() -> void:
 	var stub := MainStub.new()
@@ -41,11 +45,13 @@ func _ready() -> void:
 			e.position = Vector2(300 + s * 330, 160 + k * 130)
 			add_child(e)
 			e.set_process(false)
+			e.set_physics_process(false)
 
 	var fx = FxScript.new()
 	fx.main = stub
 	add_child(fx)
 	fx.set_process(false)
+	fx.set_physics_process(false)
 	for i in 3:
 		fx.ring(Vector2(250 + i * 200, 640), 20.0, 90.0, 1.0, Color("f2d06b"), 4.0)
 		fx.rings[-1]["t"] = 0.15 + 0.3 * i
