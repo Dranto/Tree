@@ -31,9 +31,15 @@ func _ready() -> void:
 	Game.stats_changed.connect(func(): hp = minf(hp, Game.stats["max_hp"]))
 
 
+## Animation seulement (halo, clignotement) : suit la fréquence d'affichage.
 func _process(delta: float) -> void:
-	var s: Dictionary = Game.stats
 	t += delta
+	queue_redraw()
+
+
+## Logique à pas fixe : déplacement, tir, esquive et compétences.
+func _physics_process(delta: float) -> void:
+	var s: Dictionary = Game.stats
 	fire_cd -= delta
 	dash_cd -= delta
 	invuln -= delta
@@ -96,8 +102,6 @@ func _process(delta: float) -> void:
 		_cast_cloud(s)
 	if Game.has_key("bloom") and want["bloom"] and cds["bloom"] <= 0.0:
 		_cast_bloom(s)
-
-	queue_redraw()
 
 
 func current_damage() -> float:

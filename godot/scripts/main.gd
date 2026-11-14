@@ -16,6 +16,7 @@ const Orb = preload("res://scripts/orb.gd")
 const Hud = preload("res://scripts/hud.gd")
 const TreeUI = preload("res://scripts/tree_ui.gd")
 const PauseMenu = preload("res://scripts/pause_menu.gd")
+const SpatialGrid = preload("res://scripts/spatial_grid.gd")
 
 var world_half := WORLD_HALF
 var ground
@@ -28,6 +29,10 @@ var pause_menu
 var orbs_layer: Node2D
 var enemies_layer: Node2D
 var projectiles_layer: Node2D
+## Calque trié en profondeur (Y-sort) : arbres du décor, Flétris et joueur.
+var actors_layer: Node2D
+## Flétris rangés par cases, reconstruite à chaque pas de jeu (voir enemies_near).
+var grid = SpatialGrid.new()
 var enemies: Array = []
 var spawn_timer := 1.5
 var elapsed := 0.0
@@ -43,6 +48,16 @@ const AUTOSAVE_EVERY := 60.0
 var autosave_enabled := true
 var autosave_timer := AUTOSAVE_EVERY
 var autosave_pending := false
+## Banc de performance (« -- --benchmark ») : le robot joue face à 120 Flétris pendant
+## BENCH_TIME secondes (après BENCH_WARMUP de mise en route), puis le temps par image s'affiche.
+const BENCH_ENEMIES := 120
+const BENCH_WARMUP := 3.0
+const BENCH_TIME := 30.0
+var benchmark := false
+var bench_clock := 0.0
+var bench_last_usec := 0
+var bench_frames: PackedFloat32Array = PackedFloat32Array()
+var bench_cpu := {"process": 0.0, "physics": 0.0, "samples": 0}
 
 
 func _ready() -> void:
@@ -50,23 +65,41 @@ func _ready() -> void:
 	_setup_input()
 	# Un banc de test peut activer le robot avant d'ajouter la scène (pas de sauvegarde dans ce mode).
 	autotest = autotest or "--autotest" in OS.get_cmdline_user_args()
+	benchmark = "--benchmark" in OS.get_cmdline_user_args()
+	if benchmark:
+		# Le robot joue, sans captures ni fin de partie, et rien n'est sauvegardé.
+		autotest = true
+		autotest_shots = []
+		autotest_done = true
+		if Game.forced_seed < 0:
+			rng.seed = 1
 	if autotest:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://autotest"))
 
 	ground = Ground.new()
 	add_child(ground)
+	# Les arbres du décor, les Flétris et le joueur partagent un calque trié en profondeur :
+	# un personnage plus haut à l'écran qu'un arbre passe derrière lui.
+	actors_layer = Node2D.new()
+	actors_layer.y_sort_enabled = true
+	var trees_layer := Node2D.new()
+	trees_layer.y_sort_enabled = true
+	actors_layer.add_child(trees_layer)
 	flora = Flora.new()
 	flora.ground = ground
+	flora.trees_parent = trees_layer
 	add_child(flora)
 	orbs_layer = Node2D.new()
 	add_child(orbs_layer)
+	add_child(actors_layer)
 	enemies_layer = Node2D.new()
-	add_child(enemies_layer)
-	projectiles_layer = Node2D.new()
-	add_child(projectiles_layer)
+	enemies_layer.y_sort_enabled = true
+	actors_layer.add_child(enemies_layer)
 	player = Player.new()
 	player.main = self
-	add_child(player)
+	actors_layer.add_child(player)
+	projectiles_layer = Node2D.new()
+	add_child(projectiles_layer)
 	fx = Fx.new()
 	fx.main = self
 	add_child(fx)
@@ -118,6 +151,8 @@ func _ready() -> void:
 		Game.reset()
 	else:
 		hud.banner("Partie reprise : niveau %d" % Game.level)
+		player.reset_physics_interpolation()
+		cam.reset_smoothing()
 	Flow.continue_requested = false
 	Game.tree_changed.connect(request_autosave)
 
@@ -176,7 +211,16 @@ func _keys(action: String, list: Array) -> void:
 		InputMap.action_add_event(action, ev)
 
 
+## Mesure du banc de performance : une fois par image affichée.
 func _process(delta: float) -> void:
+	if benchmark:
+		_benchmark_frame(delta)
+
+
+## Logique de jeu à pas fixe (60 pas par seconde, quelle que soit la machine).
+## Le joueur, les Flétris, les graines, les essences et les nuages avancent aussi dans
+## leur _physics_process ; l'affichage est interpolé entre deux pas (project.godot).
+func _physics_process(delta: float) -> void:
 	elapsed += delta
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
@@ -184,6 +228,11 @@ func _process(delta: float) -> void:
 	if autotest:
 		_autotest_step(delta)
 	enemies = enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
+	if benchmark:
+		player.invuln = maxf(player.invuln, 1.0)
+		while enemies.size() < BENCH_ENEMIES:
+			_spawn_enemy()
+	_rebuild_grid()
 	_separate()
 
 	spawn_timer -= delta
@@ -196,13 +245,33 @@ func _process(delta: float) -> void:
 				_spawn_enemy()
 
 
-## Évite que les Flétris s'empilent en un seul point.
+func _rebuild_grid() -> void:
+	grid.clear()
+	for i in enemies.size():
+		var e = enemies[i]
+		e.index = i
+		grid.insert(e, e.position)
+
+
+## Flétris vivants dont le corps touche le disque donné (centre, rayon), trouvés par la grille.
+## Avec touch_body = false, c'est leur centre qui doit être dans le disque.
+func enemies_near(center: Vector2, radius: float, touch_body := true) -> Array:
+	var out: Array = []
+	# Marge : les Flétris ont pu bouger depuis la reconstruction de la grille.
+	for e in grid.query(center, radius + Enemy.MAX_RADIUS + 8.0):
+		if is_instance_valid(e) and not e.dead:
+			var r: float = radius + (e.radius if touch_body else 0.0)
+			if e.position.distance_squared_to(center) < r * r:
+				out.append(e)
+	return out
+
+
+## Évite que les Flétris s'empilent en un seul point (voisins trouvés par la grille).
 func _separate() -> void:
-	var n := enemies.size()
-	for i in n:
-		var a = enemies[i]
-		for j in range(i + 1, n):
-			var b = enemies[j]
+	for a in enemies:
+		for b in grid.query(a.position, a.radius + Enemy.MAX_RADIUS):
+			if b.index <= a.index:
+				continue
 			var d: Vector2 = b.position - a.position
 			var min_d: float = a.radius + b.radius
 			var l2 := d.length_squared()
@@ -268,13 +337,13 @@ func player_hit_enemy(e, base: float, can_explode := true) -> void:
 
 
 func damage_area(center: Vector2, radius: float, amount: float, knockback: float) -> void:
-	for e in enemies:
-		if is_instance_valid(e) and not e.dead:
-			var d: Vector2 = e.position - center
-			if d.length() < radius + e.radius:
-				player_hit_enemy(e, amount)
-				if knockback > 0.0 and d.length() > 0.1:
-					e.position += d.normalized() * knockback
+	for e in enemies_near(center, radius):
+		if e.dead:
+			continue
+		var d: Vector2 = e.position - center
+		player_hit_enemy(e, amount)
+		if knockback > 0.0 and d.length() > 0.1:
+			e.position += d.normalized() * knockback
 
 
 func on_enemy_killed(e) -> void:
@@ -301,6 +370,7 @@ func player_died() -> void:
 		p.queue_free()
 	Game.xp = 0.0
 	player.respawn()
+	player.reset_physics_interpolation()
 	fx.text(player.position + Vector2(0, -60), "Tu t'es flétri… L'Arbre te fait renaître.", Color("f0e6b4"), 22, 3.0)
 
 
@@ -378,4 +448,40 @@ func _finish_autotest() -> void:
 	await get_tree().create_timer(0.5).timeout
 	await _capture("tree")
 	print("AUTOTEST fini : tués=%d" % Game.kills)
+	get_tree().quit()
+
+
+# --- Banc de performance ---
+
+## Appelé à chaque image : mesure le temps écoulé depuis l'image précédente. À chaque pas de jeu,
+## _physics_process garde 120 Flétris en jeu et rend le joueur invulnérable (pas de mort qui viderait l'écran).
+func _benchmark_frame(delta: float) -> void:
+	var now := Time.get_ticks_usec()
+	bench_clock += delta
+	if bench_clock > BENCH_WARMUP and bench_last_usec > 0:
+		bench_frames.append((now - bench_last_usec) / 1000.0)
+		bench_cpu["process"] += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+		bench_cpu["physics"] += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+		bench_cpu["samples"] += 1
+	bench_last_usec = now
+	if bench_clock >= BENCH_WARMUP + BENCH_TIME:
+		_finish_benchmark()
+
+
+func _finish_benchmark() -> void:
+	benchmark = false
+	var sorted := bench_frames.duplicate()
+	sorted.sort()
+	var n := sorted.size()
+	var total := 0.0
+	for v in sorted:
+		total += v
+	var avg := total / maxf(1.0, n)
+	var p99: float = sorted[mini(n - 1, int(n * 0.99))] if n > 0 else 0.0
+	var worst: float = sorted[n - 1] if n > 0 else 0.0
+	var k: float = maxf(1.0, bench_cpu["samples"])
+	print("BENCHMARK %d Flétris, %.0f s, %d images" % [BENCH_ENEMIES, BENCH_TIME, n])
+	print("BENCHMARK temps par image : moyen %.2f ms (%.1f images/s), 99e centile %.2f ms, pire %.2f ms" % [avg, 1000.0 / maxf(avg, 0.001), p99, worst])
+	print("BENCHMARK scripts par image : _process %.2f ms, _physics_process %.2f ms" % [bench_cpu["process"] / k, bench_cpu["physics"] / k])
+	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
 	get_tree().quit()
