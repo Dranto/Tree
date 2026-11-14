@@ -29,6 +29,24 @@ Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se dé
 
 La règle dans `.claude/settings.json` autorise ce script pour les sessions Claude.
 
+### Tests visuels
+
+`tools/visual-tests.sh` rejoue deux parties à l'identique (graine fixe, pas de temps fixe, rendu logiciel) et compare six captures du jeu et de l'Arbre de vie aux images de référence de `godot/tests/visual/reference/` :
+
+| Capture | Ce qu'elle montre |
+| --- | --- |
+| `jeu_depart` | le jeu après 1 s : oasis de départ, joueur, interface |
+| `jeu_combat` | le jeu après 30 s de partie jouée par le robot : Flétris, sol ravivé, fleurs |
+| `arbre_depart` | l'arbre ouvert en début de partie |
+| `arbre_survol` | l'infobulle d'un nœud survolé |
+| `arbre_ensemble` | l'arbre entier dézoomé |
+| `arbre_progression` | l'arbre après 30 s, avec des nœuds appris |
+
+- `tools/visual-tests.sh` : compare. Échoue si plus de 0,05 % des pixels d'une capture ont changé. Les captures, les écarts en rouge (`*.diff.png`) et `rapport.html` sont dans `godot/tests/visual/out/`.
+- `tools/visual-tests.sh --update` : remplace les références après un changement graphique voulu. Vérifier les nouvelles images, puis les committer avec le changement.
+
+La CI (GitHub Actions, workflow « Tests visuels ») lance la comparaison sur chaque pull request et publie les captures et le rapport en artefact. Les scénarios sont dans `godot/tests/visual/runner.gd`.
+
 ## Ce que contient le prototype
 
 - **Arbre de vie** : 6 branches (Ronce, Spore, Sève, Vent, Aube, Racine), environ 600 nœuds, des nœuds notables et 18 nœuds clés qui changent les règles ou donnent des compétences (Couronne d'épines, Nuage de spores, Floraison).

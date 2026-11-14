@@ -2,3 +2,4 @@
 *.import
 export/
 autotest/
+tests/visual/out/

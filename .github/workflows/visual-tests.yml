@@ -1,0 +1,40 @@
+# Tests visuels : rejoue des parties à l'identique et compare les captures du jeu
+# et de l'arbre aux références (godot/tests/visual/reference/).
+# En cas d'échec, l'artefact « tests-visuels » contient les captures, les écarts et rapport.html.
+name: Tests visuels
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, "claude/project-thread-9liy48"]
+  workflow_dispatch:
+
+jobs:
+  visual:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer l'écran virtuel et le rendu logiciel
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1
+
+      - name: Cache de Godot
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/godot
+          key: godot-4.3-stable
+
+      - name: Comparer les captures
+        run: tools/visual-tests.sh
+
+      - name: Publier les captures et le rapport
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-visuels
+          path: |
+            godot/tests/visual/out/
+            godot/tests/visual/reference/
+          if-no-files-found: ignore
