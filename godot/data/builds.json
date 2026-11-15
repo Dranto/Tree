@@ -1,7 +1,8 @@
 {
-  "_doc": "Builds types joués par le robot d'équilibrage (« -- --autotest=build:<nom> »). « targets » : nœuds visés dans l'ordre (identifiants stables) ; le robot apprend le plus court chemin vers chacun. « choices » : choix des maîtrises et mutations. Un nœud absent de l'arbre est ignoré.",
+  "_doc": "Builds types joués par le robot d'équilibrage (« -- --autotest=build:<nom> »). « targets » : nœuds visés dans l'ordre (identifiants stables) ; le robot apprend le plus court chemin vers chacun. « choices » : choix des maîtrises et mutations. « opening » (facultatif) : nœuds pris d'abord en partie complète (« --autotest=run:<nom> », depuis le niveau 1), le temps que le build ait de quoi se battre. Un nœud absent de l'arbre est ignoré.",
   "epines": {
     "name": "Épines",
+    "opening": ["c:ronce:epines:e3", "key:nova"],
     "targets": [
       "c:ronce:souche:o1",
       "c:ronce:souche:o3",

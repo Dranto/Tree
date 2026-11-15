@@ -1,0 +1,63 @@
+{
+  "_doc": "Difficulté (scripts/difficulty.gd). La menace d'un ennemi suit le niveau du joueur, la profondeur de l'endroit où il naît dans la région (0 au bord, 1 au fond) et les Cœurs purifiés, jamais le temps passé. Vie, dégâts, vitesse et expérience d'un ennemi sont multipliés par 1 + facteur × (menace − 1) ; les dégâts ont en plus un multiplicateur général (« damage_mult »). La courbe d'expérience vise une durée par niveau à peu près constante (« target_* », en minutes, vérifiée par tools/balance.sh --run). Les apparitions sont calmes près de la graine et denses au fond du roncier. Les modes multiplient la vie et les dégâts des ennemis (et de la Mère-Ronce).",
+  "threat": {
+    "base": 1.0,
+    "per_level": 0.1,
+    "depth": 0.4,
+    "per_heart": 0.25,
+    "max": 6.0
+  },
+  "scaling": {
+    "hp": 1.0,
+    "damage": 0.3,
+    "speed": 0.04,
+    "xp": 1.0,
+    "damage_mult": 0.45
+  },
+  "xp": {
+    "base": 100,
+    "per_level": 80,
+    "quad": 3.5,
+    "target_start": 1.0,
+    "target_per_level": 0.25,
+    "target_max": 2.5
+  },
+  "spawn": {
+    "interval_base": 1.3,
+    "interval_per_level": 0.02,
+    "interval_min": 0.6,
+    "depth_speedup": 0.6,
+    "cap": {
+      "near": 16,
+      "far": 40,
+      "per_level": 0.8,
+      "max": 90
+    },
+    "burst": {
+      "near": 1,
+      "far": 2.5,
+      "per_level": 0.04,
+      "max": 5
+    }
+  },
+  "modes": {
+    "facile": {
+      "name": "Facile",
+      "hp": 0.7,
+      "damage": 0.6,
+      "text": "Ennemis moins résistants (vie −30 %) et moins dangereux (dégâts −40 %)."
+    },
+    "normal": {
+      "name": "Normal",
+      "hp": 1.0,
+      "damage": 1.0,
+      "text": "La difficulté prévue."
+    },
+    "difficile": {
+      "name": "Difficile",
+      "hp": 1.35,
+      "damage": 1.4,
+      "text": "Ennemis plus résistants (vie +35 %) et plus dangereux (dégâts +40 %)."
+    }
+  }
+}

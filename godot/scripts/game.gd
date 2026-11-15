@@ -9,6 +9,7 @@ signal node_allocated(node: Dictionary)
 const SkillTree = preload("res://scripts/skill_tree.gd")
 const Content = preload("res://scripts/content.gd")
 const Effects = preload("res://scripts/effects.gd")
+const Difficulty = preload("res://scripts/difficulty.gd")
 
 var tree = null
 var allocated: Dictionary = {}
@@ -109,8 +110,10 @@ func seed_rng(rng: RandomNumberGenerator, salt := 0) -> void:
 		rng.randomize()
 
 
+## Expérience pour passer au niveau suivant (courbe dans res://data/difficulty.json, réglée pour
+## qu'un niveau prenne à peu près le même temps tout au long de la partie).
 func xp_to_next() -> float:
-	return 10.0 * pow(float(level), 1.5)
+	return Difficulty.xp_to_next(level)
 
 
 func add_xp(v: float) -> void:

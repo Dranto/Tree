@@ -21,6 +21,10 @@ const SLOT_DEFAULTS := [KEY_Q, KEY_E, KEY_R, KEY_NONE, KEY_NONE, KEY_NONE]
 var slot_keys: Array = SLOT_DEFAULTS.duplicate()
 ## Secousse d'écran, de 0 (aucune) à 1 (pleine).
 var shake := 0.6
+## Difficulté : « facile », « normal » (par défaut) ou « difficile ». Multiplie la vie et les
+## dégâts des ennemis (réglages dans res://data/difficulty.json, section « modes »).
+const DIFFICULTIES := ["facile", "normal", "difficile"]
+var difficulty := "normal"
 ## Réduit les effets de jeu : plus de secousse ni de micro-pause, très peu de particules, ambiance coupée.
 var reduce_effects := false
 
@@ -44,6 +48,8 @@ func load_settings() -> void:
 		slot_keys[i] = int(cfg.get_value("controls", "slot_%d" % (i + 1), slot_keys[i]))
 	shake = clampf(float(cfg.get_value("gameplay", "shake", shake)), 0.0, 1.0)
 	reduce_effects = bool(cfg.get_value("gameplay", "reduce_effects", reduce_effects))
+	var diff := str(cfg.get_value("gameplay", "difficulty", difficulty))
+	difficulty = diff if diff in DIFFICULTIES else "normal"
 
 
 func save_settings() -> void:
@@ -57,6 +63,7 @@ func save_settings() -> void:
 		cfg.set_value("controls", "slot_%d" % (i + 1), slot_keys[i])
 	cfg.set_value("gameplay", "shake", shake)
 	cfg.set_value("gameplay", "reduce_effects", reduce_effects)
+	cfg.set_value("gameplay", "difficulty", difficulty)
 	cfg.save(PATH)
 
 
@@ -160,6 +167,12 @@ func set_shake(v: float) -> void:
 
 func set_reduce_effects(on: bool) -> void:
 	reduce_effects = on
+	changed.emit()
+
+
+## Change la difficulté : vaut pour les ennemis qui naissent ensuite.
+func set_difficulty(id: String) -> void:
+	difficulty = id if id in DIFFICULTIES else "normal"
 	changed.emit()
 
 

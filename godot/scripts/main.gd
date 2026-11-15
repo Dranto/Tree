@@ -23,6 +23,8 @@ const Heart = preload("res://scripts/heart.gd")
 const BossArena = preload("res://scripts/boss_arena.gd")
 const Regions = preload("res://scripts/regions.gd")
 const Content = preload("res://scripts/content.gd")
+## Menace des ennemis, apparitions et choix de difficulté : res://data/difficulty.json.
+const Difficulty = preload("res://scripts/difficulty.gd")
 
 ## Apparitions par région (sortes du roncier, part selon la distance) : res://data/enemies.json.
 var region_spawn: Dictionary = Content._load("enemies").get("spawn", {})
@@ -291,14 +293,16 @@ func _physics_process(delta: float) -> void:
 	_push_out_of_bushes()
 	_watch_region_state()
 
-	spawn_timer -= delta * (1.0 + 0.6 * _region_depth(player.position))
+	# Apparitions : plus nombreuses et plus serrées au fond du roncier, calmes près de la graine.
+	# Elles suivent le niveau et la zone, jamais le temps passé (data/difficulty.json).
+	var depth := _region_depth(player.position)
+	spawn_timer -= delta * Difficulty.spawn_speedup(depth)
 	if spawn_paused:
 		spawn_timer = maxf(spawn_timer, 0.5)
-	var cap := mini(120, 16 + Game.level * 5)
+	var cap := Difficulty.spawn_cap(Game.level, depth)
 	if spawn_timer <= 0.0:
-		spawn_timer = maxf(0.22, 1.3 - Game.level * 0.05 - elapsed / 600.0)
-		var burst := 1 + int(Game.level / 4.0)
-		for i in burst:
+		spawn_timer = Difficulty.spawn_interval(Game.level)
+		for i in Difficulty.spawn_burst(Game.level, depth):
 			if enemies.size() < cap:
 				_spawn_enemy()
 
@@ -396,8 +400,25 @@ func branch_factor(e, branch: String) -> float:
 	return 1.0 - float(e.resist.get(branch, 0.0))
 
 
+## Menace d'un ennemi né à cet endroit : niveau du joueur, profondeur dans la région et Cœurs
+## de flétrissure purifiés (voir difficulty.gd). Sans position : là où se tient le joueur.
+func threat(pos = null) -> float:
+	var at: Vector2 = player.position if pos == null else pos
+	return Difficulty.threat(Game.level, _region_depth(at), hearts_purified())
+
+
+## Ancien nom de threat(), gardé le temps du jalon 4 : menace là où se tient le joueur.
 func power() -> float:
-	return 1.0 + 0.12 * (Game.level - 1) + elapsed / 240.0
+	return threat()
+
+
+## Nombre de Cœurs de flétrissure purifiés (un par région).
+func hearts_purified() -> int:
+	var n := 0
+	for id in Regions.REGIONS:
+		if Game.flags.get(id + "_coeur_purifie", false):
+			n += 1
+	return n
 
 
 func _spawn_enemy() -> void:
@@ -409,6 +430,11 @@ func _spawn_enemy() -> void:
 		pos = pos.clamp(Vector2(-WORLD_HALF, -WORLD_HALF), Vector2(WORLD_HALF, WORLD_HALF))
 		if ground.life_at(pos) < 0.5:
 			break
+	spawn_enemy_kind(_pick_kind(pos), pos, threat(pos))
+
+
+## Sorte d'ennemi à faire naître à cet endroit (indice ou identifiant de enemies.json).
+func _pick_kind(pos: Vector2):
 	var kind = 0
 	var roll := rng.randf()
 	if Game.level >= 4 and roll < 0.12:
@@ -420,7 +446,7 @@ func _spawn_enemy() -> void:
 		var regional := _region_kind(reg, pos)
 		if regional != "":
 			kind = regional
-	spawn_enemy_kind(kind, pos, power())
+	return kind
 
 
 ## Sorte du roncier à faire naître ici, ou "" pour un Flétri ordinaire. La part des ennemis de la
@@ -469,7 +495,7 @@ func spawn_enemy_at(pos: Vector2, kind: int):
 	var e = Enemy.new()
 	e.main = self
 	e.position = pos
-	e.setup(kind, power())
+	e.setup(kind, threat(pos))
 	enemies_layer.add_child(e)
 	enemies.append(e)
 	return e
@@ -630,6 +656,8 @@ func bot_input(p) -> Dictionary:
 			if d < best:
 				best = d
 				target = e.position
+	if build_bot != null and build_bot.run:
+		return build_bot.run_input(self, p, target, best)
 	if build_bot != null:
 		var styled: Dictionary = build_bot.steer(p, target, best, Game.stats["max_hp"])
 		if not styled.is_empty():
@@ -645,6 +673,12 @@ func _autotest_step(delta: float) -> void:
 		arena.autotest_step(delta)
 		return
 	autotest_time += delta
+	if build_bot != null and build_bot.run:
+		# Partie complète : expérience réelle depuis le niveau 1 (voir build_bot.run_step).
+		if build_bot.run_step(self, delta) and not autotest_done:
+			autotest_done = true
+			get_tree().quit()
+		return
 	if build_bot != null:
 		# Niveau figé : tous les builds se mesurent avec les mêmes points et la même difficulté.
 		Game.xp = 0.0

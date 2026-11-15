@@ -35,6 +35,8 @@ func _init() -> void:
 	errors.append_array(Content.validate(int(SkillTree.RINGS / 4.0)))
 	# Sortes d'ennemis et apparitions par région (data/enemies.json).
 	errors.append_array(load("res://scripts/enemy.gd").validate_kinds())
+	# Menace, apparitions, courbe d'expérience et modes de difficulté (data/difficulty.json).
+	errors.append_array(load("res://scripts/difficulty.gd").validate())
 	if errors.is_empty():
 		_check_tree()
 		_check_engine()

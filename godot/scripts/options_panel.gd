@@ -1,9 +1,10 @@
-## Panneau d'options : volume, plein écran, aide de départ, touches de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
+## Panneau d'options : volume, plein écran, aide de départ, difficulté, touches de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
 extends PanelContainer
 
 signal closed
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const Difficulty = preload("res://scripts/difficulty.gd")
 
 var volume_slider: HSlider
 var music_slider: HSlider
@@ -13,6 +14,8 @@ var hints_box: CheckBox
 var shake_slider: HSlider
 var shake_label: Label
 var reduce_box: CheckBox
+var difficulty_select: OptionButton
+var difficulty_hint: Label
 var back_button: Button
 ## Boutons des touches de la barre (un par emplacement) et emplacement en attente d'une touche.
 var slot_buttons: Array = []
@@ -79,6 +82,28 @@ func _ready() -> void:
 	reduce_box.button_pressed = Settings.reduce_effects
 	reduce_box.toggled.connect(func(on): Settings.set_reduce_effects(on); Settings.save_settings())
 	col.add_child(reduce_box)
+
+	# Difficulté : vie et dégâts des ennemis (Normal par défaut).
+	var diff_row := HBoxContainer.new()
+	diff_row.add_theme_constant_override("separation", 14)
+	col.add_child(diff_row)
+	var diff_name := Label.new()
+	diff_name.text = "Difficulté"
+	diff_name.custom_minimum_size = Vector2(110, 0)
+	diff_row.add_child(diff_name)
+	difficulty_select = OptionButton.new()
+	difficulty_select.focus_mode = Control.FOCUS_ALL
+	difficulty_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for id in Settings.DIFFICULTIES:
+		difficulty_select.add_item(Difficulty.mode_name(id))
+	difficulty_select.item_selected.connect(_on_difficulty)
+	diff_row.add_child(difficulty_select)
+	difficulty_hint = Label.new()
+	difficulty_hint.add_theme_font_size_override("font_size", 13)
+	difficulty_hint.add_theme_color_override("font_color", Color(0.7, 0.75, 0.7))
+	difficulty_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(difficulty_hint)
+	_update_difficulty()
 
 	var keys_title := Label.new()
 	keys_title.text = "Touches de la barre de compétences"
@@ -191,6 +216,17 @@ func _input(event: InputEvent) -> void:
 	_update_keys()
 
 
+func _on_difficulty(index: int) -> void:
+	Settings.set_difficulty(Settings.DIFFICULTIES[index])
+	Settings.save_settings()
+	_update_difficulty()
+
+
+func _update_difficulty() -> void:
+	difficulty_select.select(maxi(0, Settings.DIFFICULTIES.find(Settings.difficulty)))
+	difficulty_hint.text = str(Difficulty.mode(Settings.difficulty).get("text", ""))
+
+
 func _on_shake(v: float) -> void:
 	Settings.set_shake(v)
 	Settings.save_settings()
@@ -213,6 +249,7 @@ func open() -> void:
 	hints_box.button_pressed = Settings.show_hints
 	shake_slider.value = Settings.shake
 	reduce_box.button_pressed = Settings.reduce_effects
+	_update_difficulty()
 	volume_slider.grab_focus()
 
 

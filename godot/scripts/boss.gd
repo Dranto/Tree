@@ -13,6 +13,7 @@
 ## aussi dans main.big_enemies (voir main.enemies_near).
 extends Node2D
 
+const Difficulty = preload("res://scripts/difficulty.gd")
 const RADIUS := 70.0
 const INTRO := 1.4
 const DEATH_TIME := 1.6
@@ -111,9 +112,10 @@ class Layer extends Node2D:
 
 func _ready() -> void:
 	anchor = position
-	max_hp = BASE_HP + HP_PER_LEVEL * Game.level
+	# Le choix de difficulté des options (Facile / Normal / Difficile) vaut aussi pour la Mère-Ronce.
+	max_hp = (BASE_HP + HP_PER_LEVEL * Game.level) * Difficulty.hp_mult()
 	hp = max_hp
-	damage_scale = 1.0 + DAMAGE_PER_LEVEL * (Game.level - 1)
+	damage_scale = (1.0 + DAMAGE_PER_LEVEL * (Game.level - 1)) * Difficulty.damage_mult()
 	xp_value = 40.0 + 12.0 * Game.level
 	marks = Layer.new()
 	marks.boss = self

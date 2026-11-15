@@ -21,6 +21,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `skills.json` | Réglages des compétences actives (recharge, rayon, dégâts, texte). |
 | `builds.json` | Builds types joués par le robot d'équilibrage (`tools/balance.sh`). |
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
+| `difficulty.json` | Difficulté (`scripts/difficulty.gd`) : menace des ennemis (`threat` : par niveau, selon la profondeur dans la région, par Cœur purifié, plafond), effet de la menace sur leurs statistiques (`scaling`), courbe d'expérience et durée visée par niveau (`xp`), apparitions (`spawn` : cadence, plafond d'ennemis et salves près de la graine et au fond de la région), modes Facile / Normal / Difficile (`modes`). Vérifiée par `check_data.gd` ; le rythme se mesure avec `tools/balance.sh --run`. |
 | `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest` et ses réglages, `region`, `resist` par branche) et apparitions par région (`spawn` : sortes et poids, part près/loin de la graine, nombre de nids, effet de la purification du Cœur). Les trois premières sortes sont les Flétris d'origine. |
 
 ## Les effets

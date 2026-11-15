@@ -9,6 +9,7 @@ extends Node2D
 
 const Content = preload("res://scripts/content.gd")
 const Thorn = preload("res://scripts/enemy_thorn.gd")
+const Difficulty = preload("res://scripts/difficulty.gd")
 
 ## Sortes d'ennemis, dans l'ordre de enemies.json (les trois premières sont les Flétris d'origine).
 static var KINDS: Array = Content._load("enemies").get("kinds", [])
@@ -32,6 +33,8 @@ var hp := 30.0
 var max_hp := 30.0
 var speed := 85.0
 var damage := 10.0
+## Facteur des dégâts (menace et choix de difficulté), appliqué aussi aux charges et aux épines tirées.
+var damage_scale := 1.0
 var radius := 14.0
 var xp_value := 3.0
 var color := Color.GRAY
@@ -112,13 +115,15 @@ func setup(k, p: float) -> void:
 	region = data.get("region", "")
 	resist = data.get("resist", {})
 	anchored = behavior == "nest"
+	# Mise à l'échelle selon la menace (main.threat) et le choix de difficulté des options.
 	power = p
-	max_hp = data["hp"] * p
+	damage_scale = Difficulty.damage_factor(p) * Difficulty.damage_mult()
+	max_hp = data["hp"] * Difficulty.hp_factor(p) * Difficulty.hp_mult()
 	hp = max_hp
-	speed = data["speed"] * (1.0 + 0.04 * (p - 1.0))
-	damage = data["damage"] * (1.0 + 0.5 * (p - 1.0))
+	speed = data["speed"] * Difficulty.speed_factor(p)
+	damage = data["damage"] * damage_scale
 	radius = data["radius"]
-	xp_value = data["xp"] * (0.8 + 0.2 * p)
+	xp_value = data["xp"] * Difficulty.xp_factor(p)
 	color = Color(data["color"])
 	t = randf() * 10.0
 	# Les attaques ne partent pas toutes en même temps.
@@ -158,7 +163,7 @@ func _physics_process(delta: float) -> void:
 				position += dir * speed * slow * delta
 	var hit := damage
 	if state == "charge":
-		hit = float(data.get("charge_damage", damage)) * (1.0 + 0.5 * (power - 1.0))
+		hit = float(data.get("charge_damage", damage)) * damage_scale
 	if dist < radius + p.radius:
 		p.take_hit(hit, self)
 	if poison_time > 0.0:
@@ -243,7 +248,7 @@ func _shooter(delta: float, dir: Vector2, dist: float, slow: float) -> void:
 			th.main = main
 			th.position = position + attack_dir * (radius + 6.0)
 			th.vel = attack_dir * float(data["shot_speed"])
-			th.damage = float(data["shot_damage"]) * (1.0 + 0.5 * (power - 1.0))
+			th.damage = float(data["shot_damage"]) * damage_scale
 			th.life = data["shot_life"]
 			main.projectiles_layer.add_child(th)
 		return
