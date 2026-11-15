@@ -17,6 +17,8 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 | Esquive | Espace ou Maj |
 | Barre de compétences (6 emplacements) | 1 à 6, et A, E, R (AZERTY) / Q, E, R (QWERTY) pour les trois premiers ; touches réassignables dans les options. Clic sur un emplacement : y mettre une compétence acquise qui n'a pas de place |
 | Arbre de vie | Tab ou T (le jeu se met en pause) |
+| Journal des objectifs | J (le jeu se met en pause) |
+| Carte du monde | M (le jeu se met en pause) |
 
 Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer. Une maîtrise ou une mutation ouvre une fenêtre de choix quand on l'apprend ; un clic sur une maîtrise apprise permet d'en changer. L'arbre s'ouvre en vue d'ensemble ; en zoomant apparaissent tous les nœuds, puis les icônes et les noms des notables.
 
@@ -61,6 +63,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --headless -s res://tests/flow_test.gd` : teste le parcours des menus (Nouvelle partie, Retour au titre qui sauvegarde, Continuer qui reprend). Remplace la sauvegarde par défaut.
 - `tools/godot.sh --xvfb -- --autotest=boss` : le robot est posé dans l'arène de la Mère-Ronce avec un build de test (niveau 12, points placés dans Ronce) et joue le combat. Le test réussit si le combat se termine, par une victoire ou une défaite, en moins de 3 minutes ; captures de chaque phase dans `godot/autotest/`. Avec `--headless --fixed-fps 60` à la place de `--xvfb`, le combat se joue en quelques secondes, sans captures.
 - `tools/godot.sh --headless --fixed-fps 60 -s res://tests/boss_test.gd` : teste le Cœur de flétrissure et la Mère-Ronce (siège et purification, ouverture de l'arène, phases, mort du joueur, victoire, drapeaux sauvegardés).
+- `tools/godot.sh --headless --fixed-fps 60 -s res://tests/objectives_test.gd` : teste les objectifs (suite principale, facultatifs et leur point, flèche, journal et carte, fin déclenchée une seule fois, sauvegarde aller-retour).
 - `tools/godot.sh --headless -s res://tests/region_test.gd` : teste la région du roncier (géométrie, résistance aux dégâts de Ronce, buissons d'épines, vague de vie, apparitions, comportements du Tireur, du Chargeur et du Nid).
 - `tools/balance.sh` : équilibrage. Le robot joue les builds types de Ronce (`godot/data/builds.json` : épines, fouet, saignement) au niveau 20, sur plusieurs graines, sans affichage et en parallèle (moins de 2 minutes), et compare les ennemis vaincus par minute ; échec si l'écart dépasse 30 %. Un seul build : `tools/godot.sh --headless --fixed-fps 60 -- --autotest=build:fouet`.
 - `tools/godot.sh --xvfb -s res://tests/ronce_captures.gd` : captures de la branche Ronce et de chacune de ses grappes dans `godot/tests/visual/out/`.
@@ -81,6 +84,7 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 | `galerie` | `galerie_ennemis_fx` (3 ennemis × 6 états dont saignant et enraciné, ondes, textes flottants, nuage), `galerie_roncier` (4 ennemis du roncier × 4 états dont l'attaque annoncée, épine tirée, ronces et buissons morts et vivants), `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable), `galerie_types` (compétence, mutation, maîtrise, nœud flétri, greffe, avant et après), `arbre_grappe` (grappe et infobulle d'une maîtrise) et `arbre_choix` (fenêtre de choix d'une mutation) |
 | `roncier` | `roncier_mort`, `roncier_vague_1` à `_3` (la vague de vie avance), `roncier_ravive`, `roncier_purifie` (drapeau `ronce_coeur_purifie`) |
 | `resolution` | `jeu_`, `arbre_` et `titre_` en 1280x720, 1920x1080, 2560x1440 et 3440x1440 (un processus par résolution) |
+| `quetes` | Le journal (`journal_`), la carte (`carte_`) et la fin de la tranche (`fin_`) en 1280x720, 1920x1080, 2560x1440 et 3440x1440 ; en 1920x1080 aussi `jeu_objectif` (suivi et flèche vers le Cœur) et `fin_arbre` (l'Arbre en train de fleurir) |
 
 - `tools/visual-tests.sh` : compare. Échoue si plus de 0,05 % des pixels d'une capture ont changé, ou si un défaut d'interface nouveau est détecté. Résultats, écarts en rouge (`*.diff.png`), `rapport.html` et `resume.md` dans `godot/tests/visual/out/`.
 - `tools/visual-tests.sh --update` : remplace les références après un changement graphique voulu. Vérifier les nouvelles images, puis les committer avec le changement.
@@ -98,6 +102,7 @@ La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écr
 - **Ennemis** : Flétris, Cendreux (rapides) et Colosses (massifs), de plus en plus forts avec ton niveau et le temps.
 - **Région de Ronce** : au nord-est de la graine, un Cœur de flétrissure fait naître des Flétris. Tenir la zone qui l'entoure pendant 30 s, sous des vagues d'ennemis, le purifie : une grande vague de vie se répand et l'arène voisine s'ouvre. La Mère-Ronce y attend : trois phases, des attaques toujours annoncées au sol (volée d'épines, fouets, racines, invocation, arène qui rétrécit), 3 points d'arbre à la clé. Mourir face à elle ramène à la graine, le Cœur reste purifié.
 - **Le roncier** (région de Ronce, au nord-est, dans la direction de la branche Ronce de l'arbre) : sol rouillé, ronces mortes qui fleurissent quand la terre revit, buissons d'épines qui bloquent le passage (et arrêtent les charges). Ses ennemis : le Tireur d'épines (garde ses distances, vise avant de tirer), le Chargeur (marque son couloir au sol avant de charger) et le Nid de ronces (immobile, fait naître des Rejetons). Ils ignorent 25 % des dégâts de Ronce et sont plus nombreux loin de la graine.
+- **Objectifs, journal, carte et fin** : en haut à droite, l'objectif en cours et, quand la cible est loin, une flèche dorée au bord de l'écran. **J** ouvre le journal (6 objectifs principaux, du premier nœud à la Mère-Ronce, et 3 facultatifs : trois élites, tous les autels, le secret du roncier), **M** la carte (terre ravivée, région de Ronce, sanctuaires, autels découverts, Cœur, arène, objectif). Une fois la Mère-Ronce vaincue, quelques secondes plus tard, le monde reverdit : texte de fin, statistiques de la partie, puis « Continuer à jouer » ou « Retour au titre ». La fin ne se montre qu'une fois par partie.
 - **Vague de vie** : un nœud appris ravive sa région en vague (environ 1,75 s) ; arbres et ronces se couvrent de feuilles au passage.
 - **Progression** : chaque Flétri laisse une essence de vie, et chaque niveau donne un point d'arbre.
 
@@ -110,6 +115,7 @@ La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écr
   - `save_game.gd` : sauvegarde versionnée (format 2 : choix des maîtrises et mutations, greffes posées). Les nœuds y sont notés par identifiant stable (`uid`), pour qu'une sauvegarde survive aux changements de l'arbre.
   - `main.gd`, `player.gd`, `enemy.gd`, `projectile.gd`, `orb.gd` : le jeu. La logique avance à pas fixe (`_physics_process`, 60 pas par seconde) et l'affichage est interpolé entre deux pas ; l'animation pure reste dans `_process`.
   - `heart.gd`, `boss_arena.gd`, `boss.gd`, `boss_bar.gd` : le Cœur de flétrissure, l'arène et la Mère-Ronce, boss de la région de Ronce, avec leur barre en haut de l'écran. Ils posent `Game.flags["ronce_coeur_purifie"]` et `Game.flags["ronce_boss_vaincu"]`.
+  - `objectives.gd` (autoload `Objectives`) et `data/objectives.json` : les objectifs de la tranche. Aucun état propre : tout est dans `Game.flags` (`obj_<id>`, `elites_tuees`, `stat_morts`, `fin_ronce_vue`), donc dans la sauvegarde. `quest_ui.gd` assemble le suivi et la flèche (`objective_tracker.gd`), le journal (`journal.gd`), la carte (`world_map.gd`) et la fin (`ending.gd`). `Objectives.complete("<id>")` accomplit un objectif à la main ; les autres systèmes n'ont rien d'autre à faire que de poser leurs drapeaux (voir `data/README.md`, « Objectifs »).
   - `regions.gd` : les régions du monde (secteur de chaque branche) ; `main.region_at(pos)` et `main.region_center(id)`.
   - `enemy.gd`, `enemy_thorn.gd` : comportements des ennemis (sortes décrites dans `data/enemies.json`) et épine tirée.
   - `spatial_grid.gd` : grille spatiale des Flétris (collisions, séparation, zones de dégâts), via `main.enemies_near()`.
