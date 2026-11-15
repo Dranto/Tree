@@ -269,11 +269,6 @@ func _on_tree_changed() -> void:
 
 
 ## Un nœud vient d'être appris : il éclôt (petite animation), si l'arbre est à l'écran.
-func _on_node_allocated(node: Dictionary) -> void:
-	if visible:
-		_blooms[node["id"]] = 0.0
-
-
 func _redraw_all() -> void:
 	if not is_node_ready():
 		return
@@ -531,6 +526,8 @@ func click(id: int) -> void:
 
 
 func _on_node_allocated(node: Dictionary) -> void:
+	if visible:
+		_blooms[node["id"]] = 0.0
 	if visible and not node["choices"].is_empty() and Game.choice_index(node["id"]) < 0:
 		_choice_queue.append(node["id"])
 		_next_choice.call_deferred()

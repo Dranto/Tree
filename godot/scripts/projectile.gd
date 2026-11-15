@@ -30,7 +30,7 @@ func _physics_process(delta: float) -> void:
 		if e.dead or hit.has(e.get_instance_id()):
 			continue
 		hit[e.get_instance_id()] = true
-		main.player_hit_enemy(e, damage)
+		main.player_hit_enemy(e, damage, true, "ronce" if thorn else "")
 		if bleed > 0.0 and not e.dead:
 			e.apply_status("saignement", damage * bleed, bleed_duration)
 		if pierce <= 0:

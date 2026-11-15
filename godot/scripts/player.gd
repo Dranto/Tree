@@ -279,7 +279,7 @@ func _cast_fouet(s: Dictionary) -> void:
 		var d: Vector2 = e.position - position
 		if d.length() > 1.0 and absf(aim.angle_to(d)) > half_arc + e.radius / maxf(d.length(), 1.0):
 			continue
-		main.player_hit_enemy(e, base)
+		main.player_hit_enemy(e, base, true, "ronce")
 		if e.dead:
 			continue
 		e.apply_status("saignement", base * k["bleed"], k["bleed_duration"] * s["bleed_duration"])
@@ -303,7 +303,7 @@ func _cast_racines(s: Dictionary) -> void:
 	var base := skill_damage("racines")
 	main.root_hit_base = base
 	for e in main.enemies_near(target, r):
-		main.player_hit_enemy(e, base)
+		main.player_hit_enemy(e, base, true, "ronce")
 		if not e.dead:
 			e.apply_status("enracine", 1.0, k["root_duration"] * s["root_duration"])
 	main.root_hit_base = 0.0
@@ -348,7 +348,7 @@ func _cast_saignee(s: Dictionary) -> void:
 			total += amount
 			main.on_bleed_tick(e, amount)
 		if not e.dead:
-			main.player_hit_enemy(e, hit)
+			main.player_hit_enemy(e, hit, true, "ronce")
 	if total > 0.0:
 		heal(total * float(k["heal"]))
 
