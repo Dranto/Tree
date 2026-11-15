@@ -18,6 +18,8 @@ const TreeUI = preload("res://scripts/tree_ui.gd")
 const PauseMenu = preload("res://scripts/pause_menu.gd")
 const SpatialGrid = preload("res://scripts/spatial_grid.gd")
 const BLEED_BASE_DURATION := 4.0
+const Heart = preload("res://scripts/heart.gd")
+const BossArena = preload("res://scripts/boss_arena.gd")
 
 var world_half := WORLD_HALF
 var ground
@@ -37,12 +39,21 @@ var grid = SpatialGrid.new()
 var enemies: Array = []
 ## Dégâts du coup de racines en cours (contexte de l'évènement « root »), 0 hors de ce coup.
 var root_hit_base := 0.0
+## Ennemis trop gros pour la grille spatiale (boss) : testés à part dans enemies_near.
+var big_enemies: Array = []
+## Cœur de flétrissure et arène de la Mère-Ronce (région de Ronce).
+var heart
+var arena
+## Vrai pendant un combat de boss : plus aucun Flétri ne naît autour du joueur.
+var spawn_paused := false
 var spawn_timer := 1.5
 var elapsed := 0.0
 var rng := RandomNumberGenerator.new()
 ## Mode de test automatique (lancer avec « -- --autotest ») : un robot joue, apprend des nœuds
 ## et enregistre des captures dans godot/autotest/ avant de quitter.
 var autotest := false
+## « -- --autotest=boss » : le robot est posé dans l'arène de la Mère-Ronce avec un build de test.
+var autotest_boss := false
 var autotest_time := 0.0
 var autotest_shots := [3.0, 25.0, 55.0]
 var autotest_done := false
@@ -67,7 +78,8 @@ func _ready() -> void:
 	Game.seed_rng(rng)
 	_setup_input()
 	# Un banc de test peut activer le robot avant d'ajouter la scène (pas de sauvegarde dans ce mode).
-	autotest = autotest or "--autotest" in OS.get_cmdline_user_args()
+	autotest_boss = "--autotest=boss" in OS.get_cmdline_user_args()
+	autotest = autotest or autotest_boss or "--autotest" in OS.get_cmdline_user_args()
 	benchmark = "--benchmark" in OS.get_cmdline_user_args()
 	if benchmark:
 		# Le robot joue, sans captures ni fin de partie, et rien n'est sauvegardé.
@@ -139,6 +151,16 @@ func _ready() -> void:
 	pause_menu.main = self
 	pause_layer.add_child(pause_menu)
 
+	# Région de Ronce : leurs marques au sol se dessinent sous les personnages.
+	heart = Heart.new()
+	heart.main = self
+	arena = BossArena.new()
+	arena.main = self
+	arena.heart = heart
+	for n in [heart, arena]:
+		add_child(n)
+		move_child(n, actors_layer.get_index())
+
 	Game.node_allocated.connect(_on_node_allocated)
 	Game.leveled_up.connect(_on_level_up)
 
@@ -162,6 +184,8 @@ func _ready() -> void:
 		cam.reset_smoothing()
 	Flow.continue_requested = false
 	Game.tree_changed.connect(request_autosave)
+	if autotest_boss:
+		arena.autotest_begin()
 
 
 ## Demande une sauvegarde automatique, regroupée sur une seconde (fonctionne aussi en pause).
@@ -242,6 +266,8 @@ func _physics_process(delta: float) -> void:
 	_separate()
 
 	spawn_timer -= delta
+	if spawn_paused:
+		spawn_timer = maxf(spawn_timer, 0.5)
 	var cap := mini(120, 16 + Game.level * 5)
 	if spawn_timer <= 0.0:
 		spawn_timer = maxf(0.22, 1.3 - Game.level * 0.05 - elapsed / 600.0)
@@ -265,6 +291,11 @@ func enemies_near(center: Vector2, radius: float, touch_body := true) -> Array:
 	var out: Array = []
 	# Marge : les Flétris ont pu bouger depuis la reconstruction de la grille.
 	for e in grid.query(center, radius + Enemy.MAX_RADIUS + 8.0):
+		if is_instance_valid(e) and not e.dead:
+			var r: float = radius + (e.radius if touch_body else 0.0)
+			if e.radius <= Enemy.MAX_RADIUS and e.position.distance_squared_to(center) < r * r:
+				out.append(e)
+	for e in big_enemies:
 		if is_instance_valid(e) and not e.dead:
 			var r: float = radius + (e.radius if touch_body else 0.0)
 			if e.position.distance_squared_to(center) < r * r:
@@ -313,6 +344,17 @@ func _spawn_enemy() -> void:
 	e.setup(kind, power())
 	enemies_layer.add_child(e)
 	enemies.append(e)
+
+
+## Fait naître un Flétri d'un type donné à un endroit précis (vagues du Cœur, petits du boss).
+func spawn_enemy_at(pos: Vector2, kind: int):
+	var e = Enemy.new()
+	e.main = self
+	e.position = pos
+	e.setup(kind, power())
+	enemies_layer.add_child(e)
+	enemies.append(e)
+	return e
 
 
 func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, size := 1.0) -> void:
@@ -436,6 +478,8 @@ func _on_level_up(lvl: int) -> void:
 
 ## Commandes du robot : tourne autour de la graine en visant le Flétri le plus proche.
 func bot_input(p) -> Dictionary:
+	if autotest_boss:
+		return arena.bot_input(p)
 	var target: Vector2 = p.position + Vector2.RIGHT * 100.0
 	var best := INF
 	for e in enemies:
@@ -451,6 +495,9 @@ func bot_input(p) -> Dictionary:
 
 
 func _autotest_step(delta: float) -> void:
+	if autotest_boss:
+		arena.autotest_step(delta)
+		return
 	autotest_time += delta
 	Game.add_xp(delta * 6.0)
 	while Game.points > 0:
@@ -471,6 +518,8 @@ func _autotest_step(delta: float) -> void:
 
 
 func _capture(shot_name: String) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	img.save_png("res://autotest/%s.png" % shot_name)
