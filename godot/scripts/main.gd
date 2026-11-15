@@ -362,7 +362,7 @@ func spawn_enemy_at(pos: Vector2, kind: int):
 	return e
 
 
-func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, size := 1.0) -> void:
+func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, size := 1.0):
 	var p = Projectile.new()
 	p.main = self
 	p.position = pos
@@ -371,6 +371,7 @@ func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, si
 	p.pierce = pierce
 	p.radius *= size
 	projectiles_layer.add_child(p)
+	return p
 
 
 ## Applique un coup du joueur : critique, poison, vol de vie, effets déclenchés par un critique.
@@ -424,11 +425,6 @@ func on_bleed_tick(e, amount: float) -> void:
 ## Un ennemi vient d'être enraciné (appelé par enemy.gd).
 func on_enemy_rooted(e) -> void:
 	Game.fire("root", enemy_ctx(e, root_hit_base))
-
-
-## Haie d'épines posée par le joueur (hedge.gd) : vit avec les graines.
-func add_hedge(h) -> void:
-	projectiles_layer.add_child(h)
 
 
 func damage_area(center: Vector2, radius: float, amount: float, knockback: float) -> void:

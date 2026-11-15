@@ -245,14 +245,14 @@ func _cell(ui, sheet: Image, label: String, id: int, index: int, cw: int, ch: in
 	print("VISUEL cellule %s -> nœud %d" % [label, id])
 
 
-## Compétences de Ronce en action : haie qui bloque un groupe, racines qui en immobilisent un
-## autre, puis un coup de fouet (arc et saignement). La barre montre 4 compétences et 2 emplacements verrouillés.
+## Compétences de Ronce en action : racines qui immobilisent un groupe, coup de fouet
+## (arc et saignement) sur un autre, et volée d'épines en vol vers un troisième. La barre montre 4 compétences et 2 emplacements verrouillés.
 func _scenario_competences() -> void:
 	var p = main.player
 	Game.test_skills = {}
 	for id in Content.skills():
 		Game.test_skills[id] = true
-	Game.flags["barre"] = "fouet,racines,haie,nova"
+	Game.flags["barre"] = "fouet,racines,volee,saignee"
 	Game.recompute()
 	p.sync_bar()
 	main.hud.hint_time = 0.0
@@ -262,20 +262,21 @@ func _scenario_competences() -> void:
 	main.spawn_timer = 1e9
 	await _frames(2)
 	var s: Dictionary = Game.stats
-	# Groupe en bas, arrêté par la haie ; groupe en haut à gauche, enraciné.
+	# Groupe en bas, visé par la volée ; groupe en haut à gauche, enraciné.
 	for i in 4:
 		_spawn_at(Vector2(-90 + i * 60, 250), 0)
 	for i in 3:
 		_spawn_at(Vector2(-300 + i * 40, -220 + (i % 2) * 40), 1)
 	await _frames(2)   # la grille des ennemis est reconstruite au pas suivant
-	p.aim = Vector2.DOWN
-	p.cast("haie", s)
 	p.aim_point = Vector2(-260, -200)
 	p.cast("racines", s)
 	await _frames(90)
 	# Groupe à droite, frappé par le fouet.
 	for i in 3:
 		_spawn_at(Vector2(110, -50 + i * 50), 0 if i != 1 else 2)
+	await _frames(2)
+	p.aim = Vector2.DOWN
+	p.cast("volee", s)
 	await _frames(2)
 	p.aim = Vector2.RIGHT
 	p.cast("fouet", s)
