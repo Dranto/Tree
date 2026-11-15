@@ -15,7 +15,7 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 | Se déplacer | Z Q S D (AZERTY) ou W A S D (QWERTY), ou flèches |
 | Lancer des graines | Clic gauche maintenu (vise la souris) |
 | Esquive | Espace ou Maj |
-| Compétences débloquées par l'arbre | A, E, R (AZERTY) / Q, E, R (QWERTY) |
+| Barre de compétences (6 emplacements) | 1 à 6, et A, E, R (AZERTY) / Q, E, R (QWERTY) pour les trois premiers ; touches réassignables dans les options. Clic sur un emplacement : y mettre une compétence acquise qui n'a pas de place |
 | Arbre de vie | Tab ou T (le jeu se met en pause) |
 
 Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer. Une maîtrise ou une mutation ouvre une fenêtre de choix quand on l'apprend ; un clic sur une maîtrise apprise permet d'en changer. L'arbre s'ouvre en vue d'ensemble ; en zoomant apparaissent tous les nœuds, puis les icônes et les noms des notables.
@@ -46,6 +46,8 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --headless -s res://tests/planner_test.gd` : teste les outils de l'arbre (plus court chemin, simulation sans effet de bord, annulation, recherche, plan sauvegardé et rechargé).
 - `tools/godot.sh --xvfb -s res://tests/planner_captures.gd` : enregistre une capture de chaque outil de l'arbre dans `godot/tests/visual/out/`.
 - `tools/godot.sh --headless -s res://tests/node_types_test.gd` : teste les grappes écrites à la main et les types de nœuds (compétence, maîtrise, mutation, nœud flétri, greffe, exclusion, grappe complète, résonance, sauvegarde et migration de la version 1).
+- `tools/godot.sh --headless -s res://tests/skills_test.gd` : teste les compétences de Ronce, le saignement, l'enracinement, les nouveaux évènements et la barre de compétences.
+- `tools/godot.sh --xvfb -- --autotest --skills=all` : donne toutes les compétences sans passer par l'arbre (`--skills=fouet,racines,haie` pour en choisir), pour les essayer ; marche aussi sans `--autotest`.
 - `tools/godot.sh --headless -s res://tests/flow_test.gd` : teste le parcours des menus (Nouvelle partie, Retour au titre qui sauvegarde, Continuer qui reprend). Remplace la sauvegarde par défaut.
 - `tools/godot.sh --xvfb -- --benchmark` : banc de performance. Le robot joue face à 120 Flétris pendant 30 s, puis le temps moyen, le 99e centile et le pire temps par image s'affichent.
 
@@ -59,7 +61,8 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 | --- | --- |
 | `depart` | `jeu_depart`, `arbre_depart`, `arbre_survol`, `arbre_ensemble` (zoom 0,15), `arbre_zoom_proche` (zoom 1,6) ; l'arbre ouvert (`arbre_depart`) montre le zoom par défaut |
 | `combat` | `jeu_combat` après 30 s de partie jouée par le robot, `arbre_progression` |
-| `galerie` | `galerie_ennemis_fx` (3 ennemis × 4 états, ondes, textes flottants, nuage), `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable), `galerie_types` (compétence, mutation, maîtrise, nœud flétri, greffe, avant et après), `arbre_grappe` (grappe et infobulle d'une maîtrise) et `arbre_choix` (fenêtre de choix d'une mutation) |
+| `competences` | `competences` : haie, racines et fouet de Ronce en action, barre de compétences (4 emplacements pleins, 2 verrouillés) |
+| `galerie` | `galerie_ennemis_fx` (3 ennemis × 6 états dont saignant et enraciné, ondes, textes flottants, nuage), `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable), `galerie_types` (compétence, mutation, maîtrise, nœud flétri, greffe, avant et après), `arbre_grappe` (grappe et infobulle d'une maîtrise) et `arbre_choix` (fenêtre de choix d'une mutation) |
 | `resolution` | `jeu_`, `arbre_` et `titre_` en 1280x720, 1920x1080, 2560x1440 et 3440x1440 (un processus par résolution) |
 
 - `tools/visual-tests.sh` : compare. Échoue si plus de 0,05 % des pixels d'une capture ont changé, ou si un défaut d'interface nouveau est détecté. Résultats, écarts en rouge (`*.diff.png`), `rapport.html` et `resume.md` dans `godot/tests/visual/out/`.

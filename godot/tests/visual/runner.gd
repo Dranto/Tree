@@ -20,8 +20,10 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
+const Enemy = preload("res://scripts/enemy.gd")
+const Content = preload("res://scripts/content.gd")
 const TitleScene = preload("res://scenes/title.tscn")
 ## Défauts d'interface déjà connus (un par ligne : « résolution|écran|type|libellés »).
 ## Un défaut absent de cette liste fait échouer le banc ; un défaut listé qui a disparu est signalé.
@@ -77,6 +79,8 @@ func _ready() -> void:
 			await _scenario_resolution()
 		"galerie":
 			await _scenario_galerie()
+		"competences":
+			await _scenario_competences()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -237,6 +241,54 @@ func _cell(ui, sheet: Image, label: String, id: int, index: int, cw: int, ch: in
 	var c: Vector2i = (ui.size / 2.0).round()
 	sheet.blit_rect(img, Rect2i(c.x - cw / 2, c.y - ch / 2, cw, ch), Vector2i((index % 4) * cw, (index / 4) * ch))
 	print("VISUEL cellule %s -> nœud %d" % [label, id])
+
+
+## Compétences de Ronce en action : haie qui bloque un groupe, racines qui en immobilisent un
+## autre, puis un coup de fouet (arc et saignement). La barre montre 4 compétences et 2 emplacements verrouillés.
+func _scenario_competences() -> void:
+	var p = main.player
+	Game.test_skills = {}
+	for id in Content.skills():
+		Game.test_skills[id] = true
+	Game.flags["barre"] = "fouet,racines,haie,nova"
+	Game.recompute()
+	p.sync_bar()
+	main.hud.hint_time = 0.0
+	main.autotest = false   # ni robot ni expérience gagnée : rien ne bouge en dehors de ce qu'on lance
+	p.set_physics_process(false)   # le joueur ne bouge pas : les compétences sont lancées ici
+	p.invuln = 1e9
+	main.spawn_timer = 1e9
+	await _frames(2)
+	var s: Dictionary = Game.stats
+	# Groupe en bas, arrêté par la haie ; groupe en haut à gauche, enraciné.
+	for i in 4:
+		_spawn_at(Vector2(-90 + i * 60, 250), 0)
+	for i in 3:
+		_spawn_at(Vector2(-300 + i * 40, -220 + (i % 2) * 40), 1)
+	await _frames(2)   # la grille des ennemis est reconstruite au pas suivant
+	p.aim = Vector2.DOWN
+	p.cast("haie", s)
+	p.aim_point = Vector2(-260, -200)
+	p.cast("racines", s)
+	await _frames(90)
+	# Groupe à droite, frappé par le fouet.
+	for i in 3:
+		_spawn_at(Vector2(110, -50 + i * 50), 0 if i != 1 else 2)
+	await _frames(2)
+	p.aim = Vector2.RIGHT
+	p.cast("fouet", s)
+	await _frames(6)
+	await _shot("competences", "jeu")
+
+
+func _spawn_at(pos: Vector2, kind: int) -> void:
+	var e = Enemy.new()
+	e.main = main
+	e.position = pos
+	e.setup(kind, 3.0)
+	e.t = 0.0
+	main.enemies_layer.add_child(e)
+	main.enemies.append(e)
 
 
 # --- Outils ---

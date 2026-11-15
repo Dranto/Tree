@@ -6,7 +6,9 @@ extends Node2D
 const EnemyScript = preload("res://scripts/enemy.gd")
 const FxScript = preload("res://scripts/fx.gd")
 
-const STATES := ["normal", "blessé", "touché", "empoisonné"]
+const STATES := ["normal", "blessé", "touché", "empoisonné", "saignant ×3", "enraciné"]
+const COL_X := 200
+const COL_W := 240
 
 var view := Vector2(1600, 900)
 
@@ -41,8 +43,13 @@ func _ready() -> void:
 					e.hit_flash = 1.0
 				3:
 					e.poison_time = 1.0
+				4:
+					for i in 3:
+						e.apply_status("saignement", 2.0, 3.0)
+				5:
+					e.apply_status("enracine", 1.0, 2.0)
 			e.scale = Vector2(2, 2)
-			e.position = Vector2(300 + s * 330, 160 + k * 130)
+			e.position = Vector2(COL_X + s * COL_W, 160 + k * 130)
 			add_child(e)
 			e.set_process(false)
 			e.set_physics_process(false)
@@ -68,7 +75,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, view), Color(0.12, 0.15, 0.12))
 	var font := ThemeDB.fallback_font
 	for s in STATES.size():
-		draw_string(font, Vector2(300 + s * 330 - 60, 40), STATES[s], HORIZONTAL_ALIGNMENT_CENTER, 120, 18, Color.WHITE)
+		draw_string(font, Vector2(COL_X + s * COL_W - 60, 40), STATES[s], HORIZONTAL_ALIGNMENT_CENTER, 120, 18, Color.WHITE)
 	for k in EnemyScript.KINDS.size():
-		draw_string(font, Vector2(20, 168 + k * 130), ["Flétri", "Cendreux", "Colosse"][k], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+		draw_string(font, Vector2(16, 168 + k * 130), ["Flétri", "Cendreux", "Colosse"][k], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
 	draw_string(font, Vector2(20, 560), "Effets (ondes, textes flottants, nuage de spores)", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)

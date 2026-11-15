@@ -3,7 +3,15 @@ extends Node2D
 
 const DASH_SPEED := 950.0
 const DASH_TIME := 0.16
+## Barre de compétences : MAX_SLOTS emplacements, dont Game.stats["skill_slots"] débloqués.
+const MAX_SLOTS := 6
+## « Se battre chez soi » : bonus des compétences de Ronce sur une terre ravivée de sa région.
+const HOME_BONUS := 0.15
+const HOME_LIFE := 0.45
+## Statistique de dégâts de chaque famille d'attaque (champ « tags » de skills.json).
+const TAG_STATS := {"corps_a_corps": "melee_damage", "projectile": "projectile_damage", "zone": "area_damage"}
 const Content = preload("res://scripts/content.gd")
+const Hedge = preload("res://scripts/hedge.gd")
 
 var main
 var radius := 14.0
@@ -20,20 +28,90 @@ var aim_point := Vector2.ZERO
 ## Réglages des compétences actives, lus dans res://data/skills.json.
 var skills: Dictionary = Content.skills()
 var skill_cd: Dictionary = {}
-var cds := {"nova": 0.0, "cloud": 0.0, "bloom": 0.0}
+var cds: Dictionary = {}
+## Compétence de chaque emplacement de la barre ("" = vide), gardée dans Game.flags (voir sync_bar).
+var bar: Array = []
+## Dernier coup de fouet, pour le dessin de l'arc (secondes restantes, direction).
+var whip_time := 0.0
+var whip_dir := Vector2.RIGHT
 var t := 0.0
 
 
 func _ready() -> void:
-	for k in cds:
-		skill_cd[k] = skills[k]["cooldown"]
+	for k in skills:
+		cds[k] = 0.0
+		skill_cd[k] = float(skills[k]["cooldown"])
 	hp = Game.stats["max_hp"]
 	Game.stats_changed.connect(func(): hp = minf(hp, Game.stats["max_hp"]))
+	Game.tree_changed.connect(sync_bar)
+	sync_bar()
 
 
-## Animation seulement (halo, clignotement) : suit la fréquence d'affichage.
+## Réglages d'une compétence au moment du lancer, mutations de l'arbre comprises
+## (Game.skill, fourni par le moteur des nœuds ; sinon les réglages de skills.json).
+func skill(id: String) -> Dictionary:
+	if Game.has_method("skill"):
+		return Game.skill(id)
+	return skills[id]
+
+
+# --- Barre de compétences ---
+
+## Nombre d'emplacements débloqués (4 au départ, jusqu'à 6 avec la statistique skill_slots).
+static func unlocked_slots() -> int:
+	return clampi(int(Game.stats.get("skill_slots", 4)), 1, MAX_SLOTS)
+
+
+## Remet la barre d'accord avec les compétences acquises. La barre est rangée dans
+## Game.flags["barre"] (texte « nova,fouet,,… ») : elle suit la sauvegarde sans en changer le format.
+## Une compétence perdue libère sa place ; une compétence nouvelle prend la première place libre.
+func sync_bar() -> void:
+	var saved: PackedStringArray = str(Game.flags.get("barre", "")).split(",")
+	var open := unlocked_slots()
+	bar = []
+	var placed := {}
+	for i in MAX_SLOTS:
+		var id := saved[i] if i < saved.size() else ""
+		if i >= open or id == "" or not skills.has(id) or not Game.has_key(id) or placed.has(id):
+			id = ""
+		bar.append(id)
+		if id != "":
+			placed[id] = true
+	for id in skills:
+		if Game.has_key(id) and not placed.has(id):
+			var free := bar.find("")
+			if free < 0 or free >= open:
+				break
+			bar[free] = id
+			placed[id] = true
+	Game.flags["barre"] = ",".join(bar)
+
+
+## Compétences acquises qui ne sont sur aucun emplacement.
+func unbarred_skills() -> Array:
+	var out: Array = []
+	for id in skills:
+		if Game.has_key(id) and not bar.has(id):
+			out.append(id)
+	return out
+
+
+## Change la compétence d'un emplacement débloqué : elle prend la place de la première
+## compétence acquise restée sans emplacement (celle qui était là redevient sans emplacement).
+func cycle_slot(i: int) -> void:
+	if i < 0 or i >= unlocked_slots():
+		return
+	var choices: Array = unbarred_skills()
+	if choices.is_empty():
+		return
+	bar[i] = choices[0]
+	Game.flags["barre"] = ",".join(bar)
+
+
+## Animation seulement (halo, clignotement, arc du fouet) : suit la fréquence d'affichage.
 func _process(delta: float) -> void:
 	t += delta
+	whip_time -= delta
 	queue_redraw()
 
 
@@ -51,18 +129,18 @@ func _physics_process(delta: float) -> void:
 	aim_point = get_global_mouse_position()
 	var want_attack := Input.is_action_pressed("attack")
 	var want_dash := Input.is_action_just_pressed("dash")
-	var want := {
-		"nova": Input.is_action_just_pressed("skill_nova"),
-		"cloud": Input.is_action_just_pressed("skill_cloud"),
-		"bloom": Input.is_action_just_pressed("skill_bloom"),
-	}
+	var want := {}
+	for i in bar.size():
+		if bar[i] != "" and Input.is_action_just_pressed("slot_%d" % (i + 1)):
+			want[bar[i]] = true
 	if main.autotest:
 		var bot: Dictionary = main.bot_input(self)
 		mv = bot["move"]
 		aim_point = bot["aim"]
 		want_attack = true
 		want_dash = bot["dash"]
-		for k in want:
+		# Le robot essaie toutes les compétences acquises, même sans emplacement.
+		for k in skills:
 			want[k] = true
 	var to_aim := aim_point - global_position
 	if to_aim.length() > 1.0:
@@ -96,16 +174,48 @@ func _physics_process(delta: float) -> void:
 		_shoot(s)
 		fire_cd = 1.0 / s["fire_rate"]
 
-	if Game.has_key("nova") and want["nova"] and cds["nova"] <= 0.0:
-		_cast_nova(s)
-	if Game.has_key("cloud") and want["cloud"] and cds["cloud"] <= 0.0:
-		_cast_cloud(s)
-	if Game.has_key("bloom") and want["bloom"] and cds["bloom"] <= 0.0:
-		_cast_bloom(s)
+	for k in want:
+		if Game.has_key(k) and cds.get(k, 1.0) <= 0.0:
+			cast(k, s)
+
+
+## Lance une compétence (sa recharge est remise à plein).
+func cast(id: String, s: Dictionary) -> void:
+	skill_cd[id] = maxf(0.05, float(skill(id)["cooldown"]))
+	cds[id] = skill_cd[id]
+	match id:
+		"nova": _cast_nova(s)
+		"cloud": _cast_cloud(s)
+		"bloom": _cast_bloom(s)
+		"fouet": _cast_fouet(s)
+		"racines": _cast_racines(s)
+		"haie": _cast_haie(s)
+		_: push_warning("Compétence sans comportement : " + id)
 
 
 func current_damage() -> float:
 	return Game.stats["damage"]
+
+
+## Dégâts d'une compétence : dégâts de base × facteur de la compétence × statistiques de ses
+## familles (corps à corps, projectile, zone) × bonus « se battre chez soi » pour Ronce.
+func skill_damage(id: String) -> float:
+	var k: Dictionary = skill(id)
+	var s: Dictionary = Game.stats
+	var dmg: float = current_damage() * float(k.get("damage", 1.0))
+	for tag in k.get("tags", []):
+		dmg *= float(s.get(TAG_STATS.get(tag, ""), 1.0))
+	if k.get("branch", "") == "ronce" and fighting_at_home():
+		dmg *= 1.0 + HOME_BONUS
+	return dmg
+
+
+## Vrai sur une terre ravivée de la région de Ronce (main.region_at, fourni avec la région ;
+## sans elle, jamais).
+func fighting_at_home() -> bool:
+	if not main.has_method("region_at"):
+		return false
+	return main.region_at(position) == "ronce" and main.ground.life_at(position) > HOME_LIFE
 
 
 func _shoot(s: Dictionary) -> void:
@@ -114,36 +224,92 @@ func _shoot(s: Dictionary) -> void:
 	for i in n:
 		var a := aim.angle() + (i - (n - 1) / 2.0) * spread
 		var dir := Vector2.from_angle(a)
-		main.spawn_projectile(position + dir * 18.0, dir * 640.0, current_damage(), s["pierce"], s["projectile_size"])
+		main.spawn_projectile(position + dir * 18.0, dir * 640.0, current_damage() * s["projectile_damage"], s["pierce"], s["projectile_size"])
 
 
 func _cast_nova(s: Dictionary) -> void:
-	var k: Dictionary = skills["nova"]
-	cds["nova"] = skill_cd["nova"]
+	var k: Dictionary = skill("nova")
 	var r: float = k["radius"] * s["area"]
 	main.fx.ring(position, 20.0, r, 0.4, Color(k["color"]), 8.0)
-	main.damage_area(position, r, current_damage() * k["damage"], k["knockback"])
+	main.damage_area(position, r, skill_damage("nova"), k["knockback"])
 
 
 func _cast_cloud(s: Dictionary) -> void:
-	var k: Dictionary = skills["cloud"]
-	cds["cloud"] = skill_cd["cloud"]
+	var k: Dictionary = skill("cloud")
 	var target := aim_point
 	var off := target - position
 	if off.length() > k["range"]:
 		target = position + off.normalized() * k["range"]
-	main.fx.cloud(target, k["radius"] * s["area"], k["duration"], current_damage() * (k["damage"] + s["poison"]))
+	var per_factor := skill_damage("cloud") / float(k["damage"])
+	main.fx.cloud(target, k["radius"] * s["area"], k["duration"], per_factor * (k["damage"] + s["poison"]))
 
 
 func _cast_bloom(s: Dictionary) -> void:
-	var k: Dictionary = skills["bloom"]
-	cds["bloom"] = skill_cd["bloom"]
+	var k: Dictionary = skill("bloom")
 	heal(s["max_hp"] * k["heal"])
 	var r: float = k["radius"] * s["area"]
 	main.fx.ring(position, 20.0, r, 0.6, Color(k["color"]), 8.0)
-	main.damage_area(position, r, current_damage() * k["damage"], k["knockback"])
+	main.damage_area(position, r, skill_damage("bloom"), k["knockback"])
 	main.ground.paint(position, r, k["life"])
 	main.flora.spawn_patch(position, r * 0.8, 10, Color(k["color"]))
+
+
+## Fouet : arc devant le joueur. Chaque ennemi touché saigne et déclenche « melee_hit ».
+func _cast_fouet(s: Dictionary) -> void:
+	var k: Dictionary = skill("fouet")
+	var reach: float = k["range"] * s["area"]
+	var half_arc: float = k["arc"] / 2.0
+	whip_time = 0.18
+	whip_dir = aim
+	var base := skill_damage("fouet")
+	for e in main.enemies_near(position, reach):
+		var d: Vector2 = e.position - position
+		if d.length() > 1.0 and absf(aim.angle_to(d)) > half_arc + e.radius / maxf(d.length(), 1.0):
+			continue
+		main.player_hit_enemy(e, base)
+		if e.dead:
+			continue
+		e.apply_status("saignement", base * k["bleed"], k["bleed_duration"] * s["bleed_duration"])
+		if d.length() > 0.1:
+			e.position += d.normalized() * k["knockback"]
+		main.on_melee_hit(e, base)
+
+
+## Racines : à l'endroit visé, blessent et immobilisent les ennemis de la zone.
+func _cast_racines(s: Dictionary) -> void:
+	var k: Dictionary = skill("racines")
+	var target := aim_point
+	var off := target - position
+	if off.length() > k["range"]:
+		target = position + off.normalized() * k["range"]
+	var r: float = k["radius"] * s["area"]
+	var col := Color(k["color"])
+	main.fx.ring(target, r * 0.2, r, 0.5, col, 6.0)
+	main.fx.ring(target, r * 0.9, r, 0.9, col.darkened(0.3), 3.0)
+	var base := skill_damage("racines")
+	main.root_hit_base = base
+	for e in main.enemies_near(target, r):
+		main.player_hit_enemy(e, base)
+		if not e.dead:
+			e.apply_status("enracine", 1.0, k["root_duration"] * s["root_duration"])
+	main.root_hit_base = 0.0
+
+
+## Haie : un mur d'épines en travers de la visée, à quelques pas devant le joueur.
+func _cast_haie(s: Dictionary) -> void:
+	var k: Dictionary = skill("haie")
+	var h = Hedge.new()
+	h.main = main
+	h.position = position + aim * k["distance"]
+	h.along = aim.orthogonal()
+	h.half_length = k["length"] * s["area"] / 2.0
+	h.half_thickness = k["thickness"] / 2.0
+	h.duration = k["duration"]
+	h.life = k["duration"]
+	h.tick = k["tick"]
+	h.damage = skill_damage("haie") * k["tick"]
+	h.color = Color(k["color"])
+	main.add_hedge(h)
 
 
 func heal(v: float) -> void:
@@ -194,6 +360,17 @@ func _draw() -> void:
 	var seed_pos := aim * (radius + 8.0)
 	draw_circle(seed_pos, 5.0, Color("b6f28a"))
 	draw_circle(seed_pos, 9.0, Color(0.7, 1.0, 0.5, 0.25))
+	# Arc du fouet : une traînée d'épines qui balaie devant le joueur.
+	if whip_time > 0.0:
+		var k: Dictionary = skill("fouet")
+		var reach: float = k["range"] * Game.stats.get("area", 1.0)
+		var arc: float = k["arc"]
+		var a0 := whip_dir.angle() - arc / 2.0
+		var sweep := 1.0 - whip_time / 0.18
+		var a1 := a0 + arc * clampf(sweep * 1.4, 0.0, 1.0)
+		var col := Color(Color(k["color"]).lightened(0.25), clampf(whip_time / 0.12, 0.0, 1.0))
+		draw_arc(Vector2.ZERO, reach * 0.92, a0, a1, 24, col, 7.0)
+		draw_arc(Vector2.ZERO, reach * 0.7, a0, a1, 18, Color(col, col.a * 0.5), 3.0)
 	# Barre de vie
 	var ratio: float = clampf(hp / Game.stats["max_hp"], 0.0, 1.0)
 	draw_rect(Rect2(-20, radius + 10, 40, 4), Color(0, 0, 0, 0.5))
