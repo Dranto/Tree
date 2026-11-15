@@ -217,6 +217,17 @@ func apply_status(status: String, value: float, duration: float) -> void:
 			push_warning("État d'ennemi inconnu : " + status)
 
 
+## Saignée : consomme tous les saignements et renvoie mult × les dégâts qu'ils auraient
+## encore infligés (à appliquer par l'appelant).
+func burst_bleed(mult: float) -> float:
+	var left := 0.0
+	for st in bleed_stacks:
+		left += st[0] * maxf(0.0, st[1])
+	bleed_stacks = []
+	bleed_clock = 0.0
+	return left * mult
+
+
 func is_bleeding() -> bool:
 	return not bleed_stacks.is_empty()
 

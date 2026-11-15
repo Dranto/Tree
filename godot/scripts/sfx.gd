@@ -30,7 +30,7 @@ func _ready() -> void:
 	if not enabled:
 		return
 	for name in ["tir", "impact", "critique", "mort", "noeud", "niveau", "esquive", "degats", "nova", "nuage",
-			"floraison", "fouet", "racines", "haie", "annonce", "coeur", "clic", "survol"]:
+			"floraison", "fouet", "racines", "volee", "saignee", "annonce", "coeur", "clic", "survol"]:
 		var s := load_wav("res://assets/sounds/%s.wav" % name)
 		if s != null:
 			streams[name] = s

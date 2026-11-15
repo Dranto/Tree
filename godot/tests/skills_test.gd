@@ -75,14 +75,14 @@ func _run() -> void:
 	var states: Array = hud._slots.map(func(s): return s.name_label.text)
 	check(states == ["libre", "libre", "libre", "libre", "verrouillé", "verrouillé"],
 		"emplacements vides : 4 « libre » puis 2 « verrouillé » (%s)" % ", ".join(states))
-	game.test_skills = {"fouet": true, "racines": true, "haie": true, "nova": true, "cloud": true}
+	game.test_skills = {"fouet": true, "racines": true, "volee": true, "nova": true, "cloud": true}
 	game.recompute()
 	game.tree_changed.emit()
 	check(p.bar.slice(0, 4) == ["nova", "cloud", "fouet", "racines"], "compétences acquises rangées dans l'ordre de skills.json (%s)" % str(p.bar))
-	check(p.unbarred_skills() == ["haie"], "la 5e compétence attend un emplacement")
+	check(p.unbarred_skills() == ["volee"], "la 5e compétence attend un emplacement")
 	p.cycle_slot(1)
-	check(p.bar[1] == "haie" and p.unbarred_skills() == ["cloud"], "clic sur un emplacement : échange avec une compétence sans place")
-	check(game.flags.get("barre", "").begins_with("nova,haie,"), "la barre est gardée dans les drapeaux de la partie")
+	check(p.bar[1] == "volee" and p.unbarred_skills() == ["cloud"], "clic sur un emplacement : échange avec une compétence sans place")
+	check(game.flags.get("barre", "").begins_with("nova,volee,"), "la barre est gardée dans les drapeaux de la partie")
 	p.cycle_slot(4)
 	check(p.bar[4] == "", "un emplacement verrouillé ne reçoit rien")
 	game.test_skills.erase("racines")
@@ -161,15 +161,41 @@ func _run() -> void:
 	check(inside.root_time > 0.0 and inside.hp < inside.max_hp, "les ennemis de la zone sont blessés et enracinés")
 	check(outside.root_time <= 0.0, "les autres non")
 
-	print("Haie")
+	print("Volée d'épines")
 	_clear_enemies()
-	var walker = _spawn(Vector2(0, 260))
+	var line: Array = []
+	for i in 3:
+		line.append(_spawn(Vector2(140 + i * 40, 0)))
 	await _frames(2)
-	p.aim = Vector2.DOWN
-	p.cast("haie", game.stats)
-	await _frames(150)
-	check(walker.position.y > 120.0, "la haie bloque l'ennemi (y = %.0f)" % walker.position.y)
-	check(walker.hp < walker.max_hp, "la haie blesse au contact")
+	p.aim = Vector2.RIGHT
+	p.cast("volee", game.stats)
+	await _frames(20)
+	check(line[0].hp < line[0].max_hp and line[0].bleed_stacks.size() > 0, "les épines touchent et font saigner")
+	check(line[1].hp < line[1].max_hp, "elles perforent (2e ennemi touché)")
+
+	print("Saignée")
+	_clear_enemies()
+	var bleeder = _spawn(Vector2(120, 0))
+	var dry = _spawn(Vector2(-120, 0))
+	var far = _spawn(Vector2(900, 0))
+	await _frames(2)
+	bleeder.set_physics_process(false)
+	far.set_physics_process(false)
+	bleeder.apply_status("saignement", 20.0, 2.0)   # 40 dégâts restants
+	far.apply_status("saignement", 20.0, 2.0)
+	game.stats["crit"] = 0.0   # pas de coup critique : les dégâts attendus sont exacts
+	var k: Dictionary = p.skill("saignee")
+	var hit: float = p.skill_damage("saignee")
+	var b0: float = bleeder.hp
+	var d0: float = dry.hp
+	p.hp = 10.0
+	p.cast("saignee", game.stats)
+	var want: float = 40.0 * float(k["burst"]) * p.skill_multiplier("saignee") + hit
+	check(absf((b0 - bleeder.hp) - want) < 0.5, "le saignement éclate : %.1f dégâts (attendu %.1f)" % [b0 - bleeder.hp, want])
+	check(bleeder.bleed_stacks.is_empty(), "les saignements sont consommés")
+	check(absf((d0 - dry.hp) - hit) < 0.5, "un ennemi sans saignement ne prend que le petit coup")
+	check(far.bleed_stacks.size() == 1, "hors de portée, rien ne change")
+	check(absf(p.hp - (10.0 + 40.0 * float(k["burst"]) * p.skill_multiplier("saignee") * float(k["heal"]))) < 0.5, "une part de l'éclatement soigne")
 
 	print("Familles d'attaque et effets déclenchés")
 	_clear_enemies()
