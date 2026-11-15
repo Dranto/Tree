@@ -61,6 +61,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --headless -s res://tests/flow_test.gd` : teste le parcours des menus (Nouvelle partie, Retour au titre qui sauvegarde, Continuer qui reprend). Remplace la sauvegarde par défaut.
 - `tools/godot.sh --xvfb -- --autotest=boss` : le robot est posé dans l'arène de la Mère-Ronce avec un build de test (niveau 12, points placés dans Ronce) et joue le combat. Le test réussit si le combat se termine, par une victoire ou une défaite, en moins de 3 minutes ; captures de chaque phase dans `godot/autotest/`. Avec `--headless --fixed-fps 60` à la place de `--xvfb`, le combat se joue en quelques secondes, sans captures.
 - `tools/godot.sh --headless --fixed-fps 60 -s res://tests/boss_test.gd` : teste le Cœur de flétrissure et la Mère-Ronce (siège et purification, ouverture de l'arène, phases, mort du joueur, victoire, drapeaux sauvegardés).
+- `tools/godot.sh --headless -s res://tests/region_test.gd` : teste la région du roncier (géométrie, résistance aux dégâts de Ronce, buissons d'épines, vague de vie, apparitions, comportements du Tireur, du Chargeur et du Nid).
 - `tools/godot.sh --xvfb -- --benchmark` : banc de performance. Le robot joue face à 120 Flétris pendant 30 s, puis le temps moyen, le 99e centile et le pire temps par image s'affichent.
 
 La règle dans `.claude/settings.json` autorise ce script pour les sessions Claude.
@@ -74,8 +75,9 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 | `depart` | `jeu_depart`, `arbre_depart`, `arbre_survol`, `arbre_ensemble` (zoom 0,15), `arbre_zoom_proche` (zoom 1,6) ; l'arbre ouvert (`arbre_depart`) montre le zoom par défaut |
 | `combat` | `jeu_combat` après 30 s de partie jouée par le robot, `arbre_progression` |
 | `competences` | `competences` : haie, racines et fouet de Ronce en action, barre de compétences (4 emplacements pleins, 2 verrouillés) |
-| `galerie` | `galerie_ennemis_fx` (3 ennemis × 6 états dont saignant et enraciné, ondes, textes flottants, nuage), `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable), `galerie_types` (compétence, mutation, maîtrise, nœud flétri, greffe, avant et après), `arbre_grappe` (grappe et infobulle d'une maîtrise) et `arbre_choix` (fenêtre de choix d'une mutation) |
 | `boss` | Le Cœur de flétrissure (`coeur_fletri`, `coeur_siege`, `coeur_purifie`), l'arène (`arene_ouverte`, `boss_vaincu`) et la Mère-Ronce dans chaque phase et chaque attaque annoncée (`boss_volee`, `boss_racines`, `boss_fouets`, `boss_fouets_frappe`, `boss_invocation`, `boss_phase3`) |
+| `galerie` | `galerie_ennemis_fx` (3 ennemis × 6 états dont saignant et enraciné, ondes, textes flottants, nuage), `galerie_roncier` (4 ennemis du roncier × 4 états dont l'attaque annoncée, épine tirée, ronces et buissons morts et vivants), `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable), `galerie_types` (compétence, mutation, maîtrise, nœud flétri, greffe, avant et après), `arbre_grappe` (grappe et infobulle d'une maîtrise) et `arbre_choix` (fenêtre de choix d'une mutation) |
+| `roncier` | `roncier_mort`, `roncier_vague_1` à `_3` (la vague de vie avance), `roncier_ravive`, `roncier_purifie` (drapeau `ronce_coeur_purifie`) |
 | `resolution` | `jeu_`, `arbre_` et `titre_` en 1280x720, 1920x1080, 2560x1440 et 3440x1440 (un processus par résolution) |
 
 - `tools/visual-tests.sh` : compare. Échoue si plus de 0,05 % des pixels d'une capture ont changé, ou si un défaut d'interface nouveau est détecté. Résultats, écarts en rouge (`*.diff.png`), `rapport.html` et `resume.md` dans `godot/tests/visual/out/`.
@@ -93,6 +95,8 @@ La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écr
 - **La vie a un effet en jeu** : sur l'herbe, ta régénération est triplée, les Flétris ralentissent et ils naissent plutôt en terre morte.
 - **Ennemis** : Flétris, Cendreux (rapides) et Colosses (massifs), de plus en plus forts avec ton niveau et le temps.
 - **Région de Ronce** : au nord-est de la graine, un Cœur de flétrissure fait naître des Flétris. Tenir la zone qui l'entoure pendant 30 s, sous des vagues d'ennemis, le purifie : une grande vague de vie se répand et l'arène voisine s'ouvre. La Mère-Ronce y attend : trois phases, des attaques toujours annoncées au sol (volée d'épines, fouets, racines, invocation, arène qui rétrécit), 3 points d'arbre à la clé. Mourir face à elle ramène à la graine, le Cœur reste purifié.
+- **Le roncier** (région de Ronce, au nord-est, dans la direction de la branche Ronce de l'arbre) : sol rouillé, ronces mortes qui fleurissent quand la terre revit, buissons d'épines qui bloquent le passage (et arrêtent les charges). Ses ennemis : le Tireur d'épines (garde ses distances, vise avant de tirer), le Chargeur (marque son couloir au sol avant de charger) et le Nid de ronces (immobile, fait naître des Rejetons). Ils ignorent 25 % des dégâts de Ronce et sont plus nombreux loin de la graine.
+- **Vague de vie** : un nœud appris ravive sa région en vague (environ 1,75 s) ; arbres et ronces se couvrent de feuilles au passage.
 - **Progression** : chaque Flétri laisse une essence de vie, et chaque niveau donne un point d'arbre.
 
 ## Structure
@@ -104,6 +108,8 @@ La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écr
   - `save_game.gd` : sauvegarde versionnée (format 2 : choix des maîtrises et mutations, greffes posées). Les nœuds y sont notés par identifiant stable (`uid`), pour qu'une sauvegarde survive aux changements de l'arbre.
   - `main.gd`, `player.gd`, `enemy.gd`, `projectile.gd`, `orb.gd` : le jeu. La logique avance à pas fixe (`_physics_process`, 60 pas par seconde) et l'affichage est interpolé entre deux pas ; l'animation pure reste dans `_process`.
   - `heart.gd`, `boss_arena.gd`, `boss.gd`, `boss_bar.gd` : le Cœur de flétrissure, l'arène et la Mère-Ronce, boss de la région de Ronce, avec leur barre en haut de l'écran. Ils posent `Game.flags["ronce_coeur_purifie"]` et `Game.flags["ronce_boss_vaincu"]`.
+  - `regions.gd` : les régions du monde (secteur de chaque branche) ; `main.region_at(pos)` et `main.region_center(id)`.
+  - `enemy.gd`, `enemy_thorn.gd` : comportements des ennemis (sortes décrites dans `data/enemies.json`) et épine tirée.
   - `spatial_grid.gd` : grille spatiale des Flétris (collisions, séparation, zones de dégâts), via `main.enemies_near()`.
   - `ground.gd` + `shaders/ground.gdshader` : la carte de vie et le rendu du sol (bruit précalculé en texture, même rendu sur toutes les cartes graphiques).
   - `flora.gd`, `fx.gd`, `hud.gd`, `tree_ui.gd` : décor, effets et interface.

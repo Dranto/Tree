@@ -20,6 +20,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `grafts.json` | Les greffes : objets à poser dans un emplacement de greffe de l'arbre (nom, effets). |
 | `skills.json` | Réglages des compétences actives (recharge, rayon, dégâts, texte). |
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
+| `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest` et ses réglages, `region`, `resist` par branche) et apparitions par région (`spawn` : sortes et poids, part près/loin de la graine, nombre de nids, effet de la purification du Cœur). Les trois premières sortes sont les Flétris d'origine. |
 
 ## Les effets
 
