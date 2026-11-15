@@ -24,5 +24,49 @@
       {"stat": "damage", "op": "more", "value": 1.4},
       {"stat": "max_hp", "op": "more", "value": 0.8}
     ]}
-  ]
+  ],
+  "resonance": [
+    {"count": 10, "name": "Ronce éveillée", "effects": [{"stat": "damage", "op": "inc", "value": 0.1}]},
+    {"count": 25, "name": "Ronce dressée", "effects": [{"stat": "thorns", "op": "more", "value": 1.25}]},
+    {"count": 50, "name": "Ronce souveraine", "effects": [
+      {"stat": "damage", "op": "more", "value": 1.1},
+      {"stat": "pierce", "op": "add", "value": 1}
+    ]}
+  ],
+  "clusters": [{
+    "id": "exemple", "name": "Ronce naissante", "ring": 2, "angle": 0.2,
+    "entry": ["e1"],
+    "nodes": [
+      {"id": "e1", "type": "skill", "skill": "nova", "at": [0, 0]},
+      {"id": "e2", "type": "notable", "name": "Première épine", "at": [0.7, -0.45], "links": ["e1"], "effects": [
+        {"stat": "damage", "op": "inc", "value": 0.12},
+        {"stat": "thorns", "op": "add", "value": 8}
+      ]},
+      {"id": "e3", "type": "mastery", "name": "Maîtrise des épines", "at": [0.7, 0.45], "links": ["e1"], "choices": [
+        {"id": "longues", "name": "Épines longues", "effects": [{"stat": "thorns", "op": "more", "value": 1.5}]},
+        {"id": "seve", "name": "Sève rouge", "effects": [{"stat": "lifesteal", "op": "add", "value": 0.02}]},
+        {"id": "ecorce", "name": "Peau d'écorce", "effects": [{"stat": "armor", "op": "add", "value": 0.06}]}
+      ]},
+      {"id": "e4", "type": "mutation", "mutates": "nova", "at": [1.4, 0], "links": ["e2", "e3"], "choices": [
+        {"id": "large", "name": "Couronne large", "effects": [
+          {"skill_mod": "nova", "param": "radius", "op": "more", "value": 1.4, "text": "Couronne d'épines : rayon ×1,4."}
+        ]},
+        {"id": "vive", "name": "Couronne vive", "effects": [
+          {"skill_mod": "nova", "param": "cooldown", "op": "more", "value": 0.6, "text": "Couronne d'épines : recharge ×0,6, dégâts ×0,8."},
+          {"skill_mod": "nova", "param": "damage", "op": "more", "value": 0.8, "hidden": true}
+        ]},
+        {"id": "lourde", "name": "Couronne lourde", "effects": [
+          {"skill_mod": "nova", "param": "damage", "op": "more", "value": 1.6, "text": "Couronne d'épines : dégâts ×1,6, recul ×1,5, recharge ×1,25."},
+          {"skill_mod": "nova", "param": "knockback", "op": "more", "value": 1.5, "hidden": true},
+          {"skill_mod": "nova", "param": "cooldown", "op": "more", "value": 1.25, "hidden": true}
+        ]}
+      ]},
+      {"id": "e5", "type": "withered", "name": "Bourgeon de cendre", "requires_flag": "ronce_boss_vaincu",
+       "requires_text": "vaincs la Mère-Ronce pour le faire reverdir.", "at": [2.1, -0.38], "links": ["e4"], "effects": [
+        {"stat": "damage", "op": "more", "value": 1.15}
+      ]},
+      {"id": "e6", "type": "graft", "at": [2.1, 0.38], "links": ["e4"]}
+    ],
+    "complete": {"effects": [{"stat": "pierce", "op": "add", "value": 1}]}
+  }]
 }

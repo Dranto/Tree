@@ -21,7 +21,10 @@ const SkillTree = preload("res://scripts/skill_tree.gd")
 ## Drapeau de Game.flags qui porte le plan : les uid des nœuds prévus, séparés par des virgules.
 const FLAG := "plan_arbre"
 const UNDO_MAX := 50
-const KIND_WORDS := {"root": "origine graine", "small": "noeud", "notable": "notable", "keystone": "cle"}
+const KIND_WORDS := {
+	"root": "origine graine", "small": "noeud", "notable": "notable", "keystone": "cle",
+	"skill": "competence", "mutation": "mutation", "mastery": "maitrise", "graft": "greffe emplacement", "withered": "fletri cendre",
+}
 const ACCENTS := {
 	"à": "a", "â": "a", "ä": "a", "ç": "c", "é": "e", "è": "e", "ê": "e", "ë": "e", "î": "i", "ï": "i",
 	"ô": "o", "ö": "o", "ù": "u", "û": "u", "ü": "u", "œ": "oe", "’": "'",
@@ -49,7 +52,8 @@ func _init(g) -> void:
 ## Trajet le plus court (en nœuds, donc en points) depuis l'ensemble « owned » jusqu'à « target ».
 ## Renvoie [ancre déjà acquise, nœud 1, …, target], ou [] si la cible est acquise ou injoignable.
 ## À nombre de nœuds égal, le trajet le plus court à l'écran est préféré.
-static func route(tree, owned: Dictionary, target: int) -> Array:
+## « blocked » : nœuds que le trajet ne traverse pas (flétris, incompatibles…), sauf s'ils sont la cible.
+static func route(tree, owned: Dictionary, target: int, blocked: Dictionary = {}) -> Array:
 	if target < 0 or target >= tree.nodes.size() or owned.has(target):
 		return []
 	var hops := {}
@@ -69,6 +73,8 @@ static func route(tree, owned: Dictionary, target: int) -> Array:
 			break
 		var pu: Vector2 = tree.nodes[u]["pos"]
 		for v in tree.nodes[u]["neighbors"]:
+			if blocked.has(v) and v != target:
+				continue
 			var g: float = geo[u] + pu.distance_to(tree.nodes[v]["pos"])
 			if not hops.has(v):
 				hops[v] = hops[u] + 1
@@ -87,8 +93,8 @@ static func route(tree, owned: Dictionary, target: int) -> Array:
 
 
 ## Nœuds à apprendre, dans l'ordre, pour atteindre « target » : le coût en points est leur nombre.
-static func shortest_path(tree, owned: Dictionary, target: int) -> Array:
-	var r := route(tree, owned, target)
+static func shortest_path(tree, owned: Dictionary, target: int, blocked: Dictionary = {}) -> Array:
+	var r := route(tree, owned, target, blocked)
 	return r.slice(1) if r.size() > 1 else []
 
 
@@ -102,11 +108,27 @@ func owned(with_plan := false) -> Dictionary:
 
 
 func route_to(target: int, with_plan := false) -> Array:
-	return route(game.tree, owned(with_plan), target)
+	var set := owned(with_plan)
+	return route(game.tree, set, target, blocked(set))
 
 
 func path_to(target: int, with_plan := false) -> Array:
-	return shortest_path(game.tree, owned(with_plan), target)
+	var set := owned(with_plan)
+	return shortest_path(game.tree, set, target, blocked(set))
+
+
+## Nœuds qu'on ne peut pas apprendre pour l'instant (flétris, incompatibles avec un nœud de
+## « set ») : les chemins les contournent. Une mutation n'est pas contournée : le chemin peut
+## passer d'abord par le nœud qui donne sa compétence (can_learn_path le vérifie nœud après nœud).
+func blocked(set: Dictionary) -> Dictionary:
+	var out := {}
+	if not game.has_method("lock_reason"):
+		return out
+	for n in game.tree.nodes:
+		if n["requires_flag"] != "" or game.tree.exclusions.has(n["id"]):
+			if not set.has(n["id"]) and game.lock_reason(n["id"], set) != "":
+				out[n["id"]] = true
+	return out
 
 
 # --- Apprendre, oublier, annuler ---
@@ -118,6 +140,8 @@ func can_learn_path(path: Array) -> bool:
 	var set: Dictionary = game.allocated.duplicate()
 	for id in path:
 		if set.has(id) or not _touches(id, set):
+			return false
+		if game.has_method("lock_reason") and game.lock_reason(id, set) != "":
 			return false
 		set[id] = true
 	return true
@@ -244,6 +268,9 @@ func simulate(add: Array = [], remove: Array = []) -> Dictionary:
 		nodes.append(n)
 		if n["key"] != "":
 			keys[n["key"]] = true
+	# Choix des maîtrises, greffes, grappes complètes et résonance comptent aussi.
+	if game.has_method("effect_sources"):
+		nodes = game.effect_sources(set)
 	var engine = Effects.new()
 	engine.states = game.effects.states.duplicate()
 	engine.rebuild(nodes)

@@ -8,6 +8,8 @@ const PATH := "user://tests/plan_test.json"
 
 var failures := 0
 var game
+## Nœuds que les chemins contournent (flétris, incompatibles) : voir TreePlanner.blocked.
+var _blocked := {}
 
 
 func check(cond: bool, what: String) -> void:
@@ -28,6 +30,7 @@ func _run() -> void:
 	var tree = game.tree
 	game.reset()
 	var planner = TreePlanner.new(game)
+	_blocked = planner.blocked(game.allocated)
 
 	print("Plus court chemin")
 	var far := _node_at_ring(6)
@@ -81,7 +84,11 @@ func _run() -> void:
 
 	print("Recherche")
 	var hits: Array = planner.search("couronne")
-	check(hits.size() == 1 and tree.nodes[hits[0]]["key"] == "nova", "par nom : « couronne » trouve la Couronne d'épines")
+	var crown := false
+	for h in hits:
+		if tree.nodes[h]["key"] == "nova":
+			crown = true
+	check(crown and hits.size() < 10, "par nom : « couronne » trouve la Couronne d'épines")
 	check(planner.search("EPINES").size() > 5, "par statistique, sans tenir compte des accents ni des majuscules")
 	check(planner.search("nuage toxique").size() == 1, "par texte d'effet, tous les mots doivent correspondre")
 	check(planner.search("zzzz").is_empty() and planner.search("  ").is_empty(), "rien pour un mot inconnu ou une recherche vide")
@@ -165,6 +172,9 @@ func _bfs_distance(target: int) -> int:
 		var u: int = queue.pop_front()
 		if game.allocated.has(u):
 			return dist[u]
+		# Un nœud flétri ou incompatible ne se traverse pas (il peut être la cible).
+		if u != target and _blocked.has(u):
+			continue
 		for v in game.tree.nodes[u]["neighbors"]:
 			if not dist.has(v):
 				dist[v] = dist[u] + 1

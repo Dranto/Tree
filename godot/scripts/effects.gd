@@ -1,10 +1,12 @@
 ## Moteur d'effets : transforme les effets des nœuds appris (lus dans res://data/) en
 ## statistiques, compétences et réactions aux évènements du jeu.
 ##
-## Trois familles d'effets :
+## Quatre familles d'effets :
 ##   {"stat": "damage", "op": "inc", "value": 0.05}        modifie une statistique
 ##   {"skill": "nova"}                                      donne une compétence active
 ##   {"on": "kill", "do": "reduce_cooldown", ...}           réagit à un évènement
+##   {"skill_mod": "nova", "param": "radius", "op": "more", "value": 1.5, "text": "…"}
+##                                                          transforme un réglage d'une compétence
 ## Un effet peut porter une condition : "if": {"state": "immobile", "min": 0.5}.
 ##
 ## Valeur d'une statistique :
@@ -22,12 +24,16 @@ var _mods: Array = []
 var _triggers: Dictionary = {}   # évènement -> [{"uid", "effect"}]
 var _cooldowns: Dictionary = {}  # uid -> secondes restantes
 var _signature := ""
+var _skill_mods: Dictionary = {}   # compétence -> [effets skill_mod]
+var _skill_cache: Dictionary = {}
 
 
 ## Reconstruit la liste des effets actifs à partir des nœuds appris.
 func rebuild(nodes: Array) -> void:
 	_mods = []
 	_triggers = {}
+	_skill_mods = {}
+	_skill_cache = {}
 	skills = {}
 	for n in nodes:
 		var list: Array = n["effects"]
@@ -37,6 +43,10 @@ func rebuild(nodes: Array) -> void:
 				_mods.append(e)
 			elif e.has("skill"):
 				skills[e["skill"]] = true
+			elif e.has("skill_mod"):
+				if not _skill_mods.has(e["skill_mod"]):
+					_skill_mods[e["skill_mod"]] = []
+				_skill_mods[e["skill_mod"]].append(e)
 			elif e.has("on"):
 				if not _triggers.has(e["on"]):
 					_triggers[e["on"]] = []
@@ -64,6 +74,30 @@ func compute() -> Dictionary:
 		_resolve(name, defs, acc)
 	_signature = _condition_signature()
 	return stats
+
+
+## Réglages d'une compétence (skills.json) une fois les mutations appliquées. Pour chaque réglage :
+## « set » remplace la valeur, puis (valeur + somme des add) × (1 + somme des inc) × produit des more.
+func skill_settings(id: String) -> Dictionary:
+	if _skill_cache.has(id):
+		return _skill_cache[id]
+	var out: Dictionary = Content.skills().get(id, {}).duplicate(true)
+	var acc := {}
+	for e in _skill_mods.get(id, []):
+		var param: String = e["param"]
+		if not acc.has(param):
+			acc[param] = {"add": 0.0, "inc": 0.0, "more": 1.0}
+		match e["op"]:
+			"set": out[param] = e["value"]
+			"add": acc[param]["add"] += e["value"]
+			"inc": acc[param]["inc"] += e["value"]
+			"more": acc[param]["more"] *= e["value"]
+	for param in acc:
+		var v = out.get(param, 0.0)
+		if v is float or v is int:
+			out[param] = (float(v) + acc[param]["add"]) * (1.0 + acc[param]["inc"]) * acc[param]["more"]
+	_skill_cache[id] = out
+	return out
 
 
 func _resolve(name: String, defs: Dictionary, acc: Dictionary):

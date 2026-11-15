@@ -2,9 +2,11 @@
 ##
 ## Format : un fichier JSON lisible dans user://saves/, versionné.
 ## {
-##   "format": "seve-save", "version": 1, "saved_at": <unix>,
+##   "format": "seve-save", "version": 2, "saved_at": <unix>,
 ##   "game":  {"level", "xp", "points", "kills", "flags"},
-##   "tree":  {"allocated": [uid, …]},          # identifiants stables, pas des index
+##   "tree":  {"allocated": [uid, …],            # identifiants stables, pas des index
+##             "choices": {uid: choix},          # maîtrises et mutations (depuis la version 2)
+##             "grafts": {uid: greffe}},         # greffes posées (depuis la version 2)
 ##   "world": {"elapsed", "player": {"x", "y", "hp"},
 ##             "life_map": <PNG en base64>, "flowers": [[x, y, couleur, taille, pétales], …]}
 ## }
@@ -19,7 +21,7 @@
 extends Node
 
 const FORMAT := "seve-save"
-const VERSION := 1
+const VERSION := 2
 const DEFAULT_PATH := "user://saves/partie.json"
 
 ## Dernière erreur de chargement, lisible (vide si tout va bien).
@@ -73,7 +75,7 @@ func capture(main) -> Dictionary:
 			"kills": Game.kills,
 			"flags": Game.flags.duplicate(true),
 		},
-		"tree": {"allocated": Game.allocated_uids()},
+		"tree": {"allocated": Game.allocated_uids(), "choices": Game.choices.duplicate(), "grafts": Game.grafts.duplicate()},
 		"world": world,
 	}
 
@@ -122,6 +124,7 @@ func apply(data: Dictionary, main) -> void:
 	var t: Dictionary = data.get("tree", {})
 	var uids = t.get("allocated", [])
 	var refunded := Game.restore_allocation(uids if uids is Array else [])
+	Game.restore_extras(t.get("choices", {}), t.get("grafts", {}))
 	if refunded > 0:
 		print("Sauvegarde : %d nœud(s) absent(s) de l'arbre actuel, point(s) rendu(s)." % refunded)
 
@@ -158,13 +161,17 @@ func _read(path: String) -> Dictionary:
 
 
 ## Met à jour une sauvegarde ancienne vers le format courant, une version à la fois.
-## Exemple pour un futur format 2 :
-##   if int(data["version"]) == 1:
-##       data["game"]["grafts"] = []
-##       data["version"] = 2
 func _migrate(data: Dictionary) -> Dictionary:
 	if int(data.get("version", 0)) < 1:
 		data["version"] = 1
+	# Version 2 : choix des maîtrises et mutations, greffes posées. Une partie de la version 1
+	# n'en a aucun ; les nœuds appris que les grappes ont remplacés sont rendus au chargement.
+	if int(data["version"]) == 1:
+		if not data.get("tree") is Dictionary:
+			data["tree"] = {}
+		data["tree"]["choices"] = {}
+		data["tree"]["grafts"] = {}
+		data["version"] = 2
 	return data
 
 

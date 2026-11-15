@@ -17,8 +17,21 @@ const SkillTree = preload("res://scripts/skill_tree.gd")
 const TreePanels = preload("res://scripts/tree_panels.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
-const RADIUS := {"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0}
-const KIND_LABEL := {"root": "Origine", "small": "Nœud", "notable": "Nœud notable", "keystone": "Nœud clé"}
+const Effects = preload("res://scripts/effects.gd")
+const Content = preload("res://scripts/content.gd")
+
+const RADIUS := {
+	"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0,
+	"skill": 23.0, "mutation": 20.0, "mastery": 19.0, "graft": 17.0, "withered": 18.0,
+}
+const KIND_LABEL := {
+	"root": "Origine", "small": "Nœud", "notable": "Nœud notable", "keystone": "Nœud clé",
+	"skill": "Compétence", "mutation": "Mutation", "mastery": "Maîtrise", "graft": "Emplacement de greffe", "withered": "Nœud flétri",
+}
+## Couleurs de la cendre qui couvre un nœud flétri tant qu'il n'est pas libéré.
+const ASH := Color(0.56, 0.55, 0.52)
+const ASH_DARK := Color(0.17, 0.17, 0.165)
+const LOCK_COLOR := Color("e0675e")
 
 const BG := Color(0.03, 0.045, 0.04)
 const HEADER_H := 64.0
@@ -41,7 +54,10 @@ const LOD_ALL := 0.32
 const LOD_NEAR := 0.8
 
 ## Taille minimale à l'écran (en pixels) des nœuds importants, pour qu'ils restent visibles dézoomés.
-const MIN_SCREEN_RADIUS := {"root": 9.0, "keystone": 8.0, "notable": 5.0, "small": 0.0}
+const MIN_SCREEN_RADIUS := {
+	"root": 9.0, "keystone": 8.0, "notable": 5.0, "small": 0.0,
+	"skill": 7.0, "mutation": 6.0, "mastery": 6.0, "graft": 5.0, "withered": 5.0,
+}
 
 ## Familles d'effet, chacune avec son icône.
 const FAMILY_OF_STAT := {
@@ -106,6 +122,14 @@ var _fitted := false
 var _opened_once := false
 var _lod := -1
 var _can_buy := false
+## Nœuds appris dont le choix (maîtrise, mutation) reste à faire : ils pulsent.
+var _pending: Array = []
+## Raison du verrou des nœuds à règle (flétri, mutation sans compétence, incompatible).
+var _locks := {}
+## Fenêtre de choix d'une maîtrise ou d'une mutation (nœuds Control), et nœuds qui attendent la leur.
+var _choice: Control = null
+var _choice_id := -1
+var _choice_queue: Array = []
 
 
 class Layer extends Node2D:
@@ -145,6 +169,7 @@ func _ready() -> void:
 	panels.ui = self
 	add_child(panels)
 	Game.tree_changed.connect(_on_tree_changed)
+	Game.node_allocated.connect(_on_node_allocated)
 	resized.connect(_on_resized)
 
 
@@ -159,6 +184,13 @@ func _make_overlay(kind: String) -> Control:
 
 
 func _input(event: InputEvent) -> void:
+	if _choice != null:
+		# Tab ou Échap ferment la fenêtre de choix (le choix reste à faire), pas l'arbre.
+		if event.is_action_pressed("toggle_tree") or event.is_action_pressed("ui_cancel"):
+			_choice_queue.clear()
+			close_choice(false)
+			get_viewport().set_input_as_handled()
+		return
 	if panels.captures_keys():
 		return
 	if event.is_action_pressed("toggle_tree"):
@@ -170,6 +202,8 @@ func _input(event: InputEvent) -> void:
 
 
 func toggle() -> void:
+	_choice_queue.clear()
+	close_choice(false)
 	visible = not visible
 	get_tree().paused = visible
 	dragging = false
@@ -237,7 +271,7 @@ func _view_changed(zoom_changed: bool) -> void:
 
 func _process(delta: float) -> void:
 	# Seule la couche animée est redessinée à chaque image, et seulement s'il y a des nœuds à faire pulser.
-	if visible and _can_buy and not _available.is_empty():
+	if visible and ((_can_buy and not _available.is_empty()) or not _pending.is_empty()):
 		t += delta
 		_anim.queue_redraw()
 
@@ -360,7 +394,7 @@ func _gui_input(event: InputEvent) -> void:
 				if drag_moved < 6.0:
 					var id := pick(mb.position)
 					if id >= 0:
-						panels.click(id)
+						click(id)
 		elif mb.button_index == MOUSE_BUTTON_RIGHT and not mb.pressed:
 			var id := pick(mb.position)
 			if id >= 0:
@@ -383,6 +417,8 @@ func _gui_input(event: InputEvent) -> void:
 func _state(id: int) -> String:
 	if Game.allocated.has(id):
 		return "owned"
+	if Game.lock_reason(id) != "":
+		return "locked"
 	for m in Game.tree.nodes[id]["neighbors"]:
 		if Game.allocated.has(m):
 			return "available"
@@ -392,12 +428,171 @@ func _state(id: int) -> String:
 func _refresh_states() -> void:
 	_states = {}
 	_available = []
+	_pending = []
+	_locks = {}
 	for n in Game.tree.nodes:
-		var st := _state(n["id"])
-		_states[n["id"]] = st
+		var id: int = n["id"]
+		var st := _state(id)
+		_states[id] = st
 		if st == "available":
-			_available.append(n["id"])
+			_available.append(id)
+		elif st == "owned":
+			if Game.needs_choice(id):
+				_pending.append(id)
+		else:
+			var why: String = Game.lock_reason(id)
+			if why != "":
+				_locks[id] = why
 	_can_buy = Game.points > 0
+
+
+## Vrai si le nœud est un nœud flétri encore couvert de cendre.
+func _ashen(n: Dictionary) -> bool:
+	return n["type"] == "withered" and not Game.flags.get(n["requires_flag"], false)
+
+
+# --- Clics et fenêtre de choix ---
+
+## Clic sur un nœud : apprendre (par les outils de l'arbre), ou ouvrir le choix d'un nœud appris.
+func click(id: int) -> void:
+	var n: Dictionary = Game.tree.nodes[id]
+	if Game.allocated.has(id):
+		if not n["choices"].is_empty():
+			if n["type"] == "mutation" and Game.choice_index(id) >= 0:
+				panels.say("Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre.")
+			else:
+				open_choice(id)
+		elif n["type"] == "graft" and Game.graft_of(id) == "":
+			panels.say("Emplacement vide : les greffes se trouveront dans le monde.")
+		return
+	if not panels.plan_mode:
+		# Un nœud à règle (flétri, mutation sans sa compétence, incompatible) dit pourquoi il résiste.
+		var set: Dictionary = Game.allocated.duplicate()
+		for step in panels.planner.path_to(id):
+			var why: String = Game.lock_reason(step, set)
+			if why != "":
+				panels.say(why if step == id else "Ce chemin passe par « %s ». %s" % [Game.tree.nodes[step]["name"], why])
+				return
+			set[step] = true
+	panels.click(id)
+
+
+func _on_node_allocated(node: Dictionary) -> void:
+	if visible and not node["choices"].is_empty() and Game.choice_index(node["id"]) < 0:
+		_choice_queue.append(node["id"])
+		_next_choice.call_deferred()
+
+
+func _next_choice() -> void:
+	while _choice == null and not _choice_queue.is_empty():
+		var id: int = _choice_queue.pop_front()
+		if visible and Game.needs_choice(id):
+			open_choice(id)
+
+
+## Ouvre la fenêtre de choix d'une maîtrise ou d'une mutation apprise.
+func open_choice(id: int) -> void:
+	close_choice(false)
+	var n: Dictionary = Game.tree.nodes[id]
+	if n["choices"].is_empty() or not Game.allocated.has(id):
+		return
+	_choice_id = id
+	hover = -1
+	var current: int = Game.choice_index(id)
+	_choice = Control.new()
+	_choice.theme = UiTheme.make()
+	_choice.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_choice)
+	_choice.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.62)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_choice.add_child(dim)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var center := CenterContainer.new()
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_choice.add_child(center)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	panel.add_child(box)
+	var title := Label.new()
+	title.text = n["name"]
+	title.add_theme_font_override("font", UiTheme.font(true))
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", Game.tree.branch_color(n["branch"]))
+	box.add_child(title)
+	var sub := Label.new()
+	if n["type"] == "mutation":
+		sub.text = "Choisis comment « %s » se transforme. Le choix tient tant que ce nœud reste appris." % Content.skills().get(n["mutates"], {}).get("name", n["mutates"])
+	else:
+		sub.text = "Choisis un bonus. Tu pourras en changer quand tu veux, sans rien dépenser."
+	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	sub.custom_minimum_size = Vector2(560, 0)
+	sub.add_theme_font_size_override("font_size", 15)
+	sub.add_theme_color_override("font_color", Color(0.7, 0.78, 0.72))
+	box.add_child(sub)
+	var first: Button = null
+	for i in n["choices"].size():
+		var ch: Dictionary = n["choices"][i]
+		var b := Button.new()
+		var lines := PackedStringArray([str(ch.get("name", "")) + ("   (choix actuel)" if i == current else "")])
+		for e in ch.get("effects", []):
+			var line := Effects.describe(e)
+			if line != "":
+				lines.append(line)
+		b.text = "\n".join(lines)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.custom_minimum_size = Vector2(560, 0)
+		b.add_theme_font_size_override("font_size", 17)
+		if i == current:
+			b.add_theme_color_override("font_color", UiTheme.GOLD)
+		b.focus_mode = Control.FOCUS_ALL
+		b.pressed.connect(_pick_choice.bind(i))
+		box.add_child(b)
+		if first == null or i == current:
+			first = b
+	var later := Button.new()
+	later.text = "Fermer" if current >= 0 else "Plus tard"
+	later.add_theme_font_size_override("font_size", 15)
+	later.size_flags_horizontal = Control.SIZE_SHRINK_END
+	later.pressed.connect(func():
+		_choice_queue.clear()
+		close_choice(false))
+	box.add_child(later)
+	if first != null:
+		first.grab_focus.call_deferred()
+	panel.resized.connect(_overlay.queue_redraw)
+	_overlay.queue_redraw()
+
+
+func choice_open() -> bool:
+	return _choice != null
+
+
+func _pick_choice(index: int) -> void:
+	var id := _choice_id
+	var name_of: String = Game.tree.nodes[id]["choices"][index].get("name", "")
+	if Game.set_choice(id, index):
+		panels.say("%s : %s" % [Game.tree.nodes[id]["name"], name_of])
+		var scene := get_tree().current_scene if is_inside_tree() else null
+		if scene != null and scene.has_method("request_autosave"):
+			scene.request_autosave()
+	close_choice()
+
+
+func close_choice(next := true) -> void:
+	if _choice != null:
+		_choice.queue_free()
+		_choice = null
+		_choice_id = -1
+		if is_node_ready():
+			_overlay.queue_redraw()
+	if next:
+		_next_choice()
 
 
 ## Famille d'effet d'un nœud (pour son icône) : la compétence qu'il donne, sinon son premier effet.
@@ -406,7 +601,7 @@ func family(n: Dictionary) -> String:
 		return _families[n["id"]]
 	var f := ""
 	for e in n["effects"]:
-		if e.has("skill"):
+		if e.has("skill") or e.has("skill_mod"):
 			f = "competence"
 			break
 	if f == "":
@@ -477,20 +672,119 @@ func _draw_world(c: CanvasItem) -> void:
 			stroke = Color(col.r, col.g, col.b, 0.75)
 		else:
 			stroke = Color(col.r, col.g, col.b, 0.3 if n["type"] != "small" else 0.18)
-		if n["type"] == "keystone":
-			var pts := PackedVector2Array([p + Vector2(0, -r * 1.15), p + Vector2(r, 0), p + Vector2(0, r * 1.15), p + Vector2(-r, 0)])
+		var kind: String = n["type"]
+		var ashen := _ashen(n)
+		if ashen:
+			fill = ASH_DARK
+			stroke = Color(ASH, 0.7)
+		elif kind == "graft" and st == "owned":
+			# Un emplacement reste creux : c'est la greffe qui le remplit.
+			fill = Color(col.r * 0.3, col.g * 0.3, col.b * 0.3)
+			stroke = col
+		var pts := shape_points(kind, p, r)
+		if pts.is_empty():
+			c.draw_circle(p, r, fill)
+			c.draw_arc(p, r, 0.0, TAU, 32, stroke, width if kind == "small" else width + w)
+		else:
 			c.draw_colored_polygon(pts, fill)
 			pts.append(pts[0])
 			c.draw_polyline(pts, stroke, width + w)
+		var ic := Color(0.06, 0.08, 0.07, 0.9) if st == "owned" else Color(col.r, col.g, col.b, 0.9 if st == "available" else 0.55)
+		match kind:
+			"notable", "keystone":
+				if level == LOD_CLOSE:
+					draw_icon(c, family(n), p, r * (0.62 if kind == "notable" else 0.55), ic, w)
+				elif kind == "notable":
+					c.draw_circle(p, r * 0.4, Color(1, 1, 1, 0.75) if st == "owned" else Color(col.r, col.g, col.b, 0.4))
+			"skill":
+				if level == LOD_CLOSE:
+					draw_icon(c, "competence", p, r * 0.55, ic, w)
+			"mutation":
+				if level != LOD_OVERVIEW:
+					_draw_fork(c, p + Vector2(0, r * 0.12), r * 0.42, ic, maxf(r * 0.11, 1.2 * w))
+			"mastery":
+				if level != LOD_OVERVIEW:
+					_draw_mastery_dots(c, n, p, r, st, ic, w)
+			"graft":
+				_draw_graft(c, n, p, r, st, col, w, level)
+			"withered":
+				if ashen:
+					_draw_ash(c, n, p, r, w)
+				elif level == LOD_CLOSE:
+					draw_icon(c, family(n), p, r * 0.62, ic, w)
+				else:
+					c.draw_circle(p, r * 0.4, Color(1, 1, 1, 0.75) if st == "owned" else Color(col.r, col.g, col.b, 0.4))
+
+
+## Contour d'un nœud selon son type (vide = cercle) : losange pour un nœud clé, hexagone pour une
+## compétence, triangle pour une mutation, carré pour une maîtrise.
+func shape_points(kind: String, p: Vector2, r: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	match kind:
+		"keystone":
+			pts = PackedVector2Array([p + Vector2(0, -r * 1.15), p + Vector2(r, 0), p + Vector2(0, r * 1.15), p + Vector2(-r, 0)])
+		"skill":
+			for i in 6:
+				pts.append(p + Vector2.from_angle(i * TAU / 6.0 - PI / 2.0) * r * 1.08)
+		"mutation":
+			for i in 3:
+				pts.append(p + Vector2(0, r * 0.12) + Vector2.from_angle(i * TAU / 3.0 - PI / 2.0) * r * 1.3)
+		"mastery":
+			var h := r * 0.9
+			pts = PackedVector2Array([p + Vector2(-h, -h), p + Vector2(h, -h), p + Vector2(h, h), p + Vector2(-h, h)])
+	return pts
+
+
+## Mutation : un rameau qui se divise en deux.
+func _draw_fork(c: CanvasItem, p: Vector2, s: float, col: Color, lw: float) -> void:
+	c.draw_line(p + Vector2(0, s), p, col, lw)
+	c.draw_line(p, p + Vector2(-s * 0.8, -s * 0.9), col, lw)
+	c.draw_line(p, p + Vector2(s * 0.8, -s * 0.9), col, lw)
+
+
+## Maîtrise : un point par choix, celui qui est choisi est plein.
+func _draw_mastery_dots(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, col: Color, w: float) -> void:
+	var count: int = n["choices"].size()
+	var chosen: int = Game.choice_index(n["id"]) if st == "owned" else -1
+	var gap := r * 0.52
+	for i in count:
+		var q := p + Vector2((i - (count - 1) / 2.0) * gap, 0)
+		if i == chosen:
+			c.draw_circle(q, r * 0.2, col)
 		else:
-			c.draw_circle(p, r, fill)
-			c.draw_arc(p, r, 0.0, TAU, 32, stroke, width if n["type"] == "small" else width + w)
-		if n["type"] == "notable" or n["type"] == "keystone":
-			var ic := Color(0.06, 0.08, 0.07, 0.9) if st == "owned" else Color(col.r, col.g, col.b, 0.9 if st == "available" else 0.55)
-			if level == LOD_CLOSE:
-				draw_icon(c, family(n), p, r * (0.62 if n["type"] == "notable" else 0.55), ic, w)
-			elif n["type"] == "notable":
-				c.draw_circle(p, r * 0.4, Color(1, 1, 1, 0.75) if st == "owned" else Color(col.r, col.g, col.b, 0.4))
+			c.draw_arc(q, r * 0.15, 0.0, TAU, 12, col, maxf(r * 0.07, w))
+
+
+## Emplacement de greffe : un anneau creux marqué d'une croix, ou une feuille dorée quand une greffe est posée.
+func _draw_graft(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, col: Color, w: float, level: int) -> void:
+	var a := 0.9 if st == "owned" else (0.75 if st == "available" else 0.4)
+	c.draw_arc(p, r * 0.68, 0.0, TAU, 24, Color(col.r, col.g, col.b, a * 0.6), maxf(r * 0.08, w))
+	if Game.graft_of(n["id"]) != "":
+		var leaf := PackedVector2Array()
+		for i in 12:
+			var t := i / 12.0 * TAU
+			leaf.append(p + Vector2(sin(t) * r * 0.26, -cos(t) * r * 0.5).rotated(0.6))
+		c.draw_colored_polygon(leaf, Color(UiTheme.GOLD, a))
+		c.draw_line(p + Vector2(0, r * 0.5).rotated(0.6), p + Vector2(0, -r * 0.5).rotated(0.6), Color(0.1, 0.1, 0.08, a), maxf(r * 0.06, w))
+	elif level != LOD_OVERVIEW:
+		var s := r * 0.32
+		var lw := maxf(r * 0.12, 1.2 * w)
+		c.draw_line(p + Vector2(-s, 0), p + Vector2(s, 0), Color(col.r, col.g, col.b, a), lw)
+		c.draw_line(p + Vector2(0, -s), p + Vector2(0, s), Color(col.r, col.g, col.b, a), lw)
+
+
+## Nœud flétri : fissures et flocons de cendre, toujours aux mêmes endroits pour un nœud donné.
+func _draw_ash(c: CanvasItem, n: Dictionary, p: Vector2, r: float, w: float) -> void:
+	var lw := maxf(r * 0.09, w)
+	var crack := Color(ASH, 0.85)
+	c.draw_polyline(PackedVector2Array([p + Vector2(-r * 0.15, -r * 0.8), p + Vector2(r * 0.1, -r * 0.3), p + Vector2(-r * 0.2, r * 0.1), p + Vector2(r * 0.05, r * 0.75)]), crack, lw)
+	c.draw_line(p + Vector2(r * 0.1, -r * 0.3), p + Vector2(r * 0.6, -r * 0.1), crack, lw)
+	c.draw_line(p + Vector2(-r * 0.2, r * 0.1), p + Vector2(-r * 0.65, r * 0.35), crack, lw)
+	var h: int = absi(hash(n["uid"]))
+	for i in 7:
+		var a := (h % 1000) / 1000.0 * TAU + i * 0.9
+		var d := r * (1.25 + 0.35 * ((h >> (i * 3)) & 7) / 7.0)
+		c.draw_circle(p + Vector2.from_angle(a) * d, r * (0.07 + 0.05 * ((h >> (i * 2)) & 3) / 3.0), Color(ASH, 0.55))
 
 
 ## Icône vectorielle d'une famille d'effet, centrée sur p, dans un carré de demi-côté s.
@@ -552,7 +846,13 @@ func _draw_anim(c: CanvasItem) -> void:
 				continue
 			var col: Color = tree.branch_color(n["branch"])
 			var r := _radius(n, zoom)
-			c.draw_arc(n["pos"], r + maxf(2.0, 2.0 * w), 0.0, TAU, 32, Color(col.r, col.g, col.b, 0.35 + 0.65 * pulse), maxf(3.0, 2.0 * w))
+			c.draw_arc(n["pos"], r * (1.3 if n["type"] == "mutation" else 1.0) + maxf(2.0, 2.0 * w), 0.0, TAU, 32, Color(col.r, col.g, col.b, 0.35 + 0.65 * pulse), maxf(3.0, 2.0 * w))
+	# Un choix reste à faire sur ces nœuds appris : anneau doré qui pulse.
+	if not _pending.is_empty():
+		var beat := 0.5 + 0.5 * sin(t * 5.0)
+		for id in _pending:
+			var n: Dictionary = tree.nodes[id]
+			c.draw_arc(n["pos"], _radius(n, zoom) * 1.35 + maxf(3.0, 3.0 * w), 0.0, TAU, 32, Color(UiTheme.GOLD, 0.4 + 0.6 * beat), maxf(3.0, 2.0 * w))
 	if hover >= 0:
 		var n: Dictionary = tree.nodes[hover]
 		c.draw_arc(n["pos"], _radius(n, zoom) + 6.0 * maxf(1.0, w), 0.0, TAU, 32, Color.WHITE, 2.0 * w)
@@ -592,11 +892,11 @@ func layout_labels() -> Array:
 		discs.append(Rect2(sp - Vector2(sr, sr), Vector2(sr, sr) * 2.0))
 		if n["type"] == "small":
 			continue
-		if n["type"] == "notable" and level != LOD_CLOSE:
+		if not n["type"] in ["root", "keystone", "skill"] and level != LOD_CLOSE:
 			continue
 		if n["name"] == "":
 			continue
-		var prio: int = {"root": 0, "keystone": 1, "notable": 2}[n["type"]]
+		var prio: int = {"root": 0, "keystone": 1, "skill": 1}.get(n["type"], 2)
 		cands.append([prio, n, sp, sr])
 	cands.sort_custom(func(a, b): return a[0] < b[0] if a[0] != b[0] else a[1]["id"] < b[1]["id"])
 
@@ -604,7 +904,7 @@ func layout_labels() -> Array:
 		var n: Dictionary = cand[1]
 		var sp: Vector2 = cand[2]
 		var sr: float = cand[3]
-		var fs: int = {"root": FONT_ROOT, "keystone": FONT_KEYSTONE, "notable": FONT_NOTABLE}[n["type"]]
+		var fs: int = {"root": FONT_ROOT, "keystone": FONT_KEYSTONE, "skill": FONT_KEYSTONE}.get(n["type"], FONT_NOTABLE)
 		var ts := _text_size(n["name"], fs)
 		# Quatre places collées au nœud, puis les mêmes un peu plus loin (autour de l'origine, très entourée).
 		var tries := []
@@ -626,7 +926,7 @@ func layout_labels() -> Array:
 				col = UiTheme.GOLD
 			elif st == "owned":
 				col = Color(1, 1, 1, 0.95)
-			elif n["type"] == "notable":
+			elif not n["type"] in ["keystone", "skill"]:
 				col = Color(0.8, 0.85, 0.8, 0.7)
 			out.append([rect, n["name"], fs, col])
 			break
@@ -692,6 +992,9 @@ func _audit_texts() -> void:
 			y += l[1] + 4.0
 			UiAudit.text_at("arbre", font, Vector2(rect.position.x + 14, y), l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, l[1], Transform2D.IDENTITY, "infobulle")
 			y += 4.0
+	# Fenêtre de choix d'une maîtrise ou d'une mutation (nœuds Control).
+	if _choice != null:
+		UiAudit.scan_controls("arbre", _choice)
 
 
 ## Lignes de l'infobulle d'un nœud : [texte, taille, couleur], déjà coupées à la largeur maximale.
@@ -703,10 +1006,66 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 	var sub: String = KIND_LABEL[n["type"]]
 	if bname != "":
 		sub += " · " + bname + " · anneau %d" % n["ring"]
-	raw.append([sub, 13, Color(0.65, 0.72, 0.68)])
-	for d in SkillTree.describe(n):
-		raw.append(["• " + d, 14, Color(0.92, 0.95, 0.92)])
-	raw.append_array(panels.tooltip_lines(n, st))
+	var dim := Color(0.65, 0.72, 0.68)
+	var ink := Color(0.92, 0.95, 0.92)
+	raw.append([sub, 13, dim])
+	for e in n["effects"]:
+		var line := Effects.describe(e)
+		if line != "":
+			raw.append(["• " + line, 14, ink])
+	if n["desc"] != "":
+		raw.append(["• " + n["desc"], 14, ink])
+	var id: int = n["id"]
+	# Maîtrise ou mutation : tous les choix, celui qui est fait en doré.
+	if not n["choices"].is_empty():
+		var chosen: int = Game.choice_index(id) if st == "owned" else -1
+		if n["type"] == "mutation":
+			raw.append(["Transforme « %s » : un seul choix" % Content.skills().get(n["mutates"], {}).get("name", n["mutates"]), 13, dim])
+		else:
+			raw.append(["Un bonus à choisir, modifiable à tout moment", 13, dim])
+		for i in n["choices"].size():
+			var ch: Dictionary = n["choices"][i]
+			var text := "› %s : %s" % [ch.get("name", ""), SkillTree.describe_effects(ch.get("effects", []))]
+			raw.append([text + ("  (choisi)" if i == chosen else ""), 14, UiTheme.GOLD if i == chosen else (ink if chosen < 0 else dim)])
+		if st == "owned" and chosen < 0:
+			raw.append(["Clic pour faire ton choix", 13, UiTheme.GOLD])
+		elif st == "owned" and n["type"] == "mastery":
+			raw.append(["Clic pour changer de bonus", 13, UiTheme.GOLD])
+	if n["type"] == "graft":
+		var g = Content.grafts().get(Game.graft_of(id))
+		if g is Dictionary:
+			raw.append(["Greffe : " + str(g.get("name", "")), 14, UiTheme.GOLD])
+			for e in g.get("effects", []):
+				var line := Effects.describe(e)
+				if line != "":
+					raw.append(["• " + line, 14, ink])
+		else:
+			raw.append(["• Emplacement vide : reçoit une greffe trouvée dans le monde.", 14, ink])
+	# Grappe écrite à la main : avancement et bonus de grappe complète.
+	if n["cluster"] != "" and tree.clusters.has(n["cluster"]):
+		var cl: Dictionary = tree.clusters[n["cluster"]]
+		var prog: Array = Game.cluster_progress(n["cluster"])
+		raw.append(["Grappe « %s » : %d / %d nœuds" % [cl["name"], prog[0], prog[1]], 13, dim])
+		if not cl["effects"].is_empty():
+			raw.append(["Grappe complète : " + SkillTree.describe_effects(cl["effects"]), 13, UiTheme.GOLD if prog[0] == prog[1] else dim])
+	# Résonance de la branche : le prochain palier.
+	if n["branch"] >= 0:
+		var tiers = SkillTree.BRANCHES[n["branch"]].get("resonance", [])
+		if tiers is Array and not tiers.is_empty():
+			var count: int = Game.branch_count(n["branch"])
+			var next := {}
+			for tier in tiers:
+				if count < int(tier.get("count", 0)):
+					next = tier
+					break
+			if next.is_empty():
+				raw.append(["Résonance de %s : tous les paliers atteints (%d nœuds)" % [bname, count], 13, UiTheme.GOLD])
+			else:
+				raw.append(["Résonance de %s : %d / %d nœuds, puis %s" % [bname, count, int(next["count"]), SkillTree.describe_effects(next.get("effects", []))], 13, dim])
+	if st != "owned" and _locks.has(id):
+		raw.append([_locks[id], 13, LOCK_COLOR])
+	else:
+		raw.append_array(panels.tooltip_lines(n, st))
 	var maxw := minf(TOOLTIP_MAX_W, size.x - 2.0 * MARGIN - 28.0)
 	var lines: Array = []
 	for l in raw:
