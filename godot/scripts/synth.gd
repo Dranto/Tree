@@ -18,6 +18,7 @@ const SOUNDS := {
 	"impact": {"wave": NOISE, "f0": 900.0, "f1": 300.0, "dur": 0.07, "att": 0.001, "lp": 2600.0, "vol": 0.3, "body": 160.0},
 	"critique": {"wave": SAW, "f0": 520.0, "f1": 1500.0, "dur": 0.16, "att": 0.002, "lp": 6000.0, "vol": 0.3, "voice2": 7.0, "click": true},
 	"mort": {"wave": NOISE, "f0": 700.0, "f1": 120.0, "dur": 0.32, "att": 0.004, "lp": 1800.0, "vol": 0.34, "body": 90.0},
+	"chute": {"wave": SINE, "f0": 330.0, "f1": 98.0, "dur": 1.3, "att": 0.02, "lp": 1600.0, "vol": 0.4, "body": 55.0, "voice2": -5.0, "vib": [0.02, 5.0]},
 	"noeud": {"wave": TRI, "f0": 440.0, "f1": 880.0, "dur": 0.34, "att": 0.006, "lp": 0.0, "vol": 0.32, "voice2": 12.0, "vib": [0.01, 7.0]},
 	"niveau": {"wave": SQUARE, "f0": 392.0, "f1": 392.0, "dur": 0.7, "att": 0.005, "lp": 4500.0, "vol": 0.24, "duty": 0.5, "arp": [0, 4, 7, 12]},
 	"esquive": {"wave": NOISE, "f0": 1800.0, "f1": 4200.0, "dur": 0.16, "att": 0.03, "lp": 5200.0, "vol": 0.22},

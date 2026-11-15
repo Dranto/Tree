@@ -104,7 +104,7 @@ func _run() -> void:
 	await _steps(5)
 	check(arena.state == "ouverte" and not main.spawn_paused, "le combat s'arrête, l'arène reste ouverte")
 	check(game.flags.get("ronce_coeur_purifie", false) == true and heart.state == "purifie", "le Cœur reste purifié")
-	check(main.player.position.length() < 10.0, "le joueur renaît à la graine")
+	check(main.player.position.distance_to(main.respawn_point()) < 10.0, "le joueur renaît au dernier sanctuaire ravivé")
 	check(not arena.bar.visible and arena.radius == arena.RADIUS, "barre cachée, arène à sa taille")
 
 	print("Victoire")

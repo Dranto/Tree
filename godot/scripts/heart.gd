@@ -140,6 +140,21 @@ func _physics_process(delta: float) -> void:
 					_spawn(center + Vector2.from_angle(rng.randf() * TAU) * (BODY_RADIUS + 30.0), 0)
 
 
+## Le joueur est mort pendant le siège : le Cœur se rendort, tout est à recommencer.
+## Renvoie true s'il y avait un siège en cours.
+func reset_siege() -> bool:
+	if state != "siege":
+		return false
+	state = "fletri"
+	progress = 0.0
+	wave_index = 0
+	wave_timer = 0.0
+	spawn_timer = 2.0
+	spawned = []
+	bar.hide_bar()
+	return true
+
+
 ## Barre du siège : ce qu'il reste de flétrissure, et le temps à tenir encore.
 func update_bar(inside: bool) -> void:
 	bar.show_bar("Cœur de flétrissure", 1.0 - progress / HOLD_TIME,

@@ -23,6 +23,8 @@ const Heart = preload("res://scripts/heart.gd")
 const BossArena = preload("res://scripts/boss_arena.gd")
 const Regions = preload("res://scripts/regions.gd")
 const Content = preload("res://scripts/content.gd")
+const Sanctuary = preload("res://scripts/sanctuary.gd")
+const LostSap = preload("res://scripts/lost_sap.gd")
 
 ## Apparitions par région (sortes du roncier, part selon la distance) : res://data/enemies.json.
 var region_spawn: Dictionary = Content._load("enemies").get("spawn", {})
@@ -53,6 +55,10 @@ var big_enemies: Array = []
 ## Cœur de flétrissure et arène de la Mère-Ronce (région de Ronce).
 var heart
 var arena
+## Sanctuaires (sanctuary.gd), points de renaissance ; et sève perdue au sol (lost_sap.gd, ou null).
+var sanctuaries: Array = []
+var lost_sap = null
+var camera: Camera2D
 ## Vrai pendant un combat de boss : plus aucun Flétri ne naît autour du joueur.
 var spawn_paused := false
 var spawn_timer := 1.5
@@ -143,6 +149,7 @@ func _ready() -> void:
 	cam.position_smoothing_speed = 8.0
 	player.add_child(cam)
 	cam.make_current()
+	camera = cam
 
 	var hud_layer := CanvasLayer.new()
 	hud_layer.layer = 5
@@ -179,6 +186,7 @@ func _ready() -> void:
 	for n in [heart, arena]:
 		add_child(n)
 		move_child(n, actors_layer.get_index())
+	_place_sanctuaries()
 
 	Sfx.listener = player
 	Music.start()
@@ -290,6 +298,7 @@ func _physics_process(delta: float) -> void:
 	_separate()
 	_push_out_of_bushes()
 	_watch_region_state()
+	_sync_lost_sap()
 
 	spawn_timer -= delta * (1.0 + 0.6 * _region_depth(player.position))
 	if spawn_paused:
@@ -578,16 +587,118 @@ func player_died() -> void:
 		player.hp = Game.stats["max_hp"]
 		player.invuln = 1.0
 		return
+	# Un combat en cours se remet à zéro : siège du Cœur à recommencer, Mère-Ronce rendormie
+	# (elle disparaît avec les autres ennemis, voir boss_arena._fight_lost).
+	var reset := ""
+	if arena.in_combat():
+		reset = "boss"
+	elif heart.reset_siege():
+		reset = "coeur"
 	for e in enemies:
 		if is_instance_valid(e):
 			e.queue_free()
 	enemies.clear()
 	for p in projectiles_layer.get_children():
 		p.queue_free()
+	# L'expérience non dépensée reste au sol ; celle d'une mort précédente, pas reprise, est perdue.
+	# Les points et les nœuds de l'arbre ne sont jamais perdus.
+	var lost := float(Game.flags.get("seve_perdue", 0.0))
+	var dropped := Game.xp
 	Game.xp = 0.0
-	player.respawn()
+	if dropped > 0.0:
+		Game.flags["seve_perdue"] = dropped
+		Game.flags["seve_perdue_x"] = player.position.x
+		Game.flags["seve_perdue_y"] = player.position.y
+	else:
+		_clear_lost_sap_flags()
+	_sync_lost_sap()
+	var spot = current_sanctuary()
+	player.respawn(respawn_point())
 	player.reset_physics_interpolation()
-	fx.text(player.position + Vector2(0, -60), "Tu t'es flétri… L'Arbre te fait renaître.", Color("f0e6b4"), 22, 3.0)
+	camera.reset_smoothing()
+	if spot != null:
+		spot.inside = true   # déjà dans le cercle : pas de second message « tu renaîtras ici »
+	Sfx.play("chute")
+	hud.show_death({"place": spot.place if spot != null else "de la Graine", "dropped": dropped, "lost": lost, "reset": reset})
+	request_autosave()
+
+
+# --- Sanctuaires et sève perdue ---
+
+## Pose les sanctuaires de SITES, écartés des buissons d'épines (la graine reste au centre).
+func _place_sanctuaries() -> void:
+	for site in Sanctuary.SITES:
+		var s = Sanctuary.new()
+		s.main = self
+		s.setup(site)
+		var pos: Vector2 = Sanctuary.site_position(site)
+		if pos != Vector2.ZERO:
+			for i in 6:
+				pos = flora.push_out(pos, Sanctuary.RADIUS + 10.0)
+		s.position = pos
+		s.frozen = build_bot != null or benchmark
+		add_child(s)
+		move_child(s, actors_layer.get_index())
+		sanctuaries.append(s)
+
+
+## Sanctuaire d'identifiant donné, ou null.
+func sanctuary(id: String):
+	for s in sanctuaries:
+		if s.id == id:
+			return s
+	return null
+
+
+## Sanctuaire où le joueur renaîtra : le dernier ravivé ou visité (Game.flags["renaissance"]),
+## la Graine par défaut.
+func current_sanctuary():
+	var s = sanctuary(str(Game.flags.get("renaissance", "graine")))
+	if s == null or not s.is_lit():
+		s = sanctuary("graine")
+	return s
+
+
+## Point de renaissance : centre du sanctuaire courant (la graine sans sanctuaire).
+func respawn_point() -> Vector2:
+	var s = current_sanctuary()
+	return s.position if s != null else Vector2.ZERO
+
+
+func _clear_lost_sap_flags() -> void:
+	for k in ["seve_perdue", "seve_perdue_x", "seve_perdue_y"]:
+		Game.flags.erase(k)
+
+
+## Fait correspondre le nœud de la sève perdue aux drapeaux (partie chargée, nouvelle partie, mort).
+func _sync_lost_sap() -> void:
+	var amount := float(Game.flags.get("seve_perdue", 0.0))
+	var pos := Vector2(float(Game.flags.get("seve_perdue_x", 0.0)), float(Game.flags.get("seve_perdue_y", 0.0)))
+	if lost_sap != null and (not is_instance_valid(lost_sap) or amount <= 0.0 or lost_sap.position != pos or lost_sap.amount != amount):
+		if is_instance_valid(lost_sap):
+			lost_sap.queue_free()
+		lost_sap = null
+	if amount > 0.0 and lost_sap == null:
+		lost_sap = LostSap.new()
+		lost_sap.main = self
+		lost_sap.position = pos
+		lost_sap.amount = amount
+		orbs_layer.add_child(lost_sap)
+
+
+## Le joueur a touché sa sève perdue : il reprend toute son expérience.
+func recover_sap() -> void:
+	if lost_sap == null or not is_instance_valid(lost_sap):
+		return
+	var amount: float = lost_sap.amount
+	var at: Vector2 = lost_sap.position
+	_clear_lost_sap_flags()
+	_sync_lost_sap()
+	Game.add_xp(amount)
+	Sfx.play("noeud", at)
+	fx.ring(at, 10.0, 120.0, 0.6, Color("e8d36b"), 5.0)
+	hud.banner("Sève reprise : %d d'expérience." % roundi(amount))
+	request_autosave()
 
 
 func _on_node_allocated(node: Dictionary) -> void:
