@@ -341,7 +341,8 @@ func _cast_saignee(s: Dictionary) -> void:
 	var mult: float = float(k["burst"]) * skill_multiplier("saignee")
 	var total := 0.0
 	for e in main.enemies_near(position, r):
-		var amount: float = e.burst_bleed(mult)
+		# L'éclatement est un coup de Ronce : les ennemis du roncier y résistent aussi.
+		var amount: float = e.burst_bleed(mult) * main.branch_factor(e, "ronce")
 		if amount > 0.0:
 			main.fx.ring(e.position, e.radius, e.radius * 2.2, 0.3, col.lightened(0.2), 4.0)
 			e.take_damage(amount, false)
