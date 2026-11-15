@@ -190,11 +190,12 @@ Pour une version exportée du jeu, ajouter `*.json` aux fichiers à inclure dans
 
 ## Équilibrage des builds
 
-`builds.json` décrit des builds types : une liste de nœuds visés (`targets`, identifiants stables comme `key:nova` ou `c:ronce:sang:s1`) et les choix des maîtrises et mutations (`choices`). Le robot apprend, à chaque point gagné, le prochain nœud du plus court chemin vers la première cible pas encore acquise, puis complète avec les nœuds de Ronce les plus proches de la graine.
+`builds.json` décrit des builds types : une liste de nœuds visés (`targets`, identifiants stables comme `key:nova` ou `c:ronce:sang:s1`), les choix des maîtrises et mutations (`choices`) et la façon de jouer du robot (`style` : `distance`, `melee` pour aller au contact, `tank` pour rester au milieu des ennemis). Le robot passe au niveau 20, apprend à chaque point le prochain nœud du plus court chemin vers la première cible pas encore acquise, puis complète avec les nœuds de Ronce les plus proches de la graine.
 
 ```
-tools/godot.sh --xvfb --fixed-fps 60 -- --autotest=build:fouet --build-time=180 --seed=1
-tools/balance.sh            # epines, fouet et saignement sur 3 graines, 180 s chacun depuis le niveau 20 (LEVEL=…)
+tools/godot.sh --headless --fixed-fps 60 -- --autotest=build:fouet --build-time=180 --build-level=20 --seed=1
+tools/balance.sh                 # epines, fouet et saignement, graines 1 à 3, sans affichage et en parallèle
+SEEDS="1 2 3 4 5 6 7 8 9 10" tools/balance.sh
 ```
 
-`tools/balance.sh` affiche les ennemis vaincus par minute de chaque build et échoue si le meilleur dépasse le moins bon de plus de 30 %. Une cible absente de l'arbre est ignorée et signalée.
+Pendant la mesure, le niveau reste figé (mêmes points et même difficulté pour tous les builds) et une mort ne vide pas l'écran : le robot repart sur place avec toute sa vie, et chaque mort compte 10 s de plus dans le temps de jeu. Le score est le nombre d'ennemis vaincus par minute ; `tools/balance.sh` échoue si le meilleur build dépasse le moins bon de plus de 30 %. Une cible absente de l'arbre est ignorée et signalée.

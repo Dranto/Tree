@@ -12,10 +12,15 @@ const DEFAULT_TIME := 180.0
 ## Niveau de départ : le build est mesuré en milieu de partie (assez de points pour ses grappes),
 ## avec la difficulté qui va avec ce niveau.
 const DEFAULT_LEVEL := 20
+## Secondes comptées en plus pour chaque mort dans le score (ennemis vaincus par minute).
+const DEATH_PENALTY := 10.0
 
 var name := ""
 var targets: Array = []
 var choices: Dictionary = {}
+## Façon de jouer du robot : « distance » (tourne autour de la graine en tirant, par défaut),
+## « melee » (va au contact pour le fouet), « tank » (reste au milieu des ennemis pour les épines).
+var style := "distance"
 var duration := DEFAULT_TIME
 var start_level := DEFAULT_LEVEL
 var _started := false
@@ -44,6 +49,7 @@ static func from_cmdline():
 	bot.name = wanted
 	bot.targets = all[wanted].get("targets", [])
 	bot.choices = all[wanted].get("choices", {})
+	bot.style = all[wanted].get("style", "distance")
 	bot.duration = time
 	bot.start_level = level
 	return bot
@@ -105,9 +111,12 @@ func _next(game) -> int:
 ## Choix des maîtrises et mutations (interface de la tâche A, si elle est présente).
 func _choose(game, id: int) -> void:
 	var uid: String = game.tree.nodes[id]["uid"]
-	if not choices.has(uid) or not game.has_method("set_choice"):
-		return
 	var list: Array = game.tree.nodes[id].get("choices", [])
+	if list.is_empty() or not game.has_method("set_choice"):
+		return
+	if not choices.has(uid):
+		game.set_choice(id, 0)  # choix non prévu par le build : le premier
+		return
 	for i in list.size():
 		if str(list[i].get("id", i)) == str(choices[uid]):
 			game.set_choice(id, i)
@@ -115,9 +124,26 @@ func _choose(game, id: int) -> void:
 	push_warning("Build %s : choix « %s » introuvable sur %s" % [name, choices[uid], uid])
 
 
+## Déplacement du robot selon le style du build. Renvoie {} pour garder le jeu « à distance » par défaut.
+func steer(player, target: Vector2, best_d2: float, max_hp: float) -> Dictionary:
+	if style == "distance" or best_d2 == INF:
+		return {}
+	var d := sqrt(best_d2)
+	var low: bool = player.hp < max_hp * 0.35
+	var keep := 90.0 if style == "melee" else 35.0
+	var mv := Vector2.ZERO
+	if low:
+		mv = (player.position - target).normalized()
+	elif d > keep:
+		mv = (target - player.position).normalized()
+	return {"move": mv, "aim": target, "dash": low and d < 60.0}
+
+
 func report(game, elapsed: float, deaths: int) -> String:
-	var per_min: float = game.kills / maxf(elapsed / 60.0, 0.001)
-	var line := "BUILD %s : %.0f s, niveau %d, %d nœuds, %d tués, %d morts, %.1f tués/min" % [
+	# Une mort coûte DEATH_PENALTY secondes : le robot repart sur place avec toute sa vie
+	# (voir main.player_died), donc un build qui meurt souvent ne doit pas en tirer avantage.
+	var per_min: float = game.kills / maxf((elapsed + deaths * DEATH_PENALTY) / 60.0, 0.001)
+	var line := "BUILD %s : %.0f s, niveau %d, %d nœuds, %d tués, %d morts, %.1f tués/min (mort = 10 s perdues)" % [
 		name, elapsed, game.level, game.allocated.size(), game.kills, deaths, per_min]
 	if not missing.is_empty():
 		line += "\nBUILD %s : %d cibles absentes de l'arbre (%s)" % [name, missing.size(), ", ".join(missing)]

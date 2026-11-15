@@ -35,7 +35,7 @@
       "effects": [
         {"stat": "thorns", "op": "more", "value": 3},
         {"stat": "thorns", "op": "flat", "value": 15},
-        {"stat": "damage", "op": "more", "value": 0.85}
+        {"stat": "damage", "op": "more", "value": 0.9}
       ]
     },
     {
@@ -104,7 +104,7 @@
           "at": [0.55, -0.35],
           "links": ["f1"],
           "effects": [
-            {"stat": "melee_damage", "op": "inc", "value": 0.35},
+            {"stat": "melee_damage", "op": "inc", "value": 0.2},
             {"stat": "bleed", "op": "add", "value": 0.03}
           ]
         },
@@ -161,7 +161,7 @@
               "id": "fouet_tournoyant",
               "name": "Fouet tournoyant",
               "effects": [
-                {"skill_mod": "fouet", "param": "arc", "op": "more", "value": 3.0, "text": "+200 % arc du fouet"},
+                {"skill_mod": "fouet", "param": "arc", "op": "more", "value": 1.4, "text": "+40 % arc du fouet"},
                 {"skill_mod": "fouet", "param": "damage", "op": "more", "value": 0.8, "text": "−20 % dégâts du fouet"}
               ]
             },
@@ -190,7 +190,7 @@
           "at": [1.5, 0.35],
           "links": ["f4"],
           "effects": [
-            {"on": "melee_hit", "do": "explode", "radius": 60, "factor": 0.3, "color": "#e0675e", "text": "Chaque coup de fouet éclabousse les ennemis proches de 30 % de ses dégâts."}
+            {"on": "melee_hit", "do": "explode", "radius": 60, "factor": 0.2, "color": "#e0675e", "text": "Un coup de fouet éclabousse les ennemis proches de 20 % de ses dégâts (au plus toutes les 0,4 s).", "cooldown": 0.4}
           ]
         },
         {
@@ -209,7 +209,7 @@
       "complete": {
         "name": "Lanière complète",
         "effects": [
-          {"stat": "melee_damage", "op": "more", "value": 1.25}
+          {"stat": "melee_damage", "op": "more", "value": 1.1}
         ]
       }
     },
@@ -227,8 +227,9 @@
           "name": "Peau de mûrier",
           "at": [0, -0.35],
           "effects": [
-            {"stat": "thorns", "op": "add", "value": 20},
-            {"stat": "armor", "op": "add", "value": 0.05}
+            {"stat": "thorns", "op": "add", "value": 25},
+            {"stat": "armor", "op": "add", "value": 0.05},
+            {"stat": "projectile_damage", "op": "inc", "value": 0.15}
           ]
         },
         {
@@ -238,7 +239,8 @@
           "at": [0, 0.35],
           "effects": [
             {"stat": "thorns", "op": "more", "value": 1.5, "if": {"state": "immobile", "min": 0.5}},
-            {"stat": "armor", "op": "add", "value": 0.1, "if": {"state": "immobile", "min": 0.5}}
+            {"stat": "armor", "op": "add", "value": 0.1, "if": {"state": "immobile", "min": 0.5}},
+            {"stat": "area_damage", "op": "inc", "value": 0.5, "if": {"state": "immobile", "min": 0.5}}
           ]
         },
         {
@@ -326,16 +328,19 @@
           "excludes": ["sang_noir"],
           "desc": "Tu deviens un rempart, lent et immobile. Exclut Sang noir.",
           "effects": [
-            {"stat": "thorns", "op": "more", "value": 2.5},
+            {"stat": "thorns", "op": "more", "value": 3},
             {"stat": "armor", "op": "add", "value": 0.15},
-            {"stat": "move_speed", "op": "more", "value": 0.8}
+            {"stat": "move_speed", "op": "more", "value": 0.8},
+            {"stat": "projectile_damage", "op": "inc", "value": 0.3}
           ]
         }
       ],
       "complete": {
         "name": "Mur complet",
         "effects": [
-          {"on": "lethal_hit", "do": "survive", "hp": 1, "invuln": 1.5, "cooldown": 90, "label": "Le mur tient !", "color": "#e0675e", "text": "Une fois toutes les 90 s, un coup mortel te laisse à 1 point de vie."}
+          {"on": "lethal_hit", "do": "survive", "hp": 1, "invuln": 1.5, "cooldown": 90, "label": "Le mur tient !", "color": "#e0675e", "text": "Une fois toutes les 90 s, un coup mortel te laisse à 1 point de vie."},
+          {"stat": "thorns", "op": "more", "value": 1.3},
+          {"stat": "area_damage", "op": "inc", "value": 0.35}
         ]
       }
     },
@@ -602,15 +607,15 @@
           "desc": "Ce que tu tiens ne t'échappe plus, mais tes graines s'émoussent.",
           "effects": [
             {"stat": "root_duration", "op": "more", "value": 1.6},
-            {"stat": "melee_damage", "op": "inc", "value": 0.4},
-            {"stat": "projectile_damage", "op": "more", "value": 0.8}
+            {"stat": "melee_damage", "op": "inc", "value": 0.2},
+            {"stat": "projectile_damage", "op": "more", "value": 0.7}
           ]
         }
       ],
       "complete": {
         "name": "Étreinte complète",
         "effects": [
-          {"on": "root", "do": "reduce_cooldown", "target": "fouet", "value": 0.4, "text": "Chaque ennemi enraciné réduit la recharge du fouet de 0,4 s."}
+          {"on": "root", "do": "reduce_cooldown", "target": "fouet", "value": 0.4, "text": "Enraciner un ennemi réduit la recharge du fouet de 0,4 s (au plus une fois par seconde).", "cooldown": 1}
         ]
       }
     },
@@ -628,7 +633,7 @@
           "name": "Faim de sève",
           "at": [0, 0],
           "effects": [
-            {"stat": "damage", "op": "inc", "value": 0.3},
+            {"stat": "damage", "op": "inc", "value": 0.2},
             {"stat": "max_hp", "op": "inc", "value": -0.1}
           ]
         },
@@ -771,7 +776,7 @@
           "type": "graft",
           "name": "Greffon de ronce",
           "at": [1.0, 0],
-          "links": ["h2", "h3"],
+          "links": ["h1", "h2", "h3"],
           "desc": "Un emplacement où insérer une greffe trouvée dans le monde."
         }
       ],

@@ -9,6 +9,7 @@
       "c:ronce:epines:e1",
       "c:ronce:epines:e2",
       "c:ronce:epines:e3",
+      "c:ronce:fouet:f7",
       "c:ronce:epines:e4",
       "c:ronce:souche:o2",
       "c:ronce:souche:o4",
@@ -18,13 +19,15 @@
       "c:ronce:venin:p1",
       "c:ronce:venin:p4"
     ],
-    "choices": {"c:ronce:epines:e4": "epines_longues", "c:ronce:epines:e5": "volee_large", "c:ronce:souche:o4": "bois_dur", "c:ronce:venin:p4": "epines_toxiques"}
+    "choices": {"c:ronce:epines:e4": "epines_longues", "c:ronce:epines:e5": "volee_large", "c:ronce:souche:o4": "bois_dur", "c:ronce:venin:p4": "epines_toxiques"},
+    "style": "tank"
   },
   "fouet": {
     "name": "Fouet",
     "targets": [
       "c:ronce:fouet:f1",
       "c:ronce:fouet:f2",
+      "c:ronce:fouet:f7",
       "c:ronce:fouet:f3",
       "c:ronce:fouet:f4",
       "c:ronce:fouet:f5",
@@ -40,7 +43,8 @@
       "c:ronce:vorace:v4",
       "c:ronce:vorace:v5"
     ],
-    "choices": {"c:ronce:fouet:f4": "poigne", "c:ronce:fouet:f5": "fouet_tournoyant", "c:ronce:racines:r4": "racines_vives", "c:ronce:racines:r5": "racines_en_reseau", "c:ronce:vorace:v4": "festin", "c:ronce:vorace:v5": "couronne_avide"}
+    "choices": {"c:ronce:fouet:f4": "poigne", "c:ronce:fouet:f5": "fouet_tournoyant", "c:ronce:racines:r4": "racines_vives", "c:ronce:racines:r5": "racines_en_reseau", "c:ronce:vorace:v4": "festin", "c:ronce:vorace:v5": "couronne_avide"},
+    "style": "melee"
   },
   "saignement": {
     "name": "Saignement",
@@ -61,6 +65,7 @@
       "c:ronce:venin:p4",
       "key:sanguinaire"
     ],
-    "choices": {"c:ronce:sang:s4": "sang_epais", "c:ronce:sang:s5": "saignee_brutale", "c:ronce:venin:p4": "venin_et_sang"}
+    "choices": {"c:ronce:sang:s4": "sang_epais", "c:ronce:sang:s5": "saignee_brutale", "c:ronce:venin:p4": "venin_et_sang"},
+    "style": "melee"
   }
 }

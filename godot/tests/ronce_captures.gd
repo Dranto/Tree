@@ -82,6 +82,8 @@ func _hover(id: int) -> void:
 
 
 func _shot(shot_name: String) -> void:
+	if ui.choice_open():
+		ui.close_choice(false)
 	await _frames(3)
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("%s/%s.png" % [OUT, shot_name])

@@ -3,7 +3,7 @@
 # Le robot joue chaque build sur plusieurs graines, puis compare les ennemis vaincus par minute.
 # Échoue (code 1) si le meilleur build dépasse le moins bon de plus de 30 %.
 #
-#   tools/balance.sh                     # builds epines, fouet, saignement ; graines 1 2 3 ; 180 s depuis le niveau 20
+#   tools/balance.sh                     # builds epines, fouet, saignement ; graines 1 2 3 ; 180 s au niveau 20
 #   BUILDS="fouet" SEEDS="1" TIME=60 tools/balance.sh
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -12,14 +12,22 @@ SEEDS=${SEEDS:-"1 2 3"}
 TIME=${TIME:-180}
 LEVEL=${LEVEL:-20}
 LIMIT=${LIMIT:-0.30}
-export LIBGL_ALWAYS_SOFTWARE=1
 
 "$ROOT/tools/godot.sh" --headless --editor --quit >/dev/null 2>&1
+# Sans affichage (la logique est à pas fixe, donc identique) et toutes les parties en parallèle :
+# une partie de 180 s se joue en moins d'une minute.
+TMP=$(mktemp -d)
+for b in $BUILDS; do
+  for s in $SEEDS; do
+    "$ROOT/tools/godot.sh" --headless --fixed-fps 60 -- "--autotest=build:$b" "--build-time=$TIME" "--build-level=$LEVEL" "--seed=$s" > "$TMP/$b.$s.log" 2>&1 &
+  done
+done
+wait
 declare -A TOTAL
 for b in $BUILDS; do
   TOTAL[$b]=0
   for s in $SEEDS; do
-    line=$("$ROOT/tools/godot.sh" --xvfb --fixed-fps 60 -- "--autotest=build:$b" "--build-time=$TIME" "--build-level=$LEVEL" "--seed=$s" 2>&1 | grep '^BUILD' )
+    line=$(grep '^BUILD' "$TMP/$b.$s.log")
     echo "$line" | sed "s/^BUILD $b :/[$b, graine $s]/"
     rate=$(echo "$line" | head -1 | sed -E 's/.* ([0-9.]+) tués\/min.*/\1/')
     [[ "$rate" =~ ^[0-9.]+$ ]] || { echo "Pas de résultat pour $b (graine $s)"; exit 2; }

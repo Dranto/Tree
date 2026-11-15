@@ -571,6 +571,13 @@ func on_enemy_killed(e) -> void:
 
 func player_died() -> void:
 	deaths += 1
+	# Robot d'équilibrage : la mort est seulement comptée, le joueur repart sur place avec toute
+	# sa vie. Sinon chaque mort vide l'écran et offre des ennemis frais et faciles, et le build
+	# qui meurt le plus semble le plus fort.
+	if build_bot != null:
+		player.hp = Game.stats["max_hp"]
+		player.invuln = 1.0
+		return
 	for e in enemies:
 		if is_instance_valid(e):
 			e.queue_free()
@@ -623,6 +630,10 @@ func bot_input(p) -> Dictionary:
 			if d < best:
 				best = d
 				target = e.position
+	if build_bot != null:
+		var styled: Dictionary = build_bot.steer(p, target, best, Game.stats["max_hp"])
+		if not styled.is_empty():
+			return styled
 	var orbit := Vector2.from_angle(elapsed * 0.35) * minf(900.0, 200.0 + elapsed * 20.0)
 	var mv: Vector2 = orbit - p.position
 	mv = mv.normalized() if mv.length() > 40.0 else Vector2.ZERO
@@ -634,14 +645,16 @@ func _autotest_step(delta: float) -> void:
 		arena.autotest_step(delta)
 		return
 	autotest_time += delta
-	Game.add_xp(delta * 6.0)
 	if build_bot != null:
+		# Niveau figé : tous les builds se mesurent avec les mêmes points et la même difficulté.
+		Game.xp = 0.0
 		build_bot.spend(Game)
 		if autotest_time >= build_bot.duration and not autotest_done:
 			autotest_done = true
 			print(build_bot.report(Game, autotest_time, deaths))
 			get_tree().quit()
 		return
+	Game.add_xp(delta * 6.0)
 	while Game.points > 0:
 		var options: Array = []
 		for n in Game.tree.nodes:
