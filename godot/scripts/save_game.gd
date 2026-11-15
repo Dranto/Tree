@@ -2,12 +2,14 @@
 ##
 ## Format : un fichier JSON lisible dans user://saves/, versionné.
 ## {
-##   "format": "seve-save", "version": 2, "saved_at": <unix>,
+##   "format": "seve-save", "version": 3, "saved_at": <unix>,
 ##   "game":  {"level", "xp", "points", "kills", "flags"},
 ##   "tree":  {"allocated": [uid, …],            # identifiants stables, pas des index
 ##             "choices": {uid: choix},          # maîtrises et mutations (depuis la version 2)
-##             "grafts": {uid: greffe}},         # greffes posées (depuis la version 2)
+##             "grafts": {uid: greffe},          # greffes posées (depuis la version 2)
+##             "inventory": [greffe, …]},        # greffes possédées, posées ou non (depuis la version 3)
 ##   "world": {"elapsed", "player": {"x", "y", "hp"},
+##             "ground_grafts": [[x, y, greffe], …],   # greffes tombées, pas encore ramassées (version 3)
 ##             "life_map": <PNG en base64>, "flowers": [[x, y, couleur, taille, pétales], …]}
 ## }
 ##
@@ -21,7 +23,7 @@
 extends Node
 
 const FORMAT := "seve-save"
-const VERSION := 2
+const VERSION := 3
 const DEFAULT_PATH := "user://saves/partie.json"
 
 ## Dernière erreur de chargement, lisible (vide si tout va bien).
@@ -63,6 +65,7 @@ func capture(main) -> Dictionary:
 			"player": {"x": main.player.position.x, "y": main.player.position.y, "hp": main.player.hp},
 			"life_map": Marshalls.raw_to_base64(main.ground.export_map()),
 			"flowers": main.flora.export_flowers(),
+			"ground_grafts": main.export_ground_grafts() if main.has_method("export_ground_grafts") else [],
 		}
 	return {
 		"format": FORMAT,
@@ -75,7 +78,7 @@ func capture(main) -> Dictionary:
 			"kills": Game.kills,
 			"flags": Game.flags.duplicate(true),
 		},
-		"tree": {"allocated": Game.allocated_uids(), "choices": Game.choices.duplicate(), "grafts": Game.grafts.duplicate()},
+		"tree": {"allocated": Game.allocated_uids(), "choices": Game.choices.duplicate(), "grafts": Game.grafts.duplicate(), "inventory": Game.graft_inventory.duplicate()},
 		"world": world,
 	}
 
@@ -124,7 +127,7 @@ func apply(data: Dictionary, main) -> void:
 	var t: Dictionary = data.get("tree", {})
 	var uids = t.get("allocated", [])
 	var refunded := Game.restore_allocation(uids if uids is Array else [])
-	Game.restore_extras(t.get("choices", {}), t.get("grafts", {}))
+	Game.restore_extras(t.get("choices", {}), t.get("grafts", {}), t.get("inventory", []))
 	if refunded > 0:
 		print("Sauvegarde : %d nœud(s) absent(s) de l'arbre actuel, point(s) rendu(s)." % refunded)
 
@@ -138,6 +141,9 @@ func apply(data: Dictionary, main) -> void:
 	var flowers = w.get("flowers", [])
 	if flowers is Array:
 		main.flora.import_flowers(flowers)
+	var dropped = w.get("ground_grafts", [])
+	if dropped is Array and main.has_method("import_ground_grafts"):
+		main.import_ground_grafts(dropped)
 	var p: Dictionary = w.get("player", {})
 	var h: float = main.world_half
 	main.player.position = Vector2(float(p.get("x", 0.0)), float(p.get("y", 0.0))).clamp(Vector2(-h, -h), Vector2(h, h))
@@ -172,6 +178,31 @@ func _migrate(data: Dictionary) -> Dictionary:
 		data["tree"]["choices"] = {}
 		data["tree"]["grafts"] = {}
 		data["version"] = 2
+	# Version 3 : inventaire des greffes et greffes tombées au sol. Les greffes déjà posées entrent
+	# dans l'inventaire ; les points du boss et du Cœur, donnés par l'ancienne version, sont notés
+	# comme donnés pour ne pas l'être une seconde fois (Game.grant_points).
+	if int(data["version"]) == 2:
+		if not data.get("tree") is Dictionary:
+			data["tree"] = {}
+		var inv: Array = []
+		var placed = data["tree"].get("grafts", {})
+		if placed is Dictionary:
+			for uid in placed:
+				if not inv.has(str(placed[uid])):
+					inv.append(str(placed[uid]))
+		data["tree"]["inventory"] = inv
+		if not data.get("game") is Dictionary:
+			data["game"] = {}
+		if not data["game"].get("flags") is Dictionary:
+			data["game"]["flags"] = {}
+		var f: Dictionary = data["game"]["flags"]
+		if f.get("ronce_boss_vaincu", false):
+			f["points_ronce_boss"] = true
+		if f.get("ronce_coeur_purifie", false):
+			f["points_ronce_coeur"] = true
+		if data.get("world") is Dictionary:
+			data["world"]["ground_grafts"] = []
+		data["version"] = 3
 	return data
 
 

@@ -18,7 +18,7 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 | Barre de compétences (6 emplacements) | 1 à 6, et A, E, R (AZERTY) / Q, E, R (QWERTY) pour les trois premiers ; touches réassignables dans les options. Clic sur un emplacement : y mettre une compétence acquise qui n'a pas de place |
 | Arbre de vie | Tab ou T (le jeu se met en pause) |
 
-Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer. Une maîtrise ou une mutation ouvre une fenêtre de choix quand on l'apprend ; un clic sur une maîtrise apprise permet d'en changer. L'arbre s'ouvre en vue d'ensemble ; en zoomant apparaissent tous les nœuds, puis les icônes et les noms des notables.
+Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer. Une maîtrise ou une mutation ouvre une fenêtre de choix quand on l'apprend ; un clic sur une maîtrise apprise permet d'en changer. Les greffes trouvées dans le monde (autels cachés du roncier, secret, boss, élites) apparaissent en bas à gauche : glisser une greffe sur un emplacement de greffe (anneau creux) l'y pose, un clic sur l'emplacement la retire. L'arbre s'ouvre en vue d'ensemble ; en zoomant apparaissent tous les nœuds, puis les icônes et les noms des notables.
 
 Outils de l'arbre (barre sous l'en-tête) :
 
@@ -63,6 +63,8 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --headless --fixed-fps 60 -s res://tests/boss_test.gd` : teste le Cœur de flétrissure et la Mère-Ronce (siège et purification, ouverture de l'arène, phases, mort du joueur, victoire, drapeaux sauvegardés).
 - `tools/godot.sh --headless -s res://tests/region_test.gd` : teste la région du roncier (géométrie, résistance aux dégâts de Ronce, buissons d'épines, vague de vie, apparitions, comportements du Tireur, du Chargeur et du Nid).
 - `tools/balance.sh` : équilibrage. Le robot joue les builds types de Ronce (`godot/data/builds.json` : épines, fouet, saignement) au niveau 20, sur plusieurs graines, sans affichage et en parallèle (moins de 2 minutes), et compare les ennemis vaincus par minute ; échec si l'écart dépasse 30 %. Un seul build : `tools/godot.sh --headless --fixed-fps 60 -- --autotest=build:fouet`.
+- `tools/godot.sh --headless --fixed-fps 60 -s res://tests/grafts_test.gd` : teste les points et greffes du monde (points donnés une seule fois par source, inventaire, tirage des élites, pose et retrait, autels et secret, Cœur et boss, effets des greffes, sauvegarde et migration d'une sauvegarde du jalon 3).
+- `tools/godot.sh --xvfb -s res://tests/grafts_captures.gd` : captures d'un autel (avant et après), d'une greffe au sol et de l'inventaire de l'arbre dans `godot/tests/visual/out/`.
 - `tools/godot.sh --xvfb -s res://tests/ronce_captures.gd` : captures de la branche Ronce et de chacune de ses grappes dans `godot/tests/visual/out/`.
 - `tools/godot.sh --xvfb -- --benchmark` : banc de performance. Le robot joue face à 120 Flétris pendant 30 s, puis le temps moyen, le 99e centile et le pire temps par image s'affichent.
 

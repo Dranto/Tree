@@ -20,6 +20,10 @@ static func run(action: String, p: Dictionary, ctx: Dictionary) -> bool:
 			return _apply_status(p, ctx)
 		"heal":
 			return _heal(p, ctx)
+		"burst":
+			return _burst(p, ctx)
+		"status_area":
+			return _status_area(p, ctx)
 	push_warning("Action d'effet inconnue : " + action)
 	return false
 
@@ -93,4 +97,56 @@ static func _apply_status(p: Dictionary, ctx: Dictionary) -> bool:
 static func _heal(p: Dictionary, ctx: Dictionary) -> bool:
 	var main = ctx["main"]
 	main.player.heal(ctx["stats"]["max_hp"] * p["value"])
+	return true
+
+
+## Centre d'une action de zone : le joueur (« at »: "player", par défaut) ou l'ennemi de l'évènement.
+static func _center(p: Dictionary, ctx: Dictionary):
+	if p.get("at", "player") == "enemy":
+		var e = ctx.get("enemy")
+		if e == null or not is_instance_valid(e):
+			return null
+		return e.position
+	return ctx["main"].player.position
+
+
+## Onde d'épines : blesse les ennemis autour du centre pour « factor » × les dégâts du joueur
+## (× dégâts de zone, rayon × taille des zones). C'est un coup de Ronce.
+static func _burst(p: Dictionary, ctx: Dictionary) -> bool:
+	var at = _center(p, ctx)
+	if at == null:
+		return false
+	var main = ctx["main"]
+	var s: Dictionary = ctx["stats"]
+	var radius: float = p["radius"] * s.get("area", 1.0)
+	main.fx.ring(at, 12.0, radius, 0.3, Color(p.get("color", "#ffffff")), 4.0)
+	var dmg: float = s.get("damage", 0.0) * p["factor"] * s.get("area_damage", 1.0)
+	var source = ctx.get("enemy")
+	for other in main.enemies_near(at, radius):
+		if other != source and not other.dead:
+			main.player_hit_enemy(other, dmg, false, "ronce")
+	return true
+
+
+## Pose un état (« enracine », « saignement ») sur les ennemis autour du centre. Avec "scale": "damage",
+## value est une fraction des dégâts du joueur. Durées multipliées comme pour apply_status.
+static func _status_area(p: Dictionary, ctx: Dictionary) -> bool:
+	var at = _center(p, ctx)
+	if at == null:
+		return false
+	var main = ctx["main"]
+	var s: Dictionary = ctx["stats"]
+	var radius: float = p["radius"] * s.get("area", 1.0)
+	var value: float = p["value"]
+	if p.get("scale", "") == "damage":
+		value *= s.get("damage", 0.0)
+	var duration: float = p["duration"]
+	if p["status"] == "saignement":
+		duration *= s.get("bleed_duration", 1.0)
+	elif p["status"] == "enracine":
+		duration *= s.get("root_duration", 1.0)
+	main.fx.ring(at, radius * 0.2, radius, 0.45, Color(p.get("color", "#ffffff")), 5.0)
+	for e in main.enemies_near(at, radius):
+		if not e.dead:
+			e.apply_status(p["status"], value, duration)
 	return true

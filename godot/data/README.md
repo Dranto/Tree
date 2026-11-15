@@ -17,7 +17,8 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `tree.json` | Ordre des branches autour de la graine, progression des valeurs par anneau (`ring_scale`), force des nœuds notables (`notable_factor`), nœud de la graine. |
 | `stats.json` | Les statistiques du personnage : libellé, valeur de base, bornes, arrondi. |
 | `branches/<id>.json` | Une branche : nom, couleur, effets des petits nœuds, bonus et noms des nœuds notables, nœuds clés, résonance, grappes écrites à la main. |
-| `grafts.json` | Les greffes : objets à poser dans un emplacement de greffe de l'arbre (nom, effets). |
+| `grafts.json` | Les greffes : objets à poser dans un emplacement de greffe de l'arbre (nom, effets, d'où elles viennent, dessin). |
+| `rewards.json` | Points d'arbre et greffes gagnés dans le monde : boss, Cœurs, autels cachés et secrets de chaque région. |
 | `skills.json` | Réglages des compétences actives (recharge, rayon, dégâts, texte). |
 | `builds.json` | Builds types joués par le robot d'équilibrage (`tools/balance.sh`). |
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
@@ -77,7 +78,7 @@ Les compétences acquises se rangent dans la barre de compétences (6 emplacemen
  "text": "Chaque ennemi vaincu réduit la recharge de l'esquive de 0,3 s."}
 ```
 
-- `on` : `kill` (ennemi vaincu), `crit` (coup critique), `lethal_hit` (coup mortel reçu), `melee_hit` (coup au corps à corps, `base` = dégâts du coup), `bleed_tick` (à-coup de saignement toutes les 0,5 s, `base` = dégâts de l'à-coup), `root` (ennemi enraciné, `base` = dégâts du coup qui enracine).
+- `on` : `kill` (ennemi vaincu), `crit` (coup critique), `lethal_hit` (coup mortel reçu), `melee_hit` (coup au corps à corps, `base` = dégâts du coup), `bleed_tick` (à-coup de saignement toutes les 0,5 s, `base` = dégâts de l'à-coup), `root` (ennemi enraciné, `base` = dégâts du coup qui enracine), `hurt` (le joueur est touché, `base` = dégâts du coup), `dash` (le joueur esquive).
 - `do` : l'action à lancer, avec ses paramètres.
 - `cooldown` (facultatif) : durée en secondes avant que l'effet puisse se relancer.
 - `text` (obligatoire) : la phrase affichée au joueur.
@@ -90,6 +91,8 @@ Les compétences acquises se rangent dans la barre de compétences (6 emplacemen
 | `survive` | `hp`, `invuln`, `label`, `color` | Le coup mortel laisse le joueur en vie |
 | `apply_status` | `status` (`saignement` ou `enracine`), `value`, `duration`, `scale` | Pose un état sur l'ennemi de l'évènement. `saignement` : `value` dégâts par seconde (avec `"scale": "base"`, fraction des dégâts du coup). Durées multipliées par `bleed_duration` / `root_duration` |
 | `heal` | `value` | Soigne une fraction de la vie maximale |
+| `burst` | `radius`, `factor`, `at` (`player` par défaut, ou `enemy`), `color` | Onde d'épines autour du joueur ou de l'ennemi de l'évènement : `factor` × dégâts du joueur × dégâts de zone, rayon × taille des zones. Coup de Ronce |
+| `status_area` | `status`, `value`, `duration`, `radius`, `at`, `scale` (`damage`) | Pose un état sur tous les ennemis de la zone (mêmes règles que `apply_status`) |
 
 ### États des ennemis
 
@@ -176,7 +179,30 @@ Chaque palier donne ses effets dès que `count` nœuds de la branche sont appris
 
 ## Greffes
 
-`grafts.json` : `{"<id>": {"name": "...", "desc": "...", "effects": [...]}}`. Il n'y a pas encore de greffes à trouver dans le monde ; `greffe_test` sert aux tests.
+`grafts.json` : `{"<id>": {"name", "desc", "sources", "shape", "color", "effects": [...]}}` (les clés qui commencent par `_` sont des commentaires).
+
+| Champ | Rôle |
+| --- | --- |
+| `sources` | D'où la greffe peut venir : `autel`, `boss`, `secret`, `elite`, `quete`. `Game.roll_graft(source)` tire une greffe de cette source, ni possédée ni déjà au sol (les élites en font tomber une avec `main.drop_graft(pos)`). |
+| `shape`, `color` | Dessin au sol, dans l'inventaire et dans l'emplacement : `feuille`, `epine`, `racine`, `fleur` ou `coeur`. |
+| `effects` | Mêmes effets qu'un nœud. Une greffe n'agit que posée dans un emplacement appris. |
+
+Chaque greffe existe en un exemplaire. On la trouve au sol (`graft_pickup.gd`), elle entre dans l'inventaire (`Game.give_graft(id)`, signal `Game.graft_found`), puis on la pose dans l'écran de l'arbre : glisser depuis l'inventaire (en bas à gauche) jusqu'à un emplacement, ou clic sur la greffe puis sur l'emplacement. Un clic sur un emplacement appris et occupé retire la greffe. L'infobulle de l'emplacement montre l'effet de la greffe tenue (statistiques avant → après). En code : `Game.place_graft(emplacement, greffe)` (greffe possédée, déplacée si elle était ailleurs), `Game.set_graft` (outil bas niveau des tests).
+
+## Points et greffes du monde
+
+`rewards.json` décrit ce que donne chaque région, hors des niveaux :
+
+```json
+"boss":  {"ronce": {"points": 2, "graft": "greffe_mere"}},
+"coeur": {"ronce": {"points": 1}},
+"altars":  [{"id": "ronce_1", "region": "ronce", "name": "Autel des épines", "dist": 820, "side": -0.62, "points": 1, "graft": "greffe_soeurs"}],
+"secrets": [{"id": "ronce", "region": "ronce", "name": "La graine enfouie", "dist": 2380, "side": 0.95, "points": 1, "graft": "greffe_graine"}]
+```
+
+Un autel (`altar.gd`) est placé à `dist` pixels de la graine, `side` (de -1 à 1) le décale vers un bord du secteur de la région ; il est poussé hors des buissons. On le devine à 520 px, on le ravive en s'y tenant 1,5 s (2,5 s et 230 px pour un secret, presque invisible). `graft` vide : une greffe tirée parmi celles de la source.
+
+Les points passent par `Game.grant_points(n, source, clé)` : une même clé ne donne qu'une fois par partie (drapeau `points_<clé>`), le HUD annonce la source (signal `Game.points_granted`). Drapeaux posés : `autel_<id>_vu` et `secret_<id>_vu` (aperçu), `autel_<id>` et `secret_<id>` (ravivé), `points_ronce_boss`, `points_ronce_coeur`, `points_hors_niveau` (total). Les autels et secrets sont dans les groupes `autel` et `secret` (propriété `id`).
 
 ## Ajouter du contenu
 

@@ -1,5 +1,5 @@
 ## Test du Cœur de flétrissure et de la Mère-Ronce : siège et purification, ouverture de l'arène,
-## phases du boss, mort du joueur (le Cœur reste purifié), victoire (drapeau et points), puis
+## phases du boss, mort du joueur (le Cœur reste purifié), victoire (drapeau, points et greffe), puis
 ## sauvegarde aller-retour des drapeaux.
 ## Lancer : tools/godot.sh --headless --fixed-fps 60 -s res://tests/boss_test.gd
 ## Ne lit ni n'écrit la sauvegarde par défaut.
@@ -115,7 +115,7 @@ func _run() -> void:
 	var points: int = game.points
 	boss.take_damage(boss.max_hp + 1.0, false)
 	check(boss.dead and game.flags.get("ronce_boss_vaincu", false) == true, "boss vaincu : drapeau posé")
-	check(game.points == points + 3, "3 points d'arbre gagnés")
+	check(game.points == points + 2, "2 points d'arbre gagnés")
 	check(arena.state == "vaincue" and not main.spawn_paused, "l'arène refleurit, les naissances reprennent")
 	await _steps(120)
 	check(not is_instance_valid(boss) and not (boss in main.enemies), "la Mère-Ronce a disparu")

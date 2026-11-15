@@ -15,6 +15,7 @@ signal toggled(open: bool)
 
 const SkillTree = preload("res://scripts/skill_tree.gd")
 const TreePanels = preload("res://scripts/tree_panels.gd")
+const TreeGrafts = preload("res://scripts/tree_grafts.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 const Effects = preload("res://scripts/effects.gd")
@@ -105,6 +106,8 @@ var font: Font
 var t := 0.0
 ## Outils de planification (recherche, chemins, plan, résumé) : voir tree_panels.gd.
 var panels
+## Inventaire des greffes (tree_grafts.gd), en bas à gauche.
+var grafts_panel
 
 ## Rectangles (à l'écran) des textes dessinés par la couche des libellés, pour les contrôles automatiques.
 var label_rects: Array[Rect2] = []
@@ -192,6 +195,9 @@ func _ready() -> void:
 	panels = TreePanels.new()
 	panels.ui = self
 	add_child(panels)
+	grafts_panel = TreeGrafts.new()
+	grafts_panel.ui = self
+	add_child(grafts_panel)
 	Game.tree_changed.connect(_on_tree_changed)
 	Game.node_allocated.connect(_on_node_allocated)
 	resized.connect(_on_resized)
@@ -451,6 +457,19 @@ func _gui_input(event: InputEvent) -> void:
 		hover = pick(mouse)
 
 
+## Glisser-déposer d'une greffe de l'inventaire : le nœud survolé montre l'aperçu de la greffe.
+func _can_drop_data(at: Vector2, data) -> bool:
+	if not (data is Dictionary and data.has("graft")):
+		return false
+	mouse = at
+	hover = pick(at)
+	return true
+
+
+func _drop_data(at: Vector2, data) -> void:
+	grafts_panel.drop_on(pick(at), str(data["graft"]))
+
+
 # --- États ---
 
 func _state(id: int) -> String:
@@ -510,8 +529,12 @@ func click(id: int) -> void:
 				panels.say("Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre.")
 			else:
 				open_choice(id)
-		elif n["type"] == "graft" and Game.graft_of(id) == "":
-			panels.say("Emplacement vide : les greffes se trouveront dans le monde.")
+		elif n["type"] == "graft":
+			grafts_panel.click_slot(id)
+		return
+	# Une greffe tenue se pose aussi dans un emplacement pas encore appris.
+	if n["type"] == "graft" and grafts_panel.held != "":
+		grafts_panel.click_slot(id)
 		return
 	if not panels.plan_mode:
 		# Un nœud à règle (flétri, mutation sans sa compétence, incompatible) dit pourquoi il résiste.
@@ -866,13 +889,12 @@ func _draw_mastery_dots(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: 
 func _draw_graft(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, col: Color, w: float, level: int) -> void:
 	var a := 0.9 if st == "owned" else (0.75 if st == "available" else 0.4)
 	c.draw_arc(p, r * 0.68, 0.0, TAU, 24, Color(col.r, col.g, col.b, a * 0.6), maxf(r * 0.08, w))
-	if Game.graft_of(n["id"]) != "":
-		var leaf := PackedVector2Array()
-		for i in 12:
-			var t := i / 12.0 * TAU
-			leaf.append(p + Vector2(sin(t) * r * 0.26, -cos(t) * r * 0.5).rotated(0.6))
-		c.draw_colored_polygon(leaf, Color(UiTheme.GOLD, a))
-		c.draw_line(p + Vector2(0, r * 0.5).rotated(0.6), p + Vector2(0, -r * 0.5).rotated(0.6), Color(0.1, 0.1, 0.08, a), maxf(r * 0.06, w))
+	var gid := Game.graft_of(n["id"])
+	if gid != "":
+		# La greffe posée, avec sa forme et sa couleur (les mêmes qu'au sol et dans l'inventaire).
+		var g: Dictionary = Content.grafts().get(gid, {})
+		c.draw_circle(p, r * 0.56, Color(0.23, 0.16, 0.1, a))
+		TreeGrafts.GraftPickup.draw_shape(c, str(g.get("shape", "feuille")), p, r * 0.42, Color(Color(str(g.get("color", "#f2d06b"))), a))
 	elif level != LOD_OVERVIEW:
 		var s := r * 0.32
 		var lw := maxf(r * 0.12, 1.2 * w)
@@ -1164,6 +1186,8 @@ func _audit_texts() -> void:
 	# Fenêtre de choix d'une maîtrise ou d'une mutation (nœuds Control).
 	if _choice != null:
 		UiAudit.scan_controls("arbre", _choice)
+	if grafts_panel != null and grafts_panel.visible:
+		UiAudit.scan_controls("arbre", grafts_panel)
 
 
 ## Lignes de l'infobulle d'un nœud : [texte, taille, couleur], déjà coupées à la largeur maximale.
@@ -1210,6 +1234,9 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 					raw.append(["• " + line, 14, ink])
 		else:
 			raw.append(["• Emplacement vide : reçoit une greffe trouvée dans le monde.", 14, ink])
+		raw.append_array(grafts_panel.tooltip_lines(n))
+		if grafts_panel.held == "" and g is Dictionary and st == "owned":
+			raw.append(["Clic pour retirer la greffe", 13, UiTheme.GOLD])
 	# Grappe écrite à la main : avancement et bonus de grappe complète.
 	if n["cluster"] != "" and tree.clusters.has(n["cluster"]):
 		var cl: Dictionary = tree.clusters[n["cluster"]]
