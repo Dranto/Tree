@@ -28,6 +28,7 @@ const Content = preload("res://scripts/content.gd")
 var region_spawn: Dictionary = Content._load("enemies").get("spawn", {})
 ## Dernier état connu de la purification du Cœur de Ronce (contrat avec la tâche D).
 var ronce_purified := false
+const BuildBot = preload("res://scripts/build_bot.gd")
 
 var world_half := WORLD_HALF
 var ground
@@ -65,6 +66,9 @@ var autotest_boss := false
 var autotest_time := 0.0
 var autotest_shots := [3.0, 25.0, 55.0]
 var autotest_done := false
+## Robot d'équilibrage (« -- --autotest=build:<nom> », voir build_bot.gd) : joue un build type.
+var build_bot = null
+var deaths := 0
 ## Sauvegarde automatique (désactivée en autotest) : périodique et après chaque changement.
 const AUTOSAVE_EVERY := 60.0
 var autosave_enabled := true
@@ -89,6 +93,10 @@ func _ready() -> void:
 	autotest_boss = "--autotest=boss" in OS.get_cmdline_user_args()
 	autotest = autotest or autotest_boss or "--autotest" in OS.get_cmdline_user_args()
 	benchmark = "--benchmark" in OS.get_cmdline_user_args()
+	build_bot = BuildBot.from_cmdline()
+	if build_bot != null:
+		autotest = true
+		autotest_shots = []
 	if benchmark:
 		# Le robot joue, sans captures ni fin de partie, et rien n'est sauvegardé.
 		autotest = true
@@ -562,6 +570,14 @@ func on_enemy_killed(e) -> void:
 
 
 func player_died() -> void:
+	deaths += 1
+	# Robot d'équilibrage : la mort est seulement comptée, le joueur repart sur place avec toute
+	# sa vie. Sinon chaque mort vide l'écran et offre des ennemis frais et faciles, et le build
+	# qui meurt le plus semble le plus fort.
+	if build_bot != null:
+		player.hp = Game.stats["max_hp"]
+		player.invuln = 1.0
+		return
 	for e in enemies:
 		if is_instance_valid(e):
 			e.queue_free()
@@ -614,6 +630,10 @@ func bot_input(p) -> Dictionary:
 			if d < best:
 				best = d
 				target = e.position
+	if build_bot != null:
+		var styled: Dictionary = build_bot.steer(p, target, best, Game.stats["max_hp"])
+		if not styled.is_empty():
+			return styled
 	var orbit := Vector2.from_angle(elapsed * 0.35) * minf(900.0, 200.0 + elapsed * 20.0)
 	var mv: Vector2 = orbit - p.position
 	mv = mv.normalized() if mv.length() > 40.0 else Vector2.ZERO
@@ -625,6 +645,15 @@ func _autotest_step(delta: float) -> void:
 		arena.autotest_step(delta)
 		return
 	autotest_time += delta
+	if build_bot != null:
+		# Niveau figé : tous les builds se mesurent avec les mêmes points et la même difficulté.
+		Game.xp = 0.0
+		build_bot.spend(Game)
+		if autotest_time >= build_bot.duration and not autotest_done:
+			autotest_done = true
+			print(build_bot.report(Game, autotest_time, deaths))
+			get_tree().quit()
+		return
 	Game.add_xp(delta * 6.0)
 	while Game.points > 0:
 		var options: Array = []

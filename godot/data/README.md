@@ -19,6 +19,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `branches/<id>.json` | Une branche : nom, couleur, effets des petits nœuds, bonus et noms des nœuds notables, nœuds clés, résonance, grappes écrites à la main. |
 | `grafts.json` | Les greffes : objets à poser dans un emplacement de greffe de l'arbre (nom, effets). |
 | `skills.json` | Réglages des compétences actives (recharge, rayon, dégâts, texte). |
+| `builds.json` | Builds types joués par le robot d'équilibrage (`tools/balance.sh`). |
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
 | `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest` et ses réglages, `region`, `resist` par branche) et apparitions par région (`spawn` : sortes et poids, part près/loin de la graine, nombre de nids, effet de la purification du Cœur). Les trois premières sortes sont les Flétris d'origine. |
 
@@ -186,3 +187,15 @@ Chaque palier donne ses effets dès que `count` nœuds de la branche sont appris
 - **Un état pour les conditions** : le déclarer dans `conditions.json` et le tenir à jour avec `Game.set_state("nom", valeur)`.
 
 Pour une version exportée du jeu, ajouter `*.json` aux fichiers à inclure dans les réglages d'export de Godot.
+
+## Équilibrage des builds
+
+`builds.json` décrit des builds types : une liste de nœuds visés (`targets`, identifiants stables comme `key:nova` ou `c:ronce:sang:s1`), les choix des maîtrises et mutations (`choices`) et la façon de jouer du robot (`style` : `distance`, `melee` pour aller au contact, `tank` pour rester au milieu des ennemis). Le robot passe au niveau 20, apprend à chaque point le prochain nœud du plus court chemin vers la première cible pas encore acquise, puis complète avec les nœuds de Ronce les plus proches de la graine.
+
+```
+tools/godot.sh --headless --fixed-fps 60 -- --autotest=build:fouet --build-time=180 --build-level=20 --seed=1
+tools/balance.sh                 # epines, fouet et saignement, graines 1 à 3, sans affichage et en parallèle
+SEEDS="1 2 3 4 5 6 7 8 9 10" tools/balance.sh
+```
+
+Pendant la mesure, le niveau reste figé (mêmes points et même difficulté pour tous les builds) et une mort ne vide pas l'écran : le robot repart sur place avec toute sa vie, et chaque mort compte 10 s de plus dans le temps de jeu. Le score est le nombre d'ennemis vaincus par minute ; `tools/balance.sh` échoue si le meilleur build dépasse le moins bon de plus de 30 %. Une cible absente de l'arbre est ignorée et signalée.

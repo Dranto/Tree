@@ -11,7 +11,9 @@ var skip_title := false
 
 
 func _ready() -> void:
-	skip_title = "--autotest" in OS.get_cmdline_user_args() or "--autotest=boss" in OS.get_cmdline_user_args() or "--benchmark" in OS.get_cmdline_user_args()
+	for a in OS.get_cmdline_user_args():
+		if a == "--autotest" or a == "--benchmark" or a.begins_with("--autotest="):
+			skip_title = true
 
 
 ## Vrai quand la partie qui démarre doit reprendre la sauvegarde (lu par la scène de jeu).
