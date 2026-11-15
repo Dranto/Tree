@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "boss"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const TitleScene = preload("res://scenes/title.tscn")
 ## Défauts d'interface déjà connus (un par ligne : « résolution|écran|type|libellés »).
@@ -77,6 +77,8 @@ func _ready() -> void:
 			await _scenario_resolution()
 		"galerie":
 			await _scenario_galerie()
+		"boss":
+			await _scenario_boss()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -180,6 +182,157 @@ func _scenario_galerie() -> void:
 	await _shot_image("galerie_noeuds", sheet)
 
 
+## Région de Ronce : le Cœur de flétrissure (flétri, assiégé, purifié), l'arène ouverte, puis la
+## Mère-Ronce dans chaque phase et chaque attaque annoncée. La logique est figée ; chaque image
+## est une pose précise du vrai Cœur (heart.gd), de la vraie arène et du vrai boss (boss.gd).
+func _scenario_boss() -> void:
+	await _frames(2)
+	var heart = main.heart
+	var arena = main.arena
+	var p = main.player
+	main.set_physics_process(false)   # ni robot, ni naissances
+	p.set_physics_process(false)
+	heart.frozen = true
+	arena.frozen = true
+
+	# Le Cœur flétri, deux Flétris qu'il vient de faire naître.
+	var near: Vector2 = heart.center + Vector2(-190, 150)
+	_frozen_enemy(heart.center + Vector2(90, 40), 0)
+	_frozen_enemy(heart.center + Vector2(-60, 95), 0)
+	await _boss_shot("coeur_fletri", near)
+
+	# Le siège : zone tenue depuis 17 s, une vague arrive.
+	heart.state = "siege"
+	heart.progress = 17.0
+	heart.update_bar(true)
+	for i in 7:
+		_frozen_enemy(heart.center + Vector2.from_angle(-0.5 + i * 0.22) * (heart.ZONE + 60.0 + 37.0 * (i % 3)), 2 if i == 3 else i % 2)
+	await _boss_shot("coeur_siege", near)
+
+	# Purifié : la vague de vie est passée.
+	_clear_enemies()
+	Game.flags[heart.FLAG] = true
+	heart._set_purified(false)
+	main.ground.paint(heart.center, heart.LIFE_RADIUS, 1.0)
+	main.flora.spawn_patch(heart.center, heart.LIFE_RADIUS * 0.8, 90, Color("e0675e"))
+	await _boss_shot("coeur_purifie", near)
+
+	# L'arène ouverte : la brèche du côté du Cœur, la Mère-Ronce endormie.
+	var gate: Vector2 = (heart.center - arena.center).normalized()
+	arena.state = "ouverte"
+	arena.gap_open = 1.0
+	await _boss_shot("arene_ouverte", arena.center + gate * (arena.RADIUS + 60.0))
+
+	# Le combat. Le joueur se tient au sud-est du boss.
+	var spot: Vector2 = arena.center + Vector2(120, 150)
+	p.position = spot
+	arena._start_fight()
+	arena.gap_open = 0.0
+	var boss = arena.boss
+	boss.frozen = true
+	boss.intro = 0.0
+	boss.t = 0.6
+	main.hud.banner_time = 0.0
+	main.fx.rings = []
+
+	# Phase 1 : volée d'épines annoncée (le corps recule, l'éventail est verrouillé).
+	boss._begin("volee")
+	boss.timer = 0.2
+	await _boss_shot("boss_volee", spot)
+	# Phase 1 : la volée en vol, et des racines annoncées sous le joueur (une vient de jaillir).
+	boss._strike()
+	boss._fire_volley(false)
+	for th in boss.thorns:
+		th["pos"] += th["vel"] * 0.35
+	boss._end_attack()
+	boss.roots = [
+		{"pos": spot + Vector2(10, 6), "fuse": 0.25, "burst": -1.0},
+		{"pos": spot + Vector2(-150, 30), "fuse": 0.7, "burst": -1.0},
+		{"pos": spot + Vector2(120, -130), "fuse": 0.0, "burst": 0.16},
+	]
+	await _boss_shot("boss_racines", spot)
+
+	# Phase 2 : deux fouets annoncés, qui se refermeront sur le joueur.
+	boss.thorns = []
+	boss.roots = []
+	boss.phase = 2
+	boss.hp = boss.max_hp * 0.55
+	boss._begin("fouets")
+	boss.timer = 0.4
+	await _boss_shot("boss_fouets", spot)
+	# Phase 2 : les fouets en plein balayage.
+	boss._strike()
+	boss.timer = boss.stage_time * 0.45
+	boss._strike_step(0.0)
+	await _boss_shot("boss_fouets_frappe", spot)
+	# Phase 2 : invocation annoncée (bourgeons au sol), deux petits déjà éclos.
+	boss._end_attack()
+	boss._begin("invocation")
+	boss.timer = 0.3
+	_frozen_enemy(arena.center + Vector2(-150, 120), 1)
+	_frozen_enemy(arena.center + Vector2(40, 230), 1)
+	await _boss_shot("boss_invocation", spot)
+
+	# Phase 3 : le resserrement de l'arène est annoncé, les fouets couvrent presque tout.
+	boss.buds = []
+	boss._end_attack()
+	boss.phase = 3
+	boss.hp = boss.max_hp * 0.22
+	boss.cycle = 0
+	arena.shrinking = true
+	arena.shrink_warn = 0.8
+	boss._begin("fouets")
+	boss.timer = 0.5
+	await _boss_shot("boss_phase3", spot)
+
+	# Victoire : l'arène refleurit.
+	_clear_enemies([boss])
+	boss.take_damage(boss.max_hp, false)
+	boss.queue_free()
+	arena.life_wave = -1.0
+	main.ground.paint(arena.center, arena.RADIUS * 1.25, 1.0)
+	main.flora.spawn_patch(arena.center, arena.RADIUS, 70, Color("e0675e"))
+	main.fx.rings = []
+	main.hud.banner_time = 0.0
+	await _boss_shot("boss_vaincu", spot)
+
+
+## Place le joueur et la caméra, redessine les poses figées, puis capture l'écran de jeu.
+func _boss_shot(shot_name: String, player_pos: Vector2) -> void:
+	var p = main.player
+	p.position = player_pos
+	p.aim = (main.arena.center - player_pos).normalized() if shot_name.begins_with("boss") else (main.heart.center - player_pos).normalized()
+	p.reset_physics_interpolation()
+	for c in p.get_children():
+		if c is Camera2D:
+			c.reset_smoothing()
+	main.heart.t = 1.0
+	main.arena.t = 1.0
+	if is_instance_valid(main.arena.boss) and main.arena.state == "combat":
+		main.arena.update_bar()
+		main.arena.boss.redraw()
+	main.heart.queue_redraw()
+	main.heart.body.queue_redraw()
+	main.arena.queue_redraw()
+	await _frames(6)
+	await _shot(shot_name, "jeu")
+
+
+## Un Flétri immobile, à un instant précis de son animation.
+func _frozen_enemy(pos: Vector2, kind: int) -> void:
+	var e = main.spawn_enemy_at(pos, kind)
+	e.t = 0.5
+	e.set_process(false)
+	e.set_physics_process(false)
+
+
+func _clear_enemies(keep: Array = []) -> void:
+	for e in main.enemies:
+		if is_instance_valid(e) and not e in keep:
+			e.queue_free()
+	main.enemies = keep.duplicate()
+
+
 # --- Outils ---
 
 func _res_tag() -> String:
@@ -260,6 +413,7 @@ func _shot(shot_name: String, screen := "") -> void:
 		screen = "arbre"
 	if screen != "":
 		if screen == "jeu":
+			UiAudit.begin("jeu")
 			UiAudit.scan_controls("jeu", main)
 		if not screen in _screens_checked:
 			_screens_checked.append(screen)
