@@ -122,7 +122,7 @@ func _cast_nova(s: Dictionary) -> void:
 	cds["nova"] = skill_cd["nova"]
 	var r: float = k["radius"] * s["area"]
 	main.fx.ring(position, 20.0, r, 0.4, Color(k["color"]), 8.0)
-	main.damage_area(position, r, current_damage() * k["damage"], k["knockback"])
+	main.damage_area(position, r, current_damage() * k["damage"], k["knockback"], "ronce")
 
 
 func _cast_cloud(s: Dictionary) -> void:
@@ -158,7 +158,7 @@ func take_hit(amount: float, source) -> void:
 	hurt_flash = 0.15
 	invuln = 0.35
 	if s["thorns"] > 0.0 and is_instance_valid(source) and not source.dead:
-		source.take_damage(s["thorns"], false)
+		source.take_damage(s["thorns"] * main.branch_factor(source, "ronce"), false)
 	if hp <= 0.0:
 		if not Game.fire("lethal_hit", {"main": main}):
 			main.player_died()

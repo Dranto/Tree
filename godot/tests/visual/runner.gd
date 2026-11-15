@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "roncier"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const TitleScene = preload("res://scenes/title.tscn")
 ## Défauts d'interface déjà connus (un par ligne : « résolution|écran|type|libellés »).
@@ -77,6 +77,8 @@ func _ready() -> void:
 			await _scenario_resolution()
 		"galerie":
 			await _scenario_galerie()
+		"roncier":
+			await _scenario_roncier()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -145,6 +147,17 @@ func _scenario_galerie() -> void:
 	await _frames(3)
 	await _shot("galerie_ennemis_fx")
 	layer.queue_free()
+	await _frames(1)
+	layer = CanvasLayer.new()
+	layer.layer = 100
+	gallery = GalleryScript.new()
+	gallery.view = get_viewport().get_visible_rect().size
+	gallery.page = "roncier"
+	layer.add_child(gallery)
+	add_child(layer)
+	await _frames(3)
+	await _shot("galerie_roncier")
+	layer.queue_free()
 
 	Game.points = 5
 	var root_neighbors: Array = Game.tree.nodes[0]["neighbors"].duplicate()
@@ -178,6 +191,34 @@ func _scenario_galerie() -> void:
 		sheet.blit_rect(img, src, Vector2i((i % 3) * cw, (i / 3) * ch))
 		print("VISUEL cellule %s -> nœud %d" % [cells[i][0], id])
 	await _shot_image("galerie_noeuds", sheet)
+
+
+## Roncier : la région de Ronce morte, puis une vague de vie (trois images), la région ravivée
+## une fois les feuilles poussées, et enfin purifiée (drapeau de la tâche D).
+## Sans robot ni Flétris : le joueur est posé dans la région, à l'arrêt.
+func _scenario_roncier() -> void:
+	main.autotest = false
+	main.spawn_timer = 1.0e9
+	main.player.set_physics_process(false)
+	var spot: Vector2 = main.region_center("ronce") * 0.62
+	main.player.position = spot
+	main.player.reset_physics_interpolation()
+	for c in main.player.get_children():
+		if c is Camera2D:
+			c.reset_smoothing()
+	await _frames(30)
+	await _shot("roncier_mort")
+	main.revive(spot + Vector2(-140, 60), 520.0, Game.tree.branch_color(0))
+	for step in [[24, "roncier_vague_1"], [30, "roncier_vague_2"], [51, "roncier_vague_3"]]:
+		await _frames(step[0])
+		await _shot(step[1])
+	await _frames(90)
+	await _shot("roncier_ravive")
+	Game.flags["ronce_coeur_purifie"] = true
+	main.player.position = main.region_center("ronce") + Vector2(0, 260)
+	main.player.reset_physics_interpolation()
+	await _frames(40)
+	await _shot("roncier_purifie")
 
 
 # --- Outils ---

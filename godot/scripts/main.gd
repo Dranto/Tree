@@ -17,6 +17,13 @@ const Hud = preload("res://scripts/hud.gd")
 const TreeUI = preload("res://scripts/tree_ui.gd")
 const PauseMenu = preload("res://scripts/pause_menu.gd")
 const SpatialGrid = preload("res://scripts/spatial_grid.gd")
+const Regions = preload("res://scripts/regions.gd")
+const Content = preload("res://scripts/content.gd")
+
+## Apparitions par région (sortes du roncier, part selon la distance) : res://data/enemies.json.
+var region_spawn: Dictionary = Content._load("enemies").get("spawn", {})
+## Dernier état connu de la purification du Cœur de Ronce (contrat avec la tâche D).
+var ronce_purified := false
 
 var world_half := WORLD_HALF
 var ground
@@ -238,8 +245,11 @@ func _physics_process(delta: float) -> void:
 			_spawn_enemy()
 	_rebuild_grid()
 	_separate()
+	_push_out_of_bushes()
+	_watch_region_state()
 
-	spawn_timer -= delta
+	# Plus on s'enfonce dans une région, plus les ennemis arrivent vite.
+	spawn_timer -= delta * (1.0 + 0.6 * _region_depth(player.position))
 	var cap := mini(120, 16 + Game.level * 5)
 	if spawn_timer <= 0.0:
 		spawn_timer = maxf(0.22, 1.3 - Game.level * 0.05 - elapsed / 600.0)
@@ -282,8 +292,59 @@ func _separate() -> void:
 			if l2 < min_d * min_d and l2 > 0.01:
 				var l := sqrt(l2)
 				var push := d / l * (min_d - l) * 0.5
-				a.position -= push
-				b.position += push
+				# Un ennemi ancré (Nid) ne bouge pas : l'autre est poussé deux fois plus.
+				if a.anchored:
+					b.position += push * (0.0 if b.anchored else 2.0)
+				elif b.anchored:
+					a.position -= push * 2.0
+				else:
+					a.position -= push
+					b.position += push
+
+
+## Les buissons d'épines du roncier sont des obstacles pour le joueur et les ennemis.
+func _push_out_of_bushes() -> void:
+	for e in enemies:
+		if not e.anchored:
+			e.position = flora.push_out(e.position, e.radius)
+	player.position = flora.push_out(player.position, player.radius)
+
+
+## Suit les drapeaux d'aventure posés par le Cœur de flétrissure (tâche D) : la région change d'état.
+func _watch_region_state() -> void:
+	var purified := bool(Game.flags.get("ronce_coeur_purifie", false))
+	if purified != ronce_purified:
+		ronce_purified = purified
+		ground.set_purified(1.0 if purified else 0.0)
+
+
+# --- Régions du monde (voir regions.gd) ---
+
+## Région du monde à cette position : "ronce" dans le roncier, "" ailleurs.
+func region_at(pos: Vector2) -> String:
+	return Regions.region_at(pos)
+
+
+## Centre d'une région (là où se dresse son Cœur de flétrissure).
+func region_center(id: String) -> Vector2:
+	return Regions.center(id)
+
+
+## Profondeur dans une région, de 0 (au bord, près de la graine) à 1 (au fond).
+func _region_depth(pos: Vector2) -> float:
+	var reg := region_at(pos)
+	if reg == "" or not region_spawn.has(reg):
+		return 0.0
+	return clampf((pos.length() - Regions.INNER) / (float(region_spawn[reg].get("far", 2400.0)) - Regions.INNER), 0.0, 1.0)
+
+
+## Facteur des dégâts d'une branche de l'arbre sur un ennemi : les ennemis du roncier
+## ignorent 25 % des dégâts de Ronce (« resist » dans enemies.json), ce qui pousse à mélanger
+## les branches. Sans branche (""), ou pour un ennemi sans résistances, le facteur vaut 1.
+func branch_factor(e, branch: String) -> float:
+	if branch == "" or not ("resist" in e):
+		return 1.0
+	return 1.0 - float(e.resist.get(branch, 0.0))
 
 
 func power() -> float:
@@ -299,18 +360,59 @@ func _spawn_enemy() -> void:
 		pos = pos.clamp(Vector2(-WORLD_HALF, -WORLD_HALF), Vector2(WORLD_HALF, WORLD_HALF))
 		if ground.life_at(pos) < 0.5:
 			break
-	var kind := 0
+	var kind = 0
 	var roll := rng.randf()
 	if Game.level >= 4 and roll < 0.12:
 		kind = 2
 	elif roll < 0.4:
 		kind = 1
+	var reg := region_at(pos)
+	if region_spawn.has(reg):
+		var regional := _region_kind(reg, pos)
+		if regional != "":
+			kind = regional
+	spawn_enemy_kind(kind, pos, power())
+
+
+## Sorte du roncier à faire naître ici, ou "" pour un Flétri ordinaire. La part des ennemis de la
+## région grandit avec la distance à la graine, et baisse une fois son Cœur purifié.
+func _region_kind(reg: String, pos: Vector2) -> String:
+	var sp: Dictionary = region_spawn[reg]
+	var share := lerpf(sp.get("share_near", 0.25), sp.get("share_far", 0.8), _region_depth(pos))
+	if Game.flags.get(reg + "_coeur_purifie", false):
+		share *= float(sp.get("purified_factor", 1.0))
+	if rng.randf() >= share:
+		return ""
+	var kinds: Dictionary = sp.get("kinds", {})
+	var total := 0.0
+	for k in kinds:
+		total += float(kinds[k])
+	var pick := rng.randf() * total
+	var id := ""
+	for k in kinds:
+		id = k
+		pick -= float(kinds[k])
+		if pick <= 0.0:
+			break
+	if Enemy.KINDS[Enemy.kind_index(id)].get("behavior", "") == "nest":
+		var nests := enemies.filter(func(e): return e.behavior == "nest").size()
+		if pos.length() < float(sp.get("nest_min_dist", 0.0)) or nests >= int(sp.get("max_nests", 3)):
+			id = "chargeur" if rng.randf() < 0.5 else "tireur"
+	return id
+
+
+## Fait naître un ennemi d'une sorte donnée (indice ou identifiant de enemies.json).
+## « parent » : le Nid qui l'a fait naître (il compte ses petits).
+func spawn_enemy_kind(kind, pos: Vector2, pwr: float, parent = null):
 	var e = Enemy.new()
 	e.main = self
 	e.position = pos
-	e.setup(kind, power())
+	e.setup(kind, pwr)
 	enemies_layer.add_child(e)
 	enemies.append(e)
+	if parent != null:
+		parent.young.append(e)
+	return e
 
 
 func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, size := 1.0) -> void:
@@ -325,9 +427,11 @@ func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, si
 
 
 ## Applique un coup du joueur : critique, poison, vol de vie, effets déclenchés par un critique.
-func player_hit_enemy(e, base: float, can_explode := true) -> void:
+## « branch » : branche de l'arbre d'où vient le coup (« ronce » pour les épines, la Couronne
+## d'épines et les compétences de Ronce), pour les résistances des ennemis de région.
+func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void:
 	var s: Dictionary = Game.stats
-	var dmg := base
+	var dmg := base * branch_factor(e, branch)
 	var crit: bool = rng.randf() < s["crit"]
 	if crit:
 		dmg *= s["crit_mult"]
@@ -340,13 +444,13 @@ func player_hit_enemy(e, base: float, can_explode := true) -> void:
 		Game.fire("crit", {"main": self, "enemy": e, "base": base})
 
 
-func damage_area(center: Vector2, radius: float, amount: float, knockback: float) -> void:
+func damage_area(center: Vector2, radius: float, amount: float, knockback: float, branch := "") -> void:
 	for e in enemies_near(center, radius):
 		if e.dead:
 			continue
 		var d: Vector2 = e.position - center
-		player_hit_enemy(e, amount)
-		if knockback > 0.0 and d.length() > 0.1:
+		player_hit_enemy(e, amount, true, branch)
+		if knockback > 0.0 and d.length() > 0.1 and not e.anchored:
 			e.position += d.normalized() * knockback
 
 
@@ -387,8 +491,14 @@ func _on_node_allocated(node: Dictionary) -> void:
 		radius = 280.0
 	elif node["type"] == "keystone":
 		radius = 380.0
-	ground.paint(world_pos, radius, 0.9)
-	flora.spawn_patch(world_pos, radius * 0.8, int(radius / 18.0), Game.tree.branch_color(node["branch"]))
+	revive(world_pos, radius, Game.tree.branch_color(node["branch"]))
+
+
+## Vague de vie : l'herbe avance depuis le point ravivé (ground.WAVE_TIME secondes),
+## les arbres et ronces reverdissent et les fleurs éclosent au passage du front.
+func revive(world_pos: Vector2, radius: float, tint: Color, strength := 0.9) -> void:
+	ground.paint_wave(world_pos, radius, strength)
+	flora.spawn_patch(world_pos, radius * 0.8, int(radius / 18.0), tint, ground.WAVE_TIME, radius)
 
 
 func _on_level_up(lvl: int) -> void:
