@@ -43,6 +43,11 @@ var bush_bounds := Rect2()
 ## Fleurs d'une vague de vie qui n'ont pas encore éclos : {f, at} (at = temps d'éclosion).
 var pending: Array = []
 var clock := 0.0
+## Arbres, ronces et buissons rangés par carrés de CHUNK pixels : Vector2i -> Array.
+## Une peinture de vie ne regarde que les carrés qu'elle touche.
+var tree_cells: Dictionary = {}
+var bloom_timer := 0.0
+const BLOOM_STEP := 0.25
 
 
 ## Un arbre du décor, dessiné autour de son pied (l'origine sert au tri en profondeur).
@@ -105,7 +110,7 @@ class DecorBramble extends DecorTree:
 		var g := (1.0 - (1.0 - leaf) * (1.0 - leaf)) if alive else 0.0
 		var stem := Color("5e5650").lerp(Color("3f6e2e"), g)
 		var thorn := Color("8a8078").lerp(Color("c9b48a"), g)
-		draw_circle(Vector2(0, -2) * s, 13.0 * s, Color(0, 0, 0, 0.18))
+		draw_circle(Vector2(0, -1) * s, 8.0 * s, Color(0, 0, 0, 0.14))
 		var tips: Array = []
 		for i in 5:
 			# Chaque tige part du pied, monte puis retombe en arc.
@@ -195,10 +200,18 @@ func _ready() -> void:
 		t.tree_seed = rng.randi()
 		t.alive = ground.life_at(p) > ALIVE
 		trees_parent.add_child(t)
-		trees.append(t)
+		_add_tree(t)
 	_spawn_thicket()
 	Game.seed_rng(rng, 1)
 	ground.painted.connect(_on_painted)
+
+
+func _add_tree(t: DecorTree) -> void:
+	trees.append(t)
+	var key := Vector2i(floori(t.position.x / CHUNK), floori(t.position.y / CHUNK))
+	if not tree_cells.has(key):
+		tree_cells[key] = []
+	tree_cells[key].append(t)
 
 
 ## Ronces et buissons d'épines du roncier : tirage à part (graine fixe), pour ne pas déplacer
@@ -235,7 +248,7 @@ func _spawn_thicket() -> void:
 			bush_cells[key].append(t)
 			bush_bounds = Rect2(p, Vector2.ZERO) if bushes.size() == 1 else bush_bounds.expand(p)
 		trees_parent.add_child(t)
-		trees.append(t)
+		_add_tree(t)
 
 
 ## Sort un cercle (centre, rayon) des buissons d'épines qu'il touche : renvoie la position corrigée
@@ -264,17 +277,38 @@ func push_out(pos: Vector2, radius: float) -> Vector2:
 ## La vie a changé dans un disque : seuls les arbres concernés qui reverdissent sont redessinés.
 ## Pendant une vague de vie (rayon fini), leurs feuilles poussent progressivement.
 func _on_painted(center: Vector2, radius: float) -> void:
+	if radius == INF:
+		for t in trees:
+			if not t.alive and ground.life_at(t.position) > ALIVE:
+				t.revive(false)
+		return
+	var grow: bool = ground.waves.size() > 0
 	var r2 := (radius + 4.0) * (radius + 4.0)
-	for t in trees:
-		if t.alive or (radius < INF and t.position.distance_squared_to(center) > r2):
-			continue
-		if ground.life_at(t.position) > ALIVE:
-			t.revive(radius < INF and ground.waves.size() > 0)
+	var lo := Vector2i(floori((center.x - radius) / CHUNK), floori((center.y - radius) / CHUNK))
+	var hi := Vector2i(floori((center.x + radius) / CHUNK), floori((center.y + radius) / CHUNK))
+	for cy in range(lo.y, hi.y + 1):
+		for cx in range(lo.x, hi.x + 1):
+			var list = tree_cells.get(Vector2i(cx, cy))
+			if list == null:
+				continue
+			for t in list:
+				if t.alive or t.position.distance_squared_to(center) > r2:
+					continue
+				if ground.life_at(t.position) > ALIVE:
+					t.revive(grow)
 
 
 ## Fleurs d'une vague de vie : elles éclosent quand le front de la vague les atteint.
+## Elles sortent par petits groupes (toutes les BLOOM_STEP secondes) : chaque éclosion redessine
+## tout le carré de fleurs, mieux vaut ne pas le faire à chaque image.
 func _physics_process(delta: float) -> void:
+	if pending.is_empty():
+		return
 	clock += delta
+	bloom_timer -= delta
+	if bloom_timer > 0.0:
+		return
+	bloom_timer = BLOOM_STEP
 	while not pending.is_empty() and pending[0]["at"] <= clock:
 		_insert(pending.pop_front()["f"])
 

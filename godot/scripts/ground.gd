@@ -14,6 +14,7 @@ const NOISE_RES := 512
 const NOISE_PERIOD := 3000.0
 ## Vague de vie : durée de l'avancée de l'herbe depuis le point ravivé (en secondes).
 const WAVE_TIME := 1.75
+const WAVE_TICK := 0.05
 
 const Regions = preload("res://scripts/regions.gd")
 
@@ -52,8 +53,9 @@ func _ready() -> void:
 	mat.set_shader_parameter("noise_tex", noise_texture())
 	mat.set_shader_parameter("noise_period", NOISE_PERIOD)
 	# Région du roncier : secteur de la branche Ronce (sol teinté de rouille).
-	mat.set_shader_parameter("ronce_angle", Regions.angle_of("ronce"))
-	mat.set_shader_parameter("ronce_half", Regions.half_width())
+	var normals := Regions.edge_normals("ronce")
+	mat.set_shader_parameter("ronce_n1", normals[0])
+	mat.set_shader_parameter("ronce_n2", normals[1])
 	mat.set_shader_parameter("region_inner", Regions.INNER)
 	mat.set_shader_parameter("region_edge", Regions.EDGE)
 	rect.material = mat
@@ -111,6 +113,11 @@ func _physics_process(delta: float) -> void:
 	for w in waves:
 		w["t"] += delta
 		var k: float = minf(1.0, w["t"] / WAVE_TIME)
+		# Le front avance par petits bonds (WAVE_TICK) : à l'œil c'est continu, et la carte,
+		# la texture et le décor sont mis à jour trois fois moins souvent.
+		if k < 1.0 and w["t"] - w.get("last", -1.0) < WAVE_TICK:
+			continue
+		w["last"] = w["t"]
 		# Départ rapide puis ralenti, comme une eau qui se répand.
 		_advance(w, w["radius"] * (1.0 - (1.0 - k) * (1.0 - k)))
 	waves = waves.filter(func(w): return w["done"] < w["radius"])

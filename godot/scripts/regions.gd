@@ -33,12 +33,19 @@ static func half_width() -> float:
 	return PI / maxf(1.0, Content.tree().get("branches", []).size())
 
 
-## Distance (en pixels, positive à l'intérieur) entre une position et le bord de la région.
+## Normales intérieures des deux bords du secteur (le secteur fait moins d'un demi-tour :
+## un point est dedans s'il est du bon côté des deux bords).
+static func edge_normals(id: String) -> Array:
+	var a := angle_of(id)
+	var h := half_width()
+	return [-Vector2.from_angle(a - h).orthogonal(), Vector2.from_angle(a + h).orthogonal()]
+
+
+## Distance (en pixels, positive à l'intérieur) entre une position et le bord de la région :
+## le plus proche des deux bords du secteur et du cercle intérieur. Même calcul que le shader du sol.
 static func inside_distance(pos: Vector2, id: String) -> float:
-	var d := pos.length()
-	var ad := absf(angle_difference(angle_of(id), pos.angle()))
-	var side := (half_width() - ad) * d
-	return minf(side, d - INNER)
+	var n := edge_normals(id)
+	return minf(minf(pos.dot(n[0]), pos.dot(n[1])), pos.length() - INNER)
 
 
 static func region_at(pos: Vector2) -> String:

@@ -7,9 +7,11 @@ uniform sampler2D life_map : filter_linear;
 uniform sampler2D noise_tex : filter_linear, repeat_enable;
 uniform vec2 world_size = vec2(6000.0, 6000.0);
 uniform float noise_period = 3000.0;
-// Région du roncier (secteur de la branche Ronce, voir regions.gd).
-uniform float ronce_angle = -1.0472;
-uniform float ronce_half = 0.5236;
+// Région du roncier (secteur de la branche Ronce, voir regions.gd) : normales intérieures des
+// deux bords du secteur, distance de la graine où il commence, largeur du fondu.
+// Deux produits scalaires et une longueur : moins cher qu'une texture ou un atan par pixel.
+uniform vec2 ronce_n1 = vec2(0.866, 0.5);
+uniform vec2 ronce_n2 = vec2(-0.866, 0.5);
 uniform float region_inner = 430.0;
 uniform float region_edge = 110.0;
 // 0 tant que le Cœur de flétrissure vit, 1 une fois purifié : la rouille s'efface.
@@ -47,17 +49,18 @@ void fragment() {
 	// Roncier : terre rouillée, veinée de sillons sombres comme des ronces mortes ;
 	// une fois ravivé, herbe plus sombre semée de petites baies rouges.
 	vec2 p = w - world_size * 0.5;
-	float dist = length(p);
-	float ad = abs(mod(atan(p.y, p.x) - ronce_angle + 3.14159265, 6.2831853) - 3.14159265);
-	float inside = min((ronce_half - ad) * dist, dist - region_inner);
+	float inside = min(min(dot(p, ronce_n1), dot(p, ronce_n2)), length(p) - region_inner);
 	float rw = smoothstep(-region_edge, region_edge, inside + (n - 0.5) * 120.0);
-	vec3 rust = mix(vec3(0.24, 0.13, 0.09), vec3(0.42, 0.23, 0.13), n);
-	rust = mix(rust, vec3(0.12, 0.07, 0.06), crack * 0.9 + smoothstep(0.5, 0.0, abs(n2 - 0.5) * 12.0) * 0.3 * (1.0 - crack_mask));
-	dead = mix(dead, rust, rw * (0.85 - 0.6 * ronce_purified));
-	vec3 thicket = mix(vec3(0.12, 0.27, 0.12), vec3(0.24, 0.45, 0.17), n);
-	float berry = step(0.992, hash_cell(floor(w / 5.0) + vec2(91.0, 17.0)));
-	thicket = mix(thicket, vec3(0.80, 0.12, 0.16), berry * 0.85);
-	alive = mix(alive, thicket, rw * 0.8);
+	// Hors du roncier (presque tout l'écran ailleurs), rien de plus à calculer.
+	if (rw > 0.002) {
+		vec3 rust = mix(vec3(0.24, 0.13, 0.09), vec3(0.42, 0.23, 0.13), n);
+		rust = mix(rust, vec3(0.12, 0.07, 0.06), crack * 0.9 + smoothstep(0.5, 0.0, abs(n2 - 0.5) * 12.0) * 0.3 * (1.0 - crack_mask));
+		dead = mix(dead, rust, rw * (0.85 - 0.6 * ronce_purified));
+		vec3 thicket = mix(vec3(0.12, 0.27, 0.12), vec3(0.24, 0.45, 0.17), n);
+		float berry = step(0.992, hash_cell(floor(w / 5.0) + vec2(91.0, 17.0)));
+		thicket = mix(thicket, vec3(0.80, 0.12, 0.16), berry * 0.85);
+		alive = mix(alive, thicket, rw * 0.8);
+	}
 
 	float l = texture(life_map, UV).r;
 	float edge = smoothstep(0.30, 0.60, l + (n2 - 0.5) * 0.35);

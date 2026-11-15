@@ -110,11 +110,11 @@ func _ready_roncier() -> void:
 	add_child(th)
 	th.set_physics_process(false)
 	var decor := [
-		[FloraScript.DecorBramble, false, Vector2(480, 720)],
-		[FloraScript.DecorBramble, true, Vector2(700, 720)],
-		[FloraScript.DecorBush, false, Vector2(960, 720)],
-		[FloraScript.DecorBush, true, Vector2(1180, 720)],
-		[FloraScript.DecorTree, true, Vector2(1400, 720)],
+		[FloraScript.DecorBramble, false, Vector2(480, 780)],
+		[FloraScript.DecorBramble, true, Vector2(700, 780)],
+		[FloraScript.DecorBush, false, Vector2(960, 780)],
+		[FloraScript.DecorBush, true, Vector2(1180, 780)],
+		[FloraScript.DecorTree, true, Vector2(1400, 780)],
 	]
 	for d in decor:
 		var t = d[0].new()
@@ -122,11 +122,10 @@ func _ready_roncier() -> void:
 		t.tree_seed = 12345
 		t.alive = d[1]
 		t.position = d[2]
-		t.scale = Vector2(1.5, 1.5)
 		add_child(t)
 	# Un arbre à mi-pousse (vague de vie en cours).
 	var growing = get_child(get_child_count() - 1)
-	growing.leaf = 0.5
+	growing.leaf = 0.3
 
 
 func _draw() -> void:
