@@ -55,6 +55,18 @@ Le texte de l'infobulle est produit à partir de l'effet : il ne peut donc pas c
 
 L'identifiant renvoie à `skills.json`. Le comportement de la compétence reste écrit dans `scripts/player.gd` ; ses réglages sont dans les données.
 
+Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores), `bloom` (Floraison), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) et `haie` (mur d'épines temporaire qui bloque et blesse). Champs communs de `skills.json` :
+
+| Champ | Rôle |
+| --- | --- |
+| `name`, `short`, `desc`, `color` | Nom, nom court (barre de compétences), texte de l'infobulle, couleur |
+| `cooldown` | Recharge en secondes |
+| `damage` | Facteur des dégâts de base du joueur |
+| `branch` | Branche d'origine : les compétences de `ronce` gagnent +15 % de dégâts sur une terre ravivée de la région de Ronce (« se battre chez soi ») |
+| `tags` | Familles d'attaque : `corps_a_corps`, `projectile`, `zone`. Chaque famille multiplie les dégâts par sa statistique (`melee_damage`, `projectile_damage`, `area_damage`) ; les graines du tir de base sont des `projectile` |
+
+Les compétences acquises se rangent dans la barre de compétences (6 emplacements, dont `skill_slots` débloqués : 4 au départ, 6 au plus). Le rangement est gardé dans `Game.flags["barre"]`.
+
 ### 3. Réagir à un évènement
 
 ```json
@@ -62,7 +74,7 @@ L'identifiant renvoie à `skills.json`. Le comportement de la compétence reste 
  "text": "Chaque ennemi vaincu réduit la recharge de l'esquive de 0,3 s."}
 ```
 
-- `on` : `kill` (ennemi vaincu), `crit` (coup critique), `lethal_hit` (coup mortel reçu).
+- `on` : `kill` (ennemi vaincu), `crit` (coup critique), `lethal_hit` (coup mortel reçu), `melee_hit` (coup au corps à corps, `base` = dégâts du coup), `bleed_tick` (à-coup de saignement toutes les 0,5 s, `base` = dégâts de l'à-coup), `root` (ennemi enraciné, `base` = dégâts du coup qui enracine).
 - `do` : l'action à lancer, avec ses paramètres.
 - `cooldown` (facultatif) : durée en secondes avant que l'effet puisse se relancer.
 - `text` (obligatoire) : la phrase affichée au joueur.
@@ -73,6 +85,12 @@ L'identifiant renvoie à `skills.json`. Le comportement de la compétence reste 
 | `spread_poison` | `radius`, `duration`, `color` | L'ennemi vaincu transmet son poison autour de lui |
 | `explode` | `radius`, `factor`, `color` | Le coup touche aussi les ennemis proches |
 | `survive` | `hp`, `invuln`, `label`, `color` | Le coup mortel laisse le joueur en vie |
+| `apply_status` | `status` (`saignement` ou `enracine`), `value`, `duration`, `scale` | Pose un état sur l'ennemi de l'évènement. `saignement` : `value` dégâts par seconde (avec `"scale": "base"`, fraction des dégâts du coup). Durées multipliées par `bleed_duration` / `root_duration` |
+| `heal` | `value` | Soigne une fraction de la vie maximale |
+
+### États des ennemis
+
+`enemy.apply_status(nom, valeur, durée)` : `saignement` (dégâts par seconde, cumulable 5 fois ; au-delà la piqûre la plus faible est remplacée) et `enracine` (immobile, frappe toujours au contact). La statistique `bleed` fait saigner à chaque coup du joueur (fraction des dégâts par seconde, 4 s × `bleed_duration`), comme `poison`.
 
 ### Conditions
 
@@ -82,7 +100,7 @@ Tout effet accepte une condition :
 {"stat": "damage", "op": "more", "value": 1.4, "if": {"state": "immobile", "min": 0.5}}
 ```
 
-L'effet ne s'applique que si l'état vaut au moins `min`. États actuels : `immobile` (secondes passées sans bouger) et `cible_empoisonnee` (pour l'évènement `kill`).
+L'effet ne s'applique que si l'état vaut au moins `min`. États actuels : `immobile` (secondes passées sans bouger), et pour les évènements qui visent un ennemi (`kill`, `crit`, `melee_hit`, `bleed_tick`, `root`) : `cible_empoisonnee`, `cible_saignante` (nombre de piqûres) et `cible_enracinee` (secondes restantes).
 
 ## Ajouter du contenu
 

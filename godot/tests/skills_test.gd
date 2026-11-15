@@ -4,9 +4,9 @@
 ## coupé pour que seules les actions du test aient lieu.
 extends SceneTree
 
-const MainScene = preload("res://scenes/main.tscn")
-const Enemy = preload("res://scripts/enemy.gd")
-const Hud = preload("res://scripts/hud.gd")
+## Chargés à l'exécution : les autoloads (Game, Settings) n'existent pas encore à la compilation.
+var MainScene
+var Enemy
 
 var failures := 0
 var game
@@ -48,6 +48,8 @@ func _clear_enemies() -> void:
 
 
 func _run() -> void:
+	MainScene = load("res://scenes/main.tscn")
+	Enemy = load("res://scripts/enemy.gd")
 	game = root.get_node("Game")
 	var settings = root.get_node("Settings")
 	main = MainScene.instantiate()
@@ -76,11 +78,11 @@ func _run() -> void:
 	game.test_skills = {"fouet": true, "racines": true, "haie": true, "nova": true, "cloud": true}
 	game.recompute()
 	game.tree_changed.emit()
-	check(p.bar.slice(0, 4) == ["nova", "fouet", "racines", "haie"], "compétences acquises rangées dans l'ordre (%s)" % str(p.bar))
-	check(p.unbarred_skills() == ["cloud"], "la 5e compétence attend un emplacement")
+	check(p.bar.slice(0, 4) == ["nova", "cloud", "fouet", "racines"], "compétences acquises rangées dans l'ordre de skills.json (%s)" % str(p.bar))
+	check(p.unbarred_skills() == ["haie"], "la 5e compétence attend un emplacement")
 	p.cycle_slot(1)
-	check(p.bar[1] == "cloud" and p.unbarred_skills() == ["fouet"], "clic sur un emplacement : échange avec une compétence sans place")
-	check(game.flags.get("barre", "").begins_with("nova,cloud,"), "la barre est gardée dans les drapeaux de la partie")
+	check(p.bar[1] == "haie" and p.unbarred_skills() == ["cloud"], "clic sur un emplacement : échange avec une compétence sans place")
+	check(game.flags.get("barre", "").begins_with("nova,haie,"), "la barre est gardée dans les drapeaux de la partie")
 	p.cycle_slot(4)
 	check(p.bar[4] == "", "un emplacement verrouillé ne reçoit rien")
 	game.test_skills.erase("racines")
@@ -116,12 +118,14 @@ func _run() -> void:
 	for st in e.bleed_stacks:
 		weakest = minf(weakest, st[0])
 	check(weakest >= 12.0, "au-delà, les piqûres les plus faibles sont remplacées")
+	e.set_physics_process(false)   # pas de temps maîtrisé à la main
+	e.bleed_clock = 0.0
 	var hp0: float = e.hp
-	await _frames(31)
-	var dps := 0.0
-	for v in [12.0, 13.0, 14.0, 15.0, 16.0]:
-		dps += v
-	check(absf((hp0 - e.hp) - dps * 0.5) < 1.0, "un à-coup toutes les 0,5 s (%.1f dégâts, attendu %.1f)" % [hp0 - e.hp, dps * 0.5])
+	e._bleed_step(0.25)
+	check(e.hp == hp0, "pas de dégâts avant l'à-coup")
+	e._bleed_step(0.25)
+	check(absf((hp0 - e.hp) - 70.0 * 0.5) < 0.01, "un à-coup toutes les 0,5 s, somme des piqûres (%.1f dégâts, attendu 35)" % (hp0 - e.hp))
+	e.set_physics_process(true)
 	await _frames(160)
 	check(e.bleed_stacks.is_empty(), "le saignement s'arrête à la fin de sa durée")
 
@@ -184,6 +188,7 @@ func _run() -> void:
 	var neighbor = _spawn(Vector2(140, 40))
 	await _frames(2)
 	p.hp = 10.0
+	p.aim = Vector2.RIGHT
 	p.cast("fouet", game.stats)
 	check(target.root_time > 0.0, "melee_hit -> apply_status : le coup de fouet enracine")
 	check(p.hp > 10.0, "root -> heal : l'enracinement soigne")
