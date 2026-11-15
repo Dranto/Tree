@@ -11,7 +11,8 @@ const SKILL_OPS := ["add", "inc", "more", "set"]
 ## Types de nœuds qu'une grappe écrite à la main peut contenir (voir skill_tree.gd).
 const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "graft", "withered"]
 ## Moments du jeu auxquels un effet peut réagir (champ « on »).
-const EVENTS := ["kill", "crit", "lethal_hit"]
+## bleed_tick : à-coup de saignement ; root : ennemi enraciné ; melee_hit : coup au corps à corps.
+const EVENTS := ["kill", "crit", "lethal_hit", "bleed_tick", "root", "melee_hit"]
 ## Actions disponibles (champ « do ») et leurs paramètres obligatoires.
 ## Elles sont implémentées dans effect_actions.gd.
 const ACTIONS := {
@@ -19,6 +20,8 @@ const ACTIONS := {
 	"spread_poison": ["radius", "duration"],
 	"explode": ["radius", "factor"],
 	"survive": ["hp"],
+	"apply_status": ["status", "value", "duration"],
+	"heal": ["value"],
 }
 
 static var _cache: Dictionary = {}

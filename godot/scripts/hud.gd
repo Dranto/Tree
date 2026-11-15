@@ -7,8 +7,8 @@ const Content = preload("res://scripts/content.gd")
 
 ## Part du monde qu'il est possible de raviver (disque de l'arbre sur la carte carrée).
 const REVIVABLE := 0.67
-## Emplacements de compétences : au moins MIN_SLOTS affichés, au plus MAX_SLOTS.
-const MIN_SLOTS := 4
+## Emplacements de compétences : toujours MAX_SLOTS affichés, dont skill_slots débloqués
+## (4 au départ) ; un emplacement vide est « libre », un emplacement pas encore débloqué « verrouillé ».
 const MAX_SLOTS := 6
 const MARGIN := 20
 
@@ -30,28 +30,41 @@ var _slots: Array = []
 
 
 ## Un emplacement de compétence : aplat de couleur, voile de recharge, touche et nom.
+## Trois états : une compétence (couleur), « libre » (débloqué, sans compétence) et
+## « verrouillé » (pas encore débloqué par l'arbre, statistique skill_slots).
 class Slot extends PanelContainer:
+	enum { SKILL, FREE, LOCKED }
+	var index := 0
+	var state := LOCKED
 	var skill_id := ""
 	var color := Color.WHITE
-	var owned := false
 	var ratio := 0.0
 	var icon: Control
 	var key_label: Label
 	var name_label: Label
 
 	func _init() -> void:
-		custom_minimum_size = Vector2(100, 76)
+		custom_minimum_size = Vector2(84, 76)
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		var sb := UiTheme.box(UiTheme.PANEL_BG, Color(0.6, 0.8, 0.6, 0.3), 1, 10)
+		for side in [SIDE_LEFT, SIDE_RIGHT]:
+			sb.set_content_margin(side, 6)
+		for side in [SIDE_TOP, SIDE_BOTTOM]:
+			sb.set_content_margin(side, 8)
+		add_theme_stylebox_override("panel", sb)
 		var box := VBoxContainer.new()
 		box.add_theme_constant_override("separation", 2)
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(box)
 		icon = Control.new()
 		icon.custom_minimum_size = Vector2(0, 30)
 		icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		icon.draw.connect(_draw_icon)
 		box.add_child(icon)
 		key_label = Label.new()
 		key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		key_label.add_theme_font_size_override("font_size", 16)
+		key_label.add_theme_font_size_override("font_size", 15)
 		box.add_child(key_label)
 		name_label = Label.new()
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -61,12 +74,22 @@ class Slot extends PanelContainer:
 
 	func _draw_icon() -> void:
 		var r := Rect2(Vector2.ZERO, icon.size)
-		if not owned:
-			icon.draw_string(UiTheme.font(), Vector2(0, r.size.y - 8), "—", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 20, Color(0.5, 0.5, 0.5))
-			return
-		icon.draw_rect(r, color.darkened(0.6) if ratio > 0.0 else color)
-		if ratio > 0.0:
-			icon.draw_rect(Rect2(0, 0, r.size.x, r.size.y * ratio), Color(0, 0, 0, 0.45))
+		var grey := Color(0.5, 0.5, 0.5)
+		match state:
+			LOCKED:
+				# Cadenas : anse et corps.
+				var c := r.get_center() + Vector2(0, 3)
+				icon.draw_arc(c + Vector2(0, -6), 6.0, PI, TAU, 12, grey, 2.0)
+				icon.draw_rect(Rect2(c + Vector2(-8, -6), Vector2(16, 12)), grey)
+			FREE:
+				icon.draw_rect(r.grow(-2), Color(0.6, 0.7, 0.6, 0.5), false, 1.0)
+				var c := r.get_center()
+				icon.draw_line(c + Vector2(-6, 0), c + Vector2(6, 0), Color(0.6, 0.7, 0.6, 0.6), 2.0)
+				icon.draw_line(c + Vector2(0, -6), c + Vector2(0, 6), Color(0.6, 0.7, 0.6, 0.6), 2.0)
+			SKILL:
+				icon.draw_rect(r, color.darkened(0.6) if ratio > 0.0 else color)
+				if ratio > 0.0:
+					icon.draw_rect(Rect2(0, 0, r.size.x, r.size.y * ratio), Color(0, 0, 0, 0.45))
 
 	func refresh() -> void:
 		icon.queue_redraw()
@@ -80,6 +103,7 @@ func _ready() -> void:
 	_build_bottom_left()
 	_build_bottom_center()
 	_build_banner()
+	Settings.changed.connect(func(): _labels.clear())
 	_refresh()
 
 
@@ -190,15 +214,26 @@ func _build_bottom_center() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
 	v.add_child(row)
-	var ids: Array = Content.skills().keys().slice(0, MAX_SLOTS)
-	for i in maxi(MIN_SLOTS, ids.size()):
+	for i in MAX_SLOTS:
 		var s := Slot.new()
-		if i < ids.size():
-			s.skill_id = ids[i]
-			s.color = Color(Content.skills()[ids[i]].get("color", "#ffffff"))
-			s.name_label.text = Content.skills()[ids[i]].get("short", ids[i])
+		s.index = i
+		s.gui_input.connect(_on_slot_input.bind(i))
 		row.add_child(s)
 		_slots.append(s)
+
+
+## Clic sur un emplacement débloqué : y mettre une compétence acquise restée sans place.
+func _on_slot_input(event: InputEvent, i: int) -> void:
+	var mb := event as InputEventMouseButton
+	if mb and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and main and main.player:
+		main.player.cycle_slot(i)
+
+
+## Touches d'un emplacement : la touche choisie dans les options et le chiffre (« A · 1 »).
+func slot_keys_text(i: int) -> String:
+	var digit := str(i + 1)
+	var k: int = Settings.slot_keys[i]
+	return digit if k == KEY_NONE else "%s · %s" % [Settings.key_name(k), digit]
 
 
 func _build_banner() -> void:
@@ -234,19 +269,34 @@ func _refresh() -> void:
 	var revived := minf(1.0, main.ground.ratio() / REVIVABLE)
 	_world_label.text = "Monde ravivé : %.1f %%   ·   Flétris purifiés : %d" % [revived * 100.0, Game.kills]
 
+	var open: int = p.unlocked_slots()
 	for s2 in _slots:
 		var slot := s2 as Slot
-		if slot.skill_id == "":
-			slot.owned = false
+		var i := slot.index
+		var id: String = p.bar[i] if i < p.bar.size() else ""
+		slot.skill_id = id
+		if i >= open:
+			slot.state = Slot.LOCKED
+			slot.ratio = 0.0
 			slot.key_label.text = ""
+			slot.name_label.text = "verrouillé"
+		elif id == "":
+			slot.state = Slot.FREE
+			slot.ratio = 0.0
+			slot.key_label.text = slot_keys_text(i)
+			slot.name_label.text = "libre"
 		else:
-			slot.owned = Game.has_key(slot.skill_id)
-			var cd: float = p.cds.get(slot.skill_id, 0.0)
-			var maxcd: float = p.skill_cd.get(slot.skill_id, 1.0)
-			slot.ratio = cd / maxcd if slot.owned and cd > 0.0 else 0.0
-			slot.key_label.text = key_label("skill_" + slot.skill_id) if slot.owned else ""
-			slot.name_label.text = Content.skills()[slot.skill_id].get("short", slot.skill_id) if slot.owned else "verrouillé"
-		slot.name_label.add_theme_color_override("font_color", Color(0.85, 0.9, 0.85) if slot.owned else Color(0.5, 0.5, 0.5))
+			slot.state = Slot.SKILL
+			var k: Dictionary = Content.skills()[id]
+			slot.color = Color(k.get("color", "#ffffff"))
+			var cd: float = p.cds.get(id, 0.0)
+			var maxcd: float = maxf(0.01, p.skill_cd.get(id, 1.0))
+			slot.ratio = cd / maxcd if cd > 0.0 else 0.0
+			slot.key_label.text = slot_keys_text(i)
+			slot.name_label.text = k.get("short", id)
+		var dim := Color(0.5, 0.5, 0.5)
+		slot.key_label.add_theme_color_override("font_color", UiTheme.INK if slot.state == Slot.SKILL else dim)
+		slot.name_label.add_theme_color_override("font_color", Color(0.85, 0.9, 0.85) if slot.state == Slot.SKILL else dim)
 		slot.refresh()
 
 	_banner.text = banner_text
