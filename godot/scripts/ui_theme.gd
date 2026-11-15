@@ -103,4 +103,6 @@ static func button(text: String, width := 320.0) -> Button:
 	b.text = text
 	b.custom_minimum_size = Vector2(width, 52)
 	b.focus_mode = Control.FOCUS_ALL
+	b.pressed.connect(func(): Sfx.play("clic"))
+	b.mouse_entered.connect(func(): Sfx.play("survol"))
 	return b

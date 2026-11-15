@@ -21,6 +21,8 @@ var menutest := false
 
 
 func _ready() -> void:
+	Music.set_mood(0.0)
+	Music.start()
 	font = UiTheme.font(true)
 	if Flow.skip_title:
 		Flow.new_game.call_deferred()

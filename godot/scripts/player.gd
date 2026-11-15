@@ -151,6 +151,7 @@ func _physics_process(delta: float) -> void:
 		dash_time = DASH_TIME
 		dash_cd = s["dash_cd"]
 		invuln = maxf(invuln, DASH_TIME + 0.08)
+		Sfx.play("esquive")
 
 	if dash_time > 0.0:
 		dash_time -= delta
@@ -219,6 +220,7 @@ func fighting_at_home() -> bool:
 
 
 func _shoot(s: Dictionary) -> void:
+	Sfx.play("tir")
 	var n: int = s["projectiles"]
 	var spread := 0.14
 	for i in n:
@@ -230,6 +232,7 @@ func _shoot(s: Dictionary) -> void:
 func _cast_nova(s: Dictionary) -> void:
 	var k: Dictionary = skill("nova")
 	var r: float = k["radius"] * s["area"]
+	Sfx.play("nova")
 	main.fx.ring(position, 20.0, r, 0.4, Color(k["color"]), 8.0)
 	main.damage_area(position, r, skill_damage("nova"), k["knockback"])
 
@@ -241,11 +244,13 @@ func _cast_cloud(s: Dictionary) -> void:
 	if off.length() > k["range"]:
 		target = position + off.normalized() * k["range"]
 	var per_factor := skill_damage("cloud") / float(k["damage"])
+	Sfx.play("nuage")
 	main.fx.cloud(target, k["radius"] * s["area"], k["duration"], per_factor * (k["damage"] + s["poison"]))
 
 
 func _cast_bloom(s: Dictionary) -> void:
 	var k: Dictionary = skill("bloom")
+	Sfx.play("floraison")
 	heal(s["max_hp"] * k["heal"])
 	var r: float = k["radius"] * s["area"]
 	main.fx.ring(position, 20.0, r, 0.6, Color(k["color"]), 8.0)
@@ -322,6 +327,7 @@ func take_hit(amount: float, source) -> void:
 	var s: Dictionary = Game.stats
 	hp -= amount * (1.0 - s["armor"])
 	hurt_flash = 0.15
+	Sfx.play("degats")
 	invuln = 0.35
 	if s["thorns"] > 0.0 and is_instance_valid(source) and not source.dead:
 		source.take_damage(s["thorns"], false)

@@ -161,6 +161,8 @@ func _ready() -> void:
 		add_child(n)
 		move_child(n, actors_layer.get_index())
 
+	Sfx.listener = player
+	Music.start()
 	Game.node_allocated.connect(_on_node_allocated)
 	Game.leveled_up.connect(_on_level_up)
 
@@ -212,6 +214,7 @@ func _notification(what: int) -> void:
 
 ## Quitter la scène (« Retour au titre » ou « Quitter » du menu pause) sauvegarde la partie.
 func _exit_tree() -> void:
+	Sfx.listener = null
 	save_game()
 
 
@@ -252,6 +255,8 @@ func _process(delta: float) -> void:
 ## leur _physics_process ; l'affichage est interpolé entre deux pas (project.godot).
 func _physics_process(delta: float) -> void:
 	elapsed += delta
+	# La musique suit la vie du sol sous le joueur.
+	Music.set_mood(ground.life_at(player.position))
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
 		save_game()
@@ -376,6 +381,7 @@ func player_hit_enemy(e, base: float, can_explode := true) -> void:
 	if crit:
 		dmg *= s["crit_mult"]
 	e.take_damage(dmg, crit)
+	Sfx.play("critique" if crit else "impact", e.position)
 	if s["poison"] > 0.0:
 		e.apply_poison(dmg * s["poison"], 3.0)
 	if s["bleed"] > 0.0 and not e.dead:
@@ -428,6 +434,7 @@ func damage_area(center: Vector2, radius: float, amount: float, knockback: float
 
 func on_enemy_killed(e) -> void:
 	Game.kills += 1
+	Sfx.play("mort", e.position)
 	var o = Orb.new()
 	o.main = self
 	o.position = e.position

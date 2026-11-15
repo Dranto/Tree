@@ -6,7 +6,8 @@ signal closed
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 var volume_slider: HSlider
-var volume_label: Label
+var music_slider: HSlider
+var sfx_slider: HSlider
 var fullscreen_box: CheckBox
 var hints_box: CheckBox
 var back_button: Button
@@ -30,28 +31,10 @@ func _ready() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(title)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
-	col.add_child(row)
-	var lbl := Label.new()
-	lbl.text = "Volume"
-	lbl.custom_minimum_size = Vector2(110, 0)
-	row.add_child(lbl)
-	volume_slider = HSlider.new()
-	volume_slider.min_value = 0.0
-	volume_slider.max_value = 1.0
-	volume_slider.step = 0.05
-	volume_slider.value = Settings.volume
-	volume_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	volume_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	volume_slider.focus_mode = Control.FOCUS_ALL
-	volume_slider.value_changed.connect(_on_volume)
-	row.add_child(volume_slider)
-	volume_label = Label.new()
-	volume_label.custom_minimum_size = Vector2(60, 0)
-	volume_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	row.add_child(volume_label)
-	_update_volume_label()
+	volume_slider = _slider_row(col, "Volume", Settings.volume, _on_volume)
+	music_slider = _slider_row(col, "Musique", Settings.music_volume, func(v): Settings.set_music_volume(v); Settings.save_settings(); _update_labels())
+	sfx_slider = _slider_row(col, "Effets", Settings.sfx_volume, func(v): Settings.set_sfx_volume(v); Settings.save_settings(); _update_labels())
+	_update_labels()
 
 	fullscreen_box = CheckBox.new()
 	fullscreen_box.text = "Plein écran"
@@ -97,14 +80,43 @@ func _ready() -> void:
 	col.add_child(back_button)
 
 
+## Une ligne « nom, curseur, pourcentage ». Le libellé du pourcentage est rangé dans la méta « label » du curseur.
+func _slider_row(parent: Control, text: String, value: float, on_change: Callable) -> HSlider:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	parent.add_child(row)
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.custom_minimum_size = Vector2(110, 0)
+	row.add_child(lbl)
+	var sl := HSlider.new()
+	sl.min_value = 0.0
+	sl.max_value = 1.0
+	sl.step = 0.05
+	sl.value = value
+	sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	sl.focus_mode = Control.FOCUS_ALL
+	sl.value_changed.connect(on_change)
+	row.add_child(sl)
+	var pct := Label.new()
+	pct.custom_minimum_size = Vector2(60, 0)
+	pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(pct)
+	sl.set_meta("label", pct)
+	return sl
+
+
 func _on_volume(v: float) -> void:
 	Settings.set_volume(v)
 	Settings.save_settings()
-	_update_volume_label()
+	_update_labels()
 
 
-func _update_volume_label() -> void:
-	volume_label.text = "%d %%" % roundi(volume_slider.value * 100.0)
+func _update_labels() -> void:
+	for sl in [volume_slider, music_slider, sfx_slider]:
+		if sl != null:
+			sl.get_meta("label").text = "%d %%" % roundi(sl.value * 100.0)
 
 
 func _listen(i: int) -> void:
@@ -153,6 +165,8 @@ func open() -> void:
 	keys_hint.text = ""
 	_update_keys()
 	volume_slider.value = Settings.volume
+	music_slider.value = Settings.music_volume
+	sfx_slider.value = Settings.sfx_volume
 	fullscreen_box.button_pressed = Settings.fullscreen
 	hints_box.button_pressed = Settings.show_hints
 	volume_slider.grab_focus()
