@@ -200,6 +200,7 @@ func _begin(kind: String) -> void:
 		kind = "volee"
 	attack = kind
 	stage = "annonce"
+	Sfx.play("annonce", anchor)
 	var to: Vector2 = main.player.position - anchor
 	aim = to.normalized() if to.length() > 1.0 else Vector2.DOWN
 	match kind:

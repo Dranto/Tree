@@ -261,6 +261,7 @@ func _cast_bloom(s: Dictionary) -> void:
 
 ## Fouet : arc devant le joueur. Chaque ennemi touché saigne et déclenche « melee_hit ».
 func _cast_fouet(s: Dictionary) -> void:
+	Sfx.play("fouet")
 	var k: Dictionary = skill("fouet")
 	var reach: float = k["range"] * s["area"]
 	var half_arc: float = k["arc"] / 2.0
@@ -282,6 +283,7 @@ func _cast_fouet(s: Dictionary) -> void:
 
 ## Racines : à l'endroit visé, blessent et immobilisent les ennemis de la zone.
 func _cast_racines(s: Dictionary) -> void:
+	Sfx.play("racines")
 	var k: Dictionary = skill("racines")
 	var target := aim_point
 	var off := target - position
@@ -302,6 +304,7 @@ func _cast_racines(s: Dictionary) -> void:
 
 ## Haie : un mur d'épines en travers de la visée, à quelques pas devant le joueur.
 func _cast_haie(s: Dictionary) -> void:
+	Sfx.play("haie")
 	var k: Dictionary = skill("haie")
 	var h = Hedge.new()
 	h.main = main

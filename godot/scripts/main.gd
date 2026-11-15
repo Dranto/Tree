@@ -394,11 +394,20 @@ func player_hit_enemy(e, base: float, can_explode := true) -> void:
 
 ## Contexte d'un évènement qui vise un ennemi, avec les états des conditions « cible_… ».
 func enemy_ctx(e, base: float) -> Dictionary:
+	# La Mère-Ronce garde ses états dans « statuses » plutôt que dans bleed_stacks / root_time.
+	var bleeding := 0.0
+	var rooted := 0.0
+	if "bleed_stacks" in e:
+		bleeding = float(e.bleed_stacks.size())
+		rooted = e.root_time
+	elif "statuses" in e:
+		bleeding = float(e.statuses.get("saignement", {}).get("stacks", 0))
+		rooted = float(e.statuses.get("enracine", {}).get("time", 0.0))
 	return {
 		"main": self, "enemy": e, "base": base,
 		"cible_empoisonnee": e.poison_time,
-		"cible_saignante": float(e.bleed_stacks.size()),
-		"cible_enracinee": e.root_time,
+		"cible_saignante": bleeding,
+		"cible_enracinee": rooted,
 	}
 
 

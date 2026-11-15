@@ -171,6 +171,7 @@ func purify() -> void:
 		return
 	Game.flags[FLAG] = true
 	_set_purified(true)
+	Sfx.play("coeur", center)
 	main.hud.banner("Le Cœur est purifié : l'arène de la Mère-Ronce s'ouvre.")
 	for i in 3:
 		main.fx.ring(center, BODY_RADIUS, LIFE_RADIUS * (0.4 + 0.3 * i), 0.9 + 0.5 * i, Color(0.6, 1.0, 0.55, 0.9), 6.0)

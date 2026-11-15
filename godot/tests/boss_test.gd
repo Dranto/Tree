@@ -123,7 +123,8 @@ func _run() -> void:
 	print("Sauvegarde")
 	var data: Dictionary = JSON.parse_string(JSON.stringify(save.capture(main)))
 	game.reset()
-	check(game.flags.is_empty(), "nouvelle partie : drapeaux effacés")
+	# Le joueur encore en jeu réécrit « barre » à chaque changement de l'arbre : on ne regarde que les drapeaux de Ronce.
+	check(not game.flags.has("ronce_coeur_purifie") and not game.flags.has("ronce_boss_vaincu"), "nouvelle partie : drapeaux effacés")
 	save.apply(data, main)
 	await _steps(3)
 	check(game.flags.get("ronce_coeur_purifie", false) == true and game.flags.get("ronce_boss_vaincu", false) == true, "les deux drapeaux sont sauvegardés et rechargés")
