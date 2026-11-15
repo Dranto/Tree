@@ -12,6 +12,11 @@ const RES := 200
 ## Une période couvre NOISE_PERIOD pixels du monde.
 const NOISE_RES := 512
 const NOISE_PERIOD := 3000.0
+## Vague de vie : durée de l'avancée de l'herbe depuis le point ravivé (en secondes).
+const WAVE_TIME := 1.75
+const WAVE_TICK := 0.05
+
+const Regions = preload("res://scripts/regions.gd")
 
 static var _noise_tex: ImageTexture
 
@@ -27,6 +32,9 @@ var total: float:
 		return total_bytes / 255.0
 ## La texture n'est envoyée à la carte graphique qu'une fois par image, et seulement si elle a changé.
 var dirty := false
+## Vagues de vie en cours : {center, radius, add, t, done} (« done » = rayon déjà peint).
+var waves: Array = []
+var mat: ShaderMaterial
 
 
 func _ready() -> void:
@@ -38,12 +46,18 @@ func _ready() -> void:
 	rect.position = Vector2(-SIZE / 2.0, -SIZE / 2.0)
 	rect.size = Vector2(SIZE, SIZE)
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var mat := ShaderMaterial.new()
+	mat = ShaderMaterial.new()
 	mat.shader = preload("res://shaders/ground.gdshader")
 	mat.set_shader_parameter("life_map", tex)
 	mat.set_shader_parameter("world_size", Vector2(SIZE, SIZE))
 	mat.set_shader_parameter("noise_tex", noise_texture())
 	mat.set_shader_parameter("noise_period", NOISE_PERIOD)
+	# Région du roncier : secteur de la branche Ronce (sol teinté de rouille).
+	var normals := Regions.edge_normals("ronce")
+	mat.set_shader_parameter("ronce_n1", normals[0])
+	mat.set_shader_parameter("ronce_n2", normals[1])
+	mat.set_shader_parameter("region_inner", Regions.INNER)
+	mat.set_shader_parameter("region_edge", Regions.EDGE)
 	rect.material = mat
 	add_child(rect)
 
@@ -92,6 +106,28 @@ func _process(_delta: float) -> void:
 		tex.update(img)
 
 
+## Les vagues de vie avancent à pas fixe : la vie du sol compte pour le jeu (soin, Flétris ralentis).
+func _physics_process(delta: float) -> void:
+	if waves.is_empty():
+		return
+	for w in waves:
+		w["t"] += delta
+		var k: float = minf(1.0, w["t"] / WAVE_TIME)
+		# Le front avance par petits bonds (WAVE_TICK) : à l'œil c'est continu, et la carte,
+		# la texture et le décor sont mis à jour trois fois moins souvent.
+		if k < 1.0 and w["t"] - w.get("last", -1.0) < WAVE_TICK:
+			continue
+		w["last"] = w["t"]
+		# Départ rapide puis ralenti, comme une eau qui se répand.
+		_advance(w, w["radius"] * (1.0 - (1.0 - k) * (1.0 - k)))
+	waves = waves.filter(func(w): return w["done"] < w["radius"])
+
+
+## La région de Ronce a été purifiée (son Cœur) : la rouille du sol s'efface.
+func set_purified(value: float) -> void:
+	mat.set_shader_parameter("ronce_purified", value)
+
+
 func _to_map(p: Vector2) -> Vector2:
 	return (p + Vector2(SIZE / 2.0, SIZE / 2.0)) / SIZE * RES
 
@@ -99,15 +135,46 @@ func _to_map(p: Vector2) -> Vector2:
 ## Ajoute de la vie dans un disque (coordonnées monde). Ne touche que les texels du disque ;
 ## la texture est mise à jour une seule fois à la fin de l'image.
 func paint(world_pos: Vector2, radius: float, strength: float) -> void:
+	_paint_ring(world_pos, radius, strength, -1.0, radius)
+	painted.emit(world_pos, radius)
+
+
+## Vague de vie : le même apport que paint(), mais l'herbe avance du centre vers le bord
+## en WAVE_TIME secondes. Les arbres et ronces reverdissent quand la vague les atteint.
+func paint_wave(world_pos: Vector2, radius: float, strength: float) -> void:
+	waves.append({"center": world_pos, "radius": radius, "add": strength, "t": 0.0, "done": -1.0})
+
+
+## Termine tout de suite les vagues en cours (avant une sauvegarde ou une capture de la carte).
+func finish_waves() -> void:
+	for w in waves:
+		_advance(w, w["radius"])
+	waves = []
+
+
+func _advance(w: Dictionary, r_now: float) -> void:
+	if r_now <= w["done"]:
+		return
+	_paint_ring(w["center"], w["radius"], w["add"], w["done"], r_now)
+	w["done"] = r_now if r_now < w["radius"] else w["radius"]
+	painted.emit(w["center"], r_now)
+
+
+## Ajoute la vie du disque (centre, rayon) mais seulement entre les distances r_in (exclue)
+## et r_out (incluse) : une vague peint son disque anneau par anneau, sans compter deux fois.
+func _paint_ring(world_pos: Vector2, radius: float, strength: float, r_in: float, r_out: float) -> void:
 	var c := _to_map(world_pos)
 	var r := radius / SIZE * RES
 	var add := strength * 255.0
-	for y in range(maxi(0, int(c.y - r) - 1), mini(RES, int(c.y + r) + 2)):
+	var in2: float = (r_in / radius) * absf(r_in / radius) if r_in > 0.0 else -1.0
+	var out2: float = minf(1.0, (r_out / radius) * (r_out / radius))
+	var ro := r * sqrt(out2)
+	for y in range(maxi(0, int(c.y - ro) - 1), mini(RES, int(c.y + ro) + 2)):
 		var dy := (y + 0.5 - c.y) / r
-		for x in range(maxi(0, int(c.x - r) - 1), mini(RES, int(c.x + r) + 2)):
+		for x in range(maxi(0, int(c.x - ro) - 1), mini(RES, int(c.x + ro) + 2)):
 			var dx := (x + 0.5 - c.x) / r
 			var d2 := dx * dx + dy * dy
-			if d2 >= 1.0:
+			if d2 >= 1.0 or d2 <= in2 or d2 > out2:
 				continue
 			var i := y * RES + x
 			var old: int = data[i]
@@ -116,7 +183,6 @@ func paint(world_pos: Vector2, radius: float, strength: float) -> void:
 				data[i] = nv
 				total_bytes += nv - old
 				dirty = true
-	painted.emit(world_pos, radius)
 
 
 func life_at(world_pos: Vector2) -> float:
@@ -133,6 +199,7 @@ func ratio() -> float:
 
 ## Carte de vie encodée en PNG (pour la sauvegarde).
 func export_map() -> PackedByteArray:
+	finish_waves()
 	return Image.create_from_data(RES, RES, false, Image.FORMAT_R8, data).save_png_to_buffer()
 
 
@@ -141,6 +208,7 @@ func import_map(png: PackedByteArray) -> bool:
 	var loaded := Image.new()
 	if loaded.load_png_from_buffer(png) != OK:
 		return false
+	waves = []
 	loaded.convert(Image.FORMAT_R8)
 	if loaded.get_width() != RES or loaded.get_height() != RES:
 		loaded.resize(RES, RES, Image.INTERPOLATE_BILINEAR)

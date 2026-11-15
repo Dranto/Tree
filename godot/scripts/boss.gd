@@ -56,6 +56,13 @@ var statuses: Dictionary = {}
 var root_immune := 0.0
 ## Elle ne bouge pas : sa position est rétablie à chaque pas (reculs des coups, séparation).
 var anchor := Vector2.ZERO
+## Interface d'ennemi (ennemis du roncier) : enracinée, aucune résistance de région, comportement propre.
+var anchored := true
+var resist := {}
+var behavior := "boss"
+## Teinte des éclats de sa mort (fx.death).
+var color := Color("3a2a2c")
+var region := ""
 var damage_scale := 1.0
 var phase := 1
 var t := 0.0

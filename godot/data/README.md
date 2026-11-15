@@ -20,6 +20,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `grafts.json` | Les greffes : objets à poser dans un emplacement de greffe de l'arbre (nom, effets). |
 | `skills.json` | Réglages des compétences actives (recharge, rayon, dégâts, texte). |
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
+| `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest` et ses réglages, `region`, `resist` par branche) et apparitions par région (`spawn` : sortes et poids, part près/loin de la graine, nombre de nids, effet de la purification du Cœur). Les trois premières sortes sont les Flétris d'origine. |
 
 ## Les effets
 
@@ -56,7 +57,7 @@ Le texte de l'infobulle est produit à partir de l'effet : il ne peut donc pas c
 
 L'identifiant renvoie à `skills.json`. Le comportement de la compétence reste écrit dans `scripts/player.gd` ; ses réglages sont dans les données.
 
-Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores), `bloom` (Floraison), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) et `haie` (mur d'épines temporaire qui bloque et blesse). Champs communs de `skills.json` :
+Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores), `bloom` (Floraison), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) `volee` (Volée d'épines : éventail d'épines perforantes qui font saigner) et `saignee` (Saignée : fait éclater les saignements des ennemis proches en dégâts immédiats, une part soigne). Champs communs de `skills.json` :
 
 | Champ | Rôle |
 | --- | --- |

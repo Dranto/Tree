@@ -30,10 +30,17 @@
     "desc": "Nouvelle compétence : des racines jaillissent à l'endroit visé et immobilisent les ennemis.",
     "range": 460, "radius": 110, "damage": 1.0, "root_duration": 2.5
   },
-  "haie": {
-    "name": "Haie d'épines", "short": "Haie", "color": "#8fae4a", "cooldown": 12,
+  "volee": {
+    "name": "Volée d'épines", "short": "Volée", "color": "#d0574a", "cooldown": 3,
+    "branch": "ronce", "tags": ["projectile"],
+    "desc": "Nouvelle compétence : un éventail d'épines perforantes qui font saigner.",
+    "damage": 0.9, "count": 5, "spread": 0.5, "speed": 720, "pierce": 1,
+    "bleed": 0.25, "bleed_duration": 3
+  },
+  "saignee": {
+    "name": "Saignée", "short": "Saignée", "color": "#9e1f2c", "cooldown": 7,
     "branch": "ronce", "tags": ["zone"],
-    "desc": "Nouvelle compétence : un mur d'épines se dresse devant toi, bloque et blesse les ennemis.",
-    "distance": 120, "length": 280, "thickness": 22, "duration": 6, "damage": 0.8, "tick": 0.5
+    "desc": "Nouvelle compétence : les saignements des ennemis proches éclatent d'un coup et te soignent.",
+    "radius": 260, "damage": 0.3, "burst": 1.2, "heal": 0.15
   }
 }
