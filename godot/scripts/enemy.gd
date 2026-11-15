@@ -5,15 +5,24 @@
 ##   shooter : garde ses distances et tire une épine, annoncée par une visée visible (Tireur d'épines)
 ##   charger : s'arrête, annonce un couloir au sol, puis charge en ligne droite (Chargeur)
 ##   nest    : immobile, fait naître des Rejetons après avoir enflé (Nid de ronces)
+##   kite    : fuit le joueur trop proche, puis s'arrête et crache un éventail de cendre (Cracheur de cendre)
+##   guard   : avance derrière les autres et réduit les dégâts de ses voisins (Gardien d'écorce)
+##   bomber  : poursuit le joueur ; à sa mort, il éclate après une annonce au sol (Boursouflé)
+## Élites : un ennemi tiré au hasard reçoit un ou deux modificateurs (« affixes », section
+## « elites » de enemies.json) : plus de vie, un liseré doré et un nom au-dessus de lui.
 extends Node2D
 
 const Content = preload("res://scripts/content.gd")
 const Thorn = preload("res://scripts/enemy_thorn.gd")
+const Blast = preload("res://scripts/enemy_blast.gd")
 
 ## Sortes d'ennemis, dans l'ordre de enemies.json (les trois premières sont les Flétris d'origine).
 static var KINDS: Array = Content._load("enemies").get("kinds", [])
 ## Indice de chaque sorte par identifiant.
 static var KIND_INDEX: Dictionary = _index_kinds()
+## Réglages des élites et de leurs modificateurs (section « elites » de enemies.json).
+static var ELITES: Dictionary = Content._load("enemies").get("elites", {})
+const BEHAVIORS := ["chase", "shooter", "charger", "nest", "kite", "guard", "bomber"]
 
 ## Rayon du plus gros ennemi (Nid de ronces) : marge des recherches dans la grille spatiale.
 ## validate_kinds() vérifie qu'aucune sorte ne le dépasse.
@@ -61,6 +70,27 @@ var attack_dir := Vector2.RIGHT
 var travelled := 0.0
 var strafe := 1.0
 var young: Array = []
+## Gardien d'écorce proche : part des dégâts ignorée, et secondes restantes de la protection.
+var guard_cut := 0.0
+var guard_time := 0.0
+var guard_from := Vector2.ZERO
+
+## --- Élite ---
+var elite := false
+## Modificateurs de l'élite (clés de « elites.affixes »), contrat partagé avec le butin et les objectifs.
+var affixes: Array[String] = []
+var elite_name := ""
+## Multiplicateur des temps de recharge (« rapide »).
+var cd_mult := 1.0
+var enraged := false
+## Bouclier d'écorce : absorbe les dégâts avant la vie, se reforme après un temps sans coup.
+var shield := 0.0
+var max_shield := 0.0
+var shield_wait := 0.0
+## Attaque d'un modificateur (« epines », « invocateur ») : annonce en cours et recharges.
+var aff_state := ""
+var aff_t := 0.0
+var aff_cd: Dictionary = {}
 
 
 static func _index_kinds() -> Dictionary:
@@ -77,7 +107,6 @@ static func kind_index(id: String) -> int:
 ## Erreurs de enemies.json (appelée par check_data.gd).
 static func validate_kinds() -> PackedStringArray:
 	var errors := PackedStringArray()
-	var behaviors := ["chase", "shooter", "charger", "nest"]
 	if KINDS.size() < 3:
 		errors.append("enemies.json : il faut au moins les trois Flétris d'origine")
 	var seen := {}
@@ -89,17 +118,31 @@ static func validate_kinds() -> PackedStringArray:
 		for f in ["name", "hp", "speed", "damage", "radius", "xp", "color"]:
 			if not k.has(f):
 				errors.append("enemies.json, %s : champ « %s » manquant" % [id, f])
-		if not str(k.get("behavior", "")) in behaviors:
+		if not str(k.get("behavior", "")) in BEHAVIORS:
 			errors.append("enemies.json, %s : comportement inconnu « %s »" % [id, k.get("behavior", "")])
 		if float(k.get("radius", 0.0)) > MAX_RADIUS:
 			errors.append("enemies.json, %s : rayon supérieur à MAX_RADIUS (%d)" % [id, MAX_RADIUS])
 		if k.get("behavior", "") == "nest" and not KIND_INDEX.has(str(k.get("spawn", ""))):
 			errors.append("enemies.json, %s : sorte à faire naître inconnue « %s »" % [id, k.get("spawn", "")])
-	var spawn: Dictionary = Content._load("enemies").get("spawn", {})
+	for id in ELITES.get("excluded", []):
+		if not KIND_INDEX.has(id):
+			errors.append("enemies.json, élites : sorte exclue inconnue « %s »" % id)
+	var known := ["rapide", "enrage", "ecorce", "epines", "invocateur"]
+	for a in ELITES.get("affixes", {}):
+		if not a in known:
+			errors.append("enemies.json, élites : modificateur sans code « %s »" % a)
+		elif not ELITES["affixes"][a].has("name"):
+			errors.append("enemies.json, élites : modificateur « %s » sans nom" % a)
+	var inv: Dictionary = ELITES.get("affixes", {}).get("invocateur", {})
+	if not inv.is_empty() and not KIND_INDEX.has(str(inv.get("spawn", ""))):
+		errors.append("enemies.json, élites : sorte invoquée inconnue « %s »" % inv.get("spawn", ""))
+	var spawn: Dictionary = Content._load("enemies").get("spawn", {}).duplicate()
+	spawn["ordinaires"] = Content._load("enemies").get("ordinary", {})
 	for reg in spawn:
-		for id in spawn[reg].get("kinds", {}):
-			if not KIND_INDEX.has(id):
-				errors.append("enemies.json, apparitions de %s : sorte inconnue « %s »" % [reg, id])
+		for field in ["kinds", "min_level", "max_alive"]:
+			for id in spawn[reg].get(field, {}):
+				if not KIND_INDEX.has(id):
+					errors.append("enemies.json, apparitions de %s (%s) : sorte inconnue « %s »" % [reg, field, id])
 	return errors
 
 
@@ -124,6 +167,48 @@ func setup(k, p: float) -> void:
 	# Les attaques ne partent pas toutes en même temps.
 	cd = float(data.get("cooldown", 0.0)) * randf_range(0.4, 1.0)
 	strafe = 1.0 if randf() < 0.5 else -1.0
+
+
+## Sorte qui peut devenir une élite (ni le Nid, ni ses Rejetons, ni une élite déjà faite).
+func can_be_elite() -> bool:
+	return not elite and not kind_id in ELITES.get("excluded", [])
+
+
+## Modificateurs que cette sorte peut recevoir (le Gardien d'écorce n'a pas de bouclier d'écorce en plus).
+func allowed_affixes() -> Array:
+	var out := []
+	for a in ELITES.get("affixes", {}):
+		if not a in data.get("no_affix", []):
+			out.append(a)
+	return out
+
+
+## Fait de cet ennemi une élite avec ces modificateurs. À appeler après setup().
+func make_elite(list: Array) -> void:
+	elite = true
+	affixes.clear()
+	var cfg: Dictionary = ELITES.get("affixes", {})
+	var adjectives := PackedStringArray()
+	for a in list:
+		if cfg.has(a) and not a in affixes:
+			affixes.append(a)
+			adjectives.append(str(cfg[a]["name"]))
+	elite_name = str(data["name"]) + " " + " et ".join(adjectives)
+	max_hp *= float(ELITES.get("hp", 3.0))
+	hp = max_hp
+	damage *= float(ELITES.get("damage", 1.25))
+	radius = minf(MAX_RADIUS, radius * float(ELITES.get("radius", 1.2)))
+	xp_value *= float(ELITES.get("xp", 5.0))
+	if "rapide" in affixes:
+		speed *= float(cfg["rapide"].get("speed", 1.4))
+		cd_mult = float(cfg["rapide"].get("cooldown", 0.7))
+		cd *= cd_mult
+	if "ecorce" in affixes:
+		max_shield = max_hp * float(cfg["ecorce"].get("shield", 0.5))
+		shield = max_shield
+	for a in ["epines", "invocateur"]:
+		if a in affixes:
+			aff_cd[a] = float(cfg[a]["cooldown"]) * randf_range(0.5, 1.0)
 
 
 ## Animation seulement (ondulation de la silhouette) : suit la fréquence d'affichage.
@@ -154,8 +239,16 @@ func _physics_process(delta: float) -> void:
 				_charger(delta, dir, dist, slow)
 			"nest":
 				_nest(delta, dist)
+			"kite":
+				_kite(delta, dir, dist, slow)
+			"guard":
+				_guard(dir, dist, slow, delta)
 			_:
 				position += dir * speed * slow * delta
+		if elite:
+			_elite_step(delta, dist)
+	if guard_time > 0.0:
+		guard_time -= delta
 	var hit := damage
 	if state == "charge":
 		hit = float(data.get("charge_damage", damage)) * (1.0 + 0.5 * (power - 1.0))
@@ -238,7 +331,7 @@ func _shooter(delta: float, dir: Vector2, dist: float, slow: float) -> void:
 		state_t -= delta
 		if state_t <= 0.0:
 			state = ""
-			cd = data["cooldown"]
+			cd = float(data["cooldown"]) * cd_mult
 			var th = Thorn.new()
 			th.main = main
 			th.position = position + attack_dir * (radius + 6.0)
@@ -298,7 +391,7 @@ func _charger(delta: float, dir: Vector2, dist: float, slow: float) -> void:
 func _end_charge(factor: float) -> void:
 	state = "recover"
 	state_t = float(data["recover"]) * factor
-	cd = data["cooldown"]
+	cd = float(data["cooldown"]) * cd_mult
 
 
 func _nest(delta: float, dist: float) -> void:
@@ -324,6 +417,115 @@ func windup_ratio() -> float:
 	return clampf(1.0 - state_t / maxf(0.01, float(data.get("windup", 1.0))), 0.0, 1.0)
 
 
+## Cracheur de cendre : fuit le joueur trop proche, puis s'arrête et crache un éventail de cendre.
+func _kite(delta: float, dir: Vector2, dist: float, slow: float) -> void:
+	cd -= delta
+	if state == "windup":
+		state_t -= delta
+		if state_t <= 0.0:
+			state = ""
+			cd = float(data["cooldown"]) * cd_mult
+			var n := int(data.get("shots", 3))
+			var spread := float(data.get("spread", 0.3))
+			for i in n:
+				var a := attack_dir.angle() + (i - (n - 1) / 2.0) * spread
+				_shoot(Vector2.from_angle(a), float(data["shot_speed"]), float(data["shot_damage"]), float(data["shot_life"]), "cendre")
+		return
+	if cd <= 0.0 and dist < float(data["range"]) and dist > float(data["keep_min"]) * 0.7:
+		state = "windup"
+		state_t = data["windup"]
+		attack_dir = dir
+		return
+	var mv := Vector2.ZERO
+	if dist < float(data["keep_min"]):
+		mv = -dir * float(data.get("flee", 1.3))
+	elif dist > float(data["keep_max"]):
+		mv = dir
+	else:
+		mv = dir.orthogonal() * strafe * 0.45
+	position += mv * speed * slow * delta
+
+
+## Gardien d'écorce : avance sans se jeter sur le joueur et protège les ennemis autour de lui.
+func _guard(dir: Vector2, dist: float, slow: float, delta: float) -> void:
+	if dist > float(data.get("keep_back", 0.0)):
+		position += dir * speed * slow * delta
+	var cut := float(data.get("guard", 0.5))
+	for e in main.enemies_near(position, float(data.get("aura", 160.0)), false):
+		if e != self and not e.dead and "guard_cut" in e and e.behavior != "guard":
+			e.guard_cut = cut
+			e.guard_time = 0.25
+			e.guard_from = position
+
+
+## Tire une épine (ou une boule de cendre) depuis le bord de la silhouette.
+func _shoot(d: Vector2, spd: float, dmg: float, life: float, look := "") -> void:
+	var th = Thorn.new()
+	th.main = main
+	th.position = position + d * (radius + 6.0)
+	th.vel = d * spd
+	th.damage = dmg * (1.0 + 0.5 * (power - 1.0))
+	th.life = life
+	th.look = look
+	main.projectiles_layer.add_child(th)
+
+
+## Modificateurs d'élite actifs à chaque pas : rage, bouclier, couronne d'épines, invocation.
+func _elite_step(delta: float, dist: float) -> void:
+	var cfg: Dictionary = ELITES["affixes"]
+	if "enrage" in affixes and not enraged and hp < max_hp * float(cfg["enrage"].get("below", 0.5)):
+		enraged = true
+		speed *= float(cfg["enrage"].get("speed", 1.3))
+		damage *= float(cfg["enrage"].get("damage", 1.5))
+		if main.get("fx") != null:
+			main.fx.ring(position, radius, radius * 3.0, 0.4, Color(1.0, 0.35, 0.2, 0.9), 4.0)
+			main.fx.text(position + Vector2(0, -radius - 30), "Enragé !", Color("ff7a5a"), 16, 1.0)
+	if max_shield > 0.0:
+		shield_wait -= delta
+		if shield_wait <= 0.0 and shield < max_shield:
+			shield = minf(max_shield, shield + max_shield * float(cfg["ecorce"].get("regen", 0.25)) * delta)
+	if aff_state != "":
+		aff_t -= delta
+		if aff_t <= 0.0:
+			_affix_attack(aff_state)
+			aff_state = ""
+		return
+	for a in aff_cd:
+		aff_cd[a] -= delta
+		if aff_cd[a] <= 0.0 and dist < 900.0:
+			if a == "invocateur":
+				young = young.filter(func(y): return is_instance_valid(y) and not y.dead)
+				if young.size() >= int(cfg[a].get("max_young", 4)):
+					aff_cd[a] = 1.0
+					continue
+			aff_state = a
+			aff_t = float(cfg[a].get("windup", 0.7))
+			aff_cd[a] = float(cfg[a]["cooldown"]) * cd_mult
+			return
+
+
+func _affix_attack(a: String) -> void:
+	var c: Dictionary = ELITES["affixes"][a]
+	match a:
+		"epines":
+			var n := int(c.get("count", 10))
+			var phase := randf() * TAU
+			for i in n:
+				_shoot(Vector2.from_angle(phase + TAU * i / n), float(c["shot_speed"]), float(c["shot_damage"]), float(c["shot_life"]))
+		"invocateur":
+			for i in int(c.get("count", 2)):
+				var at := position + Vector2.from_angle(randf() * TAU) * (radius + 16.0)
+				main.spawn_enemy_kind(c["spawn"], at, power, self)
+
+
+## Progression de l'annonce d'un modificateur d'élite, de 0 à 1.
+func affix_ratio() -> float:
+	if aff_state == "":
+		return 0.0
+	var w := float(ELITES["affixes"][aff_state].get("windup", 0.7))
+	return clampf(1.0 - aff_t / maxf(0.01, w), 0.0, 1.0)
+
+
 func apply_poison(dps: float, duration: float) -> void:
 	poison_dps = maxf(poison_dps if poison_time > 0.0 else 0.0, dps)
 	poison_time = maxf(poison_time, duration)
@@ -332,14 +534,37 @@ func apply_poison(dps: float, duration: float) -> void:
 func take_damage(amount: float, crit: bool, dot := false) -> void:
 	if dead:
 		return
+	if guard_time > 0.0:
+		amount *= 1.0 - guard_cut
+	var shown := amount
+	if max_shield > 0.0:
+		shield_wait = float(ELITES["affixes"]["ecorce"].get("regen_delay", 4.0))
+		var soak := minf(shield, amount)
+		shield -= soak
+		amount -= soak
 	hp -= amount
 	if not dot:
 		hit_flash = 0.08
-		main.fx.impact(position, amount, crit, radius)
+		main.fx.impact(position, shown, crit, radius)
 	if hp <= 0.0:
 		dead = true
+		if behavior == "bomber":
+			_burst()
 		main.on_enemy_killed(self)
 		queue_free()
+
+
+## Boursouflé : laisse une poche de spores qui éclate après une annonce au sol.
+func _burst() -> void:
+	var b = Blast.new()
+	b.main = main
+	b.position = position
+	b.radius = float(data.get("blast_radius", 90.0))
+	b.delay = float(data.get("blast_delay", 0.9))
+	b.damage = float(data.get("blast_damage", 20.0)) * (1.0 + 0.5 * (power - 1.0))
+	b.enemy_damage = float(data.get("blast_enemy_damage", 50.0)) * power
+	b.color = color
+	main.projectiles_layer.call_deferred("add_child", b)
 
 
 # --- Dessin ---
@@ -366,7 +591,11 @@ func _draw() -> void:
 	draw_set_transform(Vector2(0, radius * 0.7), 0.0, Vector2(1.0, 0.36))
 	draw_circle(Vector2.ZERO, radius * 1.05, Color(0, 0, 0, 0.3))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if enraged:
+		c = c.lerp(Color("c0301e"), 0.35)
 	var dir: Vector2 = (main.player.position - position).normalized()
+	if elite:
+		_draw_elite_under()
 	match behavior:
 		"shooter":
 			_draw_shooter(c, dir)
@@ -374,6 +603,12 @@ func _draw() -> void:
 			_draw_charger(c, dir)
 		"nest":
 			_draw_nest(c)
+		"kite":
+			_draw_kite(c, dir)
+		"guard":
+			_draw_guard(c, dir)
+		"bomber":
+			_draw_bomber(c, dir)
 		_:
 			_draw_blob(c, radius)
 			if region != "":
@@ -385,10 +620,132 @@ func _draw() -> void:
 		var at := Vector2.from_angle(a) * radius * 0.95
 		draw_circle(at, maxf(1.8, radius * 0.11), Color("e0302a"))
 		draw_line(at, at + Vector2(0, -radius * 0.18), Color("e0302a"), maxf(1.2, radius * 0.07))
-	if hp < max_hp:
+	if guard_time > 0.0:
+		_draw_guarded()
+	if elite:
+		_draw_elite_over()
+	if hp < max_hp or (max_shield > 0.0 and shield < max_shield):
 		var w := radius * 2.0
 		draw_rect(Rect2(-radius, -radius - 9, w, 3), Color(0, 0, 0, 0.5))
 		draw_rect(Rect2(-radius, -radius - 9, w * clampf(hp / max_hp, 0.0, 1.0), 3), Color("e0675e"))
+		if max_shield > 0.0 and shield > 0.0:
+			draw_rect(Rect2(-radius, -radius - 12, w * clampf(shield / max_shield, 0.0, 1.0), 2), Color("e2c48a"))
+
+
+## Sous la silhouette d'une élite : halo doré et, pendant l'annonce d'un modificateur, son signal.
+func _draw_elite_under() -> void:
+	var pulse := 0.5 + 0.5 * sin(t * 3.0)
+	draw_circle(Vector2.ZERO, radius * 1.55, Color(1.0, 0.8, 0.35, 0.10 + 0.06 * pulse))
+	var k := affix_ratio()
+	if aff_state == "epines":
+		# Annonce : les épines de la couronne sortent tout autour, de plus en plus longues.
+		_draw_spikes(radius, int(ELITES["affixes"]["epines"].get("count", 10)), Color("e8d6b0"), 0.3 + 0.9 * k)
+		draw_arc(Vector2.ZERO, radius * (1.4 + 1.2 * k), 0.0, TAU, 32, Color(1.0, 0.85, 0.6, 0.25 + 0.4 * k), 2.0)
+	elif aff_state == "invocateur":
+		# Annonce : un cercle violet se referme au sol.
+		var col := Color("b48cff")
+		draw_arc(Vector2.ZERO, radius * (2.6 - 1.2 * k), 0.0, TAU, 32, Color(col, 0.3 + 0.5 * k), 3.0)
+		for i in 3:
+			var a := TAU * i / 3.0 + t * 2.0
+			draw_circle(Vector2.from_angle(a) * radius * (2.6 - 1.2 * k), 3.0, col)
+
+
+## Par-dessus une élite : liseré doré, bouclier d'écorce, pastilles des modificateurs et nom.
+func _draw_elite_over() -> void:
+	var gold := Color("f2c75a")
+	draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 36, Color(0.1, 0.06, 0.02, 0.6), 4.5)
+	draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 36, gold, 2.2)
+	if max_shield > 0.0 and shield > 0.0:
+		# Plaques d'écorce autour du corps, d'autant plus nombreuses que le bouclier est plein.
+		var plates := int(ceil(8.0 * shield / max_shield))
+		var bark := Color("a07a48")
+		for i in plates:
+			var a0 := TAU * i / 8.0 - PI / 2.0 + 0.08
+			draw_arc(Vector2.ZERO, radius + 8.5, a0, a0 + TAU / 8.0 - 0.16, 6, bark.darkened(0.35), 6.0)
+			draw_arc(Vector2.ZERO, radius + 8.5, a0, a0 + TAU / 8.0 - 0.16, 6, bark, 3.5)
+	var cfg: Dictionary = ELITES.get("affixes", {})
+	for i in affixes.size():
+		var at := Vector2((i - (affixes.size() - 1) / 2.0) * 10.0, radius + 11.0)
+		draw_circle(at, 4.2, Color(0.08, 0.05, 0.03, 0.8))
+		draw_circle(at, 3.0, Color(cfg[affixes[i]].get("color", "#ffffff")))
+	var font := ThemeDB.fallback_font
+	var size := 13
+	var w := font.get_string_size(elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var at := Vector2(-w / 2.0, -radius - 18.0)
+	draw_string(font, at + Vector2(1, 1), elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(0, 0, 0, 0.85))
+	draw_string(font, at, elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size, gold.lightened(0.25))
+
+
+## Protégé par un Gardien d'écorce : un trait d'écorce le relie au gardien et une plaque le couvre.
+func _draw_guarded() -> void:
+	var bark := Color("c9a46a")
+	var to := guard_from - position
+	if to.length() > radius + 4.0:
+		draw_line(to.normalized() * radius, to * 0.5, Color(bark, 0.35), 2.0)
+	var face := to.normalized() if to.length() > 1.0 else Vector2.UP
+	var a := face.angle() + PI
+	draw_arc(Vector2.ZERO, radius + 3.0, a - 0.9, a + 0.9, 10, Color(bark, 0.85), 3.0)
+
+
+func _draw_kite(c: Color, dir: Vector2) -> void:
+	var aim := attack_dir if state == "windup" else dir
+	var k := windup_ratio()
+	if state == "windup":
+		# Annonce : l'éventail des trois tirs s'allume au sol.
+		var n := int(data.get("shots", 3))
+		var spread := float(data.get("spread", 0.3))
+		for i in n:
+			var d := Vector2.from_angle(aim.angle() + (i - (n - 1) / 2.0) * spread)
+			draw_line(d * (radius + 6.0), d * (radius + 60.0 + 140.0 * k), Color(1.0, 0.6, 0.3, 0.2 + 0.45 * k), 2.0)
+	# Corps maigre et voûté, gorge gonflée de braises pendant l'annonce.
+	_draw_blob(c, radius)
+	# Museau en entonnoir tourné vers la cible, braise au fond qui grossit pendant l'annonce.
+	var side := aim.orthogonal() * radius * 0.42
+	var mouth := aim * radius * 1.45
+	draw_colored_polygon(PackedVector2Array([aim * radius * 0.4 + side, mouth + side * 0.75, mouth - side * 0.75, aim * radius * 0.4 - side]), c.darkened(0.25))
+	draw_circle(mouth, radius * 0.3, Color("2a1e1a"))
+	draw_circle(mouth, radius * (0.14 + 0.2 * k), Color("ff9a4a").lerp(Color("fff0b0"), k))
+	# Fumerolles sur le dos.
+	for i in 3:
+		var a := aim.angle() + PI + (i - 1) * 0.6
+		var b := Vector2.from_angle(a) * radius * 0.8
+		var rise := 0.5 + 0.5 * sin(t * 3.0 + i)
+		draw_circle(b + Vector2(0, -4.0 * rise), radius * (0.18 + 0.08 * rise), Color(0.55, 0.5, 0.48, 0.55))
+	_draw_eyes(aim, radius)
+
+
+func _draw_guard(c: Color, dir: Vector2) -> void:
+	# Aura : le cercle de protection au sol.
+	var aura := float(data.get("aura", 160.0))
+	var bark := Color("c9a46a")
+	draw_arc(Vector2.ZERO, aura, 0.0, TAU, 48, Color(bark, 0.16), 3.0)
+	draw_arc(Vector2.ZERO, aura, t * 0.4, t * 0.4 + 0.7, 8, Color(bark, 0.4), 3.0)
+	draw_arc(Vector2.ZERO, aura, t * 0.4 + PI, t * 0.4 + PI + 0.7, 8, Color(bark, 0.4), 3.0)
+	# Corps trapu couvert de plaques d'écorce.
+	_draw_blob(c, radius)
+	for i in 6:
+		var a := TAU * i / 6.0 + 0.3
+		var center := Vector2.from_angle(a) * radius * 0.55
+		draw_arc(center, radius * 0.38, a - 1.1, a + 1.1, 8, bark.darkened(0.2), 4.0)
+	# Écu d'écorce tenu face au joueur.
+	var front := dir * radius * 0.95
+	var side := dir.orthogonal() * radius * 0.7
+	draw_colored_polygon(PackedVector2Array([front + side, front + dir * radius * 0.35, front - side, front - dir * radius * 0.2]), bark)
+	draw_line(front + side * 0.8, front - side * 0.8, bark.darkened(0.4), 2.0)
+	_draw_eyes(dir, radius, -dir * radius * 0.15)
+
+
+func _draw_bomber(c: Color, dir: Vector2) -> void:
+	# Corps gonflé qui palpite, couvert de pustules de spores.
+	var swell := 1.0 + 0.06 * sin(t * 5.0)
+	_draw_blob(c, radius * swell)
+	for i in 7:
+		var a := TAU * i / 7.0 + 0.5
+		var at := Vector2.from_angle(a) * radius * (0.45 + 0.25 * (i % 2)) * swell
+		var glow := 0.5 + 0.5 * sin(t * 4.0 + i * 1.7)
+		draw_circle(at, radius * 0.17, Color("c8d86a").darkened(0.3))
+		draw_circle(at, radius * 0.1, Color(0.85, 0.95, 0.45, 0.6 + 0.4 * glow))
+	_draw_eyes(dir, radius * 0.8, dir * radius * 0.25)
 
 
 ## Silhouette irrégulière de cendre.

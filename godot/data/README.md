@@ -21,7 +21,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `skills.json` | Réglages des compétences actives (recharge, rayon, dégâts, texte). |
 | `builds.json` | Builds types joués par le robot d'équilibrage (`tools/balance.sh`). |
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
-| `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest` et ses réglages, `region`, `resist` par branche) et apparitions par région (`spawn` : sortes et poids, part près/loin de la graine, nombre de nids, effet de la purification du Cœur). Les trois premières sortes sont les Flétris d'origine. |
+| `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest`/`kite`/`guard`/`bomber` et ses réglages, `region`, `resist` par branche, `no_affix` : modificateurs d'élite interdits), Flétris ordinaires (`ordinary` : poids, `min_level` niveau d'apparition, `max_alive` nombre maximal en vie), apparitions par région (`spawn` : sortes et poids, part près/loin de la graine, nombre de nids, effet de la purification du Cœur) et élites (`elites` : chance près/loin, niveau minimal, nombre en vie, chance d'un second modificateur, multiplicateurs de vie, dégâts, taille et expérience, chance de greffe, sortes exclues, et `affixes` : nom affiché, couleur, poids et réglages de chaque modificateur). Les trois premières sortes sont les Flétris d'origine. |
 
 ## Les effets
 

@@ -3,12 +3,15 @@
 ## Les ennemis et les effets sont les vrais (enemy.gd, fx.gd), figés à un instant précis.
 ## page = "roncier" : les ennemis du roncier (dont leurs attaques annoncées), l'épine tirée,
 ## les ronces et les buissons d'épines, morts puis vivants.
+## page = "varies" : les nouveaux Flétris (Cracheur de cendre, Gardien d'écorce et ses protégés,
+## Boursouflé et sa poche de spores) et les élites, une par modificateur, puis une à deux modificateurs.
 extends Node2D
 
 const EnemyScript = preload("res://scripts/enemy.gd")
 const FxScript = preload("res://scripts/fx.gd")
 const FloraScript = preload("res://scripts/flora.gd")
 const ThornScript = preload("res://scripts/enemy_thorn.gd")
+const BlastScript = preload("res://scripts/enemy_blast.gd")
 
 const STATES := ["normal", "blessé", "touché", "empoisonné", "saignant ×3", "enraciné"]
 const COL_X := 200
@@ -18,6 +21,17 @@ const BASE_KINDS := 3
 const RONCIER := ["tireur", "chargeur", "nid", "rejeton"]
 const RONCIER_STATES := ["normal", "blessé", "touché", "attaque annoncée"]
 const RONCIER_X := [260, 500, 740, 1000]
+const VARIES_STATES := ["normal", "blessé", "touché", "attaque annoncée"]
+const VARIES_X := [260, 470, 680, 900]
+## Élites de la galerie : [sorte, modificateurs, préparation].
+const ELITES := [
+	["fletri", ["rapide"], ""],
+	["colosse", ["enrage"], "enrage"],
+	["fletri", ["ecorce"], "ecorce"],
+	["tireur", ["epines"], "epines"],
+	["cendreux", ["invocateur"], "invocateur"],
+	["chargeur", ["rapide", "epines"], ""],
+]
 
 var view := Vector2(1600, 900)
 var page := "fletris"
@@ -41,6 +55,9 @@ class MainStub:
 func _ready() -> void:
 	if page == "roncier":
 		_ready_roncier()
+		return
+	if page == "varies":
+		_ready_varies()
 		return
 	var stub := MainStub.new()
 	for k in BASE_KINDS:
@@ -97,6 +114,79 @@ func _ready() -> void:
 	fx.queue_redraw()
 
 
+func _enemy(stub, kind, pos: Vector2, sc: float):
+	var e = EnemyScript.new()
+	e.main = stub
+	e.setup(kind, 1.0)
+	e.t = 0.0
+	e.attack_dir = Vector2.RIGHT
+	e.scale = Vector2(sc, sc)
+	e.position = pos
+	add_child(e)
+	e.set_process(false)
+	e.set_physics_process(false)
+	return e
+
+
+func _ready_varies() -> void:
+	var stub := MainStub.new()
+	var kinds := ["cracheur", "boursoufle"]
+	for k in kinds.size():
+		for s in VARIES_STATES.size():
+			if kinds[k] == "boursoufle" and s == 3:
+				continue
+			var e = _enemy(stub, kinds[k], Vector2(VARIES_X[s], 120 + k * 130), 1.6 if s < 3 else 1.0)
+			match s:
+				1:
+					e.hp = e.max_hp * 0.4
+				2:
+					e.hit_flash = 1.0
+				3:
+					e.state = "windup"
+					e.state_t = float(e.data["windup"]) * 0.35
+	# Le Boursouflé vient d'éclater : sa poche de spores s'annonce au sol.
+	var b = BlastScript.new()
+	b.position = Vector2(VARIES_X[3], 250)
+	b.t = b.delay * 0.6
+	add_child(b)
+	b.set_process(false)
+	b.set_physics_process(false)
+	b.queue_redraw()
+	# Boule de cendre en vol.
+	var th = ThornScript.new()
+	th.vel = Vector2.RIGHT
+	th.look = "cendre"
+	th.position = Vector2(1110, 120)
+	th.scale = Vector2(2, 2)
+	add_child(th)
+	th.set_physics_process(false)
+	# Gardien d'écorce et deux Flétris qu'il protège.
+	var g = _enemy(stub, "gardien", Vector2(1330, 200), 1.0)
+	for off in [Vector2(-110, 50), Vector2(95, 70)]:
+		var f = _enemy(stub, "fletri", g.position + off, 1.0)
+		f.guard_time = 1.0
+		f.guard_cut = 0.5
+		f.guard_from = g.position
+	# Élites, une par modificateur, puis une élite à deux modificateurs.
+	for i in ELITES.size():
+		var spec: Array = ELITES[i]
+		var e = _enemy(stub, spec[0], Vector2.ZERO, 1.3)
+		e.position = Vector2(200 + (i % 3) * 300 + (0 if i < 3 else 150), 470 + int(i / 3) * 220)
+		e.make_elite(spec[1])
+		match spec[2]:
+			"enrage":
+				e.hp = e.max_hp * 0.35
+				e.enraged = true
+			"ecorce":
+				e.shield = e.max_shield * 0.6
+			"epines":
+				e.aff_state = "epines"
+				e.aff_t = 0.3
+			"invocateur":
+				e.aff_state = "invocateur"
+				e.aff_t = 0.4
+
+
 func _ready_roncier() -> void:
 	var stub := MainStub.new()
 	for k in RONCIER.size():
@@ -151,6 +241,14 @@ func _ready_roncier() -> void:
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, view), Color(0.12, 0.15, 0.12))
 	var font := ThemeDB.fallback_font
+	if page == "varies":
+		for s in VARIES_STATES.size():
+			draw_string(font, Vector2(VARIES_X[s] - 90, 40), VARIES_STATES[s], HORIZONTAL_ALIGNMENT_CENTER, 180, 18, Color.WHITE)
+		draw_string(font, Vector2(20, 128), "Cracheur", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+		draw_string(font, Vector2(20, 258), "Boursouflé", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+		draw_string(font, Vector2(1040, 40), "Boule de cendre, Gardien d'écorce et ses protégés", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+		draw_string(font, Vector2(20, 380), "Élites : rapide, enragé, cuirassé d'écorce, épineux, invocateur, deux modificateurs", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+		return
 	if page == "roncier":
 		for s in RONCIER_STATES.size():
 			draw_string(font, Vector2(RONCIER_X[s] - 90, 40), RONCIER_STATES[s], HORIZONTAL_ALIGNMENT_CENTER, 180, 18, Color.WHITE)
