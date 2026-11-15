@@ -17,6 +17,7 @@ const Hud = preload("res://scripts/hud.gd")
 const TreeUI = preload("res://scripts/tree_ui.gd")
 const PauseMenu = preload("res://scripts/pause_menu.gd")
 const SpatialGrid = preload("res://scripts/spatial_grid.gd")
+const BLEED_BASE_DURATION := 4.0
 
 var world_half := WORLD_HALF
 var ground
@@ -34,6 +35,8 @@ var actors_layer: Node2D
 ## Flétris rangés par cases, reconstruite à chaque pas de jeu (voir enemies_near).
 var grid = SpatialGrid.new()
 var enemies: Array = []
+## Dégâts du coup de racines en cours (contexte de l'évènement « root »), 0 hors de ce coup.
+var root_hit_base := 0.0
 var spawn_timer := 1.5
 var elapsed := 0.0
 var rng := RandomNumberGenerator.new()
@@ -194,9 +197,8 @@ func _setup_input() -> void:
 	_keys("move_left", [KEY_A, KEY_LEFT])
 	_keys("move_right", [KEY_D, KEY_RIGHT])
 	_keys("dash", [KEY_SPACE, KEY_SHIFT])
-	_keys("skill_nova", [KEY_Q])
-	_keys("skill_cloud", [KEY_E])
-	_keys("skill_bloom", [KEY_R])
+	# Emplacements de la barre de compétences : touches 1 à 6 et A E R, réassignables (settings.gd).
+	Settings.apply_bindings()
 	_keys("toggle_tree", [KEY_TAB, KEY_T])
 	if not InputMap.has_action("attack"):
 		InputMap.add_action("attack")
@@ -334,10 +336,42 @@ func player_hit_enemy(e, base: float, can_explode := true) -> void:
 	e.take_damage(dmg, crit)
 	if s["poison"] > 0.0:
 		e.apply_poison(dmg * s["poison"], 3.0)
+	if s["bleed"] > 0.0 and not e.dead:
+		e.apply_status("saignement", dmg * s["bleed"], BLEED_BASE_DURATION * s["bleed_duration"])
 	if s["lifesteal"] > 0.0:
 		player.heal(dmg * s["lifesteal"])
 	if crit and can_explode:
-		Game.fire("crit", {"main": self, "enemy": e, "base": base})
+		Game.fire("crit", enemy_ctx(e, base))
+
+
+## Contexte d'un évènement qui vise un ennemi, avec les états des conditions « cible_… ».
+func enemy_ctx(e, base: float) -> Dictionary:
+	return {
+		"main": self, "enemy": e, "base": base,
+		"cible_empoisonnee": e.poison_time,
+		"cible_saignante": float(e.bleed_stacks.size()),
+		"cible_enracinee": e.root_time,
+	}
+
+
+## Un coup au corps à corps (fouet) a touché un ennemi.
+func on_melee_hit(e, base: float) -> void:
+	Game.fire("melee_hit", enemy_ctx(e, base))
+
+
+## À-coup de saignement sur un ennemi (appelé par enemy.gd).
+func on_bleed_tick(e, amount: float) -> void:
+	Game.fire("bleed_tick", enemy_ctx(e, amount))
+
+
+## Un ennemi vient d'être enraciné (appelé par enemy.gd).
+func on_enemy_rooted(e) -> void:
+	Game.fire("root", enemy_ctx(e, root_hit_base))
+
+
+## Haie d'épines posée par le joueur (hedge.gd) : vit avec les graines.
+func add_hedge(h) -> void:
+	projectiles_layer.add_child(h)
 
 
 func damage_area(center: Vector2, radius: float, amount: float, knockback: float) -> void:
@@ -362,7 +396,7 @@ func on_enemy_killed(e) -> void:
 	if rng.randf() < 0.6:
 		flora.add_flower(e.position + Vector2(rng.randf_range(-14, 14), rng.randf_range(-14, 14)))
 	fx.ring(e.position, e.radius, e.radius * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
-	Game.fire("kill", {"main": self, "enemy": e, "cible_empoisonnee": e.poison_time})
+	Game.fire("kill", enemy_ctx(e, 0.0))
 
 
 func player_died() -> void:

@@ -16,6 +16,10 @@ static func run(action: String, p: Dictionary, ctx: Dictionary) -> bool:
 			return _explode(p, ctx)
 		"survive":
 			return _survive(p, ctx)
+		"apply_status":
+			return _apply_status(p, ctx)
+		"heal":
+			return _heal(p, ctx)
 	push_warning("Action d'effet inconnue : " + action)
 	return false
 
@@ -62,4 +66,31 @@ static func _survive(p: Dictionary, ctx: Dictionary) -> bool:
 	player.invuln = p.get("invuln", 0.0)
 	if p.has("label"):
 		main.fx.text(player.position + Vector2(0, -50), p["label"], Color(p.get("color", "#ffffff")), 22, 1.5)
+	return true
+
+
+## Pose un état sur l'ennemi de l'évènement : « saignement » (value = dégâts par seconde) ou
+## « enracine ». Avec "scale": "base", value est une fraction des dégâts du coup (ctx["base"]).
+## Les durées suivent bleed_duration / root_duration du joueur.
+static func _apply_status(p: Dictionary, ctx: Dictionary) -> bool:
+	var e = ctx.get("enemy")
+	if e == null or not is_instance_valid(e) or e.dead:
+		return false
+	var value: float = p["value"]
+	if p.get("scale", "") == "base":
+		value *= float(ctx.get("base", 0.0))
+	var duration: float = p["duration"]
+	var s: Dictionary = ctx["stats"]
+	if p["status"] == "saignement":
+		duration *= s.get("bleed_duration", 1.0)
+	elif p["status"] == "enracine":
+		duration *= s.get("root_duration", 1.0)
+	e.apply_status(p["status"], value, duration)
+	return true
+
+
+## Soigne le joueur d'une fraction de sa vie maximale.
+static func _heal(p: Dictionary, ctx: Dictionary) -> bool:
+	var main = ctx["main"]
+	main.player.heal(ctx["stats"]["max_hp"] * p["value"])
 	return true

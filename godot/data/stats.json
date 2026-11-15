@@ -16,5 +16,12 @@
   "poison": {"label": "Poison (dégâts du coup par seconde)", "base": 0, "percent": true},
   "thorns": {"label": "Épines (dégâts renvoyés)", "base": 0},
   "lifesteal": {"label": "Vol de vie", "base": 0, "percent": true},
-  "area": {"label": "Taille des zones", "base": 1}
+  "area": {"label": "Taille des zones", "base": 1},
+  "melee_damage": {"label": "Dégâts au corps à corps", "base": 1, "percent": true},
+  "projectile_damage": {"label": "Dégâts des projectiles", "base": 1, "percent": true},
+  "area_damage": {"label": "Dégâts de zone", "base": 1, "percent": true},
+  "bleed": {"label": "Saignement (dégâts par seconde, part du coup)", "base": 0, "percent": true},
+  "bleed_duration": {"label": "Durée du saignement", "base": 1, "percent": true},
+  "root_duration": {"label": "Durée d'immobilisation", "base": 1, "percent": true},
+  "skill_slots": {"label": "Emplacements de compétence", "base": 4, "max": 6, "round": "floor"}
 }

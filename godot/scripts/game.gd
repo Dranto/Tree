@@ -25,6 +25,8 @@ var forced_seed := -1
 var flags: Dictionary = {}
 ## Moteur d'effets : statistiques, compétences et réactions des nœuds appris (voir effects.gd).
 var effects = Effects.new()
+## Compétences données sans nœud, pour les essayer (« -- --skills=fouet,racines » ou « --skills=all »).
+var test_skills: Dictionary = {}
 
 
 func _ready() -> void:
@@ -32,6 +34,10 @@ func _ready() -> void:
 		if arg.begins_with("--seed="):
 			forced_seed = int(arg.get_slice("=", 1))
 			seed(forced_seed)
+		elif arg.begins_with("--skills="):
+			var list := arg.get_slice("=", 1)
+			for id in (Content.skills().keys() if list == "all" else Array(list.split(","))):
+				test_skills[id] = true
 	for err in Content.validate(int(SkillTree.RINGS / 4.0)):
 		push_error("Données : " + err)
 	tree = SkillTree.new()
@@ -188,6 +194,8 @@ func recompute() -> void:
 			keys[n["key"]] = true
 	effects.rebuild(learned)
 	for k in effects.skills:
+		keys[k] = true
+	for k in test_skills:
 		keys[k] = true
 	stats = effects.stats
 	stats_changed.emit()
