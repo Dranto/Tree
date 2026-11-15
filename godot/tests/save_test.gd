@@ -44,6 +44,7 @@ func _run() -> void:
 	main.player.position = Vector2(321, -654)
 	main.ground.paint(Vector2(800, 800), 300.0, 0.7)
 	main.flora.add_flower(Vector2(10, 20), Color("ff0000"))
+	main.flora.finish_pending()   # fleurs d'une vague de vie pas encore écloses : la sauvegarde les fait éclore
 	var before := {
 		"level": game.level, "xp": game.xp, "points": game.points, "kills": game.kills,
 		"uids": game.allocated_uids(), "life": main.ground.export_map(), "flowers": main.flora.flowers.size(),

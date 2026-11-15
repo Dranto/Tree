@@ -46,6 +46,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --headless -s res://tests/planner_test.gd` : teste les outils de l'arbre (plus court chemin, simulation sans effet de bord, annulation, recherche, plan sauvegardé et rechargé).
 - `tools/godot.sh --xvfb -s res://tests/planner_captures.gd` : enregistre une capture de chaque outil de l'arbre dans `godot/tests/visual/out/`.
 - `tools/godot.sh --headless -s res://tests/flow_test.gd` : teste le parcours des menus (Nouvelle partie, Retour au titre qui sauvegarde, Continuer qui reprend). Remplace la sauvegarde par défaut.
+- `tools/godot.sh --headless -s res://tests/region_test.gd` : teste la région du roncier (géométrie, résistance aux dégâts de Ronce, buissons d'épines, vague de vie, apparitions, comportements du Tireur, du Chargeur et du Nid).
 - `tools/godot.sh --xvfb -- --benchmark` : banc de performance. Le robot joue face à 120 Flétris pendant 30 s, puis le temps moyen, le 99e centile et le pire temps par image s'affichent.
 
 La règle dans `.claude/settings.json` autorise ce script pour les sessions Claude.
@@ -58,7 +59,8 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 | --- | --- |
 | `depart` | `jeu_depart`, `arbre_depart`, `arbre_survol`, `arbre_ensemble` (zoom 0,15), `arbre_zoom_proche` (zoom 1,6) ; l'arbre ouvert (`arbre_depart`) montre le zoom par défaut |
 | `combat` | `jeu_combat` après 30 s de partie jouée par le robot, `arbre_progression` |
-| `galerie` | `galerie_ennemis_fx` (3 ennemis × 4 états, ondes, textes flottants, nuage) et `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable) |
+| `galerie` | `galerie_ennemis_fx` (3 ennemis × 4 états, ondes, textes flottants, nuage), `galerie_roncier` (4 ennemis du roncier × 4 états dont l'attaque annoncée, épine tirée, ronces et buissons morts et vivants) et `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable) |
+| `roncier` | `roncier_mort`, `roncier_vague_1` à `_3` (la vague de vie avance), `roncier_ravive`, `roncier_purifie` (drapeau `ronce_coeur_purifie`) |
 | `resolution` | `jeu_`, `arbre_` et `titre_` en 1280x720, 1920x1080, 2560x1440 et 3440x1440 (un processus par résolution) |
 
 - `tools/visual-tests.sh` : compare. Échoue si plus de 0,05 % des pixels d'une capture ont changé, ou si un défaut d'interface nouveau est détecté. Résultats, écarts en rouge (`*.diff.png`), `rapport.html` et `resume.md` dans `godot/tests/visual/out/`.
@@ -75,6 +77,8 @@ La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écr
 - **Le monde reprend vie** : le sol passe de la cendre craquelée à la prairie, les arbres morts reverdissent et des fleurs éclosent. Trois sources de vie : les nœuds de l'arbre, chaque Flétri purifié et la compétence Floraison.
 - **La vie a un effet en jeu** : sur l'herbe, ta régénération est triplée, les Flétris ralentissent et ils naissent plutôt en terre morte.
 - **Ennemis** : Flétris, Cendreux (rapides) et Colosses (massifs), de plus en plus forts avec ton niveau et le temps.
+- **Le roncier** (région de Ronce, au nord-est, dans la direction de la branche Ronce de l'arbre) : sol rouillé, ronces mortes qui fleurissent quand la terre revit, buissons d'épines qui bloquent le passage (et arrêtent les charges). Ses ennemis : le Tireur d'épines (garde ses distances, vise avant de tirer), le Chargeur (marque son couloir au sol avant de charger) et le Nid de ronces (immobile, fait naître des Rejetons). Ils ignorent 25 % des dégâts de Ronce et sont plus nombreux loin de la graine.
+- **Vague de vie** : un nœud appris ravive sa région en vague (environ 1,75 s) ; arbres et ronces se couvrent de feuilles au passage.
 - **Progression** : chaque Flétri laisse une essence de vie, et chaque niveau donne un point d'arbre.
 
 ## Structure
@@ -85,6 +89,8 @@ La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écr
   - `game.gd` : état global (niveau, points, statistiques, drapeaux d'aventure).
   - `save_game.gd` : sauvegarde versionnée. Les nœuds y sont notés par identifiant stable (`uid`), pour qu'une sauvegarde survive aux changements de l'arbre.
   - `main.gd`, `player.gd`, `enemy.gd`, `projectile.gd`, `orb.gd` : le jeu. La logique avance à pas fixe (`_physics_process`, 60 pas par seconde) et l'affichage est interpolé entre deux pas ; l'animation pure reste dans `_process`.
+  - `regions.gd` : les régions du monde (secteur de chaque branche) ; `main.region_at(pos)` et `main.region_center(id)`.
+  - `enemy.gd`, `enemy_thorn.gd` : comportements des ennemis (sortes décrites dans `data/enemies.json`) et épine tirée.
   - `spatial_grid.gd` : grille spatiale des Flétris (collisions, séparation, zones de dégâts), via `main.enemies_near()`.
   - `ground.gd` + `shaders/ground.gdshader` : la carte de vie et le rendu du sol (bruit précalculé en texture, même rendu sur toutes les cartes graphiques).
   - `flora.gd`, `fx.gd`, `hud.gd`, `tree_ui.gd` : décor, effets et interface.
