@@ -34,6 +34,13 @@ func _physics_process(delta: float) -> void:
 
 func _draw() -> void:
 	var dir := vel.normalized()
+	# Traînée : la graine file droit, donc sa queue est fixe. Segments qui s'effilent et s'effacent.
+	var prev := Vector2.ZERO
+	for i in 4:
+		var q := -dir * radius * 2.2 * (i + 1)
+		var k := 1.0 - i / 4.0
+		draw_line(prev, q, Color(0.7, 1.0, 0.5, 0.5 * k), radius * 1.5 * k)
+		prev = q
 	draw_line(-dir * radius * 2.5, Vector2.ZERO, Color(0.7, 1.0, 0.5, 0.35), radius)
 	draw_circle(Vector2.ZERO, radius * 1.6, Color(0.7, 1.0, 0.5, 0.25))
 	draw_circle(Vector2.ZERO, radius, Color("d8ffb0"))

@@ -9,6 +9,9 @@ var volume_slider: HSlider
 var volume_label: Label
 var fullscreen_box: CheckBox
 var hints_box: CheckBox
+var shake_slider: HSlider
+var shake_label: Label
+var reduce_box: CheckBox
 var back_button: Button
 
 
@@ -61,6 +64,35 @@ func _ready() -> void:
 	hints_box.toggled.connect(func(on): Settings.set_show_hints(on); Settings.save_settings())
 	col.add_child(hints_box)
 
+	var shake_row := HBoxContainer.new()
+	shake_row.add_theme_constant_override("separation", 14)
+	col.add_child(shake_row)
+	var shake_name := Label.new()
+	shake_name.text = "Secousse"
+	shake_name.custom_minimum_size = Vector2(110, 0)
+	shake_row.add_child(shake_name)
+	shake_slider = HSlider.new()
+	shake_slider.min_value = 0.0
+	shake_slider.max_value = 1.0
+	shake_slider.step = 0.1
+	shake_slider.value = Settings.shake
+	shake_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shake_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	shake_slider.focus_mode = Control.FOCUS_ALL
+	shake_slider.value_changed.connect(_on_shake)
+	shake_row.add_child(shake_slider)
+	shake_label = Label.new()
+	shake_label.custom_minimum_size = Vector2(60, 0)
+	shake_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	shake_row.add_child(shake_label)
+	_update_shake_label()
+
+	reduce_box = CheckBox.new()
+	reduce_box.text = "Réduire les effets (secousse, micro-pause, particules)"
+	reduce_box.button_pressed = Settings.reduce_effects
+	reduce_box.toggled.connect(func(on): Settings.set_reduce_effects(on); Settings.save_settings())
+	col.add_child(reduce_box)
+
 	back_button = UiTheme.button("Retour", 200)
 	back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	back_button.pressed.connect(close)
@@ -73,6 +105,16 @@ func _on_volume(v: float) -> void:
 	_update_volume_label()
 
 
+func _on_shake(v: float) -> void:
+	Settings.set_shake(v)
+	Settings.save_settings()
+	_update_shake_label()
+
+
+func _update_shake_label() -> void:
+	shake_label.text = "Aucune" if shake_slider.value <= 0.001 else "%d %%" % roundi(shake_slider.value * 100.0)
+
+
 func _update_volume_label() -> void:
 	volume_label.text = "%d %%" % roundi(volume_slider.value * 100.0)
 
@@ -82,6 +124,8 @@ func open() -> void:
 	volume_slider.value = Settings.volume
 	fullscreen_box.button_pressed = Settings.fullscreen
 	hints_box.button_pressed = Settings.show_hints
+	shake_slider.value = Settings.shake
+	reduce_box.button_pressed = Settings.reduce_effects
 	volume_slider.grab_focus()
 
 

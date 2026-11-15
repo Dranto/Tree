@@ -122,6 +122,7 @@ func _cast_nova(s: Dictionary) -> void:
 	cds["nova"] = skill_cd["nova"]
 	var r: float = k["radius"] * s["area"]
 	main.fx.ring(position, 20.0, r, 0.4, Color(k["color"]), 8.0)
+	main.fx.shake(0.25)
 	main.damage_area(position, r, current_damage() * k["damage"], k["knockback"])
 
 
@@ -141,6 +142,7 @@ func _cast_bloom(s: Dictionary) -> void:
 	heal(s["max_hp"] * k["heal"])
 	var r: float = k["radius"] * s["area"]
 	main.fx.ring(position, 20.0, r, 0.6, Color(k["color"]), 8.0)
+	main.fx.shake(0.3)
 	main.damage_area(position, r, current_damage() * k["damage"], k["knockback"])
 	main.ground.paint(position, r, k["life"])
 	main.flora.spawn_patch(position, r * 0.8, 10, Color(k["color"]))
@@ -157,6 +159,7 @@ func take_hit(amount: float, source) -> void:
 	hp -= amount * (1.0 - s["armor"])
 	hurt_flash = 0.15
 	invuln = 0.35
+	main.fx.player_hurt()
 	if s["thorns"] > 0.0 and is_instance_valid(source) and not source.dead:
 		source.take_damage(s["thorns"], false)
 	if hp <= 0.0:
@@ -171,6 +174,10 @@ func respawn() -> void:
 
 
 func _draw() -> void:
+	# Ombre au sol
+	draw_set_transform(Vector2(0, radius * 0.75), 0.0, Vector2(1.0, 0.36))
+	draw_circle(Vector2.ZERO, radius * 1.15, Color(0, 0, 0, 0.32))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# Halo de vie
 	var glow := Color(0.5, 0.9, 0.45, 0.10 + 0.04 * sin(t * 3.0))
 	draw_circle(Vector2.ZERO, radius * 2.6, glow)
