@@ -1,0 +1,7 @@
+{
+  "greffe_test": {
+    "name": "Greffon d'essai",
+    "desc": "Une greffe de démonstration, en attendant celles du monde.",
+    "effects": [{"stat": "max_hp", "op": "add", "value": 25}]
+  }
+}

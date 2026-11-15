@@ -178,6 +178,65 @@ func _scenario_galerie() -> void:
 		sheet.blit_rect(img, src, Vector2i((i % 3) * cw, (i / 3) * ch))
 		print("VISUEL cellule %s -> nœud %d" % [cells[i][0], id])
 	await _shot_image("galerie_noeuds", sheet)
+	await _galerie_types(ui, cw, ch)
+
+
+## Les types de nœuds des grappes écrites à la main, chacun dans ses deux états, puis la grappe
+## avec une infobulle et la fenêtre de choix d'une mutation.
+func _galerie_types(ui, cw: int, ch: int) -> void:
+	var skill := _first_of_type("skill")
+	var mutation := _first_of_type("mutation")
+	var mastery := _first_of_type("mastery")
+	var withered := _first_of_type("withered")
+	var graft := _first_of_type("graft")
+	var sheet := Image.create(cw * 4, ch * 2, false, Image.FORMAT_RGB8)
+	var cells := [["compétence", skill], ["mutation verrouillée", mutation], ["flétri", withered], ["greffe vide", graft]]
+	for i in cells.size():
+		await _cell(ui, sheet, cells[i][0], cells[i][1], i, cw, ch)
+	# Tout apprendre : la maîtrise reçoit un choix, la mutation attend le sien, le drapeau libère le nœud flétri.
+	# Juste les points qu'il faut à chaque fois, pour que le robot n'ait rien à dépenser entre deux images.
+	var planner = ui.panels.planner
+	Game.flags[Game.tree.nodes[withered]["requires_flag"]] = true
+	for id in [skill, mastery, mutation, withered, graft]:
+		if not Game.allocated.has(id):
+			var path: Array = planner.path_to(id)
+			Game.points = path.size()
+			planner.learn_path(path)
+	Game.points = 0
+	Game.set_choice(mastery, 1)
+	Game.set_graft(graft, "greffe_test")
+	await _frames(2)
+	ui._choice_queue.clear()
+	ui.close_choice(false)
+	cells = [["maîtrise choisie", mastery], ["mutation à choisir", mutation], ["flétri libéré", withered], ["greffe posée", graft]]
+	for i in cells.size():
+		await _cell(ui, sheet, cells[i][0], cells[i][1], 4 + i, cw, ch)
+	await _shot_image("galerie_types", sheet)
+
+	ui.zoom = 1.2
+	ui.cam = Game.tree.nodes[mutation]["pos"]
+	ui.t = 0.4
+	_hover(mastery)
+	await _frames(2)
+	await _shot("arbre_grappe")
+	_hover(-1)
+	ui.open_choice(mutation)
+	await _frames(3)
+	await _shot("arbre_choix")
+	ui.close_choice(false)
+
+
+func _cell(ui, sheet: Image, label: String, id: int, index: int, cw: int, ch: int) -> void:
+	ui.cam = Game.tree.nodes[id]["pos"]
+	ui.t = 0.4
+	_hover(-1)
+	await _frames(2)
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	img.convert(Image.FORMAT_RGB8)
+	var c: Vector2i = (ui.size / 2.0).round()
+	sheet.blit_rect(img, Rect2i(c.x - cw / 2, c.y - ch / 2, cw, ch), Vector2i((index % 4) * cw, (index / 4) * ch))
+	print("VISUEL cellule %s -> nœud %d" % [label, id])
 
 
 # --- Outils ---

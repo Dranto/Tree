@@ -18,7 +18,7 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 | Compétences débloquées par l'arbre | A, E, R (AZERTY) / Q, E, R (QWERTY) |
 | Arbre de vie | Tab ou T (le jeu se met en pause) |
 
-Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer. L'arbre s'ouvre en vue d'ensemble ; en zoomant apparaissent tous les nœuds, puis les icônes et les noms des notables.
+Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer. Une maîtrise ou une mutation ouvre une fenêtre de choix quand on l'apprend ; un clic sur une maîtrise apprise permet d'en changer. L'arbre s'ouvre en vue d'ensemble ; en zoomant apparaissent tous les nœuds, puis les icônes et les noms des notables.
 
 Outils de l'arbre (barre sous l'en-tête) :
 
@@ -45,6 +45,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --xvfb -s res://tests/tree_bench.gd` : mesure le temps par image de l'écran de l'arbre (immobile, survol, déplacement et zoom).
 - `tools/godot.sh --headless -s res://tests/planner_test.gd` : teste les outils de l'arbre (plus court chemin, simulation sans effet de bord, annulation, recherche, plan sauvegardé et rechargé).
 - `tools/godot.sh --xvfb -s res://tests/planner_captures.gd` : enregistre une capture de chaque outil de l'arbre dans `godot/tests/visual/out/`.
+- `tools/godot.sh --headless -s res://tests/node_types_test.gd` : teste les grappes écrites à la main et les types de nœuds (compétence, maîtrise, mutation, nœud flétri, greffe, exclusion, grappe complète, résonance, sauvegarde et migration de la version 1).
 - `tools/godot.sh --headless -s res://tests/flow_test.gd` : teste le parcours des menus (Nouvelle partie, Retour au titre qui sauvegarde, Continuer qui reprend). Remplace la sauvegarde par défaut.
 - `tools/godot.sh --xvfb -- --benchmark` : banc de performance. Le robot joue face à 120 Flétris pendant 30 s, puis le temps moyen, le 99e centile et le pire temps par image s'affichent.
 
@@ -58,7 +59,7 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 | --- | --- |
 | `depart` | `jeu_depart`, `arbre_depart`, `arbre_survol`, `arbre_ensemble` (zoom 0,15), `arbre_zoom_proche` (zoom 1,6) ; l'arbre ouvert (`arbre_depart`) montre le zoom par défaut |
 | `combat` | `jeu_combat` après 30 s de partie jouée par le robot, `arbre_progression` |
-| `galerie` | `galerie_ennemis_fx` (3 ennemis × 4 états, ondes, textes flottants, nuage) et `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable) |
+| `galerie` | `galerie_ennemis_fx` (3 ennemis × 4 états, ondes, textes flottants, nuage), `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable), `galerie_types` (compétence, mutation, maîtrise, nœud flétri, greffe, avant et après), `arbre_grappe` (grappe et infobulle d'une maîtrise) et `arbre_choix` (fenêtre de choix d'une mutation) |
 | `resolution` | `jeu_`, `arbre_` et `titre_` en 1280x720, 1920x1080, 2560x1440 et 3440x1440 (un processus par résolution) |
 
 - `tools/visual-tests.sh` : compare. Échoue si plus de 0,05 % des pixels d'une capture ont changé, ou si un défaut d'interface nouveau est détecté. Résultats, écarts en rouge (`*.diff.png`), `rapport.html` et `resume.md` dans `godot/tests/visual/out/`.
@@ -80,10 +81,10 @@ La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écr
 ## Structure
 
 - `godot/` : le jeu (Godot 4, GDScript). Les scènes sont construites par le code, dans `godot/scripts/`.
-  - `skill_tree.gd` : génération de la forme de l'arbre.
+  - `skill_tree.gd` : génération de la forme de l'arbre, puis insertion des grappes écrites à la main.
   - `content.gd`, `effects.gd`, `effect_actions.gd` : lecture des données et moteur d'effets des nœuds.
   - `game.gd` : état global (niveau, points, statistiques, drapeaux d'aventure).
-  - `save_game.gd` : sauvegarde versionnée. Les nœuds y sont notés par identifiant stable (`uid`), pour qu'une sauvegarde survive aux changements de l'arbre.
+  - `save_game.gd` : sauvegarde versionnée (format 2 : choix des maîtrises et mutations, greffes posées). Les nœuds y sont notés par identifiant stable (`uid`), pour qu'une sauvegarde survive aux changements de l'arbre.
   - `main.gd`, `player.gd`, `enemy.gd`, `projectile.gd`, `orb.gd` : le jeu. La logique avance à pas fixe (`_physics_process`, 60 pas par seconde) et l'affichage est interpolé entre deux pas ; l'animation pure reste dans `_process`.
   - `spatial_grid.gd` : grille spatiale des Flétris (collisions, séparation, zones de dégâts), via `main.enemies_near()`.
   - `ground.gd` + `shaders/ground.gdshader` : la carte de vie et le rendu du sol (bruit précalculé en texture, même rendu sur toutes les cartes graphiques).

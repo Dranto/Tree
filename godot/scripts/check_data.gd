@@ -63,11 +63,43 @@ func _check_tree() -> void:
 			keys[n["key"]] = true
 		if n["id"] != 0 and SkillTree.describe(n).is_empty():
 			errors.append("Le nœud %d (%s) n'a aucun texte à afficher" % [n["id"], n["name"]])
+	_check_clusters(tree)
 	for b in Content.branches():
 		for ks in b["keystones"]:
 			if not keys.has(ks["key"]):
 				errors.append("Le nœud clé « %s » n'a pas de place dans l'arbre" % ks["key"])
 	print("Arbre : %d nœuds, %d liens, %s" % [tree.nodes.size(), tree.edges.size(), str(kinds)])
+
+
+## Grappes écrites à la main, une fois insérées dans l'arbre : chaque nœud a sa place, aucun ne
+## recouvre la graine, un nœud clé ou un autre nœud de grappe, et chaque exclusion vise un nœud qui existe.
+func _check_clusters(tree) -> void:
+	var gap: float = SkillTree.RING_GAP
+	var placed: Array = []
+	for bi in SkillTree.BRANCHES.size():
+		var b: Dictionary = SkillTree.BRANCHES[bi]
+		for c in b.get("clusters", []):
+			var where := "branches/%s.json, grappe « %s »" % [b["id"], c["id"]]
+			var key := "%s:%s" % [b["id"], c["id"]]
+			if not tree.clusters.has(key) or tree.clusters[key]["nodes"].size() != c["nodes"].size():
+				errors.append(where + " : tous ses nœuds n'ont pas trouvé place dans l'arbre")
+				continue
+			for id in tree.clusters[key]["nodes"]:
+				var n: Dictionary = tree.nodes[id]
+				var p: Vector2 = n["pos"]
+				if p.length() > (SkillTree.RINGS + 0.5) * gap or p.length() < 0.6 * gap:
+					errors.append("%s : le nœud « %s » sort de l'arbre ou touche la graine" % [where, n["local"]])
+				for o in tree.nodes:
+					if o["cluster"] == "" and o["type"] == "keystone" and p.distance_to(o["pos"]) < SkillTree.CLEAR_NODE * gap:
+						errors.append("%s : le nœud « %s » recouvre le nœud clé « %s » (déplacer la grappe)" % [where, n["local"], o["name"]])
+				for q in placed:
+					if p.distance_to(q[0]) < 0.45 * gap:
+						errors.append("%s : le nœud « %s » est trop près de « %s » (moins de 0,45 anneau)" % [where, n["local"], q[1]])
+				placed.append([p, "%s:%s" % [key, n["local"]]])
+				if n["excludes"].size() != tree.exclusions.get(id, []).size() and n["excludes"].size() > tree.exclusions.get(id, []).size():
+					errors.append("%s : une entrée de « excludes » du nœud « %s » ne désigne aucun nœud" % [where, n["local"]])
+				if n["neighbors"].is_empty():
+					errors.append("%s : le nœud « %s » est isolé" % [where, n["local"]])
 
 
 func _check_engine() -> void:
@@ -120,6 +152,21 @@ func _check_engine() -> void:
 		errors.append("Une compétence donnée par un nœud n'est pas enregistrée")
 	if fx.fire("crit", {"main": main}):
 		errors.append("Un évènement sans effet ne doit rien déclencher")
+
+	# Mutation d'une compétence : (réglage + add) × (1 + inc) × more, « set » remplace.
+	var nova: Dictionary = Content.skills().get("nova", {})
+	fx.rebuild([{"id": 1, "effects": [
+		{"skill_mod": "nova", "param": "radius", "op": "add", "value": 30, "text": "x"},
+		{"skill_mod": "nova", "param": "radius", "op": "inc", "value": 0.5, "text": "x"},
+		{"skill_mod": "nova", "param": "radius", "op": "more", "value": 2, "text": "x"},
+		{"skill_mod": "nova", "param": "forme", "op": "set", "value": "spirale", "text": "x"},
+	]}])
+	var mutated: Dictionary = fx.skill_settings("nova")
+	_expect("mutation d'un réglage de compétence", mutated.get("radius", 0.0), (float(nova.get("radius", 0.0)) + 30.0) * 1.5 * 2.0)
+	if mutated.get("forme", "") != "spirale" or Content.skills()["nova"].has("forme"):
+		errors.append("L'opération « set » d'un skill_mod doit poser le réglage sans toucher à skills.json")
+	fx.rebuild([])
+	_expect("réglage sans mutation", fx.skill_settings("nova").get("radius", 0.0), float(nova.get("radius", 0.0)))
 
 
 func _expect(what: String, got: float, want: float) -> void:

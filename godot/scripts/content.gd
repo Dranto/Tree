@@ -6,6 +6,10 @@ extends RefCounted
 
 const DIR := "res://data/"
 const OPS := ["add", "inc", "more", "flat"]
+## Opérations d'un effet « skill_mod » (mutation d'un réglage de compétence).
+const SKILL_OPS := ["add", "inc", "more", "set"]
+## Types de nœuds qu'une grappe écrite à la main peut contenir (voir skill_tree.gd).
+const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "graft", "withered"]
 ## Moments du jeu auxquels un effet peut réagir (champ « on »).
 const EVENTS := ["kill", "crit", "lethal_hit"]
 ## Actions disponibles (champ « do ») et leurs paramètres obligatoires.
@@ -34,6 +38,11 @@ static func skills() -> Dictionary:
 
 static func conditions() -> Dictionary:
 	return _load("conditions")
+
+
+## Greffes : objets à insérer dans un emplacement de greffe de l'arbre.
+static func grafts() -> Dictionary:
+	return _load("grafts")
 
 
 ## Branches dans l'ordre de tree.json (cet ordre fixe leur place autour de la graine).
@@ -71,11 +80,20 @@ static func _load(name: String) -> Dictionary:
 static func validate(keystones_per_branch := -1) -> PackedStringArray:
 	_cache = {}
 	var errors := PackedStringArray()
-	for name in ["tree", "stats", "skills", "conditions"]:
+	for name in ["tree", "stats", "skills", "conditions", "grafts"]:
 		if _load(name).is_empty():
 			errors.append("%s.json est absent, vide ou illisible" % name)
 	var t := tree()
 	_check_effects(t.get("root", {}).get("effects", []), "tree.json, graine", errors)
+	for gid in grafts():
+		var g = grafts()[gid]
+		var gw := "grafts.json, greffe « %s »" % gid
+		if not (g is Dictionary and g.get("name", "") != ""):
+			errors.append(gw + " : « name » est obligatoire")
+			continue
+		if not (g.get("effects") is Array) or g["effects"].is_empty():
+			errors.append(gw + " : aucun effet")
+		_check_effects(g.get("effects", []), gw, errors)
 	var seen_keys := {}
 	var ids: Array = t.get("branches", [])
 	if ids.is_empty():
@@ -117,7 +135,182 @@ static func validate(keystones_per_branch := -1) -> PackedStringArray:
 			if ks.get("effects", []).is_empty() and ks.get("desc", "") == "":
 				errors.append(kw + " : aucun effet")
 			_check_effects(ks.get("effects", []), kw, errors)
+		_check_resonance(b.get("resonance", []), where, errors)
+		_check_clusters(b.get("clusters", []), where, seen_keys, errors)
 	return errors
+
+
+## Résonance de branche : paliers croissants, chacun avec des effets.
+static func _check_resonance(list, where: String, errors: PackedStringArray) -> void:
+	if not list is Array:
+		errors.append(where + " : « resonance » doit être une liste")
+		return
+	var last := 0
+	for tier in list:
+		if not (tier is Dictionary and (tier.get("count") is float or tier.get("count") is int) and int(tier["count"]) > last):
+			errors.append(where + " : chaque palier de « resonance » demande un « count » entier, croissant")
+			continue
+		last = int(tier["count"])
+		var tw := "%s, résonance à %d nœuds" % [where, last]
+		if not (tier.get("effects") is Array) or tier["effects"].is_empty():
+			errors.append(tw + " : aucun effet")
+		_check_effects(tier.get("effects", []), tw, errors)
+
+
+## Grappes écrites à la main : identifiants uniques, liens existants, champs propres à chaque type,
+## et aucun nœud isolé (chaque nœud doit rejoindre une entrée par les liens de la grappe).
+static func _check_clusters(list, where: String, seen_keys: Dictionary, errors: PackedStringArray) -> void:
+	if not list is Array:
+		errors.append(where + " : « clusters » doit être une liste")
+		return
+	var seen := {}
+	for c in list:
+		if not c is Dictionary:
+			errors.append(where + " : une grappe doit être un objet")
+			continue
+		var cid := str(c.get("id", ""))
+		var cw := "%s, grappe « %s »" % [where, cid]
+		if cid == "" or cid.contains(":") or cid.contains(","):
+			errors.append(cw + " : « id » obligatoire, sans « : » ni virgule")
+		if seen.has(cid):
+			errors.append(cw + " : identifiant de grappe déjà utilisé dans cette branche")
+		seen[cid] = true
+		if str(c.get("name", "")) == "":
+			errors.append(cw + " : « name » est obligatoire")
+		if not (c.get("ring") is float or c.get("ring") is int) or float(c["ring"]) < 1.0:
+			errors.append(cw + " : « ring » doit être un nombre d'au moins 1")
+		if not (c.get("angle") is float or c.get("angle") is int):
+			errors.append(cw + " : « angle » doit être un nombre (fraction du secteur de la branche)")
+		var nodes = c.get("nodes")
+		if not (nodes is Array) or nodes.is_empty():
+			errors.append(cw + " : « nodes » doit contenir au moins un nœud")
+			continue
+		var ids := {}
+		for cn in nodes:
+			if not cn is Dictionary:
+				errors.append(cw + " : un nœud doit être un objet")
+				continue
+			var nid := str(cn.get("id", ""))
+			if nid == "" or nid.contains(":") or nid.contains(","):
+				errors.append("%s : chaque nœud demande un « id », sans « : » ni virgule" % cw)
+			if ids.has(nid):
+				errors.append("%s : identifiant de nœud « %s » utilisé deux fois" % [cw, nid])
+			ids[nid] = cn
+		var links := {}
+		for nid in ids:
+			links[nid] = []
+		for nid in ids:
+			var cn: Dictionary = ids[nid]
+			_check_cluster_node(cn, "%s, nœud « %s »" % [cw, nid], seen_keys, where, errors)
+			if cn.has("links") and not cn["links"] is Array:
+				errors.append("%s, nœud « %s » : « links » doit être une liste" % [cw, nid])
+				continue
+			for l in cn.get("links", []):
+				if not ids.has(str(l)) or str(l) == nid:
+					errors.append("%s, nœud « %s » : lien vers un nœud inconnu « %s »" % [cw, nid, l])
+				else:
+					links[nid].append(str(l))
+					links[str(l)].append(nid)
+		var entry = c.get("entry")
+		if not (entry is Array) or entry.is_empty():
+			errors.append(cw + " : « entry » doit lister au moins un nœud relié au reste de l'arbre")
+			continue
+		var reached := {}
+		var stack: Array = []
+		for e in entry:
+			if not ids.has(str(e)):
+				errors.append("%s : entrée inconnue « %s »" % [cw, e])
+			elif not reached.has(str(e)):
+				reached[str(e)] = true
+				stack.append(str(e))
+		while stack.size() > 0:
+			for m in links[stack.pop_back()]:
+				if not reached.has(m):
+					reached[m] = true
+					stack.append(m)
+		for nid in ids:
+			if not reached.has(nid):
+				errors.append("%s : le nœud « %s » est isolé (aucun lien ne le rattache à une entrée)" % [cw, nid])
+		if c.has("complete"):
+			var complete = c["complete"]
+			if not (complete is Dictionary and complete.get("effects") is Array and not complete["effects"].is_empty()):
+				errors.append(cw + " : « complete » demande une liste « effects » non vide")
+			else:
+				_check_effects(complete["effects"], cw + ", grappe complète", errors)
+
+
+static func _check_cluster_node(cn: Dictionary, where: String, seen_keys: Dictionary, file: String, errors: PackedStringArray) -> void:
+	var kind := str(cn.get("type", ""))
+	if not kind in CLUSTER_TYPES:
+		errors.append("%s : type inconnu « %s » (attendu : %s)" % [where, kind, ", ".join(CLUSTER_TYPES)])
+		return
+	var at = cn.get("at")
+	if not (at is Array and at.size() == 2 and (at[0] is float or at[0] is int) and (at[1] is float or at[1] is int)):
+		errors.append(where + " : « at » doit être [x, y] en unités d'anneau")
+	var effects = cn.get("effects", [])
+	_check_effects(effects, where, errors)
+	var has_effects: bool = effects is Array and not effects.is_empty()
+	if kind in ["small", "notable", "withered"] and not has_effects:
+		errors.append(where + " : aucun effet")
+	if kind in ["notable", "keystone", "mastery", "withered"] and str(cn.get("name", "")) == "":
+		errors.append(where + " : « name » est obligatoire pour ce type")
+	match kind:
+		"keystone":
+			var key := str(cn.get("key", ""))
+			if key == "":
+				errors.append(where + " : un nœud clé demande une « key »")
+			elif seen_keys.has(key):
+				errors.append("%s : clé « %s » déjà utilisée dans %s" % [where, key, seen_keys[key]])
+			seen_keys[key] = file
+			if not has_effects and str(cn.get("desc", "")) == "":
+				errors.append(where + " : aucun effet")
+		"skill":
+			var gives := str(cn.get("skill", ""))
+			if effects is Array:
+				for e in effects:
+					if e is Dictionary and e.has("skill"):
+						gives = str(e["skill"])
+			if gives == "":
+				errors.append(where + " : un nœud de compétence demande « skill » (ou un effet {\"skill\": …})")
+			elif not skills().has(gives):
+				errors.append("%s : compétence inconnue « %s »" % [where, gives])
+		"mutation":
+			if not skills().has(str(cn.get("mutates", ""))):
+				errors.append("%s : « mutates » doit nommer une compétence de skills.json (« %s » inconnue)" % [where, cn.get("mutates", "")])
+			_check_choices(cn.get("choices"), 2, 3, where, errors)
+		"mastery":
+			_check_choices(cn.get("choices"), 3, 3, where, errors)
+		"withered":
+			if str(cn.get("requires_flag", "")) == "":
+				errors.append(where + " : un nœud flétri demande « requires_flag »")
+		"graft":
+			if has_effects:
+				errors.append(where + " : un emplacement de greffe ne porte pas d'effet (c'est la greffe qui en donne)")
+	if kind != "mutation" and kind != "mastery" and cn.has("choices"):
+		errors.append(where + " : « choices » n'existe que pour les types mutation et mastery")
+	if cn.has("excludes") and not cn["excludes"] is Array:
+		errors.append(where + " : « excludes » doit être une liste")
+
+
+static func _check_choices(list, at_least: int, at_most: int, where: String, errors: PackedStringArray) -> void:
+	if not (list is Array) or list.size() < at_least or list.size() > at_most:
+		var want := str(at_least) if at_least == at_most else "%d ou %d" % [at_least, at_most]
+		errors.append("%s : « choices » doit proposer %s choix" % [where, want])
+		return
+	var seen := {}
+	for i in list.size():
+		var ch = list[i]
+		if not (ch is Dictionary and str(ch.get("name", "")) != ""):
+			errors.append("%s : chaque choix demande un « name »" % where)
+			continue
+		var cid := str(ch.get("id", i))
+		if seen.has(cid):
+			errors.append("%s : identifiant de choix « %s » utilisé deux fois" % [where, cid])
+		seen[cid] = true
+		var cw := "%s, choix « %s »" % [where, ch["name"]]
+		if not (ch.get("effects") is Array) or ch["effects"].is_empty():
+			errors.append(cw + " : aucun effet")
+		_check_effects(ch.get("effects", []), cw, errors)
 
 
 static func _check_effects(list, where: String, errors: PackedStringArray) -> void:
@@ -139,6 +332,25 @@ static func _check_effects(list, where: String, errors: PackedStringArray) -> vo
 		elif e.has("skill"):
 			if not skills().has(e["skill"]):
 				errors.append("%s : compétence inconnue « %s »" % [where, e["skill"]])
+		elif e.has("skill_mod"):
+			var target = skills().get(e["skill_mod"])
+			var op: String = str(e.get("op", ""))
+			if not target is Dictionary:
+				errors.append("%s : « skill_mod » vise une compétence inconnue « %s »" % [where, e["skill_mod"]])
+			elif op != "set" and not (target.get(e.get("param", "")) is float or target.get(e.get("param", "")) is int):
+				errors.append("%s : « %s » n'est pas un réglage numérique de la compétence « %s »" % [where, e.get("param", ""), e["skill_mod"]])
+			if str(e.get("param", "")) == "":
+				errors.append("%s : « skill_mod » demande un « param »" % where)
+			if not op in SKILL_OPS:
+				errors.append("%s : opération inconnue « %s » pour « skill_mod » (attendu : %s)" % [where, op, ", ".join(SKILL_OPS)])
+			if op != "set" and not (e.get("value") is float or e.get("value") is int):
+				errors.append("%s : « value » doit être un nombre pour « skill_mod »" % where)
+			if not e.has("value"):
+				errors.append("%s : « skill_mod » demande une « value »" % where)
+			if e.get("text", "") == "" and not e.get("hidden", false):
+				errors.append("%s : un effet « skill_mod » doit avoir un « text » affiché au joueur (ou « hidden »)" % where)
+			if e.has("if"):
+				errors.append("%s : un effet « skill_mod » n'accepte pas de condition" % where)
 		elif e.has("on"):
 			if not e["on"] in EVENTS:
 				errors.append("%s : évènement inconnu « %s » (attendu : %s)" % [where, e["on"], ", ".join(EVENTS)])
@@ -152,7 +364,7 @@ static func _check_effects(list, where: String, errors: PackedStringArray) -> vo
 			if e.get("text", "") == "":
 				errors.append("%s : un effet déclenché doit avoir un « text » affiché au joueur" % where)
 		else:
-			errors.append("%s : effet sans « stat », « skill » ni « on »" % where)
+			errors.append("%s : effet sans « stat », « skill », « skill_mod » ni « on »" % where)
 		if e.has("if"):
 			var cond = e["if"]
 			if not (cond is Dictionary and conditions().has(cond.get("state", ""))):
