@@ -19,6 +19,10 @@ const SLOT_COUNT := 6
 const SLOT_DIGITS := [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6]
 const SLOT_DEFAULTS := [KEY_Q, KEY_E, KEY_R, KEY_NONE, KEY_NONE, KEY_NONE]
 var slot_keys: Array = SLOT_DEFAULTS.duplicate()
+## Secousse d'écran, de 0 (aucune) à 1 (pleine).
+var shake := 0.6
+## Réduit les effets de jeu : plus de secousse ni de micro-pause, très peu de particules, ambiance coupée.
+var reduce_effects := false
 
 
 func _ready() -> void:
@@ -38,6 +42,8 @@ func load_settings() -> void:
 	show_hints = bool(cfg.get_value("gameplay", "show_hints", show_hints))
 	for i in SLOT_COUNT:
 		slot_keys[i] = int(cfg.get_value("controls", "slot_%d" % (i + 1), slot_keys[i]))
+	shake = clampf(float(cfg.get_value("gameplay", "shake", shake)), 0.0, 1.0)
+	reduce_effects = bool(cfg.get_value("gameplay", "reduce_effects", reduce_effects))
 
 
 func save_settings() -> void:
@@ -49,6 +55,8 @@ func save_settings() -> void:
 	cfg.set_value("gameplay", "show_hints", show_hints)
 	for i in SLOT_COUNT:
 		cfg.set_value("controls", "slot_%d" % (i + 1), slot_keys[i])
+	cfg.set_value("gameplay", "shake", shake)
+	cfg.set_value("gameplay", "reduce_effects", reduce_effects)
 	cfg.save(PATH)
 
 
@@ -143,3 +151,18 @@ func set_fullscreen(on: bool) -> void:
 func set_show_hints(on: bool) -> void:
 	show_hints = on
 	apply()
+
+
+func set_shake(v: float) -> void:
+	shake = clampf(v, 0.0, 1.0)
+	changed.emit()
+
+
+func set_reduce_effects(on: bool) -> void:
+	reduce_effects = on
+	changed.emit()
+
+
+## Force réellement appliquée de la secousse d'écran (0 si les effets sont réduits).
+func shake_strength() -> float:
+	return 0.0 if reduce_effects else shake

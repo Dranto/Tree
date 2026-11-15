@@ -81,6 +81,19 @@ func _ready() -> void:
 	fx.texts[-1]["t"] = 0.5
 	fx.cloud(Vector2(1350, 640), 90.0, 4.0, 10.0)
 	fx.clouds[-1]["t"] = 1.0
+	# Chiffres de dégâts (normal, critique) et particules figées à un instant : étincelles, cendres, pétales.
+	fx.text(Vector2(950, 700), "17", Color("f4efd8"), 15, 0.7)
+	fx.texts[-1]["t"] = 0.15
+	fx.text(Vector2(1100, 700), "96", Color("ffd45a"), 24, 0.95)
+	fx.texts[-1]["t"] = 0.2
+	for i in 8:
+		var a := TAU * i / 8.0
+		fx.particles.append({"kind": 0, "pos": Vector2(300, 760) + Vector2.from_angle(a) * 26.0, "vel": Vector2.from_angle(a) * 200.0,
+			"t": 0.1, "dur": 0.3, "size": 2.0, "color": Color("ffe08a"), "rot": 0.0, "drag": 6.0, "spin": 0.0, "ph": 0.0})
+		fx.particles.append({"kind": 1, "pos": Vector2(520, 760) + Vector2.from_angle(a) * (14.0 + i * 3.0), "vel": Vector2.ZERO,
+			"t": 0.3, "dur": 1.5, "size": 2.6, "color": Color("9a8f8a") if i % 4 else Color("ff9a4a"), "rot": 0.0, "drag": 1.8, "spin": 0.0, "ph": 0.0})
+		fx.particles.append({"kind": 2, "pos": Vector2(740, 760) + Vector2.from_angle(a) * (14.0 + i * 3.0), "vel": Vector2.ZERO,
+			"t": 0.4, "dur": 1.3, "size": 4.0, "color": Color("f6b8c8") if i % 2 else Color("f2d06b"), "rot": a * 1.3, "drag": 1.6, "spin": 0.0, "ph": 0.0})
 	fx.queue_redraw()
 
 
@@ -149,4 +162,4 @@ func _draw() -> void:
 		draw_string(font, Vector2(COL_X + s * COL_W - 60, 40), STATES[s], HORIZONTAL_ALIGNMENT_CENTER, 120, 18, Color.WHITE)
 	for k in BASE_KINDS:
 		draw_string(font, Vector2(16, 168 + k * 130), ["Flétri", "Cendreux", "Colosse"][k], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
-	draw_string(font, Vector2(20, 560), "Effets (ondes, textes flottants, nuage de spores)", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+	draw_string(font, Vector2(20, 560), "Effets (ondes, textes, nuage de spores, étincelles, cendres, pétales)", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)

@@ -111,6 +111,9 @@ var label_rects: Array[Rect2] = []
 
 var _world: Node2D
 var _anim: Node2D
+var _life: Node2D
+## Vrai si la couche de sève dessinait quelque chose à la dernière image (pour l'effacer une fois tout fini).
+var _life_busy := false
 var _labels: Control
 var _overlay: Control
 var _states := {}
@@ -130,15 +133,30 @@ var _locks := {}
 var _choice: Control = null
 var _choice_id := -1
 var _choice_queue: Array = []
+## Liens courbes : points de chaque lien (CURVE_SEGS + 1 points), calculés une fois par arbre.
+const CURVE_SEGS := 8
+## Courbure d'un lien, en part de sa longueur.
+const CURVE_BEND := 0.15
+var _curves: Array = []
+var _curve_tree = null
+## Liens appris, avec le sens de la sève (de l'origine vers l'extérieur) : [indice du lien, inversé, phase].
+var _sap: Array = []
+## Nœuds en train d'éclore : identifiant → temps écoulé.
+var _blooms := {}
+const BLOOM_DUR := 0.95
 
 
 class Layer extends Node2D:
 	var ui
+	var kind := "world"
 	func _draw() -> void:
-		if self == ui._world:
-			ui._draw_world(self)
-		else:
-			ui._draw_anim(self)
+		match kind:
+			"world":
+				ui._draw_world(self)
+			"anim":
+				ui._draw_anim(self)
+			_:
+				ui._draw_life(self)
 
 
 class Overlay extends Control:
@@ -161,7 +179,13 @@ func _ready() -> void:
 	add_child(_world)
 	_anim = Layer.new()
 	_anim.ui = self
+	_anim.kind = "anim"
 	_world.add_child(_anim)
+	# La sève et l'éclosion ont leur propre couche : elles bougent à chaque image, le reste de l'animation non.
+	_life = Layer.new()
+	_life.ui = self
+	_life.kind = "life"
+	_world.add_child(_life)
 	_labels = _make_overlay("labels")
 	_overlay = _make_overlay("overlay")
 	# Les outils passent au-dessus des couches dessinées, pour recevoir les clics de leurs boutons.
@@ -244,12 +268,19 @@ func _on_tree_changed() -> void:
 	_redraw_all()
 
 
+## Un nœud vient d'être appris : il éclôt (petite animation), si l'arbre est à l'écran.
+func _on_node_allocated(node: Dictionary) -> void:
+	if visible:
+		_blooms[node["id"]] = 0.0
+
+
 func _redraw_all() -> void:
 	if not is_node_ready():
 		return
 	queue_redraw()
 	_world.queue_redraw()
 	_anim.queue_redraw()
+	_life.queue_redraw()
 	_labels.queue_redraw()
 	_overlay.queue_redraw()
 
@@ -265,15 +296,28 @@ func _view_changed(zoom_changed: bool) -> void:
 		_lod = lod()
 		_world.queue_redraw()
 		_anim.queue_redraw()
+		_life.queue_redraw()
 	_labels.queue_redraw()
 	_overlay.queue_redraw()
 
 
 func _process(delta: float) -> void:
-	# Seule la couche animée est redessinée à chaque image, et seulement s'il y a des nœuds à faire pulser.
-	if visible and ((_can_buy and not _available.is_empty()) or not _pending.is_empty()):
+	# Seule la couche animée est redessinée à chaque image, et seulement s'il y a quelque chose à animer :
+	# nœuds qui pulsent, sève qui circule dans les liens appris, nœuds qui éclosent.
+	if not visible:
+		return
+	for id in _blooms.keys():
+		_blooms[id] += delta
+		if _blooms[id] >= BLOOM_DUR:
+			_blooms.erase(id)
+	if (_can_buy and not _available.is_empty()) or not _pending.is_empty() or not _sap.is_empty() or not _blooms.is_empty():
 		t += delta
+	if (_can_buy and not _available.is_empty()) or not _pending.is_empty():
 		_anim.queue_redraw()
+	var busy := not _sap.is_empty() or not _blooms.is_empty()
+	if busy or _life_busy:
+		_life.queue_redraw()
+	_life_busy = busy
 
 
 # --- Géométrie ---
@@ -444,6 +488,15 @@ func _refresh_states() -> void:
 			if why != "":
 				_locks[id] = why
 	_can_buy = Game.points > 0
+	_ensure_curves()
+	_sap = []
+	var edges: Array = Game.tree.edges
+	for i in edges.size():
+		var e: Vector2i = edges[i]
+		if _states[e.x] == "owned" and _states[e.y] == "owned":
+			var na: Dictionary = Game.tree.nodes[e.x]
+			var nb: Dictionary = Game.tree.nodes[e.y]
+			_sap.append([i, na["pos"].length_squared() > nb["pos"].length_squared(), fposmod(float(i) * 0.6180339, 1.0)])
 
 
 ## Vrai si le nœud est un nœud flétri encore couvert de cendre.
@@ -624,6 +677,47 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), BG)
 
 
+## Calcule la courbe de chaque lien : une courbe de Bézier dont le milieu est écarté de côté,
+## du côté (stable) que choisit l'identifiant du lien, pour que l'arbre ait l'air de branches.
+func _ensure_curves() -> void:
+	var tree = Game.tree
+	if _curve_tree == tree and _curves.size() == tree.edges.size():
+		return
+	_curve_tree = tree
+	_curves = []
+	for e in tree.edges:
+		var a: Vector2 = tree.nodes[e.x]["pos"]
+		var b: Vector2 = tree.nodes[e.y]["pos"]
+		var d := b - a
+		var side := 1.0 if ((e.x * 73856093) ^ (e.y * 19349663)) & 8 != 0 else -1.0
+		var ctrl := (a + b) * 0.5 + d.orthogonal() * CURVE_BEND * side
+		var pts := PackedVector2Array()
+		for i in CURVE_SEGS + 1:
+			var k := float(i) / CURVE_SEGS
+			pts.append(a.lerp(ctrl, k).lerp(ctrl.lerp(b, k), k))
+		_curves.append(pts)
+
+
+## Ajoute à `out` les segments d'un lien, deux points par segment, avec un point sur `step`.
+func _curve_segments(out: PackedVector2Array, idx: int, step: int) -> void:
+	var pts: PackedVector2Array = _curves[idx]
+	var i := 0
+	while i < CURVE_SEGS:
+		out.append(pts[i])
+		out.append(pts[mini(i + step, CURVE_SEGS)])
+		i += step
+
+
+## Point d'un lien à la position k (0 à 1), du côté `reversed` ou non.
+func _curve_at(idx: int, k: float, reversed: bool) -> Vector2:
+	var pts: PackedVector2Array = _curves[idx]
+	if reversed:
+		k = 1.0 - k
+	var f := clampf(k, 0.0, 1.0) * CURVE_SEGS
+	var i := mini(int(f), CURVE_SEGS - 1)
+	return pts[i].lerp(pts[i + 1], f - i)
+
+
 func _draw_world(c: CanvasItem) -> void:
 	var tree = Game.tree
 	var z := zoom
@@ -631,27 +725,43 @@ func _draw_world(c: CanvasItem) -> void:
 	for r in range(1, SkillTree.RINGS + 1):
 		c.draw_arc(Vector2.ZERO, r * SkillTree.RING_GAP, 0.0, TAU, 128, Color(1, 1, 1, 0.035), 1.0 / z)
 
-	# Liens : épaisseur minimale d'un pixel à l'écran pour rester visibles dézoomés.
+	# Liens courbes : épaisseur minimale d'un pixel à l'écran pour rester visibles dézoomés.
+	# Moins de segments par lien quand on est loin (la courbure n'y est pas visible).
+	_ensure_curves()
+	var step := 4 if level != LOD_CLOSE else 2
 	var dim := PackedVector2Array()
 	var half := PackedVector2Array()
-	for e in tree.edges:
-		var a: Dictionary = tree.nodes[e.x]
-		var b: Dictionary = tree.nodes[e.y]
+	var owned_w := maxf(6.0, 2.5 / z)
+	var edges: Array = tree.edges
+	for i in edges.size():
+		var e: Vector2i = edges[i]
 		var oa: bool = _states[e.x] == "owned"
 		var ob: bool = _states[e.y] == "owned"
 		if oa and ob:
-			var bi: int = b["branch"] if b["branch"] >= 0 else a["branch"]
-			c.draw_line(a["pos"], b["pos"], tree.branch_color(bi), maxf(6.0, 2.5 / z))
-		elif oa or ob:
-			half.append(a["pos"])
-			half.append(b["pos"])
+			continue
+		if oa or ob:
+			_curve_segments(half, i, step)
 		else:
-			dim.append(a["pos"])
-			dim.append(b["pos"])
+			_curve_segments(dim, i, step)
 	if dim.size() > 0:
 		c.draw_multiline(dim, Color(0.5, 0.55, 0.5, 0.2 if level == LOD_OVERVIEW else 0.18), maxf(2.0, 1.0 / z))
 	if half.size() > 0:
 		c.draw_multiline(half, Color(0.85, 0.9, 0.85, 0.45), maxf(3.0, 1.5 / z))
+	# Branches apprises : écorce sombre dessous, cœur coloré, filet de lumière dessus.
+	for entry in _sap:
+		var i: int = entry[0]
+		var e: Vector2i = edges[i]
+		var a: Dictionary = tree.nodes[e.x]
+		var b: Dictionary = tree.nodes[e.y]
+		var bi: int = b["branch"] if b["branch"] >= 0 else a["branch"]
+		var col: Color = tree.branch_color(bi)
+		var line := PackedVector2Array()
+		var pts: PackedVector2Array = _curves[i]
+		for j in range(0, CURVE_SEGS + 1, step):
+			line.append(pts[j])
+		c.draw_polyline(line, Color(col.r * 0.35, col.g * 0.35, col.b * 0.35, 0.8), owned_w * 1.7)
+		c.draw_polyline(line, col, owned_w)
+		c.draw_polyline(line, Color(1, 1, 1, 0.22), owned_w * 0.28)
 
 	var w := 1.0 / z
 	for n in tree.nodes:
@@ -858,6 +968,68 @@ func _draw_anim(c: CanvasItem) -> void:
 		c.draw_arc(n["pos"], _radius(n, zoom) + 6.0 * maxf(1.0, w), 0.0, TAU, 32, Color.WHITE, 2.0 * w)
 	# Plan, chemin vers le nœud survolé et résultats de la recherche.
 	panels.draw_overlay(c)
+
+
+func _draw_life(c: CanvasItem) -> void:
+	_draw_sap(c)
+	_draw_blooms(c)
+
+
+## Sève : de petites lueurs qui circulent le long des liens appris, de l'origine vers l'extérieur.
+func _draw_sap(c: CanvasItem) -> void:
+	if _sap.is_empty():
+		return
+	var tree = Game.tree
+	var base := maxf(6.0, 2.5 / zoom)
+	var area := _view_area()
+	var view := Rect2(to_tree(area.position), area.size / zoom).grow(base * 4.0)
+	for entry in _sap:
+		var i: int = entry[0]
+		var reversed: bool = entry[1]
+		# Un passage dure environ 2 s, suivi d'une pause : les lueurs ne forment pas un défilé régulier.
+		var u := fposmod(t * 0.5 + entry[2] * 1.7, 1.7)
+		if u > 1.0:
+			continue
+		var head := _curve_at(i, u, reversed)
+		if not view.has_point(head):
+			continue
+		var e: Vector2i = tree.edges[i]
+		var bi: int = tree.nodes[e.y]["branch"] if tree.nodes[e.y]["branch"] >= 0 else tree.nodes[e.x]["branch"]
+		var col: Color = tree.branch_color(bi).lerp(Color.WHITE, 0.55)
+		var fade := sin(u * PI)
+		var tail := _curve_at(i, maxf(u - 0.18, 0.0), reversed)
+		c.draw_line(tail, head, Color(col.r, col.g, col.b, 0.5 * fade), base * 0.55)
+		c.draw_circle(head, base * 1.1, Color(col.r, col.g, col.b, 0.22 * fade))
+		c.draw_circle(head, base * 0.5, Color(col.r, col.g, col.b, 0.95 * fade))
+
+
+## Éclosion d'un nœud appris : flash, onde, et pétales qui s'ouvrent puis s'effacent.
+func _draw_blooms(c: CanvasItem) -> void:
+	var tree = Game.tree
+	var w := 1.0 / zoom
+	for id in _blooms:
+		var n: Dictionary = tree.nodes[id]
+		var k: float = _blooms[id] / BLOOM_DUR
+		var open := 1.0 - pow(1.0 - minf(k * 1.8, 1.0), 3.0)
+		var fade := 1.0 - maxf(0.0, k - 0.45) / 0.55
+		var p: Vector2 = n["pos"]
+		var r := _radius(n, zoom)
+		var col: Color = tree.branch_color(n["branch"])
+		var light := col.lerp(Color.WHITE, 0.45)
+		# Le nœud gonfle un instant avant de se poser.
+		c.draw_circle(p, r * (1.0 + 0.35 * sin(PI * minf(k * 2.5, 1.0))), Color(light.r, light.g, light.b, 0.5 * (1.0 - k)))
+		c.draw_arc(p, r * (1.0 + 2.4 * open), 0.0, TAU, 40, Color(light.r, light.g, light.b, 0.8 * (1.0 - k)), maxf(3.0, 2.5 * w))
+		var petals := 6 if n["type"] == "small" else (8 if n["type"] == "notable" else 10)
+		var spin := k * 0.7
+		for j in petals:
+			var a := TAU * j / petals + spin
+			var d := Vector2.from_angle(a)
+			var o := d.orthogonal()
+			var base := p + d * r * (0.5 + 0.7 * open)
+			var tip := p + d * r * (0.9 + 2.0 * open)
+			var half_w := r * (0.12 + 0.28 * open)
+			var pts := PackedVector2Array([base, base + d * (tip - base).length() * 0.5 + o * half_w, tip, base + d * (tip - base).length() * 0.5 - o * half_w])
+			c.draw_colored_polygon(pts, Color(light.r, light.g, light.b, 0.85 * fade))
 
 
 # --- Libellés ---

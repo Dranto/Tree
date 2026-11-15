@@ -335,8 +335,7 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 	hp -= amount
 	if not dot:
 		hit_flash = 0.08
-		if crit:
-			main.fx.text(position + Vector2(0, -radius - 10), str(roundi(amount)), Color("f2d06b"), 18, 0.6)
+		main.fx.impact(position, amount, crit, radius)
 	if hp <= 0.0:
 		dead = true
 		main.on_enemy_killed(self)
@@ -363,6 +362,10 @@ func _draw() -> void:
 			var tip := Vector2.from_angle(a + 0.6) * radius * 0.6
 			draw_line(base, tip, rc, maxf(2.5, radius * 0.18))
 			draw_circle(base, maxf(2.5, radius * 0.14), rc.darkened(0.3))
+	# Ombre au sol : une ellipse sombre sous la silhouette.
+	draw_set_transform(Vector2(0, radius * 0.7), 0.0, Vector2(1.0, 0.36))
+	draw_circle(Vector2.ZERO, radius * 1.05, Color(0, 0, 0, 0.3))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var dir: Vector2 = (main.player.position - position).normalized()
 	match behavior:
 		"shooter":

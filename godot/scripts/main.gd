@@ -9,6 +9,7 @@ const TREE_TO_WORLD := 2.1
 const Ground = preload("res://scripts/ground.gd")
 const Flora = preload("res://scripts/flora.gd")
 const Fx = preload("res://scripts/fx.gd")
+const Ambience = preload("res://scripts/ambience.gd")
 const Player = preload("res://scripts/player.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Projectile = preload("res://scripts/projectile.gd")
@@ -125,6 +126,9 @@ func _ready() -> void:
 	fx = Fx.new()
 	fx.main = self
 	add_child(fx)
+	var ambience = Ambience.new()
+	ambience.main = self
+	add_child(ambience)
 
 	var cam := Camera2D.new()
 	cam.position_smoothing_enabled = true
@@ -553,6 +557,7 @@ func on_enemy_killed(e) -> void:
 	if rng.randf() < 0.6:
 		flora.add_flower(e.position + Vector2(rng.randf_range(-14, 14), rng.randf_range(-14, 14)))
 	fx.ring(e.position, e.radius, e.radius * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
+	fx.death(e.position, e.radius, e.color, ground.life_at(e.position) > 0.45)
 	Game.fire("kill", enemy_ctx(e, 0.0))
 
 
