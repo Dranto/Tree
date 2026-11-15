@@ -28,6 +28,7 @@ const Content = preload("res://scripts/content.gd")
 var region_spawn: Dictionary = Content._load("enemies").get("spawn", {})
 ## Dernier état connu de la purification du Cœur de Ronce (contrat avec la tâche D).
 var ronce_purified := false
+const BuildBot = preload("res://scripts/build_bot.gd")
 
 var world_half := WORLD_HALF
 var ground
@@ -65,6 +66,9 @@ var autotest_boss := false
 var autotest_time := 0.0
 var autotest_shots := [3.0, 25.0, 55.0]
 var autotest_done := false
+## Robot d'équilibrage (« -- --autotest=build:<nom> », voir build_bot.gd) : joue un build type.
+var build_bot = null
+var deaths := 0
 ## Sauvegarde automatique (désactivée en autotest) : périodique et après chaque changement.
 const AUTOSAVE_EVERY := 60.0
 var autosave_enabled := true
@@ -89,6 +93,10 @@ func _ready() -> void:
 	autotest_boss = "--autotest=boss" in OS.get_cmdline_user_args()
 	autotest = autotest or autotest_boss or "--autotest" in OS.get_cmdline_user_args()
 	benchmark = "--benchmark" in OS.get_cmdline_user_args()
+	build_bot = BuildBot.from_cmdline()
+	if build_bot != null:
+		autotest = true
+		autotest_shots = []
 	if benchmark:
 		# Le robot joue, sans captures ni fin de partie, et rien n'est sauvegardé.
 		autotest = true
@@ -562,6 +570,7 @@ func on_enemy_killed(e) -> void:
 
 
 func player_died() -> void:
+	deaths += 1
 	for e in enemies:
 		if is_instance_valid(e):
 			e.queue_free()
@@ -626,6 +635,13 @@ func _autotest_step(delta: float) -> void:
 		return
 	autotest_time += delta
 	Game.add_xp(delta * 6.0)
+	if build_bot != null:
+		build_bot.spend(Game)
+		if autotest_time >= build_bot.duration and not autotest_done:
+			autotest_done = true
+			print(build_bot.report(Game, autotest_time, deaths))
+			get_tree().quit()
+		return
 	while Game.points > 0:
 		var options: Array = []
 		for n in Game.tree.nodes:
