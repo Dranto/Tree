@@ -236,7 +236,7 @@
           "effects": [
             {"stat": "thorns", "op": "add", "value": 25},
             {"stat": "armor", "op": "add", "value": 0.05},
-            {"stat": "projectile_damage", "op": "inc", "value": 0.15}
+            {"stat": "projectile_damage", "op": "inc", "value": 0.35}
           ]
         },
         {
@@ -247,7 +247,8 @@
           "effects": [
             {"stat": "thorns", "op": "more", "value": 1.5, "if": {"state": "immobile", "min": 0.5}},
             {"stat": "armor", "op": "add", "value": 0.1, "if": {"state": "immobile", "min": 0.5}},
-            {"stat": "area_damage", "op": "inc", "value": 0.5, "if": {"state": "immobile", "min": 0.5}}
+            {"stat": "area_damage", "op": "inc", "value": 0.5, "if": {"state": "immobile", "min": 0.5}},
+            {"stat": "projectile_damage", "op": "inc", "value": 0.2}
           ]
         },
         {
@@ -338,7 +339,7 @@
             {"stat": "thorns", "op": "more", "value": 3},
             {"stat": "armor", "op": "add", "value": 0.15},
             {"stat": "move_speed", "op": "more", "value": 0.8},
-            {"stat": "projectile_damage", "op": "inc", "value": 0.3}
+            {"stat": "projectile_damage", "op": "inc", "value": 0.5}
           ]
         }
       ],
@@ -365,7 +366,7 @@
           "name": "Première épine",
           "at": [0, 0],
           "effects": [
-            {"stat": "bleed", "op": "add", "value": 0.05}
+            {"stat": "bleed", "op": "add", "value": 0.04}
           ]
         },
         {
