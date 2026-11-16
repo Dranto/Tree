@@ -30,7 +30,7 @@ func _ready() -> void:
 	if not enabled:
 		return
 	for name in ["tir", "impact", "critique", "mort", "noeud", "niveau", "esquive", "degats", "nova", "nuage",
-			"floraison", "fouet", "racines", "volee", "saignee", "annonce", "coeur", "clic", "survol", "chute"]:
+			"floraison", "fouet", "racines", "volee", "saignee", "annonce", "coeur", "clic", "survol", "chute", "ramasse", "greffe", "seve"]:
 		var s := load_wav("res://assets/sounds/%s.wav" % name)
 		if s != null:
 			streams[name] = s
@@ -84,7 +84,8 @@ func has_sound(name: String) -> bool:
 	return streams.has(name)
 
 
-func play(name: String, pos := Vector2.INF) -> void:
+## pitch : hauteur de base (1 = normale), pour caler un son sur l'action (ex. enchaînement de ramassages).
+func play(name: String, pos := Vector2.INF, pitch := 1.0) -> void:
 	if not enabled or not streams.has(name):
 		return
 	var now := Time.get_ticks_msec()
@@ -106,7 +107,7 @@ func play(name: String, pos := Vector2.INF) -> void:
 	recent[name] = list
 	p.stream = streams[name]
 	p.volume_db = gain
-	p.pitch_scale = rng.randf_range(0.94, 1.06)
+	p.pitch_scale = pitch * rng.randf_range(0.97, 1.03) if pitch != 1.0 else rng.randf_range(0.94, 1.06)
 	p.play()
 	played += 1
 

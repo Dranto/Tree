@@ -8,7 +8,7 @@ extends Node2D
 
 ## Distance à laquelle le joueur la ramasse (pas d'aimant : il faut aller la chercher).
 const PICK := 34.0
-const COLOR := Color("e8d36b")
+const COLOR := Color("e8d36b")   ## or doux : la sève perdue est rare et précieuse (Art.c("or"), un ton plus clair)
 const CORE := Color("b6f28a")
 
 var main

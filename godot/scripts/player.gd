@@ -368,7 +368,7 @@ func take_hit(amount: float, source) -> void:
 	hurt_flash = 0.15
 	Sfx.play("degats")
 	invuln = 0.35
-	main.fx.player_hurt(taken, position)
+	main.fx.player_hurt(taken / maxf(s["max_hp"], 1.0), taken, position)
 	Game.fire("hurt", {"main": main, "base": amount})
 	if s["thorns"] > 0.0 and is_instance_valid(source) and not source.dead:
 		source.take_damage(s["thorns"] * main.branch_factor(source, "ronce"), false)

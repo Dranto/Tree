@@ -12,6 +12,7 @@
 extends Node2D
 
 const Regions = preload("res://scripts/regions.gd")
+const Prompt = preload("res://scripts/prompt.gd")
 
 ## Rayon du cercle où se tenir.
 const RADIUS := 64.0
@@ -115,6 +116,8 @@ func light() -> void:
 	flash = 1.0
 	Sfx.play("floraison", position)
 	main.fx.ring(position, 12.0, RADIUS * 2.4, 0.8, Color(LIT_COLOR, 0.9), 5.0)
+	main.fx.pickup(position, "seve", 14, main.player.position)
+	main.screen_fx.glow(Color(LIT_COLOR), 0.3, 1.0)
 	main.revive(position, LIFE_RADIUS, LIT_COLOR)
 	rest(true)
 
@@ -145,9 +148,10 @@ func _draw() -> void:
 		var glow := 0.12 + 0.05 * sin(t * 2.2) + 0.35 * flash
 		draw_circle(Vector2.ZERO, RADIUS * 0.9, Color(LIT_COLOR, glow * 0.5))
 		draw_circle(Vector2.ZERO, RADIUS * 0.45, Color(LIT_COLOR, glow))
-	elif k > 0.0:
-		# Avancée : la flamme reprend, un arc lumineux fait le tour du cercle.
-		draw_arc(Vector2.ZERO, RADIUS + 6.0, -PI / 2.0, -PI / 2.0 + TAU * k, 48, Color(LIT_COLOR, 0.9), 4.0)
+	else:
+		# Invite commune (prompt.gd) : le cercle respire à l'approche, puis l'anneau se remplit.
+		var dist: float = main.player.position.distance_to(position)
+		Prompt.draw(self, RADIUS, k, t, Prompt.nearness(dist, RADIUS), LIT_COLOR)
 	# Pierres dressées, mousse verte une fois ravivé.
 	for i in STONES:
 		var s: Array = _stones[i]

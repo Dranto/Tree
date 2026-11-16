@@ -9,6 +9,7 @@ extends Node2D
 
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
+const Prompt = preload("res://scripts/prompt.gd")
 
 ## Distance où un autel commence à se dessiner, et où il est entièrement visible.
 const REVEAL := {"autel": 520.0, "secret": 230.0}
@@ -133,6 +134,8 @@ func activate() -> void:
 	Sfx.play("coeur", position)
 	main.revive(position, 160.0, Color("f2d06b"), 0.8)
 	main.fx.ring(position, 20.0, 180.0, 0.8, Color("f2d06b"), 5.0)
+	main.fx.pickup(position, "seve", 12, main.player.position)
+	main.screen_fx.glow(Art.c("or"), 0.3, 1.0)
 	main.request_autosave()
 	queue_redraw()
 
@@ -172,9 +175,8 @@ func _draw() -> void:
 		# Braise éteinte qui palpite, et cercle de cendre à fouler.
 		draw_circle(Vector2(0, -6), 5.0 + sin(t * 3.0), Color(0.9, 0.5, 0.3, v * 0.6))
 		draw_arc(Vector2.ZERO, ZONE, 0.0, TAU, 40, Color(0.75, 0.72, 0.65, v * 0.25), 2.0, true)
-		if progress > 0.0:
-			var k: float = progress / HOLD[kind]
-			draw_arc(Vector2.ZERO, ZONE, -PI / 2.0, -PI / 2.0 + TAU * k, 40, glow, 4.0, true)
+		var dist: float = main.player.position.distance_to(position)
+		Prompt.draw(self, ZONE, progress / HOLD[kind], t, Prompt.nearness(dist, ZONE) * v, glow)
 
 
 ## Secret encore enfoui : quelques étincelles dans la cendre, qui grandissent quand on s'y tient.
@@ -185,6 +187,5 @@ func _draw_secret(v: float) -> void:
 		var r := 10.0 + 8.0 * sin(t * 1.7 + i)
 		draw_circle(Vector2.from_angle(a) * r, 1.6 + 0.8 * sin(t * 5.0 + i * 2.0), Color(glow, v * 0.7))
 	draw_circle(Vector2.ZERO, 6.0, Color(glow, v * (0.25 + 0.15 * sin(t * 3.0))))
-	if progress > 0.0:
-		var k: float = progress / HOLD[kind]
-		draw_arc(Vector2.ZERO, 30.0, -PI / 2.0, -PI / 2.0 + TAU * k, 32, glow, 3.0, true)
+	var dist: float = main.player.position.distance_to(position)
+	Prompt.draw(self, 30.0, progress / HOLD[kind], t, Prompt.nearness(dist, 30.0) * v, glow)

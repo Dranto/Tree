@@ -21,6 +21,8 @@ var texts: Array = []
 var clouds: Array = []
 var particles: Array = []
 var font: Font
+## Élément du coup en cours de résolution (posé par main.player_hit_enemy, lu par impact()).
+var hit_element := ""
 var _rng := RandomNumberGenerator.new()
 var _trauma := 0.0
 var _shake_t := 0.0
@@ -53,8 +55,11 @@ func text(pos: Vector2, s: String, color: Color, size := 18, dur := 1.0, style :
 # --- Ressenti des coups ---
 
 ## Un coup touche un Flétri : étincelles, chiffre de dégâts, et (critique) secousse et micro-pause.
-func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0) -> void:
+## element : élément du coup (charte) : il donne leur couleur aux étincelles ; vide, elles sont blanches.
+func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0, element := "") -> void:
 	var reduce: bool = Settings.reduce_effects
+	if element == "":
+		element = hit_element
 	# Hiérarchie des chiffres : le coup normal reste discret, le critique est gras, doré et plus grand.
 	if Settings.show_damage_numbers and texts.size() < MAX_TEXTS and (crit or texts.size() < MAX_TEXTS * 2 / 3):
 		var spot := pos + Vector2(_rng.randf_range(-10.0, 10.0), -radius - 8.0)
@@ -66,13 +71,19 @@ func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0) -> void:
 			var size := 13 + mini(int(amount / 25.0), 4)
 			text(spot, str(roundi(amount)), Color(Art.c("texte"), 0.78), size, 0.6, 0)
 	var n := 0 if reduce else (9 if crit else 4)
+	var spark: Color = Art.ec(element, "clair") if element != "" else Art.c("or")
+	if not crit and element == "":
+		spark = Art.c("texte")
 	for i in n:
 		var a := _rng.randf() * TAU
 		var v := _rng.randf_range(90.0, 260.0 if crit else 190.0)
 		_particle(0, pos + Vector2.from_angle(a) * radius * 0.6, Vector2.from_angle(a) * v,
 			_rng.randf_range(0.18, 0.34), 2.0 if crit else 1.5,
-			Color("ffe08a") if crit else Color("f4efd8"), 0.0, 6.0)
+			spark if crit else spark.lerp(Art.c("texte"), 0.5), 0.0, 6.0)
 	if crit:
+		# L'impact marque le coup : une onde courte à la couleur de l'élément (anticipation : aucune).
+		if not reduce:
+			ring(pos, radius * 0.6, radius * 2.6, Anim.DUREE["eclair"] * 3.0, Color(spark, 0.85), 3.0)
 		shake(0.32)
 		hitstop(0.055)
 
@@ -97,13 +108,42 @@ func death(pos: Vector2, radius: float, color: Color, on_living_land: bool) -> v
 	hitstop(0.04 if radius < 20.0 else 0.06)
 
 
-## Le Porte-Graine encaisse un coup.
+## Le Porte-Graine encaisse un coup. frac : part de sa vie maximale perdue (0 à 1).
+## Réponse immédiate : secousse (plus forte si le coup est gros), vignette rouge sur l'écran
+## (screen_fx.gd) et quelques éclats rouges qui jaillissent de lui.
 ## amount (> 0) : le chiffre des dégâts reçus, d'une autre couleur que ceux qu'on inflige.
-func player_hurt(amount := 0.0, pos := Vector2.ZERO) -> void:
-	shake(0.55)
+func player_hurt(frac := 0.1, amount := 0.0, pos := Vector2.ZERO) -> void:
+	shake(clampf(0.4 + frac * 1.6, 0.4, 0.9))
+	if main != null and main.get("screen_fx") != null:
+		main.screen_fx.hurt(frac)
 	if amount > 0.0 and Settings.show_damage_numbers and texts.size() < MAX_TEXTS:
 		text(pos + Vector2(0, -34.0), "-%d" % roundi(amount), Color("ff6b5e"), 22 + mini(int(amount / 10.0), 8), 1.0, 2)
 		texts[-1]["pop"] = 0.14
+	if Settings.reduce_effects or main == null or main.player == null:
+		return
+	var danger := Art.c("danger")
+	for i in 7:
+		var a := _rng.randf() * TAU
+		_particle(0, main.player.position + Vector2.from_angle(a) * 10.0, Vector2.from_angle(a) * _rng.randf_range(110.0, 240.0),
+			_rng.randf_range(0.16, 0.3), 2.0, danger, 0.0, 6.0)
+
+
+## Ramassage : un petit éclat à la couleur de l'élément (bref : l'essence est le butin le plus fréquent).
+## « vers » (position du monde) : des particules qui s'envolent vers cet endroit, pour un butin rare.
+func pickup(pos: Vector2, element := "seve", count := 5, vers := Vector2.INF) -> void:
+	if Settings.reduce_effects:
+		count = mini(count, 2)
+	var clair := Art.ec(element, "clair")
+	var col := Art.ec(element)
+	for i in count:
+		var a := _rng.randf() * TAU
+		if vers != Vector2.INF:
+			# Une gerbe qui s'éparpille puis file vers le joueur (retour : la vie revient à lui).
+			_particle(3, pos + Vector2.from_angle(a) * _rng.randf_range(24.0, 46.0), Vector2.from_angle(a) * _rng.randf_range(40.0, 120.0),
+				_rng.randf_range(0.5, 0.8), _rng.randf_range(2.4, 3.8), clair if i % 2 == 0 else col, 0.0, 3.0)
+		else:
+			_particle(1, pos, Vector2.from_angle(a) * _rng.randf_range(30.0, 90.0) + Vector2(0, -30.0),
+				_rng.randf_range(0.25, 0.4), _rng.randf_range(1.8, 2.8), clair if i % 2 == 0 else col, 0.0, 4.0)
 
 
 ## Ajoute à la secousse d'écran (0 à 1, cumulée). Sans effet si la secousse est coupée.
@@ -124,7 +164,7 @@ func hitstop(dur: float) -> void:
 	Engine.time_scale = HITSTOP_SCALE
 
 
-## kind : 0 étincelle (trait), 1 cendre, 2 pétale. drag : freinage par seconde.
+## kind : 0 étincelle (trait), 1 cendre, 2 pétale, 3 lueur qui file vers le joueur. drag : freinage par seconde.
 func _particle(kind: int, pos: Vector2, vel: Vector2, dur: float, size: float, color: Color, rot: float, drag: float) -> void:
 	if particles.size() >= MAX_PARTICLES:
 		return
@@ -155,6 +195,12 @@ func _process(delta: float) -> void:
 	for p in particles:
 		var k: float = p["t"]
 		p["vel"] = p["vel"] * maxf(0.0, 1.0 - p["drag"] * delta)
+		if p["kind"] == 3 and main != null and main.player != null:
+			# Particule qui rejoint le joueur : l'accélération grandit avec le temps.
+			var to: Vector2 = main.player.position - p["pos"]
+			p["vel"] += to.normalized() * (260.0 + 1600.0 * k) * delta
+			if to.length() < 14.0:
+				p["t"] = p["dur"]
 		if p["kind"] == 2:
 			# Un pétale tombe en tournoyant doucement.
 			p["vel"] += Vector2(sin(k * 5.0 + p["ph"]) * 40.0, 70.0) * delta
@@ -238,6 +284,9 @@ func _draw_particle(p: Dictionary) -> void:
 			draw_line(pos, pos - v * 0.045, col, sz)
 		1:
 			draw_circle(pos, sz * (1.0 - 0.4 * k), col)
+		3:
+			draw_circle(pos, sz * 1.9, Color(col, col.a * 0.25))
+			draw_circle(pos, sz, col)
 		_:
 			var a: float = p["rot"]
 			# Le pétale pivote : sa largeur apparente oscille.
