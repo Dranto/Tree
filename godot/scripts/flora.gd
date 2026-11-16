@@ -122,7 +122,7 @@ class DecorTree extends Node2D:
 			draw_colored_polygon(limb(base, tip, 1.9 * s, 0.6 * s), bark)
 			tips.append(tip)
 		# Liseré clair du côté de la lumière (en haut à gauche) : le tronc a du volume sans détail.
-		draw_line(Vector2(-2.2 * s, -2.0 * s), top * 0.85 + Vector2(-0.8 * s, 0), bark.lightened(0.14), maxf(1.0, 1.1 * s), true)
+		draw_line(Vector2(-2.2 * s, -2.0 * s), top * 0.85 + Vector2(-0.8 * s, 0), bark.lightened(0.14), maxf(1.0, 1.1 * s))
 		if g <= 0.0:
 			return
 		# Couronne : trois masses de feuillage en volume, chacune éclot à son tour.
@@ -204,7 +204,7 @@ class DecorBramble extends DecorTree:
 			for j in 7:
 				var k := j / 6.0
 				pts.append(Vector2(side * 22.0 * k, -h * sin(k * PI * 0.8)) * s)
-			draw_polyline(pts, stem, 2.6 * s, true)
+			draw_polyline(pts, stem, 2.6 * s)
 			for j in [2, 4]:
 				var p: Vector2 = pts[j]
 				var d: Vector2 = (pts[j + 1] - pts[j - 1]).orthogonal().normalized()
@@ -261,19 +261,19 @@ class DecorBush extends DecorTree:
 		var rot := r.randf() * TAU
 		for i in n:
 			var d := Vector2.from_angle(rot + TAU * i / n)
-			var base := cen + d * rr * 0.78
+			var base := cen + d * rr * 0.88
 			var nn := d.orthogonal()
 			draw_colored_polygon(PackedVector2Array([base + nn * rr * 0.13, base + d * rr * 0.45, base - nn * rr * 0.13]), thorn)
 		# Masse en lobes, contour sombre puis volume.
 		var lobes: Array = []
 		for i in 5:
 			var a := rot + TAU * i / 5.0 + r.randf_range(-0.25, 0.25)
-			lobes.append([cen + Vector2.from_angle(a) * rr * 0.32, rr * r.randf_range(0.5, 0.6)])
+			lobes.append([cen + Vector2.from_angle(a) * rr * 0.34, rr * r.randf_range(0.58, 0.68)])
 		for l in lobes:
 			draw_circle(l[0], l[1] + 2.0, Color(Art.c("contour"), 0.6))
 		for l in lobes:
 			draw_circle(l[0], l[1], body.darkened(0.25))
-		Art.volume_circle(self, cen + Vector2(-0.06, -0.08) * rr, rr * 0.62, body, 0.55)
+		Art.volume_circle(self, cen + Vector2(-0.06, -0.08) * rr, rr * 0.7, body, 0.55)
 		# Quelques épines sur le dessus, et des baies une fois vivant.
 		for i in 4:
 			var a := r.randf() * TAU
@@ -317,7 +317,7 @@ class DecorLandmark extends DecorTree:
 			draw_colored_polygon(limb(Vector2(0, -6) * s, Vector2(cos(a) * 44.0, sin(a) * 12.0 - 2.0) * s, 6.0 * s, 1.0 * s), bark.darkened(0.1))
 		var top := Vector2(6, -118) * s
 		draw_colored_polygon(limb(Vector2.ZERO, top, 15.0 * s, 5.0 * s), bark)
-		draw_line(Vector2(-9, -6) * s, top + Vector2(-4, 8) * s, bark.lightened(0.14), 2.5 * s, true)
+		draw_line(Vector2(-9, -6) * s, top + Vector2(-4, 8) * s, bark.lightened(0.14), 2.5 * s)
 		# Une fente sombre dans le tronc (on le reconnaît de loin).
 		draw_colored_polygon(PackedVector2Array([Vector2(1, -30) * s, Vector2(5, -58) * s, Vector2(2, -72) * s, Vector2(-1, -55) * s]), Art.c("contour"))
 		# Grandes branches tordues.
@@ -360,8 +360,8 @@ class DecorLandmark extends DecorTree:
 			Art.volume(self, pts, stone, 0.5)
 			Art.outline(self, pts, Color(Art.c("contour"), 0.7), Art.TRAIT)
 		# Strates gravées.
-		draw_line(Vector2(-50, -30) * s, Vector2(-12, -38) * s, stone.darkened(0.3), Art.TRAIT_FIN, true)
-		draw_line(Vector2(16, -40) * s, Vector2(48, -32) * s, stone.darkened(0.3), Art.TRAIT_FIN, true)
+		draw_line(Vector2(-50, -30) * s, Vector2(-12, -38) * s, stone.darkened(0.3), Art.TRAIT_FIN)
+		draw_line(Vector2(16, -40) * s, Vector2(48, -32) * s, stone.darkened(0.3), Art.TRAIT_FIN)
 		if g <= 0.0:
 			return
 		# Mousse sur le dessus, et une pousse qui sort de la fente.
@@ -373,7 +373,7 @@ class DecorLandmark extends DecorTree:
 				draw_colored_polygon(Art.ellipse(spots[i] * s, 13.0 * s * k, 6.0 * s * k, 12), moss)
 		var k2 := bud(spots.size(), spots.size() + 2)
 		if k2 > 0.01:
-			draw_line(Vector2(3, 2) * s, Vector2(4, -26 * k2) * s, moss.darkened(0.2), 2.5 * s, true)
+			draw_line(Vector2(3, 2) * s, Vector2(4, -26 * k2) * s, moss.darkened(0.2), 2.5 * s)
 			draw_colored_polygon(leaf_shape(Vector2(4, -18 * k2) * s, 12.0 * s * k2, -2.4), moss.lightened(0.1))
 			draw_colored_polygon(leaf_shape(Vector2(4, -24 * k2) * s, 12.0 * s * k2, -0.7), moss.lightened(0.1))
 		var k3 := bud(spots.size() + 1, spots.size() + 2)
@@ -401,7 +401,7 @@ class DecorLandmark extends DecorTree:
 			# Chapiteau (sur la colonne entière) et anneaux gravés.
 			for k in 3:
 				var y: float = -hh * (0.28 + 0.3 * k)
-				draw_line(b + Vector2(-w + 2, y), b + Vector2(w - 2, y), stone.darkened(0.3), Art.TRAIT_FIN, true)
+				draw_line(b + Vector2(-w + 2, y), b + Vector2(w - 2, y), stone.darkened(0.3), Art.TRAIT_FIN)
 		var cap := PackedVector2Array([Vector2(-58, -92), Vector2(-22, -92), Vector2(-24, -100), Vector2(-56, -100)])
 		for i in cap.size():
 			cap[i] *= s

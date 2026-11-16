@@ -76,8 +76,8 @@ static func palette() -> Dictionary:
 	var rouille := mort.lerp(Art.ec("cendre", "sombre"), 0.42)
 	return {
 		# Terre morte : deux tons proches (le sol bouge sans faire de bruit).
-		"dead_dark": mort.darkened(0.2),
-		"dead_light": mort.lightened(0.04),
+		"dead_dark": mort.darkened(0.14),
+		"dead_light": mort.lightened(0.02),
 		"crack_col": Art.c("decor").darkened(0.35),
 		"pebble_col": mort.lightened(0.16),
 		# Roncier : rouille tant que le Cœur vit ; apaisé (purifié), une terre brune et calme.
