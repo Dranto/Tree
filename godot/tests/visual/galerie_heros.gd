@@ -16,6 +16,8 @@ const PHASES := ["début", "coup", "fin"]
 
 var view := Vector2(2560, 1440)
 var page := "heros"
+## Page des compétences : les quatre premières (1) ou les quatre suivantes (2).
+var part := 1
 var t := 0.0
 var font: Font
 
@@ -26,8 +28,13 @@ func _ready() -> void:
 		_add_projectiles()
 
 
+## Compétences de la page (quatre par page, pour que chaque zone tienne dans sa case).
+func _skills() -> Array:
+	return SKILLS.slice((part - 1) * 4, part * 4)
+
+
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, view), Art.c("panneau").darkened(0.3))
+	draw_rect(Rect2(Vector2.ZERO, view), Color(Art.c("panneau").darkened(0.3), 1.0))
 	match page:
 		"heros":
 			_page_heros()
@@ -49,27 +56,30 @@ const POSES := [
 
 
 func _page_heros() -> void:
-	_text(Vector2(40, 44), "Porte-Graine · poses et états (taille ×3)", 24, Art.c("texte"), true)
+	_text(Vector2(40, 48), "Porte-Graine · poses et états (taille ×4)", 30, Art.c("texte"), true)
 	var cols := 6
 	var cw := (view.x - 80) / cols
-	var ch := 470.0
+	var ch := 520.0
 	for i in POSES.size():
 		var r := Rect2(40 + (i % cols) * cw, 70 + (i / cols) * (ch + 14), cw - 12, ch)
 		_ground(r, i, POSES[i][1] == "chez_soi")
-		_text_c(Vector2(r.get_center().x, r.position.y + 30), POSES[i][0], 17, Art.c("texte"), cw, true)
-		_pose(POSES[i][1], r.get_center() + Vector2(0, 20), 3.0, t)
+		_text_c(Vector2(r.get_center().x, r.position.y + 36), POSES[i][0], 22, Art.c("texte"), cw, true)
+		_pose(POSES[i][1], r.get_center() + Vector2(0, 20), 4.0, t)
 	# À la taille du jeu : les huit orientations, pour vérifier la lecture à 40 px.
 	var y := 70 + 2 * (ch + 14) + 6
 	var r := Rect2(40, y, view.x - 80, view.y - y - 30)
 	_ground(r, 40)
-	_text(Vector2(56, y + 30), "À la taille du jeu (≈ 40 px) : la capuche et la lanterne donnent le sens", 17, Art.c("texte"), true)
+	_text(Vector2(56, y + 36), "À la taille du jeu (écran 2560 × 1440) : la capuche et la lanterne donnent le sens", 22, Art.c("texte"), true)
 	for i in 8:
-		var c := Vector2(160 + i * 150, y + 130)
-		HeroArt.draw(self, c, 14.0, i * TAU / 8.0, {"t": t + i * 0.3})
+		var c := Vector2(150 + i * 150, y + 150)
+		HeroArt.base = Transform2D(0.0, Vector2(1.6, 1.6), 0.0, c)
+		HeroArt.draw(self, Vector2.ZERO, 14.0, i * TAU / 8.0, {"t": t + i * 0.3})
+		HeroArt.base = Transform2D.IDENTITY
+		draw_set_transform_matrix(Transform2D.IDENTITY)
 	var states := [["marche", 0.0], ["tir", 0.0], ["lancer", 0.0], ["touche", 0.0], ["vie_basse", 0.0], ["invuln", 0.0], ["chez_soi", 0.0]]
 	for i in states.size():
-		var c := Vector2(1420 + i * 150, y + 130)
-		_pose(states[i][0], c, 1.0, t)
+		var c := Vector2(1400 + i * 150, y + 150)
+		_pose(states[i][0], c, 1.6, t)
 
 
 ## Dessine une pose du héros centrée en c, à l'échelle k.
@@ -154,30 +164,34 @@ const PHASE_K := {
 	"racines": [0.06, 0.16, 0.95], "volee": [0.3, 0.5, 0.4], "saignee": [0.12, 0.38, 0.72],
 	"cloud": [0.03, 0.4, 0.95], "bloom": [0.12, 0.42, 0.8],
 }
-## Échelle des cases : les zones des compétences tiennent dans une case.
-const CELL_SCALE := 0.62
+## Échelle de chaque ligne : la zone de la compétence tient dans sa case.
+const CELL_SCALE := {
+	"graine": 2.0, "nova": 0.82, "fouet": 1.0, "racines": 1.3,
+	"volee": 1.6, "saignee": 0.68, "cloud": 1.25, "bloom": 0.95,
+}
 
 
 func _cell_rect(row: int, col: int) -> Rect2:
-	var top := 70.0
-	var rh := (view.y - top - 20) / SKILLS.size()
+	var top := 100.0
+	var rh := (view.y - top - 20) / 4.0
 	var left := 300.0
 	var cw := (view.x - left - 30) / 3.0
 	return Rect2(left + col * cw, top + row * rh, cw - 10, rh - 8)
 
 
 func _page_competences() -> void:
-	_text(Vector2(40, 44), "Signatures des attaques · début, coup, fin (couleur et motif de l'élément)", 24, Art.c("texte"), true)
+	_text(Vector2(40, 44), "Signatures des attaques · début, coup, fin (couleur et motif de l'élément)", 30, Art.c("texte"), true)
 	for j in 3:
 		var r := _cell_rect(0, j)
-		_text_c(Vector2(r.get_center().x, 52), PHASES[j], 18, Art.c("texte_doux"), r.size.x, true)
-	for i in SKILLS.size():
-		var id: String = SKILLS[i]
+		_text_c(Vector2(r.get_center().x, 88), PHASES[j], 24, Art.c("texte_doux"), r.size.x, true)
+	var ids := _skills()
+	for i in ids.size():
+		var id: String = ids[i]
 		var r0 := _cell_rect(i, 0)
-		Art.icon_badge(self, id, Rect2(40, r0.position.y + r0.size.y / 2.0 - 40, 80, 80))
-		_text(Vector2(136, r0.position.y + r0.size.y / 2.0 - 6), Art.NOM_ICONE[id], 17, Art.c("texte"), true)
+		Art.icon_badge(self, id, Rect2(30, r0.position.y + r0.size.y / 2.0 - 70, 96, 96))
+		_text(Vector2(30, r0.position.y + r0.size.y / 2.0 + 54), Art.NOM_ICONE[id], 22, Art.c("texte"), true)
 		var elem: String = Art.ELEMENT_DE_COMPETENCE[id]
-		_text(Vector2(136, r0.position.y + r0.size.y / 2.0 + 18), Art.ELEMENTS[elem]["nom"], 14, Art.ec(elem).lightened(0.2))
+		_text(Vector2(30, r0.position.y + r0.size.y / 2.0 + 80), Art.ELEMENTS[elem]["nom"], 18, Art.ec(elem).lightened(0.2))
 		for j in 3:
 			var r := _cell_rect(i, j)
 			_ground(r, i * 3 + j)
@@ -187,7 +201,7 @@ func _page_competences() -> void:
 
 ## Une case : le héros (à gauche) et la signature de la compétence à l'instant k de sa durée.
 func _skill_cell(id: String, r: Rect2, k: float, phase: int) -> void:
-	var s := CELL_SCALE
+	var s: float = CELL_SCALE[id]
 	var hero := r.position + Vector2(r.size.x * 0.3, r.size.y * 0.55)
 	var target := r.position + Vector2(r.size.x * 0.72, r.size.y * 0.55)
 	var xf := Transform2D(0.0, Vector2(s, s), 0.0, hero)
@@ -200,7 +214,7 @@ func _skill_cell(id: String, r: Rect2, k: float, phase: int) -> void:
 	var dur: float = e["dur"]
 	e["t"] = k * dur
 	SkillFx.draw_effect(self, e, true)
-	for m in marks:
+	for m: Vector2 in marks:
 		_fletri(m)
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 	HeroArt.base = xf
@@ -281,19 +295,18 @@ func _fletri(p: Vector2) -> void:
 
 ## Projectiles réels (projectile.gd) dans les cases de la graine et de la volée.
 func _add_projectiles() -> void:
-	for j in 3:
-		var phase_k: float = PHASE_K["graine"][j]
-		if j == 1:
-			_projectile(_cell_rect(0, j), Vector2(130, 0), false, 0.0)
+	if part == 1:
+		_projectile(_cell_rect(0, 1), Vector2(130, 0), false, 0.0)
+		return
 	for j in 2:
-		var r := _cell_rect(4, j)
+		var r := _cell_rect(0, j)
 		for i in 5:
 			var a := (i / 4.0 - 0.5) * 0.5
 			_projectile(r, Vector2.from_angle(a) * (60.0 + 90.0 * j), true, a)
 
 
 func _projectile(r: Rect2, local: Vector2, thorn: bool, a: float) -> void:
-	var s := CELL_SCALE
+	var s: float = CELL_SCALE["graine" if not thorn else "volee"]
 	var hero := r.position + Vector2(r.size.x * 0.3, r.size.y * 0.55)
 	var pr = ProjectileScript.new()
 	pr.thorn = thorn
@@ -301,8 +314,8 @@ func _projectile(r: Rect2, local: Vector2, thorn: bool, a: float) -> void:
 	pr.age = 1.0
 	pr.position = hero + local * s
 	pr.scale = Vector2(s, s) * 1.2
-	pr.set_physics_process(false)
 	add_child(pr)
+	pr.set_physics_process(false)
 
 
 # --- Page animée ---
@@ -324,9 +337,10 @@ func _page_anim() -> void:
 
 
 func _anim_cell(id: String, r: Rect2, u: float) -> void:
-	var s := 0.85
-	var hero := r.position + Vector2(r.size.x * 0.32, r.size.y * 0.56)
-	var target := r.position + Vector2(r.size.x * 0.72, r.size.y * 0.56)
+	var s: float = CELL_SCALE[id] * 1.35
+	var centered: bool = id in ["nova", "fouet", "saignee", "bloom"]
+	var hero := r.position + Vector2(r.size.x * (0.42 if centered else 0.2), r.size.y * 0.56)
+	var target := r.position + Vector2(r.size.x * 0.66, r.size.y * 0.56)
 	var xf := Transform2D(0.0, Vector2(s, s), 0.0, hero)
 	var loc_target := xf.affine_inverse() * target
 	var e := _effect(id, loc_target, 0.0, r.size.x / s)
@@ -361,7 +375,8 @@ func _anim_cell(id: String, r: Rect2, u: float) -> void:
 			if tt >= dur * 0.75 and tt < dur * 0.75 + 0.3:
 				effects.append({"id": "epine_impact", "t": tt - dur * 0.75, "dur": 0.3, "pos": loc_target, "dir": Vector2.RIGHT})
 		_:
-			var tt := u * PERIODE
+			# Les compétences courtes reviennent deux fois par boucle.
+			var tt := fposmod(u * PERIODE, PERIODE / 2.0)
 			var dur: float = e["dur"]
 			if id == "cloud" or id == "racines":
 				# Effets longs : on montre l'apparition, la tenue, et la fin, compressées dans la boucle.
@@ -374,7 +389,7 @@ func _anim_cell(id: String, r: Rect2, u: float) -> void:
 	draw_set_transform_matrix(xf)
 	for f in effects:
 		SkillFx.draw_effect(self, f, true)
-	for m in _targets(id, loc_target):
+	for m: Vector2 in _targets(id, loc_target):
 		_fletri(m)
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 	HeroArt.base = xf

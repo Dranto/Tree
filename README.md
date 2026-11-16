@@ -67,6 +67,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --headless -s res://tests/planner_test.gd` : teste les outils de l'arbre (plus court chemin, simulation sans effet de bord, annulation, recherche, plan sauvegardé et rechargé).
 - `tools/godot.sh --xvfb -s res://tests/planner_captures.gd` : enregistre une capture de chaque outil de l'arbre dans `godot/tests/visual/out/`.
 - `tools/godot.sh --headless -s res://tests/node_types_test.gd` : teste les grappes écrites à la main et les types de nœuds (compétence, maîtrise, mutation, nœud flétri, greffe, exclusion, grappe complète, résonance, sauvegarde et migration de la version 1).
+- `TEST_ONLY=heros tools/visual-tests.sh` : galerie du héros (chaque pose et chaque état) et des attaques (la graine et les sept compétences, en trois temps) ; `tools/heros-anim.sh` en fait un GIF animé.
 - `tools/godot.sh --headless -s res://tests/skills_test.gd` : teste les compétences de Ronce, le saignement, l'enracinement, les nouveaux évènements et la barre de compétences.
 - `tools/godot.sh --xvfb -- --autotest --skills=all` : donne toutes les compétences sans passer par l'arbre (`--skills=fouet,racines,volee,saignee` pour en choisir), pour les essayer ; marche aussi sans `--autotest`.
 - `tools/godot.sh --headless -s res://tests/flow_test.gd` : teste le parcours des menus (Nouvelle partie, Retour au titre qui sauvegarde, Continuer qui reprend). Remplace la sauvegarde par défaut.

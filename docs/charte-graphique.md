@@ -114,13 +114,23 @@ La planche « en détail » s'anime en boucle de 2,4 s (respiration, cape, brais
 `Art.icon(ci, id, rect, couleur)` dessine une icône. Ce sont des silhouettes pleines, lisibles à 20 px, avec au plus un détail clair. **La même icône sert partout** : barre de compétences, arbre, infobulles, journal, ramassage. Une icône prend par défaut la couleur de son élément ou de son rôle. À partir de 20 px environ, elle prend du relief (une tranche sombre sous la forme). `Art.icon_badge(ci, id, rect)` la pose dans un médaillon (disque sombre, anneau à sa couleur, reflet) : c'est la forme à utiliser dans la barre de compétences, les infobulles et le journal.
 
 - Éléments : épine, saignement, racine, poison, cendre, sève.
-- Compétences : `nova`, `fouet`, `racines`, `volee`, `saignee`, `cloud`, `bloom`. Ce sont des premières versions : la tâche C les affine.
+- Arme et compétences : `graine` (l'arme de base), `nova`, `fouet`, `racines`, `volee`, `saignee`, `cloud`, `bloom`. Chacune a une forme propre à 20 px (couronne hérissée, liane en S, trois racines, éventail d'épines, goutte et gouttelettes qui convergent, volutes et bulles, fleur à cinq pétales) et des détails clairs qui n'apparaissent qu'en grand.
 - Statistiques : dégâts, vitesse d'attaque, projectiles, critique, vie, régénération, armure, déplacement, esquive, zones, collecte, compétence.
 - Monde : sanctuaire, autel, Cœur de flétrissure, arène, secret, sève perdue, essence de vie, greffe.
 
 Le poison se représente par des bulles, et non plus par une goutte : la goutte est réservée au saignement. L'arbre devra suivre cette règle (tâche F).
 
-## 9. Vérifier
+## 9. Le héros et ses attaques
+
+Le Porte-Graine est dessiné par `godot/scripts/hero_art.gd` (classe `HeroArt`), ses attaques par `godot/scripts/skill_fx.gd` (classe `SkillFx`). Ce sont des dessins purs : ils ne changent jamais le jeu.
+
+- **Poses** : repos qui respire, marche (rebond, pieds-racines qui alternent, cape qui traîne derrière le mouvement), esquive (corps étiré, silhouettes fantômes, traînée de feuilles), tir (recul et éclat de la lanterne), lancer (la lanterne s'embrase à la couleur de l'élément lancé, rayons en éventail), coup reçu (éclair, anneau rouge, yeux plissés, deux feuilles arrachées), mort (il se fane puis part en feuilles mortes), renaissance (une pousse sort de terre au sanctuaire, puis il se déploie).
+- **États visibles sur lui** : vie basse (battement rouge en deux temps, lanterne qui vacille), invulnérable (anneau de feuilles de sève qui tourne ; pas pour le court répit après un coup), chez soi (tapis de mousse et lueurs qui montent). La barre de vie sous ses pieds n'apparaît que s'il est blessé.
+- **Signatures** : chaque attaque a ses trois temps. Graine : collerette de feuilles au départ, traînée, corolle de sève à l'impact. Couronne d'épines : la couronne se dresse, file au bord de la zone, les épines se plantent. Fouet : la liane recule, claque en arc (secteur balayé visible), se rétracte en projetant du sang. Racines : le sol se fend en cercle, les racines jaillissent et enserrent, ondulent tant qu'elles tiennent, puis rentrent sous terre. Volée : éventail d'os et traits de visée, épines d'os tachées de sang, éclats à l'impact. Saignée : l'anneau se resserre, les saignements éclatent en couronnes de gouttes, le sang revient au héros. Nuage : volutes qui gonflent, tournent, crachent des bulles, bord en pointillés. Floraison : une fleur s'ouvre, l'onde de vie fait pousser l'herbe, les pétales s'envolent.
+- La partie au sol (fissures, taches, secteur balayé) est dessinée sous les acteurs, le reste au-dessus des projectiles.
+- Galerie : `TEST_ONLY=heros tools/visual-tests.sh` (captures `galerie_heros`, `galerie_competences_1` et `_2`) ; `tools/heros-anim.sh` en fait un GIF animé.
+
+## 10. Vérifier
 
 - `tools/godot.sh --headless -s res://tests/art_test.gd` vérifie :
   - la palette et la hiérarchie de lecture ;

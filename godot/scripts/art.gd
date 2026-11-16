@@ -539,7 +539,7 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 				var k := i / 14.0
 				pts.append(P.call(-0.85 + 1.55 * k, 0.75 - 1.45 * k + 0.5 * sin(k * PI * 1.7)))
 			ci.draw_polyline(pts, col, lw * (1.5 if s < 10.0 else 1.8), true)
-			for i in [3, 6, 9, 12]:
+			for i: int in [3, 6, 9, 12]:
 				var d: Vector2 = (pts[i + 1] - pts[i]).normalized().orthogonal() * (1.0 if i % 6 == 0 else -1.0)
 				_thorn(ci, pts[i], d, s * 0.3, col)
 			_thorn(ci, pts[14], (pts[14] - pts[13]).normalized(), s * 0.32, col)
@@ -550,7 +550,7 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 		"racines":
 			var relief := col == sombre
 			# Trois racines noueuses jaillissent du sol et se courbent vers le centre.
-			for q in [Vector3(-0.55, 0.32, 0.55), Vector3(0.0, -0.95, 0.0), Vector3(0.55, 0.32, -0.55)]:
+			for q: Vector3 in [Vector3(-0.55, 0.32, 0.55), Vector3(0.0, -0.95, 0.0), Vector3(0.55, 0.32, -0.55)]:
 				var base: Vector2 = P.call(q.x, 0.85)
 				var tip: Vector2 = P.call(q.x + q.z * 0.6, -0.5 + q.y * (0.4 if q.x == 0.0 else 0.0) + (0.0 if q.x == 0.0 else -0.25))
 				var mid := base.lerp(tip, 0.5) + Vector2(-q.z * s * 0.25, 0)
@@ -562,7 +562,7 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 					ci.draw_circle(tip, maxf(w * 0.28, 1.0), Art.ec("racine", "clair"))
 			ci.draw_line(P.call(-1.0, 0.88), P.call(1.0, 0.88), sombre, lw * 1.2, true)
 			if not relief:
-				for x in [-0.8, -0.25, 0.3, 0.8]:
+				for x: float in [-0.8, -0.25, 0.3, 0.8]:
 					ci.draw_circle(P.call(x, 0.98), lw * 0.6, sombre.lightened(0.2))
 		"volee":
 			var relief := col == sombre
@@ -596,7 +596,7 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 		"cloud":
 			var relief := col == sombre
 			# Volutes de spores, et deux bulles qui montent.
-			for q in [Vector3(-0.42, 0.3, 0.4), Vector3(0.08, -0.05, 0.5), Vector3(0.55, 0.32, 0.36), Vector3(0.0, 0.48, 0.38)]:
+			for q: Vector3 in [Vector3(-0.42, 0.3, 0.4), Vector3(0.08, -0.05, 0.5), Vector3(0.55, 0.32, 0.36), Vector3(0.0, 0.48, 0.38)]:
 				ci.draw_circle(P.call(q.x, q.y), s * q.z, col)
 			ci.draw_arc(P.call(-0.55, -0.62), s * 0.16, 0.0, TAU, 10, (sombre if relief else clair), lw * 0.8, true)
 			ci.draw_arc(P.call(0.55, -0.72), s * 0.11, 0.0, TAU, 8, (sombre if relief else clair), lw * 0.7, true)

@@ -42,6 +42,7 @@ static func _g(st: Dictionary, k: String):
 static func draw(ci: CanvasItem, p: Vector2, r: float, facing: float, st := {}) -> void:
 	var t: float = _g(st, "t")
 	var appear: float = clampf(_g(st, "appear"), 0.0, 1.0)
+	ci.draw_set_transform_matrix(base)
 	if appear < 1.0:
 		_draw_rebirth(ci, p, r, facing, st, appear)
 		return
@@ -62,20 +63,27 @@ static func draw(ci: CanvasItem, p: Vector2, r: float, facing: float, st := {}) 
 		sq *= Vector2(1.0 + 0.25 * dash, 1.0 - 0.18 * dash)
 	if wither > 0.0:
 		sq *= Vector2(1.0 + 0.25 * wither, 1.0 - 0.45 * Anim.ease_in(wither))
+	# Halo de sève au sol : on retrouve le héros d'un coup d'œil dans la mêlée (il est vivant).
+	if wither == 0.0:
+		var hb := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
+		ci.draw_circle(p, r * 2.5, Color(Art.ec("seve"), 0.05 + 0.02 * hb))
+		ci.draw_circle(p, r * 1.7, Color(Art.ec("seve"), 0.06))
 	# Ombre au sol : ne monte pas avec le rebond.
 	if wither < 1.0:
 		Art.shadow(ci, p, r * 1.1 * (1.0 - 0.15 * absf(bob) / r))
 	if _g(st, "home") and wither == 0.0:
 		_draw_home(ci, p, r, t)
-	# Pieds-racines : deux petits ovales qui alternent quand il marche.
+	# Pieds-racines : deux petits ovales sous le corps, qui avancent tour à tour quand il marche.
 	var mv: Vector2 = _g(st, "move")
 	var stride := d if mv.length() < 0.1 else mv.normalized()
-	var foot_col := Art.c("accent").darkened(0.55).lerp(Art.c("decor"), wither)
-	for sgn in [-1, 1]:
-		var fwd := sin(step + (0.0 if sgn < 0 else PI)) * r * 0.42 * walk
-		var fp: Vector2 = p + stride.orthogonal() * sgn * r * 0.5 + stride * fwd + Vector2(0, r * 0.62)
-		ci.draw_colored_polygon(Art.ellipse(fp, r * 0.3, r * 0.2, 10), foot_col)
-		ci.draw_arc(fp, r * 0.25, PI * 1.1, PI * 1.9, 6, foot_col.lightened(0.25), maxf(r * 0.05, 0.8), true)
+	var foot_col := Art.ec("racine").lerp(Art.c("decor"), wither)
+	for sgn: int in [-1, 1]:
+		var fwd := sin(step + (0.0 if sgn < 0 else PI)) * r * 0.4 * walk
+		var fp: Vector2 = p + Vector2(sgn * r * 0.5, r * 0.92) + stride * fwd - Vector2(0, absf(fwd) * 0.3)
+		var foot := Art.ellipse(fp, r * 0.3, r * 0.22, 12)
+		ci.draw_colored_polygon(foot, foot_col)
+		ci.draw_arc(fp + Vector2(0, -r * 0.03), r * 0.2, PI * 1.15, PI * 1.85, 6, foot_col.lightened(0.3), maxf(r * 0.05, 0.8), true)
+		Art.outline(ci, foot, Art.c("contour"), maxf(r * 0.05, 1.0))
 	var body_p := p + Vector2(0, bob)
 	# Tout le haut du corps est écrasé ou étiré autour de son centre, dans l'axe de la visée
 	# quand il esquive, à l'écran sinon (la lumière de la charte reste en haut à gauche).
@@ -111,7 +119,7 @@ static func _draw_cape(ci: CanvasItem, p: Vector2, r: float, facing: float, t: f
 	if mv.length() > 0.1 and walk > 0.0:
 		# La cape traîne derrière le mouvement, pas derrière le regard.
 		back = lerp_angle(back, mv.angle() + PI, 0.6 * walk)
-	for side in [-1, 0, 1]:
+	for side: int in [-1, 0, 1]:
 		var sway := 0.09 * sin(t * TAU / Anim.DUREE["respiration"] * 2.0 + side * 1.1) + 0.12 * walk * sin(t * 9.0 + side)
 		var a: float = back + side * (0.62 + 0.12 * walk) + sway
 		var droop := wither * 0.6
@@ -121,7 +129,7 @@ static func _draw_cape(ci: CanvasItem, p: Vector2, r: float, facing: float, t: f
 		ci.draw_line(c - Vector2.from_angle(a) * r * 0.5, c + Vector2.from_angle(a) * r * 0.55, leaf_col.darkened(0.45), maxf(r * 0.05, 1.0), true)
 		# Deux nervures secondaires sur la feuille du milieu.
 		if side == 0 and r >= 12.0:
-			for k in [-0.15, 0.2]:
+			for k: float in [-0.15, 0.2]:
 				var q := c + Vector2.from_angle(a) * r * k
 				ci.draw_line(q, q + Vector2.from_angle(a + 0.8) * r * 0.25, leaf_col.darkened(0.4), maxf(r * 0.03, 0.7), true)
 				ci.draw_line(q, q + Vector2.from_angle(a - 0.8) * r * 0.25, leaf_col.darkened(0.4), maxf(r * 0.03, 0.7), true)
@@ -163,7 +171,7 @@ static func _draw_hood(ci: CanvasItem, p: Vector2, r: float, facing: float, with
 static func _draw_face(ci: CanvasItem, p: Vector2, r: float, facing: float, hurt: float, wither: float) -> void:
 	var d := Vector2.from_angle(facing)
 	var n := d.orthogonal()
-	for sgn in [-1, 1]:
+	for sgn: int in [-1, 1]:
 		var e := p + d * r * 0.5 + n * sgn * r * 0.26
 		if hurt > 0.3 or wither > 0.0:
 			# Yeux plissés : deux petits traits.
@@ -242,7 +250,7 @@ static func _draw_rebirth(ci: CanvasItem, p: Vector2, r: float, facing: float, s
 		var g := Anim.ease_out(k / 0.45)
 		var top := p + Vector2(0, r * 0.5 - r * 1.1 * g)
 		ci.draw_line(p + Vector2(0, r * 0.5), top, Art.c("accent").darkened(0.2), maxf(r * 0.12, 1.5), true)
-		for sgn in [-1, 1]:
+		for sgn: int in [-1, 1]:
 			ci.draw_colored_polygon(leaf_pts(top + Vector2(sgn * r * 0.3 * g, 0), r * 0.35 * g, PI / 2.0 + PI / 2.0 * sgn - sgn * 0.5 * g), Art.c("accent"))
 		ci.draw_circle(top, r * 0.16, Art.ec("seve", "clair"))
 		return

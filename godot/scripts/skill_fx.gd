@@ -124,7 +124,7 @@ static func _graine_depart(ci: CanvasItem, e: Dictionary, k: float) -> void:
 	var d: Vector2 = e["dir"]
 	var a := 1.0 - k
 	ci.draw_circle(p, 10.0 * Anim.ease_out(k) + 3.0, Color(Art.ec("seve"), 0.35 * a))
-	for sgn in [-1, 1]:
+	for sgn: int in [-1, 1]:
 		var la := d.angle() + sgn * (0.7 + 0.5 * k)
 		ci.draw_colored_polygon(HeroArt.leaf_pts(p + Vector2.from_angle(la) * 7.0 * (0.5 + k), 4.0, la), Color(Art.ec("seve", "clair"), a))
 
@@ -349,12 +349,12 @@ static func _racines(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		g *= 1.0 - Anim.ease_in(end_k)
 		if g <= 0.01:
 			continue
-		var h := rng.randf_range(26.0, 44.0) * g
+		var h := rng.randf_range(36.0, 58.0) * g
 		# Chaque racine se courbe vers le centre (elle enserre), et ondule pendant qu'elle tient.
 		var lean := (p - base).normalized() * h * 0.45 + Vector2(sin(t * 3.0 + i) * 3.0 * hold_k, 0)
 		var tip := base + Vector2(0, -h) + lean
 		var mid := base + Vector2(0, -h * 0.55) + lean * 0.3 + Vector2(rng.randf_range(-6, 6), 0)
-		var w := rng.randf_range(5.0, 8.0) * minf(g, 1.0)
+		var w := rng.randf_range(7.0, 10.0) * minf(g, 1.0)
 		var side := (tip - base).normalized().orthogonal()
 		var poly := PackedVector2Array([base + side * w, mid + side * w * 0.6, tip, mid - side * w * 0.6, base - side * w])
 		ci.draw_colored_polygon(poly, col)
@@ -418,7 +418,7 @@ static func _saignee(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 			var la := i * TAU / 16.0 + c * 0.8
 			Art._drop(ci, p + Vector2.from_angle(la) * lerpf(r, 24.0, c), 3.2, Color(clair, 0.9))
 	# Éclatement sur chaque Flétri saignant, puis filets de sang vers le héros.
-	for q in targets:
+	for q: Vector2 in targets:
 		var bk := clampf((k - close * 0.6) / 0.3, 0.0, 1.0)
 		if bk > 0.0 and bk < 1.0:
 			var b := Anim.ease_out(bk)
@@ -506,9 +506,11 @@ static func _bloom(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 		for i in 16:
 			var d := Vector2.from_angle(i * TAU / 16.0 + 0.2)
 			var q := p + d * r * g * (0.6 + 0.3 * fposmod(i * 0.618, 1.0))
-			var h := 9.0 * g * a
-			for j in 3:
-				ci.draw_line(q, q + Vector2((j - 1) * 3.0, -h), Art.c("decor_vivant").lightened(0.3), 1.5, true)
+			var h := 5.0 * g
+			var gc := Color(Art.c("decor_vivant").lightened(0.35), a)
+			ci.draw_line(q, q + Vector2(0, -h * 1.4), gc, 1.5, true)
+			for sgn: int in [-1, 1]:
+				ci.draw_colored_polygon(HeroArt.leaf_pts(q + Vector2(sgn * h * 0.6, -h), h * 0.6, -PI / 2.0 + sgn * 0.9), gc)
 		return
 	# La fleur : huit pétales qui s'ouvrent, puis se détachent et s'envolent.
 	var petals := 8

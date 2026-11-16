@@ -20,9 +20,10 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "heros"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
+const HerosScript = preload("res://tests/visual/galerie_heros.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Content = preload("res://scripts/content.gd")
 const TitleScene = preload("res://scenes/title.tscn")
@@ -90,6 +91,8 @@ func _ready() -> void:
 			await _scenario_quetes()
 		"charte":
 			await _scenario_charte()
+		"heros":
+			await _scenario_heros()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -176,6 +179,52 @@ func _scenario_charte() -> void:
 			var img := get_viewport().get_texture().get_image()
 			img.convert(Image.FORMAT_RGB8)
 			img.save_png("%s/%03d.png" % [dir, i])
+
+
+## Héros et attaques : poses du Porte-Graine, puis la graine et chaque compétence en trois temps.
+## -- --heros-anim : enregistre aussi la page animée (20 images/s) dans out/heros_anim/.
+func _scenario_heros() -> void:
+	main.set_process(false)
+	for pg in ["heros", "competences_1", "competences_2"]:
+		var layer := _pixel_layer()
+		var sheet = HerosScript.new()
+		sheet.view = Vector2(DisplayServer.window_get_size())
+		sheet.page = pg.get_slice("_", 0)
+		if pg.contains("_"):
+			sheet.part = int(pg.get_slice("_", 1))
+		sheet.t = 0.6
+		layer.add_child(sheet)
+		add_child(layer)
+		await _frames(3)
+		await _shot("galerie_" + pg)
+		layer.queue_free()
+		await _frames(1)
+	if "--heros-anim" in OS.get_cmdline_user_args():
+		var layer := _pixel_layer()
+		var sheet = HerosScript.new()
+		sheet.view = Vector2(DisplayServer.window_get_size())
+		sheet.page = "anim"
+		layer.add_child(sheet)
+		add_child(layer)
+		var dir := ProjectSettings.globalize_path(OUT_DIR + "/heros_anim")
+		DirAccess.make_dir_recursive_absolute(dir)
+		var n := int(sheet.PERIODE * 20.0)
+		for i in n:
+			sheet.t = i * sheet.PERIODE / n
+			sheet.queue_redraw()
+			await RenderingServer.frame_post_draw
+			var img := get_viewport().get_texture().get_image()
+			img.convert(Image.FORMAT_RGB8)
+			img.save_png("%s/%03d.png" % [dir, i])
+
+
+## Calque dessiné en pixels de la fenêtre (la galerie du héros se met en page en vrais pixels).
+func _pixel_layer() -> CanvasLayer:
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	var k: float = get_viewport().get_visible_rect().size.x / float(DisplayServer.window_get_size().x)
+	layer.scale = Vector2(k, k)
+	return layer
 
 
 ## Galerie : ennemis et effets, puis les six états d'un nœud de l'arbre sur une planche.
