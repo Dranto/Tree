@@ -390,9 +390,9 @@ func _enter_phase(n: int) -> void:
 	gap = 0.3
 	main.fx.ring(anchor, radius, 420.0, 0.7, Color(1.0, 0.45, 0.3, 0.9), 8.0)
 	if n == 2:
-		main.hud.banner("La Mère-Ronce s'ouvre : ses bourgeons éclosent.")
+		main.hud.banner("La Mère-Ronce s'ouvre : ses bourgeons éclosent.", "combat")
 	else:
-		main.hud.banner("La Mère-Ronce enrage : les ronces se resserrent !")
+		main.hud.banner("La Mère-Ronce enrage : les ronces se resserrent !", "combat")
 		arena.start_shrink()
 
 
@@ -470,6 +470,20 @@ func apply_status(status: String, value: float, duration: float) -> void:
 			main.fx.text(position + Vector2(0, -radius * 2.0), "Entravée", Color("9af07a"), 18, 0.8)
 		_:
 			statuses[status] = {"value": value, "time": duration, "stacks": 1}
+
+
+## Saignée : fait éclater le saignement d'un coup (même contrat que enemy.gd). Renvoie les dégâts
+## que le saignement aurait encore faits, multipliés par « mult », et retire l'état.
+func burst_bleed(mult: float) -> float:
+	var s: Dictionary = statuses.get("saignement", {})
+	if s.is_empty():
+		return 0.0
+	statuses.erase("saignement")
+	return float(s["value"]) * int(s["stacks"]) * maxf(0.0, float(s["time"])) * mult
+
+
+func is_bleeding() -> bool:
+	return statuses.has("saignement")
 
 
 func _tick_statuses(delta: float) -> void:

@@ -84,6 +84,10 @@ func _run() -> void:
 	obj.check()
 	check(obj.is_done("sanctuaire"), "un sanctuaire de Ronce ravivé accomplit l'objectif")
 	check(obj.current().get("id", "") == "autel", "l'autel suit")
+	game.flags["autel_ronce_a_vu"] = true
+	game.flags["secret_ronce_vu"] = true
+	obj.check()
+	check(not obj.is_done("autel") and not obj.is_done("secret"), "apercevoir un autel ou le secret n'accomplit rien")
 	game.flags["autel_ronce_a"] = true
 	obj.check()
 	check(obj.is_done("autel") and not obj.is_done("autels"), "un autel accomplit l'objectif, pas « tous les autels »")
@@ -103,6 +107,24 @@ func _run() -> void:
 	check(game.allocated.has(key_id) and obj.is_done("noeud_cle"), "apprendre un nœud clé de Ronce accomplit l'objectif")
 	check(obj.current().get("id", "") == "coeur", "le Cœur suit")
 	check(obj.target_pos(obj.current()) == main.heart.center, "la flèche vise le Cœur")
+
+	print("Étape sautée")
+	var flags_saved: Dictionary = game.flags.duplicate(true)
+	game.flags.erase("obj_autel")
+	game.flags.erase("autel_ronce_a")
+	game.flags["ronce_coeur_purifie"] = true
+	obj.check()
+	check(obj.current().get("id", "") == "boss", "Cœur purifié avant l'autel : l'objectif en cours est le boss, pas l'autel")
+	check(obj.skipped(obj.get_def("autel")) and not obj.skipped(obj.get_def("boss")), "l'autel est une étape passée")
+	game.flags.erase("ronce_coeur_purifie")
+	game.flags.erase("obj_coeur")
+	game.flags.erase("obj_noeud_cle")
+	check(obj.current().get("id", "") == "autel" and not obj.skipped(obj.get_def("autel")), "sans grande étape franchie, l'ordre du début reste libre : l'autel redevient l'objectif")
+	game.flags["ronce_coeur_purifie"] = true
+	obj.check()
+	main.quest_ui.tracker.refresh()
+	check(main.quest_ui.tracker._title.text == obj.get_def("boss")["title"] and main.quest_ui.tracker._head.text.find("6 / 6") >= 0, "le cadre d'objectif montre le boss, 6 / 6")
+	game.flags = flags_saved
 
 	print("Cœur et boss")
 	game.flags["ronce_coeur_purifie"] = true

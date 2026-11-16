@@ -33,19 +33,19 @@
       "target": {"type": "none"}
     },
     {
-      "id": "coeur", "main": true,
+      "id": "coeur", "main": true, "milestone": true,
       "title": "Purifier le Cœur de flétrissure",
       "text": "Au fond du roncier, tiens la zone du Cœur pendant que les vagues de Flétris déferlent.",
       "condition": {"type": "flag", "flag": "ronce_coeur_purifie"},
       "target": {"type": "heart"}
     },
     {
-      "id": "boss", "main": true,
+      "id": "boss", "main": true, "milestone": true,
       "title": "Vaincre la Mère-Ronce",
       "text": "L'arène s'est ouverte au-delà du Cœur. Entre, et libère le roncier.",
       "condition": {"type": "flag", "flag": "ronce_boss_vaincu"},
       "target": {"type": "arena"},
-      "reward": {"text": "3 points d'arbre et la fin de la tranche"}
+      "reward": {"text": "2 points d'arbre, une greffe et la fin de la tranche"}
     },
     {
       "id": "elites", "main": false,

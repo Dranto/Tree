@@ -62,7 +62,7 @@ func capture(main) -> Dictionary:
 	if main != null:
 		world = {
 			"elapsed": main.elapsed,
-			"player": {"x": main.player.position.x, "y": main.player.position.y, "hp": main.player.hp},
+			"player": _player_entry(main),
 			"life_map": Marshalls.raw_to_base64(main.ground.export_map()),
 			"flowers": main.flora.export_flowers(),
 			"ground_grafts": main.export_ground_grafts() if main.has_method("export_ground_grafts") else [],
@@ -97,6 +97,18 @@ func save_now(main, path := DEFAULT_PATH) -> bool:
 	if FileAccess.file_exists(path):
 		DirAccess.copy_absolute(abs_path, abs_path + ".bak")
 	return DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), abs_path) == OK
+
+
+## Position et vie du joueur à sauvegarder. Pendant le combat de boss, le joueur est noté devant
+## l'arène, avec toute sa vie : reprendre la partie ne le pose pas contre la Mère-Ronce, et le
+## combat recommence quand il y entre (elle se rendort, comme après une mort).
+func _player_entry(main) -> Dictionary:
+	var pos: Vector2 = main.player.position
+	var hp: float = main.player.hp
+	if main.get("arena") != null and main.arena.in_combat():
+		pos = main.arena.entrance()
+		hp = Game.stats["max_hp"]
+	return {"x": pos.x, "y": pos.y, "hp": hp}
 
 
 ## Charge la sauvegarde dans le jeu en cours. Renvoie false si elle est absente ou refusée ;

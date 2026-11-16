@@ -117,7 +117,7 @@ func _physics_process(delta: float) -> void:
 			state = "siege"
 			wave_index = 0
 			wave_timer = 1.0
-			main.hud.banner("Le Cœur de flétrissure s'éveille : tiens la zone !")
+			main.hud.banner("Le Cœur de flétrissure s'éveille : tiens la zone !", "combat")
 		progress += delta
 	else:
 		progress = maxf(0.0, progress - delta * DECAY)
