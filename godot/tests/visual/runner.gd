@@ -472,6 +472,12 @@ func _scenario_boss() -> void:
 	# Victoire : l'arène refleurit.
 	_clear_enemies([boss])
 	boss.take_damage(boss.max_hp, false)
+	# Sa mort, à mi-chemin : les pétales tombent en cendre, la vie reprend au cœur de la rose.
+	boss.dying = boss.DEATH_TIME * 0.55
+	main.fx.rings = []
+	main.hud.banner_time = 0.0
+	boss.redraw()
+	await _boss_shot("boss_mort", spot)
 	boss.queue_free()
 	arena.life_wave = -1.0
 	main.ground.paint(arena.center, arena.RADIUS * 1.25, 1.0)

@@ -506,46 +506,82 @@ func _die() -> void:
 
 
 # --- Dessin ---
+#
+# Charte graphique : les Flétris sont anguleux, en volume, contour clair, braise dans les fentes.
+# La Mère-Ronce est une rose de cendre : bouton fermé (phase 1), qui s'ouvre (phase 2), puis
+# brûle à cœur ouvert (phase 3). Toutes ses attaques s'annoncent avec Art.telegraph.
 
+const FletriArt = preload("res://scripts/fletri_art.gd")
+
+
+## Couleur d'une partie du corps : éclair du coup reçu, poison, puis cendre pendant la mort.
 func _color(base: Color) -> Color:
 	var c := base
 	if hit_flash > 0.0:
-		c = c.lerp(Color.WHITE, 0.55)
+		c = c.lerp(Art.c("danger_eclair"), 0.6)
 	if poison_time > 0.0:
-		c = c.lerp(Color("8f5fc0"), 0.35)
+		c = c.lerp(Art.ec("poison"), 0.3)
 	if dead:
-		c = c.lerp(Color("6d6470"), clampf(dying / DEATH_TIME, 0.0, 1.0))
+		c = c.lerp(FletriArt.ash_color(), Anim.ease_out(clampf(dying / DEATH_TIME * 1.4, 0.0, 1.0)))
 	return c
+
+
+## Pétale : forme de goutte effilée, de la base vers dir, déchirée au bout en phase 3.
+func _petal(base: Vector2, dir: Vector2, length: float, width: float, torn: float) -> PackedVector2Array:
+	var n := dir.orthogonal()
+	var pts := PackedVector2Array()
+	for i in 7:
+		var u := i / 6.0
+		pts.append(base + dir * length * u + n * width * sin(u * PI * 0.92) * (1.0 - 0.25 * u))
+	if torn > 0.0:
+		pts.append(base + dir * length * (1.0 - 0.18 * torn) + n * width * 0.12)
+	pts.append(base + dir * length * 1.04)
+	if torn > 0.0:
+		pts.append(base + dir * length * (1.0 - 0.12 * torn) - n * width * 0.1)
+	for i in range(6, -1, -1):
+		var u := i / 6.0
+		pts.append(base + dir * length * u - n * width * sin(u * PI * 0.92) * (1.0 - 0.25 * u))
+	return pts
 
 
 func _draw() -> void:
 	var wake := 1.0 - clampf(intro / INTRO, 0.0, 1.0)
-	var fade := 1.0 - clampf(dying / DEATH_TIME, 0.0, 1.0) if dead else 1.0
-	var s := lerpf(0.3, 1.0, 1.0 - (1.0 - wake) * (1.0 - wake)) * (0.55 + 0.45 * fade)
-	# Recul avant la volée, élan au moment du tir, tremblement pendant un changement de phase.
+	var dk := clampf(dying / DEATH_TIME, 0.0, 1.0) if dead else 0.0
+	var s := lerpf(0.3, 1.0, Anim.ease_out(wake)) * (1.0 - 0.2 * Anim.ease_in(dk))
+	# Recul avant la volée, élan au tir, tremblement avant les fouets et pendant un changement de phase.
 	var shift := Vector2.ZERO
+	var crouch := 0.0
 	if attack == "volee":
 		var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
-		shift = -aim * 22.0 * k if stage == "annonce" else aim * 12.0
+		shift = -aim * 22.0 * Anim.ease_out(k) if stage == "annonce" else aim * 12.0 * Anim.flash(k * 3.0)
+		crouch = k if stage == "annonce" else 0.0
 	elif attack == "fouets" and stage == "annonce":
-		shift = Vector2(0, 6.0 * sin(t * 30.0))
+		shift = Vector2(0, 5.0 * sin(t * 30.0))
 	if transition > 0.0:
 		shift += Vector2(sin(t * 50.0), cos(t * 43.0)) * 4.0
 	var r := radius
-	var open: float = [0.0, 0.35, 0.8][phase - 1]
+	var open: float = [0.0, 0.45, 0.9][phase - 1]
 	var rage: float = [0.0, 0.5, 1.0][phase - 1]
-	modulate.a = 0.35 + 0.65 * fade
+	if dead:
+		open = lerpf(open, 1.3, Anim.ease_out(dk))
+	modulate.a = 1.0 - Anim.ease_in(clampf((dk - 0.55) / 0.45, 0.0, 1.0))
+	Art.shadow(self, Vector2(0, r * 0.1), r * 1.45)
 	draw_set_transform(shift, 0.0, Vector2(s, s))
+	var contour := Art.c("ennemi_contour")
+	var body := Art.c("ennemi")
 
-	# Racines maîtresses, étalées au sol.
+	# Racines maîtresses, étalées au sol, en volume (côté sombre, dos éclairé).
 	for i in 9:
 		var a := TAU * i / 9.0 + 0.2
 		var pts := PackedVector2Array()
 		for j in 6:
 			var u := j / 5.0
 			pts.append(Vector2.from_angle(a + 0.35 * sin(u * 3.0 + i)) * r * (0.6 + 1.5 * u) * Vector2(1.0, 0.7))
-		draw_polyline(pts, _color(Color("1c1418")), 12.0 - 1.2 * (i % 4))
-	# Fouets au repos : des lianes épineuses qui ondulent (plus nombreuses à chaque phase).
+		var w := 13.0 - 1.2 * (i % 4)
+		draw_polyline(pts, _color(Art.c("contour")), w + 3.0, true)
+		draw_polyline(pts, _color(body.darkened(0.45)), w, true)
+		draw_polyline(pts, _color(body.darkened(0.2)), w * 0.35, true)
+	# Fouets au repos : lianes épineuses qui ondulent (une de plus à chaque phase).
 	var vines := 2 + phase
 	for i in vines:
 		var a := TAU * (i + 0.5) / vines + 0.25 * sin(t * 0.9 + i * 1.7)
@@ -554,109 +590,181 @@ func _draw() -> void:
 			var u := j / 8.0
 			var sway := 0.5 * sin(t * (1.6 + rage) + u * 4.0 + i * 2.0) * u
 			pts.append(Vector2.from_angle(a + sway) * r * (0.8 + 1.6 * u) + Vector2(0, -r * 0.5 * sin(u * PI)))
-		draw_polyline(pts, _color(Color("3d2a22")), 7.0)
-		for j in range(2, 9, 2):
-			var tip: Vector2 = pts[j] + (pts[j] - pts[j - 1]).orthogonal().normalized() * 10.0
-			draw_line(pts[j], tip, _color(Color("c9b8a0")), 3.0)
-	var lift := Vector2(0, -r * 0.5)
-	# Sépales épineux derrière la corolle.
+		_vine(self, pts, 8.0, 1.0)
+	var lift := Vector2(0, -r * 0.5) + Vector2(0, r * 0.08 * crouch)
+	# Sépales épineux derrière la corolle, en volume.
 	for i in 12:
 		var a := TAU * i / 12.0 + 0.05 * sin(t * 2.0 + i)
 		var dir := Vector2.from_angle(a)
+		var base := lift + dir * r * 0.85
+		var tip := lift + dir * r * (1.55 + 0.25 * rage)
 		var side := dir.orthogonal() * r * 0.2
-		draw_colored_polygon(PackedVector2Array([lift + dir * r * 0.9 + side, lift + dir * r * (1.55 + 0.25 * rage), lift + dir * r * 0.9 - side]), _color(Color("231a1e")))
-	# Corolle : pétales de rose fanée, qui s'écartent et rougissent à chaque phase.
-	var petal_far := Color("5b2a3a").lerp(Color("b8323a"), rage)
-	var petal_near := Color("7a3346").lerp(Color("e0675e"), rage)
+		draw_colored_polygon(PackedVector2Array([base + side, tip, base]), _color(body.darkened(0.35)))
+		draw_colored_polygon(PackedVector2Array([base, tip, base - side]), _color(body.darkened(0.6)))
+	# Corolle : deux couronnes de pétales de rose fanée, qui s'écartent et rougissent à chaque phase.
+	var petal_far := body.lerp(Art.ec("saignement"), 0.35 + 0.3 * rage)
+	var petal_near := body.lerp(Art.ec("saignement", "clair"), 0.15 + 0.45 * rage)
 	for ring in 2:
 		var n := 9 - ring * 3
 		for i in n:
 			var a := TAU * (i + 0.5 * ring) / n + 0.04 * sin(t * 1.5 + i * 1.3)
-			var length: float = r * (1.25 - 0.4 * ring) * (1.0 + 0.25 * open)
-			var width: float = r * (0.46 - 0.1 * ring) * (1.0 - 0.3 * open)
 			var dir := Vector2.from_angle(a)
-			var side: Vector2 = dir.orthogonal() * width
-			var base: Vector2 = lift + dir * r * 0.25 * open
-			draw_colored_polygon(PackedVector2Array([base, base + dir * length * 0.5 + side, base + dir * length, base + dir * length * 0.5 - side]), _color(petal_far if ring == 0 else petal_near))
-	# Bulbe central.
-	var body := PackedVector2Array()
-	for i in 24:
-		var a := TAU * i / 24.0
-		body.append(lift + Vector2.from_angle(a) * r * 0.62 * (1.0 + 0.06 * sin(a * 5.0 + t * 3.0)))
-	draw_colored_polygon(body, _color(Color("3a2630").lerp(Color("5a2228"), rage)))
-	# Cœur de braise, de plus en plus à nu.
-	var ember := Color("ff9a4a")
+			var length: float = r * (1.25 - 0.4 * ring) * (1.0 + 0.22 * open)
+			var width: float = r * (0.5 - 0.12 * ring) * (1.0 - 0.25 * open)
+			var base: Vector2 = lift + dir * r * 0.22 * open
+			if dead:
+				# Les pétales se détachent et tombent en tournoyant.
+				var fall := Anim.ease_in(clampf(dk * 1.3 - i * 0.03, 0.0, 1.0))
+				base += dir * r * 0.8 * fall + Vector2(0, r * 0.5 * fall)
+				dir = dir.rotated(fall * (1.5 if i % 2 else -1.5))
+			var pts := _petal(base, dir, length, width, rage if ring == 0 else 0.0)
+			Art.volume(self, pts, _color(petal_far if ring == 0 else petal_near), 0.8)
+			Art.outline(self, pts, Color(_color(contour), 0.55 if ring == 0 else 0.8), Art.TRAIT_FIN)
+			# Nervure.
+			draw_line(base + dir * length * 0.15, base + dir * length * 0.75, _color((petal_far if ring == 0 else petal_near).darkened(0.35)), 1.5, true)
+	# Bulbe central, fendu de braise.
+	var bulb := PackedVector2Array()
+	for i in 20:
+		var a := TAU * i / 20.0
+		bulb.append(lift + Vector2.from_angle(a) * r * (0.6 + 0.08 * open) * (1.0 + 0.06 * sin(a * 5.0 + t * 3.0)))
+	Art.volume(self, bulb, _color(body.darkened(0.2).lerp(Art.ec("cendre", "sombre"), rage * 0.5)))
+	var ember := Art.ec("cendre")
 	var pulse := 0.5 + 0.5 * sin(t * (3.0 + 4.0 * rage))
-	draw_circle(lift, r * (0.26 + 0.16 * open), Color(ember.r, ember.g, ember.b, 0.25 + 0.2 * pulse))
-	draw_circle(lift, r * (0.14 + 0.12 * open), _color(ember.lerp(Color("fff0b0"), pulse * rage)))
-	# Trois braises (yeux) tournées vers le joueur.
-	var look: Vector2 = (main.player.position - anchor).normalized()
+	var fade := 1.0 - dk
+	for i in 6:
+		var a := TAU * i / 6.0 + 0.3
+		var p0 := lift + Vector2.from_angle(a) * r * 0.2
+		var p1 := lift + Vector2.from_angle(a + 0.25) * r * 0.42
+		var p2 := lift + Vector2.from_angle(a - 0.1) * r * 0.58
+		draw_polyline(PackedVector2Array([p0, p1, p2]), _color(Art.c("contour")), 4.0, true)
+		draw_polyline(PackedVector2Array([p0, p1, p2]), Color(ember, (0.35 + 0.55 * rage) * (0.7 + 0.3 * pulse) * fade), 2.0, true)
+	Art.outline(self, bulb, _color(contour), Art.TRAIT)
+	# Cœur de braise, de plus en plus à nu ; il s'éteint à la mort.
+	var core := r * (0.16 + 0.14 * open)
+	if dead:
+		core *= 1.0 + 0.6 * Anim.flash(dk * 3.0)
+	draw_circle(lift, core * 2.1, Color(ember, (0.15 + 0.2 * pulse) * fade))
+	draw_circle(lift, core * 1.45, Color(ember, (0.3 + 0.2 * pulse) * fade))
+	Art.volume_circle(self, lift, core, _color(ember.lerp(Art.ec("cendre", "clair"), pulse * (0.3 + 0.7 * rage))), 0.9)
+	# Trois yeux fendus tournés vers le joueur, plus vifs pendant une annonce.
+	var look: Vector2 = (main.player.position - anchor).normalized() if main and main.player else Vector2.DOWN
+	var glare := 0.35 + (0.5 if stage == "annonce" else 0.0)
 	for i in 3:
 		var eye := lift + look * r * 0.4 + look.orthogonal() * r * 0.22 * (i - 1) - look * r * 0.06 * absf(i - 1)
-		draw_circle(eye, r * 0.075, _color(ember))
-	# États visibles : gouttes du saignement, liens de l'enracinement.
+		var xf := Transform2D(look.angle(), Vector2(r, r), 0.0, eye)
+		FletriArt._slit(self, xf, Vector2.ZERO, 0.075, 1 if i == 2 else -1, glare, {"ash": dk})
+	# Phase 3 et mort : des braises s'échappent de la corolle.
+	var embers := 0 if phase < 3 and not dead else 8
+	for i in embers:
+		var u := fposmod(t * 0.7 + i / 8.0, 1.0)
+		var q := lift + Vector2(sin(i * 2.4 + t) * r * 0.9, -r * (0.3 + 1.6 * u))
+		FletriArt._flake(self, q, 3.5 * (1.0 - 0.5 * u), Color(Art.ec("cendre", "clair") if i % 2 else FletriArt.ash_color(), 1.0 - u))
+	# États visibles : motifs des éléments (charte, § 3).
 	if statuses.has("saignement"):
+		Art.status(self, "saignement", lift, r * 0.7, t * 1.25)
 		for i in int(statuses["saignement"]["stacks"]):
-			draw_circle(lift + Vector2(-r * 0.5 + i * r * 0.25, r * 0.75 + 4.0 * sin(t * 6.0 + i)), 5.0, Color("c0283a"))
+			Art._drop(self, lift + Vector2(-r * 0.5 + i * r * 0.25, -r * 1.05), 4.5, Art.ec("saignement", "clair"))
 	if statuses.has("enracine"):
-		for i in 3:
-			draw_arc(lift, r * (0.75 + 0.12 * i), 0.4 + i, 2.4 + i, 12, Color("7a9a4a"), 4.0)
+		Art.status(self, "racine", lift + Vector2(0, r * 0.2), r * 0.9, t)
+	if poison_time > 0.0:
+		Art.status(self, "poison", lift, r * 0.7, t)
+	# Mort : la vie reprend au cœur de la rose.
+	if dead and dk > 0.45:
+		var g := Anim.ease_out((dk - 0.45) / 0.55)
+		Art.glow(self, lift, r * 0.9 * g, "seve")
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-## Annonces au sol, en coordonnées monde.
+## Liane épineuse (fouet) : contour sombre, corps, épines d'os en volume. thorns : densité (0 → 1).
+func _vine(c: CanvasItem, pts: PackedVector2Array, width: float, thorns: float) -> void:
+	c.draw_polyline(pts, _color(Art.c("contour")), width + 3.0, true)
+	c.draw_polyline(pts, _color(Art.c("ennemi").darkened(0.3)), width, true)
+	c.draw_polyline(pts, _color(Art.c("ennemi").lightened(0.1)), width * 0.3, true)
+	if thorns <= 0.0:
+		return
+	var bone := _color(Art.ec("epine", "clair").darkened(0.15))
+	for j in range(2, pts.size(), 2):
+		var d: Vector2 = (pts[j] - pts[j - 1]).normalized()
+		var n := d.orthogonal() * (1.0 if j % 4 == 0 else -1.0)
+		var b: Vector2 = pts[j] + n * width * 0.4
+		var tip: Vector2 = b + (n - d * 0.5).normalized() * width * 1.3
+		var side := (tip - b).orthogonal() * 0.25
+		c.draw_colored_polygon(PackedVector2Array([b + side, tip, b]), bone.lightened(0.15))
+		c.draw_colored_polygon(PackedVector2Array([b, tip, b - side]), bone.darkened(0.3))
+
+
+## Annonces au sol, en coordonnées monde : toujours la grammaire de Art.telegraph. Pour que l'écran
+## reste lisible, l'invocation (qui ne blesse pas) n'est pas en rouge, et une seule forme par attaque.
 func draw_marks(c: CanvasItem) -> void:
-	var warn := Color(1.0, 0.35, 0.2)
-	if attack == "volee" and stage == "annonce":
-		var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
-		var locked := timer <= stage_time * 0.4
-		var reach: float = arena.radius * 2.0
-		for dir in volley_dirs():
-			var from: Vector2 = anchor + dir * radius
-			var to: Vector2 = anchor + dir * lerpf(radius + 40.0, reach, k)
-			to = arena.center + (to - arena.center).limit_length(arena.radius)
-			c.draw_line(from, to, Color(warn.r, warn.g, warn.b, 0.16 + 0.1 * k), VOLLEY["radius"] * 2.0)
-			c.draw_line(from, to, Color(warn.r, warn.g, warn.b, 0.9 if locked else 0.45), 2.0)
+	if dead:
+		return
+	if attack == "volee":
+		var n: int = PHASES[phase]["thorns"]
+		var reach: float = arena.radius + anchor.distance_to(arena.center)
+		var cone := {"type": "cone", "centre": anchor, "direction": aim.angle(), "ouverture": (n - 1) * VOLLEY["spread"] + 0.14, "rayon": reach}
+		if stage == "annonce":
+			var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
+			Art.telegraph(c, cone, k, -1.0, t)
+			# Les trajectoires des épines, en traits fins dans l'éventail.
+			for dir in volley_dirs():
+				c.draw_line(anchor + dir * radius, anchor + dir * reach, Color(Art.c("danger"), 0.25 + 0.3 * k), 1.5, true)
+		else:
+			var since: float = stage_time - timer
+			if since < 0.3:
+				Art.telegraph(c, cone, 1.0, since / 0.3, t)
 	if attack == "fouets":
-		var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0) if stage == "annonce" else 1.0
 		for w in whips:
-			var a0: float = w["angle"]
+			var a0: float = w["from"]
 			var a1: float = w["to"]
-			var pts := PackedVector2Array([anchor])
-			var steps := 20
-			for i in steps + 1:
-				pts.append(anchor + Vector2.from_angle(lerpf(a0, a1, i / float(steps))) * WHIP["length"])
-			# Un secteur presque refermé n'a plus de surface à remplir.
-			if absf(a1 - a0) > 0.05:
-				c.draw_colored_polygon(pts, Color(warn.r, warn.g, warn.b, 0.08 + 0.14 * k))
-			c.draw_arc(anchor, WHIP["length"], minf(a0, a1), maxf(a0, a1), 32, Color(warn.r, warn.g, warn.b, 0.75), 3.0)
-			# Le bord de départ, en clair, et des chevrons qui donnent le sens du balayage.
-			c.draw_line(anchor, anchor + Vector2.from_angle(a0) * WHIP["length"], Color(1.0, 0.85, 0.6, 0.9), 3.0)
+			var sector := {"type": "cone", "centre": anchor, "direction": (a0 + a1) / 2.0, "ouverture": absf(a1 - a0), "rayon": WHIP["length"]}
+			if stage == "annonce":
+				var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
+				Art.telegraph(c, sector, k, -1.0, t)
+			else:
+				# Pendant le balayage : la part balayée a frappé (éclair), le reste reste menacé.
+				var cur: float = w["angle"]
+				var done := {"type": "cone", "centre": anchor, "direction": (a0 + cur) / 2.0, "ouverture": absf(cur - a0), "rayon": WHIP["length"]}
+				var left := {"type": "cone", "centre": anchor, "direction": (cur + a1) / 2.0, "ouverture": absf(a1 - cur), "rayon": WHIP["length"]}
+				var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
+				if absf(a1 - cur) > 0.02:
+					Art.telegraph(c, left, 1.0, -1.0, t)
+				if absf(cur - a0) > 0.02:
+					Art.telegraph(c, done, 1.0, k, t)
+			# Le sens du balayage : bord de départ et chevrons clairs.
 			var sgn := signf(a1 - a0)
-			for i in 4:
-				var a := lerpf(a0, a1, (i + 0.5 + fmod(t * 1.5, 1.0) * 0.5) / 4.5)
-				var mid: Vector2 = anchor + Vector2.from_angle(a) * WHIP["length"] * 0.72
-				var tang := Vector2.from_angle(a + sgn * PI / 2.0)
-				var out := Vector2.from_angle(a)
-				c.draw_polyline(PackedVector2Array([mid - tang * 10.0 + out * 12.0, mid + tang * 8.0, mid - tang * 10.0 - out * 12.0]), Color(1.0, 0.85, 0.6, 0.7), 3.0)
+			var col := Color(Art.c("danger_eclair"), 0.8)
+			c.draw_line(anchor, anchor + Vector2.from_angle(a0) * WHIP["length"], col, Art.TRAIT, true)
+			if stage == "annonce":
+				for i in 4:
+					var a := lerpf(a0, a1, (i + 0.5 + fmod(t * 1.5, 1.0) * 0.5) / 4.5)
+					var mid: Vector2 = anchor + Vector2.from_angle(a) * WHIP["length"] * 0.72
+					var tang := Vector2.from_angle(a + sgn * PI / 2.0)
+					var out := Vector2.from_angle(a)
+					c.draw_polyline(PackedVector2Array([mid - tang * 10.0 + out * 12.0, mid + tang * 8.0, mid - tang * 10.0 - out * 12.0]), Color(col, 0.6), Art.TRAIT, true)
 	for r in roots:
-		var pos: Vector2 = r["pos"]
+		var forme := {"type": "cercle", "centre": r["pos"], "rayon": ROOT["radius"]}
 		if r["burst"] < 0.0:
 			var k := 1.0 - clampf(r["fuse"] / ROOT["fuse"], 0.0, 1.0)
-			c.draw_circle(pos, ROOT["radius"], Color(0.12, 0.05, 0.04, 0.35 + 0.25 * k))
-			c.draw_circle(pos, ROOT["radius"] * k, Color(warn.r, warn.g, warn.b, 0.22))
-			c.draw_arc(pos, ROOT["radius"], 0.0, TAU, 40, Color(warn.r, warn.g, warn.b, 0.5 + 0.4 * k), 3.0)
+			Art.telegraph(c, forme, k, -1.0, t)
+			# Le sol se fissure là où la racine va jaillir.
+			var pos: Vector2 = r["pos"]
 			for i in 5:
 				var a := TAU * i / 5.0 + pos.x * 0.01
-				c.draw_line(pos + Vector2.from_angle(a) * 8.0, pos + Vector2.from_angle(a + 0.3) * ROOT["radius"] * (0.3 + 0.6 * k), Color(0.05, 0.02, 0.02, 0.8), 3.0)
+				c.draw_line(pos + Vector2.from_angle(a) * 6.0, pos + Vector2.from_angle(a + 0.3) * ROOT["radius"] * (0.25 + 0.6 * k), Color(Art.c("contour"), 0.85), 3.0, true)
 		else:
-			c.draw_circle(pos, ROOT["radius"], Color(0.1, 0.04, 0.03, 0.5))
+			Art.telegraph(c, forme, 1.0, clampf(r["burst"] / ROOT["burst"], 0.0, 1.0), t)
+	# Invocation : des boutons de rose sortent du sol et enflent (pas un coup : couleur de cendre).
 	for b in buds:
 		var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
-		c.draw_circle(b, 30.0, Color(warn.r, warn.g, warn.b, 0.12 + 0.12 * k))
-		c.draw_arc(b, 30.0, 0.0, TAU, 24, Color(warn.r, warn.g, warn.b, 0.7), 2.0)
-		c.draw_circle(b, 6.0 + 12.0 * k, Color("5b2a3a"))
-		c.draw_circle(b, 3.0 + 5.0 * k, Color("ff9a4a"))
+		var e := Art.ec("cendre")
+		c.draw_arc(b, 30.0, 0.0, TAU, 28, Color(e, 0.25 + 0.4 * k), Art.TRAIT, true)
+		c.draw_circle(b, 30.0 * k, Color(e, 0.1))
+		var size := 6.0 + 12.0 * Anim.ease_out(k)
+		for i in 4:
+			var a := TAU * i / 4.0 + 0.4 + k
+			var pts := _petal(b, Vector2.from_angle(a), size, size * 0.6, 0.0)
+			Art.volume(c, pts, Art.c("ennemi").lerp(Art.ec("saignement"), 0.4), 0.7)
+		c.draw_circle(b, 3.0 + 4.0 * k, Art.ec("cendre", "clair"))
 
 
 ## Projectiles et coups, au-dessus des personnages, en coordonnées monde.
@@ -664,10 +772,14 @@ func draw_overlay(c: CanvasItem) -> void:
 	for th in thorns:
 		var pos: Vector2 = th["pos"]
 		var dir: Vector2 = (th["vel"] as Vector2).normalized()
-		var side := dir.orthogonal() * VOLLEY["radius"] * 0.7
-		c.draw_line(pos - dir * 26.0, pos, Color(1.0, 0.5, 0.3, 0.3), 5.0)
-		c.draw_colored_polygon(PackedVector2Array([pos + dir * 14.0, pos - dir * 8.0 + side, pos - dir * 8.0 - side]), Color("e8d6b8"))
-		c.draw_circle(pos, 3.0, Color("ff9a4a"))
+		var n := dir.orthogonal()
+		c.draw_line(pos - dir * 30.0, pos - dir * 6.0, Color(Art.c("danger"), 0.35), 6.0, true)
+		var tip := pos + dir * 15.0
+		var back := pos - dir * 9.0
+		c.draw_colored_polygon(PackedVector2Array([back + n * 5.5, tip, back]), Art.ec("epine", "clair"))
+		c.draw_colored_polygon(PackedVector2Array([back, tip, back - n * 5.5]), Art.ec("epine").darkened(0.2))
+		Art.outline(c, PackedVector2Array([back + n * 5.5, tip, back - n * 5.5]), Art.ec("epine", "sombre"), 1.2)
+		c.draw_circle(back, 2.5, Art.ec("cendre"))
 	if attack == "fouets":
 		for w in whips:
 			var a: float = w["angle"]
@@ -680,11 +792,12 @@ func draw_overlay(c: CanvasItem) -> void:
 				var lag := 0.0 if raised else -0.25 * signf(w["to"] - w["from"]) * (1.0 - u) * u * 4.0
 				var wave := 0.12 * sin(t * 14.0 + u * 6.0) * u if raised else 0.0
 				pts.append(anchor + Vector2.from_angle(a + lag + wave) * (radius * 0.6 + reach * u) + Vector2(0, -24.0 * sin(u * PI)))
-			c.draw_polyline(pts, Color("2a1a16"), WHIP["width"] * 0.7)
-			c.draw_polyline(pts, Color("6a3a2a"), WHIP["width"] * 0.35)
-			for i in range(2, 13, 2):
-				var n: Vector2 = (pts[i] - pts[i - 1]).orthogonal().normalized()
-				c.draw_line(pts[i] - n * 12.0, pts[i] + n * 12.0, Color("e8d6b8"), 3.0)
+			_vine(c, pts, WHIP["width"] * 0.55, 1.0)
+			# Une griffe d'os au bout.
+			var d: Vector2 = (pts[12] - pts[11]).normalized()
+			var tip: Vector2 = pts[12] + d * 18.0
+			var side := d.orthogonal() * 7.0
+			c.draw_colored_polygon(PackedVector2Array([pts[12] + side, tip, pts[12] - side]), Art.ec("epine", "clair"))
 	for r in roots:
 		if r["burst"] >= 0.0:
 			var pos: Vector2 = r["pos"]
@@ -694,5 +807,8 @@ func draw_overlay(c: CanvasItem) -> void:
 				var a := TAU * i / 6.0 + pos.y * 0.01
 				var foot := pos + Vector2.from_angle(a) * ROOT["radius"] * 0.5 * Vector2(1.0, 0.6)
 				var tip := foot + Vector2(cos(a) * 14.0, -70.0 * rise)
-				c.draw_colored_polygon(PackedVector2Array([foot + Vector2(-9, 0), tip, foot + Vector2(9, 0)]), Color("2a1a16"))
-				c.draw_line(foot, tip, Color("6a3a2a"), 3.0)
+				var body := Art.c("ennemi").darkened(0.3)
+				c.draw_colored_polygon(PackedVector2Array([foot + Vector2(-10, 0), tip, foot]), body.lightened(0.15))
+				c.draw_colored_polygon(PackedVector2Array([foot, tip, foot + Vector2(10, 0)]), body.darkened(0.35))
+				Art.outline(c, PackedVector2Array([foot + Vector2(-10, 0), tip, foot + Vector2(10, 0)]), Art.c("ennemi_contour"), Art.TRAIT_FIN)
+				c.draw_circle(tip, 2.5, Art.ec("epine", "clair"))
