@@ -269,7 +269,10 @@ func _build_banner() -> void:
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner.add_theme_font_size_override("font_size", 24)
 	_banner.add_theme_color_override("font_color", Color(0.95, 0.92, 0.75))
-	_banner.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	# Le cadre épouse le texte, centré : un cadre pleine largeur passait sous le suivi des
+	# objectifs (en haut à droite) et l'audit d'interface y voyait un chevauchement.
+	_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_banner.offset_top = 140
 	_banner.offset_bottom = 180
 	add_child(_banner)
@@ -330,7 +333,11 @@ func _refresh() -> void:
 		slot.name_label.add_theme_color_override("font_color", Color(0.85, 0.9, 0.85) if slot.state == Slot.SKILL else dim)
 		slot.refresh()
 
-	_banner.text = banner_text
+	if _banner.text != banner_text:
+		_banner.text = banner_text
+		var w := _banner.get_minimum_size().x
+		_banner.offset_left = -w / 2.0
+		_banner.offset_right = w / 2.0
 	_banner.modulate.a = clampf(banner_time, 0.0, 1.0)
 
 	var show_hint := hint_time > 0.0 and Settings.show_hints

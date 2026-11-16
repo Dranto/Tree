@@ -90,6 +90,10 @@ func refresh() -> void:
 
 func _process(delta: float) -> void:
 	t += delta
+	# Une étiquette qui se replie peut annoncer une hauteur trop grande avant son premier
+	# affichage : le cadre se recale sur son contenu dès qu'il est trop haut.
+	if _panel.size.y > _panel.get_combined_minimum_size().y + 1.0:
+		_panel.reset_size()
 	# Le texte du compteur suit les drapeaux sans attendre un changement de liste.
 	var o: Dictionary = Objectives.current()
 	if not o.is_empty():
