@@ -215,6 +215,17 @@ func _scenario_galerie() -> void:
 	await _frames(3)
 	await _shot("galerie_varies")
 	layer.queue_free()
+	await _frames(1)
+	layer = CanvasLayer.new()
+	layer.layer = 100
+	gallery = GalleryScript.new()
+	gallery.view = get_viewport().get_visible_rect().size
+	gallery.page = "silhouettes"
+	layer.add_child(gallery)
+	add_child(layer)
+	await _frames(3)
+	await _shot("galerie_silhouettes")
+	layer.queue_free()
 
 	Game.points = 5
 	var root_neighbors: Array = Game.tree.nodes[0]["neighbors"].duplicate()
@@ -464,6 +475,12 @@ func _scenario_boss() -> void:
 	# Victoire : l'arène refleurit.
 	_clear_enemies([boss])
 	boss.take_damage(boss.max_hp, false)
+	# Sa mort, à mi-chemin : les pétales tombent en cendre, la vie reprend au cœur de la rose.
+	boss.dying = boss.DEATH_TIME * 0.55
+	main.fx.rings = []
+	main.hud.banner_time = 0.0
+	boss.redraw()
+	await _boss_shot("boss_mort", spot)
 	boss.queue_free()
 	arena.life_wave = -1.0
 	main.ground.paint(arena.center, arena.RADIUS * 1.25, 1.0)
