@@ -236,7 +236,7 @@
           "effects": [
             {"stat": "thorns", "op": "add", "value": 25},
             {"stat": "armor", "op": "add", "value": 0.05},
-            {"stat": "projectile_damage", "op": "inc", "value": 0.35}
+            {"stat": "projectile_damage", "op": "inc", "value": 0.55}
           ]
         },
         {
@@ -248,7 +248,7 @@
             {"stat": "thorns", "op": "more", "value": 1.5, "if": {"state": "immobile", "min": 0.5}},
             {"stat": "armor", "op": "add", "value": 0.1, "if": {"state": "immobile", "min": 0.5}},
             {"stat": "area_damage", "op": "inc", "value": 0.5, "if": {"state": "immobile", "min": 0.5}},
-            {"stat": "projectile_damage", "op": "inc", "value": 0.2}
+            {"stat": "projectile_damage", "op": "inc", "value": 0.45}
           ]
         },
         {
