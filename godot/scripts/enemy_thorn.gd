@@ -35,14 +35,20 @@ func _physics_process(delta: float) -> void:
 
 
 func _draw() -> void:
+	# Repère local : l'épine vole vers +x (rotation = direction du vol).
 	if look == "cendre":
-		# Boule de cendre rougeoyante, avec sa traînée de fumée.
-		draw_line(Vector2(-20, 0), Vector2(-4, 0), Color(0.5, 0.45, 0.42, 0.35), 6.0)
-		draw_circle(Vector2.ZERO, 6.5, Color("4a3a34"))
-		draw_circle(Vector2(1, 0), 4.2, Color("ff9a4a"))
-		draw_circle(Vector2(2, -1), 1.8, Color("fff0b0"))
+		# Boule de braise (élément cendre) : traînée de fumée, braises qui s'en détachent.
+		for i in 4:
+			draw_circle(Vector2(-6.0 - i * 5.0, sin(i * 1.7) * 1.5), 5.0 - i, Color(Art.c("brume").lightened(0.1), 0.4 - i * 0.08))
+		draw_circle(Vector2.ZERO, 9.0, Color(Art.ec("cendre"), 0.3))
+		Art.volume_circle(self, Vector2.ZERO, 6.0, Art.ec("cendre"), 1.0)
+		draw_arc(Vector2.ZERO, 6.0, 0.0, TAU, 16, Art.ec("cendre", "sombre"), Art.TRAIT_FIN, true)
+		draw_circle(Vector2(1.5, -1.0), 2.2, Art.ec("cendre", "clair"))
 		return
-	# Épine claire et effilée, avec une traînée rouge pour qu'on la voie venir.
-	draw_line(Vector2(-22, 0), Vector2(-4, 0), Color(0.9, 0.3, 0.2, 0.35), 4.0)
-	draw_colored_polygon(PackedVector2Array([Vector2(-9, -3.5), Vector2(10, 0), Vector2(-9, 3.5)]), Color("e8d6b0"))
-	draw_line(Vector2(-9, 0), Vector2(6, 0), Color("6a3a30"), 1.2)
+	# Épine d'os (élément épine), avec une traînée rouge de danger pour qu'on la voie venir.
+	draw_line(Vector2(-24, 0), Vector2(-6, 0), Color(Art.c("danger"), 0.35), 5.0, true)
+	draw_line(Vector2(-14, 0), Vector2(-6, 0), Color(Art.c("danger"), 0.6), 2.5, true)
+	var tip := Vector2(11, 0)
+	draw_colored_polygon(PackedVector2Array([Vector2(-9, -4), tip, Vector2(-9, 0)]), Art.ec("epine", "clair"))
+	draw_colored_polygon(PackedVector2Array([Vector2(-9, 0), tip, Vector2(-9, 4)]), Art.ec("epine").darkened(0.2))
+	Art.outline(self, PackedVector2Array([Vector2(-9, -4), tip, Vector2(-9, 4)]), Art.ec("epine", "sombre"), 1.2)

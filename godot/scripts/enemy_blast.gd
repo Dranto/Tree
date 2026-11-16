@@ -29,7 +29,7 @@ func _physics_process(delta: float) -> void:
 	for e in main.enemies_near(position, radius):
 		if not e.dead and e.has_method("take_damage"):
 			e.take_damage(enemy_damage, false)
-	main.fx.ring(position, radius * 0.3, radius * 1.1, 0.35, Color(0.85, 0.95, 0.45, 0.9), 5.0)
+	main.fx.ring(position, radius * 0.3, radius * 1.1, 0.35, Art.ec("poison", "clair"), 5.0)
 	main.fx.shake(4.0)
 	# Par le chemin de l'autoload : ce script est aussi chargé par check_data.gd, sans autoloads.
 	var sfx = get_node_or_null("/root/Sfx")
@@ -44,15 +44,25 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	var k := clampf(t / maxf(delay, 0.01), 0.0, 1.0)
+	var forme := {"type": "cercle", "centre": Vector2.ZERO, "rayon": radius}
 	if done:
+		# Frappe : éclair de la charte, puis un nuage de spores qui se dissipe.
 		var f := clampf((t - delay) / 0.25, 0.0, 1.0)
-		draw_circle(Vector2.ZERO, radius * (0.6 + 0.5 * f), Color(0.8, 0.9, 0.4, 0.35 * (1.0 - f)))
+		Art.telegraph(self, forme, 1.0, f, t)
+		for i in 8:
+			var a := TAU * i / 8.0 + 0.3
+			var q := Vector2.from_angle(a) * radius * (0.3 + 0.6 * Anim.ease_out(f))
+			draw_arc(q, radius * (0.08 + 0.1 * f), 0.0, TAU, 12, Color(Art.ec("poison", "clair"), 1.0 - f), Art.TRAIT_FIN, true)
 		return
-	# Annonce : la zone au sol se remplit depuis le centre, le bord clignote de plus en plus vite.
-	var blink := 0.5 + 0.5 * sin(t * (10.0 + 30.0 * k))
-	draw_circle(Vector2.ZERO, radius, Color(0.75, 0.85, 0.3, 0.08 + 0.06 * k))
-	draw_circle(Vector2.ZERO, radius * k, Color(0.85, 0.9, 0.35, 0.12 + 0.14 * k))
-	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 40, Color(0.95, 1.0, 0.5, 0.35 + 0.45 * blink), 2.5)
-	# La poche de spores elle-même, qui enfle.
-	draw_circle(Vector2.ZERO, 10.0 + 8.0 * k, color.darkened(0.2))
-	draw_circle(Vector2.ZERO, 6.0 + 6.0 * k, Color("c8d86a").lerp(Color("f4ffb0"), k))
+	# Annonce : la grammaire de la charte (contour, voile qui se remplit, clignotement final).
+	Art.telegraph(self, forme, k, -1.0, t)
+	# La poche de spores elle-même, qui enfle et palpite de plus en plus vite.
+	var beat := 0.5 + 0.5 * sin(t * (8.0 + 24.0 * k))
+	var r := 9.0 + 8.0 * k + 1.5 * beat
+	Art.volume_circle(self, Vector2.ZERO, r, Art.ec("poison").darkened(0.2), 0.9)
+	draw_arc(Vector2.ZERO, r, 0.0, TAU, 20, Art.ec("poison", "sombre"), Art.TRAIT_FIN, true)
+	draw_circle(Vector2.ZERO, r * 0.45, Art.ec("poison", "clair").lerp(Art.c("danger_eclair"), k))
+	for i in 3:
+		var u := fposmod(t * 1.2 + i / 3.0, 1.0)
+		var q := Vector2(sin(i * 2.0 + t * 3.0) * r * 0.8, -r * (0.8 + 1.6 * u))
+		draw_arc(q, 2.0 + 2.5 * u, 0.0, TAU, 10, Color(Art.ec("poison", "clair"), 1.0 - u), Art.TRAIT_FIN, true)

@@ -5,6 +5,8 @@
 ## les ronces et les buissons d'épines, morts puis vivants.
 ## page = "varies" : les nouveaux Flétris (Cracheur de cendre, Gardien d'écorce et ses protégés,
 ## Boursouflé et sa poche de spores) et les élites, une par modificateur, puis une à deux modificateurs.
+## page = "silhouettes" : chaque sorte en noir sur blanc puis en couleur, la mort d'un Flétri (cendre,
+## puis la pousse de vie) et chaque attaque annoncée puis frappée.
 extends Node2D
 
 const EnemyScript = preload("res://scripts/enemy.gd")
@@ -12,6 +14,14 @@ const FxScript = preload("res://scripts/fx.gd")
 const FloraScript = preload("res://scripts/flora.gd")
 const ThornScript = preload("res://scripts/enemy_thorn.gd")
 const BlastScript = preload("res://scripts/enemy_blast.gd")
+const RemainsScript = preload("res://scripts/enemy_remains.gd")
+const FletriArt = preload("res://scripts/fletri_art.gd")
+## Toutes les sortes, dans l'ordre de la planche des silhouettes.
+const ALL_KINDS := ["fletri", "cendreux", "colosse", "rejeton", "cracheur", "tireur", "gardien", "boursoufle", "chargeur", "nid"]
+const SIL_X0 := 100
+const SIL_DX := 155
+## Instants de la mort d'un Flétri (secondes depuis le coup fatal).
+const DEATH_TIMES := [0.05, 0.2, 0.36, 0.5, 0.7, 0.95]
 
 const STATES := ["normal", "blessé", "touché", "empoisonné", "saignant ×3", "enraciné"]
 const COL_X := 200
@@ -58,6 +68,9 @@ func _ready() -> void:
 		return
 	if page == "varies":
 		_ready_varies()
+		return
+	if page == "silhouettes":
+		_ready_silhouettes()
 		return
 	var stub := MainStub.new()
 	for k in BASE_KINDS:
@@ -187,6 +200,62 @@ func _ready_varies() -> void:
 				e.aff_t = 0.4
 
 
+func _ready_silhouettes() -> void:
+	var stub := MainStub.new()
+	for i in ALL_KINDS.size():
+		_enemy(stub, ALL_KINDS[i], Vector2(SIL_X0 + i * SIL_DX, 262), 1.5)
+	# Mort d'un Flétri : la silhouette s'éteint et s'effrite, puis une pousse de vie sort du sol.
+	for i in DEATH_TIMES.size():
+		var r = RemainsScript.new()
+		r.kind_id = "fletri"
+		r.radius = 14.0
+		r.t = DEATH_TIMES[i]
+		r.scale = Vector2(2, 2)
+		r.position = Vector2(140 + i * 140, 465)
+		add_child(r)
+		r.set_process(false)
+		r.queue_redraw()
+	# Attaques : annoncée (aux deux tiers), puis frappée. Échelle réduite pour que tout tienne.
+	var sc := 0.62
+	var tir = _enemy(stub, "tireur", Vector2(50, 600), sc)
+	tir.state = "windup"
+	tir.state_t = float(tir.data["windup"]) * 0.35
+	tir = _enemy(stub, "tireur", Vector2(400, 600), sc)
+	tir.strike_t = tir.STRIKE_TIME * 0.3
+	var cr = _enemy(stub, "cracheur", Vector2(60, 700), sc)
+	cr.state = "windup"
+	cr.state_t = float(cr.data["windup"]) * 0.35
+	cr = _enemy(stub, "cracheur", Vector2(400, 700), sc)
+	cr.strike_t = cr.STRIKE_TIME * 0.3
+	var ch = _enemy(stub, "chargeur", Vector2(60, 810), sc)
+	ch.state = "windup"
+	ch.state_t = float(ch.data["windup"]) * 0.35
+	ch = _enemy(stub, "chargeur", Vector2(560, 810), sc)
+	ch.state = "charge"
+	ch.travelled = 220.0
+	for j in 2:
+		var b = BlastScript.new()
+		b.position = Vector2(900 + j * 200, 640)
+		b.scale = Vector2(0.8, 0.8)
+		b.t = b.delay * 0.65 if j == 0 else b.delay + 0.06
+		b.done = j == 1
+		add_child(b)
+		b.set_process(false)
+		b.set_physics_process(false)
+		b.queue_redraw()
+	for j in 2:
+		var e = _enemy(stub, "fletri", Vector2(1340 + j * 160, 640), 0.8)
+		e.make_elite(["epines"])
+		if j == 0:
+			e.aff_state = "epines"
+			e.aff_t = 0.25
+		else:
+			e.strike_t = e.STRIKE_TIME * 0.3
+	var nid = _enemy(stub, "nid", Vector2(960, 810), 1.0)
+	nid.state = "windup"
+	nid.state_t = float(nid.data["windup"]) * 0.15
+
+
 func _ready_roncier() -> void:
 	var stub := MainStub.new()
 	for k in RONCIER.size():
@@ -241,6 +310,9 @@ func _ready_roncier() -> void:
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, view), Color(0.12, 0.15, 0.12))
 	var font := ThemeDB.fallback_font
+	if page == "silhouettes":
+		_draw_silhouettes(font)
+		return
 	if page == "varies":
 		for s in VARIES_STATES.size():
 			draw_string(font, Vector2(VARIES_X[s] - 90, 40), VARIES_STATES[s], HORIZONTAL_ALIGNMENT_CENTER, 180, 18, Color.WHITE)
@@ -261,3 +333,16 @@ func _draw() -> void:
 	for k in BASE_KINDS:
 		draw_string(font, Vector2(16, 168 + k * 130), ["Flétri", "Cendreux", "Colosse"][k], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
 	draw_string(font, Vector2(20, 560), "Effets (ondes, textes, nuage de spores, étincelles, cendres, pétales)", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+
+
+func _draw_silhouettes(font: Font) -> void:
+	draw_string(font, Vector2(20, 34), "Silhouettes en noir sur blanc : chaque sorte se reconnaît à sa forme", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+	draw_rect(Rect2(20, 50, view.x - 40, 130), Color("f4f0e6"))
+	for i in ALL_KINDS.size():
+		var x: float = SIL_X0 + i * SIL_DX
+		FletriArt.draw(self, ALL_KINDS[i], Vector2(x, 115), EnemyScript.KINDS[EnemyScript.kind_index(ALL_KINDS[i])]["radius"] * 1.5, Vector2.RIGHT, 0.0, {"mono": true})
+		var nm: String = EnemyScript.KINDS[EnemyScript.kind_index(ALL_KINDS[i])]["name"]
+		draw_string(font, Vector2(x - 75, 335), nm, HORIZONTAL_ALIGNMENT_CENTER, 150, 14, Color.WHITE)
+	draw_string(font, Vector2(20, 395), "Mort : la silhouette tombe en cendre, puis la vie reprend à sa place", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+	draw_string(font, Vector2(20, 560), "Attaques : annoncée, puis frappée (même grammaire pour tous)", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+	draw_string(font, Vector2(880, 560), "Poche du Boursouflé · élite épineuse · Nid qui enfante", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
