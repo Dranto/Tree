@@ -16,6 +16,9 @@
 ##   ash    : 0 → 1, la silhouette devient cendre (mort) ; mono : silhouette noire (planche)
 extends RefCounted
 
+## Traits lissés : non. Les silhouettes passent par un lot de triangles (draw_batch.gd), sans lissage.
+const AA := false
+
 ## Teinte du corps de chaque sorte : toutes partent du rôle « ennemi », un élément les nuance.
 static func body_color(kind_id: String) -> Color:
 	var e := Art.c("ennemi")
@@ -45,7 +48,7 @@ static func ash_color() -> Color:
 
 
 ## Dessine la sorte kind_id en pos, de rayon r, tournée vers face.
-static func draw(ci: CanvasItem, kind_id: String, pos: Vector2, r: float, face: Vector2, t: float, o := {}) -> void:
+static func draw(ci, kind_id: String, pos: Vector2, r: float, face: Vector2, t: float, o := {}) -> void:
 	match kind_id:
 		"cendreux":
 			_cendreux(ci, pos, r, face, t, o)
@@ -70,6 +73,35 @@ static func draw(ci: CanvasItem, kind_id: String, pos: Vector2, r: float, face: 
 
 
 # --- Outils ---
+
+## Volume de la charte (Art.volume, Art.volume_circle), pour un CanvasItem ou un lot de triangles.
+static func _volume(ci, pts: PackedVector2Array, col: Color, light := 1.0) -> void:
+	var cen := Vector2.ZERO
+	for q in pts:
+		cen += q
+	cen /= pts.size()
+	var r := 0.0
+	for q in pts:
+		r = maxf(r, q.distance_to(cen))
+	if ci.has_method("polygon_tri"):
+		# Lot de triangles : les trois couches ont la même forme, une seule triangulation suffit.
+		var tri := Geometry2D.triangulate_polygon(pts)
+		ci.polygon_tri(pts, col.darkened(0.38), tri)
+		ci.polygon_tri(Art._xform(pts, cen, 0.84, Vector2(-0.06, -0.09) * r), col, tri)
+		if light > 0.0:
+			ci.polygon_tri(Art._xform(pts, cen, 0.4, Vector2(-0.24, -0.3) * r), Color(col.lightened(0.3), 0.5 * light), tri)
+		return
+	ci.draw_colored_polygon(pts, col.darkened(0.38))
+	ci.draw_colored_polygon(Art._xform(pts, cen, 0.84, Vector2(-0.06, -0.09) * r), col)
+	if light > 0.0:
+		ci.draw_colored_polygon(Art._xform(pts, cen, 0.4, Vector2(-0.24, -0.3) * r), Color(col.lightened(0.3), 0.5 * light))
+
+
+static func _volume_circle(ci, pos: Vector2, r: float, col: Color, light := 1.0) -> void:
+	ci.draw_circle(pos, r, col.darkened(0.38))
+	ci.draw_circle(pos + Vector2(-0.07, -0.1) * r, r * 0.84, col)
+	if light > 0.0:
+		ci.draw_circle(pos + Vector2(-0.3, -0.34) * r, r * 0.34, Color(col.lightened(0.32), 0.55 * light))
 
 static func _jag(radii: Array, rot: float) -> PackedVector2Array:
 	var pts := PackedVector2Array()
@@ -121,14 +153,14 @@ static func _shade(col: Color, o: Dictionary) -> Color:
 
 
 ## Remplit une forme avec du volume (ou en noir pour la planche des silhouettes).
-static func _fill(ci: CanvasItem, pts: PackedVector2Array, col: Color, o: Dictionary, light := 1.0) -> void:
+static func _fill(ci, pts: PackedVector2Array, col: Color, o: Dictionary, light := 1.0) -> void:
 	if o.get("mono", false):
 		ci.draw_colored_polygon(pts, Color.BLACK)
 	else:
-		Art.volume(ci, pts, _shade(col, o), light)
+		_volume(ci, pts, _shade(col, o), light)
 
 
-static func _outline(ci: CanvasItem, pts: PackedVector2Array, r: float, o: Dictionary, strong := false) -> void:
+static func _outline(ci, pts: PackedVector2Array, r: float, o: Dictionary, strong := false) -> void:
 	if o.get("mono", false):
 		return
 	var w := maxf(r * (0.12 if strong else 0.1), Art.TRAIT if strong else Art.TRAIT_FIN)
@@ -136,11 +168,13 @@ static func _outline(ci: CanvasItem, pts: PackedVector2Array, r: float, o: Dicti
 	var ash: float = o.get("ash", 0.0)
 	if ash > 0.0:
 		col = Color(col.lerp(ash_color(), ash), 1.0 - ash)
-	Art.outline(ci, pts, col, w)
+	var closed := pts.duplicate()
+	closed.append(pts[0])
+	ci.draw_polyline(closed, col, w, AA)
 
 
 ## Pointe en volume (moitié éclairée, moitié dans l'ombre), décrite dans le repère de la silhouette.
-static func _spike(ci: CanvasItem, xf: Transform2D, base: Vector2, d: Vector2, len: float, col: Color, o: Dictionary) -> void:
+static func _spike(ci, xf: Transform2D, base: Vector2, d: Vector2, len: float, col: Color, o: Dictionary) -> void:
 	var b := xf * base
 	var tip := xf * (base + d * len)
 	var n := (tip - b).orthogonal() * 0.25
@@ -158,7 +192,7 @@ static func _bone() -> Color:
 
 
 ## Fentes de l'écorce, avec la braise qui couve dedans (plus vive pendant une annonce).
-static func _cracks(ci: CanvasItem, xf: Transform2D, lines: Array, r: float, body: Color, glow: float, t: float, o: Dictionary) -> void:
+static func _cracks(ci, xf: Transform2D, lines: Array, r: float, body: Color, glow: float, t: float, o: Dictionary) -> void:
 	if o.get("mono", false) or r < 7.0:
 		return
 	var w := maxf(r * 0.07, 1.0)
@@ -168,13 +202,13 @@ static func _cracks(ci: CanvasItem, xf: Transform2D, lines: Array, r: float, bod
 		var line := PackedVector2Array()
 		for q in crack:
 			line.append(xf * q)
-		ci.draw_polyline(line, _shade(body.darkened(0.6), o), w * 1.8, true)
+		ci.draw_polyline(line, _shade(body.darkened(0.6), o), w * 1.8, AA)
 		var flick := 0.85 + 0.15 * sin(t * 6.0 + line[0].x * 0.05)
-		ci.draw_polyline(line, Color(ember, glow * flick * (1.0 - ash)), w * 0.7, true)
+		ci.draw_polyline(line, Color(ember, glow * flick * (1.0 - ash)), w * 0.7, AA)
 
 
 ## Œil fendu des Flétris : une lueur et un trait oblique de braise.
-static func _slit(ci: CanvasItem, xf: Transform2D, p: Vector2, s: float, side: int, glow: float, o: Dictionary) -> void:
+static func _slit(ci, xf: Transform2D, p: Vector2, s: float, side: int, glow: float, o: Dictionary) -> void:
 	if o.get("mono", false):
 		return
 	var col := Art.c("ennemi_oeil")
@@ -184,16 +218,16 @@ static func _slit(ci: CanvasItem, xf: Transform2D, p: Vector2, s: float, side: i
 	ci.draw_circle(c, sw * 1.25, Color(col, glow * (1.0 - ash)))
 	var a := xf * (p + Vector2(-s, -side * s * 0.6))
 	var b := xf * (p + Vector2(s, side * s * 0.2))
-	ci.draw_line(a, b, Color(col, 1.0 - ash), clampf(sw * 0.45, 1.3, 5.0), true)
+	ci.draw_line(a, b, Color(col, 1.0 - ash), clampf(sw * 0.45, 1.3, 5.0), AA)
 
 
 ## Flocon de cendre (losange).
-static func _flake(ci: CanvasItem, q: Vector2, s: float, col: Color) -> void:
+static func _flake(ci, q: Vector2, s: float, col: Color) -> void:
 	ci.draw_colored_polygon(PackedVector2Array([q + Vector2(0, -s * 1.4), q + Vector2(s, 0), q + Vector2(0, s * 1.4), q + Vector2(-s, 0)]), col)
 
 
 ## Flocons de cendre qui s'élèvent au-dessus d'un Flétri (n flocons).
-static func _ash_flakes(ci: CanvasItem, pos: Vector2, r: float, t: float, n: int, o: Dictionary) -> void:
+static func _ash_flakes(ci, pos: Vector2, r: float, t: float, n: int, o: Dictionary) -> void:
 	if o.get("mono", false) or r < 9.0:
 		return
 	for i in n:
@@ -205,7 +239,7 @@ static func _ash_flakes(ci: CanvasItem, pos: Vector2, r: float, t: float, n: int
 # --- Les sortes ---
 
 ## Flétri (mêlée) : corps compact cassé, deux griffes d'os vers l'avant qui s'avancent tour à tour.
-static func _fletri(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
+static func _fletri(ci, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var xf := _xf(pos, r, face, _squash(o, t))
 	var walk: float = o.get("walk", 0.0)
 	var mv: float = o.get("moving", 0.0)
@@ -219,7 +253,7 @@ static func _fletri(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: fl
 		# Grain de l'écorce et lichen mort.
 		var grain := _shade(body.darkened(0.3), o)
 		for g in [[Vector2(0.15, 0.3), Vector2(0.45, 0.42)], [Vector2(-0.5, 0.05), Vector2(-0.7, 0.12)], [Vector2(0.3, -0.62), Vector2(0.5, -0.5)]]:
-			ci.draw_line(xf * g[0], xf * g[1], grain, maxf(r * 0.04, 0.8), true)
+			ci.draw_line(xf * g[0], xf * g[1], grain, maxf(r * 0.04, 0.8), AA)
 		for l in [Vector2(-0.55, -0.45), Vector2(-0.62, 0.32)]:
 			ci.draw_circle(xf * l, r * 0.06, Color(Art.c("brume").lightened(0.2), 0.5))
 	_cracks(ci, xf, [[Vector2(-0.1, -0.05), Vector2(-0.45, -0.35), Vector2(-0.62, -0.28)], [Vector2(-0.1, -0.05), Vector2(-0.3, 0.35), Vector2(-0.55, 0.5)], [Vector2(-0.1, -0.05), Vector2(0.1, -0.5)]], r, body, 0.5, t, o)
@@ -230,7 +264,7 @@ static func _fletri(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: fl
 
 
 ## Cendreux (petit, rapide) : une flammèche de cendre, tête ronde et traîne de langues effilées.
-static func _cendreux(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
+static func _cendreux(ci, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var xf := _xf(pos, r, face, _squash(o, t))
 	var pts := PackedVector2Array()
 	for i in 7:
@@ -264,7 +298,7 @@ static func _cendreux(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: 
 
 
 ## Colosse (lourd) : bloc d'écorce à plaques, deux poings massifs, trait fort, petits yeux.
-static func _colosse(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
+static func _colosse(ci, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var walk: float = o.get("walk", 0.0)
 	var mv: float = o.get("moving", 0.0)
 	# Démarche lourde : le corps roule d'un côté à l'autre.
@@ -277,8 +311,8 @@ static func _colosse(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: f
 		if o.get("mono", false):
 			ci.draw_circle(fist, r * 0.32, Color.BLACK)
 		else:
-			Art.volume_circle(ci, fist, r * 0.32, _shade(body.lightened(0.08), o))
-			ci.draw_arc(fist, r * 0.32, 0.0, TAU, 16, Art.c("ennemi_contour"), maxf(r * 0.07, Art.TRAIT_FIN), true)
+			_volume_circle(ci, fist, r * 0.32, _shade(body.lightened(0.08), o))
+			ci.draw_arc(fist, r * 0.32, 0.0, TAU, 16, Art.c("ennemi_contour"), maxf(r * 0.07, Art.TRAIT_FIN), AA)
 			# Jointures d'os.
 			for j in 3:
 				ci.draw_circle(xf * Vector2(0.95 + reach, sgn * (0.6 + 0.14 * j)), r * 0.05, _shade(_bone(), o))
@@ -294,7 +328,7 @@ static func _colosse(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: f
 		[Vector2(0.35, 0.32), Vector2(0.82, 0.38), Vector2(0.45, 0.78), Vector2(0.32, 0.72)],
 	]
 	for pl in plates:
-		Art.volume(ci, xf * PackedVector2Array(pl), _shade(body.lightened(0.05), o), 0.7)
+		_volume(ci, xf * PackedVector2Array(pl), _shade(body.lightened(0.05), o), 0.7)
 	_cracks(ci, xf, [[Vector2(-0.5, -0.05), Vector2(0.18, -0.16), Vector2(0.26, 0.26), Vector2(-0.4, 0.06)]], r, body, 0.6, t, o)
 	_outline(ci, pts, r, o, true)
 	for sgn in [-1, 1]:
@@ -303,7 +337,7 @@ static func _colosse(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: f
 
 
 ## Cracheur de cendre : corps voûté, gorge gonflée de braises, long museau en entonnoir, cheminées.
-static func _cracheur(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
+static func _cracheur(ci, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var k: float = o.get("k", 0.0)
 	var strike: float = o.get("strike", -1.0)
 	var recoil := 0.25 * Anim.flash(strike) if strike >= 0.0 else 0.0
@@ -344,7 +378,7 @@ static func _cracheur(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: 
 
 
 ## Gardien d'écorce : corps trapu à plaques, grand écu d'écorce en croissant tenu face au joueur.
-static func _gardien(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
+static func _gardien(ci, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var xf := _xf(pos, r, face, _squash(o, t))
 	var body := body_color("gardien")
 	var pts := xf * GARDIEN
@@ -354,7 +388,7 @@ static func _gardien(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: f
 		for i in 5:
 			var a := PI * 0.55 + i * PI * 0.22
 			var cen := xf * (Vector2.from_angle(a) * 0.5)
-			ci.draw_arc(cen, r * 0.3, a + PI - 0.9, a + PI + 0.9, 8, bark, maxf(r * 0.1, 1.2), true)
+			ci.draw_arc(cen, r * 0.3, a + PI - 0.9, a + PI + 0.9, 8, bark, maxf(r * 0.1, 1.2), AA)
 	_outline(ci, pts, r, o)
 	for sgn in [-1, 1]:
 		_slit(ci, xf, Vector2(0.35, sgn * 0.3), 0.11, sgn, 0.3, o)
@@ -372,15 +406,15 @@ static func _gardien(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: f
 		var rim := PackedVector2Array()
 		for i in 9:
 			rim.append(xf * (Vector2.from_angle(-1.0 + i * 2.0 / 8.0) * 1.2))
-		ci.draw_polyline(rim, _shade(Art.ec("racine", "clair"), o), maxf(r * 0.06, 1.0), true)
+		ci.draw_polyline(rim, _shade(Art.ec("racine", "clair"), o), maxf(r * 0.06, 1.0), AA)
 		var knot := xf * Vector2(1.12, 0.0)
-		ci.draw_line(xf * Vector2(1.08, -0.45), xf * Vector2(1.08, 0.45), _shade(Art.ec("racine", "sombre"), o), maxf(r * 0.07, 1.0), true)
+		ci.draw_line(xf * Vector2(1.08, -0.45), xf * Vector2(1.08, 0.45), _shade(Art.ec("racine", "sombre"), o), maxf(r * 0.07, 1.0), AA)
 		ci.draw_circle(knot, r * 0.12, _shade(Art.ec("racine", "clair"), o))
 	_outline(ci, shield, r * 0.8, o)
 
 
 ## Boursouflé : outre gonflée et bosselée, pustules de spores violettes qui palpitent, pattes courtes.
-static func _boursoufle(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
+static func _boursoufle(ci, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var swell := 1.0 + 0.06 * sin(t * 5.0)
 	var walk: float = o.get("walk", 0.0)
 	var mv: float = o.get("moving", 0.0)
@@ -411,19 +445,19 @@ static func _boursoufle(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t
 	for j in 6:
 		var at := xf * (Vector2.from_angle(j * TAU / 6.0 + 0.5) * 0.62)
 		var g := 0.5 + 0.5 * sin(t * 4.0 + j * 1.7)
-		Art.volume_circle(ci, at, r * 0.2, _shade(spore.darkened(0.25), o), 0.8)
+		_volume_circle(ci, at, r * 0.2, _shade(spore.darkened(0.25), o), 0.8)
 		ci.draw_circle(at, r * 0.1, Color(Art.ec("poison", "clair"), (0.5 + 0.5 * g) * (1.0 - ash)))
 	# Bulles de spores qui s'échappent.
 	for i in 2:
 		var u := fposmod(t * 0.7 + i * 0.5, 1.0)
 		var q := pos + Vector2(sin(t * 2.0 + i * 3.0) * r * 0.5, -r * (0.6 + 1.1 * u))
-		ci.draw_arc(q, r * (0.08 + 0.1 * u), 0.0, TAU, 10, Color(Art.ec("poison", "clair"), (1.0 - u) * (1.0 - ash)), Art.TRAIT_FIN, true)
+		ci.draw_arc(q, r * (0.08 + 0.1 * u), 0.0, TAU, 10, Color(Art.ec("poison", "clair"), (1.0 - u) * (1.0 - ash)), Art.TRAIT_FIN, AA)
 	for sgn in [-1, 1]:
 		_slit(ci, xf, Vector2(0.72, sgn * 0.2), 0.1, sgn, 0.25, o)
 
 
 ## Tireur d'épines : corps effilé, piquants dans le dos, long canon-épine cerclé, un œil.
-static func _tireur(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
+static func _tireur(ci, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var k: float = o.get("k", 0.0)
 	var strike: float = o.get("strike", -1.0)
 	var recoil := 0.3 * Anim.flash(strike) if strike >= 0.0 else 0.0
@@ -440,7 +474,7 @@ static func _tireur(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: fl
 		return
 	for i in 2:
 		var x := 0.78 + i * 0.28
-		ci.draw_line(xf * Vector2(x, -0.2 + i * 0.05), xf * Vector2(x, 0.2 - i * 0.05), _shade(body.darkened(0.4), o), maxf(r * 0.08, 1.0), true)
+		ci.draw_line(xf * Vector2(x, -0.2 + i * 0.05), xf * Vector2(x, 0.2 - i * 0.05), _shade(body.darkened(0.4), o), maxf(r * 0.08, 1.0), AA)
 	_outline(ci, pts, r, o)
 	var ash: float = o.get("ash", 0.0)
 	var eye := xf * Vector2(0.05, 0)
@@ -455,7 +489,7 @@ static func _tireur(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: fl
 
 
 ## Chargeur : taureau de ronce, deux cornes d'os en croissant, crête d'épines sur l'échine.
-static func _chargeur(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
+static func _chargeur(ci, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var state: String = o.get("state", "")
 	var sq := _squash(o, t)
 	var shake := Vector2.ZERO
@@ -502,7 +536,7 @@ static func _chargeur(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: 
 
 
 ## Nid de ronces : monticule étoilé de ronces emmêlées, cœur de braise qui enfle avant une naissance.
-static func _nid(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
+static func _nid(ci, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var k: float = o.get("k", 0.0)
 	var b := Anim.breathe(t, 0.03 + 0.05 * k)
 	var xf := _xf(pos, r * b, Vector2.RIGHT, Vector2.ONE)
@@ -522,18 +556,18 @@ static func _nid(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float
 	var vine := _shade(body.darkened(0.45), o)
 	for i in 7:
 		var a := TAU * i / 7.0 + 0.4
-		ci.draw_arc(xf * (Vector2.from_angle(a) * 0.45), r * 0.52, a + 1.2, a + 4.2, 10, vine, maxf(r * 0.1, 1.5), true)
+		ci.draw_arc(xf * (Vector2.from_angle(a) * 0.45), r * 0.52, a + 1.2, a + 4.2, 10, vine, maxf(r * 0.1, 1.5), AA)
 	_cracks(ci, xf, [[Vector2(0, 0), Vector2(0.55, -0.3)], [Vector2(0, 0), Vector2(-0.5, -0.4)], [Vector2(0, 0), Vector2(-0.1, 0.62)]], r, body, 0.5 + 0.5 * k, t, o)
 	_outline(ci, pts, r, o, true)
 	# Cœur qui enfle avant de faire naître un Rejeton.
 	var ash: float = o.get("ash", 0.0)
 	var core := r * (0.26 + 0.2 * k + 0.03 * sin(t * 3.0))
 	ci.draw_circle(pos, core * 1.7, Color(Art.ec("cendre"), (0.18 + 0.35 * k) * (1.0 - ash)))
-	Art.volume_circle(ci, pos, core, _shade(Art.ec("cendre").lerp(Art.ec("cendre", "clair"), k), o), 0.8)
+	_volume_circle(ci, pos, core, _shade(Art.ec("cendre").lerp(Art.ec("cendre", "clair"), k), o), 0.8)
 
 
 ## Rejeton : larve de ronce en goutte, une épine recourbée sur le dos, qui frétille.
-static func _rejeton(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
+static func _rejeton(ci, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var f := face.rotated(0.18 * sin(t * 14.0) * maxf(0.3, float(o.get("moving", 0.0))))
 	var xf := _xf(pos, r, f, _squash(o, t))
 	# Épine recourbée en crochet sur le dos, et deux mandibules à l'avant.

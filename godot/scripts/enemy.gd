@@ -20,6 +20,7 @@ const Difficulty = preload("res://scripts/difficulty.gd")
 const Blast = preload("res://scripts/enemy_blast.gd")
 const FletriArt = preload("res://scripts/fletri_art.gd")
 const Remains = preload("res://scripts/enemy_remains.gd")
+const DrawBatch = preload("res://scripts/draw_batch.gd")
 
 ## Sortes d'ennemis, dans l'ordre de enemies.json (les trois premières sont les Flétris d'origine).
 static var KINDS: Array = Content._load("enemies").get("kinds", [])
@@ -225,7 +226,7 @@ func make_elite(list: Array) -> void:
 func _process(delta: float) -> void:
 	t += delta
 	_animate(delta)
-	queue_redraw()
+	_redraw_parts(delta)
 
 
 ## Logique à pas fixe : comportement, contact avec le joueur, poison.
@@ -557,6 +558,8 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 		shield -= soak
 		amount -= soak
 	hp -= amount
+	if _over:
+		_over.queue_redraw()
 	if not dot:
 		hit_flash = 0.08
 		main.fx.impact(position, shown, crit, radius)
@@ -650,47 +653,125 @@ func pose() -> Dictionary:
 	return o
 
 
+## Couches : le sol (ombre, aura, annonce, dessous de l'élite) est dessiné par l'ennemi lui-même ;
+## la silhouette et ce qui la recouvre (états, signes d'élite, barre de vie) par deux enfants.
+## La silhouette n'est redessinée qu'une douzaine de fois par seconde, et pas hors de l'écran (plus souvent pendant une action) ;
+## entre deux dessins, elle tourne avec le regard. 120 Flétris restent ainsi aussi légers qu'avant.
+class Part extends Node2D:
+	var e
+	var top := false
+
+	func _draw() -> void:
+		if top:
+			e._draw_over(self)
+		else:
+			e._draw_body(self)
+
+
+const BODY_PERIOD := 1.0 / 12.0
+var _body: Part
+var _over: Part
+var _body_face := Vector2.RIGHT
+var _body_clock := 0.0
+
+
+func _ready() -> void:
+	_body = Part.new()
+	_body.e = self
+	add_child(_body)
+	_over = Part.new()
+	_over.e = self
+	_over.top = true
+	add_child(_over)
+	_body_clock = randf() * BODY_PERIOD
+	_body_face = face if is_processing() else _target_face()
+
+
+## Redessine ce qui bouge, et seulement cela (appelé par _process).
+func _redraw_parts(delta: float) -> void:
+	var busy := state != "" or hit_flash > 0.0 or strike_t >= 0.0 or aff_state != ""
+	if busy or behavior == "guard" or elite:
+		queue_redraw()
+	_body_clock -= delta
+	var turn := absf(angle_difference(_body_face.angle(), face.angle()))
+	if (busy or turn > 0.3 or _body_clock <= 0.0) and _on_screen():
+		_body_clock += BODY_PERIOD
+		if _body_clock < 0.0:
+			_body_clock = BODY_PERIOD
+		_body_face = face
+		_body.queue_redraw()
+	_body.rotation = angle_difference(_body_face.angle(), face.angle())
+	var knock := -face * radius * 0.18 * clampf(hit_flash / 0.08, 0.0, 1.0)
+	_body.position = knock
+	_over.position = knock
+	if elite or guard_time > 0.0 or root_time > 0.0 or poison_time > 0.0 or not bleed_stacks.is_empty() or _over_dirty:
+		_over_dirty = root_time > 0.0 or poison_time > 0.0 or not bleed_stacks.is_empty() or guard_time > 0.0
+		_over.queue_redraw()
+
+
+## Hors de l'écran (avec une marge), la silhouette n'est pas redessinée.
+func _on_screen() -> bool:
+	var vp := get_viewport()
+	if vp == null:
+		return true
+	var view := vp.get_canvas_transform().affine_inverse() * vp.get_visible_rect()
+	return view.grow(radius * 3.0 + 40.0).has_point(global_position)
+
+
+## Vrai tant qu'un état visible vient de finir : un dernier dessin l'efface.
+var _over_dirty := false
+
+
 func _draw() -> void:
 	var f := face if is_processing() else _target_face()
-	var o := pose()
-	var fl: float = o.get("flash", 0.0)
-	# Recul du coup reçu.
-	var at := -f * radius * 0.18 * fl
-	Art.shadow(self, Vector2.ZERO, radius * (1.15 if behavior == "nest" else 1.0))
 	if behavior == "guard":
 		_draw_guard_aura()
 	_draw_attack(f)
 	if elite:
 		_draw_elite_under(f)
-	FletriArt.draw(self, kind_id, at, radius, f, t, o)
+
+
+## Lot de triangles partagé : la silhouette entière part en un seul appel de rendu.
+static var _batch = DrawBatch.new()
+
+func _draw_body(ci: CanvasItem) -> void:
+	var f := _body_face if is_processing() else _target_face()
+	# L'ombre tourne avec la silhouette entre deux dessins : on la garde ronde et centrée.
+	var sr := radius * (1.15 if behavior == "nest" else 1.0)
+	_batch.draw_colored_polygon(Art.ellipse(Vector2(0, sr * Art.OMBRE_DECALAGE * 0.5), sr * 1.05, sr * 0.75, 14), Art.c("ombre"))
+	FletriArt.draw(_batch, kind_id, Vector2.ZERO, radius, f, t, pose())
+	_batch.flush(ci)
+
+
+func _draw_over(ci: CanvasItem) -> void:
 	# États : le motif de l'élément de chaque effet (charte, § 3).
 	if root_time > 0.0:
-		Art.status(self, "racine", at, radius, t)
+		Art.status(ci, "racine", Vector2.ZERO, radius, t)
 	if poison_time > 0.0:
-		Art.status(self, "poison", at, radius, t)
+		Art.status(ci, "poison", Vector2.ZERO, radius, t)
 	if not bleed_stacks.is_empty():
-		Art.status(self, "saignement", at, radius, t * 1.25)
+		Art.status(ci, "saignement", Vector2.ZERO, radius, t * 1.25)
 		# Une goutte par piqûre, en arc au-dessus de la tête.
 		for i in bleed_stacks.size():
 			var a := -PI / 2.0 + (i - (bleed_stacks.size() - 1) / 2.0) * 0.4
-			Art._drop(self, at + Vector2.from_angle(a) * radius * 1.15, maxf(1.8, radius * 0.11), Art.ec("saignement", "clair"))
+			Art._drop(ci, Vector2.from_angle(a) * radius * 1.15, maxf(1.8, radius * 0.11), Art.ec("saignement", "clair"))
 	if guard_time > 0.0:
-		_draw_guarded()
+		_draw_guarded(ci)
 	if elite:
-		_draw_elite_over(f)
-	_draw_bar()
+		_draw_elite_over(ci)
+	_draw_bar(ci)
 
 
 ## Barre de vie (et bouclier d'écorce) : seulement quand il est entamé.
-func _draw_bar() -> void:
+func _draw_bar(ci: CanvasItem) -> void:
 	if hp >= max_hp and (max_shield <= 0.0 or shield >= max_shield):
 		return
 	var w := maxf(radius * 2.0, 22.0)
 	var y := -radius - (radius * 0.95 + 14.0 if elite else 11.0)
-	draw_rect(Rect2(-w / 2.0 - 1.0, y - 1.0, w + 2.0, 5.0), Color(Art.c("contour"), 0.85))
-	draw_rect(Rect2(-w / 2.0, y, w * clampf(hp / max_hp, 0.0, 1.0), 3.0), Art.c("danger"))
+	ci.draw_rect(Rect2(-w / 2.0 - 1.0, y - 1.0, w + 2.0, 5.0), Color(Art.c("contour"), 0.85))
+	ci.draw_rect(Rect2(-w / 2.0, y, w * clampf(hp / max_hp, 0.0, 1.0), 3.0), Art.c("danger"))
 	if max_shield > 0.0 and shield > 0.0:
-		draw_rect(Rect2(-w / 2.0, y - 4.0, w * clampf(shield / max_shield, 0.0, 1.0), 2.5), Art.ec("racine", "clair"))
+		ci.draw_rect(Rect2(-w / 2.0, y - 4.0, w * clampf(shield / max_shield, 0.0, 1.0), 2.5), Art.ec("racine", "clair"))
 
 
 ## Annonce de l'attaque en cours, puis éclair de la frappe : toujours Art.telegraph (charte, § 6).
@@ -732,15 +813,15 @@ func _draw_guard_aura() -> void:
 
 
 ## Protégé par un Gardien d'écorce : une racine le relie au gardien, une plaque d'écorce le couvre.
-func _draw_guarded() -> void:
+func _draw_guarded(ci: CanvasItem) -> void:
 	var bark := Art.ec("racine", "clair")
 	var to := guard_from - position
 	if to.length() > radius + 4.0:
-		draw_line(to.normalized() * radius, to * 0.5, Color(Art.ec("racine"), 0.4), Art.TRAIT_FIN, true)
+		ci.draw_line(to.normalized() * radius, to * 0.5, Color(Art.ec("racine"), 0.4), Art.TRAIT_FIN, true)
 	var dir := to.normalized() if to.length() > 1.0 else Vector2.UP
 	var a := dir.angle() + PI
-	draw_arc(Vector2.ZERO, radius + 4.0, a - 0.9, a + 0.9, 12, Art.ec("racine", "sombre"), Art.TRAIT_FORT, true)
-	draw_arc(Vector2.ZERO, radius + 4.0, a - 0.8, a + 0.8, 12, bark, Art.TRAIT_FIN, true)
+	ci.draw_arc(Vector2.ZERO, radius + 4.0, a - 0.9, a + 0.9, 12, Art.ec("racine", "sombre"), Art.TRAIT_FORT, true)
+	ci.draw_arc(Vector2.ZERO, radius + 4.0, a - 0.8, a + 0.8, 12, bark, Art.TRAIT_FIN, true)
 
 
 ## Couleur du signe d'un modificateur : celle de son élément (charte), sinon la sienne.
@@ -796,47 +877,47 @@ func _draw_elite_under(f: Vector2) -> void:
 
 
 ## Par-dessus une élite : gemme de corruption, flammes de la rage, plaques d'écorce, signes, nom.
-func _draw_elite_over(_f: Vector2) -> void:
+func _draw_elite_over(ci: CanvasItem) -> void:
 	var r := radius
 	var col := Art.c("elite")
 	var g := Vector2(r * 0.05, -r * 0.55)
-	draw_circle(g, r * (0.22 + 0.05 * sin(t * 4.0)), Color(col, 0.25))
-	draw_colored_polygon(PackedVector2Array([g + Vector2(0, -r * 0.17), g + Vector2(r * 0.12, 0), g + Vector2(0, r * 0.17), g + Vector2(-r * 0.12, 0)]), col)
-	draw_circle(g + Vector2(-r * 0.03, -r * 0.05), maxf(r * 0.04, 1.0), Color.WHITE)
+	ci.draw_circle(g, r * (0.22 + 0.05 * sin(t * 4.0)), Color(col, 0.25))
+	ci.draw_colored_polygon(PackedVector2Array([g + Vector2(0, -r * 0.17), g + Vector2(r * 0.12, 0), g + Vector2(0, r * 0.17), g + Vector2(-r * 0.12, 0)]), col)
+	ci.draw_circle(g + Vector2(-r * 0.03, -r * 0.05), maxf(r * 0.04, 1.0), Color.WHITE)
 	if "enrage" in affixes:
 		# Braises qui s'envolent : quelques-unes au calme, une gerbe une fois enragé.
 		var n := 7 if enraged else 3
 		for i in n:
 			var u := fposmod(t * (1.4 if enraged else 0.8) + i / float(n), 1.0)
 			var q := Vector2(sin(i * 2.3 + t * 2.0) * r * 0.8, -r * (0.2 + 1.5 * u))
-			FletriArt._flake(self, q, r * 0.09 * (1.0 - 0.5 * u), Color(Art.ec("cendre", "clair") if i % 2 else Art.ec("cendre"), 1.0 - u))
+			FletriArt._flake(ci, q, r * 0.09 * (1.0 - 0.5 * u), Color(Art.ec("cendre", "clair") if i % 2 else Art.ec("cendre"), 1.0 - u))
 	if max_shield > 0.0 and shield > 0.0:
 		# Plaques d'écorce autour du corps, d'autant plus nombreuses que le bouclier est plein.
 		var plates := int(ceil(8.0 * shield / max_shield))
 		for i in plates:
 			var a0 := TAU * i / 8.0 - PI / 2.0 + 0.1
-			draw_arc(Vector2.ZERO, r + 7.0, a0, a0 + TAU / 8.0 - 0.2, 6, Art.ec("racine", "sombre"), 7.0, true)
-			draw_arc(Vector2.ZERO, r + 7.5, a0 + 0.04, a0 + TAU / 8.0 - 0.24, 6, Art.ec("racine"), 3.5, true)
-			draw_arc(Vector2.ZERO, r + 9.0, a0 + 0.1, a0 + TAU / 16.0, 4, Art.ec("racine", "clair"), 1.2, true)
+			ci.draw_arc(Vector2.ZERO, r + 7.0, a0, a0 + TAU / 8.0 - 0.2, 6, Art.ec("racine", "sombre"), 7.0, true)
+			ci.draw_arc(Vector2.ZERO, r + 7.5, a0 + 0.04, a0 + TAU / 8.0 - 0.24, 6, Art.ec("racine"), 3.5, true)
+			ci.draw_arc(Vector2.ZERO, r + 9.0, a0 + 0.1, a0 + TAU / 16.0, 4, Art.ec("racine", "clair"), 1.2, true)
 	# Signes des modificateurs : un médaillon par modificateur sous la silhouette.
 	var s := 11.0
 	for i in affixes.size():
 		var a: String = affixes[i]
 		var at := Vector2((i - (affixes.size() - 1) / 2.0) * (s * 2.0 + 3.0), r + s + 5.0)
 		var c := _affix_color(a)
-		draw_circle(at, s, Art.c("contour"))
-		draw_circle(at, s - 1.5, c.darkened(0.75))
-		draw_arc(at, s - 1.0, 0.0, TAU, 20, c, Art.TRAIT_FIN, true)
+		ci.draw_circle(at, s, Art.c("contour"))
+		ci.draw_circle(at, s - 1.5, c.darkened(0.75))
+		ci.draw_arc(at, s - 1.0, 0.0, TAU, 20, c, Art.TRAIT_FIN, true)
 		if AFFIX_ELEMENT.has(a):
-			Art.icon(self, AFFIX_ELEMENT[a], Rect2(at - Vector2(s, s) * 0.75, Vector2(s, s) * 1.5), c)
+			Art.icon(ci, AFFIX_ELEMENT[a], Rect2(at - Vector2(s, s) * 0.75, Vector2(s, s) * 1.5), c)
 		else:
 			# « Rapide » : deux chevrons.
 			for j in 2:
 				var x := at.x - s * 0.35 + j * s * 0.4
-				draw_polyline(PackedVector2Array([Vector2(x - s * 0.2, at.y - s * 0.38), Vector2(x + s * 0.18, at.y), Vector2(x - s * 0.2, at.y + s * 0.38)]), c, Art.TRAIT, true)
+				ci.draw_polyline(PackedVector2Array([Vector2(x - s * 0.2, at.y - s * 0.38), Vector2(x + s * 0.18, at.y), Vector2(x - s * 0.2, at.y + s * 0.38)]), c, Art.TRAIT, true)
 	var font := ThemeDB.fallback_font
 	var size := 12
 	var w := font.get_string_size(elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 	var pos := Vector2(-w / 2.0, -r - (r * 0.95 + 14.0) - 7.0)
-	draw_string_outline(font, pos, elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, Color(Art.c("contour"), 0.9))
-	draw_string(font, pos, elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col.lerp(Color.WHITE, 0.55))
+	ci.draw_string_outline(font, pos, elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, Color(Art.c("contour"), 0.9))
+	ci.draw_string(font, pos, elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col.lerp(Color.WHITE, 0.55))
