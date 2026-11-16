@@ -57,6 +57,13 @@ func _run() -> void:
 	check(obj.main_done_count() == 0, "aucun objectif accompli")
 	check(main.quest_ui != null and obj.main == main, "l'interface des objectifs est branchée")
 
+	print("Monde réel")
+	check(not get_nodes_in_group("sanctuaire").is_empty() and not get_nodes_in_group("autel").is_empty(), "les sanctuaires et les autels du roncier sont dans leurs groupes")
+	# La suite se joue dans un monde sans sanctuaire ni autel, puis avec des faux bien placés.
+	for g in ["sanctuaire", "autel"]:
+		for n in get_nodes_in_group(g):
+			n.remove_from_group(g)
+
 	print("Premier nœud")
 	game.points = 50
 	var nid: int = game.tree.nodes[0]["neighbors"][0]

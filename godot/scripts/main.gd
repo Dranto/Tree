@@ -497,7 +497,7 @@ func _ordinary_kind() -> String:
 
 
 ## Tirage d'une élite : rare près de la graine, un peu moins au fond d'une région ; au plus
-## « max_alive » en même temps. Réglages : section « elites » de enemies.json.
+## « max_alive » en même temps. Réglages : section « elites » de difficulty.json.
 func _roll_elite(e, pos: Vector2) -> void:
 	var cfg: Dictionary = Enemy.ELITES
 	if cfg.is_empty() or Game.level < int(cfg.get("min_level", 1)) or not e.can_be_elite():

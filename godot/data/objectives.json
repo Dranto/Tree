@@ -68,7 +68,7 @@
       "title": "Découvrir le secret du roncier",
       "text": "Quelque chose est enfoui là où personne ne regarde. Explore les recoins de la région.",
       "condition": {"type": "flag_count", "prefix": "secret_", "count": 1},
-      "reward": {"text": "1 point d'arbre", "points": 1}
+      "reward": {"text": "1 point d'arbre et une greffe, donnés par le secret lui-même"}
     }
   ]
 }

@@ -9,7 +9,7 @@
 ##   guard   : avance derrière les autres et réduit les dégâts de ses voisins (Gardien d'écorce)
 ##   bomber  : poursuit le joueur ; à sa mort, il éclate après une annonce au sol (Boursouflé)
 ## Élites : un ennemi tiré au hasard reçoit un ou deux modificateurs (« affixes », section
-## « elites » de enemies.json) : plus de vie, un liseré doré et un nom au-dessus de lui.
+## « elites » de difficulty.json) : plus de vie, un liseré doré et un nom au-dessus de lui.
 extends Node2D
 
 const Content = preload("res://scripts/content.gd")
@@ -21,8 +21,8 @@ const Blast = preload("res://scripts/enemy_blast.gd")
 static var KINDS: Array = Content._load("enemies").get("kinds", [])
 ## Indice de chaque sorte par identifiant.
 static var KIND_INDEX: Dictionary = _index_kinds()
-## Réglages des élites et de leurs modificateurs (section « elites » de enemies.json).
-static var ELITES: Dictionary = Content._load("enemies").get("elites", {})
+## Réglages des élites et de leurs modificateurs (section « elites » de difficulty.json).
+static var ELITES: Dictionary = Content._load("difficulty").get("elites", {})
 const BEHAVIORS := ["chase", "shooter", "charger", "nest", "kite", "guard", "bomber"]
 
 ## Rayon du plus gros ennemi (Nid de ronces) : marge des recherches dans la grille spatiale.

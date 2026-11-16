@@ -97,13 +97,15 @@ func _run() -> void:
 		if game.can_allocate(m):
 			first = m
 			break
+	# Les autels voisins du sanctuaire ont pu donner des points : on compte à partir d'ici.
+	var p0: int = game.points
 	game.allocate(first)
 	game.add_xp(game.xp_to_next() + 7.5)   # un niveau gagné, un point gardé en réserve
 	var level: int = game.level
 	var points: int = game.points
 	var uids: Array = game.allocated_uids()
 	var xp: float = game.xp
-	check(xp > 7.0 and points == 1, "avant la mort : %.1f d'expérience non dépensée, un point en réserve" % xp)
+	check(xp > 7.0 and points == p0, "avant la mort : %.1f d'expérience non dépensée, un point gagné en réserve" % xp)
 	var fall: Vector2 = lisiere.position + Vector2(-1100, -300)
 	await _die_at(fall)
 	check(main.player.position == lisiere.position, "le joueur renaît au dernier sanctuaire ravivé")
