@@ -48,6 +48,8 @@ var ground
 var flora
 var fx
 var screen_fx
+## Signatures visuelles des attaques du héros (skill_fx.gd).
+var skill_fx: SkillFx
 var player
 var hud
 var tree_ui
@@ -148,6 +150,10 @@ func _ready() -> void:
 	add_child(flora)
 	orbs_layer = Node2D.new()
 	add_child(orbs_layer)
+	# Signatures des attaques du héros : une moitié sous les acteurs, l'autre au-dessus des projectiles.
+	var sfx_pair := SkillFx.make_pair()
+	add_child(sfx_pair[0])
+	skill_fx = sfx_pair[1]
 	add_child(actors_layer)
 	enemies_layer = Node2D.new()
 	enemies_layer.y_sort_enabled = true
@@ -157,6 +163,7 @@ func _ready() -> void:
 	actors_layer.add_child(player)
 	projectiles_layer = Node2D.new()
 	add_child(projectiles_layer)
+	add_child(skill_fx)
 	fx = Fx.new()
 	fx.main = self
 	add_child(fx)

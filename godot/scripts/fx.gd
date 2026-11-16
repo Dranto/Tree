@@ -243,6 +243,8 @@ func _physics_process(delta: float) -> void:
 
 func _draw() -> void:
 	for c in clouds:
+		if c.has("dessin"):
+			continue   # dessiné ailleurs (signature du Nuage de spores, skill_fx.gd)
 		var k: float = c["t"] / c["dur"]
 		var a := 0.22 * (1.0 - k * k)
 		draw_circle(c["pos"], c["radius"], Color(0.55, 0.35, 0.75, a))
