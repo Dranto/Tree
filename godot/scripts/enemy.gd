@@ -706,7 +706,7 @@ func _draw_attack(f: Vector2) -> void:
 			if state == "windup" or hit >= 0.0:
 				var n := int(data.get("shots", 3))
 				var spread := float(data.get("spread", 0.3))
-				Art.telegraph(self, {"type": "cone", "centre": attack_dir * radius * 0.5, "direction": attack_dir.angle(), "ouverture": spread * (n - 1) + 0.22, "rayon": 300.0}, k, hit, t)
+				Art.telegraph(self, {"type": "cone", "centre": attack_dir * radius * 0.5, "direction": attack_dir.angle(), "ouverture": spread * (n - 1) + 0.22, "rayon": 240.0}, k, hit, t)
 		"charger":
 			var ln := float(data["charge_dist"])
 			if state == "windup":
@@ -837,6 +837,6 @@ func _draw_elite_over(_f: Vector2) -> void:
 	var font := ThemeDB.fallback_font
 	var size := 12
 	var w := font.get_string_size(elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-	var pos := Vector2(-w / 2.0, -r * 1.95 - 14.0)
+	var pos := Vector2(-w / 2.0, -r - (r * 0.95 + 14.0) - 7.0)
 	draw_string_outline(font, pos, elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, Color(Art.c("contour"), 0.9))
 	draw_string(font, pos, elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col.lerp(Color.WHITE, 0.55))

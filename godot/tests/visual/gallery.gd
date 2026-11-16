@@ -184,7 +184,7 @@ func _ready_varies() -> void:
 	for i in ELITES.size():
 		var spec: Array = ELITES[i]
 		var e = _enemy(stub, spec[0], Vector2.ZERO, 1.3)
-		e.position = Vector2(200 + (i % 3) * 300 + (0 if i < 3 else 150), 470 + int(i / 3) * 220)
+		e.position = Vector2(200 + (i % 3) * 300 + (0 if i < 3 else 150), 500 + int(i / 3) * 230)
 		e.make_elite(spec[1])
 		match spec[2]:
 			"enrage":

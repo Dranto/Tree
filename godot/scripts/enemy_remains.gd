@@ -61,10 +61,11 @@ func draw_at(ci: CanvasItem, pos: Vector2, time: float) -> void:
 		var fade := 1.0 - Anim.ease_in(clampf((u - 0.6) / 0.4, 0.0, 1.0))
 		var s := maxf(8.0, r * 0.75) * (1.3 if elite else 1.0)
 		var base := pos + Vector2(0, r * 0.35)
-		Art.glow(ci, base + Vector2(0, -s * 0.4), s * 1.6 * grow, "seve")
+		ci.draw_circle(base + Vector2(0, -s * 0.5), s * 1.1 * grow, Color(Art.ec("seve"), 0.12 * fade))
 		var top := base + Vector2(0, -s * 1.1 * grow)
-		ci.draw_line(base, top, Color(Art.ec("seve", "sombre"), fade), maxf(1.5, s * 0.14), true)
+		ci.draw_line(base, top, Color(Art.ec("seve", "sombre").lightened(0.2), fade), maxf(1.5, s * 0.14), true)
 		for sgn in [-1.0, 1.0]:
-			var leaf := top + Vector2(sgn * s * 0.38 * grow, s * 0.05)
-			Art._leaf(ci, leaf, s * 0.42 * grow, PI / 2.0 + sgn * 1.15, Color(Art.ec("seve"), fade))
-		ci.draw_circle(top, maxf(1.2, s * 0.1) * grow, Color(Art.ec("seve", "clair"), fade))
+			var d := Vector2.from_angle(-PI / 2.0 + sgn * 0.95)
+			var l := s * 0.3 * grow
+			Art._leaf(ci, top + d * l, l, d.angle(), Color(Art.ec("seve"), fade))
+		ci.draw_circle(top, maxf(1.2, s * 0.09) * grow, Color(Art.ec("seve", "clair"), fade))

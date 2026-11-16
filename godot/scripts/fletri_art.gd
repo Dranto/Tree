@@ -536,8 +536,11 @@ static func _nid(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float
 static func _rejeton(ci: CanvasItem, pos: Vector2, r: float, face: Vector2, t: float, o: Dictionary) -> void:
 	var f := face.rotated(0.18 * sin(t * 14.0) * maxf(0.3, float(o.get("moving", 0.0))))
 	var xf := _xf(pos, r, f, _squash(o, t))
-	_spike(ci, xf, Vector2(-0.7, 0.0), Vector2(-1, -0.7).normalized(), 0.95, _bone(), o)
-	_spike(ci, xf, Vector2(-0.6, 0.2), Vector2(-1, 0.6).normalized(), 0.55, _bone(), o)
+	# Épine recourbée en crochet sur le dos, et deux mandibules à l'avant.
+	_spike(ci, xf, Vector2(-0.55, -0.1), Vector2(-0.6, -1).normalized(), 1.0, _bone(), o)
+	_spike(ci, xf, Vector2(-0.6, -0.75), Vector2(1, -0.35).normalized(), 0.5, _bone(), o)
+	for sgn in [-1, 1]:
+		_spike(ci, xf, Vector2(0.75, sgn * 0.3), Vector2(1, sgn * 0.8).normalized(), 0.55, _bone(), o)
 	var pts := xf * REJETON
 	_fill(ci, pts, body_color("rejeton"), o)
 	_outline(ci, pts, r, o)
