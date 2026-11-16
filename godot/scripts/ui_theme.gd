@@ -1,10 +1,12 @@
 ## Thème commun des menus : aplats sombres et accents verts, tout dessiné par le code.
+## Ses couleurs viennent de la charte graphique (art.gd, docs/charte-graphique.md).
 extends RefCounted
 
-const INK := Color("e9e2c8")
-const LEAF := Color("7fd36b")
-const GOLD := Color("f2d06b")
-const PANEL_BG := Color(0.06, 0.08, 0.07, 0.92)
+## Couleurs de la charte (art.gd) : texte, accent, or et fond des panneaux.
+const INK: Color = Art.PALETTE["texte"]
+const LEAF: Color = Art.PALETTE["accent"]
+const GOLD: Color = Art.PALETTE["or"]
+const PANEL_BG: Color = Art.PALETTE["panneau"]
 const FONT_REGULAR := "res://assets/fonts/Inter-Regular.otf"
 const FONT_BOLD := "res://assets/fonts/Inter-Bold.otf"
 
