@@ -92,6 +92,14 @@ func visibility() -> float:
 func _physics_process(delta: float) -> void:
 	if main == null or main.player == null:
 		return
+	# Les drapeaux font foi : une partie chargée après la création des autels (« Continuer ») les
+	# retrouve ravivés, sans rejouer leur récompense ni leur vague de vie.
+	if not active and Game.flags.get(flag(), false):
+		active = true
+		progress = HOLD[kind]
+		seen = 1.0
+	elif seen <= 0.0 and Game.flags.get(flag() + "_vu", false):
+		seen = 1.0
 	var d: float = main.player.position.distance_to(position)
 	if seen <= 0.0 and d < CLEAR[kind]:
 		seen = 1.0

@@ -125,6 +125,9 @@ func _add_row(o: Dictionary, is_current: bool) -> void:
 	var pr: Array = Objectives.progress(o)
 	if not pr.is_empty():
 		title += "   (%d / %d)" % [pr[0], pr[1]]
+	if Objectives.skipped(o):
+		# Étape dépassée par la suite de l'aventure : elle reste à faire, sans bloquer.
+		title += "   (étape passée)"
 	var t := _label(head, title, 17, ink, true)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var reward: String = o.get("reward", {}).get("text", "")

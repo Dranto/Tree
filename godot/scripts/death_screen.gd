@@ -73,7 +73,10 @@ func show_death(info: Dictionary) -> void:
 	var texts: Array = [["Tu renais au sanctuaire %s." % info.get("place", "de la Graine"), UiTheme.INK]]
 	var dropped := roundi(float(info.get("dropped", 0.0)))
 	if dropped > 0:
-		texts.append(["Ta sève (%d d'expérience) est restée là où tu es tombé : va la reprendre." % dropped, Color("e8d36b")])
+		if str(info.get("reset", "")) == "boss":
+			texts.append(["Ta sève (%d d'expérience) t'attend devant l'arène : va la reprendre." % dropped, Color("e8d36b")])
+		else:
+			texts.append(["Ta sève (%d d'expérience) est restée là où tu es tombé : va la reprendre." % dropped, Color("e8d36b")])
 	else:
 		texts.append(["Tu n'avais pas de sève à perdre.", UiTheme.INK])
 	var lost := roundi(float(info.get("lost", 0.0)))

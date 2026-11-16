@@ -56,6 +56,14 @@ func detach(m) -> void:
 		main = null
 
 
+## Une mort du joueur, notée tout de suite dans les drapeaux : une partie quittée juste après
+## la garde dans ses statistiques.
+func note_death() -> void:
+	Game.flags[STAT_DEATHS] = int(Game.flags.get(STAT_DEATHS, 0)) + 1
+	if main != null and is_instance_valid(main):
+		_last_deaths = int(main.deaths)
+
+
 func _on_elite_killed(_enemy = null) -> void:
 	Game.flags[ELITES] = int(Game.flags.get(ELITES, 0)) + 1
 	check()
@@ -101,12 +109,47 @@ func available(o: Dictionary) -> bool:
 	return not main.get_tree().get_nodes_in_group(g).is_empty()
 
 
-## Objectif principal à suivre : le premier qui n'est pas accompli. {} quand la tranche est finie.
+## Objectif principal à suivre : le premier qui n'est pas accompli après la dernière grande étape
+## accomplie (« milestone » : le Cœur, le boss). Les petites étapes du début se font dans n'importe
+## quel ordre ; mais un joueur qui purifie le Cœur avant d'avoir ravivé un sanctuaire n'est pas
+## renvoyé en arrière : les étapes sautées restent ouvertes dans le journal (voir skipped) et
+## s'accomplissent encore si leur condition se remplit. {} quand la tranche est finie.
 func current() -> Dictionary:
-	for o in list():
-		if o.get("main", false) and not is_done(o["id"]) and available(o):
+	var mains := main_list()
+	for i in range(_last_main_done(mains) + 1, mains.size()):
+		var o: Dictionary = mains[i]
+		if not is_done(o["id"]) and available(o):
 			return o
 	return {}
+
+
+## Objectifs principaux, dans l'ordre de la suite.
+func main_list() -> Array:
+	return list().filter(func(o): return o.get("main", false))
+
+
+## Indice de la dernière grande étape accomplie dans la suite, -1 s'il n'y en a pas.
+func _last_main_done(mains: Array) -> int:
+	var last := -1
+	for i in mains.size():
+		if mains[i].get("milestone", false) and is_done(mains[i]["id"]):
+			last = i
+	return last
+
+
+## Objectif principal pas accompli alors qu'une grande étape plus loin dans la suite l'est déjà.
+func skipped(o: Dictionary) -> bool:
+	if not o.get("main", false) or is_done(o["id"]):
+		return false
+	var mains := main_list()
+	var i := mains.find(o)
+	return i >= 0 and i < _last_main_done(mains)
+
+
+## Rang (à partir de 1) de l'objectif principal en cours dans la suite, 0 quand tout est fait.
+func current_rank() -> int:
+	var o := current()
+	return 0 if o.is_empty() else main_list().find(o) + 1
 
 
 func main_done_count() -> int:
@@ -143,6 +186,9 @@ func _count_flags(c: Dictionary) -> int:
 	var skip: Array = c.get("exclude", [])
 	for k in Game.flags:
 		var key := str(k)
+		# « autel_<id>_vu », « secret_<id>_vu » : aperçu seulement, pas encore ravivé ni trouvé.
+		if key.ends_with("_vu"):
+			continue
 		if key.begins_with(str(c["prefix"])) and not key in skip and bool(Game.flags[k]):
 			n += 1
 	return n

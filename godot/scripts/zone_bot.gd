@@ -1,0 +1,198 @@
+## Robot « zone complète » : joue la région de Ronce d'une nouvelle partie jusqu'à la Mère-Ronce,
+## en suivant l'objectif principal en cours (Objectives.current), comme un joueur qui lit le cadre
+## d'objectif. Utilisé par tests/zone_test.gd (tools/zone.sh), qui le fait passer par des
+## sauvegardes, des reprises et des morts en route.
+##
+## Le robot gagne de l'expérience plus vite qu'un joueur (LEVEL_SECONDS par niveau, en plus des
+## Flétris vaincus) : le but est la fiabilité de l'aventure, pas l'équilibrage (tools/balance.sh).
+## Il apprend d'abord le chemin vers le nœud clé de Ronce le plus proche, puis le build « fouet ».
+##
+## Sans état dans le jeu : il ne garde que ses mesures, et survit donc aux reprises (le test lui
+## rattache la nouvelle scène de jeu).
+extends RefCounted
+
+const BuildBot = preload("res://scripts/build_bot.gd")
+const TreePlanner = preload("res://scripts/tree_planner.gd")
+const Content = preload("res://scripts/content.gd")
+const GraftPickup = preload("res://scripts/graft_pickup.gd")
+
+## Secondes de jeu par niveau gagnées en plus des ennemis vaincus.
+const LEVEL_SECONDS := 18.0
+## Niveaux attendus avant d'assiéger le Cœur et d'entrer dans l'arène.
+const HEART_LEVEL := 14
+const BOSS_LEVEL := 17
+## Vie (part de la vie maximale) sous laquelle le robot décroche, et au-dessus de laquelle il revient.
+const FLEE_BELOW := 0.35
+const BACK_ABOVE := 0.8
+
+var builder
+## Ce que fait le robot en ce moment (journal du test).
+var goal := ""
+var recovering := false
+## Détection d'un blocage contre un obstacle : position et temps du dernier progrès.
+var _last_pos := Vector2.INF
+var _still := 0.0
+var _detour := 0.0
+var _detour_dir := Vector2.ZERO
+var _t := 0.0
+## Vrai pendant une vérification du test : le robot ne joue plus et le jeu ne lui donne rien.
+var hold := false
+
+
+func _init(build := "fouet") -> void:
+	var all := BuildBot.load_all()
+	builder = BuildBot.new()
+	builder.name = build
+	builder.targets = all.get(build, {}).get("targets", [])
+	builder.choices = all.get(build, {}).get("choices", {})
+	builder.start_level = 1
+
+
+## Nœud clé de Ronce le plus proche des nœuds appris (uid), "" s'il y en a déjà un d'appris.
+func _nearest_keystone() -> String:
+	var ronce: int = Content.tree().get("branches", []).find("ronce")
+	var best := ""
+	var best_len := 1 << 30
+	for n in Game.tree.nodes:
+		if n["branch"] != ronce or n["type"] != "keystone":
+			continue
+		if Game.allocated.has(n["id"]):
+			return ""
+		var path: Array = TreePlanner.shortest_path(Game.tree, Game.allocated, n["id"])
+		if not path.is_empty() and path.size() < best_len:
+			best_len = path.size()
+			best = n["uid"]
+	return best
+
+
+## Un pas de jeu : expérience en plus, points dépensés.
+func step(main, delta: float) -> void:
+	if hold:
+		return
+	_t += delta
+	if main.arena.in_combat() or main.heart.state == "siege":
+		pass  # pas d'expérience offerte pendant un combat : il se joue au niveau atteint
+	else:
+		Game.add_xp(Game.xp_to_next() * delta / LEVEL_SECONDS)
+	if Game.points > 0:
+		var key := _nearest_keystone()
+		if key != "" and not builder.targets.has(key):
+			builder.targets.push_front(key)
+		builder.spend(Game)
+
+
+## Où aller pour l'objectif en cours (ou null : rester à se battre là où il est).
+func _goal_pos(main, p):
+	if main.lost_sap != null and is_instance_valid(main.lost_sap) and not main.arena.in_combat():
+		goal = "sève perdue"
+		return main.lost_sap.position
+	# Greffe au sol (autel, boss, élite) : la ramasser.
+	for g in main.orbs_layer.get_children():
+		if g is GraftPickup and not g.is_queued_for_deletion() and g.position.distance_to(p.position) < 900.0:
+			goal = "greffe " + g.graft_id
+			return g.position
+	var o: Dictionary = Objectives.current()
+	var id: String = o.get("id", "")
+	match id:
+		"premier_noeud", "noeud_cle":
+			goal = "apprendre (%s)" % id
+			return null
+		"sanctuaire", "autel":
+			goal = id
+			return Objectives.target_pos(o)
+		"coeur":
+			if Game.level < HEART_LEVEL:
+				goal = "monter de niveau avant le Cœur"
+				return null
+			goal = "siège du Cœur"
+			var c: Vector2 = main.heart.center
+			return c - c.normalized() * 130.0
+		"boss":
+			if Game.level < BOSS_LEVEL and not main.arena.in_combat():
+				goal = "monter de niveau avant la Mère-Ronce"
+				return null
+			goal = "Mère-Ronce"
+			return main.arena.center
+	goal = "fini"
+	return main.arena.center
+
+
+## Commandes du robot : {"move", "aim", "dash"}.
+func input(main, p) -> Dictionary:
+	if hold:
+		return {"move": Vector2.ZERO, "aim": p.position + Vector2.RIGHT, "dash": false}
+	var target: Vector2 = p.position + Vector2.RIGHT * 100.0
+	var best := INF
+	for e in main.enemies:
+		if is_instance_valid(e) and not e.dead:
+			var d: float = e.position.distance_squared_to(p.position)
+			if d < best:
+				best = d
+				target = e.position
+	if main.arena.in_combat():
+		goal = "Mère-Ronce"
+		return main.arena.bot_input(p)
+	var where = _goal_pos(main, p)
+	var hp_ratio: float = p.hp / Game.stats["max_hp"]
+	if hp_ratio < FLEE_BELOW:
+		recovering = true
+	elif hp_ratio > BACK_ABOVE:
+		recovering = false
+	var away := Vector2.ZERO
+	for e in main.enemies_near(p.position, 200.0):
+		var d: Vector2 = p.position - e.position
+		var l := maxf(d.length(), 8.0)
+		away += d / (l * l)
+	away = away.normalized() if away.length() > 0.0 else Vector2.ZERO
+	# Siège du Cœur : rester dans la zone prime sur tout le reste (sortir fait reculer le siège).
+	if goal == "siège du Cœur" and where != null:
+		var from_c: float = p.position.distance_to(main.heart.center)
+		if from_c > main.heart.ZONE - 50.0:
+			var back: Vector2 = ((where as Vector2) - p.position).normalized()
+			return {"move": _unstick(p, back).normalized(), "aim": target, "dash": best < 45.0 * 45.0}
+	var dodge: Vector2 = builder._dodge(main, p)
+	if dodge != Vector2.ZERO:
+		return {"move": dodge.normalized(), "aim": target, "dash": dodge.length() > 1.5}
+	var mv := Vector2.ZERO
+	# En siège, il tient la zone tant qu'il le peut : il ne décroche qu'au tout dernier moment.
+	var sieging: bool = goal == "siège du Cœur" and main.heart.state == "siege"
+	if recovering and not (sieging and hp_ratio > 0.2):
+		# Repli vers son point de renaissance (un sanctuaire ravivé rend toute la vie en y entrant).
+		var safe: Vector2 = main.respawn_point()
+		mv = (safe - p.position).normalized() + away * 1.5
+		goal = "repli"
+	elif where != null:
+		var to: Vector2 = (where as Vector2) - p.position
+		if to.length() > 24.0:
+			mv = to.normalized() + away * (0.3 if sieging else 0.8)
+	else:
+		# Se battre autour du point de renaissance, en tournant.
+		var orbit: Vector2 = main.respawn_point() + Vector2.from_angle(_t * 0.35) * 260.0
+		var to: Vector2 = orbit - p.position
+		mv = (to.normalized() if to.length() > 40.0 else Vector2.ZERO) + away
+	mv = _unstick(p, mv)
+	return {"move": mv.normalized() if mv.length() > 0.05 else Vector2.ZERO, "aim": target, "dash": best < 45.0 * 45.0}
+
+
+## Contre un buisson d'épines ou un mur, le robot fait un détour sur le côté pendant un instant.
+func _unstick(p, mv: Vector2) -> Vector2:
+	var dt := 1.0 / 60.0
+	if _detour > 0.0:
+		_detour -= dt
+		return _detour_dir
+	if mv.length() < 0.1:
+		_still = 0.0
+		_last_pos = p.position
+		return mv
+	if _last_pos == Vector2.INF or p.position.distance_to(_last_pos) > 40.0:
+		_last_pos = p.position
+		_still = 0.0
+	else:
+		_still += dt
+		if _still > 1.5:
+			_still = 0.0
+			_detour = 0.9
+			var side := mv.orthogonal().normalized()
+			_detour_dir = (side * (1.0 if randf() < 0.5 else -1.0) - mv.normalized() * 0.3).normalized()
+			return _detour_dir
+	return mv

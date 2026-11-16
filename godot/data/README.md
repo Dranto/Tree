@@ -208,7 +208,7 @@ Les points passent par `Game.grant_points(n, source, clé)` : une même clé ne 
 
 ## Objectifs
 
-`objectives.json` : `{"ending_flag": "...", "objectives": [...]}`. Chaque objectif a un `id`, un `title`, un `text`, `"main": true` pour la suite principale (ordre du fichier), une `condition`, éventuellement une `target` (cible de la flèche et de la carte) et une `reward` (`text` affiché, `points` donnés une seule fois). Un objectif est accompli dès que sa condition est vraie, dans n'importe quel ordre ; l'objectif en cours est le premier principal qui ne l'est pas.
+`objectives.json` : `{"ending_flag": "...", "objectives": [...]}`. Chaque objectif a un `id`, un `title`, un `text`, `"main": true` pour la suite principale (ordre du fichier), une `condition`, éventuellement une `target` (cible de la flèche et de la carte) et une `reward` (`text` affiché, `points` donnés une seule fois). Un objectif est accompli dès que sa condition est vraie, dans n'importe quel ordre ; l'objectif en cours est le premier principal qui ne l'est pas, après la dernière étape marquée `"milestone": true` déjà accomplie (le Cœur, le boss) : un joueur qui purifie le Cœur avant d'avoir ravivé un sanctuaire n'est pas renvoyé en arrière, et l'étape sautée reste ouverte dans le journal (« étape passée »). Les drapeaux qui finissent par `_vu` (autel ou secret seulement aperçu) ne comptent pas dans `flag_count`.
 
 | `condition.type` | Vrai quand |
 | --- | --- |
