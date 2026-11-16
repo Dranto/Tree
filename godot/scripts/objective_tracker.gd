@@ -70,7 +70,6 @@ func _label(parent: Node, size_px: int, color: Color) -> Label:
 ## Remet les textes à jour (changement d'objectif, d'avancement ou de touches).
 func refresh() -> void:
 	var o: Dictionary = Objectives.current()
-	var done: int = Objectives.main_done_count()
 	var total: int = Objectives.main_total()
 	if o.is_empty():
 		_head.text = "TRANCHE DE RONCE"
@@ -78,7 +77,8 @@ func refresh() -> void:
 		_text.text = "Le roncier est libre. Les autres branches de l'Arbre t'attendent."
 		_progress.text = ""
 	else:
-		_head.text = "OBJECTIF  ·  %d / %d" % [done + 1, total]
+		# Rang dans la suite (pas le nombre d'objectifs faits : une étape sautée ne décale rien).
+		_head.text = "OBJECTIF  ·  %d / %d" % [Objectives.current_rank(), total]
 		_title.text = o["title"]
 		_text.text = o["text"]
 		var pr: Array = Objectives.progress(o)

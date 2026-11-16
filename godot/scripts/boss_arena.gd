@@ -76,6 +76,13 @@ func in_combat() -> bool:
 	return state == "combat"
 
 
+## Point devant la brèche, côté Cœur, hors de la zone qui réveille la Mère-Ronce : là où l'on
+## reprend une partie sauvegardée pendant le combat, et où la sève attend après une mort dans l'arène.
+func entrance() -> Vector2:
+	var dir: Vector2 = (heart.center - center).normalized() if heart.center.distance_to(center) > 1.0 else Vector2.DOWN
+	return center + dir * (RADIUS + 70.0)
+
+
 func _process(delta: float) -> void:
 	t += delta
 	if not frozen and main.player.position.distance_squared_to(center) < 1900.0 * 1900.0:
@@ -142,8 +149,12 @@ func _start_fight() -> void:
 	main.enemies_layer.add_child(boss)
 	main.enemies.append(boss)
 	main.big_enemies.append(boss)
-	main.hud.banner("La Mère-Ronce s'éveille.")
+	main.hud.banner("La Mère-Ronce s'éveille.", "combat")
 	main.fx.ring(center, 30.0, RADIUS, 0.8, Color(1.0, 0.45, 0.3, 0.8), 6.0)
+	# Entrée dans l'arène : les ronces se referment, l'écran rougit sur les bords et tremble.
+	main.screen_fx.glow(Art.c("danger"), 0.45, main.screen_fx.FADE_ARENA * 1.6)
+	main.fx.shake(0.45)
+	main.fx.hitstop(0.05)
 
 
 ## Le joueur est mort : la Mère-Ronce a disparu avec les autres ennemis. Elle reviendra avec toute
@@ -175,6 +186,8 @@ func boss_defeated() -> void:
 		main.drop_graft(center, str(reward["graft"]))
 	for i in 3:
 		main.fx.ring(center, 40.0, RADIUS * (0.5 + 0.3 * i), 0.9 + 0.4 * i, Color(0.6, 1.0, 0.55, 0.9), 6.0)
+	# Sortie de l'arène : un éclat de sève sur les bords de l'écran, qui s'éteint doucement.
+	main.screen_fx.glow(Art.ec("seve"), 0.5, 1.6)
 	life_wave = 0.0
 	life_step = 0.0
 	bar.hide_bar()

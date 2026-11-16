@@ -13,12 +13,16 @@ const SHAKE_DECAY := 2.2
 const HITSTOP_SCALE := 0.05
 const HITSTOP_COOLDOWN := 0.2
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 var main
 var rings: Array = []
 var texts: Array = []
 var clouds: Array = []
 var particles: Array = []
 var font: Font
+## Élément du coup en cours de résolution (posé par main.player_hit_enemy, lu par impact()).
+var hit_element := ""
 var _rng := RandomNumberGenerator.new()
 var _trauma := 0.0
 var _shake_t := 0.0
@@ -43,29 +47,43 @@ func ring(pos: Vector2, r0: float, r1: float, dur: float, color: Color, width :=
 	rings.append({"pos": pos, "r0": r0, "r1": r1, "t": 0.0, "dur": dur, "color": color, "width": width})
 
 
-func text(pos: Vector2, s: String, color: Color, size := 18, dur := 1.0) -> void:
-	texts.append({"pos": pos, "s": s, "t": 0.0, "dur": dur, "color": color, "size": size, "pop": 0.0})
+## style : 0 discret (coup normal), 1 marqué (critique : gras, contour), 2 reçu (gras, contour, plus lent).
+func text(pos: Vector2, s: String, color: Color, size := 18, dur := 1.0, style := 0) -> void:
+	texts.append({"pos": pos, "s": s, "t": 0.0, "dur": dur, "color": color, "size": size, "pop": 0.0, "style": style})
 
 
 # --- Ressenti des coups ---
 
 ## Un coup touche un Flétri : étincelles, chiffre de dégâts, et (critique) secousse et micro-pause.
-func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0) -> void:
+## element : élément du coup (charte) : il donne leur couleur aux étincelles ; vide, elles sont blanches.
+func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0, element := "") -> void:
 	var reduce: bool = Settings.reduce_effects
-	if texts.size() < MAX_TEXTS and (crit or texts.size() < MAX_TEXTS * 2 / 3):
+	if element == "":
+		element = hit_element
+	# Hiérarchie des chiffres : le coup normal reste discret, le critique est gras, doré et plus grand.
+	if Settings.show_damage_numbers and texts.size() < MAX_TEXTS and (crit or texts.size() < MAX_TEXTS * 2 / 3):
 		var spot := pos + Vector2(_rng.randf_range(-10.0, 10.0), -radius - 8.0)
-		var size := 22 + mini(int(amount / 12.0), 8) if crit else 14 + mini(int(amount / 18.0), 6)
-		var col := Color("ffd45a") if crit else Color("f4efd8")
-		text(spot, str(roundi(amount)), col, size, 0.95 if crit else 0.7)
-		texts[-1]["pop"] = 0.12
+		if crit:
+			var size := 26 + mini(int(amount / 12.0), 8)
+			text(spot, "%d !" % roundi(amount), Art.c("butin"), size, 1.05, 1)
+			texts[-1]["pop"] = 0.16
+		else:
+			var size := 13 + mini(int(amount / 25.0), 4)
+			text(spot, str(roundi(amount)), Color(Art.c("texte"), 0.78), size, 0.6, 0)
 	var n := 0 if reduce else (9 if crit else 4)
+	var spark: Color = Art.ec(element, "clair") if element != "" else Art.c("or")
+	if not crit and element == "":
+		spark = Art.c("texte")
 	for i in n:
 		var a := _rng.randf() * TAU
 		var v := _rng.randf_range(90.0, 260.0 if crit else 190.0)
 		_particle(0, pos + Vector2.from_angle(a) * radius * 0.6, Vector2.from_angle(a) * v,
 			_rng.randf_range(0.18, 0.34), 2.0 if crit else 1.5,
-			Color("ffe08a") if crit else Color("f4efd8"), 0.0, 6.0)
+			spark if crit else spark.lerp(Art.c("texte"), 0.5), 0.0, 6.0)
 	if crit:
+		# L'impact marque le coup : une onde courte à la couleur de l'élément (anticipation : aucune).
+		if not reduce:
+			ring(pos, radius * 0.6, radius * 2.6, Anim.DUREE["eclair"] * 3.0, Color(spark, 0.85), 3.0)
 		shake(0.32)
 		hitstop(0.055)
 
@@ -90,9 +108,42 @@ func death(pos: Vector2, radius: float, color: Color, on_living_land: bool) -> v
 	hitstop(0.04 if radius < 20.0 else 0.06)
 
 
-## Le Porte-Graine encaisse un coup.
-func player_hurt() -> void:
-	shake(0.55)
+## Le Porte-Graine encaisse un coup. frac : part de sa vie maximale perdue (0 à 1).
+## Réponse immédiate : secousse (plus forte si le coup est gros), vignette rouge sur l'écran
+## (screen_fx.gd) et quelques éclats rouges qui jaillissent de lui.
+## amount (> 0) : le chiffre des dégâts reçus, d'une autre couleur que ceux qu'on inflige.
+func player_hurt(frac := 0.1, amount := 0.0, pos := Vector2.ZERO) -> void:
+	shake(clampf(0.4 + frac * 1.6, 0.4, 0.9))
+	if main != null and main.get("screen_fx") != null:
+		main.screen_fx.hurt(frac)
+	if amount > 0.0 and Settings.show_damage_numbers and texts.size() < MAX_TEXTS:
+		text(pos + Vector2(0, -34.0), "-%d" % roundi(amount), Color("ff6b5e"), 22 + mini(int(amount / 10.0), 8), 1.0, 2)
+		texts[-1]["pop"] = 0.14
+	if Settings.reduce_effects or main == null or main.player == null:
+		return
+	var danger := Art.c("danger")
+	for i in 7:
+		var a := _rng.randf() * TAU
+		_particle(0, main.player.position + Vector2.from_angle(a) * 10.0, Vector2.from_angle(a) * _rng.randf_range(110.0, 240.0),
+			_rng.randf_range(0.16, 0.3), 2.0, danger, 0.0, 6.0)
+
+
+## Ramassage : un petit éclat à la couleur de l'élément (bref : l'essence est le butin le plus fréquent).
+## « vers » (position du monde) : des particules qui s'envolent vers cet endroit, pour un butin rare.
+func pickup(pos: Vector2, element := "seve", count := 5, vers := Vector2.INF) -> void:
+	if Settings.reduce_effects:
+		count = mini(count, 2)
+	var clair := Art.ec(element, "clair")
+	var col := Art.ec(element)
+	for i in count:
+		var a := _rng.randf() * TAU
+		if vers != Vector2.INF:
+			# Une gerbe qui s'éparpille puis file vers le joueur (retour : la vie revient à lui).
+			_particle(3, pos + Vector2.from_angle(a) * _rng.randf_range(24.0, 46.0), Vector2.from_angle(a) * _rng.randf_range(40.0, 120.0),
+				_rng.randf_range(0.5, 0.8), _rng.randf_range(2.4, 3.8), clair if i % 2 == 0 else col, 0.0, 3.0)
+		else:
+			_particle(1, pos, Vector2.from_angle(a) * _rng.randf_range(30.0, 90.0) + Vector2(0, -30.0),
+				_rng.randf_range(0.25, 0.4), _rng.randf_range(1.8, 2.8), clair if i % 2 == 0 else col, 0.0, 4.0)
 
 
 ## Ajoute à la secousse d'écran (0 à 1, cumulée). Sans effet si la secousse est coupée.
@@ -113,7 +164,7 @@ func hitstop(dur: float) -> void:
 	Engine.time_scale = HITSTOP_SCALE
 
 
-## kind : 0 étincelle (trait), 1 cendre, 2 pétale. drag : freinage par seconde.
+## kind : 0 étincelle (trait), 1 cendre, 2 pétale, 3 lueur qui file vers le joueur. drag : freinage par seconde.
 func _particle(kind: int, pos: Vector2, vel: Vector2, dur: float, size: float, color: Color, rot: float, drag: float) -> void:
 	if particles.size() >= MAX_PARTICLES:
 		return
@@ -144,6 +195,12 @@ func _process(delta: float) -> void:
 	for p in particles:
 		var k: float = p["t"]
 		p["vel"] = p["vel"] * maxf(0.0, 1.0 - p["drag"] * delta)
+		if p["kind"] == 3 and main != null and main.player != null:
+			# Particule qui rejoint le joueur : l'accélération grandit avec le temps.
+			var to: Vector2 = main.player.position - p["pos"]
+			p["vel"] += to.normalized() * (260.0 + 1600.0 * k) * delta
+			if to.length() < 14.0:
+				p["t"] = p["dur"]
 		if p["kind"] == 2:
 			# Un pétale tombe en tournoyant doucement.
 			p["vel"] += Vector2(sin(k * 5.0 + p["ph"]) * 40.0, 70.0) * delta
@@ -186,6 +243,8 @@ func _physics_process(delta: float) -> void:
 
 func _draw() -> void:
 	for c in clouds:
+		if c.has("dessin"):
+			continue   # dessiné ailleurs (signature du Nuage de spores, skill_fx.gd)
 		var k: float = c["t"] / c["dur"]
 		var a := 0.22 * (1.0 - k * k)
 		draw_circle(c["pos"], c["radius"], Color(0.55, 0.35, 0.75, a))
@@ -203,12 +262,16 @@ func _draw() -> void:
 		col.a = 1.0 - k * k * k
 		var lift := 34.0 * (1.0 - (1.0 - k) * (1.0 - k))
 		var size: int = e["size"]
+		var style: int = e.get("style", 0)
+		var f: Font = UiTheme.font(style > 0)
 		if e["pop"] > 0.0 and e["t"] < e["pop"]:
 			size = roundi(size * (1.0 + 0.45 * (1.0 - e["t"] / e["pop"])))
 		var p: Vector2 = e["pos"] + Vector2(-200, -lift)
-		# Ombre portée : les chiffres restent lisibles sur le sol clair comme sur la cendre.
-		draw_string(font, p + Vector2(1.5, 2.0), e["s"], HORIZONTAL_ALIGNMENT_CENTER, 400, size, Color(0.04, 0.03, 0.05, 0.9 * col.a))
-		draw_string(font, p, e["s"], HORIZONTAL_ALIGNMENT_CENTER, 400, size, col)
+		# Ombre portée (et contour pour les chiffres marqués) : lisibles sur le sol clair comme sur la cendre.
+		draw_string(f, p + Vector2(1.5, 2.0), e["s"], HORIZONTAL_ALIGNMENT_CENTER, 400, size, Color(0.04, 0.03, 0.05, 0.9 * col.a))
+		if style > 0:
+			draw_string_outline(f, p, e["s"], HORIZONTAL_ALIGNMENT_CENTER, 400, size, 4, Color(0.06, 0.03, 0.03, 0.95 * col.a))
+		draw_string(f, p, e["s"], HORIZONTAL_ALIGNMENT_CENTER, 400, size, col)
 
 
 func _draw_particle(p: Dictionary) -> void:
@@ -223,6 +286,9 @@ func _draw_particle(p: Dictionary) -> void:
 			draw_line(pos, pos - v * 0.045, col, sz)
 		1:
 			draw_circle(pos, sz * (1.0 - 0.4 * k), col)
+		3:
+			draw_circle(pos, sz * 1.9, Color(col, col.a * 0.25))
+			draw_circle(pos, sz, col)
 		_:
 			var a: float = p["rot"]
 			# Le pétale pivote : sa largeur apparente oscille.

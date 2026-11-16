@@ -20,10 +20,13 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
+const HerosScript = preload("res://tests/visual/galerie_heros.gd")
+const MondeScript = preload("res://tests/visual/monde.gd")
 const Enemy = preload("res://scripts/enemy.gd")
+const Orb = preload("res://scripts/orb.gd")
 const Content = preload("res://scripts/content.gd")
 const TitleScene = preload("res://scenes/title.tscn")
 ## Défauts d'interface déjà connus (un par ligne : « résolution|écran|type|libellés »).
@@ -90,6 +93,12 @@ func _ready() -> void:
 			await _scenario_quetes()
 		"charte":
 			await _scenario_charte()
+		"interactions":
+			await _scenario_interactions()
+		"heros":
+			await _scenario_heros()
+		"monde":
+			await _scenario_monde()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -178,6 +187,65 @@ func _scenario_charte() -> void:
 			img.save_png("%s/%03d.png" % [dir, i])
 
 
+## Héros et attaques : poses du Porte-Graine, puis la graine et chaque compétence en trois temps.
+## -- --heros-anim : enregistre aussi la page animée (20 images/s) dans out/heros_anim/.
+func _scenario_heros() -> void:
+	main.set_process(false)
+	for pg in ["heros", "competences_1", "competences_2"]:
+		var layer := _pixel_layer()
+		var sheet = HerosScript.new()
+		sheet.view = Vector2(DisplayServer.window_get_size())
+		sheet.page = pg.get_slice("_", 0)
+		if pg.contains("_"):
+			sheet.part = int(pg.get_slice("_", 1))
+		sheet.t = 0.6
+		layer.add_child(sheet)
+		add_child(layer)
+		await _frames(3)
+		await _shot("galerie_" + pg)
+		layer.queue_free()
+		await _frames(1)
+	if "--heros-anim" in OS.get_cmdline_user_args():
+		var layer := _pixel_layer()
+		var sheet = HerosScript.new()
+		sheet.view = Vector2(DisplayServer.window_get_size())
+		sheet.page = "anim"
+		layer.add_child(sheet)
+		add_child(layer)
+		var dir := ProjectSettings.globalize_path(OUT_DIR + "/heros_anim")
+		DirAccess.make_dir_recursive_absolute(dir)
+		var n := int(sheet.PERIODE * 20.0)
+		for i in n:
+			sheet.t = i * sheet.PERIODE / n
+			sheet.queue_redraw()
+			await RenderingServer.frame_post_draw
+			var img := get_viewport().get_texture().get_image()
+			img.convert(Image.FORMAT_RGB8)
+			img.save_png("%s/%03d.png" % [dir, i])
+
+
+## Calque dessiné en pixels de la fenêtre (la galerie du héros se met en page en vrais pixels).
+func _pixel_layer() -> CanvasLayer:
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	var k: float = get_viewport().get_visible_rect().size.x / float(DisplayServer.window_get_size().x)
+	layer.scale = Vector2(k, k)
+	return layer
+
+
+## Monde de Ronce : chaque lieu dans chaque état et le décor (planche tests/visual/monde.gd).
+func _scenario_monde() -> void:
+	main.set_process(false)
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	var sheet = MondeScript.new()
+	sheet.view = get_viewport().get_visible_rect().size
+	layer.add_child(sheet)
+	add_child(layer)
+	await _frames(3)
+	await _shot("galerie_monde")
+
+
 ## Galerie : ennemis et effets, puis les six états d'un nœud de l'arbre sur une planche.
 func _scenario_galerie() -> void:
 	main.set_process(false)   # pas de robot : l'état des nœuds est celui qu'on prépare ici
@@ -211,6 +279,17 @@ func _scenario_galerie() -> void:
 	add_child(layer)
 	await _frames(3)
 	await _shot("galerie_varies")
+	layer.queue_free()
+	await _frames(1)
+	layer = CanvasLayer.new()
+	layer.layer = 100
+	gallery = GalleryScript.new()
+	gallery.view = get_viewport().get_visible_rect().size
+	gallery.page = "silhouettes"
+	layer.add_child(gallery)
+	add_child(layer)
+	await _frames(3)
+	await _shot("galerie_silhouettes")
 	layer.queue_free()
 
 	Game.points = 5
@@ -319,7 +398,7 @@ func _scenario_competences() -> void:
 	main.hud.hint_time = 0.0
 	main.autotest = false   # ni robot ni expérience gagnée : rien ne bouge en dehors de ce qu'on lance
 	p.set_physics_process(false)   # le joueur ne bouge pas : les compétences sont lancées ici
-	p.invuln = 1e9
+	p.invuln = 0.4   # figé (pas de pas physique) : aucun coup ne passe, sans le voile d'invulnérabilité
 	main.spawn_timer = 1e9
 	await _frames(2)
 	var s: Dictionary = Game.stats
@@ -461,6 +540,12 @@ func _scenario_boss() -> void:
 	# Victoire : l'arène refleurit.
 	_clear_enemies([boss])
 	boss.take_damage(boss.max_hp, false)
+	# Sa mort, à mi-chemin : les pétales tombent en cendre, la vie reprend au cœur de la rose.
+	boss.dying = boss.DEATH_TIME * 0.55
+	main.fx.rings = []
+	main.hud.banner_time = 0.0
+	boss.redraw()
+	await _boss_shot("boss_mort", spot)
 	boss.queue_free()
 	arena.life_wave = -1.0
 	main.ground.paint(arena.center, arena.RADIUS * 1.25, 1.0)
@@ -564,6 +649,94 @@ func _death_shots() -> void:
 	main.camera.reset_smoothing()
 	await _frames(int(main.hud.death_screen.time_left * 60.0) + 10)
 	await _shot("seve_perdue", "jeu")
+
+
+## Interactions et retours (tâche G du jalon 5) : un ramassage d'essence, une greffe, la sève perdue,
+## un coup reçu, un critique, l'invite d'un sanctuaire, l'ouverture de l'arbre, la mort et la
+## renaissance. Le jeu est figé (ni robot ni Flétris) ; chaque image est prise à un instant précis.
+func _scenario_interactions() -> void:
+	main.autotest = false
+	main.spawn_timer = 1.0e9
+	main.player.set_physics_process(false)
+	var s = main.sanctuary("lisiere")
+	s.frozen = true
+	var spot: Vector2 = s.position + Vector2(-380, 120)
+	await _place_player(spot)
+	main.hud.banner_time = 0.0
+	# Essences de vie : l'aimant les attire, puis elles éclatent au contact.
+	for i in 5:
+		var o = Orb.new()
+		o.main = main
+		o.value = 3.0
+		o.position = spot + Vector2.from_angle(TAU * i / 5.0 + 0.4) * (55.0 + 8.0 * i)
+		main.orbs_layer.add_child(o)
+	await _frames(3)
+	await _shot("interaction_orbe_1")
+	await _frames(9)
+	await _shot("interaction_orbe_2")
+	await _frames(20)
+	# Greffe : saut d'apparition, attirance, ramassage.
+	var gid: String = str(Content.grafts().keys()[0])
+	main.drop_graft(spot + Vector2(110, -30), gid)
+	await _frames(20)
+	await _shot("interaction_greffe_1")
+	await _frames(34)
+	await _shot("interaction_greffe_2")
+	await _frames(14)
+	await _shot("interaction_greffe_3")
+	main.hud.banner_time = 0.0
+	# Coup reçu : vignette rouge, secousse, puis retour au calme.
+	main.player.invuln = 0.0
+	main.player.hp = Game.stats["max_hp"]
+	main.player.take_hit(Game.stats["max_hp"] * 0.2, null)
+	await _frames(4)
+	await _shot("interaction_degats_1")
+	await _frames(40)
+	await _shot("interaction_degats_2")
+	# Critique sur un Flétri : chiffre, étincelles, onde.
+	_clear_enemies()
+	var old_crit = Game.stats["crit"]
+	Game.stats["crit"] = 1.0
+	var e = main.spawn_enemy_at(spot + Vector2(120, -10), 0)
+	e.set_process(false)
+	e.set_physics_process(false)
+	main.player_hit_enemy(e, 40.0, false, "ronce")
+	await _frames(4)
+	await _shot("interaction_impact")
+	Game.stats["crit"] = old_crit
+	_clear_enemies()
+	await _frames(40)
+	# Sanctuaire : l'invite à l'approche, puis l'anneau qui se remplit.
+	await _place_player(s.position + Vector2(-300, 90))
+	main.hud.banner_time = 0.0
+	await _frames(20)
+	await _shot("interaction_sanctuaire_approche")
+	await _place_player(s.position + Vector2(-20, 20))
+	s.progress = s.LIGHT_TIME * 0.6
+	await _frames(12)
+	await _shot("interaction_sanctuaire_anneau")
+	await _place_player(spot)
+	# Transitions : ouverture de l'arbre, puis mort et renaissance.
+	main.tree_ui.toggle()
+	await _frames(3)
+	await _shot("interaction_arbre_ouverture")
+	await _frames(30)
+	main.tree_ui.toggle()
+	await _frames(3)
+	await _shot("interaction_arbre_fermeture")
+	await _frames(30)
+	Game.xp = 20.0
+	main.player_died()
+	main.hud.banner_time = 0.0
+	await _frames(5)
+	await _shot("interaction_renaissance")
+
+
+func _place_player(pos: Vector2) -> void:
+	main.player.position = pos
+	main.player.reset_physics_interpolation()
+	main.camera.reset_smoothing()
+	await _frames(2)
 
 
 ## Objectifs : le journal et la carte en cours de tranche, la flèche vers l'objectif, puis la fin.

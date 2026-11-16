@@ -9,6 +9,7 @@ const TREE_TO_WORLD := 2.1
 const Ground = preload("res://scripts/ground.gd")
 const Flora = preload("res://scripts/flora.gd")
 const Fx = preload("res://scripts/fx.gd")
+const ScreenFx = preload("res://scripts/screen_fx.gd")
 const Ambience = preload("res://scripts/ambience.gd")
 const Player = preload("res://scripts/player.gd")
 const Enemy = preload("res://scripts/enemy.gd")
@@ -46,6 +47,9 @@ var world_half := WORLD_HALF
 var ground
 var flora
 var fx
+var screen_fx
+## Signatures visuelles des attaques du héros (skill_fx.gd).
+var skill_fx: SkillFx
 var player
 var hud
 var tree_ui
@@ -88,6 +92,10 @@ var autotest_shots := [3.0, 25.0, 55.0]
 var autotest_done := false
 ## Robot d'équilibrage (« -- --autotest=build:<nom> », voir build_bot.gd) : joue un build type.
 var build_bot = null
+## Robot « zone complète » (tests/zone_test.gd, voir zone_bot.gd) : joue la zone jusqu'au boss.
+var zone_bot = null
+## Sauvegarde à reprendre même en mode robot (tests de reprise) ; vide sinon.
+var resume_from := ""
 var deaths := 0
 ## Sauvegarde automatique (désactivée en autotest) : périodique et après chaque changement.
 const AUTOSAVE_EVERY := 60.0
@@ -142,6 +150,10 @@ func _ready() -> void:
 	add_child(flora)
 	orbs_layer = Node2D.new()
 	add_child(orbs_layer)
+	# Signatures des attaques du héros : une moitié sous les acteurs, l'autre au-dessus des projectiles.
+	var sfx_pair := SkillFx.make_pair()
+	add_child(sfx_pair[0])
+	skill_fx = sfx_pair[1]
 	add_child(actors_layer)
 	enemies_layer = Node2D.new()
 	enemies_layer.y_sort_enabled = true
@@ -151,6 +163,7 @@ func _ready() -> void:
 	actors_layer.add_child(player)
 	projectiles_layer = Node2D.new()
 	add_child(projectiles_layer)
+	add_child(skill_fx)
 	fx = Fx.new()
 	fx.main = self
 	add_child(fx)
@@ -181,7 +194,14 @@ func _ready() -> void:
 	# L'arbre couvre tout l'écran : le monde et le HUD ne sont plus dessinés tant qu'il est ouvert.
 	tree_ui.toggled.connect(func(open: bool):
 		visible = not open
-		hud_layer.visible = not open)
+		hud_layer.visible = not open
+		# Transition : l'écran s'ouvre depuis un voile sombre, à l'ouverture comme à la fermeture.
+		screen_fx.fade(Art.c("decor"), 0.7, 0.0, ScreenFx.FADE_PANEL))
+
+	# Effets d'écran (vignette de dégâts, transitions) : au-dessus de l'arbre, sous le menu pause.
+	screen_fx = ScreenFx.new()
+	screen_fx.main = self
+	add_child(screen_fx)
 
 	var pause_layer := CanvasLayer.new()
 	pause_layer.layer = 20
@@ -219,7 +239,9 @@ func _ready() -> void:
 	# « Nouvelle partie » repart de zéro, et la première sauvegarde automatique remplace l'ancienne.
 	autosave_enabled = not autotest
 	var loaded := false
-	if not autotest and Flow.continue_requested and not "--new-game" in OS.get_cmdline_user_args():
+	if resume_from != "":
+		loaded = SaveGame.load_into(self, resume_from)
+	elif not autotest and Flow.continue_requested and not "--new-game" in OS.get_cmdline_user_args():
 		loaded = SaveGame.load_into(self)
 		if not loaded and SaveGame.last_error != "aucune sauvegarde":
 			hud.banner("Sauvegarde illisible (%s) : nouvelle partie." % SaveGame.last_error)
@@ -601,7 +623,10 @@ func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void
 	var crit: bool = rng.randf() < s["crit"]
 	if crit:
 		dmg *= s["crit_mult"]
+	# Les étincelles du coup prennent la couleur de son élément (charte) : racines ou épines de Ronce.
+	fx.hit_element = "racine" if root_hit_base > 0.0 else ("epine" if branch == "ronce" else "")
 	e.take_damage(dmg, crit)
+	fx.hit_element = ""
 	Sfx.play("critique" if crit else "impact", e.position)
 	if s["poison"] > 0.0:
 		e.apply_poison(dmg * s["poison"], 3.0)
@@ -730,6 +755,8 @@ func _on_elite_killed(e) -> void:
 
 func player_died() -> void:
 	deaths += 1
+	if Objectives.main == self:
+		Objectives.note_death()
 	# Robot d'équilibrage : la mort est seulement comptée, le joueur repart sur place avec toute
 	# sa vie. Sinon chaque mort vide l'écran et offre des ennemis frais et faciles, et le build
 	# qui meurt le plus semble le plus fort.
@@ -755,10 +782,13 @@ func player_died() -> void:
 	var lost := float(Game.flags.get("seve_perdue", 0.0))
 	var dropped := Game.xp
 	Game.xp = 0.0
+	# Tombé face à la Mère-Ronce : la sève attend devant l'arène, pour la reprendre sans relancer
+	# le combat. Ailleurs, là où le joueur est tombé.
+	var sap_at: Vector2 = arena.entrance() if reset == "boss" else player.position
 	if dropped > 0.0:
 		Game.flags["seve_perdue"] = dropped
-		Game.flags["seve_perdue_x"] = player.position.x
-		Game.flags["seve_perdue_y"] = player.position.y
+		Game.flags["seve_perdue_x"] = sap_at.x
+		Game.flags["seve_perdue_y"] = sap_at.y
 	else:
 		_clear_lost_sap_flags()
 	_sync_lost_sap()
@@ -769,7 +799,13 @@ func player_died() -> void:
 	if spot != null:
 		spot.inside = true   # déjà dans le cercle : pas de second message « tu renaîtras ici »
 	Sfx.play("chute")
+	# Mort puis renaissance : l'écran tombe dans le noir rougeâtre et remonte, la sève jaillit au sanctuaire.
+	screen_fx.fade(Art.c("decor").darkened(0.5), 1.0, 0.0, ScreenFx.FADE_DEATH)
+	fx.ring(player.position, 16.0, 150.0, 0.9, Art.ec("seve"), 5.0)
+	fx.pickup(player.position, "seve", 10)
 	hud.show_death({"place": spot.place if spot != null else "de la Graine", "dropped": dropped, "lost": lost, "reset": reset})
+	# Les annonces de l'endroit où il est tombé n'ont plus lieu d'être.
+	hud.drop_combat_banners()
 	request_autosave()
 
 
@@ -845,8 +881,12 @@ func recover_sap() -> void:
 	_clear_lost_sap_flags()
 	_sync_lost_sap()
 	Game.add_xp(amount)
-	Sfx.play("noeud", at)
+	Sfx.play("seve", at)
+	# La sève revient à lui : onde, gerbe qui file vers le joueur et éclat doré sur les bords.
 	fx.ring(at, 10.0, 120.0, 0.6, Color("e8d36b"), 5.0)
+	fx.ring(at, 4.0, 60.0, 0.35, Art.c("danger_eclair"), 3.0)
+	fx.pickup(at, "seve", 16, player.position)
+	screen_fx.glow(Art.c("or"), 0.25, 0.8)
 	hud.banner("Sève reprise : %d d'expérience." % roundi(amount))
 	request_autosave()
 
@@ -871,8 +911,9 @@ func revive(world_pos: Vector2, radius: float, tint: Color, strength := 0.9) -> 
 
 
 func _on_level_up(lvl: int) -> void:
-	fx.ring(player.position, 20.0, 160.0, 0.6, Color("f0e6b4"), 5.0)
-	hud.banner("Niveau %d : un point à placer dans l'Arbre de vie (Tab)" % lvl)
+	fx.ring(player.position, 20.0, 160.0, 0.6, Art.c("or"), 5.0)
+	fx.pickup(player.position, "seve", 12)
+	hud.banner("Niveau %d : un point à placer dans l'Arbre de vie (%s)" % [lvl, hud.key_label("toggle_tree")])
 	request_autosave()
 	player.heal(Game.stats["max_hp"] * 0.25)
 
@@ -881,6 +922,8 @@ func _on_level_up(lvl: int) -> void:
 
 ## Commandes du robot : tourne autour de la graine en visant le Flétri le plus proche.
 func bot_input(p) -> Dictionary:
+	if zone_bot != null:
+		return zone_bot.input(self, p)
 	if autotest_boss:
 		return arena.bot_input(p)
 	var target: Vector2 = p.position + Vector2.RIGHT * 100.0
@@ -904,6 +947,9 @@ func bot_input(p) -> Dictionary:
 
 
 func _autotest_step(delta: float) -> void:
+	if zone_bot != null:
+		zone_bot.step(self, delta)
+		return
 	if autotest_boss:
 		arena.autotest_step(delta)
 		return

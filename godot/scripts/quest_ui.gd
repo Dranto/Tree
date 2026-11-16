@@ -50,10 +50,7 @@ func _ready() -> void:
 	add_child(end_layer)
 	ending = Ending.new()
 	end_layer.add_child(ending)
-	ending.closed.connect(func(): _tracker_layer.visible = not main.tree_ui.visible)
-
-	# Pas de suivi par-dessus l'Arbre de vie (il couvre tout l'écran).
-	main.tree_ui.toggled.connect(func(open: bool): _tracker_layer.visible = not open)
+	ending.closed.connect(_on_ending_closed)
 	Objectives.attach(main)
 	# Pas de fin de partie pendant les bancs d'essai et les combats de test.
 	ending_enabled = main.build_bot == null and not main.autotest_boss and not main.benchmark
@@ -115,6 +112,7 @@ func toggle(which: String) -> void:
 		journal.open()
 	else:
 		world_map.open()
+	_veil()
 
 
 func close() -> void:
@@ -123,9 +121,28 @@ func close() -> void:
 	(journal if current == "journal" else world_map).close()
 	current = ""
 	get_tree().paused = false
+	_veil()
+
+
+## Transition d'ouverture ou de fermeture : un voile sombre qui se dissipe vite.
+func _veil() -> void:
+	if main.get("screen_fx") != null:
+		main.screen_fx.fade(Art.c("decor"), 0.45, 0.0, main.screen_fx.FADE_PANEL)
+
+
+## Le suivi s'efface par-dessus l'Arbre de vie (il couvre tout l'écran), pendant la fin et pendant
+## le combat de boss (seules les informations du combat restent).
+func tracker_shown() -> bool:
+	return not main.tree_ui.visible and not ending.active and not main.arena.in_combat()
+
+
+func _on_ending_closed() -> void:
+	main.hud.get_parent().visible = not main.tree_ui.visible
+	_tracker_layer.visible = tracker_shown()
 
 
 func _process(delta: float) -> void:
+	_tracker_layer.visible = tracker_shown()
 	# Fin de la tranche : une fois le boss vaincu, après un court délai, une seule fois.
 	if not ending_enabled or ending.active:
 		return
@@ -147,4 +164,6 @@ func start_ending() -> void:
 	if main.pause_menu.visible:
 		main.pause_menu.close()
 	_tracker_layer.visible = false
+	# Les annonces en attente reprendront après « Continuer à jouer » : rien par-dessus la fin.
+	main.hud.get_parent().visible = false
 	ending.begin(main)

@@ -87,6 +87,10 @@ func _run() -> void:
 	for i in 7:
 		boss.apply_status("saignement", 1.0, 5.0)
 	check(boss.statuses["saignement"]["stacks"] == 5, "le saignement se cumule 5 fois au plus")
+	var hp_before: float = boss.hp
+	var burst: float = boss.burst_bleed(1.0)
+	check(burst > 0.0 and not boss.is_bleeding() and boss.hp == hp_before, "la Saignée fait éclater son saignement (burst_bleed, comme les autres ennemis)")
+	check(boss.burst_bleed(1.0) == 0.0, "sans saignement, rien n'éclate")
 	boss.apply_status("enracine", 1.0, 2.0)
 	check(boss.statuses.has("enracine"), "l'enracinement la ralentit")
 	_place(arena.center + Vector2(0, 420))
