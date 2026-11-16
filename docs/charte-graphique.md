@@ -107,6 +107,8 @@ Toute action suit trois temps :
 
 Les courbes disponibles sont `Anim.ease_in`, `ease_out`, `ease_in_out` et `ease_out_back`. On a aussi `Anim.flash(t)` (de 1 à 0), `Anim.pop(t)` (dépasse un peu puis se pose), `Anim.breathe(temps)` et `Anim.blink(temps)`. L'animation pure reste dans `_process` et ne change jamais le jeu.
 
+La planche « en détail » s'anime en boucle de 2,4 s (respiration, cape, braises, lueurs, runes, butin qui flotte, attaques annoncées puis frappées, recharge des médaillons) : `tools/charte-anim.sh` en fait un GIF. Les animations de la vague 2 reprennent ces mouvements.
+
 ## 8. Icônes
 
 `Art.icon(ci, id, rect, couleur)` dessine une icône. Ce sont des silhouettes pleines, lisibles à 20 px, avec au plus un détail clair. **La même icône sert partout** : barre de compétences, arbre, infobulles, journal, ramassage. Une icône prend par défaut la couleur de son élément ou de son rôle. À partir de 20 px environ, elle prend du relief (une tranche sombre sous la forme). `Art.icon_badge(ci, id, rect)` la pose dans un médaillon (disque sombre, anneau à sa couleur, reflet) : c'est la forme à utiliser dans la barre de compétences, les infobulles et le journal.

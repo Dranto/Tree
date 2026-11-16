@@ -159,9 +159,23 @@ func _scenario_charte() -> void:
 	await _frames(3)
 	await _shot("charte")
 	sheet.page = "details"
+	sheet.t = 1.2   # milieu de la boucle : attaques annoncées, graine en vol
 	sheet.queue_redraw()
 	await _frames(3)
 	await _shot("charte_details")
+	# -- --charte-anim : enregistre une boucle complète (20 images/s) dans out/charte_anim/,
+	# pour en faire une animation (tools/charte-anim.sh). Pas de comparaison.
+	if "--charte-anim" in OS.get_cmdline_user_args():
+		var dir := ProjectSettings.globalize_path(OUT_DIR + "/charte_anim")
+		DirAccess.make_dir_recursive_absolute(dir)
+		var n := int(sheet.PERIODE * 20.0)
+		for i in n:
+			sheet.t = i * sheet.PERIODE / n
+			sheet.queue_redraw()
+			await RenderingServer.frame_post_draw
+			var img := get_viewport().get_texture().get_image()
+			img.convert(Image.FORMAT_RGB8)
+			img.save_png("%s/%03d.png" % [dir, i])
 
 
 ## Galerie : ennemis et effets, puis les six états d'un nœud de l'arbre sur une planche.

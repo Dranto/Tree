@@ -8,6 +8,13 @@ extends Node2D
 var view := Vector2(1600, 900)
 ## "planche" : la charte sur une page ; "details" : personnages et objets en grand.
 var page := "planche"
+## Temps de l'animation (s). Toutes les animations de la planche bouclent sur PERIODE.
+var t := 0.0
+## Intensité de l'éclair « coup reçu » appliqué aux figures (0 à 1).
+var _flash := 0.0
+## Charge du tir du Tireur (0 à 1), pour sa pointe qui rougeoie.
+var tir_charge := 0.0
+const PERIODE := 2.4
 var font: Font
 var font_bold: Font
 
@@ -197,47 +204,181 @@ func _action(o: Vector2) -> void:
 
 func _details() -> void:
 	_text(Vector2(L, 30), "Charte graphique · personnages et objets en détail", 22, Art.c("texte"), true)
-	_text(Vector2(L + 560, 30), "volume : lumière en haut à gauche · ombre portée · contour à la couleur du rôle", 13, Art.c("texte_doux"))
+	_text(Vector2(L + 560, 30), "volume : lumière en haut à gauche · ombre portée · tout bouge en boucle de %.1f s" % PERIODE, 13, Art.c("texte_doux"))
 	var cw := (view.x - 2 * L) / 6.0
-	var row1 := [
-		["Héros · repos", "joueur", ""], ["Héros · lancer", "joueur", "lancer"], ["Héros · coup reçu", "joueur", "touche"],
-		["Flétri · repos", "melee", ""], ["Flétri · anticipation", "melee", "anticipation"], ["Flétri · saignant", "melee", "saignant"],
+	var cells := [
+		["Héros · repos", "hero_repos"], ["Héros · lancer", "hero_lancer"], ["Héros · coup reçu", "hero_touche"],
+		["Flétri · repos", "fletri_repos"], ["Flétri · attaque", "fletri_attaque"], ["Flétri · saignant", "fletri_saignant"],
+		["Tireur d'épines · tir", "tireur"], ["Colosse · frappe au sol", "colosse"], ["Élite", "elite"],
+		["Sanctuaire · en cours", "sanct_eteint"], ["Sanctuaire ravivé", "sanct_ravive"], ["Butin", "butin"],
 	]
-	var row2 := [
-		["Tireur d'épines", "tireur", ""], ["Colosse", "lourd", ""], ["Élite", "elite", ""],
-		["Sanctuaire éteint", "interactif", "eteint"], ["Sanctuaire ravivé", "interactif", "ravive"], ["Butin", "butin", ""],
-	]
-	for row in 2:
-		var cells: Array = [row1, row2][row]
-		for i in cells.size():
-			var r := Rect2(L + i * cw, 54 + row * 332, cw - 10, 318)
-			_ground(r, i + row * 7, cells[i][2] == "ravive")
-			var c := r.get_center() + Vector2(0, -10)
-			var role: String = cells[i][1]
-			var k := 3.0
-			if role == "lourd":
-				k = 2.4
-			elif role == "interactif":
-				k = 2.6
-			elif role == "butin":
-				_role("butin", c + Vector2(-30, -40), false, 3.0)
-				_essence(c + Vector2(55, 55), 18.0)
-				_seve_perdue(c + Vector2(-45, 80), 16.0)
-				_text_c(Vector2(c.x - 30, c.y + 22), "greffe", 10, Art.c("texte_doux"), 80)
-				_text_c(Vector2(c.x + 55, c.y + 100), "essence", 10, Art.c("texte_doux"), 80)
-				_text_c(Vector2(c.x - 45, c.y + 128), "sève perdue", 10, Art.c("texte_doux"), 90)
-				_text_c(Vector2(r.get_center().x, r.position.y + 22), cells[i][0], 13, Art.c("texte"), cw, true)
-				continue
-			_role(role, c, false, k, 0.0, cells[i][2])
-			_text_c(Vector2(r.get_center().x, r.position.y + 22), cells[i][0], 13, Art.c("texte"), cw, true)
-	# Médaillons des compétences, tels qu'ils iront dans la barre.
+	for i in cells.size():
+		var col := i % 6
+		var row := i / 6
+		var r := Rect2(L + col * cw, 54 + row * 332, cw - 10, 318)
+		_ground(r, i + row, cells[i][1] == "sanct_ravive")
+		_scene(cells[i][1], r)
+		_text_c(Vector2(r.get_center().x, r.position.y + 22), cells[i][0], 13, Art.c("texte"), cw, true)
+	# Médaillons des compétences, tels qu'ils iront dans la barre, avec leur recharge.
 	var y := 54 + 2 * 332 + 6
 	_text(Vector2(L, y + 30), "Médaillons de compétence", 13, Art.c("or"), true)
+	_text(Vector2(L, y + 48), "recharge en arc, éclat quand c'est prêt", 10, Art.c("texte_doux"))
 	var x := L + 230
-	for id in Art.ICONES["competences"]:
-		Art.icon_badge(self, id, Rect2(x, y, 64, 64))
-		_text_c(Vector2(x + 32, y + 82), Art.NOM_ICONE[id], 10, Art.c("texte_doux"), 120)
+	var ids: Array = Art.ICONES["competences"]
+	for i in ids.size():
+		var rect := Rect2(x, y, 64, 64)
+		var f := _u(i / float(ids.size()))   # avancement de la recharge
+		var ready := f > 0.75
+		var pop := Anim.pop(clampf((f - 0.75) / 0.12, 0.0, 1.0)) if ready else 1.0
+		var grow := rect.grow(4.0 * (pop - 1.0) * 8.0) if ready else rect
+		Art.icon_badge(self, ids[i], grow)
+		if not ready:
+			_cooldown(rect.get_center(), 30.0, f / 0.75)
+		else:
+			var k := clampf((f - 0.75) / 0.25, 0.0, 1.0)
+			draw_arc(rect.get_center(), 34.0 + 10.0 * k, 0, TAU, 40, Color(Art.icon_color(ids[i]).lightened(0.4), 1.0 - k), 3.0, true)
+		_text_c(Vector2(x + 32, y + 82), Art.NOM_ICONE[ids[i]], 10, Art.c("texte_doux"), 120)
 		x += 132
+
+
+## Voile de recharge : secteur sombre qui se retire dans le sens des aiguilles d'une montre.
+func _cooldown(c: Vector2, r: float, done: float) -> void:
+	var pts := PackedVector2Array([c])
+	var start := -PI / 2.0 + TAU * clampf(done, 0.0, 1.0)
+	var n := 24
+	for i in n + 1:
+		pts.append(c + Vector2.from_angle(start + (TAU * (1.0 - done)) * i / n) * r)
+	if pts.size() >= 3 and done < 0.999:
+		draw_colored_polygon(pts, Color(0, 0, 0, 0.55))
+	draw_arc(c, r + 1.0, -PI / 2.0, start, 32, Color(1, 1, 1, 0.7), 2.0, true)
+
+
+## Une case animée de la planche de détail.
+func _scene(kind: String, r: Rect2) -> void:
+	var c := r.get_center() + Vector2(0, -10)
+	var u := _u()
+	_flash = 0.0
+	tir_charge = 0.0
+	match kind:
+		"hero_repos":
+			_at(c, Vector2.ONE * Anim.breathe(t, 0.035))
+			_role("joueur", Vector2.ZERO, false, 3.0, 0.0)
+			_reset()
+		"hero_lancer":
+			# Anticipation, lancer, la graine file et éclate au bout de la case.
+			var sq := Anim.squash(clampf(u / 0.45, 0.0, 1.0), 0.7)
+			_at(c + Vector2(-40, 0), Vector2(sq.y, sq.x))
+			_role("joueur", Vector2.ZERO, false, 3.0, 0.0, "lancer" if u > 0.12 and u < 0.35 else "")
+			_reset()
+			if u >= 0.22 and u < 0.62:
+				var k := Anim.ease_out((u - 0.22) / 0.4)
+				var a := c + Vector2(30 + 70 * k, 0)
+				for j in 8:
+					draw_circle(a - Vector2(j * 7, 0), 9.0 - j, Color(Art.ec("seve"), 0.6 - j * 0.07))
+				Art.glow(self, a, 26, "seve")
+				draw_circle(a, 7, Art.ec("seve", "clair"))
+			elif u >= 0.62 and u < 0.9:
+				var k := (u - 0.62) / 0.28
+				var a := c + Vector2(100, 0)
+				draw_arc(a, 8 + 30 * Anim.ease_out(k), 0, TAU, 28, Color(Art.ec("seve", "clair"), 1.0 - k), 3.0, true)
+				for j in 6:
+					var d := Vector2.from_angle(j * TAU / 6.0 + 0.3)
+					_leaf(a + d * (6 + 26 * Anim.ease_out(k)), 5.0, d.angle(), Color(Art.ec("seve"), 1.0 - k))
+		"hero_touche":
+			var hit := 0.15
+			var k := (u - hit) / 0.35
+			_flash = Anim.flash(k) if k >= 0.0 and k <= 1.0 else 0.0
+			var kb := Vector2(-18 * Anim.flash(k), 0) if k >= 0.0 and k <= 1.0 else Vector2.ZERO
+			var sq := Anim.squash(clampf(k + Anim.SQUASH_ANTICIPATION, 0.0, 1.0), 0.8) if k >= 0.0 and k <= 1.0 else Vector2.ONE
+			_at(c + kb, sq)
+			_role("joueur", Vector2.ZERO, false, 3.0, 0.0, "touche")
+			_reset()
+			# Deux feuilles arrachées qui tombent en tournoyant.
+			if k >= 0.0:
+				for j in 2:
+					var fk := clampf(k * 0.8, 0.0, 1.0)
+					var q := c + Vector2(-60 - 25 * j, -20 + 30 * j) + Vector2(sin(fk * 6.0 + j) * 12, 60 * fk)
+					_leaf(q, 8.0, fk * 5.0 + j, Color(Art.c("joueur_accent").darkened(0.3), 1.0 - fk))
+		"fletri_repos":
+			_at(c, Vector2(1.0 + 0.03 * _w(), 1.0 - 0.03 * _w()), 0.04 * _w(1.0, 0.25))
+			_role("melee", Vector2.ZERO, false, 3.0)
+			_reset()
+		"fletri_attaque":
+			var forme := {"type": "cone", "centre": c + Vector2(-10, 0), "direction": 0.0, "ouverture": 1.0, "rayon": 112.0}
+			var prog := clampf(u / 0.55, 0.0, 1.0)
+			var frappe := (u - 0.55) / 0.25 if u >= 0.55 and u < 0.8 else -1.0
+			if u < 0.8:
+				Art.telegraph(self, forme, prog, frappe, t)
+			var sq := Anim.squash(clampf(u / 0.8, 0.0, 1.0))
+			var lunge := Vector2(30 * Anim.flash((u - 0.55) / 0.3), 0) if u >= 0.55 and u < 0.85 else Vector2.ZERO
+			_at(c + Vector2(-50, 0) + lunge, sq)
+			_role("melee", Vector2.ZERO, false, 2.6, 0.0, "anticipation" if u < 0.6 else "")
+			_reset()
+		"fletri_saignant":
+			# Un sursaut à chaque goutte de saignement.
+			var tick := fposmod(u * 3.0, 1.0)
+			var shake := Vector2(sin(tick * 40.0) * 5.0 * Anim.flash(tick * 4.0), 0)
+			_at(c + shake, Vector2.ONE)
+			_role("melee", Vector2.ZERO, false, 3.0, 0.0, "saignant")
+			_reset()
+			if tick < 0.3:
+				_text_c(c + Vector2(40, -60 - 40 * tick), "%d" % (4 + int(u * 3.0)), 18, Art.ec("saignement", "clair").lerp(Color.WHITE, 0.3), 60, true)
+		"tireur":
+			# Il vise (ligne d'annonce), la pointe rougeoie, il tire, recule, l'épine file.
+			var aim := clampf(u / 0.5, 0.0, 1.0)
+			tir_charge = aim if u < 0.5 else maxf(0.0, 1.0 - (u - 0.5) * 6.0)
+			var recoil := Vector2(-16 * Anim.flash((u - 0.5) / 0.25), 0) if u >= 0.5 and u < 0.75 else Vector2.ZERO
+			if u < 0.55:
+				Art.telegraph(self, {"type": "ligne", "de": c + Vector2(10, 0), "a": c + Vector2(r.size.x / 2.0 - 14, 0), "largeur": 10.0}, aim, (u - 0.5) / 0.05 if u >= 0.5 else -1.0, t)
+			_at(c + Vector2(-60, 0) + recoil, Vector2.ONE)
+			_role("tireur", Vector2.ZERO, false, 2.2)
+			_reset()
+			if u >= 0.5 and u < 0.8:
+				var k := (u - 0.5) / 0.3
+				var a := c + Vector2(10 + 90 * k, 0)
+				_spike_vol(a, Vector2.RIGHT, 22, Art.ec("epine", "clair"))
+				draw_line(a - Vector2(30, 0), a, Color(Art.ec("epine"), 0.4), 2.0, true)
+		"colosse":
+			# Il se soulève, l'annonce circulaire se remplit, il s'écrase : éclair, onde de poussière.
+			var forme := {"type": "cercle", "centre": c + Vector2(0, 10), "rayon": 104.0}
+			var prog := clampf(u / 0.6, 0.0, 1.0)
+			if u < 0.8:
+				Art.telegraph(self, forme, prog, (u - 0.6) / 0.2 if u >= 0.6 else -1.0, t)
+			if u >= 0.6:
+				var k := (u - 0.6) / 0.4
+				draw_arc(c + Vector2(0, 10), 50 + 60 * Anim.ease_out(k), 0, TAU, 48, Color(Art.c("brume").lightened(0.3), 0.8 * (1.0 - k)), 6.0 * (1.0 - k) + 1.0, true)
+			var lift := -14.0 * Anim.ease_in_out(prog) if u < 0.6 else -14.0 * (1.0 - clampf((u - 0.6) / 0.05, 0.0, 1.0))
+			var sq := Anim.squash(clampf((u - 0.45) / 0.5, 0.0, 1.0), 0.8) if u > 0.45 else Vector2.ONE * (1.0 + 0.05 * prog)
+			_at(c + Vector2(0, lift), Vector2(sq.y, sq.x))
+			_role("lourd", Vector2.ZERO, false, 2.2)
+			_reset()
+		"elite":
+			_at(c, Vector2.ONE * Anim.breathe(t, 0.03))
+			_role("elite", Vector2.ZERO, false, 2.6)
+			_reset()
+		"sanct_eteint":
+			_role("interactif", c, false, 2.6, 0.0, "eteint")
+		"sanct_ravive":
+			_role("interactif", c, false, 2.6, 0.0, "ravive")
+		"butin":
+			_role("butin", c + Vector2(-30, -40), false, 3.0)
+			_essence(c + Vector2(55, 55), 18.0)
+			_seve_perdue(c + Vector2(-45, 80), 16.0)
+			_text_c(Vector2(c.x - 30, c.y + 22), "greffe", 10, Art.c("texte_doux"), 80)
+			_text_c(Vector2(c.x + 55, c.y + 100), "essence", 10, Art.c("texte_doux"), 80)
+			_text_c(Vector2(c.x - 45, c.y + 128), "sève perdue", 10, Art.c("texte_doux"), 90)
+
+
+func _at(pos: Vector2, scale_: Vector2, rot := 0.0) -> void:
+	draw_set_transform(pos, rot, scale_)
+
+
+func _reset() -> void:
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _leaf(p: Vector2, l: float, a: float, col: Color) -> void:
+	draw_colored_polygon(_leaf_pts(p, l, a), col)
 
 
 ## Un carré de sol mort (ou ravivé) avec un peu de texture : cailloux, fissures fines, touffes.
@@ -287,7 +428,7 @@ func _role(role: String, p: Vector2, mono: bool, scale := 1.0, facing := 0.0, et
 				draw_circle(p, r * 1.75, Color(Art.c("elite"), 0.07))
 				draw_circle(p, r * 1.4, Color(Art.c("elite"), 0.09))
 				for i in 10:
-					var a: float = i * TAU / 10.0 + 0.2
+					var a: float = i * TAU / 10.0 + 0.2 + TAU / 10.0 * _u()
 					draw_arc(p, r * 1.6, a, a + 0.38, 6, Color(Art.c("elite"), 0.75), Art.TRAIT_FIN, true)
 			# Couronne de pointes, en volume (une moitié éclairée, une moitié dans l'ombre).
 			for i in 5:
@@ -302,6 +443,7 @@ func _role(role: String, p: Vector2, mono: bool, scale := 1.0, facing := 0.0, et
 				# Gemme de corruption au front
 				var g := p + Vector2(r * 0.05, -r * 0.55)
 				draw_colored_polygon(PackedVector2Array([g + Vector2(0, -r * 0.16), g + Vector2(r * 0.12, 0), g + Vector2(0, r * 0.16), g + Vector2(-r * 0.12, 0)]), Art.c("elite"))
+				draw_circle(g, r * (0.2 + 0.06 * _w(2.0)), Color(Art.c("elite"), 0.25))
 				draw_circle(g + Vector2(-r * 0.03, -r * 0.04), r * 0.04, Color.WHITE)
 		"interactif":
 			_sanctuaire(p, 26.0 * k, mono, etat != "eteint")
@@ -319,7 +461,7 @@ func _hero(p: Vector2, r: float, mono: bool, facing: float, etat: String) -> voi
 		Art.shadow(self, p, r * 1.1)
 	# Cape : trois feuilles dans le dos, nervurées.
 	for side in [-1, 0, 1]:
-		var a: float = facing + PI + side * 0.62
+		var a: float = facing + PI + side * 0.62 + 0.09 * _w(1.0, side * 0.18)
 		var c := p + Vector2.from_angle(a) * r * (1.05 if side == 0 else 0.95)
 		var lf := _leaf_pts(c, r * (0.78 if side == 0 else 0.66), a)
 		if mono:
@@ -364,16 +506,21 @@ func _hero(p: Vector2, r: float, mono: bool, facing: float, etat: String) -> voi
 	if mono:
 		draw_circle(seed_p, r * 0.3, black)
 	else:
-		Art.glow(self, seed_p, r * (1.3 if big else 0.75), "seve")
+		Art.glow(self, seed_p, r * (1.3 if big else 0.75) * (1.0 + 0.1 * _w(2.0)), "seve")
+		# Lucioles qui tournent autour de la lanterne.
+		for i in 3:
+			var m := seed_p + Vector2.from_angle(TAU * (_u() + i / 3.0)) * r * (0.6 + 0.08 * _w(3.0, i * 0.3))
+			draw_circle(m, maxf(r * 0.05, 0.8), Color(Art.ec("seve", "clair"), 0.5 + 0.4 * _w(2.0, i * 0.33)))
 		draw_colored_polygon(Art.ellipse(seed_p, r * 0.3, r * 0.22, 14), Art.ec("seve", "sombre").lightened(0.2))
 		draw_circle(seed_p + Vector2(-r * 0.06, -r * 0.06), r * 0.13, Art.ec("seve", "clair"))
 		if big:
 			for i in 5:
 				var a: float = facing + (i - 2) * 0.35
 				draw_line(seed_p + Vector2.from_angle(a) * r * 0.55, seed_p + Vector2.from_angle(a) * r * 0.95, Color(Art.ec("seve"), 0.8), maxf(r * 0.06, 1.0), true)
-		if etat == "touche":
-			draw_circle(p, r * 1.02, Color(Art.c("danger_eclair"), 0.7))
-			draw_arc(p, r * 1.25, 0, TAU, 32, Color(Art.c("danger"), 0.8), maxf(r * 0.08, 1.5), true)
+		var fl := _flash if etat == "touche" else 0.0
+		if fl > 0.0:
+			draw_circle(p, r * 1.02, Color(Art.c("danger_eclair"), 0.75 * fl))
+			draw_arc(p, r * (1.1 + 0.5 * (1.0 - fl)), 0, TAU, 32, Color(Art.c("danger"), 0.9 * fl), maxf(r * 0.08, 1.5), true)
 
 
 ## Le Flétri de mêlée : écorce anguleuse et fendue, veines de braise, yeux fendus, griffes d'os.
@@ -392,9 +539,17 @@ func _fletri(p: Vector2, r: float, mono: bool, etat := "") -> void:
 		draw_colored_polygon(pts, black)
 		return
 	var body := Art.c("ennemi")
-	if etat == "touche":
-		body = body.lerp(Color.WHITE, 0.7)
+	if _flash > 0.0 and etat == "touche":
+		body = body.lerp(Color.WHITE, 0.8 * _flash)
 	Art.volume(self, pts, body)
+	# Grain de l'écorce : petits traits et un nœud.
+	var grain := body.darkened(0.3)
+	for gq in [[Vector2(0.15, 0.3), Vector2(0.45, 0.42)], [Vector2(0.05, 0.55), Vector2(0.3, 0.62)], [Vector2(-0.5, 0.05), Vector2(-0.7, 0.12)], [Vector2(0.3, -0.62), Vector2(0.5, -0.5)]]:
+		draw_line(p + gq[0] * r, p + gq[1] * r, grain, maxf(r * 0.04, 0.8), true)
+	draw_arc(p + Vector2(-0.15, 0.45) * r, r * 0.09, 0, TAU, 10, grain, maxf(r * 0.04, 0.8), true)
+	# Lichen mort, en taches pâles.
+	for lq in [Vector2(-0.55, -0.45), Vector2(-0.62, 0.32), Vector2(0.55, 0.2)]:
+		draw_circle(p + lq * r, r * 0.06, Color(Art.c("brume").lightened(0.2), 0.55))
 	# Fentes de l'écorce, avec la braise qui couve dedans.
 	var w := maxf(r * 0.07, 1.0)
 	for crack in [[Vector2(-0.1, -0.05), Vector2(-0.45, -0.35), Vector2(-0.62, -0.28)], [Vector2(-0.1, -0.05), Vector2(-0.3, 0.35), Vector2(-0.55, 0.5)], [Vector2(-0.1, -0.05), Vector2(0.1, -0.5)]]:
@@ -402,20 +557,23 @@ func _fletri(p: Vector2, r: float, mono: bool, etat := "") -> void:
 		for q in crack:
 			line.append(p + q * r)
 		draw_polyline(line, body.darkened(0.6), w * 1.8, true)
-		draw_polyline(line, Color(Art.ec("cendre"), 0.75 if etat == "anticipation" else 0.5), w * 0.7, true)
+		var flick := 0.8 + 0.2 * _w(3.0, line[1].x * 0.01)
+		draw_polyline(line, Color(Art.ec("cendre"), (0.85 if etat == "anticipation" else 0.5) * flick), w * 0.7, true)
 	Art.outline(self, pts, Art.c("ennemi_contour"), maxf(r * 0.1, Art.TRAIT_FIN))
 	# Yeux
-	var eye_a := 0.55 if etat == "anticipation" else 0.25
+	var eye_a := (0.6 if etat == "anticipation" else 0.25) * (0.85 + 0.15 * _w(2.0))
 	for sgn in [-1, 1]:
 		var e := p + Vector2(r * 0.38, sgn * r * 0.27)
 		draw_circle(e, r * 0.16, Color(Art.c("ennemi_oeil"), eye_a))
 		_slit(e, r * 0.13, sgn)
 	# Flocons de cendre
+	# Flocons de cendre qui s'élèvent et s'éteignent.
 	for i in 3:
-		var q := p + Vector2(-r * (0.4 + 0.35 * i), -r * (1.1 + 0.25 * (i % 2)))
-		draw_colored_polygon(PackedVector2Array([q + Vector2(0, -r * 0.07), q + Vector2(r * 0.05, 0), q + Vector2(0, r * 0.07), q + Vector2(-r * 0.05, 0)]), Color(Art.c("brume").lightened(0.3), 0.7 - i * 0.18))
+		var k := _u(i / 3.0)
+		var q := p + Vector2(-r * (0.3 + 0.3 * i) + sin(TAU * k + i) * r * 0.15, -r * (0.8 + 0.9 * k))
+		draw_colored_polygon(PackedVector2Array([q + Vector2(0, -r * 0.07), q + Vector2(r * 0.05, 0), q + Vector2(0, r * 0.07), q + Vector2(-r * 0.05, 0)]), Color(Art.c("brume").lightened(0.3), 0.8 * sin(PI * k)))
 	if etat == "saignant":
-		Art.status(self, "saignement", p, r, 0.4)
+		Art.status(self, "saignement", p, r, t * 1.25)
 
 
 ## Le Tireur d'épines : corps effilé, piquants dans le dos, canon-épine cerclé, un œil.
@@ -440,10 +598,11 @@ func _tireur(p: Vector2, r: float, mono: bool) -> void:
 		var x := p.x + r * (0.75 + i * 0.28)
 		draw_line(Vector2(x, p.y - r * (0.22 - i * 0.05)), Vector2(x, p.y + r * (0.22 - i * 0.05)), Art.c("ennemi").darkened(0.4), maxf(r * 0.08, 1.0), true)
 	Art.outline(self, pts, Art.c("ennemi_contour"), maxf(r * 0.1, Art.TRAIT_FIN))
-	draw_circle(p + Vector2(r * 0.05, 0), r * 0.32, Color(Art.c("ennemi_oeil"), 0.3))
+	draw_circle(p + Vector2(r * 0.05, 0), r * 0.32, Color(Art.c("ennemi_oeil"), 0.3 + 0.15 * _w(2.0)))
 	draw_circle(p + Vector2(r * 0.05, 0), r * 0.18, Art.c("ennemi_oeil"))
 	draw_circle(p + Vector2(r * 0.1, 0), r * 0.07, Art.c("contour"))
-	draw_circle(p + Vector2(r * 1.95, 0), r * 0.1, Art.ec("cendre", "clair"))
+	draw_circle(p + Vector2(r * 1.95, 0), r * (0.1 + tir_charge * 0.25), Color(Art.ec("cendre"), 0.35 * tir_charge))
+	draw_circle(p + Vector2(r * 1.95, 0), r * (0.1 + tir_charge * 0.08), Art.ec("cendre", "clair"))
 
 
 ## Le Colosse : bloc d'écorce à plaques, fentes de braise, petits yeux, trait fort.
@@ -484,7 +643,10 @@ func _sanctuaire(p: Vector2, r: float, mono: bool, lit: bool) -> void:
 		if lit:
 			draw_arc(p, r * 1.32, -PI / 2.0, -PI / 2.0 + TAU, 48, Art.c("butin"), maxf(r * 0.06, Art.TRAIT), true)
 		else:
-			draw_arc(p, r * 1.32, -PI / 2.0, -PI / 2.0 + TAU * 0.4, 32, Color(Art.c("butin"), 0.8), maxf(r * 0.06, Art.TRAIT), true)
+			var fill := 0.15 + 0.8 * Anim.ease_in_out(_u())
+			draw_arc(p, r * 1.32, 0, TAU, 48, Color(Art.c("contour"), 0.4), maxf(r * 0.06, Art.TRAIT), true)
+			draw_arc(p, r * 1.32, -PI / 2.0, -PI / 2.0 + TAU * fill, 40, Color(Art.c("butin"), 0.85), maxf(r * 0.06, Art.TRAIT), true)
+			draw_circle(p + Vector2.from_angle(-PI / 2.0 + TAU * fill) * r * 1.32, maxf(r * 0.07, 2.0), Art.c("butin").lightened(0.4))
 	var stone_col := Art.c("interactif") if lit else Art.c("interactif").darkened(0.35)
 	for i in 6:
 		var a: float = i * TAU / 6.0 + 0.3
@@ -496,7 +658,10 @@ func _sanctuaire(p: Vector2, r: float, mono: bool, lit: bool) -> void:
 		Art.shadow(self, q + Vector2(0, r * 0.05), r * 0.16)
 		Art.volume(self, stone, stone_col, 0.8)
 		Art.outline(self, stone, Art.c("contour"), maxf(r * 0.04, 1.0))
-		var rune := Color(Art.ec("seve"), 0.95) if lit else Color(Art.c("contour"), 0.5)
+		var pulse := 0.5 + 0.5 * sin(TAU * (_u() - i / 6.0))
+		var rune := Color(Art.ec("seve").lerp(Art.ec("seve", "clair"), pulse), 0.6 + 0.4 * pulse) if lit else Color(Art.c("contour"), 0.5)
+		if lit:
+			draw_circle(q + Vector2(0, -0.04) * r, r * 0.16, Color(Art.ec("seve"), 0.18 * pulse))
 		draw_line(q + Vector2(0, -0.14) * r, q + Vector2(0, 0.08) * r, rune, maxf(r * 0.035, 1.0), true)
 		draw_line(q + Vector2(-0.07, -0.04) * r, q + Vector2(0.07, -0.1) * r, rune, maxf(r * 0.03, 1.0), true)
 	if mono:
@@ -504,15 +669,20 @@ func _sanctuaire(p: Vector2, r: float, mono: bool, lit: bool) -> void:
 		return
 	Art.volume_circle(self, p, r * 0.24, stone_col.darkened(0.1), 0.6)
 	if lit:
-		Art.glow(self, p, r * 0.5, "seve")
+		Art.glow(self, p, r * 0.5 * (1.0 + 0.12 * _w(2.0)), "seve")
+		# Étincelles de sève qui montent du socle.
+		for i in 5:
+			var k := _u(i / 5.0)
+			var q := p + Vector2(sin(i * 2.3 + TAU * k) * r * 0.25, -r * 1.2 * k)
+			draw_circle(q, maxf(r * 0.035, 1.0), Color(Art.ec("seve", "clair"), sin(PI * k)))
 	else:
-		draw_circle(p, r * 0.08, Art.ec("seve", "sombre"))
+		draw_circle(p, r * 0.08, Art.ec("seve", "sombre").lerp(Art.ec("seve"), 0.5 * _u()))
 
 
 ## Une greffe au sol : feuille d'or nervurée, tige, éclat ; avec une essence et une sève perdue à côté.
 func _greffe(p: Vector2, r: float, mono: bool) -> void:
-	var bob := Vector2(0, -r * 0.35)
-	var lf := _leaf_pts(p + bob, r * 1.1, -PI / 4.0)
+	var bob := Vector2(0, -r * (0.35 + 0.15 * _w()))
+	var lf := _leaf_pts(p + bob, r * 1.1, -PI / 4.0 + 0.06 * _w(1.0, 0.25))
 	if mono:
 		draw_colored_polygon(lf, Color.BLACK)
 		return
@@ -528,7 +698,7 @@ func _greffe(p: Vector2, r: float, mono: bool) -> void:
 		for sgn in [-1, 1]:
 			draw_line(base, base + d * r * 0.3 + d.orthogonal() * sgn * r * 0.35, Art.c("butin").darkened(0.35), maxf(r * 0.05, 0.8), true)
 	Art.outline(self, lf, Art.c("contour"), maxf(r * 0.08, 1.2))
-	_sparkle(p + bob + Vector2(r * 0.95, -r * 0.95), r * 0.5)
+	_sparkle(p + bob + Vector2(r * 0.95, -r * 0.95), r * 0.5 * (0.6 + 0.4 * absf(_w(2.0))), TAU / 8.0 * _u())
 
 
 ## Pointe en volume : moitié claire, moitié sombre.
@@ -541,6 +711,7 @@ func _spike_vol(base: Vector2, d: Vector2, len: float, col: Color) -> void:
 
 ## Essence de vie : gemme taillée de sève.
 func _essence(p: Vector2, r: float) -> void:
+	p += Vector2(0, r * 0.2 * _w(1.0, 0.4))
 	Art.glow(self, p, r * 1.8, "seve")
 	var top := p + Vector2(0, -r)
 	var bot := p + Vector2(0, r)
@@ -548,6 +719,7 @@ func _essence(p: Vector2, r: float) -> void:
 	var rgt := p + Vector2(r * 0.62, 0)
 	var mid := p + Vector2(-r * 0.1, -r * 0.1)
 	var c := Art.ec("seve")
+	mid += Vector2(r * 0.18 * _w(), 0)
 	draw_colored_polygon(PackedVector2Array([top, mid, lft]), c.lightened(0.4))
 	draw_colored_polygon(PackedVector2Array([top, rgt, mid]), c)
 	draw_colored_polygon(PackedVector2Array([lft, mid, bot]), c.darkened(0.2))
@@ -557,7 +729,8 @@ func _essence(p: Vector2, r: float) -> void:
 
 ## Sève perdue : grosse goutte de sève qui palpite, avec sa lueur.
 func _seve_perdue(p: Vector2, r: float) -> void:
-	Art.glow(self, p, r * 2.0, "seve")
+	r *= 1.0 + 0.07 * _w(2.0)
+	Art.glow(self, p, r * 2.0 * (1.0 + 0.15 * _w(2.0)), "seve")
 	var pts := PackedVector2Array()
 	for i in 24:
 		var a: float = i * TAU / 24.0
@@ -601,10 +774,24 @@ func _slit(p: Vector2, s: float, side: int) -> void:
 	draw_line(p + Vector2(-s, -side * s * 0.6), p + Vector2(s, side * s * 0.2), Art.c("ennemi_oeil"), clampf(s * 0.45, 1.6, 5.0), true)
 
 
-func _sparkle(p: Vector2, s: float) -> void:
+## Éclat à quatre branches fines (qui tourne avec rot).
+func _sparkle(p: Vector2, s: float, rot := 0.0) -> void:
 	var col := Art.c("butin").lerp(Color.WHITE, 0.6)
-	draw_line(p + Vector2(-s, 0), p + Vector2(s, 0), col, 1.5, true)
-	draw_line(p + Vector2(0, -s), p + Vector2(0, s), col, 1.5, true)
+	var pts := PackedVector2Array()
+	for i in 8:
+		pts.append(p + Vector2.from_angle(rot + i * TAU / 8.0) * s * (1.0 if i % 2 == 0 else 0.18))
+	draw_colored_polygon(pts, col)
+	draw_circle(p, s * 0.18, Color.WHITE)
+
+
+## Onde qui boucle sur la période : sin(2π (t / PERIODE × n + phase)).
+func _w(n := 1.0, phase := 0.0) -> float:
+	return sin(TAU * (t / PERIODE * n + phase))
+
+
+## Avancement dans la boucle, de 0 à 1.
+func _u(phase := 0.0) -> float:
+	return fposmod(t / PERIODE + phase, 1.0)
 
 
 # --- Texte et petits outils ---
