@@ -1,0 +1,659 @@
+## Charte graphique du jeu, en code : palette par rôle, identité des éléments, traits, ombres,
+## lueurs, icônes vectorielles et grammaire des annonces de danger.
+##
+## Règle : aucune couleur, épaisseur ou ombre n'est écrite en dur ailleurs. On écrit
+## `Art.c("ennemi")`, `Art.ec("poison")`, `Art.TRAIT`, `Art.icon(ci, "fouet", rect)`…
+## L'intention (pourquoi ces choix) est décrite dans docs/charte-graphique.md.
+##
+## Tout est statique : rien à instancier. Les fonctions de dessin prennent le CanvasItem qui dessine
+## (à appeler depuis son _draw).
+class_name Art
+extends RefCounted
+
+# --- Palette sémantique ---
+#
+# Hiérarchie de lecture : le fond est sourd et désaturé, ce qui se ramasse ou s'utilise est clair
+# et chaud, ce qui fait mal est saturé et contrasté.
+const PALETTE := {
+	# Fond : sourd, désaturé, sombre. Ne doit jamais attirer l'œil plus qu'un ennemi.
+	"sol_mort": Color("3b3631"),
+	"sol_vivant": Color("3e5a35"),
+	"brume": Color("5c5650"),
+	"decor": Color("27221f"),
+	"decor_vivant": Color("4d6a3f"),
+	# Le héros et ses alliés : clairs, ronds, organiques.
+	"joueur": Color("f3ead2"),
+	"joueur_accent": Color("8af5c0"),
+	"allie": Color("a9e6a0"),
+	# Les Flétris : sombres et saturés, contour clair pour ressortir sur le sol.
+	"ennemi": Color("6a2a3c"),
+	"ennemi_contour": Color("f09a8a"),
+	"ennemi_oeil": Color("ffb347"),
+	"elite": Color("ff4fb0"),
+	# Les dangers : rouge vif, puis éclair blanc chaud au moment du coup.
+	"danger": Color("ff3348"),
+	"danger_annonce": Color(1.0, 0.2, 0.282, 0.30),
+	"danger_eclair": Color("fff4e6"),
+	# Ce qui s'utilise ou se ramasse : clair et chaud.
+	"interactif": Color("f4d9a0"),
+	"butin": Color("ffd84a"),
+	# Interface (mêmes valeurs que ui_theme.gd, qui les lit ici).
+	"texte": Color("e9e2c8"),
+	"texte_doux": Color("a9a38f"),
+	"accent": Color("7fd36b"),
+	"or": Color("f2d06b"),
+	"panneau": Color(0.06, 0.08, 0.07, 0.92),
+	# Traits et ombres.
+	"contour": Color("140f0c"),
+	"ombre": Color(0.0, 0.0, 0.0, 0.35),
+}
+
+## Couleur de rôle par nom. Un nom inconnu est une erreur (magenta à l'écran, message en console).
+static func c(role: String) -> Color:
+	if PALETTE.has(role):
+		return PALETTE[role]
+	push_error("Art.c : rôle de couleur inconnu « %s »" % role)
+	return Color.MAGENTA
+
+
+## Groupes de la palette, dans l'ordre de la planche.
+const GROUPES := [
+	["Fond", ["sol_mort", "sol_vivant", "brume", "decor", "decor_vivant"]],
+	["Héros et alliés", ["joueur", "joueur_accent", "allie"]],
+	["Flétris", ["ennemi", "ennemi_contour", "ennemi_oeil", "elite"]],
+	["Danger", ["danger", "danger_annonce", "danger_eclair"]],
+	["Utile", ["interactif", "butin"]],
+	["Interface", ["texte", "texte_doux", "accent", "or", "panneau"]],
+	["Traits", ["contour", "ombre"]],
+]
+
+# --- Éléments ---
+#
+# Chaque élément a une couleur principale, une couleur claire (reflet, cœur d'une lueur), une
+# sombre (contour, ombre), un motif et une icône. La couleur seule ne suffit jamais : le motif
+# porte aussi l'information (lisible par les daltoniens et en noir et blanc).
+const ELEMENTS := {
+	"epine": {
+		"nom": "Épine", "sens": "physique : pointes, perforation, dégâts renvoyés",
+		"couleur": Color("dcb878"), "clair": Color("f4ead0"), "sombre": Color("6e5428"),
+		"motif": "pointes",
+	},
+	"saignement": {
+		"nom": "Saignement", "sens": "dégâts dans la durée, cumulables",
+		"couleur": Color("7a0c22"), "clair": Color("e0435a"), "sombre": Color("3a0410"),
+		"motif": "gouttes",
+	},
+	"racine": {
+		"nom": "Racine", "sens": "immobilise, tient, protège",
+		"couleur": Color("857a44"), "clair": Color("9fbf5a"), "sombre": Color("3e321a"),
+		"motif": "noeuds",
+	},
+	"poison": {
+		"nom": "Poison", "sens": "affaiblit, se répand en nuage",
+		"couleur": Color("9d6ae8"), "clair": Color("d6c0ff"), "sombre": Color("3e2266"),
+		"motif": "bulles",
+	},
+	"cendre": {
+		"nom": "Cendre", "sens": "brûle, explose : l'arme des Flétris",
+		"couleur": Color("f0601a"), "clair": Color("ffc56a"), "sombre": Color("5a1e08"),
+		"motif": "braises",
+	},
+	"seve": {
+		"nom": "Sève", "sens": "la vie : soins, essences, sol ravivé",
+		"couleur": Color("8af5c0"), "clair": Color("eafff4"), "sombre": Color("1f6a4a"),
+		"motif": "lueur",
+	},
+}
+const ELEMENT_IDS := ["epine", "saignement", "racine", "poison", "cendre", "seve"]
+
+## Couleur d'un élément : variante "couleur" (par défaut), "clair" ou "sombre".
+static func ec(element: String, variante := "couleur") -> Color:
+	if ELEMENTS.has(element):
+		return ELEMENTS[element][variante]
+	push_error("Art.ec : élément inconnu « %s »" % element)
+	return Color.MAGENTA
+
+
+## Élément dominant d'une compétence (pour sa couleur, ses particules et son icône).
+const ELEMENT_DE_COMPETENCE := {
+	"nova": "epine", "fouet": "epine", "volee": "epine", "racines": "racine",
+	"saignee": "saignement", "cloud": "poison", "bloom": "seve",
+}
+
+# --- Traits, ombres, lumière ---
+
+const TRAIT_FIN := 1.5     ## détails, motifs, icônes de petite taille
+const TRAIT := 2.5         ## contour standard d'un acteur
+const TRAIT_FORT := 4.0    ## acteur lourd, boss, contour d'annonce au moment du coup
+## L'ombre portée est une ellipse aplatie sous l'acteur, décalée vers le bas (lumière zénithale, un peu de face).
+const OMBRE_APLATI := 0.38
+const OMBRE_DECALAGE := 0.55
+
+## Ordre de dessin (z_index) : sol < décor bas < objets interactifs < acteurs < projectiles < effets < décor haut < interface.
+const COUCHE := {
+	"sol": -100, "decor_bas": -50, "interactif": -20, "acteurs": 0,
+	"projectiles": 10, "effets": 20, "decor_haut": 40, "interface": 100,
+}
+
+## Contour fermé d'un polygone, au trait de la charte.
+static func outline(ci: CanvasItem, points: PackedVector2Array, col := Color(0, 0, 0, 0), width := TRAIT) -> void:
+	if points.size() < 2:
+		return
+	if col.a == 0.0:
+		col = c("contour")
+	var closed := points.duplicate()
+	closed.append(points[0])
+	ci.draw_polyline(closed, col, width, true)
+
+
+## Ombre portée sous un acteur de rayon r posé en pos.
+static func shadow(ci: CanvasItem, pos: Vector2, r: float) -> void:
+	ci.draw_colored_polygon(ellipse(pos + Vector2(0, r * OMBRE_DECALAGE), r * 1.05, r * OMBRE_APLATI * 1.05), c("ombre"))
+
+
+## Lueur douce d'un élément : trois halos de plus en plus clairs, puis un cœur.
+static func glow(ci: CanvasItem, pos: Vector2, r: float, element := "seve") -> void:
+	var col := ec(element)
+	var core := ec(element, "clair")
+	ci.draw_circle(pos, r, Color(col, 0.08))
+	ci.draw_circle(pos, r * 0.7, Color(col, 0.14))
+	ci.draw_circle(pos, r * 0.42, Color(col, 0.3))
+	ci.draw_circle(pos, r * 0.2, Color(core, 0.9))
+
+
+## Remplit une forme avec du volume, lumière venant d'en haut à gauche : côté ombre, face éclairée,
+## reflet. light règle la force du reflet (0 : mat). Pour les acteurs et les objets importants.
+static func volume(ci: CanvasItem, pts: PackedVector2Array, col: Color, light := 1.0) -> void:
+	var cen := Vector2.ZERO
+	for q in pts:
+		cen += q
+	cen /= pts.size()
+	var r := 0.0
+	for q in pts:
+		r = maxf(r, q.distance_to(cen))
+	ci.draw_colored_polygon(pts, col.darkened(0.38))
+	ci.draw_colored_polygon(_xform(pts, cen, 0.84, Vector2(-0.06, -0.09) * r), col)
+	if light > 0.0:
+		ci.draw_colored_polygon(_xform(pts, cen, 0.4, Vector2(-0.24, -0.3) * r), Color(col.lightened(0.3), 0.5 * light))
+
+
+## Disque avec du volume (même lumière que volume()).
+static func volume_circle(ci: CanvasItem, pos: Vector2, r: float, col: Color, light := 1.0) -> void:
+	ci.draw_circle(pos, r, col.darkened(0.38))
+	ci.draw_circle(pos + Vector2(-0.07, -0.1) * r, r * 0.84, col)
+	if light > 0.0:
+		ci.draw_circle(pos + Vector2(-0.3, -0.34) * r, r * 0.34, Color(col.lightened(0.32), 0.55 * light))
+
+
+static func _xform(pts: PackedVector2Array, cen: Vector2, k: float, off: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for q in pts:
+		out.append(cen + (q - cen) * k + off)
+	return out
+
+
+## Polygone d'une ellipse (rayons rx, ry) : sert aux ombres et aux zones vues en perspective.
+static func ellipse(pos: Vector2, rx: float, ry: float, n := 20) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in n:
+		var a := i * TAU / n
+		pts.append(pos + Vector2(cos(a) * rx, sin(a) * ry))
+	return pts
+
+
+# --- Motifs des éléments ---
+
+## Remplit un rectangle avec le motif d'un élément (échantillon de la planche, tuile d'état).
+## t : temps en secondes, pour les motifs animés.
+static func motif(ci: CanvasItem, element: String, rect: Rect2, t := 0.0) -> void:
+	var e: Dictionary = ELEMENTS[element]
+	ci.draw_rect(rect, Color(e["sombre"], 0.55))
+	var step := 22.0
+	var cols := int(rect.size.x / step)
+	var rows := int(rect.size.y / step)
+	var off := rect.position + (rect.size - Vector2(cols, rows) * step) / 2.0 + Vector2(step, step) / 2.0
+	for j in rows:
+		for i in cols:
+			var p := off + Vector2(i * step + (step * 0.5 if j % 2 == 1 else 0.0), j * step)
+			if p.x > rect.end.x - 4.0:
+				continue
+			_motif_unit(ci, element, p, step * 0.36, t + (i * 0.37 + j * 0.61))
+
+
+## Marque d'état autour d'un acteur de rayon r : le motif de l'élément, animé par t.
+## Pour les Flétris saignants, enracinés, empoisonnés, enflammés ; pour le héros sous un effet.
+static func status(ci: CanvasItem, element: String, pos: Vector2, r: float, t := 0.0) -> void:
+	var e: Dictionary = ELEMENTS[element]
+	match element:
+		"saignement":
+			# Gouttes qui perlent sous le corps et tombent.
+			for i in 3:
+				var k := fposmod(t * 0.9 + i / 3.0, 1.0)
+				var p := pos + Vector2((i - 1) * r * 0.55, r * (0.3 + 0.9 * k))
+				_drop(ci, p, r * 0.22 * (1.0 - 0.4 * k), Color(e["clair"], 1.0 - k))
+		"racine":
+			# Racines noueuses qui enserrent le bas du corps.
+			for i in 4:
+				var a := PI * (0.15 + i * 0.23)
+				var base := pos + Vector2.from_angle(a) * r * 1.25
+				var tip := pos + Vector2.from_angle(a - 0.6) * r * 0.75
+				ci.draw_polyline(PackedVector2Array([base, base.lerp(tip, 0.5) + Vector2(0, -r * 0.15), tip]), e["couleur"], TRAIT, true)
+				ci.draw_circle(base.lerp(tip, 0.5) + Vector2(0, -r * 0.15), TRAIT * 0.9, e["clair"])
+		"poison":
+			# Bulles qui montent et éclatent.
+			for i in 4:
+				var k := fposmod(t * 0.7 + i * 0.27, 1.0)
+				var p := pos + Vector2(sin(i * 2.1 + t * 2.0) * r * 0.7, -r * (0.2 + 1.2 * k))
+				ci.draw_arc(p, r * (0.1 + 0.12 * k), 0.0, TAU, 12, Color(e["clair"], 1.0 - k), TRAIT_FIN, true)
+		"cendre":
+			# Braises qui s'envolent.
+			for i in 4:
+				var k := fposmod(t * 1.1 + i * 0.25, 1.0)
+				var p := pos + Vector2(sin(i * 1.7 + t) * r * 0.8, -r * (0.3 + 1.3 * k))
+				_ember(ci, p, r * 0.16 * (1.0 - 0.5 * k), Color(e["clair"], 1.0 - k))
+		"epine":
+			# Pointes qui hérissent le contour.
+			for i in 8:
+				var d := Vector2.from_angle(i * TAU / 8.0 + 0.2)
+				_thorn(ci, pos + d * r * 1.02, d, r * 0.38, e["couleur"])
+		"seve":
+			# Halo vert qui respire.
+			var b := 0.5 + 0.5 * sin(t * 3.0)
+			ci.draw_arc(pos, r * (1.25 + 0.1 * b), 0.0, TAU, 32, Color(e["couleur"], 0.35 + 0.35 * b), TRAIT, true)
+
+
+static func _motif_unit(ci: CanvasItem, element: String, p: Vector2, s: float, t: float) -> void:
+	var e: Dictionary = ELEMENTS[element]
+	match e["motif"]:
+		"pointes":
+			_thorn(ci, p + Vector2(0, s * 0.6), Vector2.UP, s * 1.5, e["couleur"])
+		"gouttes":
+			_drop(ci, p, s * 0.7, e["clair"])
+		"noeuds":
+			ci.draw_line(p + Vector2(-s * 1.4, s * 0.4), p + Vector2(s * 1.4, -s * 0.4), e["couleur"], TRAIT)
+			ci.draw_circle(p, s * 0.42, e["clair"])
+		"bulles":
+			ci.draw_arc(p + Vector2(-s * 0.3, s * 0.2), s * 0.55, 0.0, TAU, 14, e["clair"], TRAIT_FIN, true)
+			ci.draw_arc(p + Vector2(s * 0.55, -s * 0.5), s * 0.3, 0.0, TAU, 10, e["couleur"], TRAIT_FIN, true)
+		"braises":
+			_ember(ci, p, s * 0.6, e["clair"])
+			ci.draw_circle(p + Vector2(s * 0.8, s * 0.7), s * 0.18, e["couleur"])
+		"lueur":
+			ci.draw_circle(p, s * 0.9, Color(e["couleur"], 0.22))
+			ci.draw_circle(p, s * 0.35, e["clair"])
+
+
+## Une pointe d'épine : base large, pointe dans la direction d.
+static func _thorn(ci: CanvasItem, base: Vector2, d: Vector2, len: float, col: Color) -> void:
+	var n := Vector2(-d.y, d.x)
+	ci.draw_colored_polygon(PackedVector2Array([base + n * len * 0.28, base + d * len, base - n * len * 0.28]), col)
+
+
+## Une goutte : rond en bas, pointe en haut.
+static func _drop(ci: CanvasItem, p: Vector2, s: float, col: Color) -> void:
+	ci.draw_circle(p, s, col)
+	ci.draw_colored_polygon(PackedVector2Array([p + Vector2(-s * 0.92, -s * 0.3), p + Vector2(0, -s * 2.1), p + Vector2(s * 0.92, -s * 0.3)]), col)
+
+
+## Une braise : losange.
+static func _ember(ci: CanvasItem, p: Vector2, s: float, col: Color) -> void:
+	ci.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -s * 1.4), p + Vector2(s, 0), p + Vector2(0, s * 1.1), p + Vector2(-s, 0)]), col)
+
+
+# --- Annonces de danger ---
+#
+# Une seule grammaire, pour les ennemis, les élites et le boss :
+#   1. annonce (progression 0 → 1) : la forme apparaît en contour rouge, un voile la remplit
+#      depuis l'origine de l'attaque ; dans le dernier quart, le contour clignote ;
+#   2. frappe (frappe 0 → 1) : éclair blanc chaud sur toute la forme, puis il s'éteint.
+# Formes (dictionnaires) :
+#   {"type": "cercle", "centre": Vector2, "rayon": float}
+#   {"type": "cone", "centre": Vector2, "direction": float (radians), "ouverture": float (radians), "rayon": float}
+#   {"type": "ligne", "de": Vector2, "a": Vector2, "largeur": float}
+const ANNONCE_CLIGNOTE := 0.75   ## à partir de cette progression, le contour clignote
+
+## Dessine une attaque annoncée. progression : 0 → 1 pendant l'annonce. frappe : -1 tant que le coup
+## n'est pas parti, puis 0 → 1 pendant l'éclair. t : temps (pour le clignotement).
+static func telegraph(ci: CanvasItem, forme: Dictionary, progression: float, frappe := -1.0, t := 0.0) -> void:
+	var danger := c("danger")
+	if frappe >= 0.0:
+		var k := clampf(frappe, 0.0, 1.0)
+		var fl := c("danger_eclair").lerp(danger, k)
+		ci.draw_colored_polygon(telegraph_polygon(forme, 1.0), Color(fl, 0.85 * (1.0 - k)))
+		outline(ci, telegraph_polygon(forme, 1.0), Color(fl, 1.0 - k), TRAIT_FORT)
+		return
+	var p := clampf(progression, 0.0, 1.0)
+	ci.draw_colored_polygon(telegraph_polygon(forme, 1.0), Color(danger, 0.10))
+	if p > 0.0:
+		ci.draw_colored_polygon(telegraph_polygon(forme, p), c("danger_annonce"))
+	var a := 0.55 + 0.45 * p
+	if p >= ANNONCE_CLIGNOTE:
+		a = 0.6 + 0.4 * (0.5 + 0.5 * cos(t * TAU * 6.0))
+	outline(ci, telegraph_polygon(forme, 1.0), Color(danger, a), TRAIT)
+
+
+## Polygone d'une forme d'annonce remplie à k (0 → 1) depuis l'origine de l'attaque.
+static func telegraph_polygon(forme: Dictionary, k: float) -> PackedVector2Array:
+	k = clampf(k, 0.0, 1.0)
+	var pts := PackedVector2Array()
+	match str(forme.get("type", "")):
+		"cercle":
+			return ellipse(forme["centre"], forme["rayon"] * k, forme["rayon"] * k, 32)
+		"cone":
+			var o: Vector2 = forme["centre"]
+			var half: float = forme["ouverture"] / 2.0
+			var r: float = forme["rayon"] * k
+			pts.append(o)
+			for i in 13:
+				pts.append(o + Vector2.from_angle(forme["direction"] - half + i * 2.0 * half / 12.0) * r)
+		"ligne":
+			var a: Vector2 = forme["de"]
+			var b: Vector2 = a.lerp(forme["a"], k)
+			var n: Vector2 = (forme["a"] - a).normalized().orthogonal() * forme["largeur"] / 2.0
+			pts.append_array([a + n, b + n, b - n, a - n])
+		_:
+			push_error("Art.telegraph : forme inconnue « %s »" % forme.get("type", ""))
+	return pts
+
+
+# --- Daltonisme ---
+#
+# Simulation de Machado, Oliveira et Fernandes (2009), sévérité maximale, en RGB linéaire.
+# Sert à la planche (les éléments vus par un daltonien) et au test qui vérifie qu'ils restent distincts.
+const DALTONISMES := {
+	"protanopie": [Vector3(0.152286, 1.052583, -0.204868), Vector3(0.114503, 0.786281, 0.099216), Vector3(-0.003882, -0.048116, 1.051998)],
+	"deuteranopie": [Vector3(0.367322, 0.860646, -0.227968), Vector3(0.280085, 0.672501, 0.047413), Vector3(-0.011820, 0.042940, 0.968881)],
+	"tritanopie": [Vector3(1.255528, -0.076749, -0.178779), Vector3(-0.078411, 0.930809, 0.147602), Vector3(0.004733, 0.691367, 0.303900)],
+}
+
+## La couleur telle que la voit une personne atteinte de la forme de daltonisme donnée.
+static func simulate(col: Color, kind: String) -> Color:
+	var m: Array = DALTONISMES[kind]
+	var l := Vector3(col.srgb_to_linear().r, col.srgb_to_linear().g, col.srgb_to_linear().b)
+	var o := Color(clampf(m[0].dot(l), 0, 1), clampf(m[1].dot(l), 0, 1), clampf(m[2].dot(l), 0, 1), col.a)
+	return o.linear_to_srgb()
+
+
+## Coordonnées CIELAB (L, a, b) d'une couleur sRGB, illuminant D65.
+static func lab(col: Color) -> Vector3:
+	var l := col.srgb_to_linear()
+	var x := (0.4124 * l.r + 0.3576 * l.g + 0.1805 * l.b) / 0.95047
+	var y := 0.2126 * l.r + 0.7152 * l.g + 0.0722 * l.b
+	var z := (0.0193 * l.r + 0.1192 * l.g + 0.9505 * l.b) / 1.08883
+	var f := func(v: float) -> float: return pow(v, 1.0 / 3.0) if v > 0.008856 else 7.787 * v + 16.0 / 116.0
+	var fx: float = f.call(x)
+	var fy: float = f.call(y)
+	var fz: float = f.call(z)
+	return Vector3(116.0 * fy - 16.0, 500.0 * (fx - fy), 200.0 * (fy - fz))
+
+
+## Écart perçu entre deux couleurs (ΔE 1976). Au-dessus de 20, on les distingue d'un coup d'œil.
+static func delta_e(a: Color, b: Color) -> float:
+	return lab(a).distance_to(lab(b))
+
+
+# --- Icônes ---
+#
+# Une icône par compétence, élément, famille de statistiques, objet du monde et greffe.
+# La même partout : barre de compétences, arbre, infobulles, journal, ramassage.
+# Silhouettes pleines, lisibles à 20 px ; un détail clair au plus.
+const ICONES := {
+	"elements": ["epine", "saignement", "racine", "poison", "cendre", "seve"],
+	"competences": ["nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom"],
+	"statistiques": ["degats", "attaque", "projectile", "critique", "vie", "regen", "armure", "vitesse", "esquive", "zone", "collecte", "competence"],
+	"monde": ["sanctuaire", "autel", "coeur", "arene", "secret", "seve_perdue", "essence", "greffe"],
+}
+## Nom affiché de chaque icône (planche, infobulles).
+const NOM_ICONE := {
+	"nova": "Couronne d'épines", "fouet": "Fouet de ronce", "racines": "Racines voraces",
+	"volee": "Volée d'épines", "saignee": "Saignée", "cloud": "Nuage de spores", "bloom": "Floraison",
+	"degats": "Dégâts", "attaque": "Vitesse d'attaque", "projectile": "Projectiles", "critique": "Critique",
+	"vie": "Vie", "regen": "Régénération", "armure": "Armure", "vitesse": "Déplacement", "esquive": "Esquive",
+	"zone": "Zones", "collecte": "Collecte", "competence": "Compétence",
+	"sanctuaire": "Sanctuaire", "autel": "Autel", "coeur": "Cœur de flétrissure", "arene": "Arène",
+	"secret": "Secret", "seve_perdue": "Sève perdue", "essence": "Essence de vie", "greffe": "Greffe",
+}
+## Couleur par défaut d'une icône qui n'est pas un élément.
+const COULEUR_ICONE := {
+	"degats": "texte", "attaque": "texte", "projectile": "texte", "critique": "or", "vie": "danger",
+	"regen": "accent", "armure": "texte", "vitesse": "texte", "esquive": "texte", "zone": "texte",
+	"collecte": "butin", "competence": "or",
+	"sanctuaire": "interactif", "autel": "interactif", "coeur": "elite", "arene": "danger", "secret": "or",
+	"seve_perdue": "joueur_accent", "essence": "joueur_accent", "greffe": "butin",
+}
+
+## Couleur naturelle d'une icône (celle de son élément, sinon celle de son rôle).
+static func icon_color(id: String) -> Color:
+	if ELEMENTS.has(id):
+		return ec(id)
+	if ELEMENT_DE_COMPETENCE.has(id):
+		return ec(ELEMENT_DE_COMPETENCE[id])
+	return c(COULEUR_ICONE.get(id, "texte"))
+
+
+## Toutes les icônes connues, dans l'ordre de la planche.
+static func icon_ids() -> Array:
+	var out := []
+	for g in ICONES:
+		out.append_array(ICONES[g])
+	return out
+
+
+## Dessine l'icône id centrée dans rect (carré conseillé). col : couleur de l'icône, sa couleur
+## naturelle par défaut. Le dessin tient dans le cercle inscrit, au trait de la charte.
+## Au-dessus de 10 px de demi-côté, l'icône prend du relief : sa propre forme, assombrie et décalée
+## vers le bas, lui fait une tranche (comme une pièce découpée et posée).
+static func icon(ci: CanvasItem, id: String, rect: Rect2, col := Color(0, 0, 0, 0)) -> void:
+	var p := rect.get_center()
+	var s := minf(rect.size.x, rect.size.y) * 0.42
+	if col.a == 0.0:
+		col = icon_color(id)
+	var lw := maxf(s * 0.14, 1.2)
+	if s >= 10.0:
+		var edge := col.darkened(0.62)
+		_icon_body(ci, id, p + Vector2(0, s * 0.11), s, edge, edge, edge, lw)
+	_icon_body(ci, id, p, s, col, col.lerp(Color.WHITE, 0.6), col.darkened(0.55), lw)
+
+
+## Médaillon d'icône (barre de compétences, infobulles, journal) : disque sombre, anneau à la
+## couleur de l'icône, reflet en haut, puis l'icône en relief.
+static func icon_badge(ci: CanvasItem, id: String, rect: Rect2, col := Color(0, 0, 0, 0)) -> void:
+	var p := rect.get_center()
+	var r := minf(rect.size.x, rect.size.y) / 2.0
+	if col.a == 0.0:
+		col = icon_color(id)
+	ci.draw_circle(p + Vector2(0, r * 0.08), r, c("ombre"))
+	ci.draw_circle(p, r, c("contour"))
+	ci.draw_circle(p, r * 0.9, col.darkened(0.82))
+	ci.draw_circle(p + Vector2(0, -r * 0.12), r * 0.74, Color(col.darkened(0.65), 0.6))
+	ci.draw_arc(p, r * 0.93, 0.0, TAU, 40, col.darkened(0.25), maxf(r * 0.08, 1.2), true)
+	ci.draw_arc(p, r * 0.8, PI * 1.12, PI * 1.88, 20, Color(1, 1, 1, 0.16), maxf(r * 0.07, 1.0), true)
+	icon(ci, id, Rect2(p - Vector2(r, r) * 0.72, Vector2(r, r) * 1.44), col)
+
+
+static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Color, clair: Color, sombre: Color, lw: float) -> void:
+	var P := func(x: float, y: float) -> Vector2: return p + Vector2(x, y) * s
+	match id:
+		# Éléments
+		"epine":
+			ci.draw_colored_polygon(PackedVector2Array([P.call(-0.55, 0.95), P.call(0.05, -1.0), P.call(0.25, -0.1), P.call(0.55, 0.95)]), col)
+			ci.draw_colored_polygon(PackedVector2Array([P.call(0.05, -1.0), P.call(0.25, -0.1), P.call(-0.05, 0.1)]), clair)
+		"saignement":
+			_drop(ci, P.call(0, 0.35), s * 0.58, col)
+			ci.draw_circle(P.call(-0.2, 0.25), s * 0.15, clair)
+		"racine":
+			ci.draw_polyline(PackedVector2Array([P.call(0, -1.0), P.call(0.05, -0.2), P.call(-0.45, 0.45), P.call(-0.8, 0.95)]), col, lw * 1.4, true)
+			ci.draw_polyline(PackedVector2Array([P.call(0.05, -0.2), P.call(0.45, 0.35), P.call(0.55, 0.95)]), col, lw * 1.2, true)
+			ci.draw_polyline(PackedVector2Array([P.call(-0.45, 0.45), P.call(-0.1, 0.9)]), col, lw, true)
+			ci.draw_circle(P.call(0.05, -0.2), lw * 1.1, clair)
+			ci.draw_circle(P.call(-0.45, 0.45), lw * 0.9, clair)
+		"poison":
+			ci.draw_circle(P.call(-0.25, 0.35), s * 0.5, col)
+			ci.draw_circle(P.call(0.45, -0.25), s * 0.32, col)
+			ci.draw_circle(P.call(-0.05, -0.7), s * 0.2, col)
+			ci.draw_arc(P.call(-0.38, 0.2), s * 0.22, PI, PI * 1.6, 8, clair, lw * 0.8, true)
+		"cendre":
+			ci.draw_colored_polygon(PackedVector2Array([P.call(0, -1.0), P.call(0.55, -0.1), P.call(0.6, 0.45), P.call(0, 0.95), P.call(-0.6, 0.45), P.call(-0.55, -0.1), P.call(-0.15, -0.35)]), col)
+			ci.draw_colored_polygon(PackedVector2Array([P.call(0, -0.2), P.call(0.28, 0.4), P.call(0, 0.75), P.call(-0.28, 0.4)]), clair)
+		"seve":
+			ci.draw_circle(p, s * 0.95, Color(col, 0.25))
+			_leaf(ci, p, s * 0.8, -PI / 4.0, col)
+			ci.draw_line(P.call(-0.45, 0.45), P.call(0.35, -0.35), sombre, lw * 0.7, true)
+		# Compétences
+		"nova":
+			ci.draw_arc(p, s * 0.5, 0.0, TAU, 24, col, lw * 1.2, true)
+			for i in 8:
+				var d := Vector2.from_angle(i * TAU / 8.0 - PI / 2.0)
+				_thorn(ci, p + d * s * 0.55, d, s * 0.45, col)
+		"fouet":
+			var pts := PackedVector2Array()
+			for i in 13:
+				var k := i / 12.0
+				pts.append(P.call(-0.85 + 1.7 * k, 0.55 - 1.3 * k + 0.45 * sin(k * PI * 1.6)))
+			ci.draw_polyline(pts, col, lw * 1.3, true)
+			for i in [3, 6, 9]:
+				var d: Vector2 = (pts[i + 1] - pts[i]).normalized().orthogonal()
+				_thorn(ci, pts[i], d, s * 0.28, col)
+			ci.draw_circle(pts[12], lw * 1.1, clair)
+		"racines":
+			for x in [-0.6, 0.0, 0.6]:
+				ci.draw_colored_polygon(PackedVector2Array([P.call(x - 0.2, 0.95), P.call(x + 0.08, -0.85 + absf(x) * 0.3), P.call(x + 0.2, 0.95)]), col)
+			ci.draw_line(P.call(-1.0, 0.95), P.call(1.0, 0.95), sombre, lw, true)
+			ci.draw_circle(P.call(0.08, -0.85), lw, clair)
+		"volee":
+			for i in 3:
+				var o: Vector2 = P.call(-0.55 + i * 0.35, 0.6 - i * 0.55)
+				_thorn(ci, o, Vector2(1, -1).normalized(), s * 0.75, col)
+				ci.draw_line(o, o - Vector2(1, -1).normalized() * s * 0.35, Color(col, 0.5), lw * 0.7, true)
+		"saignee":
+			ci.draw_line(P.call(-0.85, -0.6), P.call(0.6, 0.4), col, lw * 1.4, true)
+			_drop(ci, P.call(0.35, -0.15), s * 0.4, (sombre if col == sombre else Art.ec("saignement", "clair")))
+			_drop(ci, P.call(-0.3, 0.6), s * 0.28, (sombre if col == sombre else Art.ec("saignement", "clair")))
+		"cloud":
+			for q in [Vector3(-0.45, 0.2, 0.42), Vector3(0.1, -0.2, 0.52), Vector3(0.55, 0.25, 0.38), Vector3(0.0, 0.4, 0.4)]:
+				ci.draw_circle(P.call(q.x, q.y), s * q.z, col)
+			ci.draw_arc(P.call(0.05, -0.3), s * 0.18, PI, PI * 1.7, 8, clair, lw * 0.7, true)
+		"bloom":
+			for i in 5:
+				var a := i * TAU / 5.0 - PI / 2.0
+				_leaf(ci, p + Vector2.from_angle(a) * s * 0.45, s * 0.5, a, col)
+			ci.draw_circle(p, s * 0.25, clair)
+		# Statistiques
+		"degats":
+			ci.draw_colored_polygon(PackedVector2Array([P.call(0, -1.0), P.call(0.28, 0.3), P.call(-0.28, 0.3)]), col)
+			ci.draw_line(P.call(-0.6, 0.4), P.call(0.6, 0.4), col, lw, true)
+			ci.draw_line(P.call(0, 0.4), P.call(0, 1.0), col, lw, true)
+		"attaque":
+			for dx in [-0.5, 0.2]:
+				ci.draw_colored_polygon(PackedVector2Array([P.call(dx, -0.7), P.call(dx + 0.55, 0), P.call(dx, 0.7), P.call(dx + 0.2, 0)]), col)
+		"projectile":
+			ci.draw_circle(P.call(0.45, -0.35), s * 0.36, col)
+			ci.draw_line(P.call(-0.85, 0.75), P.call(0.25, -0.15), Color(col, 0.6), lw * 1.2, true)
+			ci.draw_line(P.call(-0.55, 0.85), P.call(0.15, 0.2), Color(col, 0.35), lw, true)
+		"critique":
+			var st := PackedVector2Array()
+			for i in 8:
+				st.append(p + Vector2.from_angle(i * TAU / 8.0 - PI / 2.0) * s * (1.0 if i % 2 == 0 else 0.32))
+			ci.draw_colored_polygon(st, col)
+		"vie":
+			ci.draw_circle(P.call(-0.4, -0.25), s * 0.42, col)
+			ci.draw_circle(P.call(0.4, -0.25), s * 0.42, col)
+			ci.draw_colored_polygon(PackedVector2Array([P.call(-0.8, -0.12), P.call(0.8, -0.12), P.call(0, 0.85)]), col)
+		"regen":
+			ci.draw_circle(P.call(-0.4, -0.25), s * 0.42, col)
+			ci.draw_circle(P.call(0.4, -0.25), s * 0.42, col)
+			ci.draw_colored_polygon(PackedVector2Array([P.call(-0.8, -0.12), P.call(0.8, -0.12), P.call(0, 0.85)]), col)
+			ci.draw_line(P.call(-0.3, 0), P.call(0.3, 0), sombre, lw, true)
+			ci.draw_line(P.call(0, -0.3), P.call(0, 0.3), sombre, lw, true)
+		"armure":
+			ci.draw_colored_polygon(PackedVector2Array([P.call(-0.75, -0.8), P.call(0.75, -0.8), P.call(0.7, 0.1), P.call(0, 1.0), P.call(-0.7, 0.1)]), col)
+			ci.draw_line(P.call(0, -0.6), P.call(0, 0.7), sombre, lw * 0.8, true)
+		"vitesse":
+			ci.draw_circle(P.call(0.45, 0), s * 0.38, col)
+			for k in 3:
+				ci.draw_line(P.call(-0.95 + k * 0.12, -0.4 + k * 0.4), P.call(-0.05, -0.4 + k * 0.4), Color(col, 0.75 - k * 0.15), lw, true)
+		"esquive":
+			ci.draw_arc(p, s * 0.75, PI * 0.7, PI * 1.9, 20, col, lw * 1.2, true)
+			_thorn(ci, p + Vector2.from_angle(PI * 1.9) * s * 0.75, Vector2.from_angle(PI * 1.9 + PI / 2.0), s * 0.45, col)
+			_leaf(ci, P.call(-0.1, 0.1), s * 0.38, -PI / 4.0, clair)
+		"zone":
+			ci.draw_arc(p, s * 0.9, 0.0, TAU, 28, col, lw, true)
+			ci.draw_arc(p, s * 0.55, 0.0, TAU, 20, Color(col, 0.7), lw, true)
+			ci.draw_circle(p, s * 0.2, col)
+		"collecte":
+			ci.draw_arc(P.call(0, -0.1), s * 0.6, PI * 0.0, PI, 16, col, lw * 1.6, true)
+			ci.draw_line(P.call(-0.6, -0.1), P.call(-0.6, -0.7), col, lw * 1.6, true)
+			ci.draw_line(P.call(0.6, -0.1), P.call(0.6, -0.7), col, lw * 1.6, true)
+			ci.draw_circle(P.call(0, 0.0), s * 0.18, clair)
+		"competence":
+			ci.draw_circle(p, s * 0.38, col)
+			for i in 6:
+				var d := Vector2.from_angle(i * TAU / 6.0)
+				ci.draw_line(p + d * s * 0.58, p + d * s, col, lw, true)
+		# Monde
+		"sanctuaire":
+			ci.draw_arc(P.call(0, 0.35), s * 0.7, 0.0, TAU, 24, Color(col, 0.45), lw * 0.8, true)
+			for i in 5:
+				var q: Vector2 = P.call(0, 0.35) + Vector2.from_angle(PI + i * PI / 4.0) * s * 0.7
+				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-s * 0.12, s * 0.1), q + Vector2(-s * 0.1, -s * 0.35), q + Vector2(0, -s * 0.45), q + Vector2(s * 0.1, -s * 0.35), q + Vector2(s * 0.12, s * 0.1)]), col)
+			ci.draw_circle(P.call(0, 0.35), s * 0.2, (sombre if col == sombre else Art.ec("seve")))
+		"autel":
+			ci.draw_colored_polygon(PackedVector2Array([P.call(-0.8, 0.95), P.call(-0.55, 0.3), P.call(0.55, 0.3), P.call(0.8, 0.95)]), col)
+			ci.draw_rect(Rect2(P.call(-0.7, 0.12), Vector2(1.4, 0.2) * s), col)
+			_leaf(ci, P.call(0, -0.4), s * 0.42, -PI / 2.0, (sombre if col == sombre else Art.c("butin")))
+		"coeur":
+			var pts2 := PackedVector2Array()
+			for i in 10:
+				pts2.append(p + Vector2.from_angle(i * TAU / 10.0) * s * (0.9 if i % 2 == 0 else 0.55))
+			ci.draw_colored_polygon(pts2, col)
+			ci.draw_circle(p, s * 0.3, (sombre if col == sombre else Art.c("contour")))
+			ci.draw_circle(p, s * 0.16, (sombre if col == sombre else Art.c("ennemi_oeil")))
+		"arene":
+			ci.draw_arc(p, s * 0.72, 0.0, TAU, 28, col, lw, true)
+			for i in 10:
+				var d := Vector2.from_angle(i * TAU / 10.0)
+				_thorn(ci, p + d * s * 0.72, d, s * 0.3, col)
+				_thorn(ci, p + d * s * 0.72, -d, s * 0.2, col)
+		"secret":
+			_eye(ci, p, s, col, sombre)
+		"seve_perdue":
+			_drop(ci, P.call(0, 0.35), s * 0.55, col)
+			ci.draw_circle(P.call(-0.18, 0.25), s * 0.14, clair)
+			ci.draw_arc(P.call(0, 0.35), s * 0.85, PI * 1.15, PI * 1.85, 14, Color(col, 0.5), lw * 0.8, true)
+		"essence":
+			ci.draw_circle(p, s * 0.8, Color(col, 0.2))
+			ci.draw_colored_polygon(PackedVector2Array([P.call(0, -0.75), P.call(0.45, 0), P.call(0, 0.75), P.call(-0.45, 0)]), col)
+			ci.draw_colored_polygon(PackedVector2Array([P.call(0, -0.4), P.call(0.18, 0), P.call(0, 0.4), P.call(-0.18, 0)]), clair)
+		"greffe":
+			_leaf(ci, P.call(0.1, -0.1), s * 0.85, -PI / 4.0, col)
+			ci.draw_line(P.call(-0.45, 0.45), P.call(-0.85, 0.85), sombre.lightened(0.2), lw * 1.2, true)
+			ci.draw_line(P.call(-0.5, 0.5), P.call(0.55, -0.55), sombre, lw * 0.7, true)
+		_:
+			ci.draw_circle(p, s * 0.35, col)
+
+
+## Feuille en amande, pointe dans la direction a, longueur l (de la base à la pointe : 2 × l).
+static func _leaf(ci: CanvasItem, p: Vector2, l: float, a: float, col: Color) -> void:
+	var d := Vector2.from_angle(a)
+	var n := d.orthogonal()
+	var pts := PackedVector2Array()
+	for i in 9:
+		var k := i / 8.0
+		pts.append(p + d * l * (2.0 * k - 1.0) + n * l * 0.5 * sin(k * PI))
+	for i in range(7, 0, -1):
+		var k := i / 8.0
+		pts.append(p + d * l * (2.0 * k - 1.0) - n * l * 0.5 * sin(k * PI))
+	ci.draw_colored_polygon(pts, col)
+
+
+static func _eye(ci: CanvasItem, p: Vector2, s: float, col: Color, pupil: Color) -> void:
+	var pts := PackedVector2Array()
+	for i in 12:
+		var k := i / 11.0
+		pts.append(p + Vector2(-s + 2.0 * s * k, -s * 0.55 * sin(k * PI)))
+	for i in range(10, 0, -1):
+		var k := i / 11.0
+		pts.append(p + Vector2(-s + 2.0 * s * k, s * 0.55 * sin(k * PI)))
+	ci.draw_colored_polygon(pts, col)
+	ci.draw_circle(p, s * 0.32, pupil)
+	ci.draw_circle(p + Vector2(-s * 0.1, -s * 0.1), s * 0.1, col.lerp(Color.WHITE, 0.7))

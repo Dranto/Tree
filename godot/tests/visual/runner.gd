@@ -20,8 +20,9 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
+const CharteScript = preload("res://tests/visual/charte.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Content = preload("res://scripts/content.gd")
 const TitleScene = preload("res://scenes/title.tscn")
@@ -87,6 +88,8 @@ func _ready() -> void:
 			await _scenario_roncier()
 		"quetes":
 			await _scenario_quetes()
+		"charte":
+			await _scenario_charte()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -141,6 +144,38 @@ func _scenario_resolution() -> void:
 	await _frames(30)
 	UiAudit.scan_controls("titre", title)
 	await _shot("titre_" + tag, "titre")
+
+
+## Planche de la charte graphique (tests/visual/charte.gd) : palette, éléments, icônes, annonces,
+## silhouettes par rôle. Jouée en 2560x1440 pour que les petits détails restent lisibles.
+func _scenario_charte() -> void:
+	main.set_process(false)
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	var sheet = CharteScript.new()
+	sheet.view = get_viewport().get_visible_rect().size
+	layer.add_child(sheet)
+	add_child(layer)
+	await _frames(3)
+	await _shot("charte")
+	sheet.page = "details"
+	sheet.t = 1.2   # milieu de la boucle : attaques annoncées, graine en vol
+	sheet.queue_redraw()
+	await _frames(3)
+	await _shot("charte_details")
+	# -- --charte-anim : enregistre une boucle complète (20 images/s) dans out/charte_anim/,
+	# pour en faire une animation (tools/charte-anim.sh). Pas de comparaison.
+	if "--charte-anim" in OS.get_cmdline_user_args():
+		var dir := ProjectSettings.globalize_path(OUT_DIR + "/charte_anim")
+		DirAccess.make_dir_recursive_absolute(dir)
+		var n := int(sheet.PERIODE * 20.0)
+		for i in n:
+			sheet.t = i * sheet.PERIODE / n
+			sheet.queue_redraw()
+			await RenderingServer.frame_post_draw
+			var img := get_viewport().get_texture().get_image()
+			img.convert(Image.FORMAT_RGB8)
+			img.save_png("%s/%03d.png" % [dir, i])
 
 
 ## Galerie : ennemis et effets, puis les six états d'un nœud de l'arbre sur une planche.
