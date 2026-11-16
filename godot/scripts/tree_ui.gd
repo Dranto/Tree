@@ -3,9 +3,12 @@
 ##
 ## Le dessin est réparti en couches pour ne pas tout redessiner à chaque image :
 ## - le fond (ce nœud) : un aplat opaque, redessiné seulement au changement de taille ;
+## - l'ambiance (_ambient) : pollen de sève qui monte doucement, en coordonnées de l'écran ;
 ## - la couche fixe (_world) : anneaux, liens, nœuds et icônes, dessinés en coordonnées de l'arbre.
 ##   Se déplacer ne fait que changer sa position ; elle n'est redessinée qu'au zoom ou quand l'arbre change ;
 ## - la couche animée (_anim, enfant de _world) : pulsation des nœuds disponibles et survol ;
+## - la couche de vie (_life, enfant de _world) : sève, éclosions, halos qui respirent, braises, onde d'ouverture ;
+## Le dessin lui-même (médaillons, fond, animations) est dans tree_art.gd, selon la charte (Art, Anim).
 ## - les libellés (_labels) : noms des branches et des nœuds, en taille fixe à l'écran, placés sans chevauchement ;
 ## - l'interface (_overlay) : en-tête et infobulle.
 extends Control
@@ -17,6 +20,7 @@ const SkillTree = preload("res://scripts/skill_tree.gd")
 const TreePanels = preload("res://scripts/tree_panels.gd")
 const TreeGrafts = preload("res://scripts/tree_grafts.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const TreeArt = preload("res://scripts/tree_art.gd")
 
 const Effects = preload("res://scripts/effects.gd")
 const Content = preload("res://scripts/content.gd")
@@ -60,17 +64,6 @@ const MIN_SCREEN_RADIUS := {
 	"skill": 7.0, "mutation": 6.0, "mastery": 6.0, "graft": 5.0, "withered": 5.0,
 }
 
-## Familles d'effet, chacune avec son icône.
-const FAMILY_OF_STAT := {
-	"damage": "degats", "pierce": "degats", "projectiles": "degats", "projectile_size": "degats", "thorns": "degats",
-	"max_hp": "vie", "regen": "vie", "lifesteal": "vie",
-	"move_speed": "vitesse", "fire_rate": "vitesse", "dash_cd": "vitesse", "pickup": "vitesse",
-	"poison": "poison", "area": "poison",
-	"crit": "critique", "crit_mult": "critique",
-	"armor": "armure", "armor_cap": "armure",
-}
-const FAMILY_OF_ACTION := {"explode": "critique", "spread_poison": "poison", "survive": "vie", "reduce_cooldown": "vitesse"}
-
 ## Taille des textes (pixels à l'écran, quel que soit le zoom).
 const FONT_BRANCH := 30
 const FONT_KEYSTONE := 15
@@ -91,6 +84,7 @@ var hover := -1:
 		if v == hover:
 			return
 		hover = v
+		_hover_since = 0.0
 		if is_node_ready():
 			_anim.queue_redraw()
 			_overlay.queue_redraw()
@@ -112,16 +106,26 @@ var grafts_panel
 ## Rectangles (à l'écran) des textes dessinés par la couche des libellés, pour les contrôles automatiques.
 var label_rects: Array[Rect2] = []
 
+## Faux pour sauter l'onde d'ouverture (bancs de captures qui photographient l'arbre juste après l'ouverture).
+var play_intro := true
+var _ambient: Control
 var _world: Node2D
 var _anim: Node2D
 var _life: Node2D
-## Vrai si la couche de sève dessinait quelque chose à la dernière image (pour l'effacer une fois tout fini).
-var _life_busy := false
 var _labels: Control
 var _overlay: Control
 var _states := {}
 var _available: Array = []
-var _families := {}
+## Icône de chaque nœud (TreeArt.icon_of), calculée une fois.
+var _icons := {}
+## Temps écoulé depuis l'ouverture de l'arbre (onde de sève) et depuis le dernier changement de survol.
+var _intro := INF
+var _hover_since := INF
+## Cernes de croissance du fond, calculés une fois.
+var _rings: Array = []
+## Nœuds appris et nœuds flétris couverts de cendre : ceux que la couche de vie anime.
+var _owned_ids: Array = []
+var _ashen_ids: Array = []
 var _extent_cache := -1.0
 ## true tant que le joueur n'a ni zoomé ni bougé : la vue se recadre si la fenêtre change de taille.
 var _fitted := false
@@ -168,6 +172,8 @@ class Overlay extends Control:
 	func _draw() -> void:
 		if kind == "labels":
 			ui._draw_labels(self)
+		elif kind == "ambient":
+			ui._draw_ambient(self)
 		else:
 			ui._draw_overlay(self)
 
@@ -177,6 +183,8 @@ func _ready() -> void:
 	visible = false
 	focus_mode = Control.FOCUS_NONE
 	font = ThemeDB.fallback_font
+	_rings = TreeArt.growth_rings(SkillTree.RINGS, SkillTree.RING_GAP)
+	_ambient = _make_overlay("ambient")
 	_world = Layer.new()
 	_world.ui = self
 	add_child(_world)
@@ -246,6 +254,8 @@ func toggle() -> void:
 			fit_view()
 		else:
 			zoom = zoom
+		_intro = 0.0 if play_intro and not Settings.reduce_effects else INF
+		_world.modulate.a = 1.0
 		_redraw_all()
 	toggled.emit(visible)
 
@@ -279,6 +289,7 @@ func _redraw_all() -> void:
 	if not is_node_ready():
 		return
 	queue_redraw()
+	_ambient.queue_redraw()
 	_world.queue_redraw()
 	_anim.queue_redraw()
 	_life.queue_redraw()
@@ -303,22 +314,24 @@ func _view_changed(zoom_changed: bool) -> void:
 
 
 func _process(delta: float) -> void:
-	# Seule la couche animée est redessinée à chaque image, et seulement s'il y a quelque chose à animer :
-	# nœuds qui pulsent, sève qui circule dans les liens appris, nœuds qui éclosent.
+	# Les couches fixes ne bougent pas ; l'ambiance, la couche animée et la couche de vie
+	# (petites, et limitées à ce qui est à l'écran) sont redessinées à chaque image.
 	if not visible:
 		return
+	t += delta
+	_hover_since += delta
 	for id in _blooms.keys():
 		_blooms[id] += delta
 		if _blooms[id] >= BLOOM_DUR:
 			_blooms.erase(id)
-	if (_can_buy and not _available.is_empty()) or not _pending.is_empty() or not _sap.is_empty() or not _blooms.is_empty():
-		t += delta
-	if (_can_buy and not _available.is_empty()) or not _pending.is_empty():
-		_anim.queue_redraw()
-	var busy := not _sap.is_empty() or not _blooms.is_empty()
-	if busy or _life_busy:
-		_life.queue_redraw()
-	_life_busy = busy
+	if _intro < TreeArt.INTRO_DUR:
+		_intro += delta
+		# L'arbre se dévoile derrière l'onde de sève.
+		_world.modulate.a = lerpf(0.35, 1.0, Anim.ease_out(minf(_intro / (TreeArt.INTRO_DUR * 0.6), 1.0)))
+	if not Settings.reduce_effects:
+		_ambient.queue_redraw()
+	_anim.queue_redraw()
+	_life.queue_redraw()
 
 
 # --- Géométrie ---
@@ -488,10 +501,16 @@ func _refresh_states() -> void:
 	_available = []
 	_pending = []
 	_locks = {}
+	_owned_ids = []
+	_ashen_ids = []
 	for n in Game.tree.nodes:
 		var id: int = n["id"]
 		var st := _state(id)
 		_states[id] = st
+		if st == "owned" and n["type"] != "root":
+			_owned_ids.append(id)
+		if _ashen(n):
+			_ashen_ids.append(id)
 		if st == "available":
 			_available.append(id)
 		elif st == "owned":
@@ -668,33 +687,23 @@ func close_choice(next := true) -> void:
 		_next_choice()
 
 
-## Famille d'effet d'un nœud (pour son icône) : la compétence qu'il donne, sinon son premier effet.
-func family(n: Dictionary) -> String:
-	if _families.has(n["id"]):
-		return _families[n["id"]]
-	var f := ""
-	for e in n["effects"]:
-		if e.has("skill") or e.has("skill_mod"):
-			f = "competence"
-			break
-	if f == "":
-		for e in n["effects"]:
-			if e.get("hidden", false):
-				continue
-			if e.has("stat") and FAMILY_OF_STAT.has(e["stat"]):
-				f = FAMILY_OF_STAT[e["stat"]]
-			elif e.has("do"):
-				f = FAMILY_OF_ACTION.get(e["do"], "")
-			if f != "":
-				break
-	_families[n["id"]] = f
-	return f
+## Icône d'un nœud (la même que partout ailleurs : Art.icon), calculée une fois par arbre.
+func icon_of(n: Dictionary) -> String:
+	if not _icons.has(n["id"]):
+		_icons[n["id"]] = TreeArt.icon_of(n)
+	return _icons[n["id"]]
 
 
 # --- Couche fixe ---
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), BG)
+
+
+## Pollen de sève (couche d'ambiance, en coordonnées de l'écran).
+func _draw_ambient(c: CanvasItem) -> void:
+	if not Settings.reduce_effects:
+		TreeArt.motes(c, size, t)
 
 
 ## Calcule la courbe de chaque lien : une courbe de Bézier dont le milieu est écarté de côté,
@@ -705,6 +714,7 @@ func _ensure_curves() -> void:
 		return
 	_curve_tree = tree
 	_curves = []
+	_icons = {}
 	for e in tree.edges:
 		var a: Vector2 = tree.nodes[e.x]["pos"]
 		var b: Vector2 = tree.nodes[e.y]["pos"]
@@ -742,15 +752,18 @@ func _draw_world(c: CanvasItem) -> void:
 	var tree = Game.tree
 	var z := zoom
 	var level := lod()
-	for r in range(1, SkillTree.RINGS + 1):
-		c.draw_arc(Vector2.ZERO, r * SkillTree.RING_GAP, 0.0, TAU, 128, Color(1, 1, 1, 0.035), 1.0 / z)
+	var colors: Array = []
+	for bi in SkillTree.BRANCHES.size():
+		colors.append(tree.branch_color(bi))
+	TreeArt.background(c, _extent(), colors, _rings, z)
 
 	# Liens courbes : épaisseur minimale d'un pixel à l'écran pour rester visibles dézoomés.
 	# Moins de segments par lien quand on est loin (la courbure n'y est pas visible).
 	_ensure_curves()
 	var step := 4 if level != LOD_CLOSE else 2
 	var dim := PackedVector2Array()
-	var half := PackedVector2Array()
+	# Liens qui partent d'un nœud appris : teintés de leur branche (un lot par branche).
+	var half := {}
 	var owned_w := maxf(6.0, 2.5 / z)
 	var edges: Array = tree.edges
 	for i in edges.size():
@@ -760,30 +773,35 @@ func _draw_world(c: CanvasItem) -> void:
 		if oa and ob:
 			continue
 		if oa or ob:
-			_curve_segments(half, i, step)
+			var bi := _edge_branch(e)
+			if not half.has(bi):
+				half[bi] = PackedVector2Array()
+			_curve_segments(half[bi], i, step)
 		else:
 			_curve_segments(dim, i, step)
 	if dim.size() > 0:
-		c.draw_multiline(dim, Color(0.5, 0.55, 0.5, 0.2 if level == LOD_OVERVIEW else 0.18), maxf(2.0, 1.0 / z))
-	if half.size() > 0:
-		c.draw_multiline(half, Color(0.85, 0.9, 0.85, 0.45), maxf(3.0, 1.5 / z))
-	# Branches apprises : écorce sombre dessous, cœur coloré, filet de lumière dessus.
+		c.draw_multiline(dim, Color(Art.c("brume").lightened(0.15), 0.3 if level == LOD_OVERVIEW else 0.26), maxf(2.0, 1.0 / z))
+	for bi in half:
+		var hc: Color = tree.branch_color(bi).lerp(Art.c("texte"), 0.35)
+		c.draw_multiline(half[bi], Color(hc, 0.55), maxf(3.0, 1.5 / z))
+	# Branches apprises : écorce sombre dessous, cœur coloré, filet de lumière dessus, feuilles de près.
 	for entry in _sap:
 		var i: int = entry[0]
-		var e: Vector2i = edges[i]
-		var a: Dictionary = tree.nodes[e.x]
-		var b: Dictionary = tree.nodes[e.y]
-		var bi: int = b["branch"] if b["branch"] >= 0 else a["branch"]
-		var col: Color = tree.branch_color(bi)
+		var col: Color = tree.branch_color(_edge_branch(edges[i]))
 		var line := PackedVector2Array()
 		var pts: PackedVector2Array = _curves[i]
 		for j in range(0, CURVE_SEGS + 1, step):
 			line.append(pts[j])
-		c.draw_polyline(line, Color(col.r * 0.35, col.g * 0.35, col.b * 0.35, 0.8), owned_w * 1.7)
-		c.draw_polyline(line, col, owned_w)
-		c.draw_polyline(line, Color(1, 1, 1, 0.22), owned_w * 0.28)
+		c.draw_polyline(line, Color(Art.c("contour"), 0.85), owned_w * 1.8)
+		c.draw_polyline(line, col.darkened(0.25), owned_w * 1.15)
+		c.draw_polyline(line, col, owned_w * 0.75)
+		c.draw_polyline(line, Color(1, 1, 1, 0.28), owned_w * 0.22)
+		if level == LOD_CLOSE:
+			TreeArt.link_leaves(c, pts, col, owned_w * 0.9, i)
 
 	var w := 1.0 / z
+	# Ombres, volume, anneaux intérieurs et reflets seulement de près : le zoom reste fluide.
+	var detail := level == LOD_CLOSE
 	for n in tree.nodes:
 		if not _shown(n, level):
 			continue
@@ -791,44 +809,36 @@ func _draw_world(c: CanvasItem) -> void:
 		var p: Vector2 = n["pos"]
 		var r := _radius(n, z)
 		var col: Color = tree.branch_color(n["branch"])
-		var fill := Color(0.08, 0.1, 0.09)
-		var stroke := col
-		var width := maxf(2.0, 1.2 * w)
-		if st == "owned":
-			c.draw_circle(p, r * 1.8, Color(col.r, col.g, col.b, 0.18))
-			fill = col
-			stroke = Color(1, 1, 1, 0.7)
-		elif st == "available":
-			stroke = Color(col.r, col.g, col.b, 0.75)
-		else:
-			stroke = Color(col.r, col.g, col.b, 0.3 if n["type"] != "small" else 0.18)
 		var kind: String = n["type"]
+		if kind == "small":
+			TreeArt.pearl(c, p, r, st, col, w, detail)
+			continue
+		if kind == "root":
+			TreeArt.seed_node(c, p, r, col, w, detail)
+			continue
 		var ashen := _ashen(n)
+		var shape := shape_points(kind, p, r)
+		var ring_w := maxf(2.0, 1.2 * w) + w
 		if ashen:
-			fill = ASH_DARK
-			stroke = Color(ASH, 0.7)
+			# Cendre : médaillon gris, quel que soit l'état.
+			TreeArt.medallion(c, shape, p, r, "locked", Art.c("brume").lightened(0.25), w, detail, ring_w)
 		elif kind == "graft" and st == "owned":
 			# Un emplacement reste creux : c'est la greffe qui le remplit.
-			fill = Color(col.r * 0.3, col.g * 0.3, col.b * 0.3)
-			stroke = col
-		var pts := shape_points(kind, p, r)
-		if pts.is_empty():
-			c.draw_circle(p, r, fill)
-			c.draw_arc(p, r, 0.0, TAU, 32, stroke, width if kind == "small" else width + w)
+			TreeArt.medallion(c, shape, p, r, "available", col, w, detail, ring_w)
 		else:
-			c.draw_colored_polygon(pts, fill)
-			pts.append(pts[0])
-			c.draw_polyline(pts, stroke, width + w)
+			TreeArt.medallion(c, shape, p, r, st, col, w, detail, ring_w)
+		if kind == "keystone" and detail:
+			# Nœud clé : une seconde couronne autour du losange.
+			var crown := shape_points(kind, p, r * 1.28)
+			crown.append(crown[0])
+			c.draw_polyline(crown, Color(col, 0.55 if st != "locked" else 0.22), maxf(1.5, w))
 		var ic := Color(0.06, 0.08, 0.07, 0.9) if st == "owned" else Color(col.r, col.g, col.b, 0.9 if st == "available" else 0.55)
 		match kind:
-			"notable", "keystone":
+			"notable", "keystone", "skill":
 				if level == LOD_CLOSE:
-					draw_icon(c, family(n), p, r * (0.62 if kind == "notable" else 0.55), ic, w)
+					TreeArt.node_icon(c, icon_of(n), p, r * (0.66 if kind == "notable" else 0.6), st, col)
 				elif kind == "notable":
-					c.draw_circle(p, r * 0.4, Color(1, 1, 1, 0.75) if st == "owned" else Color(col.r, col.g, col.b, 0.4))
-			"skill":
-				if level == LOD_CLOSE:
-					draw_icon(c, "competence", p, r * 0.55, ic, w)
+					c.draw_circle(p, r * 0.36, col.lerp(Color.WHITE, 0.6) if st == "owned" else Color(col, 0.45))
 			"mutation":
 				if level != LOD_OVERVIEW:
 					_draw_fork(c, p + Vector2(0, r * 0.12), r * 0.42, ic, maxf(r * 0.11, 1.2 * w))
@@ -841,9 +851,15 @@ func _draw_world(c: CanvasItem) -> void:
 				if ashen:
 					_draw_ash(c, n, p, r, w)
 				elif level == LOD_CLOSE:
-					draw_icon(c, family(n), p, r * 0.62, ic, w)
+					TreeArt.node_icon(c, icon_of(n), p, r * 0.66, st, col)
 				else:
-					c.draw_circle(p, r * 0.4, Color(1, 1, 1, 0.75) if st == "owned" else Color(col.r, col.g, col.b, 0.4))
+					c.draw_circle(p, r * 0.36, col.lerp(Color.WHITE, 0.6) if st == "owned" else Color(col, 0.45))
+
+
+## Branche d'un lien : celle de son nœud extérieur (l'origine n'a pas de branche).
+func _edge_branch(e: Vector2i) -> int:
+	var b: int = Game.tree.nodes[e.y]["branch"]
+	return b if b >= 0 else Game.tree.nodes[e.x]["branch"]
 
 
 ## Contour d'un nœud selon son type (vide = cercle) : losange pour un nœud clé, hexagone pour une
@@ -916,82 +932,69 @@ func _draw_ash(c: CanvasItem, n: Dictionary, p: Vector2, r: float, w: float) -> 
 		c.draw_circle(p + Vector2.from_angle(a) * d, r * (0.07 + 0.05 * ((h >> (i * 2)) & 3) / 3.0), Color(ASH, 0.55))
 
 
-## Icône vectorielle d'une famille d'effet, centrée sur p, dans un carré de demi-côté s.
-func draw_icon(c: CanvasItem, fam: String, p: Vector2, s: float, col: Color, w: float) -> void:
-	var lw := maxf(s * 0.16, 1.2 * w)
-	match fam:
-		"degats":
-			# Lame tournée vers le haut, avec sa garde.
-			c.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -s), p + Vector2(s * 0.3, s * 0.35), p + Vector2(-s * 0.3, s * 0.35)]), col)
-			c.draw_line(p + Vector2(-s * 0.6, s * 0.4), p + Vector2(s * 0.6, s * 0.4), col, lw)
-			c.draw_line(p + Vector2(0, s * 0.4), p + Vector2(0, s), col, lw)
-		"vie":
-			# Cœur : deux lobes et une pointe.
-			var lr := s * 0.42
-			c.draw_circle(p + Vector2(-s * 0.4, -s * 0.25), lr, col)
-			c.draw_circle(p + Vector2(s * 0.4, -s * 0.25), lr, col)
-			c.draw_colored_polygon(PackedVector2Array([p + Vector2(-s * 0.8, -s * 0.12), p + Vector2(s * 0.8, -s * 0.12), p + Vector2(0, s * 0.85)]), col)
-		"vitesse":
-			# Double chevron.
-			for dx in [-0.45, 0.25]:
-				c.draw_polyline(PackedVector2Array([p + Vector2(s * dx, -s * 0.7), p + Vector2(s * (dx + 0.45), 0), p + Vector2(s * dx, s * 0.7)]), col, lw)
-		"poison":
-			# Goutte.
-			c.draw_circle(p + Vector2(0, s * 0.3), s * 0.55, col)
-			c.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -s), p + Vector2(s * 0.52, s * 0.15), p + Vector2(-s * 0.52, s * 0.15)]), col)
-		"critique":
-			# Étoile à quatre branches.
-			var pts := PackedVector2Array()
-			for i in 8:
-				var rr := s if i % 2 == 0 else s * 0.32
-				pts.append(p + Vector2.from_angle(i * TAU / 8.0 - PI / 2.0) * rr)
-			c.draw_colored_polygon(pts, col)
-		"armure":
-			# Écu.
-			c.draw_colored_polygon(PackedVector2Array([
-				p + Vector2(-s * 0.75, -s * 0.8), p + Vector2(s * 0.75, -s * 0.8), p + Vector2(s * 0.7, s * 0.1),
-				p + Vector2(0, s), p + Vector2(-s * 0.7, s * 0.1)]), col)
-		"competence":
-			# Soleil : un disque et six rayons.
-			c.draw_circle(p, s * 0.38, col)
-			for i in 6:
-				var d := Vector2.from_angle(i * TAU / 6.0)
-				c.draw_line(p + d * s * 0.58, p + d * s, col, lw)
-		_:
-			c.draw_circle(p, s * 0.35, col)
-
-
 # --- Couche animée ---
 
 func _draw_anim(c: CanvasItem) -> void:
 	var tree = Game.tree
 	var w := 1.0 / zoom
+	var view := _tree_view(40.0 / zoom)
 	if _can_buy:
-		var pulse := 0.5 + 0.5 * sin(t * 4.0)
 		var level := lod()
 		for id in _available:
 			var n: Dictionary = tree.nodes[id]
-			if not _shown(n, level):
+			if not _shown(n, level) or not view.has_point(n["pos"]):
 				continue
-			var col: Color = tree.branch_color(n["branch"])
-			var r := _radius(n, zoom)
-			c.draw_arc(n["pos"], r * (1.3 if n["type"] == "mutation" else 1.0) + maxf(2.0, 2.0 * w), 0.0, TAU, 32, Color(col.r, col.g, col.b, 0.35 + 0.65 * pulse), maxf(3.0, 2.0 * w))
+			var r := _radius(n, zoom) * (1.3 if n["type"] == "mutation" else 1.0)
+			TreeArt.invite(c, n["pos"], r, tree.branch_color(n["branch"]), t, w, id * 0.7)
 	# Un choix reste à faire sur ces nœuds appris : anneau doré qui pulse.
 	if not _pending.is_empty():
 		var beat := 0.5 + 0.5 * sin(t * 5.0)
 		for id in _pending:
 			var n: Dictionary = tree.nodes[id]
-			c.draw_arc(n["pos"], _radius(n, zoom) * 1.35 + maxf(3.0, 3.0 * w), 0.0, TAU, 32, Color(UiTheme.GOLD, 0.4 + 0.6 * beat), maxf(3.0, 2.0 * w))
+			var rr := _radius(n, zoom) * 1.35 + maxf(3.0, 3.0 * w)
+			c.draw_arc(n["pos"], rr, 0.0, TAU, 32, Color(UiTheme.GOLD, 0.4 + 0.6 * beat), maxf(3.0, 2.0 * w))
+			var a := t * 1.2
+			c.draw_arc(n["pos"], rr + maxf(5.0, 5.0 * w), a, a + PI * 0.6, 12, Color(UiTheme.GOLD, 0.5), maxf(2.0, 1.4 * w))
+			c.draw_arc(n["pos"], rr + maxf(5.0, 5.0 * w), a + PI, a + PI * 1.6, 12, Color(UiTheme.GOLD, 0.5), maxf(2.0, 1.4 * w))
 	if hover >= 0:
 		var n: Dictionary = tree.nodes[hover]
-		c.draw_arc(n["pos"], _radius(n, zoom) + 6.0 * maxf(1.0, w), 0.0, TAU, 32, Color.WHITE, 2.0 * w)
+		TreeArt.hover_mark(c, n["pos"], _radius(n, zoom), tree.branch_color(n["branch"]), t, _hover_since, w)
 	# Plan, chemin vers le nœud survolé et résultats de la recherche.
 	panels.draw_overlay(c)
 
 
+## Partie de l'arbre visible à l'écran (coordonnées de l'arbre), agrandie de margin.
+func _tree_view(margin: float) -> Rect2:
+	return Rect2(to_tree(Vector2.ZERO), size / zoom).grow(margin)
+
+
 func _draw_life(c: CanvasItem) -> void:
+	var tree = Game.tree
+	var level := lod()
+	var view := _tree_view(60.0 / zoom)
+	# La graine d'origine rayonne.
+	var root: Dictionary = tree.nodes[0]
+	if view.has_point(root["pos"]):
+		TreeArt.seed_rays(c, root["pos"], _radius(root, zoom), tree.branch_color(-1), t)
+	# Les nœuds appris respirent ; les nœuds flétris couverts de cendre fument.
+	for id in _owned_ids:
+		var n: Dictionary = tree.nodes[id]
+		if view.has_point(n["pos"]):
+			TreeArt.owned_halo(c, n["pos"], _radius(n, zoom), tree.branch_color(n["branch"]), t, id * 1.3)
+	if level != LOD_OVERVIEW:
+		for id in _ashen_ids:
+			var n: Dictionary = tree.nodes[id]
+			if view.has_point(n["pos"]):
+				TreeArt.embers(c, n["pos"], _radius(n, zoom), t, id)
 	_draw_sap(c)
 	_draw_blooms(c)
+	# Ouverture : une onde de sève part de la graine et parcourt l'arbre.
+	if _intro < TreeArt.INTRO_DUR:
+		var k := _intro / TreeArt.INTRO_DUR
+		var rr := _extent() * 1.05 * Anim.ease_out(k)
+		var col := Art.ec("seve", "clair")
+		c.draw_arc(Vector2.ZERO, rr, 0.0, TAU, 96, Color(col, 0.45 * (1.0 - k)), maxf(4.0, 14.0 * (1.0 - k)) / zoom)
+		c.draw_arc(Vector2.ZERO, rr * 0.9, 0.0, TAU, 96, Color(col, 0.15 * (1.0 - k)), maxf(8.0, 40.0 * (1.0 - k)) / zoom)
 
 
 ## Sève : de petites lueurs qui circulent le long des liens appris, de l'origine vers l'extérieur.
@@ -1000,8 +1003,7 @@ func _draw_sap(c: CanvasItem) -> void:
 		return
 	var tree = Game.tree
 	var base := maxf(6.0, 2.5 / zoom)
-	var area := _view_area()
-	var view := Rect2(to_tree(area.position), area.size / zoom).grow(base * 4.0)
+	var view := _tree_view(base * 4.0)
 	for entry in _sap:
 		var i: int = entry[0]
 		var reversed: bool = entry[1]
@@ -1012,43 +1014,24 @@ func _draw_sap(c: CanvasItem) -> void:
 		var head := _curve_at(i, u, reversed)
 		if not view.has_point(head):
 			continue
-		var e: Vector2i = tree.edges[i]
-		var bi: int = tree.nodes[e.y]["branch"] if tree.nodes[e.y]["branch"] >= 0 else tree.nodes[e.x]["branch"]
-		var col: Color = tree.branch_color(bi).lerp(Color.WHITE, 0.55)
+		var col: Color = tree.branch_color(_edge_branch(tree.edges[i])).lerp(Color.WHITE, 0.55)
 		var fade := sin(u * PI)
 		var tail := _curve_at(i, maxf(u - 0.18, 0.0), reversed)
-		c.draw_line(tail, head, Color(col.r, col.g, col.b, 0.5 * fade), base * 0.55)
-		c.draw_circle(head, base * 1.1, Color(col.r, col.g, col.b, 0.22 * fade))
-		c.draw_circle(head, base * 0.5, Color(col.r, col.g, col.b, 0.95 * fade))
+		var mid := _curve_at(i, maxf(u - 0.09, 0.0), reversed)
+		c.draw_line(tail, mid, Color(col, 0.25 * fade), base * 0.4)
+		c.draw_line(mid, head, Color(col, 0.55 * fade), base * 0.55)
+		c.draw_circle(head, base * 1.25, Color(col, 0.18 * fade))
+		c.draw_circle(head, base * 0.5, Color(col, 0.95 * fade))
+		c.draw_circle(head, base * 0.22, Color(1, 1, 1, fade))
 
 
-## Éclosion d'un nœud appris : flash, onde, et pétales qui s'ouvrent puis s'effacent.
+## Éclosion d'un nœud appris (TreeArt.bloom).
 func _draw_blooms(c: CanvasItem) -> void:
 	var tree = Game.tree
-	var w := 1.0 / zoom
 	for id in _blooms:
 		var n: Dictionary = tree.nodes[id]
-		var k: float = _blooms[id] / BLOOM_DUR
-		var open := 1.0 - pow(1.0 - minf(k * 1.8, 1.0), 3.0)
-		var fade := 1.0 - maxf(0.0, k - 0.45) / 0.55
-		var p: Vector2 = n["pos"]
-		var r := _radius(n, zoom)
-		var col: Color = tree.branch_color(n["branch"])
-		var light := col.lerp(Color.WHITE, 0.45)
-		# Le nœud gonfle un instant avant de se poser.
-		c.draw_circle(p, r * (1.0 + 0.35 * sin(PI * minf(k * 2.5, 1.0))), Color(light.r, light.g, light.b, 0.5 * (1.0 - k)))
-		c.draw_arc(p, r * (1.0 + 2.4 * open), 0.0, TAU, 40, Color(light.r, light.g, light.b, 0.8 * (1.0 - k)), maxf(3.0, 2.5 * w))
 		var petals := 6 if n["type"] == "small" else (8 if n["type"] == "notable" else 10)
-		var spin := k * 0.7
-		for j in petals:
-			var a := TAU * j / petals + spin
-			var d := Vector2.from_angle(a)
-			var o := d.orthogonal()
-			var base := p + d * r * (0.5 + 0.7 * open)
-			var tip := p + d * r * (0.9 + 2.0 * open)
-			var half_w := r * (0.12 + 0.28 * open)
-			var pts := PackedVector2Array([base, base + d * (tip - base).length() * 0.5 + o * half_w, tip, base + d * (tip - base).length() * 0.5 - o * half_w])
-			c.draw_colored_polygon(pts, Color(light.r, light.g, light.b, 0.85 * fade))
+		TreeArt.bloom(c, n["pos"], _radius(n, zoom), tree.branch_color(n["branch"]), _blooms[id] / BLOOM_DUR, petals, 1.0 / zoom, id)
 
 
 # --- Libellés ---

@@ -118,7 +118,7 @@ La planche « en détail » s'anime en boucle de 2,4 s (respiration, cape, brais
 - Statistiques : dégâts, vitesse d'attaque, projectiles, critique, vie, régénération, armure, déplacement, esquive, zones, collecte, compétence.
 - Monde : sanctuaire, autel, Cœur de flétrissure, arène, secret, sève perdue, essence de vie, greffe.
 
-Le poison se représente par des bulles, et non plus par une goutte : la goutte est réservée au saignement. L'arbre devra suivre cette règle (tâche F).
+Le poison se représente par des bulles, et non plus par une goutte : la goutte est réservée au saignement. L'arbre suit cette règle (section 10).
 
 ## 9. Le héros et ses attaques
 
@@ -130,7 +130,29 @@ Le Porte-Graine est dessiné par `godot/scripts/hero_art.gd` (classe `HeroArt`),
 - La partie au sol (fissures, taches, secteur balayé) est dessinée sous les acteurs, le reste au-dessus des projectiles.
 - Galerie : `TEST_ONLY=heros tools/visual-tests.sh` (captures `galerie_heros`, `galerie_competences_1` et `_2`) ; `tools/heros-anim.sh` en fait un GIF animé.
 
-## 10. Vérifier
+## 10. L'Arbre de vie
+
+L'écran de l'arbre suit la même charte. Le dessin est dans `godot/scripts/tree_art.gd` ; `tree_ui.gd` choisit seulement quoi dessiner, où et à quel niveau de détail.
+
+- **Fond** : une lueur verte part de la graine et se fond dans le secteur de chaque branche, teinté de sa couleur. Les anneaux de l'arbre sont des cernes de croissance légèrement ondulés, et une fine racine sépare deux branches. Tout reste sourd : le fond n'attire jamais l'œil plus qu'un nœud.
+- **Nœuds** : les petits nœuds sont des perles, bombées une fois apprises (`Art.volume_circle`). Les autres sont des **médaillons**, avec la forme de leur type (cercle, losange du nœud clé et sa seconde couronne, hexagone de compétence, triangle de mutation, carré de maîtrise). Ils ont un double trait (contour sombre et anneau à la couleur de la branche). Un nœud verrouillé est sombre et terne. Un nœud disponible est sombre, avec un anneau vif. Un nœud appris est plein, avec du volume, et son icône est sombre.
+- **Icônes** : ce sont celles de la charte (`Art.icon`). Une compétence montre sa propre icône (couronne, fouet, racines, volée, saignée, nuage, floraison), une statistique montre la sienne. Le poison est représenté par des bulles, le saignement par une goutte et les épines par une pointe. Les icônes n'apparaissent qu'au zoom proche.
+- **Liens** : les liens verrouillés sont en brume. Ceux qui partent d'un nœud appris sont teintés de leur branche. Une branche apprise a une écorce sombre, un cœur coloré et un filet de lumière, et des feuilles y poussent au zoom proche.
+- **Animations** : toutes sont de pures animations de dessin.
+  - À l'ouverture, une onde de sève part de la graine et l'arbre se dévoile (0,75 s).
+  - Du pollen monte doucement à l'écran.
+  - La graine d'origine rayonne.
+  - Les nœuds appris respirent, sur la période de respiration de la charte.
+  - Quand on a des points à placer, les nœuds disponibles invitent au clic : leur anneau pulse et trois arcs tournent autour.
+  - Le survol montre un anneau clair, une onde au premier instant et quatre épines qui tournent.
+  - Un nœud qu'on apprend éclôt : il se gonfle, un éclair part, puis une onde, des feuilles qui s'ouvrent et des graines lumineuses.
+  - La sève circule dans les branches apprises.
+  - Les nœuds flétris couverts de cendre fument : des braises en montent.
+  Avec l'option « réduire les effets », il n'y a ni pollen ni onde d'ouverture.
+- **Performance** : les couches fixes ne sont redessinées qu'au zoom. Les ombres, le volume et les reflets n'apparaissent qu'au zoom proche, et les animations ne dessinent que ce qui est à l'écran. Le banc `tests/tree_bench.gd` doit rester au niveau d'avant.
+- `tools/arbre-anim.sh` produit un GIF de ces animations.
+
+## 11. Vérifier
 
 - `tools/godot.sh --headless -s res://tests/art_test.gd` vérifie :
   - la palette et la hiérarchie de lecture ;
