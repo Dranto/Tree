@@ -13,6 +13,8 @@ const SHAKE_DECAY := 2.2
 const HITSTOP_SCALE := 0.05
 const HITSTOP_COOLDOWN := 0.2
 
+const UiTheme = preload("res://scripts/ui_theme.gd")
+
 var main
 var rings: Array = []
 var texts: Array = []
@@ -43,8 +45,9 @@ func ring(pos: Vector2, r0: float, r1: float, dur: float, color: Color, width :=
 	rings.append({"pos": pos, "r0": r0, "r1": r1, "t": 0.0, "dur": dur, "color": color, "width": width})
 
 
-func text(pos: Vector2, s: String, color: Color, size := 18, dur := 1.0) -> void:
-	texts.append({"pos": pos, "s": s, "t": 0.0, "dur": dur, "color": color, "size": size, "pop": 0.0})
+## style : 0 discret (coup normal), 1 marqué (critique : gras, contour), 2 reçu (gras, contour, plus lent).
+func text(pos: Vector2, s: String, color: Color, size := 18, dur := 1.0, style := 0) -> void:
+	texts.append({"pos": pos, "s": s, "t": 0.0, "dur": dur, "color": color, "size": size, "pop": 0.0, "style": style})
 
 
 # --- Ressenti des coups ---
@@ -52,12 +55,16 @@ func text(pos: Vector2, s: String, color: Color, size := 18, dur := 1.0) -> void
 ## Un coup touche un Flétri : étincelles, chiffre de dégâts, et (critique) secousse et micro-pause.
 func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0) -> void:
 	var reduce: bool = Settings.reduce_effects
-	if texts.size() < MAX_TEXTS and (crit or texts.size() < MAX_TEXTS * 2 / 3):
+	# Hiérarchie des chiffres : le coup normal reste discret, le critique est gras, doré et plus grand.
+	if Settings.show_damage_numbers and texts.size() < MAX_TEXTS and (crit or texts.size() < MAX_TEXTS * 2 / 3):
 		var spot := pos + Vector2(_rng.randf_range(-10.0, 10.0), -radius - 8.0)
-		var size := 22 + mini(int(amount / 12.0), 8) if crit else 14 + mini(int(amount / 18.0), 6)
-		var col := Color("ffd45a") if crit else Color("f4efd8")
-		text(spot, str(roundi(amount)), col, size, 0.95 if crit else 0.7)
-		texts[-1]["pop"] = 0.12
+		if crit:
+			var size := 26 + mini(int(amount / 12.0), 8)
+			text(spot, "%d !" % roundi(amount), Art.c("butin"), size, 1.05, 1)
+			texts[-1]["pop"] = 0.16
+		else:
+			var size := 13 + mini(int(amount / 25.0), 4)
+			text(spot, str(roundi(amount)), Color(Art.c("texte"), 0.78), size, 0.6, 0)
 	var n := 0 if reduce else (9 if crit else 4)
 	for i in n:
 		var a := _rng.randf() * TAU
@@ -91,8 +98,12 @@ func death(pos: Vector2, radius: float, color: Color, on_living_land: bool) -> v
 
 
 ## Le Porte-Graine encaisse un coup.
-func player_hurt() -> void:
+## amount (> 0) : le chiffre des dégâts reçus, d'une autre couleur que ceux qu'on inflige.
+func player_hurt(amount := 0.0, pos := Vector2.ZERO) -> void:
 	shake(0.55)
+	if amount > 0.0 and Settings.show_damage_numbers and texts.size() < MAX_TEXTS:
+		text(pos + Vector2(0, -34.0), "-%d" % roundi(amount), Color("ff6b5e"), 22 + mini(int(amount / 10.0), 8), 1.0, 2)
+		texts[-1]["pop"] = 0.14
 
 
 ## Ajoute à la secousse d'écran (0 à 1, cumulée). Sans effet si la secousse est coupée.
@@ -203,12 +214,16 @@ func _draw() -> void:
 		col.a = 1.0 - k * k * k
 		var lift := 34.0 * (1.0 - (1.0 - k) * (1.0 - k))
 		var size: int = e["size"]
+		var style: int = e.get("style", 0)
+		var f: Font = UiTheme.font(style > 0)
 		if e["pop"] > 0.0 and e["t"] < e["pop"]:
 			size = roundi(size * (1.0 + 0.45 * (1.0 - e["t"] / e["pop"])))
 		var p: Vector2 = e["pos"] + Vector2(-200, -lift)
-		# Ombre portée : les chiffres restent lisibles sur le sol clair comme sur la cendre.
-		draw_string(font, p + Vector2(1.5, 2.0), e["s"], HORIZONTAL_ALIGNMENT_CENTER, 400, size, Color(0.04, 0.03, 0.05, 0.9 * col.a))
-		draw_string(font, p, e["s"], HORIZONTAL_ALIGNMENT_CENTER, 400, size, col)
+		# Ombre portée (et contour pour les chiffres marqués) : lisibles sur le sol clair comme sur la cendre.
+		draw_string(f, p + Vector2(1.5, 2.0), e["s"], HORIZONTAL_ALIGNMENT_CENTER, 400, size, Color(0.04, 0.03, 0.05, 0.9 * col.a))
+		if style > 0:
+			draw_string_outline(f, p, e["s"], HORIZONTAL_ALIGNMENT_CENTER, 400, size, 4, Color(0.06, 0.03, 0.03, 0.95 * col.a))
+		draw_string(f, p, e["s"], HORIZONTAL_ALIGNMENT_CENTER, 400, size, col)
 
 
 func _draw_particle(p: Dictionary) -> void:

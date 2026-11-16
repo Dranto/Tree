@@ -174,7 +174,7 @@ func _invariants() -> void:
 	if main.arena.in_combat():
 		if tracker_on:
 			_bad("cadre d'objectif visible pendant le boss")
-		if hud._info_panel.visible:
+		if hud._corner.visible:
 			_bad("infos de partie visibles pendant le boss")
 		if hud.hint_visible():
 			_bad("aide de départ pendant le boss")

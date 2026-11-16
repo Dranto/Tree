@@ -363,11 +363,12 @@ func take_hit(amount: float, source) -> void:
 	if invuln > 0.0 or hp <= 0.0:
 		return
 	var s: Dictionary = Game.stats
-	hp -= amount * (1.0 - s["armor"])
+	var taken: float = amount * (1.0 - s["armor"])
+	hp -= taken
 	hurt_flash = 0.15
 	Sfx.play("degats")
 	invuln = 0.35
-	main.fx.player_hurt()
+	main.fx.player_hurt(taken, position)
 	Game.fire("hurt", {"main": main, "base": amount})
 	if s["thorns"] > 0.0 and is_instance_valid(source) and not source.dead:
 		source.take_damage(s["thorns"] * main.branch_factor(source, "ronce"), false)

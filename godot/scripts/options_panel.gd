@@ -11,6 +11,7 @@ var music_slider: HSlider
 var sfx_slider: HSlider
 var fullscreen_box: CheckBox
 var hints_box: CheckBox
+var numbers_box: CheckBox
 var shake_slider: HSlider
 var shake_label: Label
 var reduce_box: CheckBox
@@ -53,6 +54,11 @@ func _ready() -> void:
 	hints_box.button_pressed = Settings.show_hints
 	hints_box.toggled.connect(func(on): Settings.set_show_hints(on); Settings.save_settings())
 	col.add_child(hints_box)
+	numbers_box = CheckBox.new()
+	numbers_box.text = "Afficher les chiffres de dégâts"
+	numbers_box.button_pressed = Settings.show_damage_numbers
+	numbers_box.toggled.connect(func(on): Settings.show_damage_numbers = on; Settings.save_settings())
+	col.add_child(numbers_box)
 
 	var shake_row := HBoxContainer.new()
 	shake_row.add_theme_constant_override("separation", 14)
@@ -247,6 +253,7 @@ func open() -> void:
 	sfx_slider.value = Settings.sfx_volume
 	fullscreen_box.button_pressed = Settings.fullscreen
 	hints_box.button_pressed = Settings.show_hints
+	numbers_box.button_pressed = Settings.show_damage_numbers
 	shake_slider.value = Settings.shake
 	reduce_box.button_pressed = Settings.reduce_effects
 	_update_difficulty()

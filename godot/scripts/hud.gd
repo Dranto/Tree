@@ -37,13 +37,8 @@ var _hint_shot := false
 var _hint_start = null
 
 var _labels := {}
-var _level_label: Label
-var _points_label: Label
-var _world_label: Label
-var _info_panel: PanelContainer
-var _hp_bar: ProgressBar
-var _hp_label: Label
-var _xp_bar: ProgressBar
+var _corner
+var _vital
 var _banner: Label
 var _hint_box: VBoxContainer
 var _slots: Array = []
@@ -51,70 +46,7 @@ var _slots: Array = []
 var death_screen
 
 
-## Un emplacement de compétence : aplat de couleur, voile de recharge, touche et nom.
-## Trois états : une compétence (couleur), « libre » (débloqué, sans compétence) et
-## « verrouillé » (pas encore débloqué par l'arbre, statistique skill_slots).
-class Slot extends PanelContainer:
-	enum { SKILL, FREE, LOCKED }
-	var index := 0
-	var state := LOCKED
-	var skill_id := ""
-	var color := Color.WHITE
-	var ratio := 0.0
-	var icon: Control
-	var key_label: Label
-	var name_label: Label
-
-	func _init() -> void:
-		custom_minimum_size = Vector2(84, 76)
-		mouse_filter = Control.MOUSE_FILTER_STOP
-		var sb := UiTheme.box(UiTheme.PANEL_BG, Color(0.6, 0.8, 0.6, 0.3), 1, 10)
-		for side in [SIDE_LEFT, SIDE_RIGHT]:
-			sb.set_content_margin(side, 6)
-		for side in [SIDE_TOP, SIDE_BOTTOM]:
-			sb.set_content_margin(side, 8)
-		add_theme_stylebox_override("panel", sb)
-		var box := VBoxContainer.new()
-		box.add_theme_constant_override("separation", 2)
-		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(box)
-		icon = Control.new()
-		icon.custom_minimum_size = Vector2(0, 30)
-		icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		icon.draw.connect(_draw_icon)
-		box.add_child(icon)
-		key_label = Label.new()
-		key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		key_label.add_theme_font_size_override("font_size", 15)
-		box.add_child(key_label)
-		name_label = Label.new()
-		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_label.add_theme_font_size_override("font_size", 12)
-		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		box.add_child(name_label)
-
-	func _draw_icon() -> void:
-		var r := Rect2(Vector2.ZERO, icon.size)
-		var grey := Color(0.5, 0.5, 0.5)
-		match state:
-			LOCKED:
-				# Cadenas : anse et corps.
-				var c := r.get_center() + Vector2(0, 3)
-				icon.draw_arc(c + Vector2(0, -6), 6.0, PI, TAU, 12, grey, 2.0)
-				icon.draw_rect(Rect2(c + Vector2(-8, -6), Vector2(16, 12)), grey)
-			FREE:
-				icon.draw_rect(r.grow(-2), Color(0.6, 0.7, 0.6, 0.5), false, 1.0)
-				var c := r.get_center()
-				icon.draw_line(c + Vector2(-6, 0), c + Vector2(6, 0), Color(0.6, 0.7, 0.6, 0.6), 2.0)
-				icon.draw_line(c + Vector2(0, -6), c + Vector2(0, 6), Color(0.6, 0.7, 0.6, 0.6), 2.0)
-			SKILL:
-				icon.draw_rect(r, color.darkened(0.6) if ratio > 0.0 else color)
-				if ratio > 0.0:
-					icon.draw_rect(Rect2(0, 0, r.size.x, r.size.y * ratio), Color(0, 0, 0, 0.45))
-
-	func refresh() -> void:
-		icon.queue_redraw()
+const Widgets = preload("res://scripts/hud_widgets.gd")
 
 
 func _ready() -> void:
@@ -244,22 +176,6 @@ func key_label(action: String) -> String:
 	return label
 
 
-func _panel(anchor: Control.LayoutPreset, grow_h: Control.GrowDirection, grow_v: Control.GrowDirection) -> PanelContainer:
-	var p := PanelContainer.new()
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	p.set_anchors_and_offsets_preset(anchor, Control.PRESET_MODE_MINSIZE, MARGIN)
-	p.grow_horizontal = grow_h
-	p.grow_vertical = grow_v
-	var sb := UiTheme.box(Color(0.06, 0.08, 0.07, 0.8), Color(0.6, 0.8, 0.6, 0.2), 1, 4)
-	sb.content_margin_left = 12
-	sb.content_margin_right = 12
-	sb.content_margin_top = 8
-	sb.content_margin_bottom = 8
-	p.add_theme_stylebox_override("panel", sb)
-	add_child(p)
-	return p
-
-
 func _label(parent: Node, size_px: int, color: Color) -> Label:
 	var l := Label.new()
 	l.add_theme_font_size_override("font_size", size_px)
@@ -268,46 +184,18 @@ func _label(parent: Node, size_px: int, color: Color) -> Label:
 	return l
 
 
-func _bar(fill: Color, back: Color, height: float) -> ProgressBar:
-	var b := ProgressBar.new()
-	b.show_percentage = false
-	b.min_value = 0.0
-	b.max_value = 1.0
-	b.step = 0.0
-	b.custom_minimum_size = Vector2(320, height)
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = back
-	var fg := StyleBoxFlat.new()
-	fg.bg_color = fill
-	b.add_theme_stylebox_override("background", bg)
-	b.add_theme_stylebox_override("fill", fg)
-	return b
-
-
 func _build_top_left() -> void:
-	var p := _panel(Control.PRESET_TOP_LEFT, Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_END)
-	_info_panel = p
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 4)
-	p.add_child(v)
-	_level_label = _label(v, 20, UiTheme.INK)
-	_points_label = _label(v, 15, UiTheme.GOLD)
-	_world_label = _label(v, 13, Color(0.75, 0.85, 0.75))
+	# Pas de cadre : le coin n'est qu'un médaillon et trois repères sur le jeu.
+	_corner = Widgets.Corner.new()
+	_corner.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT, Control.PRESET_MODE_MINSIZE, MARGIN)
+	add_child(_corner)
 
 
 func _build_bottom_left() -> void:
-	var p := _panel(Control.PRESET_BOTTOM_LEFT, Control.GROW_DIRECTION_END, Control.GROW_DIRECTION_BEGIN)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 6)
-	p.add_child(v)
-	_hp_bar = _bar(Color("c84b44"), Color(0.25, 0.08, 0.08), 20)
-	v.add_child(_hp_bar)
-	_hp_label = _label(_hp_bar, 13, Color.WHITE)
-	_hp_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_hp_label.offset_left = 6
-	_hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_xp_bar = _bar(Color("7fd36b"), Color(0.08, 0.15, 0.08), 10)
-	v.add_child(_xp_bar)
+	_vital = Widgets.Vital.new()
+	_vital.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, MARGIN)
+	_vital.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	add_child(_vital)
 
 
 func _build_bottom_center() -> void:
@@ -327,10 +215,10 @@ func _build_bottom_center() -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 6)
 	v.add_child(row)
 	for i in MAX_SLOTS:
-		var s := Slot.new()
+		var s := Widgets.Slot.new()
 		s.index = i
 		s.gui_input.connect(_on_slot_input.bind(i))
 		row.add_child(s)
@@ -404,45 +292,27 @@ func _refresh() -> void:
 	var s: Dictionary = Game.stats
 	var p = main.player
 	var hp_ratio: float = clampf(p.hp / s["max_hp"], 0.0, 1.0)
-	_hp_bar.value = hp_ratio
-	_hp_label.text = "Vie %d / %d" % [roundi(p.hp), roundi(s["max_hp"])]
-	_xp_bar.value = clampf(Game.xp / Game.xp_to_next(), 0.0, 1.0)
-
-	_level_label.text = "Niveau %d" % Game.level
-	_points_label.text = "Points de l'Arbre : %d  (%s)" % [Game.points, key_label("toggle_tree")]
-	_points_label.add_theme_color_override("font_color", UiTheme.GOLD if Game.points > 0 else Color(0.7, 0.75, 0.7))
+	_vital.set_value(hp_ratio, "%d / %d" % [roundi(p.hp), roundi(s["max_hp"])])
 	var revived := minf(1.0, main.ground.ratio() / REVIVABLE)
-	_world_label.text = "Monde ravivé : %.1f %%   ·   Flétris purifiés : %d" % [revived * 100.0, Game.kills]
+	_corner.set_values(Game.level, clampf(Game.xp / Game.xp_to_next(), 0.0, 1.0), Game.points, key_label("toggle_tree"), revived, Game.kills)
 
 	var open: int = p.unlocked_slots()
 	for s2 in _slots:
-		var slot := s2 as Slot
-		var i := slot.index
+		var slot := s2 as Widgets.Slot
+		var i: int = slot.index
 		var id: String = p.bar[i] if i < p.bar.size() else ""
-		slot.skill_id = id
 		if i >= open:
-			slot.state = Slot.LOCKED
-			slot.ratio = 0.0
-			slot.key_label.text = ""
 			slot.name_label.text = "verrouillé"
+			slot.apply(Widgets.Slot.LOCKED, "", 0.0, 0.0, "", "")
 		elif id == "":
-			slot.state = Slot.FREE
-			slot.ratio = 0.0
-			slot.key_label.text = slot_keys_text(i)
 			slot.name_label.text = "libre"
+			slot.apply(Widgets.Slot.FREE, "", 0.0, 0.0, slot_keys_text(i), "Emplacement libre")
 		else:
-			slot.state = Slot.SKILL
 			var k: Dictionary = Content.skills()[id]
-			slot.color = Color(k.get("color", "#ffffff"))
 			var cd: float = p.cds.get(id, 0.0)
 			var maxcd: float = maxf(0.01, p.skill_cd.get(id, 1.0))
-			slot.ratio = cd / maxcd if cd > 0.0 else 0.0
-			slot.key_label.text = slot_keys_text(i)
 			slot.name_label.text = k.get("short", id)
-		var dim := Color(0.5, 0.5, 0.5)
-		slot.key_label.add_theme_color_override("font_color", UiTheme.INK if slot.state == Slot.SKILL else dim)
-		slot.name_label.add_theme_color_override("font_color", Color(0.85, 0.9, 0.85) if slot.state == Slot.SKILL else dim)
-		slot.refresh()
+			slot.apply(Widgets.Slot.SKILL, id, cd / maxcd if cd > 0.0 else 0.0, cd, slot_keys_text(i), "%s\n%s" % [k.get("name", id), k.get("desc", "")])
 
 	if _banner.text != banner_text:
 		_banner.text = banner_text
@@ -453,7 +323,7 @@ func _refresh() -> void:
 	_banner.visible = banner_time > 0.0
 
 	# Pendant le combat de boss, seules les informations du combat restent (vie, compétences, barre du boss).
-	_info_panel.visible = not in_boss_fight()
+	_corner.visible = not in_boss_fight()
 
 	var show_hint := hint_time > 0.0 and Settings.show_hints and not in_boss_fight()
 	_hint_box.modulate.a = clampf(hint_time / 2.0, 0.0, 1.0) if show_hint else 0.0

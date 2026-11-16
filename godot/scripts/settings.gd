@@ -12,6 +12,8 @@ var music_volume := 0.7
 var sfx_volume := 0.9
 var fullscreen := false
 var show_hints := true
+## Chiffres de dégâts flottants (infligés et reçus).
+var show_damage_numbers := true
 ## Touches des emplacements de la barre de compétences (actions « slot_1 » à « slot_6 »).
 ## Chaque emplacement répond à son chiffre (fixe) et à une touche réassignable dans les options.
 ## Ce sont des positions physiques (QWERTY) : Q E R deviennent A E R sur un clavier AZERTY.
@@ -44,6 +46,7 @@ func load_settings() -> void:
 	sfx_volume = clampf(float(cfg.get_value("audio", "sfx_volume", sfx_volume)), 0.0, 1.0)
 	fullscreen = bool(cfg.get_value("video", "fullscreen", fullscreen))
 	show_hints = bool(cfg.get_value("gameplay", "show_hints", show_hints))
+	show_damage_numbers = bool(cfg.get_value("gameplay", "show_damage_numbers", show_damage_numbers))
 	for i in SLOT_COUNT:
 		slot_keys[i] = int(cfg.get_value("controls", "slot_%d" % (i + 1), slot_keys[i]))
 	shake = clampf(float(cfg.get_value("gameplay", "shake", shake)), 0.0, 1.0)
@@ -59,6 +62,7 @@ func save_settings() -> void:
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
 	cfg.set_value("video", "fullscreen", fullscreen)
 	cfg.set_value("gameplay", "show_hints", show_hints)
+	cfg.set_value("gameplay", "show_damage_numbers", show_damage_numbers)
 	for i in SLOT_COUNT:
 		cfg.set_value("controls", "slot_%d" % (i + 1), slot_keys[i])
 	cfg.set_value("gameplay", "shake", shake)
