@@ -22,8 +22,6 @@ const DECAY := 1.0
 ## Rayon de la vague de vie lancée quand le sanctuaire est ravivé.
 const LIFE_RADIUS := 170.0
 const STONES := 7
-const LIT_COLOR := Color("b6f28a")
-const EMBER := Color("c8734a")
 
 ## Emplacements : « dist » depuis la graine et « angle » (radians) par rapport à l'axe de la région.
 ## Ils restent hors de la zone du Cœur et de l'arène, et sont écartés des buissons d'épines.
@@ -114,8 +112,8 @@ func light() -> void:
 	inside = true
 	flash = 1.0
 	Sfx.play("floraison", position)
-	main.fx.ring(position, 12.0, RADIUS * 2.4, 0.8, Color(LIT_COLOR, 0.9), 5.0)
-	main.revive(position, LIFE_RADIUS, LIT_COLOR)
+	main.fx.ring(position, 12.0, RADIUS * 2.4, 0.8, Color(Art.ec("seve"), 0.9), 5.0)
+	main.revive(position, LIFE_RADIUS, Art.ec("seve"))
 	rest(true)
 
 
@@ -134,56 +132,109 @@ func rest(just_lit: bool) -> void:
 	main.request_autosave()
 
 
+## Dessin (charte : un cercle de pierres claires, ce qui s'utilise est clair et chaud).
+## Trois états lisibles sans texte :
+## - éteint : pierres ternes, runes mortes, une braise sombre au centre ;
+## - en cours : l'anneau d'or se remplit et les runes s'allument une à une ;
+## - ravivé : pierres claires aux runes de sève, lueur, étincelles et colonne de lumière qu'on voit de loin.
 func _draw() -> void:
 	var lit := is_lit()
-	var k := clampf(progress / LIGHT_TIME, 0.0, 1.0)
-	# Dalle de terre battue et cercle tracé au sol.
-	draw_circle(Vector2.ZERO, RADIUS + 10.0, Color(0.1, 0.09, 0.07, 0.35))
-	var line := Color(0.55, 0.5, 0.42, 0.45).lerp(Color(LIT_COLOR, 0.55), 1.0 if lit else k * 0.6)
-	draw_arc(Vector2.ZERO, RADIUS, 0.0, TAU, 48, line, 2.0)
+	var k := 1.0 if lit else clampf(progress / LIGHT_TIME, 0.0, 1.0)
+	var seve := Art.ec("seve")
+	var seve_clair := Art.ec("seve", "clair")
+	var pierre := Art.c("interactif")
+	var or_ := Art.c("butin")
+	# Dalle : un disque de terre battue, un anneau de pavés et un cercle gravé.
+	draw_circle(Vector2.ZERO, RADIUS + 16.0, Color(Art.c("contour"), 0.28))
+	draw_circle(Vector2.ZERO, RADIUS + 8.0, Color(Art.c("decor_vivant") if lit else Art.c("decor"), 0.35))
+	draw_arc(Vector2.ZERO, RADIUS * 0.82, 0.0, TAU, 56, Color(pierre.darkened(0.55), 0.55), 9.0, true)
+	draw_arc(Vector2.ZERO, RADIUS * 0.82, 0.0, TAU, 56, Color(pierre, 0.10 + 0.12 * k), 1.5, true)
+	draw_arc(Vector2.ZERO, RADIUS * 0.42, 0.0, TAU, 40, Color(pierre, 0.12 + 0.2 * k), Art.TRAIT_FIN, true)
 	if lit:
-		var glow := 0.12 + 0.05 * sin(t * 2.2) + 0.35 * flash
-		draw_circle(Vector2.ZERO, RADIUS * 0.9, Color(LIT_COLOR, glow * 0.5))
-		draw_circle(Vector2.ZERO, RADIUS * 0.45, Color(LIT_COLOR, glow))
-	elif k > 0.0:
-		# Avancée : la flamme reprend, un arc lumineux fait le tour du cercle.
-		draw_arc(Vector2.ZERO, RADIUS + 6.0, -PI / 2.0, -PI / 2.0 + TAU * k, 48, Color(LIT_COLOR, 0.9), 4.0)
-	# Pierres dressées, mousse verte une fois ravivé.
+		# Le sol du cercle respire doucement.
+		var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
+		draw_circle(Vector2.ZERO, RADIUS * 0.8, Color(seve, 0.06 + 0.04 * b + 0.25 * flash))
+	# Anneau de progression : fond sombre, or qui se remplit, tête brillante ; plein une fois ravivé.
+	var ring_r := RADIUS + 12.0
+	draw_arc(Vector2.ZERO, ring_r, 0.0, TAU, 64, Color(Art.c("contour"), 0.45), Art.TRAIT_FORT, true)
+	if k > 0.0:
+		var col := or_ if not lit else or_.lerp(seve_clair, 0.25 + 0.25 * sin(t * 2.0))
+		draw_arc(Vector2.ZERO, ring_r, -PI / 2.0, -PI / 2.0 + TAU * k, 64, col, Art.TRAIT_FORT, true)
+		if not lit:
+			var head := Vector2.from_angle(-PI / 2.0 + TAU * k) * ring_r
+			draw_circle(head, 5.0, Color(or_, 0.35))
+			draw_circle(head, 3.0, or_.lightened(0.45))
+	elif not lit:
+		# Éteint : l'anneau d'or est à peine esquissé, en tirets, pour inviter à entrer.
+		for i in 16:
+			var a0 := TAU * i / 16.0 + t * 0.15
+			draw_arc(Vector2.ZERO, ring_r, a0, a0 + TAU / 16.0 * 0.45, 4, Color(or_, 0.28 + 0.12 * sin(t * 2.0)), Art.TRAIT, true)
+	if flash > 0.0:
+		var u := 1.0 - flash
+		draw_arc(Vector2.ZERO, ring_r + 70.0 * Anim.ease_out(u), 0.0, TAU, 64, Color(seve_clair, flash), Art.TRAIT_FORT * flash + 1.0, true)
+	# Pierres dressées : stèles gravées, en volume ; chacune s'allume quand l'avancée la dépasse.
 	for i in STONES:
 		var s: Array = _stones[i]
 		var a: float = TAU * i / STONES + s[0] - PI / 2.0
-		var c := Vector2.from_angle(a) * (RADIUS - 6.0)
-		var h: float = 15.0 * s[1]
-		var w := 6.5
-		var stone := Color("4a4640").lerp(Color("5d6a50"), 1.0 if lit else k * 0.5)
-		var tilt: float = s[2] * 3.0
-		var pts := PackedVector2Array([
-			c + Vector2(-w, 3), c + Vector2(w, 3), c + Vector2(w * 0.7 + tilt, -h), c + Vector2(tilt, -h - 4.0), c + Vector2(-w * 0.8 + tilt, -h + 1.0)])
-		draw_colored_polygon(pts, stone)
-		draw_polyline(PackedVector2Array([pts[4], pts[3], pts[2]]), stone.lightened(0.25), 1.5)
-		if lit:
-			draw_circle(c + Vector2(tilt * 0.5 - 2.0, -h * 0.4), 3.0, Color("7fb35e"))
-	# Vasque de pierre au centre.
-	draw_circle(Vector2(0, 2), 13.0, Color("3a3732"))
-	draw_circle(Vector2(0, 0), 10.0, Color("2a2724"))
+		var c := Vector2.from_angle(a) * (RADIUS - 4.0)
+		var on := clampf((k * STONES - i) * 1.5, 0.0, 1.0)
+		var h: float = 20.0 * s[1]
+		var w := 7.5
+		var tilt: float = s[2] * 2.5
+		var stone := PackedVector2Array([c + Vector2(-w, 4), c + Vector2(-w * 0.9 + tilt * 0.6, -h * 0.65), c + Vector2(tilt, -h),
+			c + Vector2(w * 0.9 + tilt * 0.6, -h * 0.65), c + Vector2(w, 4)])
+		Art.shadow(self, c + Vector2(0, 2), w)
+		Art.volume(self, stone, pierre.darkened(0.42).lerp(pierre, on), 0.4 + 0.5 * on)
+		Art.outline(self, stone, Art.c("contour"), Art.TRAIT_FIN)
+		var pulse := 0.5 + 0.5 * sin(t * 2.4 - i * 0.9)
+		var rune := Color(Art.c("contour"), 0.55).lerp(Color(seve.lerp(seve_clair, pulse), 0.75 + 0.25 * pulse), on)
+		var m := c + Vector2(tilt * 0.5, -h * 0.42)
+		if on > 0.0:
+			draw_circle(m, 7.0, Color(seve, 0.16 * on * pulse))
+		draw_line(m + Vector2(0, -5), m + Vector2(0, 5), rune, Art.TRAIT_FIN, true)
+		draw_line(m + Vector2(-3, -1), m + Vector2(3, -4), rune, Art.TRAIT_FIN, true)
+		if lit and s[1] > 1.0:
+			# Un peu de mousse au pied des plus hautes.
+			draw_colored_polygon(Art.ellipse(c + Vector2(-w * 0.4, 2.5), 5.0, 2.2, 8), Art.c("decor_vivant").lightened(0.15))
+	# Socle central, sa graine et sa flamme.
+	Art.shadow(self, Vector2(0, 2), 13.0)
+	Art.volume_circle(self, Vector2(0, -2), 13.0, pierre.darkened(0.5).lerp(pierre.darkened(0.15), k), 0.6)
+	draw_circle(Vector2(0, -3), 8.0, Art.c("contour").lerp(Art.ec("seve", "sombre"), k))
 	if lit:
-		# Flamme de sève : trois langues qui ondulent.
-		for j in 3:
-			var sway := sin(t * (3.0 + j) + j * 1.7) * 2.5
-			var hgt := 26.0 - j * 6.0 + 2.0 * sin(t * 5.0 + j)
-			var wid := 9.0 - j * 2.2
-			var col := LIT_COLOR.lerp(Color("fff3c4"), j * 0.45)
-			var flame := PackedVector2Array()
-			for q in 10:
-				var u := q / 9.0
-				var side := sin(u * PI) * wid * (1.0 - u * 0.3)
-				flame.append(Vector2(-side + sway * u, -u * hgt))
-			for q in range(8, 0, -1):
-				var u := q / 9.0
-				var side := sin(u * PI) * wid * (1.0 - u * 0.3)
-				flame.append(Vector2(side + sway * u, -u * hgt))
-			draw_colored_polygon(flame, Color(col, 0.85))
+		_draw_flame(seve, seve_clair)
 	else:
-		# Braise presque éteinte, qui rougeoie à mesure qu'on s'y tient.
-		var ember := EMBER.darkened(0.5).lerp(LIT_COLOR, k)
-		draw_circle(Vector2(0, -1), 4.0 + 3.0 * k, Color(ember, 0.6 + 0.3 * sin(t * 4.0)))
+		# Braise presque éteinte, qui reprend à mesure qu'on s'y tient.
+		var ember := Art.ec("seve", "sombre").lerp(seve, k)
+		draw_circle(Vector2(0, -3), 3.0 + 3.0 * k, Color(ember, 0.55 + 0.3 * sin(t * 4.0)))
+		if k > 0.0:
+			Art.glow(self, Vector2(0, -6), 22.0 * k, "seve")
+
+
+## Flamme de sève sur le socle, étincelles qui montent et colonne de lumière qui se voit de loin.
+func _draw_flame(seve: Color, seve_clair: Color) -> void:
+	var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
+	# Colonne de lumière : deux bandes qui s'effacent vers le haut.
+	for j in 6:
+		var y0 := -14.0 - j * 26.0
+		var al := (0.16 + 0.06 * b) * (1.0 - j / 6.0)
+		draw_rect(Rect2(-7.0, y0 - 26.0, 14.0, 26.0), Color(seve, al * 0.6))
+		draw_rect(Rect2(-2.5, y0 - 26.0, 5.0, 26.0), Color(seve_clair, al))
+	Art.glow(self, Vector2(0, -10), 34.0 * (1.0 + 0.08 * b + 0.4 * flash), "seve")
+	for j in 3:
+		var sway := sin(t * (3.0 + j) + j * 1.7) * 2.5
+		var hgt := 26.0 - j * 6.0 + 2.0 * sin(t * 5.0 + j)
+		var wid := 8.0 - j * 2.0
+		var col := seve.lerp(seve_clair, j * 0.45)
+		var flame := PackedVector2Array()
+		for q in 10:
+			var u := q / 9.0
+			flame.append(Vector2(-sin(u * PI) * wid * (1.0 - u * 0.3) + sway * u, -4.0 - u * hgt))
+		for q in range(8, 0, -1):
+			var u := q / 9.0
+			flame.append(Vector2(sin(u * PI) * wid * (1.0 - u * 0.3) + sway * u, -4.0 - u * hgt))
+		draw_colored_polygon(flame, Color(col, 0.85))
+	# Étincelles qui montent du socle et s'éteignent.
+	for i in 6:
+		var u := fposmod(t * 0.45 + i / 6.0, 1.0)
+		var p := Vector2(sin(i * 2.3 + t * 1.3) * 14.0, -10.0 - 70.0 * u)
+		draw_circle(p, 1.8, Color(seve_clair, sin(PI * u)))

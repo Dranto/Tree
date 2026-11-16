@@ -27,6 +27,13 @@ const BUSH_CELL := 256.0
 ## Zones gardées libres de buissons : l'oasis de départ et le centre de la région (Cœur, arène).
 const BUSH_CLEAR_CENTER := 340.0
 const BUSH_CLEAR_SEED := 560.0
+## Points de repère du roncier : « dist » depuis la graine, « angle » (radians) par rapport à
+## l'axe de la région (même repère que les sanctuaires).
+const LANDMARKS := [
+	{"kind": "grand_arbre", "dist": 1060.0, "angle": -0.05, "size": 1.0},
+	{"kind": "ruine", "dist": 1380.0, "angle": -0.43, "size": 1.0},
+	{"kind": "rocher", "dist": 2000.0, "angle": 0.42, "size": 1.0},
+]
 
 var ground
 ## Calque trié en profondeur où ranger les arbres (par défaut : ce nœud).
@@ -47,11 +54,18 @@ var clock := 0.0
 ## Une peinture de vie ne regarde que les carrés qu'elle touche.
 var tree_cells: Dictionary = {}
 var bloom_timer := 0.0
+## Points de repère (DecorLandmark).
+var landmarks: Array = []
 const BLOOM_STEP := 0.25
 
 
 ## Un arbre du décor, dessiné autour de son pied (l'origine sert au tri en profondeur).
 ## « leaf » (0 à 1) : pousse des feuilles quand il reverdit pendant une vague de vie.
+##
+## Charte : le décor est sourd (Art.c("decor"), proche du sol) pour rester sous les ennemis dans
+## la lecture. Formes épurées : un tronc effilé, deux ou trois branches, une couronne de trois
+## masses en volume une fois vivant. Quand il reverdit, chaque masse éclot à son tour (Anim.pop)
+## et quelques feuilles s'envolent.
 class DecorTree extends Node2D:
 	var size := 1.0
 	var tree_seed := 0
@@ -74,102 +88,347 @@ class DecorTree extends Node2D:
 		if leaf >= 1.0:
 			set_process(false)
 
-	func _draw() -> void:
-		var s := size
-		var trunk := Color("5a4636") if alive else Color("1e1a18")
-		if alive and leaf < 1.0:
-			trunk = Color("1e1a18").lerp(Color("5a4636"), leaf)
-		draw_line(Vector2.ZERO, Vector2(0, -34) * s, trunk, 6.0 * s)
-		if alive and leaf < 1.0:
-			_dead_branches(s, trunk)
-		if alive:
-			var g := 1.0 - (1.0 - leaf) * (1.0 - leaf)
-			if g > 0.02:
-				draw_circle(Vector2(0, -42) * s, 22.0 * s * g, Color("2f6b2a"))
-				draw_circle(Vector2(-12, -34) * s, 15.0 * s * g, Color("3b7d31"))
-				draw_circle(Vector2(12, -36) * s, 16.0 * s * g, Color("468f38"))
-		else:
-			_dead_branches(s, trunk)
+	## Avancée de la pousse (0 mort, 1 vivant) avec un départ rapide.
+	func growth() -> float:
+		return (1.0 - (1.0 - leaf) * (1.0 - leaf)) if alive else 0.0
 
-	func _dead_branches(s: float, trunk: Color) -> void:
+	## Éclosion du i-ème de n éléments : ils sortent l'un après l'autre, en dépassant un peu.
+	func bud(i: int, n: int) -> float:
+		if not alive:
+			return 0.0
+		var start := 0.15 + 0.5 * i / maxf(1.0, n - 1.0)
+		return Anim.pop(clampf((leaf - start) / 0.35, 0.0, 1.0)) if leaf < 1.0 else 1.0
+
+	func _draw() -> void:
 		var r := RandomNumberGenerator.new()
 		r.seed = tree_seed
+		var s := size
+		var g := growth()
+		var bark := dead_color().lerp(Art.ec("racine", "sombre").lerp(Art.c("decor_vivant"), 0.25), g)
+		flat_shadow(self, Vector2(0, 1), 11.0 * s)
+		var lean := r.randf_range(-0.12, 0.12)
+		var h := r.randf_range(34.0, 44.0) * s
+		var top := Vector2(lean * h, -h)
+		draw_colored_polygon(limb(Vector2.ZERO, top, 4.2 * s, 1.4 * s), bark)
+		# Branches : deux ou trois, qui partent vers le haut en se croisant peu.
+		var nb := 2 + r.randi() % 2
+		var tips: Array = [top]
+		for i in nb:
+			var side := -1.0 if i % 2 == 0 else 1.0
+			var k := r.randf_range(0.45, 0.8)
+			var base := top * k
+			var a := -PI / 2.0 + side * r.randf_range(0.45, 0.95)
+			var tip := base + Vector2.from_angle(a) * r.randf_range(12.0, 20.0) * s
+			draw_colored_polygon(limb(base, tip, 1.9 * s, 0.6 * s), bark)
+			tips.append(tip)
+		# Liseré clair du côté de la lumière (en haut à gauche) : le tronc a du volume sans détail.
+		draw_line(Vector2(-2.2 * s, -2.0 * s), top * 0.85 + Vector2(-0.8 * s, 0), bark.lightened(0.14), maxf(1.0, 1.1 * s), true)
+		if g <= 0.0:
+			return
+		# Couronne : trois masses de feuillage en volume, chacune éclot à son tour.
+		var masses := [[top + Vector2(-9, 4) * s, 13.0], [top + Vector2(10, 2) * s, 14.0], [top + Vector2(0, -6) * s, 17.0]]
+		var green := Art.c("decor_vivant")
+		for i in masses.size():
+			var m: Array = masses[i]
+			var k := bud(i, masses.size())
+			if k <= 0.01:
+				continue
+			draw_circle(m[0], (m[1] * s + 1.5) * k, Color(Art.c("contour"), 0.45))
+		for i in masses.size():
+			var m: Array = masses[i]
+			var k := bud(i, masses.size())
+			if k <= 0.01:
+				continue
+			Art.volume_circle(self, m[0], m[1] * s * k, green.darkened(0.12 * (2 - i)), 0.7)
+		if leaf < 1.0:
+			drift_leaves(self, top, 18.0 * s, leaf, tree_seed)
+
+	func dead_color() -> Color:
+		return Art.c("decor").lerp(Art.c("sol_mort"), 0.35)
+
+	## Ombre au sol aplatie (lumière zénithale) pour le décor : plus légère que celle des acteurs.
+	static func flat_shadow(ci: CanvasItem, pos: Vector2, r: float) -> void:
+		ci.draw_colored_polygon(Art.ellipse(pos, r, r * Art.OMBRE_APLATI, 16), Color(Art.c("ombre"), 0.22))
+
+
+	## Membre effilé (tronc, branche, tige) : un quadrilatère de base « w0 » et de pointe « w1 ».
+	static func limb(a: Vector2, b: Vector2, w0: float, w1: float) -> PackedVector2Array:
+		var n := (b - a).orthogonal().normalized()
+		return PackedVector2Array([a + n * w0, b + n * w1, b - n * w1, a - n * w0])
+
+
+	## Feuille (deux arcs pointus) de longueur l, orientée selon a.
+	static func leaf_shape(p: Vector2, l: float, a: float) -> PackedVector2Array:
+		var d := Vector2.from_angle(a)
+		var n := d.orthogonal()
+		var pts := PackedVector2Array()
+		for i in 7:
+			var u := i / 6.0
+			pts.append(p + d * l * u + n * l * 0.32 * sin(u * PI))
+		for i in range(5, 0, -1):
+			var u := i / 6.0
+			pts.append(p + d * l * u - n * l * 0.32 * sin(u * PI))
+		return pts
+
+
+	## Pendant la pousse, quelques feuilles s'envolent du feuillage et s'effacent.
+	static func drift_leaves(ci: CanvasItem, from: Vector2, spread: float, k: float, sd: int) -> void:
+		var col := Art.c("decor_vivant").lightened(0.25)
 		for i in 4:
-			var a := -PI / 2.0 + r.randf_range(-1.0, 1.0)
-			var start := Vector2(0, -r.randf_range(14, 32)) * s
-			draw_line(start, start + Vector2.from_angle(a) * r.randf_range(14, 26) * s, trunk, 3.5 * s)
+			var u := clampf(k * 1.4 - i * 0.12, 0.0, 1.0)
+			if u <= 0.0 or u >= 1.0:
+				continue
+			var side := 1.0 if (sd + i) % 2 == 0 else -1.0
+			var p := from + Vector2(side * spread * (0.4 + 0.8 * u), -spread * 0.4 + spread * 1.3 * u * u)
+			ci.draw_colored_polygon(leaf_shape(p, 6.0, u * 5.0 * side + i), Color(col, 1.0 - u))
 
 
-## Une ronce du roncier : tiges arquées et épineuses, grises quand la terre est morte ;
-## vivante, elle verdit, se couvre de feuilles, de fleurs blanches et de baies rouges.
+## Une ronce du roncier : trois tiges arquées et quelques épines, sombres et brunes quand la terre
+## est morte (elles se fondent dans la rouille) ; vivante, elle verdit, se couvre de feuilles,
+## puis de fleurs claires et de baies.
 class DecorBramble extends DecorTree:
 	func _draw() -> void:
 		var r := RandomNumberGenerator.new()
 		r.seed = tree_seed
-		var s := size * 1.6
-		var g := (1.0 - (1.0 - leaf) * (1.0 - leaf)) if alive else 0.0
-		var stem := Color("5e5650").lerp(Color("3f6e2e"), g)
-		var thorn := Color("8a8078").lerp(Color("c9b48a"), g)
-		draw_circle(Vector2(0, -1) * s, 8.0 * s, Color(0, 0, 0, 0.14))
+		var s := size * 1.5
+		var g := growth()
+		var stem := dead_color().lerp(Art.c("decor_vivant").darkened(0.15), g)
+		var thorn := stem.lightened(0.18)
+		flat_shadow(self, Vector2(0, 1), 15.0 * s)
 		var tips: Array = []
-		for i in 5:
-			# Chaque tige part du pied, monte puis retombe en arc.
-			var side := r.randf_range(-1.0, 1.0)
-			var h := r.randf_range(18.0, 34.0)
+		for i in 3:
+			# Chaque tige part du pied, monte puis retombe en arc, d'un côté puis de l'autre.
+			var side := (i - 1) * 0.8 + r.randf_range(-0.3, 0.3)
+			var h := r.randf_range(18.0, 30.0)
 			var pts := PackedVector2Array()
 			for j in 7:
 				var k := j / 6.0
-				pts.append(Vector2(side * 26.0 * k, -h * sin(k * PI * 0.85)) * s)
-			draw_polyline(pts, stem, 2.4 * s)
+				pts.append(Vector2(side * 22.0 * k, -h * sin(k * PI * 0.8)) * s)
+			draw_polyline(pts, stem, 2.6 * s, true)
 			for j in [2, 4]:
 				var p: Vector2 = pts[j]
-				draw_line(p, p + Vector2(0, -4) * s, thorn, 1.4 * s)
-			tips.append(pts[5])
-			tips.append(pts[3])
-		if g > 0.02:
-			for p in tips:
-				draw_circle(p, 5.0 * s * g, Color("4f8a37"))
-				draw_circle(p + Vector2(3, -2) * s, 3.5 * s * g, Color("5f9c40"))
-			if g > 0.6:
-				for i in tips.size():
-					var p: Vector2 = tips[i]
-					if i % 3 == 0:
-						draw_circle(p + Vector2(-2, -3) * s, 2.6 * s, Color("f4ecf0"))
-						draw_circle(p + Vector2(-2, -3) * s, 1.0 * s, Color("f2d06b"))
-					else:
-						draw_circle(p + Vector2(2, 2) * s, 2.0 * s, Color("c8243a"))
-		else:
-			# Quelques baies sèches restées sur les tiges mortes.
-			for i in 2:
-				draw_circle(tips[i * 3], 1.6 * s, Color("5a2a2a"))
+				var d: Vector2 = (pts[j + 1] - pts[j - 1]).orthogonal().normalized()
+				if d.y > 0.0:
+					d = -d
+				draw_colored_polygon(PackedVector2Array([p + (pts[j + 1] - p).normalized() * 1.6 * s, p + d * 4.0 * s, p - (pts[j + 1] - p).normalized() * 1.6 * s]), thorn)
+			tips.append([pts[5], side])
+			tips.append([pts[3], -side])
+		if g <= 0.0:
+			return
+		var green := Art.c("decor_vivant")
+		for i in tips.size():
+			var k := bud(i, tips.size())
+			if k <= 0.01:
+				continue
+			var p: Vector2 = tips[i][0]
+			var a := -PI / 2.0 + 0.9 * signf(tips[i][1] + 0.01)
+			draw_colored_polygon(leaf_shape(p, 9.0 * s * k, a), green)
+			draw_colored_polygon(leaf_shape(p, 7.0 * s * k, a - 1.4 * signf(tips[i][1] + 0.01)), green.lightened(0.12))
+		# Fleurs et baies : les dernières à sortir.
+		for i in tips.size():
+			var k := bud(i + 2, tips.size() + 2)
+			if k <= 0.01:
+				continue
+			var p: Vector2 = tips[i][0] + Vector2(0, -2.5) * s
+			if i % 3 == 0:
+				for q in 5:
+					draw_circle(p + Vector2.from_angle(TAU * q / 5.0) * 2.2 * s * k, 1.6 * s * k, Art.c("interactif").lightened(0.3))
+				draw_circle(p, 1.2 * s * k, Art.c("or"))
+			elif i % 3 == 1:
+				draw_circle(p + Vector2(1.5, 2.0) * s, 2.0 * s * k, Art.ec("saignement", "clair"))
+				draw_circle(p + Vector2(1.0, 1.4) * s, 0.7 * s * k, Art.ec("saignement", "clair").lightened(0.4))
+		if leaf < 1.0:
+			drift_leaves(self, Vector2(0, -20) * s, 14.0 * s, leaf, tree_seed)
 
 
 ## Buisson d'épines : obstacle solide (cercle de rayon « radius »), mort ou vivant comme le reste.
+## Il doit se lire comme un obstacle sans voler la vedette aux ennemis : une masse ronde et sombre,
+## nette, hérissée d'une couronne d'épines régulière.
 class DecorBush extends DecorTree:
 	var radius := 26.0
 
 	func _draw() -> void:
 		var r := RandomNumberGenerator.new()
 		r.seed = tree_seed
-		var g := (1.0 - (1.0 - leaf) * (1.0 - leaf)) if alive else 0.0
-		var body := Color("3a3330").lerp(Color("244a22"), g)
-		var light := Color("524842").lerp(Color("356b2c"), g)
-		var thorn := Color("9a8f86").lerp(Color("d6c39a"), g)
-		draw_circle(Vector2(0, 2), radius * 1.05, Color(0, 0, 0, 0.25))
-		for i in 7:
-			var a := TAU * i / 7.0 + r.randf_range(-0.3, 0.3)
-			draw_circle(Vector2.from_angle(a) * radius * 0.45 + Vector2(0, -radius * 0.25), radius * 0.55, body)
-		draw_circle(Vector2(0, -radius * 0.35), radius * 0.55, light)
-		for i in 18:
+		var g := growth()
+		var rr := radius
+		var body := Art.c("decor").lerp(Art.ec("racine", "sombre"), 0.45).lerp(Art.c("decor_vivant").darkened(0.3), g)
+		var thorn := Art.ec("epine", "sombre").lerp(Art.ec("epine"), 0.25 + 0.35 * g)
+		var cen := Vector2(0, -rr * 0.3)
+		flat_shadow(self, Vector2(0, rr * 0.25), rr * 1.15)
+		# Couronne d'épines : régulière, posée sous la masse (on voit leurs pointes dépasser).
+		var n := 9 + r.randi() % 3
+		var rot := r.randf() * TAU
+		for i in n:
+			var d := Vector2.from_angle(rot + TAU * i / n)
+			var base := cen + d * rr * 0.78
+			var nn := d.orthogonal()
+			draw_colored_polygon(PackedVector2Array([base + nn * rr * 0.13, base + d * rr * 0.45, base - nn * rr * 0.13]), thorn)
+		# Masse en lobes, contour sombre puis volume.
+		var lobes: Array = []
+		for i in 5:
+			var a := rot + TAU * i / 5.0 + r.randf_range(-0.25, 0.25)
+			lobes.append([cen + Vector2.from_angle(a) * rr * 0.32, rr * r.randf_range(0.5, 0.6)])
+		for l in lobes:
+			draw_circle(l[0], l[1] + 2.0, Color(Art.c("contour"), 0.6))
+		for l in lobes:
+			draw_circle(l[0], l[1], body.darkened(0.25))
+		Art.volume_circle(self, cen + Vector2(-0.06, -0.08) * rr, rr * 0.62, body, 0.55)
+		# Quelques épines sur le dessus, et des baies une fois vivant.
+		for i in 4:
 			var a := r.randf() * TAU
-			var base := Vector2.from_angle(a) * radius * r.randf_range(0.55, 0.9) + Vector2(0, -radius * 0.25)
-			draw_line(base, base + Vector2.from_angle(a) * radius * 0.32, thorn, 1.6)
-		if g > 0.6:
-			for i in 7:
-				var p := Vector2.from_angle(r.randf() * TAU) * radius * r.randf_range(0.2, 0.8) + Vector2(0, -radius * 0.3)
-				draw_circle(p, 2.6, Color("c8243a"))
-				draw_circle(p + Vector2(-0.8, -0.8), 0.9, Color("ff8a8a"))
+			var p := cen + Vector2.from_angle(a) * rr * r.randf_range(0.15, 0.5)
+			var d := Vector2.from_angle(a)
+			draw_colored_polygon(PackedVector2Array([p + d.orthogonal() * 1.8, p + d * rr * 0.22, p - d.orthogonal() * 1.8]), thorn.lightened(0.1))
+		if g > 0.0:
+			for i in 5:
+				var k := bud(i, 5)
+				var p := cen + Vector2.from_angle(r.randf() * TAU) * rr * r.randf_range(0.15, 0.55)
+				if k > 0.01:
+					draw_circle(p, 2.8 * k, Art.ec("saignement", "clair"))
+					draw_circle(p + Vector2(-0.9, -0.9), 1.0 * k, Art.ec("saignement", "clair").lightened(0.45))
 
+
+## Point de repère du roncier : grand arbre mort, rocher fendu, ruine. Plus grand que le reste du
+## décor et d'une silhouette unique, pour s'orienter sans la carte ; il reste sourd (pas de lueur)
+## et ne fait pas obstacle. Vivant, la mousse, le lierre et les fleurs le gagnent.
+class DecorLandmark extends DecorTree:
+	var kind := "grand_arbre"
+
+	func _draw() -> void:
+		match kind:
+			"rocher":
+				_rock()
+			"ruine":
+				_ruin()
+			_:
+				_great_tree()
+
+	func _great_tree() -> void:
+		var r := RandomNumberGenerator.new()
+		r.seed = tree_seed
+		var s := size
+		var g := growth()
+		var bark := Art.c("decor").lerp(Art.ec("racine", "sombre"), 0.25 + 0.5 * g)
+		flat_shadow(self, Vector2(0, 2), 46.0 * s)
+		# Racines qui s'étalent au pied.
+		for i in 5:
+			var a := PI * (0.05 + 0.9 * i / 4.0)
+			draw_colored_polygon(limb(Vector2(0, -6) * s, Vector2(cos(a) * 44.0, sin(a) * 12.0 - 2.0) * s, 6.0 * s, 1.0 * s), bark.darkened(0.1))
+		var top := Vector2(6, -118) * s
+		draw_colored_polygon(limb(Vector2.ZERO, top, 15.0 * s, 5.0 * s), bark)
+		draw_line(Vector2(-9, -6) * s, top + Vector2(-4, 8) * s, bark.lightened(0.14), 2.5 * s, true)
+		# Une fente sombre dans le tronc (on le reconnaît de loin).
+		draw_colored_polygon(PackedVector2Array([Vector2(1, -30) * s, Vector2(5, -58) * s, Vector2(2, -72) * s, Vector2(-1, -55) * s]), Art.c("contour"))
+		# Grandes branches tordues.
+		var tips: Array = []
+		var branches := [[0.55, -2.3, 54.0], [0.7, -0.75, 48.0], [0.85, -1.9, 40.0], [0.95, -1.05, 34.0], [0.4, -0.4, 36.0]]
+		for b in branches:
+			var base: Vector2 = top * b[0]
+			var mid: Vector2 = base + Vector2.from_angle(b[1] + r.randf_range(-0.15, 0.15)) * b[2] * 0.55 * s
+			var tip: Vector2 = mid + Vector2.from_angle(b[1] - 0.35 * signf(b[1] + PI / 2.0)) * b[2] * 0.5 * s
+			draw_colored_polygon(limb(base, mid, 5.0 * s, 3.0 * s), bark)
+			draw_colored_polygon(limb(mid, tip, 3.0 * s, 0.8 * s), bark)
+			tips.append(tip)
+			tips.append(mid)
+		if g <= 0.0:
+			return
+		var green := Art.c("decor_vivant")
+		for i in tips.size():
+			var k := bud(i, tips.size())
+			if k > 0.01:
+				draw_circle(tips[i], (17.0 * s + 2.0) * k, Color(Art.c("contour"), 0.45))
+		for i in tips.size():
+			var k := bud(i, tips.size())
+			if k > 0.01:
+				Art.volume_circle(self, tips[i], 17.0 * s * k, green.darkened(0.1 * (i % 3)), 0.7)
+		if leaf < 1.0:
+			drift_leaves(self, top, 50.0 * s, leaf, tree_seed)
+
+	func _rock() -> void:
+		var s := size
+		var g := growth()
+		var stone := Art.c("brume").darkened(0.15)
+		flat_shadow(self, Vector2(0, 2), 58.0 * s)
+		# Deux moitiés d'un bloc, écartées par une fente.
+		var left := PackedVector2Array([Vector2(-56, 4), Vector2(-60, -30), Vector2(-38, -64), Vector2(-8, -72), Vector2(-2, -40), Vector2(-10, -14), Vector2(-4, 6)])
+		var right := PackedVector2Array([Vector2(6, 6), Vector2(2, -18), Vector2(10, -44), Vector2(6, -70), Vector2(34, -62), Vector2(58, -34), Vector2(54, 4)])
+		for half in [left, right]:
+			var pts := PackedVector2Array()
+			for q in half:
+				pts.append(q * s)
+			Art.volume(self, pts, stone, 0.5)
+			Art.outline(self, pts, Color(Art.c("contour"), 0.7), Art.TRAIT)
+		# Strates gravées.
+		draw_line(Vector2(-50, -30) * s, Vector2(-12, -38) * s, stone.darkened(0.3), Art.TRAIT_FIN, true)
+		draw_line(Vector2(16, -40) * s, Vector2(48, -32) * s, stone.darkened(0.3), Art.TRAIT_FIN, true)
+		if g <= 0.0:
+			return
+		# Mousse sur le dessus, et une pousse qui sort de la fente.
+		var moss := Art.c("decor_vivant")
+		var spots := [Vector2(-30, -60), Vector2(-48, -40), Vector2(26, -62), Vector2(44, -48)]
+		for i in spots.size():
+			var k := bud(i, spots.size() + 2)
+			if k > 0.01:
+				draw_colored_polygon(Art.ellipse(spots[i] * s, 13.0 * s * k, 6.0 * s * k, 12), moss)
+		var k2 := bud(spots.size(), spots.size() + 2)
+		if k2 > 0.01:
+			draw_line(Vector2(3, 2) * s, Vector2(4, -26 * k2) * s, moss.darkened(0.2), 2.5 * s, true)
+			draw_colored_polygon(leaf_shape(Vector2(4, -18 * k2) * s, 12.0 * s * k2, -2.4), moss.lightened(0.1))
+			draw_colored_polygon(leaf_shape(Vector2(4, -24 * k2) * s, 12.0 * s * k2, -0.7), moss.lightened(0.1))
+		var k3 := bud(spots.size() + 1, spots.size() + 2)
+		if k3 > 0.01:
+			for q in 5:
+				draw_circle(Vector2(4, -30) * s + Vector2.from_angle(TAU * q / 5.0) * 3.0 * s * k3, 2.4 * s * k3, Art.c("interactif").lightened(0.3))
+			draw_circle(Vector2(4, -30) * s, 1.8 * s * k3, Art.c("or"))
+		if leaf < 1.0:
+			drift_leaves(self, Vector2(0, -50) * s, 40.0 * s, leaf, tree_seed)
+
+	func _ruin() -> void:
+		var s := size
+		var g := growth()
+		var stone := Art.c("brume").lerp(Art.c("interactif"), 0.12).darkened(0.12)
+		flat_shadow(self, Vector2(0, 2), 70.0 * s)
+		# Deux colonnes, l'une brisée, et un linteau tombé au pied.
+		var cols := [[Vector2(-40, 0), 92.0, 0.0], [Vector2(40, 0), 54.0, 0.35]]
+		for c in cols:
+			var b: Vector2 = c[0] * s
+			var hh: float = c[1] * s
+			var w := 12.0 * s
+			var pts := PackedVector2Array([b + Vector2(-w, 0), b + Vector2(-w, -hh), b + Vector2(-w * 0.2, -hh - 6.0 * s * c[2]), b + Vector2(w, -hh + 8.0 * s * c[2]), b + Vector2(w, 0)])
+			Art.volume(self, pts, stone, 0.5)
+			Art.outline(self, pts, Color(Art.c("contour"), 0.7), Art.TRAIT)
+			# Chapiteau (sur la colonne entière) et anneaux gravés.
+			for k in 3:
+				var y: float = -hh * (0.28 + 0.3 * k)
+				draw_line(b + Vector2(-w + 2, y), b + Vector2(w - 2, y), stone.darkened(0.3), Art.TRAIT_FIN, true)
+		var cap := PackedVector2Array([Vector2(-58, -92), Vector2(-22, -92), Vector2(-24, -100), Vector2(-56, -100)])
+		for i in cap.size():
+			cap[i] *= s
+		Art.volume(self, cap, stone.lightened(0.05), 0.5)
+		Art.outline(self, cap, Color(Art.c("contour"), 0.7), Art.TRAIT)
+		var lintel := PackedVector2Array([Vector2(-14, 22), Vector2(46, 18), Vector2(48, 28), Vector2(-12, 32)])
+		for i in lintel.size():
+			lintel[i] *= s
+		Art.volume(self, lintel, stone.darkened(0.08), 0.4)
+		Art.outline(self, lintel, Color(Art.c("contour"), 0.7), Art.TRAIT)
+		if g <= 0.0:
+			return
+		# Lierre qui grimpe le long de la grande colonne.
+		var ivy := Art.c("decor_vivant")
+		for i in 7:
+			var k := bud(i, 8)
+			if k <= 0.01:
+				continue
+			var p := Vector2(-40 + (8 if i % 2 == 0 else -8), -8 - i * 12) * s
+			draw_colored_polygon(leaf_shape(p, 11.0 * s * k, -PI / 2.0 + (0.9 if i % 2 == 0 else -0.9)), ivy.lightened(0.06 * (i % 3)))
+		var kf := bud(7, 8)
+		if kf > 0.01:
+			for q in 5:
+				draw_circle(Vector2(30, 6) * s + Vector2.from_angle(TAU * q / 5.0) * 3.0 * s * kf, 2.4 * s * kf, Art.ec("poison", "clair"))
+			draw_circle(Vector2(30, 6) * s, 1.8 * s * kf, Art.c("or"))
+		if leaf < 1.0:
+			drift_leaves(self, Vector2(-40, -70) * s, 30.0 * s, leaf, tree_seed)
 
 ## Les fleurs d'un carré du monde, dessinées en coordonnées monde.
 class FlowerChunk extends Node2D:
@@ -182,7 +441,7 @@ class FlowerChunk extends Node2D:
 			var n: int = f["petals"]
 			for i in n:
 				draw_circle(p + Vector2.from_angle(TAU * i / n) * sz, sz * 0.8, f["color"])
-			draw_circle(p, sz * 0.6, Color("fff3c4"))
+			draw_circle(p, sz * 0.6, Art.c("or").lightened(0.3))
 
 
 func _ready() -> void:
@@ -196,12 +455,14 @@ func _ready() -> void:
 		# Dans le roncier, l'arbre laisse la place à une ronce (même tirage, mêmes autres arbres).
 		var t: DecorTree = DecorBramble.new() if Regions.weight(p, "ronce") > 0.5 else DecorTree.new()
 		t.position = p
-		t.size = rng.randf_range(0.8, 1.6)
+		# Même tirage qu'avant, étalé sur plus de tailles (plus de variété, même placement).
+		t.size = remap(rng.randf_range(0.8, 1.6), 0.8, 1.6, 0.6, 1.9)
 		t.tree_seed = rng.randi()
 		t.alive = ground.life_at(p) > ALIVE
 		trees_parent.add_child(t)
 		_add_tree(t)
 	_spawn_thicket()
+	_spawn_landmarks()
 	Game.seed_rng(rng, 1)
 	ground.painted.connect(_on_painted)
 
@@ -247,6 +508,22 @@ func _spawn_thicket() -> void:
 				bush_cells[key] = []
 			bush_cells[key].append(t)
 			bush_bounds = Rect2(p, Vector2.ZERO) if bushes.size() == 1 else bush_bounds.expand(p)
+		trees_parent.add_child(t)
+		_add_tree(t)
+
+
+## Points de repère du roncier : posés à la main (distance à la graine, écart à l'axe de la
+## région), loin des sanctuaires, des autels, du Cœur et de l'arène. Ils ne font pas obstacle.
+func _spawn_landmarks() -> void:
+	for l in LANDMARKS:
+		var p := Vector2.from_angle(Regions.angle_of("ronce") + float(l["angle"])) * float(l["dist"])
+		var t := DecorLandmark.new()
+		t.kind = l["kind"]
+		t.position = push_out(p, 70.0)
+		t.size = float(l["size"])
+		t.tree_seed = hash(l["kind"])
+		t.alive = ground.life_at(t.position) > ALIVE
+		landmarks.append(t)
 		trees_parent.add_child(t)
 		_add_tree(t)
 
@@ -328,7 +605,7 @@ func add_flower(p: Vector2, color := Color(0, 0, 0, 0)) -> void:
 
 func _make_flower(p: Vector2, color: Color) -> Dictionary:
 	if color.a == 0.0:
-		var palette := [Color("f48fb1"), Color("fff59d"), Color("b39ddb"), Color("ffffff"), Color("ffb74d")]
+		var palette := [Art.c("interactif").lightened(0.3), Art.c("or"), Art.ec("poison", "clair"), Art.ec("saignement", "clair").lightened(0.2), Art.ec("seve", "clair")]
 		color = palette[rng.randi() % palette.size()]
 	return {"pos": p, "color": color, "size": rng.randf_range(2.5, 4.5), "petals": rng.randi_range(4, 6)}
 

@@ -58,8 +58,42 @@ func _ready() -> void:
 	mat.set_shader_parameter("ronce_n2", normals[1])
 	mat.set_shader_parameter("region_inner", Regions.INNER)
 	mat.set_shader_parameter("region_edge", Regions.EDGE)
+	for k in PALETTE_SOL:
+		var col: Color = palette()[k]
+		mat.set_shader_parameter(k, Vector3(col.r, col.g, col.b))
 	rect.material = mat
 	add_child(rect)
+
+
+## Couleurs du sol passées au shader, toutes tirées de la charte (Art) : le fond reste sourd.
+const PALETTE_SOL := ["dead_dark", "dead_light", "crack_col", "pebble_col", "rust_dark", "rust_light",
+	"calm_dark", "calm_light", "alive_dark", "alive_light", "moss_col", "thicket_dark", "thicket_light",
+	"berry_col", "bloom_col"]
+
+static func palette() -> Dictionary:
+	var mort := Art.c("sol_mort")
+	var vivant := Art.c("sol_vivant")
+	var rouille := mort.lerp(Art.ec("cendre", "sombre"), 0.42)
+	return {
+		# Terre morte : deux tons proches (le sol bouge sans faire de bruit).
+		"dead_dark": mort.darkened(0.2),
+		"dead_light": mort.lightened(0.04),
+		"crack_col": Art.c("decor").darkened(0.35),
+		"pebble_col": mort.lightened(0.16),
+		# Roncier : rouille tant que le Cœur vit ; apaisé (purifié), une terre brune et calme.
+		"rust_dark": rouille.darkened(0.18),
+		"rust_light": rouille.lightened(0.03),
+		"calm_dark": mort.lerp(Art.ec("racine", "sombre"), 0.5).darkened(0.12),
+		"calm_light": mort.lerp(Art.ec("racine"), 0.25),
+		# Terre vivante : herbe, et liseré de mousse à la frontière de la vie.
+		"alive_dark": vivant.lightened(0.02),
+		"alive_light": vivant.lerp(Art.c("decor_vivant"), 0.7).lightened(0.2),
+		"moss_col": Art.c("decor_vivant").lerp(Art.ec("racine", "clair"), 0.45),
+		"thicket_dark": vivant.darkened(0.22),
+		"thicket_light": vivant.lerp(Art.c("decor_vivant"), 0.6).lightened(0.08),
+		"berry_col": Art.ec("saignement", "clair"),
+		"bloom_col": Art.c("interactif"),
+	}
 
 
 ## Bruit du sol, une couche par canal, qui se répète sans couture :

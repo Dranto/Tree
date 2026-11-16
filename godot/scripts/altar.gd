@@ -123,60 +123,175 @@ func activate() -> void:
 	if g != "" and not Game.has_graft(g):
 		main.drop_graft(position + Vector2(0, 46), g)
 	Sfx.play("coeur", position)
-	main.revive(position, 160.0, Color("f2d06b"), 0.8)
-	main.fx.ring(position, 20.0, 180.0, 0.8, Color("f2d06b"), 5.0)
+	main.revive(position, 160.0, Art.c("or"), 0.8)
+	main.fx.ring(position, 20.0, 180.0, 0.8, Art.c("or"), 5.0)
 	main.request_autosave()
 	queue_redraw()
 
 
+## Dessin. L'autel se reconnaît à sa silhouette : une porte de deux pierres dressées au-dessus
+## d'une table d'offrande, sur une dalle hexagonale. Il donne une greffe : son accent est l'or du butin.
+## - éteint : couvert de cendre, une braise sous le tas, anneau d'or en tirets ;
+## - en cours : l'anneau d'or se remplit, la cendre s'envole, la braise devient or ;
+## - ravivé : une pousse dorée sur la table, lueur, éclats.
 func _draw() -> void:
 	var v := visibility()
 	if v <= 0.01:
 		return
-	if kind == "secret" and not active:
-		_draw_secret(v)
+	if kind == "secret":
+		if active:
+			_draw_secret_lit(v)
+		else:
+			_draw_secret(v)
 		return
-	var stone := Color(0.42, 0.4, 0.37, v)
-	var stone_dark := Color(0.22, 0.21, 0.2, v)
-	var glow := Color(0.95, 0.82, 0.42, v)
-	# Dalle hexagonale et ombre.
+	var k := 1.0 if active else clampf(progress / HOLD[kind], 0.0, 1.0)
+	var pierre := Art.c("interactif").darkened(0.4).lerp(Art.c("interactif"), 0.35 + 0.65 * k)
+	var or_ := Art.c("butin")
+	var ink := Color(Art.c("contour"), v)
+	# Dalle hexagonale.
 	var slab := PackedVector2Array()
 	for i in 6:
-		slab.append(Vector2.from_angle(TAU * i / 6.0) * Vector2(52, 30))
-	draw_colored_polygon(slab, stone_dark)
-	draw_polyline(slab + PackedVector2Array([slab[0]]), Color(stone, v * 0.8), 2.0)
-	# Deux pierres dressées, l'une penchée.
-	draw_colored_polygon(PackedVector2Array([Vector2(-40, 0), Vector2(-34, -46), Vector2(-24, -50), Vector2(-22, 2)]), stone)
-	draw_colored_polygon(PackedVector2Array([Vector2(24, 2), Vector2(30, -38), Vector2(40, -36), Vector2(42, 4)]), stone)
-	# Vasque centrale.
-	draw_set_transform(Vector2(0, -6), 0.0, Vector2(1.0, 0.5))
-	draw_circle(Vector2.ZERO, 18.0, stone)
-	draw_circle(Vector2.ZERO, 12.0, stone_dark)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		slab.append(Vector2.from_angle(TAU * i / 6.0) * Vector2(58, 32) + Vector2(0, 6))
+	draw_colored_polygon(slab, Color(Art.c("contour"), 0.35 * v))
+	var top := PackedVector2Array()
+	for q in slab:
+		top.append(q * 0.9 + Vector2(0, -2))
+	draw_colored_polygon(top, Color(pierre.darkened(0.55), 0.8 * v))
+	draw_polyline(top + PackedVector2Array([top[0]]), Color(pierre, 0.35 * v), Art.TRAIT_FIN, true)
+	# Anneau de la zone à fouler.
+	_ring(Vector2(0, 4), ZONE, k, v)
+	# Porte : deux pierres dressées et un linteau.
+	for side in [-1.0, 1.0]:
+		var b := Vector2(side * 34.0, 2.0)
+		var st := PackedVector2Array([b + Vector2(-8, 0), b + Vector2(-7, -50), b + Vector2(0, -56), b + Vector2(7, -50), b + Vector2(8, 0)])
+		Art.shadow(self, b, 9.0)
+		_vol(st, pierre, v)
+		# Rune d'or gravée, qui s'allume avec l'avancée.
+		var rune := Color(Art.c("contour"), 0.6 * v).lerp(Color(or_, v), k)
+		draw_line(b + Vector2(0, -38), b + Vector2(0, -22), rune, Art.TRAIT_FIN, true)
+		draw_line(b + Vector2(-4, -32), b + Vector2(0, -27), rune, Art.TRAIT_FIN, true)
+		draw_line(b + Vector2(4, -32), b + Vector2(0, -27), rune, Art.TRAIT_FIN, true)
+	var lintel := PackedVector2Array([Vector2(-46, -54), Vector2(46, -54), Vector2(42, -64), Vector2(-42, -64)])
+	_vol(lintel, pierre.lightened(0.05), v)
+	# Table d'offrande.
+	var table := PackedVector2Array([Vector2(-20, 0), Vector2(-22, -14), Vector2(22, -14), Vector2(20, 0)])
+	Art.shadow(self, Vector2(0, 0), 20.0)
+	_vol(table, pierre.darkened(0.1), v)
+	var plate := Art.ellipse(Vector2(0, -15), 22.0, 6.0, 16)
+	draw_colored_polygon(plate, Color(pierre.lightened(0.1), v))
+	draw_polyline(plate + PackedVector2Array([plate[0]]), ink, Art.TRAIT_FIN, true)
 	if active:
-		# Ravivé : une pousse dorée et une lueur douce.
-		draw_circle(Vector2(0, -8), 26.0, Color(glow, v * (0.18 + 0.06 * sin(t * 2.0))))
-		draw_line(Vector2(0, -6), Vector2(0, -30), Color(0.5, 0.85, 0.4, v), 3.0)
-		draw_colored_polygon(PackedVector2Array([Vector2(0, -24), Vector2(-12, -32), Vector2(-2, -36)]), Color(0.55, 0.9, 0.45, v))
-		draw_colored_polygon(PackedVector2Array([Vector2(0, -28), Vector2(12, -38), Vector2(3, -40)]), Color(0.55, 0.9, 0.45, v))
-		draw_circle(Vector2(0, -32), 4.0, glow)
+		_draw_sprout(Vector2(0, -16), v)
+		return
+	# Tas de cendre qui s'envole à mesure qu'on s'y tient, braise dessous qui vire à l'or.
+	var ash := Art.c("brume").lightened(0.1)
+	var heap := 1.0 - Anim.ease_in(k)
+	if heap > 0.02:
+		draw_colored_polygon(Art.ellipse(Vector2(0, -18), 16.0 * heap, 6.0 * heap, 14), Color(ash, v))
+		draw_colored_polygon(Art.ellipse(Vector2(-3, -21), 9.0 * heap, 4.0 * heap, 12), Color(ash.lightened(0.15), v))
+	var ember := Art.ec("cendre").lerp(or_, k)
+	draw_circle(Vector2(0, -19), 3.0 + 2.0 * k + sin(t * 3.0), Color(ember, v * (0.55 + 0.25 * sin(t * 4.0))))
+	if k > 0.0:
+		for i in 6:
+			var u := fposmod(t * 0.9 + i / 6.0, 1.0)
+			var p := Vector2(sin(i * 2.1 + t) * 12.0 + 20.0 * u * (1.0 if i % 2 == 0 else -1.0), -20.0 - 40.0 * u)
+			draw_circle(p, 1.6, Color(ash, v * k * (1.0 - u)))
+
+
+## Anneau de progression commun aux autels et au secret : fond sombre, or qui se remplit.
+func _ring(c: Vector2, r: float, k: float, v: float) -> void:
+	var or_ := Art.c("butin")
+	if active:
+		draw_arc(c, r, 0.0, TAU, 56, Color(or_, v * (0.35 + 0.1 * sin(t * 2.0))), Art.TRAIT, true)
+		return
+	draw_arc(c, r, 0.0, TAU, 56, Color(Art.c("contour"), 0.35 * v), Art.TRAIT_FORT, true)
+	if k > 0.0:
+		draw_arc(c, r, -PI / 2.0, -PI / 2.0 + TAU * k, 56, Color(or_, v), Art.TRAIT_FORT, true)
+		draw_circle(c + Vector2.from_angle(-PI / 2.0 + TAU * k) * r, 3.0, Color(or_.lightened(0.45), v))
 	else:
-		# Braise éteinte qui palpite, et cercle de cendre à fouler.
-		draw_circle(Vector2(0, -6), 5.0 + sin(t * 3.0), Color(0.9, 0.5, 0.3, v * 0.6))
-		draw_arc(Vector2.ZERO, ZONE, 0.0, TAU, 40, Color(0.75, 0.72, 0.65, v * 0.25), 2.0, true)
-		if progress > 0.0:
-			var k: float = progress / HOLD[kind]
-			draw_arc(Vector2.ZERO, ZONE, -PI / 2.0, -PI / 2.0 + TAU * k, 40, glow, 4.0, true)
+		for i in 14:
+			var a0 := TAU * i / 14.0 + t * 0.15
+			draw_arc(c, r, a0, a0 + TAU / 14.0 * 0.45, 4, Color(or_, v * (0.25 + 0.1 * sin(t * 2.0))), Art.TRAIT, true)
 
 
-## Secret encore enfoui : quelques étincelles dans la cendre, qui grandissent quand on s'y tient.
+## Forme en volume avec contour, à l'opacité de l'autel.
+func _vol(pts: PackedVector2Array, col: Color, v: float) -> void:
+	if v >= 0.99:
+		Art.volume(self, pts, col, 0.6)
+		Art.outline(self, pts, Art.c("contour"), Art.TRAIT_FIN)
+	else:
+		draw_colored_polygon(pts, Color(col.darkened(0.2), v))
+		Art.outline(self, pts, Color(Art.c("contour"), v), Art.TRAIT_FIN)
+
+
+## Une pousse dorée qui sort de l'offrande, sa lueur et des éclats.
+func _draw_sprout(base: Vector2, v: float) -> void:
+	var or_ := Art.c("butin")
+	var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
+	draw_circle(base + Vector2(0, -14), 34.0, Color(or_, v * (0.08 + 0.04 * b)))
+	draw_circle(base + Vector2(0, -14), 20.0, Color(or_, v * (0.12 + 0.05 * b)))
+	var sway := sin(t * 1.6) * 1.5
+	draw_line(base, base + Vector2(sway, -26), Color(Art.c("decor_vivant").lightened(0.3), v), 2.5, true)
+	for side in [-1.0, 1.0]:
+		var lf := _leaf(base + Vector2(sway * 0.6, -14 - 4 * side), 13.0, -PI / 2.0 + side * 0.9)
+		draw_colored_polygon(lf, Color(or_.darkened(0.1 if side > 0 else 0.0), v))
+		Art.outline(self, lf, Color(Art.c("contour"), 0.6 * v), Art.TRAIT_FIN)
+	draw_circle(base + Vector2(sway, -28), 3.5, Color(or_.lightened(0.5), v))
+	for i in 3:
+		var u := fposmod(t * 0.5 + i / 3.0, 1.0)
+		var p := base + Vector2(sin(i * 2.4) * 18.0, -10.0 - 34.0 * u)
+		_sparkle(p, 3.0 * sin(PI * u), v)
+
+
+func _leaf(p: Vector2, l: float, a: float) -> PackedVector2Array:
+	var d := Vector2.from_angle(a)
+	var n := d.orthogonal()
+	var pts := PackedVector2Array()
+	for i in 7:
+		var u := i / 6.0
+		pts.append(p + d * l * u + n * l * 0.34 * sin(u * PI))
+	for i in range(5, 0, -1):
+		var u := i / 6.0
+		pts.append(p + d * l * u - n * l * 0.34 * sin(u * PI))
+	return pts
+
+
+## Éclat en étoile à quatre branches.
+func _sparkle(p: Vector2, r: float, v: float) -> void:
+	if r <= 0.2:
+		return
+	var col := Color(Art.c("butin").lightened(0.5), v)
+	draw_colored_polygon(PackedVector2Array([p + Vector2(0, -r * 2), p + Vector2(r * 0.4, 0), p + Vector2(0, r * 2), p + Vector2(-r * 0.4, 0)]), col)
+	draw_colored_polygon(PackedVector2Array([p + Vector2(-r * 2, 0), p + Vector2(0, r * 0.4), p + Vector2(r * 2, 0), p + Vector2(0, -r * 0.4)]), col)
+
+
+## Secret encore enfoui : quelques étincelles d'or dans un petit tas de cendre, qui grandissent
+## quand on s'y tient.
 func _draw_secret(v: float) -> void:
-	var glow := Color(0.98, 0.88, 0.5, v)
+	var k := clampf(progress / HOLD[kind], 0.0, 1.0)
+	var or_ := Art.c("butin")
+	draw_colored_polygon(Art.ellipse(Vector2(0, 2), 20.0, 8.0, 14), Color(Art.c("brume"), v * 0.6))
 	for i in 5:
 		var a := TAU * i / 5.0 + t * 0.4
-		var r := 10.0 + 8.0 * sin(t * 1.7 + i)
-		draw_circle(Vector2.from_angle(a) * r, 1.6 + 0.8 * sin(t * 5.0 + i * 2.0), Color(glow, v * 0.7))
-	draw_circle(Vector2.ZERO, 6.0, Color(glow, v * (0.25 + 0.15 * sin(t * 3.0))))
+		var r := 10.0 + 6.0 * sin(t * 1.7 + i)
+		draw_circle(Vector2.from_angle(a) * r * Vector2(1.0, 0.5), 1.5 + 0.7 * sin(t * 5.0 + i * 2.0), Color(or_, v * 0.75))
+	draw_circle(Vector2.ZERO, 5.0 + 3.0 * k, Color(or_, v * (0.25 + 0.15 * sin(t * 3.0) + 0.4 * k)))
+	_sparkle(Vector2(0, -4), 2.0 + 2.5 * k + 0.6 * sin(t * 3.0), v)
 	if progress > 0.0:
-		var k: float = progress / HOLD[kind]
-		draw_arc(Vector2.ZERO, 30.0, -PI / 2.0, -PI / 2.0 + TAU * k, 32, glow, 3.0, true)
+		_ring(Vector2.ZERO, 30.0, k, v)
+
+
+## Secret ravivé : une fleur d'or éclose dans une dalle fendue.
+func _draw_secret_lit(v: float) -> void:
+	var or_ := Art.c("butin")
+	var slab := PackedVector2Array([Vector2(-26, 4), Vector2(-20, -8), Vector2(18, -10), Vector2(28, 2), Vector2(14, 12), Vector2(-16, 12)])
+	_vol(slab, Art.c("interactif").darkened(0.25), v)
+	draw_polyline(PackedVector2Array([Vector2(-6, -9), Vector2(-1, -1), Vector2(-5, 5), Vector2(1, 11)]), Color(Art.c("contour"), v), Art.TRAIT_FIN, true)
+	var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
+	draw_circle(Vector2(0, -14), 26.0, Color(or_, v * (0.1 + 0.05 * b)))
+	draw_line(Vector2(-1, -1), Vector2(0, -16), Color(Art.c("decor_vivant").lightened(0.3), v), 2.0, true)
+	for i in 6:
+		var a := TAU * i / 6.0 + t * 0.2
+		draw_colored_polygon(_leaf(Vector2(0, -18), 9.0, a), Color(or_.lerp(Art.c("interactif"), 0.3 * (i % 2)), v))
+	draw_circle(Vector2(0, -18), 3.0, Color(Art.c("interactif").lightened(0.4), v))
+	_sparkle(Vector2(12, -28), 2.0 + 0.8 * sin(t * 3.0), v)
