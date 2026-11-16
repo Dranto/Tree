@@ -28,6 +28,8 @@ const Difficulty = preload("res://scripts/difficulty.gd")
 const QuestUi = preload("res://scripts/quest_ui.gd")
 const Sanctuary = preload("res://scripts/sanctuary.gd")
 const LostSap = preload("res://scripts/lost_sap.gd")
+const Altar = preload("res://scripts/altar.gd")
+const GraftPickup = preload("res://scripts/graft_pickup.gd")
 
 ## Apparitions par région (sortes du roncier, part selon la distance) : res://data/enemies.json.
 var region_spawn: Dictionary = Content._load("enemies").get("spawn", {})
@@ -64,6 +66,8 @@ var arena
 var sanctuaries: Array = []
 var lost_sap = null
 var camera: Camera2D
+## Autels et secrets de la région (altar.gd), sous les personnages.
+var altars: Array = []
 ## Vrai pendant un combat de boss : plus aucun Flétri ne naît autour du joueur.
 var spawn_paused := false
 var spawn_timer := 1.5
@@ -192,6 +196,10 @@ func _ready() -> void:
 		add_child(n)
 		move_child(n, actors_layer.get_index())
 	_place_sanctuaries()
+	var rewards_layer := Node2D.new()
+	add_child(rewards_layer)
+	move_child(rewards_layer, actors_layer.get_index())
+	altars = Altar.spawn_all(self, rewards_layer)
 
 	Sfx.listener = player
 	Music.start()
@@ -609,6 +617,46 @@ func on_enemy_killed(e) -> void:
 	fx.ring(e.position, e.radius, e.radius * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
 	fx.death(e.position, e.radius, e.color, ground.life_at(e.position) > 0.45)
 	Game.fire("kill", enemy_ctx(e, 0.0))
+
+
+## Fait tomber une greffe au sol, à ramasser (contrat de la tâche B). id vide : une greffe tirée
+## parmi celles des élites (Game.roll_graft("elite")). Ne fait rien (renvoie null) s'il n'y a rien
+## à donner, ou si la greffe est déjà possédée ou déjà au sol.
+func drop_graft(pos: Vector2, id := ""):
+	if id == "":
+		id = Game.roll_graft("elite")
+	if id == "" or Game.has_graft(id) or not Content.grafts().has(id):
+		return null
+	for g in orbs_layer.get_children():
+		if g is GraftPickup and g.graft_id == id and not g.is_queued_for_deletion():
+			return null
+	var g = GraftPickup.new()
+	g.main = self
+	g.graft_id = id
+	g.position = pos
+	Game.grafts_on_ground[id] = true
+	orbs_layer.call_deferred("add_child", g)
+	return g
+
+
+## Greffes au sol pas encore ramassées, pour la sauvegarde : [[x, y, greffe], …].
+func export_ground_grafts() -> Array:
+	var out: Array = []
+	for g in orbs_layer.get_children():
+		if g is GraftPickup and not g.is_queued_for_deletion():
+			out.append([g.position.x, g.position.y, g.graft_id])
+	return out
+
+
+func import_ground_grafts(list: Array) -> void:
+	for g in orbs_layer.get_children():
+		if g is GraftPickup:
+			g.queue_free()
+	for item in list:
+		if item is Array and item.size() >= 3:
+			var g = drop_graft(Vector2(float(item[0]), float(item[1])), str(item[2]))
+			if g != null:
+				g.pop = 0.0
 
 
 func player_died() -> void:

@@ -13,6 +13,7 @@ extends Node2D
 
 const Boss = preload("res://scripts/boss.gd")
 const BossBar = preload("res://scripts/boss_bar.gd")
+const Content = preload("res://scripts/content.gd")
 
 const FLAG := "ronce_boss_vaincu"
 const RADIUS := 470.0
@@ -23,7 +24,8 @@ const OFFSET := 800.0
 const SHRINK_WARN := 1.6
 const SHRINK_SPEED := 30.0
 const WALL_DAMAGE := 8.0
-const REWARD_POINTS := 3
+## Points du boss si data/rewards.json ne les donne pas.
+const REWARD_POINTS := 2
 const PHASE_NAMES := ["Phase 1 sur 3", "Phase 2 sur 3 : les bourgeons éclosent", "Phase 3 sur 3 : les ronces se resserrent"]
 
 var main
@@ -165,9 +167,12 @@ func boss_defeated() -> void:
 	shrink_warn = 0.0
 	main.spawn_paused = false
 	Game.flags[FLAG] = true
-	Game.points += REWARD_POINTS
-	Game.tree_changed.emit()
-	main.hud.banner("La Mère-Ronce est vaincue : %d points à placer dans l'Arbre de vie." % REWARD_POINTS)
+	# Récompense (data/rewards.json) : points d'arbre, donnés une seule fois, et une greffe au sol.
+	main.hud.banner("La Mère-Ronce est vaincue !")
+	var reward: Dictionary = Content.rewards().get("boss", {}).get("ronce", {})
+	Game.grant_points(int(reward.get("points", REWARD_POINTS)), "boss", "ronce_boss")
+	if str(reward.get("graft", "")) != "":
+		main.drop_graft(center, str(reward["graft"]))
 	for i in 3:
 		main.fx.ring(center, 40.0, RADIUS * (0.5 + 0.3 * i), 0.9 + 0.4 * i, Color(0.6, 1.0, 0.55, 0.9), 6.0)
 	life_wave = 0.0

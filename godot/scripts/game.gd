@@ -5,6 +5,10 @@ signal stats_changed
 signal tree_changed
 signal leveled_up(level: int)
 signal node_allocated(node: Dictionary)
+## Points d'arbre gagnés hors des niveaux (boss, Cœur, autel, secret, quête) : voir grant_points.
+signal points_granted(n: int, source: String)
+## Une greffe vient d'entrer dans l'inventaire (voir give_graft).
+signal graft_found(id: String)
 
 const SkillTree = preload("res://scripts/skill_tree.gd")
 const Content = preload("res://scripts/content.gd")
@@ -23,6 +27,18 @@ var keys: Dictionary = {}
 var choices: Dictionary = {}
 ## Greffes posées : uid de l'emplacement -> identifiant de la greffe (data/grafts.json).
 var grafts: Dictionary = {}
+## Inventaire des greffes possédées (identifiants de data/grafts.json, chacune en un exemplaire),
+## qu'elles soient posées dans un emplacement ou non. Sauvegardé depuis la version 3.
+var graft_inventory: Array = []
+## Greffes tombées au sol et pas encore ramassées (identifiant -> true) : elles ne sont plus tirées.
+var grafts_on_ground: Dictionary = {}
+## Libellés des sources de points hors niveau (annonce du HUD).
+const POINT_SOURCES := {
+	"boss": "Boss vaincu", "coeur": "Cœur purifié", "autel": "Autel ravivé",
+	"secret": "Secret découvert", "quete": "Objectif accompli",
+}
+## Tirages des greffes (élites, autels sans greffe fixée) : rejouables avec « --seed ».
+var graft_rng := RandomNumberGenerator.new()
 ## Graine imposée par « -- --seed=N » pour rejouer une partie à l'identique (tests visuels), -1 sinon.
 var forced_seed := -1
 ## Drapeaux de l'aventure (quêtes, rencontres, fin…) : sauvegardés tels quels.
@@ -47,6 +63,7 @@ func _ready() -> void:
 		push_error("Données : " + err)
 	tree = SkillTree.new()
 	tree.build()
+	seed_rng(graft_rng, 3)
 	reset()
 
 
@@ -60,8 +77,95 @@ func reset() -> void:
 	flags = {}
 	choices = {}
 	grafts = {}
+	graft_inventory = []
+	grafts_on_ground = {}
 	recompute()
 	tree_changed.emit()
+
+
+# --- Points et greffes gagnés dans le monde ---
+
+## Donne n points d'arbre hors des niveaux. « source » : "boss", "coeur", "autel", "secret" ou
+## "quete" (pour l'annonce). « key » (facultatif) rend le don unique : une même clé ne donne
+## qu'une fois par partie (drapeau « points_<key> », sauvegardé). Renvoie false si déjà donné.
+func grant_points(n: int, source: String, key := "") -> bool:
+	if n <= 0:
+		return false
+	if key != "":
+		if flags.get("points_" + key, false):
+			return false
+		flags["points_" + key] = true
+	points += n
+	flags["points_hors_niveau"] = int(flags.get("points_hors_niveau", 0)) + n
+	points_granted.emit(n, source)
+	tree_changed.emit()
+	return true
+
+
+## Libellé d'une source de points (« autel ravivé »…), la source telle quelle si elle est inconnue.
+func point_source_label(source: String) -> String:
+	return str(POINT_SOURCES.get(source, source))
+
+
+## Ajoute une greffe à l'inventaire. Renvoie false si elle n'existe pas ou si elle est déjà possédée.
+func give_graft(id: String) -> bool:
+	grafts_on_ground.erase(id)
+	if not Content.grafts().has(id) or graft_inventory.has(id):
+		return false
+	graft_inventory.append(id)
+	graft_found.emit(id)
+	tree_changed.emit()
+	return true
+
+
+func has_graft(id: String) -> bool:
+	return graft_inventory.has(id)
+
+
+## Greffes possédées qui ne sont posées dans aucun emplacement, dans l'ordre où elles ont été trouvées.
+func free_grafts() -> Array:
+	var placed := {}
+	for uid in grafts:
+		placed[grafts[uid]] = true
+	return graft_inventory.filter(func(g): return not placed.has(g))
+
+
+## Emplacement où une greffe est posée (-1 si elle n'est posée nulle part).
+func graft_slot(graft_id: String) -> int:
+	for uid in grafts:
+		if grafts[uid] == graft_id:
+			return tree.id_for_uid(str(uid))
+	return -1
+
+
+## Tire une greffe à donner pour une source (« elite », « autel »…) : une greffe dont « sources »
+## contient la source, ni possédée ni déjà tombée au sol. "" s'il ne reste rien à donner.
+func roll_graft(source: String) -> String:
+	var pool: Array = []
+	var all := Content.grafts()
+	for id in all:
+		var g = all[id]
+		if g is Dictionary and source in g.get("sources", []) and not graft_inventory.has(id) and not grafts_on_ground.has(id):
+			pool.append(id)
+	if pool.is_empty():
+		return ""
+	pool.sort()
+	return pool[graft_rng.randi() % pool.size()]
+
+
+## Pose une greffe possédée dans un emplacement (appris ou non). Si elle était déjà posée ailleurs,
+## elle y est retirée ; si l'emplacement portait une autre greffe, celle-ci revient dans l'inventaire.
+func place_graft(node_id: int, graft_id: String) -> bool:
+	if not graft_inventory.has(graft_id):
+		return false
+	var from := graft_slot(graft_id)
+	if from == node_id:
+		return true
+	if node_id < 0 or node_id >= tree.nodes.size() or tree.nodes[node_id]["type"] != "graft":
+		return false
+	if from >= 0:
+		grafts.erase(tree.nodes[from]["uid"])
+	return set_graft(node_id, graft_id)
 
 
 ## Recharge les nœuds appris à partir de leurs identifiants stables.
@@ -252,7 +356,14 @@ func set_graft(node_id: int, graft_id: String) -> bool:
 	if graft_id == "":
 		grafts.erase(n["uid"])
 	elif Content.grafts().has(graft_id):
+		# Outil bas niveau (tests, galerie) : poser une greffe la fait entrer dans l'inventaire,
+		# et une greffe n'est jamais posée à deux endroits.
+		for uid in grafts.keys():
+			if grafts[uid] == graft_id:
+				grafts.erase(uid)
 		grafts[n["uid"]] = graft_id
+		if not graft_inventory.has(graft_id):
+			graft_inventory.append(graft_id)
 	else:
 		return false
 	recompute()
@@ -265,10 +376,16 @@ func graft_of(id: int) -> String:
 	return str(grafts.get(tree.nodes[id]["uid"], ""))
 
 
-## Recharge les choix et les greffes d'une sauvegarde ; ce qui ne correspond plus à l'arbre est ignoré.
-func restore_extras(saved_choices, saved_grafts) -> void:
+## Recharge les choix, les greffes posées et l'inventaire d'une sauvegarde ; ce qui ne correspond
+## plus à l'arbre ou aux données est ignoré (une greffe posée reste toujours dans l'inventaire).
+func restore_extras(saved_choices, saved_grafts, saved_inventory = []) -> void:
 	choices = {}
 	grafts = {}
+	graft_inventory = []
+	if saved_inventory is Array:
+		for g in saved_inventory:
+			if Content.grafts().has(str(g)) and not graft_inventory.has(str(g)):
+				graft_inventory.append(str(g))
 	if saved_choices is Dictionary:
 		for uid in saved_choices:
 			var id: int = tree.id_for_uid(str(uid))
@@ -280,8 +397,11 @@ func restore_extras(saved_choices, saved_grafts) -> void:
 	if saved_grafts is Dictionary:
 		for uid in saved_grafts:
 			var id: int = tree.id_for_uid(str(uid))
-			if id >= 0 and tree.nodes[id]["type"] == "graft" and Content.grafts().has(str(saved_grafts[uid])):
-				grafts[str(uid)] = str(saved_grafts[uid])
+			var gid := str(saved_grafts[uid])
+			if id >= 0 and tree.nodes[id]["type"] == "graft" and Content.grafts().has(gid) and not grafts.values().has(gid):
+				grafts[str(uid)] = gid
+				if not graft_inventory.has(gid):
+					graft_inventory.append(gid)
 	recompute()
 	tree_changed.emit()
 
@@ -310,7 +430,9 @@ func branch_count(bi: int, owned = null) -> int:
 ## Tout ce qui donne des effets pour un ensemble de nœuds appris : les nœuds eux-mêmes, le choix
 ## fait sur chaque maîtrise ou mutation, les greffes posées, les bonus de grappe complète et les
 ## paliers de résonance de branche. Chaque entrée a la forme {"id", "effects"} attendue par le moteur.
-func effect_sources(owned: Dictionary) -> Array:
+## « graft_override » (uid de l'emplacement -> greffe) remplace les greffes posées, pour un aperçu.
+func effect_sources(owned: Dictionary, graft_override = null) -> Array:
+	var placed: Dictionary = grafts if graft_override == null else graft_override
 	var out: Array = []
 	var per_branch := {}
 	for id in owned:
@@ -322,9 +444,9 @@ func effect_sources(owned: Dictionary) -> Array:
 		if i >= 0:
 			out.append({"id": "%d:choix" % id, "effects": n["choices"][i].get("effects", [])})
 		if n["type"] == "graft":
-			var g = Content.grafts().get(grafts.get(n["uid"], ""))
+			var g = Content.grafts().get(placed.get(n["uid"], ""))
 			if g is Dictionary:
-				out.append({"id": "%d:greffe" % id, "effects": g.get("effects", [])})
+				out.append({"id": "%d:greffe:%s" % [id, placed.get(n["uid"], "")], "effects": g.get("effects", [])})
 	for key in tree.clusters:
 		var c: Dictionary = tree.clusters[key]
 		if c["effects"].is_empty():

@@ -175,16 +175,13 @@ func _run() -> void:
 
 	print("Greffe")
 	var g := _id("e")
-	check(not game.set_graft(m, "greffe_test") and not game.set_graft(g, "inconnue"), "greffe refusée ailleurs que dans un emplacement, ou si elle n'existe pas")
-	check(game.set_graft(g, "greffe_test") and is_equal_approx(game.stats["max_hp"], hp + 130.0), "une greffe posée dans un emplacement non appris n'agit pas")
+	check(not game.set_graft(m, "greffe_soeurs") and not game.set_graft(g, "inconnue"), "greffe refusée ailleurs que dans un emplacement, ou si elle n'existe pas")
+	var shots: int = game.stats["projectiles"]
+	check(game.set_graft(g, "greffe_soeurs") and game.stats["projectiles"] == shots, "une greffe posée dans un emplacement non appris n'agit pas")
 	game.allocate(g)
-	var graft_hp: float = 0.0
-	for e in Content.grafts()["greffe_test"]["effects"]:
-		if e.get("stat", "") == "max_hp":
-			graft_hp += e["value"]
-	check(is_equal_approx(game.stats["max_hp"], hp + 130.0 + graft_hp), "la greffe agit une fois l'emplacement appris (+%d)" % graft_hp)
-	check(game.set_graft(g, "") and is_equal_approx(game.stats["max_hp"], hp + 130.0), "greffe retirée")
-	game.set_graft(g, "greffe_test")
+	check(game.stats["projectiles"] == shots + 2, "la greffe agit une fois l'emplacement appris (+2 projectiles)")
+	check(game.set_graft(g, "") and game.stats["projectiles"] == shots, "greffe retirée")
+	game.set_graft(g, "greffe_soeurs")
 
 	print("Exclusion, grappe complète, résonance")
 	var k1 := _id("k1")
@@ -221,12 +218,12 @@ func _run() -> void:
 	var want_stats: Dictionary = game.stats.duplicate()
 	var want_uids: Array = game.allocated_uids()
 	var data: Dictionary = save.capture(null)
-	check(data["version"] == 2 and data["tree"]["choices"].size() == 2 and data["tree"]["grafts"].size() == 1, "format 2 : choix et greffes enregistrés")
+	check(data["version"] == 3 and data["tree"]["choices"].size() == 2 and data["tree"]["grafts"].size() == 1, "format 3 : choix et greffes enregistrés")
 	_write(data)
 	game.reset()
 	check(game.choices.is_empty() and game.grafts.is_empty(), "une nouvelle partie n'a ni choix ni greffe")
 	check(save.load_into(null, PATH), "chargement")
-	check(game.allocated_uids() == want_uids and game.choice_index(m) == 2 and game.choice_index(c) == 1 and game.graft_of(g) == "greffe_test", "nœuds, choix et greffe retrouvés")
+	check(game.allocated_uids() == want_uids and game.choice_index(m) == 2 and game.choice_index(c) == 1 and game.graft_of(g) == "greffe_soeurs", "nœuds, choix et greffe retrouvés")
 	var same_stats := true
 	for k in want_stats:
 		if not is_equal_approx(float(want_stats[k]), float(game.stats[k])):

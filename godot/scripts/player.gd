@@ -151,6 +151,7 @@ func _physics_process(delta: float) -> void:
 		dash_cd = s["dash_cd"]
 		invuln = maxf(invuln, DASH_TIME + 0.08)
 		Sfx.play("esquive")
+		Game.fire("dash", {"main": main})
 
 	if dash_time > 0.0:
 		dash_time -= delta
@@ -367,6 +368,7 @@ func take_hit(amount: float, source) -> void:
 	Sfx.play("degats")
 	invuln = 0.35
 	main.fx.player_hurt()
+	Game.fire("hurt", {"main": main, "base": amount})
 	if s["thorns"] > 0.0 and is_instance_valid(source) and not source.dead:
 		source.take_damage(s["thorns"] * main.branch_factor(source, "ronce"), false)
 	if hp <= 0.0:

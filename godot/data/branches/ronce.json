@@ -204,6 +204,13 @@
             {"skill": "saignee"},
             {"stat": "bleed", "op": "add", "value": 0.03}
           ]
+        },
+        {
+          "id": "f8",
+          "type": "graft",
+          "name": "Greffon de la lanière",
+          "at": [1.95, 0.1],
+          "links": ["f6"]
         }
       ],
       "complete": {
@@ -776,8 +783,7 @@
           "type": "graft",
           "name": "Greffon de ronce",
           "at": [1.0, 0],
-          "links": ["h1", "h2", "h3"],
-          "desc": "Un emplacement où insérer une greffe trouvée dans le monde."
+          "links": ["h1", "h2", "h3"]
         }
       ],
       "complete": {
@@ -865,6 +871,13 @@
               ]
             }
           ]
+        },
+        {
+          "id": "p5",
+          "type": "graft",
+          "name": "Greffon venimeux",
+          "at": [1.5, 0],
+          "links": ["p4"]
         }
       ],
       "complete": {
@@ -944,6 +957,13 @@
               ]
             }
           ]
+        },
+        {
+          "id": "o5",
+          "type": "graft",
+          "name": "Greffon de la souche",
+          "at": [1.5, 0],
+          "links": ["o4"]
         }
       ],
       "complete": {

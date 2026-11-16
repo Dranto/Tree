@@ -12,7 +12,8 @@ const SKILL_OPS := ["add", "inc", "more", "set"]
 const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "graft", "withered"]
 ## Moments du jeu auxquels un effet peut réagir (champ « on »).
 ## bleed_tick : à-coup de saignement ; root : ennemi enraciné ; melee_hit : coup au corps à corps.
-const EVENTS := ["kill", "crit", "lethal_hit", "bleed_tick", "root", "melee_hit"]
+## hurt : le joueur est touché (« base » = dégâts du coup) ; dash : le joueur esquive.
+const EVENTS := ["kill", "crit", "lethal_hit", "bleed_tick", "root", "melee_hit", "hurt", "dash"]
 ## Actions disponibles (champ « do ») et leurs paramètres obligatoires.
 ## Elles sont implémentées dans effect_actions.gd.
 const ACTIONS := {
@@ -22,7 +23,11 @@ const ACTIONS := {
 	"survive": ["hp"],
 	"apply_status": ["status", "value", "duration"],
 	"heal": ["value"],
+	"burst": ["radius", "factor"],
+	"status_area": ["status", "value", "duration", "radius"],
 }
+## Sources possibles d'une greffe (champ « sources » de grafts.json).
+const GRAFT_SOURCES := ["autel", "boss", "secret", "elite", "quete"]
 
 static var _cache: Dictionary = {}
 
@@ -44,8 +49,21 @@ static func conditions() -> Dictionary:
 
 
 ## Greffes : objets à insérer dans un emplacement de greffe de l'arbre.
+## Les clés qui commencent par « _ » (commentaires) sont écartées.
 static func grafts() -> Dictionary:
-	return _load("grafts")
+	if not _cache.has("#grafts"):
+		var out := {}
+		var raw := _load("grafts")
+		for id in raw:
+			if not str(id).begins_with("_"):
+				out[id] = raw[id]
+		_cache["#grafts"] = out
+	return _cache["#grafts"]
+
+
+## Points et greffes du monde : boss, Cœurs, autels et secrets (data/rewards.json).
+static func rewards() -> Dictionary:
+	return _load("rewards")
 
 
 ## Branches dans l'ordre de tree.json (cet ordre fixe leur place autour de la graine).
@@ -83,7 +101,7 @@ static func _load(name: String) -> Dictionary:
 static func validate(keystones_per_branch := -1) -> PackedStringArray:
 	_cache = {}
 	var errors := PackedStringArray()
-	for name in ["tree", "stats", "skills", "conditions", "grafts"]:
+	for name in ["tree", "stats", "skills", "conditions", "grafts", "rewards"]:
 		if _load(name).is_empty():
 			errors.append("%s.json est absent, vide ou illisible" % name)
 	var t := tree()
@@ -97,6 +115,10 @@ static func validate(keystones_per_branch := -1) -> PackedStringArray:
 		if not (g.get("effects") is Array) or g["effects"].is_empty():
 			errors.append(gw + " : aucun effet")
 		_check_effects(g.get("effects", []), gw, errors)
+		for src in g.get("sources", []):
+			if not src in GRAFT_SOURCES:
+				errors.append("%s : source inconnue « %s » (attendu : %s)" % [gw, src, ", ".join(GRAFT_SOURCES)])
+	_check_rewards(errors)
 	var seen_keys := {}
 	var ids: Array = t.get("branches", [])
 	if ids.is_empty():
@@ -376,3 +398,43 @@ static func _check_effects(list, where: String, errors: PackedStringArray) -> vo
 		var def: Dictionary = stats()[name]
 		if def.get("max") is String and not stats().has(def["max"]):
 			errors.append("stats.json, %s : plafond inconnu « %s »" % [name, def["max"]])
+
+
+## rewards.json : chaque greffe nommée existe, chaque autel et secret a un identifiant unique,
+## une région connue et une position dans le secteur.
+static func _check_rewards(errors: PackedStringArray) -> void:
+	var r := rewards()
+	var regions: Array = tree().get("branches", [])
+	for kind in ["boss", "coeur"]:
+		var per = r.get(kind, {})
+		if not per is Dictionary:
+			errors.append("rewards.json : « %s » doit être un objet par région" % kind)
+			continue
+		for reg in per:
+			var where := "rewards.json, %s « %s »" % [kind, reg]
+			if not reg in regions:
+				errors.append(where + " : région inconnue")
+			if int(per[reg].get("points", 0)) < 0:
+				errors.append(where + " : « points » ne peut pas être négatif")
+			var g := str(per[reg].get("graft", ""))
+			if g != "" and not grafts().has(g):
+				errors.append("%s : greffe inconnue « %s »" % [where, g])
+	var seen := {}
+	for kind in ["altars", "secrets"]:
+		var list = r.get(kind, [])
+		if not list is Array:
+			errors.append("rewards.json : « %s » doit être une liste" % kind)
+			continue
+		for a in list:
+			var where: String = "rewards.json, %s « %s »" % [kind, a.get("id", "?")]
+			var key: String = kind + ":" + str(a.get("id", ""))
+			if str(a.get("id", "")) == "" or seen.has(key):
+				errors.append(where + " : « id » manquant ou en double")
+			seen[key] = true
+			if not str(a.get("region", "")) in regions:
+				errors.append(where + " : région inconnue")
+			if not (a.get("dist") is float or a.get("dist") is int) or absf(float(a.get("side", 0.0))) > 1.0:
+				errors.append(where + " : « dist » (pixels) et « side » (-1 à 1) sont obligatoires")
+			var g := str(a.get("graft", ""))
+			if g != "" and not grafts().has(g):
+				errors.append("%s : greffe inconnue « %s »" % [where, g])

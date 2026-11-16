@@ -255,7 +255,8 @@ func _touches(id: int, set: Dictionary) -> bool:
 ## Statistiques, compétences et nœuds clés qu'aurait le personnage en ajoutant les nœuds « add »
 ## et en retirant « remove ». Le calcul passe par un moteur d'effets à part : la partie
 ## (Game.allocated, Game.stats, Game.points…) n'est pas touchée.
-func simulate(add: Array = [], remove: Array = []) -> Dictionary:
+## « grafts_override » (uid -> greffe) remplace les greffes posées (aperçu d'une greffe).
+func simulate(add: Array = [], remove: Array = [], grafts_override = null) -> Dictionary:
 	var set: Dictionary = game.allocated.duplicate()
 	for id in add:
 		set[id] = true
@@ -270,7 +271,7 @@ func simulate(add: Array = [], remove: Array = []) -> Dictionary:
 			keys[n["key"]] = true
 	# Choix des maîtrises, greffes, grappes complètes et résonance comptent aussi.
 	if game.has_method("effect_sources"):
-		nodes = game.effect_sources(set)
+		nodes = game.effect_sources(set) if grafts_override == null else game.effect_sources(set, grafts_override)
 	var engine = Effects.new()
 	engine.states = game.effects.states.duplicate()
 	engine.rebuild(nodes)
@@ -282,6 +283,19 @@ func simulate(add: Array = [], remove: Array = []) -> Dictionary:
 ## Différences de statistiques (avant → après) si l'on apprenait « add » et oubliait « remove ».
 func preview(add: Array = [], remove: Array = []) -> Array:
 	return diff(game.effects.stats, simulate(add, remove)["stats"])
+
+
+## Différences de statistiques si la greffe « graft » était posée dans l'emplacement « slot »
+## (retirée d'un autre emplacement si besoin). Un emplacement pas encore appris est compté comme appris.
+func preview_graft(slot: int, graft: String) -> Array:
+	var placed: Dictionary = game.grafts.duplicate()
+	for uid in placed.keys():
+		if placed[uid] == graft:
+			placed.erase(uid)
+	placed[game.tree.nodes[slot]["uid"]] = graft
+	var add: Array = [] if game.allocated.has(slot) else [slot]
+	var before: Dictionary = game.effects.stats if add.is_empty() else simulate(add)["stats"]
+	return diff(before, simulate(add, [], placed)["stats"])
 
 
 ## Liste des statistiques qui changent entre deux jeux de valeurs, dans l'ordre de stats.json :

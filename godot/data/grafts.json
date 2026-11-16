@@ -1,7 +1,115 @@
 {
-  "greffe_test": {
-    "name": "Greffon d'essai",
-    "desc": "Une greffe de démonstration, en attendant celles du monde.",
-    "effects": [{"stat": "max_hp", "op": "add", "value": 25}]
+  "_doc": "Greffes de Ronce : objets trouvés dans le monde, à poser dans un emplacement de greffe de l'Arbre de vie. « sources » : d'où elles peuvent venir (autel, boss, secret, elite) ; une greffe fixée par data/rewards.json vient de cet endroit précis. « shape » : dessin de la greffe au sol et dans l'inventaire (feuille, epine, racine, fleur, coeur).",
+  "greffe_soeurs": {
+    "name": "Épines sœurs",
+    "desc": "Chaque tir lance deux graines de plus, un peu moins fortes.",
+    "sources": ["autel"], "shape": "epine", "color": "#e8b04a",
+    "effects": [
+      {"stat": "projectiles", "op": "add", "value": 2},
+      {"stat": "projectile_damage", "op": "more", "value": 0.8}
+    ]
+  },
+  "greffe_ecorce": {
+    "name": "Écorce de mûrier",
+    "desc": "Être touché fait jaillir des épines tout autour de toi.",
+    "sources": ["autel"], "shape": "feuille", "color": "#c98a4a",
+    "effects": [
+      {"on": "hurt", "do": "burst", "radius": 140, "factor": 1.5, "color": "#e0675e", "cooldown": 1.2,
+       "text": "Quand un coup te touche, une onde d'épines blesse les ennemis autour de toi (×1,5 dégâts, toutes les 1,2 s au plus)."},
+      {"stat": "armor", "op": "add", "value": 0.04}
+    ]
+  },
+  "greffe_tracante": {
+    "name": "Racine traçante",
+    "desc": "Ton esquive plante des racines là où tu étais.",
+    "sources": ["autel"], "shape": "racine", "color": "#a07a4a",
+    "effects": [
+      {"on": "dash", "do": "status_area", "status": "enracine", "value": 1, "duration": 1.6, "radius": 130, "color": "#a07a4a",
+       "text": "L'esquive fait jaillir des racines qui immobilisent les ennemis proches (1,6 s)."}
+    ]
+  },
+  "greffe_couronne": {
+    "name": "Volée en couronne",
+    "desc": "La volée d'épines part dans toutes les directions.",
+    "sources": ["autel"], "shape": "fleur", "color": "#d0574a",
+    "effects": [
+      {"skill_mod": "volee", "param": "spread", "op": "set", "value": 5.6, "text": "Volée d'épines : les épines partent tout autour de toi."},
+      {"skill_mod": "volee", "param": "count", "op": "add", "value": 4, "text": "Volée d'épines : +4 épines."}
+    ]
+  },
+  "greffe_mere": {
+    "name": "Cœur de la Mère-Ronce",
+    "desc": "Ce qui tombe sous tes coups éclate en épines.",
+    "sources": ["boss"], "shape": "coeur", "color": "#e0675e",
+    "effects": [
+      {"on": "kill", "do": "burst", "at": "enemy", "radius": 90, "factor": 0.7, "color": "#e0675e", "cooldown": 0.15,
+       "text": "Un ennemi vaincu éclate en épines qui blessent ses voisins (×0,7 dégâts)."}
+    ]
+  },
+  "greffe_graine": {
+    "name": "Graine ancienne",
+    "desc": "Une graine enfouie depuis toujours, qui refuse de mourir.",
+    "sources": ["secret"], "shape": "fleur", "color": "#f2d06b",
+    "effects": [
+      {"on": "lethal_hit", "do": "survive", "hp": 60, "invuln": 2.5, "label": "La graine ancienne te garde en vie", "color": "#f2d06b", "cooldown": 120,
+       "text": "Un coup mortel te laisse à 60 points de vie, invulnérable 2,5 s (une fois toutes les 2 minutes)."},
+      {"stat": "regen", "op": "add", "value": 1}
+    ]
+  },
+  "greffe_tournoyante": {
+    "name": "Tourbillon de ronce",
+    "desc": "Le fouet balaie tout autour de toi.",
+    "sources": ["elite"], "shape": "epine", "color": "#c9433f",
+    "effects": [
+      {"skill_mod": "fouet", "param": "arc", "op": "set", "value": 6.283, "text": "Fouet de ronce : frappe tout autour de toi."},
+      {"skill_mod": "fouet", "param": "damage", "op": "more", "value": 0.8, "text": "Fouet de ronce : dégâts ×0,8."}
+    ]
+  },
+  "greffe_rampante": {
+    "name": "Racines rampantes",
+    "desc": "Les racines naissent sous tes pieds, plus larges.",
+    "sources": ["elite"], "shape": "racine", "color": "#8a6a3a",
+    "effects": [
+      {"skill_mod": "racines", "param": "range", "op": "set", "value": 0, "text": "Racines voraces : jaillissent autour de toi au lieu de l'endroit visé."},
+      {"skill_mod": "racines", "param": "radius", "op": "more", "value": 1.6, "text": "Racines voraces : rayon ×1,6."}
+    ]
+  },
+  "greffe_sang_vif": {
+    "name": "Sang vif",
+    "desc": "Les coups critiques ouvrent des plaies.",
+    "sources": ["elite"], "shape": "coeur", "color": "#9e1f2c",
+    "effects": [
+      {"on": "crit", "do": "apply_status", "status": "saignement", "value": 0.6, "scale": "base", "duration": 3,
+       "text": "Chaque coup critique fait saigner la cible (60 % des dégâts du coup par seconde, 3 s)."},
+      {"stat": "crit", "op": "add", "value": 0.05}
+    ]
+  },
+  "greffe_sentinelle": {
+    "name": "Sentinelle",
+    "desc": "Planté dans le sol, tu frappes bien plus fort ; tu marches un peu moins vite.",
+    "sources": ["elite"], "shape": "feuille", "color": "#7fa35b",
+    "effects": [
+      {"stat": "damage", "op": "more", "value": 1.3, "if": {"state": "immobile", "min": 0.8}},
+      {"stat": "move_speed", "op": "inc", "value": -0.1}
+    ]
+  },
+  "greffe_nid": {
+    "name": "Nid de mûres",
+    "desc": "Un ennemi pris dans les racines projette des épines.",
+    "sources": ["elite"], "shape": "fleur", "color": "#b54a6a",
+    "effects": [
+      {"on": "root", "do": "burst", "at": "enemy", "radius": 100, "factor": 0.6, "color": "#b54a6a", "cooldown": 0.1,
+       "text": "Chaque ennemi enraciné projette des épines autour de lui (×0,6 dégâts)."}
+    ]
+  },
+  "greffe_vorace": {
+    "name": "Sève vorace",
+    "desc": "Chaque coup au corps à corps boit un peu de vie.",
+    "sources": ["elite"], "shape": "feuille", "color": "#6fbf5a",
+    "effects": [
+      {"on": "melee_hit", "do": "heal", "value": 0.01, "cooldown": 0.1,
+       "text": "Chaque coup au corps à corps te soigne de 1 % de ta vie maximale."},
+      {"stat": "melee_damage", "op": "inc", "value": 0.1}
+    ]
   }
 }

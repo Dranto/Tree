@@ -16,6 +16,8 @@ const MARGIN := 20
 var main
 var banner_text := ""
 var banner_time := 0.0
+## Annonces en attente : une annonce ne coupe pas celle qui vient d'apparaître.
+var banner_queue: Array = []
 var hint_time := 12.0
 
 var _labels := {}
@@ -110,10 +112,17 @@ func _ready() -> void:
 	death_screen.main = main
 	add_child(death_screen)
 	Settings.changed.connect(func(): _labels.clear())
+	Game.points_granted.connect(_on_points_granted)
+	Game.graft_found.connect(_on_graft_found)
 	_refresh()
 
 
+## Affiche une annonce en haut de l'écran. Si une autre vient d'apparaître, celle-ci attend son tour.
 func banner(s: String) -> void:
+	if banner_time > 1.2 and banner_text != s:
+		if not banner_queue.has(s):
+			banner_queue.append(s)
+		return
 	banner_text = s
 	banner_time = 3.0
 
@@ -121,6 +130,14 @@ func banner(s: String) -> void:
 ## Écran de mort (voir death_screen.gd et main.player_died).
 func show_death(info: Dictionary) -> void:
 	death_screen.show_death(info)
+## Points d'arbre gagnés hors niveau : la source et le nombre de points.
+func _on_points_granted(n: int, source: String) -> void:
+	banner("%s : +%d point%s de l'Arbre de vie (%s)" % [Game.point_source_label(source), n, "s" if n > 1 else "", key_label("toggle_tree")])
+
+
+func _on_graft_found(id: String) -> void:
+	var g: Dictionary = Content.grafts().get(id, {})
+	banner("Greffe trouvée : %s. Pose-la dans l'Arbre de vie (%s)" % [g.get("name", id), key_label("toggle_tree")])
 
 
 ## Nom de la touche selon la disposition du clavier du joueur (Z sur AZERTY pour « avancer »).
@@ -260,6 +277,9 @@ func _build_banner() -> void:
 
 func _process(delta: float) -> void:
 	banner_time -= delta
+	if banner_time <= 0.2 and not banner_queue.is_empty():
+		banner_text = banner_queue.pop_front()
+		banner_time = 3.0
 	hint_time -= delta
 	_refresh()
 

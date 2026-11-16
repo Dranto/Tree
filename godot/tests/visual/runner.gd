@@ -225,7 +225,7 @@ func _galerie_types(ui, cw: int, ch: int) -> void:
 			planner.learn_path(path)
 	Game.points = 0
 	Game.set_choice(mastery, 1)
-	Game.set_graft(graft, "greffe_test")
+	Game.set_graft(graft, "greffe_soeurs")
 	await _frames(2)
 	ui._choice_queue.clear()
 	ui.close_choice(false)

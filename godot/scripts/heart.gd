@@ -10,6 +10,7 @@ extends Node2D
 signal purified
 
 const BossBar = preload("res://scripts/boss_bar.gd")
+const Content = preload("res://scripts/content.gd")
 
 const FLAG := "ronce_coeur_purifie"
 ## Position de repli tant que main.region_center("ronce") n'existe pas : dans la direction de la
@@ -188,6 +189,8 @@ func purify() -> void:
 	_set_purified(true)
 	Sfx.play("coeur", center)
 	main.hud.banner("Le Cœur est purifié : l'arène de la Mère-Ronce s'ouvre.")
+	var reward: Dictionary = Content.rewards().get("coeur", {}).get("ronce", {})
+	Game.grant_points(int(reward.get("points", 1)), "coeur", "ronce_coeur")
 	for i in 3:
 		main.fx.ring(center, BODY_RADIUS, LIFE_RADIUS * (0.4 + 0.3 * i), 0.9 + 0.5 * i, Color(0.6, 1.0, 0.55, 0.9), 6.0)
 	for e in main.enemies_near(center, ZONE + 420.0):
