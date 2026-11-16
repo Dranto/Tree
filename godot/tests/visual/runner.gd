@@ -20,10 +20,11 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const Enemy = preload("res://scripts/enemy.gd")
+const Orb = preload("res://scripts/orb.gd")
 const Content = preload("res://scripts/content.gd")
 const TitleScene = preload("res://scenes/title.tscn")
 ## Défauts d'interface déjà connus (un par ligne : « résolution|écran|type|libellés »).
@@ -90,6 +91,8 @@ func _ready() -> void:
 			await _scenario_quetes()
 		"charte":
 			await _scenario_charte()
+		"interactions":
+			await _scenario_interactions()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -564,6 +567,94 @@ func _death_shots() -> void:
 	main.camera.reset_smoothing()
 	await _frames(int(main.hud.death_screen.time_left * 60.0) + 10)
 	await _shot("seve_perdue", "jeu")
+
+
+## Interactions et retours (tâche G du jalon 5) : un ramassage d'essence, une greffe, la sève perdue,
+## un coup reçu, un critique, l'invite d'un sanctuaire, l'ouverture de l'arbre, la mort et la
+## renaissance. Le jeu est figé (ni robot ni Flétris) ; chaque image est prise à un instant précis.
+func _scenario_interactions() -> void:
+	main.autotest = false
+	main.spawn_timer = 1.0e9
+	main.player.set_physics_process(false)
+	var s = main.sanctuary("lisiere")
+	s.frozen = true
+	var spot: Vector2 = s.position + Vector2(-380, 120)
+	await _place_player(spot)
+	main.hud.banner_time = 0.0
+	# Essences de vie : l'aimant les attire, puis elles éclatent au contact.
+	for i in 5:
+		var o = Orb.new()
+		o.main = main
+		o.value = 3.0
+		o.position = spot + Vector2.from_angle(TAU * i / 5.0 + 0.4) * (55.0 + 8.0 * i)
+		main.orbs_layer.add_child(o)
+	await _frames(3)
+	await _shot("interaction_orbe_1")
+	await _frames(9)
+	await _shot("interaction_orbe_2")
+	await _frames(20)
+	# Greffe : saut d'apparition, attirance, ramassage.
+	var gid: String = str(Content.grafts().keys()[0])
+	main.drop_graft(spot + Vector2(110, -30), gid)
+	await _frames(20)
+	await _shot("interaction_greffe_1")
+	await _frames(34)
+	await _shot("interaction_greffe_2")
+	await _frames(14)
+	await _shot("interaction_greffe_3")
+	main.hud.banner_time = 0.0
+	# Coup reçu : vignette rouge, secousse, puis retour au calme.
+	main.player.invuln = 0.0
+	main.player.hp = Game.stats["max_hp"]
+	main.player.take_hit(Game.stats["max_hp"] * 0.2, null)
+	await _frames(4)
+	await _shot("interaction_degats_1")
+	await _frames(40)
+	await _shot("interaction_degats_2")
+	# Critique sur un Flétri : chiffre, étincelles, onde.
+	_clear_enemies()
+	var old_crit = Game.stats["crit"]
+	Game.stats["crit"] = 1.0
+	var e = main.spawn_enemy_at(spot + Vector2(120, -10), 0)
+	e.set_process(false)
+	e.set_physics_process(false)
+	main.player_hit_enemy(e, 40.0, false, "ronce")
+	await _frames(4)
+	await _shot("interaction_impact")
+	Game.stats["crit"] = old_crit
+	_clear_enemies()
+	await _frames(40)
+	# Sanctuaire : l'invite à l'approche, puis l'anneau qui se remplit.
+	await _place_player(s.position + Vector2(-300, 90))
+	main.hud.banner_time = 0.0
+	await _frames(20)
+	await _shot("interaction_sanctuaire_approche")
+	await _place_player(s.position + Vector2(-20, 20))
+	s.progress = s.LIGHT_TIME * 0.6
+	await _frames(12)
+	await _shot("interaction_sanctuaire_anneau")
+	await _place_player(spot)
+	# Transitions : ouverture de l'arbre, puis mort et renaissance.
+	main.tree_ui.toggle()
+	await _frames(3)
+	await _shot("interaction_arbre_ouverture")
+	await _frames(30)
+	main.tree_ui.toggle()
+	await _frames(3)
+	await _shot("interaction_arbre_fermeture")
+	await _frames(30)
+	Game.xp = 20.0
+	main.player_died()
+	main.hud.banner_time = 0.0
+	await _frames(5)
+	await _shot("interaction_renaissance")
+
+
+func _place_player(pos: Vector2) -> void:
+	main.player.position = pos
+	main.player.reset_physics_interpolation()
+	main.camera.reset_smoothing()
+	await _frames(2)
 
 
 ## Objectifs : le journal et la carte en cours de tranche, la flèche vers l'objectif, puis la fin.

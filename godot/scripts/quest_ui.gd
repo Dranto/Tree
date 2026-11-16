@@ -115,6 +115,7 @@ func toggle(which: String) -> void:
 		journal.open()
 	else:
 		world_map.open()
+	_veil()
 
 
 func close() -> void:
@@ -123,6 +124,13 @@ func close() -> void:
 	(journal if current == "journal" else world_map).close()
 	current = ""
 	get_tree().paused = false
+	_veil()
+
+
+## Transition d'ouverture ou de fermeture : un voile sombre qui se dissipe vite.
+func _veil() -> void:
+	if main.get("screen_fx") != null:
+		main.screen_fx.fade(Art.c("decor"), 0.45, 0.0, main.screen_fx.FADE_PANEL)
 
 
 func _process(delta: float) -> void:

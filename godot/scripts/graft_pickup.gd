@@ -46,9 +46,13 @@ func pick_up() -> void:
 		return
 	Game.grafts_on_ground.erase(graft_id)
 	if Game.give_graft(graft_id):
-		Sfx.play("noeud", position)
+		Sfx.play("greffe", position)
 		if main != null and main.fx != null:
-			main.fx.ring(position, 10.0, 90.0, 0.5, Color("f2d06b"), 4.0)
+			# Impact : onde dorée et gerbe d'éclats qui file vers le Porte-Graine (retour).
+			main.fx.ring(position, 10.0, 90.0, 0.5, Art.c("or"), 4.0)
+			main.fx.ring(position, 4.0, 46.0, 0.3, Art.c("danger_eclair"), 3.0)
+			main.fx.pickup(position, "epine", 10, main.player.position)
+			main.fx.shake(0.12)
 	queue_free()
 
 
@@ -59,7 +63,10 @@ func _draw() -> void:
 	# Ombre au sol, qui rétrécit quand la greffe monte.
 	draw_set_transform(Vector2(0, 12), 0.0, Vector2(SCALE, SCALE * 0.35))
 	draw_circle(Vector2.ZERO, 13.0 + lift * 0.15, Color(0, 0, 0, 0.3))
-	draw_set_transform(Vector2(0, lift), 0.0, Vector2(SCALE, SCALE))
+	# Anticipation : le médaillon gonfle un instant quand le joueur approche.
+	var near := 1.0 - smoothstep(PICK, PULL, main.player.position.distance_to(position)) if main != null and main.player != null else 0.0
+	var sc := SCALE * (1.0 + 0.12 * near * (0.5 + 0.5 * sin(t * 9.0)))
+	draw_set_transform(Vector2(0, lift), 0.0, Vector2(sc, sc))
 	draw_circle(Vector2.ZERO, 24.0, Color(1.0, 0.86, 0.45, 0.10 + 0.05 * sin(t * 4.0)))
 	# Couronne d'épines qui tourne.
 	for i in 6:

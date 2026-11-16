@@ -9,6 +9,7 @@ const TREE_TO_WORLD := 2.1
 const Ground = preload("res://scripts/ground.gd")
 const Flora = preload("res://scripts/flora.gd")
 const Fx = preload("res://scripts/fx.gd")
+const ScreenFx = preload("res://scripts/screen_fx.gd")
 const Ambience = preload("res://scripts/ambience.gd")
 const Player = preload("res://scripts/player.gd")
 const Enemy = preload("res://scripts/enemy.gd")
@@ -46,6 +47,7 @@ var world_half := WORLD_HALF
 var ground
 var flora
 var fx
+var screen_fx
 var player
 var hud
 var tree_ui
@@ -181,7 +183,14 @@ func _ready() -> void:
 	# L'arbre couvre tout l'écran : le monde et le HUD ne sont plus dessinés tant qu'il est ouvert.
 	tree_ui.toggled.connect(func(open: bool):
 		visible = not open
-		hud_layer.visible = not open)
+		hud_layer.visible = not open
+		# Transition : l'écran s'ouvre depuis un voile sombre, à l'ouverture comme à la fermeture.
+		screen_fx.fade(Art.c("decor"), 0.7, 0.0, ScreenFx.FADE_PANEL))
+
+	# Effets d'écran (vignette de dégâts, transitions) : au-dessus de l'arbre, sous le menu pause.
+	screen_fx = ScreenFx.new()
+	screen_fx.main = self
+	add_child(screen_fx)
 
 	var pause_layer := CanvasLayer.new()
 	pause_layer.layer = 20
@@ -601,7 +610,10 @@ func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void
 	var crit: bool = rng.randf() < s["crit"]
 	if crit:
 		dmg *= s["crit_mult"]
+	# Les étincelles du coup prennent la couleur de son élément (charte) : racines ou épines de Ronce.
+	fx.hit_element = "racine" if root_hit_base > 0.0 else ("epine" if branch == "ronce" else "")
 	e.take_damage(dmg, crit)
+	fx.hit_element = ""
 	Sfx.play("critique" if crit else "impact", e.position)
 	if s["poison"] > 0.0:
 		e.apply_poison(dmg * s["poison"], 3.0)
@@ -769,6 +781,10 @@ func player_died() -> void:
 	if spot != null:
 		spot.inside = true   # déjà dans le cercle : pas de second message « tu renaîtras ici »
 	Sfx.play("chute")
+	# Mort puis renaissance : l'écran tombe dans le noir rougeâtre et remonte, la sève jaillit au sanctuaire.
+	screen_fx.fade(Art.c("decor").darkened(0.5), 1.0, 0.0, ScreenFx.FADE_DEATH)
+	fx.ring(player.position, 16.0, 150.0, 0.9, Art.ec("seve"), 5.0)
+	fx.pickup(player.position, "seve", 10)
 	hud.show_death({"place": spot.place if spot != null else "de la Graine", "dropped": dropped, "lost": lost, "reset": reset})
 	request_autosave()
 
@@ -845,8 +861,12 @@ func recover_sap() -> void:
 	_clear_lost_sap_flags()
 	_sync_lost_sap()
 	Game.add_xp(amount)
-	Sfx.play("noeud", at)
+	Sfx.play("seve", at)
+	# La sève revient à lui : onde, gerbe qui file vers le joueur et éclat doré sur les bords.
 	fx.ring(at, 10.0, 120.0, 0.6, Color("e8d36b"), 5.0)
+	fx.ring(at, 4.0, 60.0, 0.35, Art.c("danger_eclair"), 3.0)
+	fx.pickup(at, "seve", 16, player.position)
+	screen_fx.glow(Art.c("or"), 0.25, 0.8)
 	hud.banner("Sève reprise : %d d'expérience." % roundi(amount))
 	request_autosave()
 
@@ -871,7 +891,8 @@ func revive(world_pos: Vector2, radius: float, tint: Color, strength := 0.9) -> 
 
 
 func _on_level_up(lvl: int) -> void:
-	fx.ring(player.position, 20.0, 160.0, 0.6, Color("f0e6b4"), 5.0)
+	fx.ring(player.position, 20.0, 160.0, 0.6, Art.c("or"), 5.0)
+	fx.pickup(player.position, "seve", 12)
 	hud.banner("Niveau %d : un point à placer dans l'Arbre de vie (Tab)" % lvl)
 	request_autosave()
 	player.heal(Game.stats["max_hp"] * 0.25)
