@@ -22,6 +22,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `builds.json` | Builds types joués par le robot d'équilibrage (`tools/balance.sh`). |
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
 | `difficulty.json` | Difficulté (`scripts/difficulty.gd`) : menace des ennemis (`threat` : par niveau, selon la profondeur dans la région, par Cœur purifié, plafond), effet de la menace sur leurs statistiques (`scaling`), courbe d'expérience et durée visée par niveau (`xp`), apparitions (`spawn` : cadence, plafond d'ennemis et salves près de la graine et au fond de la région), modes Facile / Normal / Difficile (`modes`). Vérifiée par `check_data.gd` ; le rythme se mesure avec `tools/balance.sh --run`. |
+| `objectives.json` | Les objectifs de la tranche : principaux (dans l'ordre), facultatifs, drapeau de fin. Voir « Objectifs ». |
 | `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest` et ses réglages, `region`, `resist` par branche) et apparitions par région (`spawn` : sortes et poids, part près/loin de la graine, nombre de nids, effet de la purification du Cœur). Les trois premières sortes sont les Flétris d'origine. |
 
 ## Les effets
@@ -178,6 +179,24 @@ Chaque palier donne ses effets dès que `count` nœuds de la branche sont appris
 ## Greffes
 
 `grafts.json` : `{"<id>": {"name": "...", "desc": "...", "effects": [...]}}`. Il n'y a pas encore de greffes à trouver dans le monde ; `greffe_test` sert aux tests.
+
+## Objectifs
+
+`objectives.json` : `{"ending_flag": "...", "objectives": [...]}`. Chaque objectif a un `id`, un `title`, un `text`, `"main": true` pour la suite principale (ordre du fichier), une `condition`, éventuellement une `target` (cible de la flèche et de la carte) et une `reward` (`text` affiché, `points` donnés une seule fois). Un objectif est accompli dès que sa condition est vraie, dans n'importe quel ordre ; l'objectif en cours est le premier principal qui ne l'est pas.
+
+| `condition.type` | Vrai quand |
+| --- | --- |
+| `nodes` (`count`) | au moins `count` nœuds sont appris (la graine ne compte pas) |
+| `flag` (`flag`) | `Game.flags[flag]` est vrai |
+| `flag_count` (`prefix`, `count`, `exclude`) | au moins `count` drapeaux vrais commencent par `prefix` (sauf ceux de `exclude`) |
+| `counter` (`flag`, `count`) | `Game.flags[flag]` vaut au moins `count` |
+| `keystone` (`branch`) | un nœud clé de la branche est appris |
+
+`target.type` : `none`, `seed`, `heart`, `arena`, ou `group` (le plus proche des nœuds du groupe `group` dont le drapeau `<done_prefix><id>` n'est pas levé). `needs_group` masque l'objectif tant que le groupe est vide (le monde n'a pas encore de sanctuaire ou d'autel).
+
+**Ce que les autres systèmes doivent poser** : `sanctuaire_<id>` à la ravivation d'un sanctuaire (le sanctuaire de la graine s'appelle `sanctuaire_graine` et ne compte pas), `autel_<id>` à la découverte d'un autel, `secret_<id>` pour un secret, `ronce_coeur_purifie` et `ronce_boss_vaincu` (déjà posés). Les sanctuaires et les autels se rangent dans les groupes `sanctuaire` et `autel` (nœuds Node2D avec une propriété `id`) pour que la carte et la flèche les trouvent. Un élite vaincu émet `main.elite_killed(enemy)` : `Objectives` le compte dans `elites_tuees`. Les points des objectifs facultatifs passent par `Game.grant_points(n, "quete")` quand il existe.
+
+La fin de la tranche se déclenche cinq secondes après `ending_flag` ; elle pose `fin_ronce_vue` et ne revient plus. `tools/godot.sh --headless -s res://scripts/check_data.gd` contrôle le fichier.
 
 ## Ajouter du contenu
 

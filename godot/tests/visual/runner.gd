@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Content = preload("res://scripts/content.gd")
@@ -85,6 +85,8 @@ func _ready() -> void:
 			await _scenario_boss()
 		"roncier":
 			await _scenario_roncier()
+		"quetes":
+			await _scenario_quetes()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -484,6 +486,81 @@ func _scenario_roncier() -> void:
 	main.player.reset_physics_interpolation()
 	await _frames(40)
 	await _shot("roncier_purifie")
+
+
+## Objectifs : le journal et la carte en cours de tranche, la flèche vers l'objectif, puis la fin.
+## Le jeu est figé (ni robot ni Flétris) et la partie est mise en scène par appels directs.
+## Journal, carte et fin sont capturés à chaque résolution ; la flèche et le monde qui reverdit
+## seulement en 1920x1080 (le suivi et la flèche font déjà partie des captures « jeu_ » de « resolution »).
+func _scenario_quetes() -> void:
+	var tag := _res_tag()
+	var q = main.quest_ui
+	main.autotest = false
+	main.spawn_timer = 1.0e9
+	main.player.set_physics_process(false)
+	main.hud.hint_time = 0.0
+	var fake := load("res://tests/objectives_fake.gd")
+	var ronce: Vector2 = main.region_center("ronce")
+	for e in [["sanctuaire", "ronce_1", ronce * 0.45], ["sanctuaire", "ronce_2", ronce * 0.8 + Vector2(260, -180)],
+			["autel", "ronce_a", ronce * 0.6 + Vector2(-320, 240)], ["autel", "ronce_b", ronce * 0.9 + Vector2(-380, -300)],
+			["autel", "ronce_c", ronce * 0.3 + Vector2(420, 380)]]:
+		var n = fake.new()
+		n.id = e[1]
+		n.position = e[2]
+		n.add_to_group(e[0])
+		main.add_child(n)
+	# Une partie déjà bien entamée : terre ravivée jusqu'au premier sanctuaire, un autel trouvé.
+	Game.points = 4
+	var neighbors: Array = Game.tree.nodes[0]["neighbors"].duplicate()
+	neighbors.sort()
+	Game.allocate(neighbors[0])
+	main.ground.paint(ronce * 0.45, 330.0, 1.0)
+	main.ground.paint(ronce * 0.6 + Vector2(-320, 240), 200.0, 1.0)
+	Game.flags["sanctuaire_graine"] = true
+	Game.flags["sanctuaire_ronce_1"] = true
+	Game.flags["autel_ronce_a"] = true
+	Game.flags[Objectives.ELITES] = 2
+	Game.level = 14
+	Game.kills = 312
+	Game.flags[Objectives.STAT_DEATHS] = 3
+	main.elapsed = 4380.0
+	main.player.position = ronce * 0.45 + Vector2(40, 60)
+	main.player.reset_physics_interpolation()
+	for c in main.player.get_children():
+		if c is Camera2D:
+			c.reset_smoothing()
+	await _frames(30)
+	Objectives.check()
+	Objectives.main = main
+
+	q.toggle("journal")
+	await _frames(3)
+	UiAudit.begin("journal")
+	UiAudit.scan_controls("journal", q.journal)
+	await _shot("journal_" + tag, "journal")
+	q.toggle("carte")
+	await _frames(3)
+	await _shot("carte_" + tag, "carte")
+	q.close()
+	await _frames(2)
+
+	if tag == "1920x1080":
+		# Le Cœur est l'objectif : il est loin, la flèche borde l'écran.
+		Objectives.complete("noeud_cle", true)
+		await _frames(30)
+		await _shot("jeu_objectif", "jeu")
+
+	Game.flags["ronce_coeur_purifie"] = true
+	Game.flags["ronce_boss_vaincu"] = true
+	Objectives.check()
+	q.start_ending()
+	if tag == "1920x1080":
+		q.ending.set_time(6.0)
+		await _frames(2)
+		await _shot("fin_arbre", "fin")
+	q.ending.set_time(10.0)
+	await _frames(2)
+	await _shot("fin_" + tag, "fin")
 
 
 # --- Outils ---

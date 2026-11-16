@@ -17,6 +17,7 @@ Flow="*res://scripts/flow.gd"
 UiAudit="*res://scripts/ui_audit.gd"
 Sfx="*res://scripts/sfx.gd"
 Music="*res://scripts/music.gd"
+Objectives="*res://scripts/objectives.gd"
 
 [display]
 

@@ -37,6 +37,8 @@ func _init() -> void:
 	errors.append_array(load("res://scripts/enemy.gd").validate_kinds())
 	# Menace, apparitions, courbe d'expérience et modes de difficulté (data/difficulty.json).
 	errors.append_array(load("res://scripts/difficulty.gd").validate())
+	# Objectifs de la tranche (data/objectives.json).
+	errors.append_array(load("res://scripts/objective_check.gd").validate())
 	if errors.is_empty():
 		_check_tree()
 		_check_engine()

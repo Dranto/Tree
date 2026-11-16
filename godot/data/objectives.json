@@ -1,0 +1,74 @@
+{
+  "region": "ronce",
+  "ending_flag": "ronce_boss_vaincu",
+  "objectives": [
+    {
+      "id": "premier_noeud", "main": true,
+      "title": "Faire germer ton premier nœud",
+      "text": "Ouvre l'Arbre de vie et dépense ton premier point : la terre autour de toi se ravive.",
+      "condition": {"type": "nodes", "count": 1},
+      "target": {"type": "none"}
+    },
+    {
+      "id": "sanctuaire", "main": true,
+      "title": "Raviver un sanctuaire",
+      "text": "Tiens-toi quelques secondes dans un sanctuaire du roncier : tu y renaîtras si tu tombes.",
+      "condition": {"type": "flag_count", "prefix": "sanctuaire_", "exclude": ["sanctuaire_graine"], "count": 1},
+      "target": {"type": "group", "group": "sanctuaire", "done_prefix": "sanctuaire_"},
+      "needs_group": "sanctuaire"
+    },
+    {
+      "id": "autel", "main": true,
+      "title": "Trouver un autel caché",
+      "text": "Des autels dorment dans le roncier. Chacun offre un point d'arbre à qui les découvre.",
+      "condition": {"type": "flag_count", "prefix": "autel_", "count": 1},
+      "target": {"type": "group", "group": "autel", "done_prefix": "autel_"},
+      "needs_group": "autel"
+    },
+    {
+      "id": "noeud_cle", "main": true,
+      "title": "Apprendre un nœud clé de Ronce",
+      "text": "Suis la branche rouge de l'Arbre jusqu'à un nœud clé : il change ta façon de te battre.",
+      "condition": {"type": "keystone", "branch": "ronce"},
+      "target": {"type": "none"}
+    },
+    {
+      "id": "coeur", "main": true,
+      "title": "Purifier le Cœur de flétrissure",
+      "text": "Au fond du roncier, tiens la zone du Cœur pendant que les vagues de Flétris déferlent.",
+      "condition": {"type": "flag", "flag": "ronce_coeur_purifie"},
+      "target": {"type": "heart"}
+    },
+    {
+      "id": "boss", "main": true,
+      "title": "Vaincre la Mère-Ronce",
+      "text": "L'arène s'est ouverte au-delà du Cœur. Entre, et libère le roncier.",
+      "condition": {"type": "flag", "flag": "ronce_boss_vaincu"},
+      "target": {"type": "arena"},
+      "reward": {"text": "3 points d'arbre et la fin de la tranche"}
+    },
+    {
+      "id": "elites", "main": false,
+      "title": "Vaincre trois élites",
+      "text": "Certains Flétris portent un liseré : ils sont plus coriaces, mais laissent un butin rare.",
+      "condition": {"type": "counter", "flag": "elites_tuees", "count": 3},
+      "reward": {"text": "1 point d'arbre", "points": 1}
+    },
+    {
+      "id": "autels", "main": false,
+      "title": "Réveiller tous les autels",
+      "text": "Retrouve chacun des autels cachés dans la région de Ronce.",
+      "condition": {"type": "flag_count", "prefix": "autel_", "count": 4},
+      "target": {"type": "group", "group": "autel", "done_prefix": "autel_"},
+      "needs_group": "autel",
+      "reward": {"text": "1 point d'arbre", "points": 1}
+    },
+    {
+      "id": "secret", "main": false,
+      "title": "Découvrir le secret du roncier",
+      "text": "Quelque chose est enfoui là où personne ne regarde. Explore les recoins de la région.",
+      "condition": {"type": "flag_count", "prefix": "secret_", "count": 1},
+      "reward": {"text": "1 point d'arbre", "points": 1}
+    }
+  ]
+}

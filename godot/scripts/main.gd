@@ -25,6 +25,7 @@ const Regions = preload("res://scripts/regions.gd")
 const Content = preload("res://scripts/content.gd")
 ## Menace des ennemis, apparitions et choix de difficulté : res://data/difficulty.json.
 const Difficulty = preload("res://scripts/difficulty.gd")
+const QuestUi = preload("res://scripts/quest_ui.gd")
 
 ## Apparitions par région (sortes du roncier, part selon la distance) : res://data/enemies.json.
 var region_spawn: Dictionary = Content._load("enemies").get("spawn", {})
@@ -40,6 +41,8 @@ var player
 var hud
 var tree_ui
 var pause_menu
+## Objectifs : suivi à l'écran, journal (J), carte (M) et fin de la tranche (quest_ui.gd).
+var quest_ui
 var orbs_layer: Node2D
 var enemies_layer: Node2D
 var projectiles_layer: Node2D
@@ -206,6 +209,10 @@ func _ready() -> void:
 		player.reset_physics_interpolation()
 		cam.reset_smoothing()
 	Flow.continue_requested = false
+	# Après la reprise de la partie : le premier contrôle des objectifs rattrape l'état sans annonce.
+	quest_ui = QuestUi.new()
+	quest_ui.main = self
+	add_child(quest_ui)
 	Game.tree_changed.connect(request_autosave)
 	if autotest_boss:
 		arena.autotest_begin()
