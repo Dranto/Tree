@@ -374,8 +374,8 @@ func take_hit(amount: float, source) -> void:
 			main.player_died()
 
 
-func respawn() -> void:
-	position = Vector2.ZERO
+func respawn(at := Vector2.ZERO) -> void:
+	position = at
 	hp = Game.stats["max_hp"]
 	invuln = 2.0
 

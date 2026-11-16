@@ -39,6 +39,15 @@ Rien n'est enregistré : tous les sons sont **calculés par le code** (`godot/sc
 - **Options** : volume général, musique et effets (bus `Musique` et `Effets`, créés au démarrage).
 - **En test** : sans écran, dans le banc visuel (graine fixe) ou avec `-- --silent`, plus rien n'est joué.
 
+### Mort et sanctuaires
+
+Mourir ne fait jamais perdre l'arbre : les points et les nœuds appris restent. Le Porte-Graine renaît au **dernier sanctuaire** ravivé ou visité, avec toute sa vie, et son **expérience non dépensée reste au sol** là où il est tombé, sous forme de sève perdue (une flèche au bord de l'écran la montre). La toucher rend toute l'expérience ; mourir une seconde fois avant de la reprendre la perd pour de bon. Un court écran de mort dit ce qui est perdu et où le reprendre.
+
+- **Sanctuaires** (`godot/scripts/sanctuary.gd`) : celui de la Graine, ravivé dès le départ, et quatre dans le roncier (Lisière, Ravin, Veille, Épine). On en ravive un en restant trois secondes dans son cercle de pierres ; il devient le point de renaissance et rend toute la vie. Revenir dans un sanctuaire déjà ravivé en refait le point de renaissance et rend aussi toute la vie.
+- **Combats remis à zéro** : mourir pendant le siège du Cœur de flétrissure le rendort (siège à recommencer) ; mourir face à la Mère-Ronce la rendort avec toute sa vie.
+- Tout tient dans `Game.flags` : `sanctuaire_<id>`, `renaissance` (sanctuaire courant), `seve_perdue`, `seve_perdue_x`, `seve_perdue_y`.
+- Le robot d'équilibrage n'est pas concerné : il renaît sur place, sans rien perdre.
+
 ### Sauvegarde
 
 Le jeu s'ouvre sur l'écran titre : **Continuer** reprend la partie sauvegardée, **Nouvelle partie** repart de zéro (la sauvegarde précédente est remplacée dès la première sauvegarde automatique, l'avant-dernière reste en `.bak`). La partie se sauvegarde toute seule : montée de niveau, nœud appris ou oublié, toutes les 60 s, en revenant au titre et en quittant.
@@ -64,6 +73,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --xvfb -- --autotest=boss` : le robot est posé dans l'arène de la Mère-Ronce avec un build de test (niveau 12, points placés dans Ronce) et joue le combat. Le test réussit si le combat se termine, par une victoire ou une défaite, en moins de 3 minutes ; captures de chaque phase dans `godot/autotest/`. Avec `--headless --fixed-fps 60` à la place de `--xvfb`, le combat se joue en quelques secondes, sans captures.
 - `tools/godot.sh --headless --fixed-fps 60 -s res://tests/boss_test.gd` : teste le Cœur de flétrissure et la Mère-Ronce (siège et purification, ouverture de l'arène, phases, mort du joueur, victoire, drapeaux sauvegardés).
 - `tools/godot.sh --headless --fixed-fps 60 -s res://tests/objectives_test.gd` : teste les objectifs (suite principale, facultatifs et leur point, flèche, journal et carte, fin déclenchée une seule fois, sauvegarde aller-retour).
+- `tools/godot.sh --headless --fixed-fps 60 -s res://tests/death_test.gd` : teste la mort et les sanctuaires (sanctuaire ravivé, renaissance, sève laissée au sol, sauvegarde entre la mort et le ramassage, sève reprise ou perdue, siège du Cœur remis à zéro, robot inchangé).
 - `tools/godot.sh --headless -s res://tests/region_test.gd` : teste la région du roncier (géométrie, résistance aux dégâts de Ronce, buissons d'épines, vague de vie, apparitions, comportements du Tireur, du Chargeur et du Nid).
 - `tools/balance.sh` : équilibrage. Le robot joue les builds types de Ronce (`godot/data/builds.json` : épines, fouet, saignement) au niveau 20, sur plusieurs graines, sans affichage et en parallèle (moins de 2 minutes), et compare les ennemis vaincus par minute ; échec si l'écart dépasse 30 %. Un seul build : `tools/godot.sh --headless --fixed-fps 60 -- --autotest=build:fouet`.
 - `tools/balance.sh --run` : partie complète. Le robot part du niveau 1 avec chaque build, apprend ses nœuds au fil des niveaux, s'enfonce dans le roncier à mesure qu'il progresse (il assiège le Cœur au niveau 15), esquive les épines tirées et les charges, se replie quand sa vie baisse, et note chaque minute son niveau, la menace des ennemis, le temps pour tuer un Flétri, les dégâts reçus et ses morts (journaux dans `godot/autotest/balance-run/`, environ 20 minutes par graine). Échec si un niveau prend plus de deux fois la durée visée, si un build meurt plus de trois fois avant le niveau 20, ou si les builds atteignent le niveau 20 avec plus de 30 % d’écart. Un seul build : `tools/godot.sh --headless --fixed-fps 60 -- --autotest=run:fouet` (`--run-freeze --build-level=12` : niveau figé, pour mesurer l'expérience gagnée par minute à ce niveau).
@@ -84,7 +94,7 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 | `competences` | `competences` : racines, fouet et volée d'épines de Ronce en action, barre de compétences (4 emplacements pleins, 2 verrouillés) |
 | `boss` | Le Cœur de flétrissure (`coeur_fletri`, `coeur_siege`, `coeur_purifie`), l'arène (`arene_ouverte`, `boss_vaincu`) et la Mère-Ronce dans chaque phase et chaque attaque annoncée (`boss_volee`, `boss_racines`, `boss_fouets`, `boss_fouets_frappe`, `boss_invocation`, `boss_phase3`) |
 | `galerie` | `galerie_ennemis_fx` (3 ennemis × 6 états dont saignant et enraciné, ondes, textes flottants, nuage), `galerie_roncier` (4 ennemis du roncier × 4 états dont l'attaque annoncée, épine tirée, ronces et buissons morts et vivants), `galerie_noeuds` (nœud verrouillé, disponible, appris, survolé, clé, notable), `galerie_types` (compétence, mutation, maîtrise, nœud flétri, greffe, avant et après), `arbre_grappe` (grappe et infobulle d'une maîtrise) et `arbre_choix` (fenêtre de choix d'une mutation) |
-| `roncier` | `roncier_mort`, `roncier_vague_1` à `_3` (la vague de vie avance), `roncier_ravive`, `roncier_purifie` (drapeau `ronce_coeur_purifie`) |
+| `roncier` | `roncier_mort`, `roncier_vague_1` à `_3` (la vague de vie avance), `roncier_ravive`, `roncier_purifie` (drapeau `ronce_coeur_purifie`), puis `sanctuaire_reprise` (sanctuaire à moitié ravivé), `sanctuaire_ravive`, `mort_ecran` (écran de mort et flèche vers la sève) et `seve_perdue` |
 | `resolution` | `jeu_`, `arbre_` et `titre_` en 1280x720, 1920x1080, 2560x1440 et 3440x1440 (un processus par résolution) |
 | `quetes` | Le journal (`journal_`), la carte (`carte_`) et la fin de la tranche (`fin_`) en 1280x720, 1920x1080, 2560x1440 et 3440x1440 ; en 1920x1080 aussi `jeu_objectif` (suivi et flèche vers le Cœur) et `fin_arbre` (l'Arbre en train de fleurir) |
 

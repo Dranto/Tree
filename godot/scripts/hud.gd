@@ -4,6 +4,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const Content = preload("res://scripts/content.gd")
+const DeathScreen = preload("res://scripts/death_screen.gd")
 
 ## Part du monde qu'il est possible de raviver (disque de l'arbre sur la carte carrée).
 const REVIVABLE := 0.67
@@ -27,6 +28,8 @@ var _xp_bar: ProgressBar
 var _banner: Label
 var _hint_box: VBoxContainer
 var _slots: Array = []
+## Écran de mort et flèche vers la sève perdue (death_screen.gd).
+var death_screen
 
 
 ## Un emplacement de compétence : aplat de couleur, voile de recharge, touche et nom.
@@ -103,6 +106,9 @@ func _ready() -> void:
 	_build_bottom_left()
 	_build_bottom_center()
 	_build_banner()
+	death_screen = DeathScreen.new()
+	death_screen.main = main
+	add_child(death_screen)
 	Settings.changed.connect(func(): _labels.clear())
 	_refresh()
 
@@ -110,6 +116,11 @@ func _ready() -> void:
 func banner(s: String) -> void:
 	banner_text = s
 	banner_time = 3.0
+
+
+## Écran de mort (voir death_screen.gd et main.player_died).
+func show_death(info: Dictionary) -> void:
+	death_screen.show_death(info)
 
 
 ## Nom de la touche selon la disposition du clavier du joueur (Z sur AZERTY pour « avancer »).

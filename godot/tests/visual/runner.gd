@@ -486,6 +486,38 @@ func _scenario_roncier() -> void:
 	main.player.reset_physics_interpolation()
 	await _frames(40)
 	await _shot("roncier_purifie")
+	await _death_shots()
+
+
+## Sanctuaire de la Lisière à moitié ravivé puis ravivé, et l'écran de mort : renaissance au
+## sanctuaire, sève perdue au loin (flèche au bord de l'écran).
+func _death_shots() -> void:
+	var s = main.sanctuary("lisiere")
+	s.frozen = true
+	s.progress = s.LIGHT_TIME * 0.55
+	main.player.position = s.position + Vector2(-130, 50)
+	main.player.aim = Vector2.RIGHT
+	main.player.reset_physics_interpolation()
+	main.camera.reset_smoothing()
+	main.hud.banner_time = 0.0
+	await _frames(20)
+	await _shot("sanctuaire_reprise", "jeu")
+	s.light()
+	await _frames(100)
+	await _shot("sanctuaire_ravive", "jeu")
+	main.hud.banner_time = 0.0
+	Game.xp = 37.0
+	main.player.position = s.position + Vector2(-1100, -300)
+	main.player_died()
+	main.hud.banner_time = 0.0
+	await _frames(30)
+	await _shot("mort_ecran", "jeu")
+	# La sève perdue, là où le joueur est tombé.
+	main.player.position = main.lost_sap.position + Vector2(-160, 40)
+	main.player.reset_physics_interpolation()
+	main.camera.reset_smoothing()
+	await _frames(int(main.hud.death_screen.time_left * 60.0) + 10)
+	await _shot("seve_perdue", "jeu")
 
 
 ## Objectifs : le journal et la carte en cours de tranche, la flèche vers l'objectif, puis la fin.
