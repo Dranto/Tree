@@ -8,8 +8,6 @@ extends Node2D
 
 ## Distance à laquelle le joueur la ramasse (pas d'aimant : il faut aller la chercher).
 const PICK := 34.0
-const COLOR := Color("e8d36b")   ## or doux : la sève perdue est rare et précieuse (Art.c("or"), un ton plus clair)
-const CORE := Color("b6f28a")
 
 var main
 var amount := 0.0
@@ -27,23 +25,30 @@ func _physics_process(_delta: float) -> void:
 		main.recover_sap()
 
 
+## Une goutte de sève en volume qui flotte, son halo, une colonne de lumière qui se voit de loin
+## et des éclats qui tournent autour (charte : la sève est le vert lumineux de la vie).
 func _draw() -> void:
+	var seve := Art.ec("seve")
+	var clair := Art.ec("seve", "clair")
 	var pulse := 0.5 + 0.5 * sin(t * 3.0)
-	# Halo et colonne de lumière qui se voit de loin.
-	draw_circle(Vector2.ZERO, 40.0 + 6.0 * pulse, Color(COLOR, 0.10))
-	draw_circle(Vector2.ZERO, 24.0, Color(COLOR, 0.16 + 0.08 * pulse))
-	draw_rect(Rect2(-3, -70, 6, 70), Color(COLOR, 0.18 + 0.1 * pulse))
-	draw_rect(Rect2(-1.5, -110, 3, 110), Color(COLOR, 0.12))
-	# Goutte de sève.
+	var bob := Vector2(0, -8.0 - 3.0 * sin(t * 2.0))
+	Art.shadow(self, Vector2(0, 2), 10.0 * (1.0 - 0.1 * sin(t * 2.0)))
+	# Colonne de lumière : elle s'efface vers le haut.
+	for j in 5:
+		var al := (0.2 + 0.08 * pulse) * (1.0 - j / 5.0)
+		draw_rect(Rect2(-6.0, -24.0 - (j + 1) * 22.0, 12.0, 22.0), Color(seve, al * 0.5))
+		draw_rect(Rect2(-2.0, -24.0 - (j + 1) * 22.0, 4.0, 22.0), Color(clair, al))
+	Art.glow(self, bob, 36.0 + 6.0 * pulse, "seve")
+	# Goutte : rond en bas, pointe en haut.
 	var drop := PackedVector2Array()
-	for i in 18:
-		var a := TAU * i / 18.0
-		var r := 10.0 * (1.0 + 0.55 * maxf(0.0, -sin(a)))
-		drop.append(Vector2(cos(a) * 10.0 * (1.0 - 0.35 * maxf(0.0, -sin(a))), sin(a) * r) + Vector2(0, -6 - 2.0 * pulse))
-	draw_colored_polygon(drop, COLOR)
-	draw_circle(Vector2(-3, -8 - 2.0 * pulse), 3.0, Color(1, 1, 0.9, 0.8))
-	# Éclats qui tournent autour.
+	for i in 20:
+		var a := TAU * i / 20.0
+		var up := maxf(0.0, -sin(a))
+		drop.append(bob + Vector2(cos(a) * 10.0 * (1.0 - 0.45 * up * up), sin(a) * 10.0 * (1.0 + 0.7 * up)))
+	Art.volume(self, drop, seve, 1.0)
+	Art.outline(self, drop, Art.ec("seve", "sombre"), Art.TRAIT)
+	# Éclats qui tournent autour, devant puis derrière.
 	for i in 5:
 		var a := t * 1.6 + TAU * i / 5.0
-		var p := Vector2(cos(a) * 26.0, sin(a) * 10.0 - 6.0)
-		draw_circle(p, 2.5, Color(CORE, 0.8))
+		var p := bob + Vector2(cos(a) * 24.0, sin(a) * 9.0)
+		draw_circle(p, 2.0 + 0.8 * sin(a), Color(clair, 0.55 + 0.4 * sin(a)))

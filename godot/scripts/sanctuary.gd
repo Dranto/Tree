@@ -23,8 +23,6 @@ const DECAY := 1.0
 ## Rayon de la vague de vie lancée quand le sanctuaire est ravivé.
 const LIFE_RADIUS := 170.0
 const STONES := 7
-const LIT_COLOR := Color("b6f28a")
-const EMBER := Color("c8734a")
 
 ## Emplacements : « dist » depuis la graine et « angle » (radians) par rapport à l'axe de la région.
 ## Ils restent hors de la zone du Cœur et de l'arène, et sont écartés des buissons d'épines.
@@ -115,10 +113,10 @@ func light() -> void:
 	inside = true
 	flash = 1.0
 	Sfx.play("floraison", position)
-	main.fx.ring(position, 12.0, RADIUS * 2.4, 0.8, Color(LIT_COLOR, 0.9), 5.0)
+	main.fx.ring(position, 12.0, RADIUS * 2.4, 0.8, Color(Art.ec("seve"), 0.9), 5.0)
 	main.fx.pickup(position, "seve", 14, main.player.position)
-	main.screen_fx.glow(Color(LIT_COLOR), 0.3, 1.0)
-	main.revive(position, LIFE_RADIUS, LIT_COLOR)
+	main.screen_fx.glow(Art.ec("seve"), 0.3, 1.0)
+	main.revive(position, LIFE_RADIUS, Art.ec("seve"))
 	rest(true)
 
 
@@ -137,57 +135,184 @@ func rest(just_lit: bool) -> void:
 	main.request_autosave()
 
 
+## Calque de dessin : appelle une fonction du sanctuaire avec lui-même comme toile.
+## Les pierres ne sont redessinées que quand l'avancée change ; seule la flamme s'anime à chaque image.
+class Layer extends Node2D:
+	var fn: Callable
+
+	func _draw() -> void:
+		fn.call(self)
+
+
+var _stones_layer: Layer
+var _flame_layer: Layer
+## Avancée (en soixantièmes) au dernier dessin des pierres.
+var _stones_key := -1
+
+
+func _ready() -> void:
+	_stones_layer = Layer.new()
+	_stones_layer.fn = _draw_stones
+	_stones_layer.show_behind_parent = true
+	add_child(_stones_layer)
+	_flame_layer = Layer.new()
+	_flame_layer.fn = _draw_center
+	add_child(_flame_layer)
+
+
+func _k() -> float:
+	return 1.0 if is_lit() else clampf(progress / LIGHT_TIME, 0.0, 1.0)
+
+
+## Dessin (charte : un cercle de pierres claires, ce qui s'utilise est clair et chaud).
+## Trois états lisibles sans texte :
+## - éteint : pierres ternes, runes mortes, une braise sombre au centre ;
+## - en cours : l'anneau d'or se remplit et les runes s'allument une à une ;
+## - ravivé : pierres claires aux runes de sève, lueur, étincelles et colonne de lumière qu'on voit de loin.
+## La dalle, l'anneau et les pierres ne changent qu'avec l'avancée : ils sont sur un calque redessiné
+## à ce moment-là. Le centre (flamme, runes qui palpitent) est sur un calque animé. Ici : ce qui tourne
+## ou passe (tirets de l'anneau éteint, onde du ravivement), au-dessus des pierres.
 func _draw() -> void:
 	var lit := is_lit()
-	var k := clampf(progress / LIGHT_TIME, 0.0, 1.0)
-	# Dalle de terre battue et cercle tracé au sol.
-	draw_circle(Vector2.ZERO, RADIUS + 10.0, Color(0.1, 0.09, 0.07, 0.35))
-	var line := Color(0.55, 0.5, 0.42, 0.45).lerp(Color(LIT_COLOR, 0.55), 1.0 if lit else k * 0.6)
-	draw_arc(Vector2.ZERO, RADIUS, 0.0, TAU, 48, line, 2.0)
-	if lit:
-		var glow := 0.12 + 0.05 * sin(t * 2.2) + 0.35 * flash
-		draw_circle(Vector2.ZERO, RADIUS * 0.9, Color(LIT_COLOR, glow * 0.5))
-		draw_circle(Vector2.ZERO, RADIUS * 0.45, Color(LIT_COLOR, glow))
-	else:
-		# Invite commune (prompt.gd) : le cercle respire à l'approche, puis l'anneau se remplit.
-		var dist: float = main.player.position.distance_to(position)
-		Prompt.draw(self, RADIUS, k, t, Prompt.nearness(dist, RADIUS), LIT_COLOR)
-	# Pierres dressées, mousse verte une fois ravivé.
+	var k := _k()
+	var key := int(k * 60.0) + (100 if lit else 0)
+	if key != _stones_key and _stones_layer != null:
+		_stones_key = key
+		_stones_layer.queue_redraw()
+	if _flame_layer != null:
+		_flame_layer.queue_redraw()
+	var or_ := Art.c("butin")
+	var ring_r := RADIUS + 12.0
+	if not lit and k <= 0.0:
+		# Éteint : l'anneau d'or est à peine esquissé, en tirets qui tournent, pour inviter à entrer.
+		for i in 16:
+			var a0 := TAU * i / 16.0 + t * 0.15
+			draw_arc(Vector2.ZERO, ring_r, a0, a0 + TAU / 16.0 * 0.45, 4, Color(or_, 0.28 + 0.12 * sin(t * 2.0)), Art.TRAIT)
+		# Invite commune (prompt.gd) : le cercle respire et un chevron indique où se tenir.
+		if main != null and main.get("player") != null:
+			var dist: float = main.player.position.distance_to(position)
+			Prompt.draw(self, RADIUS, 0.0, t, Prompt.nearness(dist, RADIUS))
+	if flash > 0.0:
+		var u := 1.0 - flash
+		draw_arc(Vector2.ZERO, ring_r + 70.0 * Anim.ease_out(u), 0.0, TAU, 64, Color(Art.ec("seve", "clair"), flash), Art.TRAIT_FORT * flash + 1.0, true)
+
+
+## Dalle, anneau de progression, pierres et socle : redessinés seulement quand l'avancée change.
+func _draw_plate(ci: CanvasItem, lit: bool, k: float) -> void:
+	var pierre := Art.c("interactif")
+	var or_ := Art.c("butin")
+	# Dalle : un disque de terre battue, un anneau de pavés et un cercle gravé.
+	ci.draw_circle(Vector2.ZERO, RADIUS + 16.0, Color(Art.c("contour"), 0.28))
+	ci.draw_circle(Vector2.ZERO, RADIUS + 8.0, Color(Art.c("decor_vivant") if lit else Art.c("decor"), 0.35))
+	ci.draw_arc(Vector2.ZERO, RADIUS * 0.82, 0.0, TAU, 48, Color(pierre.darkened(0.55), 0.55), 9.0)
+	ci.draw_arc(Vector2.ZERO, RADIUS * 0.82, 0.0, TAU, 48, Color(pierre, 0.10 + 0.12 * k), 1.5)
+	ci.draw_arc(Vector2.ZERO, RADIUS * 0.42, 0.0, TAU, 32, Color(pierre, 0.12 + 0.2 * k), Art.TRAIT_FIN)
+	# Anneau de progression : fond sombre, or qui se remplit, tête brillante ; plein une fois ravivé.
+	var ring_r := RADIUS + 12.0
+	ci.draw_arc(Vector2.ZERO, ring_r, 0.0, TAU, 64, Color(Art.c("contour"), 0.45), Art.TRAIT_FORT, true)
+	if k > 0.0:
+		var col := or_ if not lit else or_.lerp(Art.ec("seve", "clair"), 0.3)
+		ci.draw_arc(Vector2.ZERO, ring_r, -PI / 2.0, -PI / 2.0 + TAU * k, 64, col, Art.TRAIT_FORT, true)
+		if not lit:
+			var head := Vector2.from_angle(-PI / 2.0 + TAU * k) * ring_r
+			ci.draw_circle(head, 5.0, Color(or_, 0.35))
+			ci.draw_circle(head, 3.0, or_.lightened(0.45))
+
+
+## Pierres dressées : stèles gravées, en volume ; chacune s'allume quand l'avancée la dépasse.
+## Socle central. Redessiné seulement quand l'avancée change.
+func _draw_stones(ci: CanvasItem) -> void:
+	var lit := is_lit()
+	var k := _k()
+	_draw_plate(ci, lit, k)
+	var seve := Art.ec("seve")
+	var pierre := Art.c("interactif")
 	for i in STONES:
 		var s: Array = _stones[i]
-		var a: float = TAU * i / STONES + s[0] - PI / 2.0
-		var c := Vector2.from_angle(a) * (RADIUS - 6.0)
-		var h: float = 15.0 * s[1]
-		var w := 6.5
-		var stone := Color("4a4640").lerp(Color("5d6a50"), 1.0 if lit else k * 0.5)
-		var tilt: float = s[2] * 3.0
-		var pts := PackedVector2Array([
-			c + Vector2(-w, 3), c + Vector2(w, 3), c + Vector2(w * 0.7 + tilt, -h), c + Vector2(tilt, -h - 4.0), c + Vector2(-w * 0.8 + tilt, -h + 1.0)])
-		draw_colored_polygon(pts, stone)
-		draw_polyline(PackedVector2Array([pts[4], pts[3], pts[2]]), stone.lightened(0.25), 1.5)
-		if lit:
-			draw_circle(c + Vector2(tilt * 0.5 - 2.0, -h * 0.4), 3.0, Color("7fb35e"))
-	# Vasque de pierre au centre.
-	draw_circle(Vector2(0, 2), 13.0, Color("3a3732"))
-	draw_circle(Vector2(0, 0), 10.0, Color("2a2724"))
+		var c := _stone_pos(i)
+		var on := clampf((k * STONES - i) * 1.5, 0.0, 1.0)
+		var h: float = 20.0 * s[1]
+		var w := 7.5
+		var tilt: float = s[2] * 2.5
+		var stone := PackedVector2Array([c + Vector2(-w, 4), c + Vector2(-w * 0.9 + tilt * 0.6, -h * 0.65), c + Vector2(tilt, -h),
+			c + Vector2(w * 0.9 + tilt * 0.6, -h * 0.65), c + Vector2(w, 4)])
+		Art.shadow(ci, c + Vector2(0, 2), w)
+		Art.volume(ci, stone, pierre.darkened(0.42).lerp(pierre, on), 0.4 + 0.5 * on)
+		Art.outline(ci, stone, Art.c("contour"), Art.TRAIT_FIN)
+		var rune := Color(Art.c("contour"), 0.55).lerp(seve, on)
+		var m := c + Vector2(tilt * 0.5, -h * 0.42)
+		ci.draw_line(m + Vector2(0, -5), m + Vector2(0, 5), rune, Art.TRAIT_FIN, true)
+		ci.draw_line(m + Vector2(-3, -1), m + Vector2(3, -4), rune, Art.TRAIT_FIN, true)
+		if lit and s[1] > 1.0:
+			# Un peu de mousse au pied des plus hautes.
+			ci.draw_colored_polygon(Art.ellipse(c + Vector2(-w * 0.4, 2.5), 5.0, 2.2, 8), Art.c("decor_vivant").lightened(0.15))
+	# Socle central et sa coupe.
+	Art.shadow(ci, Vector2(0, 2), 13.0)
+	Art.volume_circle(ci, Vector2(0, -2), 13.0, pierre.darkened(0.5).lerp(pierre.darkened(0.15), k), 0.6)
+	ci.draw_circle(Vector2(0, -3), 8.0, Art.c("contour").lerp(Art.ec("seve", "sombre"), k))
+
+
+func _stone_pos(i: int) -> Vector2:
+	var a: float = TAU * i / STONES + _stones[i][0] - PI / 2.0
+	return Vector2.from_angle(a) * (RADIUS - 4.0)
+
+
+## Centre animé : lueur des runes allumées, braise ou flamme de sève, étincelles, colonne de lumière.
+func _draw_center(ci: CanvasItem) -> void:
+	var lit := is_lit()
+	var k := _k()
+	var seve := Art.ec("seve")
+	var seve_clair := Art.ec("seve", "clair")
 	if lit:
-		# Flamme de sève : trois langues qui ondulent.
-		for j in 3:
-			var sway := sin(t * (3.0 + j) + j * 1.7) * 2.5
-			var hgt := 26.0 - j * 6.0 + 2.0 * sin(t * 5.0 + j)
-			var wid := 9.0 - j * 2.2
-			var col := LIT_COLOR.lerp(Color("fff3c4"), j * 0.45)
-			var flame := PackedVector2Array()
-			for q in 10:
-				var u := q / 9.0
-				var side := sin(u * PI) * wid * (1.0 - u * 0.3)
-				flame.append(Vector2(-side + sway * u, -u * hgt))
-			for q in range(8, 0, -1):
-				var u := q / 9.0
-				var side := sin(u * PI) * wid * (1.0 - u * 0.3)
-				flame.append(Vector2(side + sway * u, -u * hgt))
-			draw_colored_polygon(flame, Color(col, 0.85))
+		# Le sol du cercle respire doucement (sous les pierres : le calque des pierres est dessus,
+		# on ne garde donc ici qu'un disque intérieur).
+		var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
+		ci.draw_circle(Vector2.ZERO, RADIUS * 0.5, Color(seve, 0.05 + 0.04 * b + 0.25 * flash))
+	for i in STONES:
+		var on := clampf((k * STONES - i) * 1.5, 0.0, 1.0)
+		if on <= 0.0:
+			continue
+		# Les runes allumées palpitent l'une après l'autre.
+		var pulse := 0.5 + 0.5 * sin(t * 2.4 - i * 0.9)
+		var s: Array = _stones[i]
+		var m := _stone_pos(i) + Vector2(s[2] * 1.25, -20.0 * s[1] * 0.42)
+		ci.draw_circle(m, 6.0, Color(seve, 0.2 * on * pulse))
+	if lit:
+		_draw_flame(ci, seve, seve_clair)
 	else:
-		# Braise presque éteinte, qui rougeoie à mesure qu'on s'y tient.
-		var ember := EMBER.darkened(0.5).lerp(LIT_COLOR, k)
-		draw_circle(Vector2(0, -1), 4.0 + 3.0 * k, Color(ember, 0.6 + 0.3 * sin(t * 4.0)))
+		# Braise presque éteinte, qui reprend à mesure qu'on s'y tient.
+		var ember := Art.ec("seve", "sombre").lerp(seve, k)
+		ci.draw_circle(Vector2(0, -3), 3.0 + 3.0 * k, Color(ember, 0.55 + 0.3 * sin(t * 4.0)))
+		if k > 0.0:
+			Art.glow(ci, Vector2(0, -6), 22.0 * k, "seve")
+
+
+## Flamme de sève sur le socle, étincelles qui montent et colonne de lumière qui se voit de loin.
+func _draw_flame(ci: CanvasItem, seve: Color, seve_clair: Color) -> void:
+	var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
+	# Colonne de lumière : deux bandes qui s'effacent vers le haut.
+	var al := 0.16 + 0.06 * b
+	for band in [[7.0, Color(seve, al * 0.6)], [2.5, Color(seve_clair, al)]]:
+		var hw: float = band[0]
+		var c0: Color = band[1]
+		ci.draw_polygon(PackedVector2Array([Vector2(-hw, -14), Vector2(hw, -14), Vector2(hw, -170), Vector2(-hw, -170)]),
+			PackedColorArray([c0, c0, Color(c0, 0.0), Color(c0, 0.0)]))
+	Art.glow(ci, Vector2(0, -10), 34.0 * (1.0 + 0.08 * b + 0.4 * flash), "seve")
+	for j in 3:
+		var sway := sin(t * (3.0 + j) + j * 1.7) * 2.5
+		var hgt := 26.0 - j * 6.0 + 2.0 * sin(t * 5.0 + j)
+		var wid := 8.0 - j * 2.0
+		var col := seve.lerp(seve_clair, j * 0.45)
+		var flame := PackedVector2Array()
+		for q in 8:
+			var u := q / 7.0
+			flame.append(Vector2(-sin(u * PI) * wid * (1.0 - u * 0.3) + sway * u, -4.0 - u * hgt))
+		for q in range(6, 0, -1):
+			var u := q / 7.0
+			flame.append(Vector2(sin(u * PI) * wid * (1.0 - u * 0.3) + sway * u, -4.0 - u * hgt))
+		ci.draw_colored_polygon(flame, Color(col, 0.85))
+	# Étincelles qui montent du socle et s'éteignent.
+	for i in 6:
+		var u := fposmod(t * 0.45 + i / 6.0, 1.0)
+		var p := Vector2(sin(i * 2.3 + t * 1.3) * 14.0, -10.0 - 70.0 * u)
+		ci.draw_circle(p, 1.8, Color(seve_clair, sin(PI * u)))

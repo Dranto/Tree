@@ -3,7 +3,7 @@
   "boss": {"ronce": {"points": 2, "graft": "greffe_mere"}},
   "coeur": {"ronce": {"points": 1}},
   "altars": [
-    {"id": "ronce_1", "region": "ronce", "name": "Autel des épines", "dist": 820, "side": -0.62, "points": 1, "graft": "greffe_soeurs"},
+    {"id": "ronce_1", "region": "ronce", "name": "Autel des épines", "dist": 980, "side": -0.85, "points": 1, "graft": "greffe_soeurs"},
     {"id": "ronce_2", "region": "ronce", "name": "Autel de l'écorce", "dist": 1300, "side": 0.72, "points": 1, "graft": "greffe_ecorce"},
     {"id": "ronce_3", "region": "ronce", "name": "Autel des racines", "dist": 2050, "side": -0.74, "points": 1, "graft": "greffe_tracante"},
     {"id": "ronce_4", "region": "ronce", "name": "Autel de la couronne", "dist": 2600, "side": 0.5, "points": 1, "graft": "greffe_couronne"}
