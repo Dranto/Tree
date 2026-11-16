@@ -30,10 +30,33 @@ var skill_cd: Dictionary = {}
 var cds: Dictionary = {}
 ## Compétence de chaque emplacement de la barre ("" = vide), gardée dans Game.flags (voir sync_bar).
 var bar: Array = []
-## Dernier coup de fouet, pour le dessin de l'arc (secondes restantes, direction).
-var whip_time := 0.0
-var whip_dir := Vector2.RIGHT
 var t := 0.0
+
+# --- Animation (dessin seulement, voir HeroArt) ---
+## Phase du pas, part de marche (0 → 1) et direction du déplacement, lues sur la position.
+var step := 0.0
+var walk := 0.0
+var move_dir := Vector2.ZERO
+var _last_pos := Vector2.ZERO
+## Lancer de compétence : temps restant et couleur de l'élément.
+var cast_anim := 0.0
+var cast_col := Color(0, 0, 0, 0)
+## Tir de graine (recul de la lanterne), coup reçu, renaissance.
+var shoot_anim := 0.0
+var hurt_anim := 0.0
+var reborn := 1.0
+## « Se battre chez soi », relu quatre fois par seconde.
+var home := false
+var _home_check := 0.0
+## Feuilles semées par l'esquive et arrachées par les coups (positions dans le monde).
+var leaves: Array = []
+## Tirage des feuilles : à part, pour ne jamais toucher au hasard du jeu.
+var _leaf_rng := RandomNumberGenerator.new()
+const CAST_ANIM := 0.32
+const SHOOT_ANIM := 0.12
+const HURT_ANIM := 0.4
+const REBIRTH_TIME := 1.1
+const LOW_HP := 0.3
 
 
 func _ready() -> void:
@@ -107,11 +130,51 @@ func cycle_slot(i: int) -> void:
 	Game.flags["barre"] = ",".join(bar)
 
 
-## Animation seulement (halo, clignotement, arc du fouet) : suit la fréquence d'affichage.
+## Animation seulement (marche, lanterne, feuilles, états) : suit la fréquence d'affichage.
 func _process(delta: float) -> void:
 	t += delta
-	whip_time -= delta
+	cast_anim = maxf(0.0, cast_anim - delta)
+	shoot_anim = maxf(0.0, shoot_anim - delta)
+	hurt_anim = maxf(0.0, hurt_anim - delta)
+	reborn = minf(1.0, reborn + delta / REBIRTH_TIME)
+	# Marche : la vitesse réelle (esquive comprise) fait avancer le pas.
+	var moved := position - _last_pos
+	_last_pos = position
+	var speed := moved.length() / maxf(delta, 0.0001)
+	if speed > 2000.0:
+		speed = 0.0   # téléportation (renaissance) : pas un pas
+	var target := clampf(speed / maxf(Game.stats.get("move_speed", 220.0), 1.0), 0.0, 1.0)
+	walk = lerpf(walk, target, clampf(delta * 12.0, 0.0, 1.0))
+	if speed > 1.0 and speed <= 2000.0:
+		move_dir = moved.normalized()
+		step += moved.length() / (radius * 1.6)
+	_home_check -= delta
+	if _home_check <= 0.0 and main != null:
+		_home_check = 0.25
+		home = fighting_at_home()
+	# Feuilles : tombent en tournoyant, s'effacent.
+	if dash_time > 0.0 and fposmod(t, 0.03) < delta:
+		_leaf(position - dash_dir * radius * 0.6, -dash_dir * 60.0, 0.6, Art.c("joueur_accent").darkened(0.3))
+	for l in leaves:
+		l["t"] += delta
+		l["pos"] += l["vel"] * delta
+		l["vel"] = l["vel"] * maxf(0.0, 1.0 - 3.0 * delta) + Vector2(sin(l["t"] * 6.0 + l["ph"]) * 50.0, 30.0) * delta
+		l["rot"] += l["spin"] * delta
+	leaves = leaves.filter(func(l): return l["t"] < l["dur"])
 	queue_redraw()
+
+
+func _leaf(pos: Vector2, vel: Vector2, dur: float, col: Color) -> void:
+	if leaves.size() >= 24:
+		return
+	leaves.append({"pos": pos, "vel": vel + Vector2.from_angle(_leaf_rng.randf() * TAU) * 30.0, "t": 0.0, "dur": dur, "col": col,
+		"rot": _leaf_rng.randf() * TAU, "spin": _leaf_rng.randf_range(-6.0, 6.0), "ph": _leaf_rng.randf() * TAU})
+
+
+## Signature visuelle d'une attaque (skill_fx.gd), si le jeu en a une (pas dans les bancs sans dessin).
+func _sig(id: String, data := {}) -> void:
+	if main != null and "skill_fx" in main and main.skill_fx != null:
+		main.skill_fx.play(id, data)
 
 
 ## Logique à pas fixe : déplacement, tir, esquive et compétences.
@@ -184,6 +247,8 @@ func _physics_process(delta: float) -> void:
 func cast(id: String, s: Dictionary) -> void:
 	skill_cd[id] = maxf(0.05, float(skill(id)["cooldown"]))
 	cds[id] = skill_cd[id]
+	cast_anim = CAST_ANIM
+	cast_col = Art.ec(Art.ELEMENT_DE_COMPETENCE.get(id, "seve"))
 	match id:
 		"nova": _cast_nova(s)
 		"cloud": _cast_cloud(s)
@@ -233,13 +298,15 @@ func _shoot(s: Dictionary) -> void:
 		var a := aim.angle() + (i - (n - 1) / 2.0) * spread
 		var dir := Vector2.from_angle(a)
 		main.spawn_projectile(position + dir * 18.0, dir * 640.0, current_damage() * s["projectile_damage"], s["pierce"], s["projectile_size"])
+	shoot_anim = SHOOT_ANIM
+	_sig("graine_depart", {"pos": position + aim * radius * 1.5, "dir": aim})
 
 
 func _cast_nova(s: Dictionary) -> void:
 	var k: Dictionary = skill("nova")
 	var r: float = k["radius"] * s["area"]
 	Sfx.play("nova")
-	main.fx.ring(position, 20.0, r, 0.4, Color(k["color"]), 8.0)
+	_sig("nova", {"pos": position, "r": r})
 	main.fx.shake(0.25)
 	main.damage_area(position, r, skill_damage("nova"), k["knockback"], "ronce")
 
@@ -253,6 +320,9 @@ func _cast_cloud(s: Dictionary) -> void:
 	var per_factor := current_damage() * skill_multiplier("cloud")
 	Sfx.play("nuage")
 	main.fx.cloud(target, k["radius"] * s["area"], k["duration"], per_factor * (k["damage"] + s["poison"]))
+	if "skill_fx" in main and main.skill_fx != null:
+		main.fx.clouds[-1]["dessin"] = "skill_fx"   # le nuage est dessiné par sa signature
+	_sig("cloud", {"pos": target, "r": k["radius"] * s["area"], "dur": float(k["duration"])})
 
 
 func _cast_bloom(s: Dictionary) -> void:
@@ -260,7 +330,7 @@ func _cast_bloom(s: Dictionary) -> void:
 	Sfx.play("floraison")
 	heal(s["max_hp"] * k["heal"])
 	var r: float = k["radius"] * s["area"]
-	main.fx.ring(position, 20.0, r, 0.6, Color(k["color"]), 8.0)
+	_sig("bloom", {"pos": position, "r": r, "follow": self})
 	main.fx.shake(0.3)
 	main.damage_area(position, r, skill_damage("bloom"), k["knockback"])
 	main.ground.paint(position, r, k["life"])
@@ -273,8 +343,7 @@ func _cast_fouet(s: Dictionary) -> void:
 	var k: Dictionary = skill("fouet")
 	var reach: float = k["range"] * s["area"]
 	var half_arc: float = k["arc"] / 2.0
-	whip_time = 0.18
-	whip_dir = aim
+	_sig("fouet", {"pos": position, "dir": aim, "r": reach, "arc": float(k["arc"]), "follow": self})
 	var base := skill_damage("fouet")
 	for e in main.enemies_near(position, reach):
 		var d: Vector2 = e.position - position
@@ -298,9 +367,8 @@ func _cast_racines(s: Dictionary) -> void:
 	if off.length() > k["range"]:
 		target = position + off.normalized() * k["range"]
 	var r: float = k["radius"] * s["area"]
-	var col := Color(k["color"])
-	main.fx.ring(target, r * 0.2, r, 0.5, col, 6.0)
-	main.fx.ring(target, r * 0.9, r, 0.9, col.darkened(0.3), 3.0)
+	var hold: float = minf(float(k["root_duration"]) * s["root_duration"], 3.0)
+	_sig("racines", {"pos": target, "r": r, "dur": 0.3 + hold + 0.35, "seed": int(t * 1000.0) + 1})
 	var base := skill_damage("racines")
 	main.root_hit_base = base
 	for e in main.enemies_near(target, r):
@@ -317,6 +385,7 @@ func _cast_volee(s: Dictionary) -> void:
 	var n: int = maxi(1, int(k["count"]))
 	var spread: float = k["spread"]
 	var dmg := skill_damage("volee")
+	_sig("volee", {"pos": position, "dir": aim, "spread": spread, "count": n})
 	for i in n:
 		var a: float = aim.angle()
 		if n > 1:
@@ -335,22 +404,23 @@ func _cast_saignee(s: Dictionary) -> void:
 	Sfx.play("saignee")
 	var k: Dictionary = skill("saignee")
 	var r: float = k["radius"] * s["area"]
-	var col := Color(k["color"])
-	main.fx.ring(position, r, 30.0, 0.35, col, 6.0)
 	var hit := skill_damage("saignee")
 	# Le multiplicateur des dégâts de zone et le bonus « chez soi » s'appliquent aussi à l'éclatement.
 	var mult: float = float(k["burst"]) * skill_multiplier("saignee")
 	var total := 0.0
+	var bled: Array = []
 	for e in main.enemies_near(position, r):
 		# L'éclatement est un coup de Ronce : les ennemis du roncier y résistent aussi.
 		var amount: float = e.burst_bleed(mult) * main.branch_factor(e, "ronce")
 		if amount > 0.0:
-			main.fx.ring(e.position, e.radius, e.radius * 2.2, 0.3, col.lightened(0.2), 4.0)
+			if bled.size() < 12:
+				bled.append(e.position)
 			e.take_damage(amount, false)
 			total += amount
 			main.on_bleed_tick(e, amount)
 		if not e.dead:
 			main.player_hit_enemy(e, hit, true, "ronce")
+	_sig("saignee", {"pos": position, "r": r, "targets": bled, "follow": self})
 	if total > 0.0:
 		heal(total * float(k["heal"]))
 
@@ -365,6 +435,13 @@ func take_hit(amount: float, source) -> void:
 	var s: Dictionary = Game.stats
 	hp -= amount * (1.0 - s["armor"])
 	hurt_flash = 0.15
+	hurt_anim = HURT_ANIM
+	# Deux feuilles de la cape arrachées par le coup.
+	var away := aim
+	if is_instance_valid(source) and "position" in source:
+		away = (position - source.position).normalized()
+	for i in 2:
+		_leaf(position - aim * radius * 0.8, away * 90.0 + Vector2(0, -40.0), 0.8, Art.c("joueur_accent").darkened(0.3))
 	Sfx.play("degats")
 	invuln = 0.35
 	main.fx.player_hurt()
@@ -377,51 +454,61 @@ func take_hit(amount: float, source) -> void:
 
 
 func respawn(at := Vector2.ZERO) -> void:
+	# Il se fane là où il est tombé, puis renaît en pousse au sanctuaire.
+	_sig("chute", {"pos": position, "facing": aim.angle()})
 	position = at
+	_last_pos = at
+	reborn = 0.0
+	leaves.clear()
 	hp = Game.stats["max_hp"]
 	invuln = 2.0
 
 
+## Pose actuelle du héros pour HeroArt (états lus sur le jeu, sans le modifier).
+func pose() -> Dictionary:
+	var ratio: float = clampf(hp / maxf(Game.stats["max_hp"], 1.0), 0.0, 1.0)
+	var sq := Vector2.ONE
+	if hurt_anim > 0.0:
+		var k := 1.0 - hurt_anim / HURT_ANIM
+		sq = Anim.squash(clampf(Anim.SQUASH_ANTICIPATION + k * (1.0 - Anim.SQUASH_ANTICIPATION), 0.0, 1.0), 0.8)
+	elif cast_anim > 0.0:
+		sq = Anim.squash(1.0 - cast_anim / CAST_ANIM, 0.7)
+	return {
+		"t": t, "walk": walk, "step": step, "move": move_dir, "squash": sq,
+		"hurt": Anim.flash(1.0 - hurt_anim / HURT_ANIM) if hurt_anim > 0.0 else 0.0,
+		"cast": cast_anim / CAST_ANIM, "cast_col": cast_col,
+		"shoot": shoot_anim / SHOOT_ANIM,
+		"low": clampf((LOW_HP - ratio) / LOW_HP * 2.0, 0.0, 1.0) if ratio < LOW_HP and hp > 0.0 else 0.0,
+		# Le voile n'apparaît que pour une vraie protection (renaissance, bonus), pas pour le
+		# court répit qui suit chaque coup ou esquive.
+		"invuln": clampf((invuln - 0.45) * 2.0, 0.0, 1.0),
+		"home": home, "appear": reborn,
+		"dash": clampf(dash_time / DASH_TIME, 0.0, 1.0),
+	}
+
+
 func _draw() -> void:
-	# Ombre au sol
-	draw_set_transform(Vector2(0, radius * 0.75), 0.0, Vector2(1.0, 0.36))
-	draw_circle(Vector2.ZERO, radius * 1.15, Color(0, 0, 0, 0.32))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	# Halo de vie
-	var glow := Color(0.5, 0.9, 0.45, 0.10 + 0.04 * sin(t * 3.0))
-	draw_circle(Vector2.ZERO, radius * 2.6, glow)
+	# Feuilles semées (esquive, coups) : sous le héros, dans le repère du monde.
+	for l in leaves:
+		var k: float = l["t"] / l["dur"]
+		var q: Vector2 = l["pos"] - position
+		var a: float = l["rot"]
+		var w := 0.35 + 0.65 * absf(sin(a))
+		var pts := HeroArt.leaf_pts(q, 5.0, a)
+		for i in pts.size():
+			pts[i] = q + (pts[i] - q) * Vector2(1.0, w).rotated(0.0)
+		draw_colored_polygon(pts, Color(l["col"], 1.0 - k * k))
 	if dash_time > 0.0:
-		for i in 4:
-			draw_circle(-dash_dir * (i + 1) * 12.0, radius * (0.9 - i * 0.15), Color(0.8, 1.0, 0.8, 0.25 - i * 0.05))
-	var body := Color("e9e2c8")
-	if hurt_flash > 0.0:
-		body = Color("ff8a7a")
-	elif invuln > 0.0 and int(t * 20.0) % 2 == 0:
-		body = Color(0.9, 0.9, 0.8, 0.6)
-	# Cape à capuche (forme en goutte) orientée vers la visée
-	var pts := PackedVector2Array()
-	for i in 20:
-		var a := TAU * i / 20.0
-		var r := radius * (1.0 + 0.35 * maxf(0.0, -cos(a)))
-		pts.append(Vector2.from_angle(a + aim.angle()) * r)
-	draw_colored_polygon(pts, Color("3f6b3a"))
-	draw_circle(Vector2.ZERO, radius * 0.75, body)
-	# La graine tenue en main
-	var seed_pos := aim * (radius + 8.0)
-	draw_circle(seed_pos, 5.0, Color("b6f28a"))
-	draw_circle(seed_pos, 9.0, Color(0.7, 1.0, 0.5, 0.25))
-	# Arc du fouet : une traînée d'épines qui balaie devant le joueur.
-	if whip_time > 0.0:
-		var k: Dictionary = skill("fouet")
-		var reach: float = k["range"] * Game.stats.get("area", 1.0)
-		var arc: float = k["arc"]
-		var a0 := whip_dir.angle() - arc / 2.0
-		var sweep := 1.0 - whip_time / 0.18
-		var a1 := a0 + arc * clampf(sweep * 1.4, 0.0, 1.0)
-		var col := Color(Color(k["color"]).lightened(0.25), clampf(whip_time / 0.12, 0.0, 1.0))
-		draw_arc(Vector2.ZERO, reach * 0.92, a0, a1, 24, col, 7.0)
-		draw_arc(Vector2.ZERO, reach * 0.7, a0, a1, 18, Color(col, col.a * 0.5), 3.0)
-	# Barre de vie
+		# Silhouettes fantômes de l'élan.
+		for i in 3:
+			var q := -dash_dir * (i + 1) * 13.0
+			draw_circle(q, radius * (0.85 - i * 0.18), Color(Art.ec("seve"), 0.22 - i * 0.06))
+	HeroArt.draw(self, Vector2.ZERO, radius, aim.angle(), pose())
+	# Barre de vie : fine, sous les pieds, cachée quand la vie est pleine.
 	var ratio: float = clampf(hp / Game.stats["max_hp"], 0.0, 1.0)
-	draw_rect(Rect2(-20, radius + 10, 40, 4), Color(0, 0, 0, 0.5))
-	draw_rect(Rect2(-20, radius + 10, 40 * ratio, 4), Color("7fd36b"))
+	if ratio < 0.999 and reborn >= 1.0:
+		var w := 36.0
+		var y := radius + 14.0
+		draw_rect(Rect2(-w / 2.0 - 1.0, y - 1.0, w + 2.0, 6.0), Art.c("contour"))
+		draw_rect(Rect2(-w / 2.0, y, w * ratio, 4.0), Art.c("danger") if ratio < LOW_HP else Art.c("accent"))
+		draw_rect(Rect2(-w / 2.0, y, w * ratio, 1.5), Color(1, 1, 1, 0.25))

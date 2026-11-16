@@ -319,7 +319,7 @@ func _scenario_competences() -> void:
 	main.hud.hint_time = 0.0
 	main.autotest = false   # ni robot ni expérience gagnée : rien ne bouge en dehors de ce qu'on lance
 	p.set_physics_process(false)   # le joueur ne bouge pas : les compétences sont lancées ici
-	p.invuln = 1e9
+	p.invuln = 0.4   # figé (pas de pas physique) : aucun coup ne passe, sans le voile d'invulnérabilité
 	main.spawn_timer = 1e9
 	await _frames(2)
 	var s: Dictionary = Game.stats

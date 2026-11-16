@@ -116,7 +116,7 @@ static func ec(element: String, variante := "couleur") -> Color:
 
 ## Élément dominant d'une compétence (pour sa couleur, ses particules et son icône).
 const ELEMENT_DE_COMPETENCE := {
-	"nova": "epine", "fouet": "epine", "volee": "epine", "racines": "racine",
+	"graine": "seve", "nova": "epine", "fouet": "epine", "volee": "epine", "racines": "racine",
 	"saignee": "saignement", "cloud": "poison", "bloom": "seve",
 }
 
@@ -399,13 +399,13 @@ static func delta_e(a: Color, b: Color) -> float:
 # Silhouettes pleines, lisibles à 20 px ; un détail clair au plus.
 const ICONES := {
 	"elements": ["epine", "saignement", "racine", "poison", "cendre", "seve"],
-	"competences": ["nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom"],
+	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom"],
 	"statistiques": ["degats", "attaque", "projectile", "critique", "vie", "regen", "armure", "vitesse", "esquive", "zone", "collecte", "competence"],
 	"monde": ["sanctuaire", "autel", "coeur", "arene", "secret", "seve_perdue", "essence", "greffe"],
 }
 ## Nom affiché de chaque icône (planche, infobulles).
 const NOM_ICONE := {
-	"nova": "Couronne d'épines", "fouet": "Fouet de ronce", "racines": "Racines voraces",
+	"graine": "Graines", "nova": "Couronne d'épines", "fouet": "Fouet de ronce", "racines": "Racines voraces",
 	"volee": "Volée d'épines", "saignee": "Saignée", "cloud": "Nuage de spores", "bloom": "Floraison",
 	"degats": "Dégâts", "attaque": "Vitesse d'attaque", "projectile": "Projectiles", "critique": "Critique",
 	"vie": "Vie", "regen": "Régénération", "armure": "Armure", "vitesse": "Déplacement", "esquive": "Esquive",
@@ -499,45 +499,124 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 			ci.draw_circle(p, s * 0.95, Color(col, 0.25))
 			_leaf(ci, p, s * 0.8, -PI / 4.0, col)
 			ci.draw_line(P.call(-0.45, 0.45), P.call(0.35, -0.35), sombre, lw * 0.7, true)
-		# Compétences
+		# Compétences et arme. Chacune garde une forme propre à 20 px ; les détails clairs ne
+		# servent qu'en grand (barre, infobulles). relief : vrai pendant la passe de la tranche.
+		"graine":
+			var relief := col == sombre
+			# Graine en amande, inclinée, avec sa pousse et un éclat de lumière.
+			var body := PackedVector2Array()
+			for i in 16:
+				var a := i * TAU / 16.0
+				body.append(p + Vector2(cos(a) * 0.62, sin(a) * 0.42).rotated(-PI / 4.0) * s + Vector2(-0.08, 0.12) * s)
+			ci.draw_colored_polygon(body, col)
+			_leaf(ci, P.call(0.42, -0.5), s * 0.34, -PI / 4.0 - 0.5, (sombre if relief else col.lightened(0.15)))
+			ci.draw_line(P.call(0.22, -0.28), P.call(0.42, -0.5), sombre, lw * 0.8, true)
+			if not relief:
+				ci.draw_circle(P.call(-0.28, 0.0), s * 0.16, clair)
+				ci.draw_arc(P.call(-0.08, 0.12), s * 0.9, PI * 0.55, PI * 1.05, 10, Color(clair, 0.6), lw * 0.7, true)
 		"nova":
-			ci.draw_arc(p, s * 0.5, 0.0, TAU, 24, col, lw * 1.2, true)
-			for i in 8:
-				var d := Vector2.from_angle(i * TAU / 8.0 - PI / 2.0)
-				_thorn(ci, p + d * s * 0.55, d, s * 0.45, col)
+			var relief := col == sombre
+			# Couronne d'épines : un anneau tressé hérissé de pointes, longues et courtes alternées.
+			for i in 10:
+				var d := Vector2.from_angle(i * TAU / 10.0 - PI / 2.0)
+				var len := s * (0.48 if i % 2 == 0 else 0.3)
+				var nn := d.orthogonal()
+				var b := p + d * s * 0.5
+				ci.draw_colored_polygon(PackedVector2Array([b + nn * len * 0.32, b + d * len, b - nn * len * 0.32]), col)
+				if not relief and s >= 10.0:
+					ci.draw_colored_polygon(PackedVector2Array([b, b + d * len, b - nn * len * 0.32]), col.darkened(0.25))
+			ci.draw_arc(p, s * 0.5, 0.0, TAU, 28, col, lw * 1.6, true)
+			if not relief:
+				ci.draw_arc(p, s * 0.5, PI * 1.1, PI * 1.7, 10, clair, lw * 0.6, true)
+				for i in 5:
+					var a := i * TAU / 5.0 + 0.3
+					ci.draw_line(p + Vector2.from_angle(a) * s * 0.42, p + Vector2.from_angle(a + 0.35) * s * 0.58, sombre, lw * 0.5, true)
 		"fouet":
+			var relief := col == sombre
+			# Liane en S qui claque : épines alternées, pointe d'os et éclat au bout.
 			var pts := PackedVector2Array()
-			for i in 13:
-				var k := i / 12.0
-				pts.append(P.call(-0.85 + 1.7 * k, 0.55 - 1.3 * k + 0.45 * sin(k * PI * 1.6)))
-			ci.draw_polyline(pts, col, lw * 1.3, true)
-			for i in [3, 6, 9]:
-				var d: Vector2 = (pts[i + 1] - pts[i]).normalized().orthogonal()
-				_thorn(ci, pts[i], d, s * 0.28, col)
-			ci.draw_circle(pts[12], lw * 1.1, clair)
+			for i in 15:
+				var k := i / 14.0
+				pts.append(P.call(-0.85 + 1.55 * k, 0.75 - 1.45 * k + 0.5 * sin(k * PI * 1.7)))
+			ci.draw_polyline(pts, col, lw * (1.5 if s < 10.0 else 1.8), true)
+			for i in [3, 6, 9, 12]:
+				var d: Vector2 = (pts[i + 1] - pts[i]).normalized().orthogonal() * (1.0 if i % 6 == 0 else -1.0)
+				_thorn(ci, pts[i], d, s * 0.3, col)
+			_thorn(ci, pts[14], (pts[14] - pts[13]).normalized(), s * 0.32, col)
+			if not relief:
+				for i in 3:
+					var a := -PI / 3.0 + i * 0.6
+					ci.draw_line(pts[14] + Vector2.from_angle(a) * s * 0.22, pts[14] + Vector2.from_angle(a) * s * 0.42, clair, lw * 0.6, true)
 		"racines":
-			for x in [-0.6, 0.0, 0.6]:
-				ci.draw_colored_polygon(PackedVector2Array([P.call(x - 0.2, 0.95), P.call(x + 0.08, -0.85 + absf(x) * 0.3), P.call(x + 0.2, 0.95)]), col)
-			ci.draw_line(P.call(-1.0, 0.95), P.call(1.0, 0.95), sombre, lw, true)
-			ci.draw_circle(P.call(0.08, -0.85), lw, clair)
+			var relief := col == sombre
+			# Trois racines noueuses jaillissent du sol et se courbent vers le centre.
+			for q in [Vector3(-0.55, 0.32, 0.55), Vector3(0.0, -0.95, 0.0), Vector3(0.55, 0.32, -0.55)]:
+				var base: Vector2 = P.call(q.x, 0.85)
+				var tip: Vector2 = P.call(q.x + q.z * 0.6, -0.5 + q.y * (0.4 if q.x == 0.0 else 0.0) + (0.0 if q.x == 0.0 else -0.25))
+				var mid := base.lerp(tip, 0.5) + Vector2(-q.z * s * 0.25, 0)
+				var w := s * (0.26 if q.x == 0.0 else 0.2)
+				var side := (tip - base).normalized().orthogonal()
+				ci.draw_colored_polygon(PackedVector2Array([base + side * w, mid + side * w * 0.6, tip, mid - side * w * 0.6, base - side * w]), col)
+				if not relief:
+					ci.draw_circle(mid, w * 0.38, sombre)
+					ci.draw_circle(tip, maxf(w * 0.28, 1.0), Art.ec("racine", "clair"))
+			ci.draw_line(P.call(-1.0, 0.88), P.call(1.0, 0.88), sombre, lw * 1.2, true)
+			if not relief:
+				for x in [-0.8, -0.25, 0.3, 0.8]:
+					ci.draw_circle(P.call(x, 0.98), lw * 0.6, sombre.lightened(0.2))
 		"volee":
+			var relief := col == sombre
+			# Éventail de trois épines qui partent d'un même point, avec leurs traînées.
+			var o: Vector2 = P.call(-0.75, 0.75)
 			for i in 3:
-				var o: Vector2 = P.call(-0.55 + i * 0.35, 0.6 - i * 0.55)
-				_thorn(ci, o, Vector2(1, -1).normalized(), s * 0.75, col)
-				ci.draw_line(o, o - Vector2(1, -1).normalized() * s * 0.35, Color(col, 0.5), lw * 0.7, true)
+				var d := Vector2.from_angle(-PI / 4.0 + (i - 1) * 0.42)
+				var b := o + d * s * 0.55
+				if not relief:
+					ci.draw_line(o + d * s * 0.1, b, Color(col, 0.45), lw * 0.8, true)
+				var nn := d.orthogonal()
+				var len := s * (0.95 if i == 1 else 0.8)
+				ci.draw_colored_polygon(PackedVector2Array([b + nn * s * 0.17, b + d * len, b - nn * s * 0.17]), col)
+				if not relief and s >= 10.0:
+					ci.draw_colored_polygon(PackedVector2Array([b, b + d * len, b - nn * s * 0.17]), col.darkened(0.25))
+				if not relief:
+					ci.draw_circle(b, s * 0.07, Art.ec("saignement", "clair"))
 		"saignee":
-			ci.draw_line(P.call(-0.85, -0.6), P.call(0.6, 0.4), col, lw * 1.4, true)
-			_drop(ci, P.call(0.35, -0.15), s * 0.4, (sombre if col == sombre else Art.ec("saignement", "clair")))
-			_drop(ci, P.call(-0.3, 0.6), s * 0.28, (sombre if col == sombre else Art.ec("saignement", "clair")))
+			var relief := col == sombre
+			# Une grande goutte au centre ; quatre petites gouttes convergent vers elle.
+			var clair_s := (sombre if relief else Art.ec("saignement", "clair"))
+			_drop(ci, P.call(0, 0.25), s * 0.5, (sombre if relief else clair_s))
+			for i in 4:
+				var a := i * TAU / 4.0 + PI / 4.0
+				var q := p + Vector2.from_angle(a) * s * 0.82 + Vector2(0, s * 0.1)
+				_drop(ci, q, s * 0.13, col.lightened(0.15) if not relief else sombre)
+				ci.draw_line(q - Vector2.from_angle(a) * s * 0.12, q - Vector2.from_angle(a) * s * 0.3, Color(col.lightened(0.15), 0.8) if not relief else sombre, lw * 0.6, true)
+			if not relief:
+				ci.draw_arc(P.call(0, 0.25), s * 0.5, PI * 0.15, PI * 0.85, 10, col.darkened(0.2), lw * 0.8, true)
+				ci.draw_circle(P.call(-0.15, 0.12), s * 0.12, Color.WHITE.lerp(clair_s, 0.4))
 		"cloud":
-			for q in [Vector3(-0.45, 0.2, 0.42), Vector3(0.1, -0.2, 0.52), Vector3(0.55, 0.25, 0.38), Vector3(0.0, 0.4, 0.4)]:
+			var relief := col == sombre
+			# Volutes de spores, et deux bulles qui montent.
+			for q in [Vector3(-0.42, 0.3, 0.4), Vector3(0.08, -0.05, 0.5), Vector3(0.55, 0.32, 0.36), Vector3(0.0, 0.48, 0.38)]:
 				ci.draw_circle(P.call(q.x, q.y), s * q.z, col)
-			ci.draw_arc(P.call(0.05, -0.3), s * 0.18, PI, PI * 1.7, 8, clair, lw * 0.7, true)
+			ci.draw_arc(P.call(-0.55, -0.62), s * 0.16, 0.0, TAU, 10, (sombre if relief else clair), lw * 0.8, true)
+			ci.draw_arc(P.call(0.55, -0.72), s * 0.11, 0.0, TAU, 8, (sombre if relief else clair), lw * 0.7, true)
+			if not relief:
+				ci.draw_arc(P.call(0.05, -0.12), s * 0.26, PI, PI * 1.7, 8, clair, lw * 0.7, true)
+				ci.draw_circle(P.call(-0.2, 0.3), s * 0.08, sombre)
+				ci.draw_circle(P.call(0.3, 0.38), s * 0.06, sombre)
 		"bloom":
+			var relief := col == sombre
+			# Fleur à cinq pétales sur deux feuilles, cœur doré.
+			_leaf(ci, P.call(-0.5, 0.62), s * 0.32, PI * 0.85, (sombre if relief else col.darkened(0.3)))
+			_leaf(ci, P.call(0.5, 0.62), s * 0.32, PI * 0.15, (sombre if relief else col.darkened(0.3)))
 			for i in 5:
 				var a := i * TAU / 5.0 - PI / 2.0
-				_leaf(ci, p + Vector2.from_angle(a) * s * 0.45, s * 0.5, a, col)
-			ci.draw_circle(p, s * 0.25, clair)
+				_leaf(ci, p + Vector2.from_angle(a) * s * 0.45, s * 0.42, a, col)
+				if not relief and s >= 10.0:
+					ci.draw_line(p + Vector2.from_angle(a) * s * 0.25, p + Vector2.from_angle(a) * s * 0.65, col.darkened(0.3), lw * 0.5, true)
+			ci.draw_circle(p, s * 0.24, (sombre if relief else Art.c("butin")))
+			if not relief:
+				ci.draw_circle(p + Vector2(-s * 0.06, -s * 0.06), s * 0.09, clair)
 		# Statistiques
 		"degats":
 			ci.draw_colored_polygon(PackedVector2Array([P.call(0, -1.0), P.call(0.28, 0.3), P.call(-0.28, 0.3)]), col)
