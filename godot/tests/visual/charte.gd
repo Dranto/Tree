@@ -6,6 +6,8 @@
 extends Node2D
 
 var view := Vector2(1600, 900)
+## "planche" : la charte sur une page ; "details" : personnages et objets en grand.
+var page := "planche"
 var font: Font
 var font_bold: Font
 
@@ -23,6 +25,9 @@ func _ready() -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, view), Art.c("decor").darkened(0.2))
+	if page == "details":
+		_details()
+		return
 	_text(Vector2(L, 30), "Charte graphique · Ronce", 22, Art.c("texte"), true)
 	_text(Vector2(L + 300, 30), "Le fond est sourd · ce qui sert est clair et chaud · ce qui fait mal est saturé et contrasté", 13, Art.c("texte_doux"))
 	_palette(Vector2(L, 62))
@@ -64,8 +69,7 @@ func _elements(o: Vector2) -> void:
 		var y := o.y + 18
 		draw_rect(Rect2(x, y, w - 8, 322), Color(Art.c("panneau"), 0.7))
 		# Icône sur un disque sombre
-		draw_circle(Vector2(cx, y + 38), 30, Art.c("contour"))
-		Art.icon(self, id, Rect2(cx - 26, y + 12, 52, 52))
+		Art.icon_badge(self, id, Rect2(cx - 32, y + 6, 64, 64))
 		_text_c(Vector2(cx, y + 90), e["nom"], 15, e["couleur"].lerp(Color.WHITE, 0.25), w - 8, true)
 		draw_multiline_string(font, Vector2(x + 6, y + 108), e["sens"], HORIZONTAL_ALIGNMENT_CENTER, w - 20, 10, 3, Art.c("texte_doux"))
 		# Trois teintes
@@ -123,8 +127,7 @@ func _icones(o: Vector2) -> void:
 		_text(Vector2(o.x, y + 24), names[g], 11, Art.c("texte_doux"))
 		var x := o.x + 82
 		for id in Art.ICONES[g]:
-			draw_circle(Vector2(x + 26, y + 20), 20, Art.c("contour"))
-			Art.icon(self, id, Rect2(x + 8, y + 2, 36, 36))
+			Art.icon_badge(self, id, Rect2(x + 4, y - 2, 44, 44))
 			var label: String = Art.NOM_ICONE.get(id, Art.ELEMENTS[id]["nom"] if Art.ELEMENTS.has(id) else id)
 			draw_multiline_string(font, Vector2(x - 2, y + 51), label, HORIZONTAL_ALIGNMENT_CENTER, 56, 9, 2, Art.c("texte_doux"))
 			x += 56
@@ -190,103 +193,382 @@ func _action(o: Vector2) -> void:
 	_text(Vector2(o.x, y + 198), "Traits : fin %.1f px (détails) · standard %.1f px (acteurs) · fort %.1f px (lourds, boss, frappe)" % [Art.TRAIT_FIN, Art.TRAIT, Art.TRAIT_FORT], 11, Art.c("texte_doux"))
 
 
+# --- Page « détails » : personnages et objets en grand ---
+
+func _details() -> void:
+	_text(Vector2(L, 30), "Charte graphique · personnages et objets en détail", 22, Art.c("texte"), true)
+	_text(Vector2(L + 560, 30), "volume : lumière en haut à gauche · ombre portée · contour à la couleur du rôle", 13, Art.c("texte_doux"))
+	var cw := (view.x - 2 * L) / 6.0
+	var row1 := [
+		["Héros · repos", "joueur", ""], ["Héros · lancer", "joueur", "lancer"], ["Héros · coup reçu", "joueur", "touche"],
+		["Flétri · repos", "melee", ""], ["Flétri · anticipation", "melee", "anticipation"], ["Flétri · saignant", "melee", "saignant"],
+	]
+	var row2 := [
+		["Tireur d'épines", "tireur", ""], ["Colosse", "lourd", ""], ["Élite", "elite", ""],
+		["Sanctuaire éteint", "interactif", "eteint"], ["Sanctuaire ravivé", "interactif", "ravive"], ["Butin", "butin", ""],
+	]
+	for row in 2:
+		var cells: Array = [row1, row2][row]
+		for i in cells.size():
+			var r := Rect2(L + i * cw, 54 + row * 332, cw - 10, 318)
+			_ground(r, i + row * 7, cells[i][2] == "ravive")
+			var c := r.get_center() + Vector2(0, -10)
+			var role: String = cells[i][1]
+			var k := 3.0
+			if role == "lourd":
+				k = 2.4
+			elif role == "interactif":
+				k = 2.6
+			elif role == "butin":
+				_role("butin", c + Vector2(-30, -40), false, 3.0)
+				_essence(c + Vector2(55, 55), 18.0)
+				_seve_perdue(c + Vector2(-45, 80), 16.0)
+				_text_c(Vector2(c.x - 30, c.y + 22), "greffe", 10, Art.c("texte_doux"), 80)
+				_text_c(Vector2(c.x + 55, c.y + 100), "essence", 10, Art.c("texte_doux"), 80)
+				_text_c(Vector2(c.x - 45, c.y + 128), "sève perdue", 10, Art.c("texte_doux"), 90)
+				_text_c(Vector2(r.get_center().x, r.position.y + 22), cells[i][0], 13, Art.c("texte"), cw, true)
+				continue
+			_role(role, c, false, k, 0.0, cells[i][2])
+			_text_c(Vector2(r.get_center().x, r.position.y + 22), cells[i][0], 13, Art.c("texte"), cw, true)
+	# Médaillons des compétences, tels qu'ils iront dans la barre.
+	var y := 54 + 2 * 332 + 6
+	_text(Vector2(L, y + 30), "Médaillons de compétence", 13, Art.c("or"), true)
+	var x := L + 230
+	for id in Art.ICONES["competences"]:
+		Art.icon_badge(self, id, Rect2(x, y, 64, 64))
+		_text_c(Vector2(x + 32, y + 82), Art.NOM_ICONE[id], 10, Art.c("texte_doux"), 120)
+		x += 132
+
+
+## Un carré de sol mort (ou ravivé) avec un peu de texture : cailloux, fissures fines, touffes.
+func _ground(r: Rect2, seed_: int, vivant := false) -> void:
+	draw_rect(r, Art.c("sol_vivant") if vivant else Art.c("sol_mort"))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1000 + seed_
+	var crack := Color(Art.c("decor"), 0.45)
+	for i in 3:
+		var q := r.position + Vector2(rng.randf_range(20, r.size.x - 20), rng.randf_range(40, r.size.y - 20))
+		var line := PackedVector2Array([q])
+		for j in 4:
+			q += Vector2(rng.randf_range(-22, 22), rng.randf_range(-14, 14))
+			q = q.clamp(r.position + Vector2(4, 4), r.end - Vector2(4, 4))
+			line.append(q)
+		draw_polyline(line, crack, 1.2, true)
+	for i in 14:
+		var q := r.position + Vector2(rng.randf_range(8, r.size.x - 8), rng.randf_range(34, r.size.y - 8))
+		var s := rng.randf_range(1.5, 4.0)
+		draw_colored_polygon(Art.ellipse(q, s * 1.3, s, 8), Color(Art.c("brume"), 0.35))
+		draw_circle(q + Vector2(-s * 0.3, -s * 0.3), s * 0.4, Color(Art.c("brume").lightened(0.3), 0.3))
+	if vivant:
+		for i in 8:
+			var q := r.position + Vector2(rng.randf_range(10, r.size.x - 10), rng.randf_range(40, r.size.y - 10))
+			for j in 3:
+				draw_line(q, q + Vector2((j - 1) * 3, -7), Art.c("decor_vivant").lightened(0.2), 1.4, true)
+
 # --- Silhouettes d'exemple (référence pour la vague 2) ---
 
 ## Dessine un rôle centré en p. mono : silhouette noire pleine, sans détail (test de lecture).
-func _role(role: String, p: Vector2, mono: bool, scale := 1.0, facing := 0.0) -> void:
+## etat : variante d'exemple ("" repos, "lancer", "touche", "anticipation", "saignant", "eteint", "ravive").
+func _role(role: String, p: Vector2, mono: bool, scale := 1.0, facing := 0.0, etat := "") -> void:
 	var k := scale
 	var black := Color.BLACK
 	match role:
 		"joueur":
-			var r := 15.0 * k
-			if not mono:
-				Art.shadow(self, p, r)
-			var d := Vector2.from_angle(facing)
-			# Corps rond, deux feuilles en cape dans le dos, une graine lumineuse devant (la visée).
-			for side in [-1, 1]:
-				var a: float = facing + PI + side * 0.55
-				var leaf := _leaf_pts(p + Vector2.from_angle(a) * r * 1.15, r * 0.7, a)
-				draw_colored_polygon(leaf, black if mono else Art.c("joueur_accent").darkened(0.2))
-				if not mono:
-					Art.outline(self, leaf, Art.c("contour"), Art.TRAIT_FIN)
-			draw_circle(p, r, black if mono else Art.c("joueur"))
-			draw_circle(p + d * r * 1.15, r * 0.3, black if mono else Art.c("joueur_accent"))
-			if not mono:
-				draw_arc(p, r, 0, TAU, 28, Art.c("contour"), Art.TRAIT, true)
-				draw_circle(p + d * r * 0.4, r * 0.16, Art.c("contour"))
+			_hero(p, 15.0 * k, mono, facing, etat)
 		"melee":
-			var r := 18.0 * k
-			var pts := _jagged(p, r, [1.0, 0.72, 1.05, 0.8, 0.95, 0.68, 1.0, 0.85], 0.2)
-			if not mono:
-				Art.shadow(self, p, r)
-			draw_colored_polygon(pts, black if mono else Art.c("ennemi"))
-			for s in [-1, 1]:
-				var cl := p + Vector2(r * 0.85, s * r * 0.5)
-				_spike(cl, Vector2(1, s * 0.4).normalized(), r * 0.5, black if mono else Art.c("ennemi_contour"))
-			if not mono:
-				Art.outline(self, pts, Art.c("ennemi_contour"), Art.TRAIT)
-				for s in [-1, 1]:
-					_slit(p + Vector2(r * 0.35, s * r * 0.28), r * 0.2, s)
+			_fletri(p, 18.0 * k, mono, etat)
 		"tireur":
-			var r := 16.0 * k
-			var pts := PackedVector2Array([p + Vector2(-r, -r * 0.7), p + Vector2(r * 0.5, -r * 0.55), p + Vector2(r * 0.8, 0), p + Vector2(r * 0.5, r * 0.55), p + Vector2(-r, r * 0.7), p + Vector2(-r * 0.6, 0)])
-			if not mono:
-				Art.shadow(self, p, r)
-			draw_colored_polygon(pts, black if mono else Art.c("ennemi"))
-			_spike(p + Vector2(r * 0.6, 0), Vector2.RIGHT, r * 1.3, black if mono else Art.c("ennemi_contour"))
-			if not mono:
-				Art.outline(self, pts, Art.c("ennemi_contour"), Art.TRAIT)
-				draw_circle(p + Vector2(r * 0.1, 0), r * 0.2, Art.c("ennemi_oeil"))
+			_tireur(p, 16.0 * k, mono)
 		"lourd":
-			var r := 27.0 * k
-			var pts := _jagged(p, r, [1.0, 0.9, 1.0, 0.92, 1.0, 0.9], 0.0)
-			if not mono:
-				Art.shadow(self, p, r)
-			draw_colored_polygon(pts, black if mono else Art.c("ennemi").darkened(0.15))
-			if not mono:
-				# Plaques d'écorce
-				draw_line(p + Vector2(-r * 0.6, -r * 0.3), p + Vector2(r * 0.2, -r * 0.55), Art.c("ennemi_contour").darkened(0.35), Art.TRAIT)
-				draw_line(p + Vector2(-r * 0.7, r * 0.3), p + Vector2(r * 0.1, r * 0.55), Art.c("ennemi_contour").darkened(0.35), Art.TRAIT)
-				Art.outline(self, pts, Art.c("ennemi_contour"), Art.TRAIT_FORT)
-				for s in [-1, 1]:
-					_slit(p + Vector2(r * 0.45, s * r * 0.2), r * 0.13, s)
+			_lourd(p, 27.0 * k, mono)
 		"elite":
 			var r := 18.0 * k
 			if not mono:
-				draw_circle(p, r * 1.7, Color(Art.c("elite"), 0.12))
-				for i in 8:
-					var a := i * TAU / 8.0
-					draw_arc(p, r * 1.55, a, a + 0.45, 6, Color(Art.c("elite"), 0.7), Art.TRAIT_FIN, true)
-			# Couronne de pointes
+				draw_circle(p, r * 1.75, Color(Art.c("elite"), 0.07))
+				draw_circle(p, r * 1.4, Color(Art.c("elite"), 0.09))
+				for i in 10:
+					var a: float = i * TAU / 10.0 + 0.2
+					draw_arc(p, r * 1.6, a, a + 0.38, 6, Color(Art.c("elite"), 0.75), Art.TRAIT_FIN, true)
+			# Couronne de pointes, en volume (une moitié éclairée, une moitié dans l'ombre).
 			for i in 5:
 				var d := Vector2.from_angle(-PI / 2.0 + (i - 2) * 0.42)
-				_spike(p + d * r * 0.8, d, r * 0.75, black if mono else Art.c("elite"))
-			_role("melee", p, mono, k)
+				var len := r * (0.85 if i == 2 else 0.7)
+				if mono:
+					_spike(p + d * r * 0.8, d, len, black)
+				else:
+					_spike_vol(p + d * r * 0.8, d, len, Art.c("elite"))
+			_fletri(p, r, mono, etat)
+			if not mono:
+				# Gemme de corruption au front
+				var g := p + Vector2(r * 0.05, -r * 0.55)
+				draw_colored_polygon(PackedVector2Array([g + Vector2(0, -r * 0.16), g + Vector2(r * 0.12, 0), g + Vector2(0, r * 0.16), g + Vector2(-r * 0.12, 0)]), Art.c("elite"))
+				draw_circle(g + Vector2(-r * 0.03, -r * 0.04), r * 0.04, Color.WHITE)
 		"interactif":
-			var r := 26.0 * k
-			if not mono:
-				draw_circle(p, r, Color(Art.c("interactif"), 0.10))
-				draw_arc(p, r * 1.15, -PI / 2.0, -PI / 2.0 + TAU * 0.62, 32, Art.c("interactif"), Art.TRAIT, true)
-				Art.glow(self, p, r * 0.6, "seve")
-			for i in 6:
-				var q := p + Vector2.from_angle(i * TAU / 6.0 + 0.3) * r * 0.85
-				var stone := Art.ellipse(q, r * 0.17, r * 0.23, 10)
-				draw_colored_polygon(stone, black if mono else Art.c("interactif"))
-				if not mono:
-					Art.outline(self, stone, Art.c("contour"), Art.TRAIT_FIN)
-			if mono:
-				draw_circle(p, r * 0.2, black)
+			_sanctuaire(p, 26.0 * k, mono, etat != "eteint")
 		"butin":
-			var r := 12.0 * k
-			var bob := Vector2(0, -r * 0.35)
-			if not mono:
-				Art.shadow(self, p + Vector2(0, r * 0.3), r * 0.8)
-				draw_circle(p + bob, r * 1.6, Color(Art.c("butin"), 0.15))
-			var leaf := _leaf_pts(p + bob, r * 1.1, -PI / 4.0)
-			draw_colored_polygon(leaf, black if mono else Art.c("butin"))
-			if not mono:
-				Art.outline(self, leaf, Art.c("contour"), Art.TRAIT_FIN)
-				_sparkle(p + bob + Vector2(r * 0.9, -r * 0.9), r * 0.5)
+			_greffe(p, 12.0 * k, mono)
+
+
+## Le Porte-Graine : corps rond, capuche de feuilles, cape de trois feuilles, graine-lanterne devant.
+func _hero(p: Vector2, r: float, mono: bool, facing: float, etat: String) -> void:
+	var d := Vector2.from_angle(facing)
+	var n := d.orthogonal()
+	var black := Color.BLACK
+	var leaf_col := Art.c("joueur_accent").darkened(0.3)
+	if not mono:
+		Art.shadow(self, p, r * 1.1)
+	# Cape : trois feuilles dans le dos, nervurées.
+	for side in [-1, 0, 1]:
+		var a: float = facing + PI + side * 0.62
+		var c := p + Vector2.from_angle(a) * r * (1.05 if side == 0 else 0.95)
+		var lf := _leaf_pts(c, r * (0.78 if side == 0 else 0.66), a)
+		if mono:
+			draw_colored_polygon(lf, black)
+		else:
+			Art.volume(self, lf, leaf_col.darkened(0.08 * absf(side)), 0.6)
+			draw_line(c - Vector2.from_angle(a) * r * 0.5, c + Vector2.from_angle(a) * r * 0.55, leaf_col.darkened(0.45), maxf(r * 0.05, 1.0), true)
+			Art.outline(self, lf, Art.c("contour"), maxf(r * 0.06, 1.2))
+	# Corps
+	if mono:
+		draw_circle(p, r, black)
+	else:
+		Art.volume_circle(self, p, r, Art.c("joueur"))
+		draw_arc(p, r, 0, TAU, 32, Art.c("contour"), maxf(r * 0.12, Art.TRAIT_FIN), true)
+	# Capuche de feuillage : couvre l'arrière du crâne (un croissant), avec une pousse au sommet.
+	var hood := PackedVector2Array()
+	for i in 17:
+		var a: float = facing + PI / 2.0 + 0.25 + i * (PI - 0.5) / 16.0
+		hood.append(p + Vector2.from_angle(a) * r * 1.04)
+	for i in range(16, -1, -1):
+		var a: float = facing + PI / 2.0 + 0.25 + i * (PI - 0.5) / 16.0
+		hood.append(p - d * r * 0.12 + Vector2.from_angle(a) * r * 0.62)
+	if mono:
+		draw_colored_polygon(hood, black)
+	else:
+		Art.volume(self, hood, Art.c("accent").darkened(0.15), 0.7)
+		for i in 4:
+			var a: float = facing + PI / 2.0 + 0.6 + i * 0.62
+			draw_line(p + Vector2.from_angle(a) * r * 0.66, p + Vector2.from_angle(a) * r * 0.98, Art.c("accent").darkened(0.5), maxf(r * 0.045, 0.8), true)
+		Art.outline(self, hood, Art.c("contour"), maxf(r * 0.06, 1.2))
+		var sprout := _leaf_pts(p - d * r * 0.55 - n * r * 0.1, r * 0.32, facing + PI + 0.5)
+		Art.volume(self, sprout, Art.c("accent"), 0.8)
+		Art.outline(self, sprout, Art.c("contour"), maxf(r * 0.04, 1.0))
+		# Visage : deux yeux et une joue claire.
+		for sgn in [-1, 1]:
+			draw_circle(p + d * r * 0.5 + n * sgn * r * 0.26, r * 0.1, Art.c("contour"))
+			draw_circle(p + d * r * 0.5 + n * sgn * r * 0.26 + Vector2(-r * 0.03, -r * 0.03), r * 0.035, Color.WHITE)
+		draw_arc(p + d * r * 0.62, r * 0.12, facing - 0.9, facing + 0.9, 8, Art.c("contour").lightened(0.2), maxf(r * 0.04, 0.8), true)
+	# Graine-lanterne
+	var seed_p := p + d * r * 1.4
+	var big := etat == "lancer"
+	if mono:
+		draw_circle(seed_p, r * 0.3, black)
+	else:
+		Art.glow(self, seed_p, r * (1.3 if big else 0.75), "seve")
+		draw_colored_polygon(Art.ellipse(seed_p, r * 0.3, r * 0.22, 14), Art.ec("seve", "sombre").lightened(0.2))
+		draw_circle(seed_p + Vector2(-r * 0.06, -r * 0.06), r * 0.13, Art.ec("seve", "clair"))
+		if big:
+			for i in 5:
+				var a: float = facing + (i - 2) * 0.35
+				draw_line(seed_p + Vector2.from_angle(a) * r * 0.55, seed_p + Vector2.from_angle(a) * r * 0.95, Color(Art.ec("seve"), 0.8), maxf(r * 0.06, 1.0), true)
+		if etat == "touche":
+			draw_circle(p, r * 1.02, Color(Art.c("danger_eclair"), 0.7))
+			draw_arc(p, r * 1.25, 0, TAU, 32, Color(Art.c("danger"), 0.8), maxf(r * 0.08, 1.5), true)
+
+
+## Le Flétri de mêlée : écorce anguleuse et fendue, veines de braise, yeux fendus, griffes d'os.
+func _fletri(p: Vector2, r: float, mono: bool, etat := "") -> void:
+	var black := Color.BLACK
+	var pts := _jagged(p, r, [1.0, 0.72, 1.05, 0.8, 0.95, 0.68, 1.0, 0.85], 0.2)
+	if not mono:
+		Art.shadow(self, p, r)
+	for sgn in [-1, 1]:
+		var cl := p + Vector2(r * 0.82, sgn * r * 0.48)
+		if mono:
+			_spike(cl, Vector2(1, sgn * 0.4).normalized(), r * 0.55, black)
+		else:
+			_spike_vol(cl, Vector2(1, sgn * 0.4).normalized(), r * 0.55, Art.ec("epine", "clair").darkened(0.15))
+	if mono:
+		draw_colored_polygon(pts, black)
+		return
+	var body := Art.c("ennemi")
+	if etat == "touche":
+		body = body.lerp(Color.WHITE, 0.7)
+	Art.volume(self, pts, body)
+	# Fentes de l'écorce, avec la braise qui couve dedans.
+	var w := maxf(r * 0.07, 1.0)
+	for crack in [[Vector2(-0.1, -0.05), Vector2(-0.45, -0.35), Vector2(-0.62, -0.28)], [Vector2(-0.1, -0.05), Vector2(-0.3, 0.35), Vector2(-0.55, 0.5)], [Vector2(-0.1, -0.05), Vector2(0.1, -0.5)]]:
+		var line := PackedVector2Array()
+		for q in crack:
+			line.append(p + q * r)
+		draw_polyline(line, body.darkened(0.6), w * 1.8, true)
+		draw_polyline(line, Color(Art.ec("cendre"), 0.75 if etat == "anticipation" else 0.5), w * 0.7, true)
+	Art.outline(self, pts, Art.c("ennemi_contour"), maxf(r * 0.1, Art.TRAIT_FIN))
+	# Yeux
+	var eye_a := 0.55 if etat == "anticipation" else 0.25
+	for sgn in [-1, 1]:
+		var e := p + Vector2(r * 0.38, sgn * r * 0.27)
+		draw_circle(e, r * 0.16, Color(Art.c("ennemi_oeil"), eye_a))
+		_slit(e, r * 0.13, sgn)
+	# Flocons de cendre
+	for i in 3:
+		var q := p + Vector2(-r * (0.4 + 0.35 * i), -r * (1.1 + 0.25 * (i % 2)))
+		draw_colored_polygon(PackedVector2Array([q + Vector2(0, -r * 0.07), q + Vector2(r * 0.05, 0), q + Vector2(0, r * 0.07), q + Vector2(-r * 0.05, 0)]), Color(Art.c("brume").lightened(0.3), 0.7 - i * 0.18))
+	if etat == "saignant":
+		Art.status(self, "saignement", p, r, 0.4)
+
+
+## Le Tireur d'épines : corps effilé, piquants dans le dos, canon-épine cerclé, un œil.
+func _tireur(p: Vector2, r: float, mono: bool) -> void:
+	var black := Color.BLACK
+	var pts := PackedVector2Array([p + Vector2(-r, -r * 0.7), p + Vector2(r * 0.5, -r * 0.55), p + Vector2(r * 0.8, 0), p + Vector2(r * 0.5, r * 0.55), p + Vector2(-r, r * 0.7), p + Vector2(-r * 0.6, 0)])
+	if not mono:
+		Art.shadow(self, p, r)
+	for i in 3:
+		var base := p + Vector2(-r * (0.55 + i * 0.12), (i - 1) * r * 0.45)
+		if mono:
+			_spike(base, Vector2(-1, (i - 1) * 0.5).normalized(), r * 0.6, black)
+		else:
+			_spike_vol(base, Vector2(-1, (i - 1) * 0.5).normalized(), r * 0.6, Art.c("ennemi_contour").darkened(0.35))
+	if mono:
+		draw_colored_polygon(pts, black)
+		_spike(p + Vector2(r * 0.6, 0), Vector2.RIGHT, r * 1.3, black)
+		return
+	Art.volume(self, pts, Art.c("ennemi"))
+	_spike_vol(p + Vector2(r * 0.55, 0), Vector2.RIGHT, r * 1.35, Art.ec("epine", "clair").darkened(0.15))
+	for i in 2:
+		var x := p.x + r * (0.75 + i * 0.28)
+		draw_line(Vector2(x, p.y - r * (0.22 - i * 0.05)), Vector2(x, p.y + r * (0.22 - i * 0.05)), Art.c("ennemi").darkened(0.4), maxf(r * 0.08, 1.0), true)
+	Art.outline(self, pts, Art.c("ennemi_contour"), maxf(r * 0.1, Art.TRAIT_FIN))
+	draw_circle(p + Vector2(r * 0.05, 0), r * 0.32, Color(Art.c("ennemi_oeil"), 0.3))
+	draw_circle(p + Vector2(r * 0.05, 0), r * 0.18, Art.c("ennemi_oeil"))
+	draw_circle(p + Vector2(r * 0.1, 0), r * 0.07, Art.c("contour"))
+	draw_circle(p + Vector2(r * 1.95, 0), r * 0.1, Art.ec("cendre", "clair"))
+
+
+## Le Colosse : bloc d'écorce à plaques, fentes de braise, petits yeux, trait fort.
+func _lourd(p: Vector2, r: float, mono: bool) -> void:
+	var pts := _jagged(p, r, [1.0, 0.9, 1.0, 0.92, 1.0, 0.9], 0.0)
+	if mono:
+		draw_colored_polygon(pts, Color.BLACK)
+		return
+	Art.shadow(self, p, r)
+	var body := Art.c("ennemi").darkened(0.12)
+	draw_colored_polygon(pts, body.darkened(0.45))
+	# Plaques d'écorce, chacune en volume, séparées par des fentes où couve la braise.
+	var plates := [
+		[Vector2(-0.82, -0.3), Vector2(-0.3, -0.78), Vector2(0.35, -0.72), Vector2(0.15, -0.2), Vector2(-0.45, 0.0)],
+		[Vector2(0.25, -0.62), Vector2(0.82, -0.3), Vector2(0.85, 0.3), Vector2(0.3, 0.2), Vector2(0.22, -0.12)],
+		[Vector2(-0.82, 0.1), Vector2(-0.4, 0.12), Vector2(0.2, 0.32), Vector2(0.25, 0.75), Vector2(-0.45, 0.75)],
+		[Vector2(0.35, 0.32), Vector2(0.82, 0.38), Vector2(0.45, 0.78), Vector2(0.32, 0.72)],
+	]
+	for pl in plates:
+		var poly := PackedVector2Array()
+		for q in pl:
+			poly.append(p + q * r)
+		Art.volume(self, poly, body.lightened(0.05), 0.7)
+	draw_polyline(PackedVector2Array([p + Vector2(-0.5, -0.05) * r, p + Vector2(0.18, -0.16) * r, p + Vector2(0.26, 0.26) * r, p + Vector2(-0.4, 0.06) * r]), Color(Art.ec("cendre"), 0.55), maxf(r * 0.04, 1.0), true)
+	Art.outline(self, pts, Art.c("ennemi_contour"), maxf(r * 0.12, Art.TRAIT_FORT))
+	for sgn in [-1, 1]:
+		var e := p + Vector2(r * 0.55, sgn * r * 0.14)
+		draw_circle(e, r * 0.1, Color(Art.c("ennemi_oeil"), 0.3))
+		_slit(e, r * 0.08, sgn)
+
+
+## Un sanctuaire : cercle de pierres levées gravées, socle central et sa graine.
+func _sanctuaire(p: Vector2, r: float, mono: bool, lit: bool) -> void:
+	if not mono:
+		draw_circle(p, r * 1.2, Color(Art.c("decor_vivant") if lit else Art.c("decor"), 0.35))
+		draw_arc(p, r * 1.0, 0, TAU, 40, Color(Art.c("interactif"), 0.35 if lit else 0.15), maxf(r * 0.04, 1.0), true)
+		draw_arc(p, r * 0.55, 0, TAU, 32, Color(Art.c("interactif"), 0.3 if lit else 0.12), maxf(r * 0.03, 1.0), true)
+		if lit:
+			draw_arc(p, r * 1.32, -PI / 2.0, -PI / 2.0 + TAU, 48, Art.c("butin"), maxf(r * 0.06, Art.TRAIT), true)
+		else:
+			draw_arc(p, r * 1.32, -PI / 2.0, -PI / 2.0 + TAU * 0.4, 32, Color(Art.c("butin"), 0.8), maxf(r * 0.06, Art.TRAIT), true)
+	var stone_col := Art.c("interactif") if lit else Art.c("interactif").darkened(0.35)
+	for i in 6:
+		var a: float = i * TAU / 6.0 + 0.3
+		var q := p + Vector2.from_angle(a) * r * 0.85
+		var stone := PackedVector2Array([q + Vector2(-0.17, 0.2) * r, q + Vector2(-0.15, -0.16) * r, q + Vector2(0, -0.27) * r, q + Vector2(0.15, -0.17) * r, q + Vector2(0.17, 0.2) * r])
+		if mono:
+			draw_colored_polygon(stone, Color.BLACK)
+			continue
+		Art.shadow(self, q + Vector2(0, r * 0.05), r * 0.16)
+		Art.volume(self, stone, stone_col, 0.8)
+		Art.outline(self, stone, Art.c("contour"), maxf(r * 0.04, 1.0))
+		var rune := Color(Art.ec("seve"), 0.95) if lit else Color(Art.c("contour"), 0.5)
+		draw_line(q + Vector2(0, -0.14) * r, q + Vector2(0, 0.08) * r, rune, maxf(r * 0.035, 1.0), true)
+		draw_line(q + Vector2(-0.07, -0.04) * r, q + Vector2(0.07, -0.1) * r, rune, maxf(r * 0.03, 1.0), true)
+	if mono:
+		draw_circle(p, r * 0.22, Color.BLACK)
+		return
+	Art.volume_circle(self, p, r * 0.24, stone_col.darkened(0.1), 0.6)
+	if lit:
+		Art.glow(self, p, r * 0.5, "seve")
+	else:
+		draw_circle(p, r * 0.08, Art.ec("seve", "sombre"))
+
+
+## Une greffe au sol : feuille d'or nervurée, tige, éclat ; avec une essence et une sève perdue à côté.
+func _greffe(p: Vector2, r: float, mono: bool) -> void:
+	var bob := Vector2(0, -r * 0.35)
+	var lf := _leaf_pts(p + bob, r * 1.1, -PI / 4.0)
+	if mono:
+		draw_colored_polygon(lf, Color.BLACK)
+		return
+	Art.shadow(self, p + Vector2(0, r * 0.3), r * 0.8)
+	draw_circle(p + bob, r * 1.7, Color(Art.c("butin"), 0.08))
+	draw_circle(p + bob, r * 1.25, Color(Art.c("butin"), 0.1))
+	var d := Vector2.from_angle(-PI / 4.0)
+	draw_line(p + bob - d * r * 1.05, p + bob - d * r * 1.55, Art.c("butin").darkened(0.5), maxf(r * 0.12, 1.2), true)
+	Art.volume(self, lf, Art.c("butin"))
+	draw_line(p + bob - d * r * 1.0, p + bob + d * r * 0.95, Art.c("butin").darkened(0.45), maxf(r * 0.07, 1.0), true)
+	for i in 3:
+		var base := p + bob + d * r * (-0.5 + i * 0.45)
+		for sgn in [-1, 1]:
+			draw_line(base, base + d * r * 0.3 + d.orthogonal() * sgn * r * 0.35, Art.c("butin").darkened(0.35), maxf(r * 0.05, 0.8), true)
+	Art.outline(self, lf, Art.c("contour"), maxf(r * 0.08, 1.2))
+	_sparkle(p + bob + Vector2(r * 0.95, -r * 0.95), r * 0.5)
+
+
+## Pointe en volume : moitié claire, moitié sombre.
+func _spike_vol(base: Vector2, d: Vector2, len: float, col: Color) -> void:
+	var n := d.orthogonal()
+	var tip := base + d * len
+	draw_colored_polygon(PackedVector2Array([base + n * len * 0.25, tip, base]), col.lightened(0.15))
+	draw_colored_polygon(PackedVector2Array([base, tip, base - n * len * 0.25]), col.darkened(0.3))
+
+
+## Essence de vie : gemme taillée de sève.
+func _essence(p: Vector2, r: float) -> void:
+	Art.glow(self, p, r * 1.8, "seve")
+	var top := p + Vector2(0, -r)
+	var bot := p + Vector2(0, r)
+	var lft := p + Vector2(-r * 0.62, 0)
+	var rgt := p + Vector2(r * 0.62, 0)
+	var mid := p + Vector2(-r * 0.1, -r * 0.1)
+	var c := Art.ec("seve")
+	draw_colored_polygon(PackedVector2Array([top, mid, lft]), c.lightened(0.4))
+	draw_colored_polygon(PackedVector2Array([top, rgt, mid]), c)
+	draw_colored_polygon(PackedVector2Array([lft, mid, bot]), c.darkened(0.2))
+	draw_colored_polygon(PackedVector2Array([mid, rgt, bot]), c.darkened(0.45))
+	Art.outline(self, PackedVector2Array([top, rgt, bot, lft]), Art.ec("seve", "sombre"), maxf(r * 0.08, 1.0))
+
+
+## Sève perdue : grosse goutte de sève qui palpite, avec sa lueur.
+func _seve_perdue(p: Vector2, r: float) -> void:
+	Art.glow(self, p, r * 2.0, "seve")
+	var pts := PackedVector2Array()
+	for i in 24:
+		var a: float = i * TAU / 24.0
+		var q := Vector2(cos(a), sin(a)) * r
+		if q.y < 0:
+			q.x *= 1.0 + q.y / r * 0.85
+			q.y *= 1.7
+		pts.append(p + q)
+	Art.volume(self, pts, Art.ec("seve").darkened(0.15))
+	Art.outline(self, pts, Art.ec("seve", "sombre"), maxf(r * 0.08, 1.0))
+	draw_circle(p + Vector2(-r * 0.32, -r * 0.1), r * 0.14, Color.WHITE)
 
 
 func _jagged(p: Vector2, r: float, radii: Array, rot: float) -> PackedVector2Array:
@@ -316,7 +598,7 @@ func _spike(base: Vector2, d: Vector2, len: float, col: Color) -> void:
 
 ## Œil fendu des Flétris : un trait oblique de braise.
 func _slit(p: Vector2, s: float, side: int) -> void:
-	draw_line(p + Vector2(-s, -side * s * 0.6), p + Vector2(s, side * s * 0.2), Art.c("ennemi_oeil"), maxf(s * 0.7, 2.0), true)
+	draw_line(p + Vector2(-s, -side * s * 0.6), p + Vector2(s, side * s * 0.2), Art.c("ennemi_oeil"), clampf(s * 0.45, 1.6, 5.0), true)
 
 
 func _sparkle(p: Vector2, s: float) -> void:

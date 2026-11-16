@@ -158,6 +158,10 @@ func _scenario_charte() -> void:
 	add_child(layer)
 	await _frames(3)
 	await _shot("charte")
+	sheet.page = "details"
+	sheet.queue_redraw()
+	await _frames(3)
+	await _shot("charte_details")
 
 
 ## Galerie : ennemis et effets, puis les six états d'un nœud de l'arbre sur une planche.

@@ -4,6 +4,8 @@ Ce document fixe le langage visuel du jeu. Il vaut pour la zone de Ronce et pour
 
 ![Planche de la charte](../godot/tests/visual/reference/charte.png)
 
+![Personnages et objets en détail](../godot/tests/visual/reference/charte_details.png)
+
 ## 1. Hiérarchie de lecture
 
 On doit lire l'écran en une seconde, dans cet ordre :
@@ -71,6 +73,7 @@ Toutes ces silhouettes doivent se reconnaître **en noir sur blanc**. La planche
 - Traits : `Art.TRAIT_FIN` (1,5 px : détails, motifs, petites icônes), `Art.TRAIT` (2,5 px : contour des acteurs), `Art.TRAIT_FORT` (4 px : lourds, boss, contour au moment de la frappe). `Art.outline(ci, points, couleur, épaisseur)`.
 - Ombre portée : une ellipse aplatie sous l'acteur, légèrement vers le bas. La lumière vient d'en haut, un peu de face. `Art.shadow(ci, pos, r)`.
 - Lueur : trois halos qui s'éclaircissent vers le centre, puis un cœur à la couleur claire de l'élément. `Art.glow(ci, pos, r, element)`. On la réserve à ce qui est vivant ou utile (sève, essences, sanctuaires). Un ennemi n'a pas de lueur, sauf l'aura d'une élite.
+- Volume : les acteurs et objets importants ne sont pas des aplats. `Art.volume(ci, points, couleur)` et `Art.volume_circle(ci, pos, r, couleur)` donnent un côté ombre, une face éclairée (en haut à gauche) et un reflet. On ajoute ensuite les détails propres au rôle : nervures des feuilles du héros, fentes d'écorce où couve la braise chez les Flétris, plaques du Colosse, runes des sanctuaires (voir la planche « en détail »).
 - Ordre de dessin (`Art.COUCHE`, valeurs de `z_index`) : sol < décor bas < objets interactifs < acteurs < projectiles < effets < décor haut < interface.
 
 ## 6. Annonce d'une attaque : une seule grammaire
@@ -106,7 +109,7 @@ Les courbes disponibles sont `Anim.ease_in`, `ease_out`, `ease_in_out` et `ease_
 
 ## 8. Icônes
 
-`Art.icon(ci, id, rect, couleur)` dessine une icône. Ce sont des silhouettes pleines, lisibles à 20 px, avec au plus un détail clair. **La même icône sert partout** : barre de compétences, arbre, infobulles, journal, ramassage. Une icône prend par défaut la couleur de son élément ou de son rôle.
+`Art.icon(ci, id, rect, couleur)` dessine une icône. Ce sont des silhouettes pleines, lisibles à 20 px, avec au plus un détail clair. **La même icône sert partout** : barre de compétences, arbre, infobulles, journal, ramassage. Une icône prend par défaut la couleur de son élément ou de son rôle. À partir de 20 px environ, elle prend du relief (une tranche sombre sous la forme). `Art.icon_badge(ci, id, rect)` la pose dans un médaillon (disque sombre, anneau à sa couleur, reflet) : c'est la forme à utiliser dans la barre de compétences, les infobulles et le journal.
 
 - Éléments : épine, saignement, racine, poison, cendre, sève.
 - Compétences : `nova`, `fouet`, `racines`, `volee`, `saignee`, `cloud`, `bloom`. Ce sont des premières versions : la tâche C les affine.

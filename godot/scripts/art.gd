@@ -161,6 +161,37 @@ static func glow(ci: CanvasItem, pos: Vector2, r: float, element := "seve") -> v
 	ci.draw_circle(pos, r * 0.2, Color(core, 0.9))
 
 
+## Remplit une forme avec du volume, lumière venant d'en haut à gauche : côté ombre, face éclairée,
+## reflet. light règle la force du reflet (0 : mat). Pour les acteurs et les objets importants.
+static func volume(ci: CanvasItem, pts: PackedVector2Array, col: Color, light := 1.0) -> void:
+	var cen := Vector2.ZERO
+	for q in pts:
+		cen += q
+	cen /= pts.size()
+	var r := 0.0
+	for q in pts:
+		r = maxf(r, q.distance_to(cen))
+	ci.draw_colored_polygon(pts, col.darkened(0.38))
+	ci.draw_colored_polygon(_xform(pts, cen, 0.84, Vector2(-0.06, -0.09) * r), col)
+	if light > 0.0:
+		ci.draw_colored_polygon(_xform(pts, cen, 0.4, Vector2(-0.24, -0.3) * r), Color(col.lightened(0.3), 0.5 * light))
+
+
+## Disque avec du volume (même lumière que volume()).
+static func volume_circle(ci: CanvasItem, pos: Vector2, r: float, col: Color, light := 1.0) -> void:
+	ci.draw_circle(pos, r, col.darkened(0.38))
+	ci.draw_circle(pos + Vector2(-0.07, -0.1) * r, r * 0.84, col)
+	if light > 0.0:
+		ci.draw_circle(pos + Vector2(-0.3, -0.34) * r, r * 0.34, Color(col.lightened(0.32), 0.55 * light))
+
+
+static func _xform(pts: PackedVector2Array, cen: Vector2, k: float, off: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for q in pts:
+		out.append(cen + (q - cen) * k + off)
+	return out
+
+
 ## Polygone d'une ellipse (rayons rx, ry) : sert aux ombres et aux zones vues en perspective.
 static func ellipse(pos: Vector2, rx: float, ry: float, n := 20) -> PackedVector2Array:
 	var pts := PackedVector2Array()
@@ -410,14 +441,37 @@ static func icon_ids() -> Array:
 
 ## Dessine l'icône id centrée dans rect (carré conseillé). col : couleur de l'icône, sa couleur
 ## naturelle par défaut. Le dessin tient dans le cercle inscrit, au trait de la charte.
+## Au-dessus de 10 px de demi-côté, l'icône prend du relief : sa propre forme, assombrie et décalée
+## vers le bas, lui fait une tranche (comme une pièce découpée et posée).
 static func icon(ci: CanvasItem, id: String, rect: Rect2, col := Color(0, 0, 0, 0)) -> void:
 	var p := rect.get_center()
 	var s := minf(rect.size.x, rect.size.y) * 0.42
 	if col.a == 0.0:
 		col = icon_color(id)
 	var lw := maxf(s * 0.14, 1.2)
-	var clair := col.lerp(Color.WHITE, 0.6)
-	var sombre := col.darkened(0.55)
+	if s >= 10.0:
+		var edge := col.darkened(0.62)
+		_icon_body(ci, id, p + Vector2(0, s * 0.11), s, edge, edge, edge, lw)
+	_icon_body(ci, id, p, s, col, col.lerp(Color.WHITE, 0.6), col.darkened(0.55), lw)
+
+
+## Médaillon d'icône (barre de compétences, infobulles, journal) : disque sombre, anneau à la
+## couleur de l'icône, reflet en haut, puis l'icône en relief.
+static func icon_badge(ci: CanvasItem, id: String, rect: Rect2, col := Color(0, 0, 0, 0)) -> void:
+	var p := rect.get_center()
+	var r := minf(rect.size.x, rect.size.y) / 2.0
+	if col.a == 0.0:
+		col = icon_color(id)
+	ci.draw_circle(p + Vector2(0, r * 0.08), r, c("ombre"))
+	ci.draw_circle(p, r, c("contour"))
+	ci.draw_circle(p, r * 0.9, col.darkened(0.82))
+	ci.draw_circle(p + Vector2(0, -r * 0.12), r * 0.74, Color(col.darkened(0.65), 0.6))
+	ci.draw_arc(p, r * 0.93, 0.0, TAU, 40, col.darkened(0.25), maxf(r * 0.08, 1.2), true)
+	ci.draw_arc(p, r * 0.8, PI * 1.12, PI * 1.88, 20, Color(1, 1, 1, 0.16), maxf(r * 0.07, 1.0), true)
+	icon(ci, id, Rect2(p - Vector2(r, r) * 0.72, Vector2(r, r) * 1.44), col)
+
+
+static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Color, clair: Color, sombre: Color, lw: float) -> void:
 	var P := func(x: float, y: float) -> Vector2: return p + Vector2(x, y) * s
 	match id:
 		# Éléments
@@ -473,8 +527,8 @@ static func icon(ci: CanvasItem, id: String, rect: Rect2, col := Color(0, 0, 0, 
 				ci.draw_line(o, o - Vector2(1, -1).normalized() * s * 0.35, Color(col, 0.5), lw * 0.7, true)
 		"saignee":
 			ci.draw_line(P.call(-0.85, -0.6), P.call(0.6, 0.4), col, lw * 1.4, true)
-			_drop(ci, P.call(0.35, -0.15), s * 0.4, Art.ec("saignement", "clair"))
-			_drop(ci, P.call(-0.3, 0.6), s * 0.28, Art.ec("saignement", "clair"))
+			_drop(ci, P.call(0.35, -0.15), s * 0.4, (sombre if col == sombre else Art.ec("saignement", "clair")))
+			_drop(ci, P.call(-0.3, 0.6), s * 0.28, (sombre if col == sombre else Art.ec("saignement", "clair")))
 		"cloud":
 			for q in [Vector3(-0.45, 0.2, 0.42), Vector3(0.1, -0.2, 0.52), Vector3(0.55, 0.25, 0.38), Vector3(0.0, 0.4, 0.4)]:
 				ci.draw_circle(P.call(q.x, q.y), s * q.z, col)
@@ -542,18 +596,18 @@ static func icon(ci: CanvasItem, id: String, rect: Rect2, col := Color(0, 0, 0, 
 			for i in 5:
 				var q: Vector2 = P.call(0, 0.35) + Vector2.from_angle(PI + i * PI / 4.0) * s * 0.7
 				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-s * 0.12, s * 0.1), q + Vector2(-s * 0.1, -s * 0.35), q + Vector2(0, -s * 0.45), q + Vector2(s * 0.1, -s * 0.35), q + Vector2(s * 0.12, s * 0.1)]), col)
-			ci.draw_circle(P.call(0, 0.35), s * 0.2, Art.ec("seve"))
+			ci.draw_circle(P.call(0, 0.35), s * 0.2, (sombre if col == sombre else Art.ec("seve")))
 		"autel":
 			ci.draw_colored_polygon(PackedVector2Array([P.call(-0.8, 0.95), P.call(-0.55, 0.3), P.call(0.55, 0.3), P.call(0.8, 0.95)]), col)
 			ci.draw_rect(Rect2(P.call(-0.7, 0.12), Vector2(1.4, 0.2) * s), col)
-			_leaf(ci, P.call(0, -0.4), s * 0.42, -PI / 2.0, Art.c("butin"))
+			_leaf(ci, P.call(0, -0.4), s * 0.42, -PI / 2.0, (sombre if col == sombre else Art.c("butin")))
 		"coeur":
 			var pts2 := PackedVector2Array()
 			for i in 10:
 				pts2.append(p + Vector2.from_angle(i * TAU / 10.0) * s * (0.9 if i % 2 == 0 else 0.55))
 			ci.draw_colored_polygon(pts2, col)
-			ci.draw_circle(p, s * 0.3, Art.c("contour"))
-			ci.draw_circle(p, s * 0.16, Art.c("ennemi_oeil"))
+			ci.draw_circle(p, s * 0.3, (sombre if col == sombre else Art.c("contour")))
+			ci.draw_circle(p, s * 0.16, (sombre if col == sombre else Art.c("ennemi_oeil")))
 		"arene":
 			ci.draw_arc(p, s * 0.72, 0.0, TAU, 28, col, lw, true)
 			for i in 10:
