@@ -166,6 +166,17 @@ func _scenario_galerie() -> void:
 	await _frames(3)
 	await _shot("galerie_roncier")
 	layer.queue_free()
+	await _frames(1)
+	layer = CanvasLayer.new()
+	layer.layer = 100
+	gallery = GalleryScript.new()
+	gallery.view = get_viewport().get_visible_rect().size
+	gallery.page = "varies"
+	layer.add_child(gallery)
+	add_child(layer)
+	await _frames(3)
+	await _shot("galerie_varies")
+	layer.queue_free()
 
 	Game.points = 5
 	var root_neighbors: Array = Game.tree.nodes[0]["neighbors"].duplicate()

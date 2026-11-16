@@ -33,6 +33,11 @@ const GraftPickup = preload("res://scripts/graft_pickup.gd")
 
 ## Apparitions par région (sortes du roncier, part selon la distance) : res://data/enemies.json.
 var region_spawn: Dictionary = Content._load("enemies").get("spawn", {})
+## Flétris ordinaires (poids, niveau minimal, nombre maximal en vie) : « ordinary » de enemies.json.
+var ordinary_spawn: Dictionary = Content._load("enemies").get("ordinary", {})
+
+## Une élite vient d'être vaincue (contrat partagé : butin, objectif « vaincre trois élites »).
+signal elite_killed(enemy)
 ## Dernier état connu de la purification du Cœur de Ronce (contrat avec la tâche D).
 var ronce_purified := false
 const BuildBot = preload("res://scripts/build_bot.gd")
@@ -454,23 +459,73 @@ func _spawn_enemy() -> void:
 		pos = pos.clamp(Vector2(-WORLD_HALF, -WORLD_HALF), Vector2(WORLD_HALF, WORLD_HALF))
 		if ground.life_at(pos) < 0.5:
 			break
-	spawn_enemy_kind(_pick_kind(pos), pos, threat(pos))
+	var e = spawn_enemy_kind(_pick_kind(pos), pos, threat(pos))
+	_roll_elite(e, pos)
 
 
-## Sorte d'ennemi à faire naître à cet endroit (indice ou identifiant de enemies.json).
+## Sorte d'ennemi à faire naître ici : une sorte du roncier, ou un Flétri ordinaire.
 func _pick_kind(pos: Vector2):
-	var kind = 0
-	var roll := rng.randf()
-	if Game.level >= 4 and roll < 0.12:
-		kind = 2
-	elif roll < 0.4:
-		kind = 1
 	var reg := region_at(pos)
 	if region_spawn.has(reg):
 		var regional := _region_kind(reg, pos)
 		if regional != "":
-			kind = regional
-	return kind
+			return regional
+	return _ordinary_kind()
+
+
+## Flétri ordinaire tiré selon les poids de « ordinary », parmi les sortes permises à ce niveau
+## et pas déjà trop nombreuses.
+func _ordinary_kind() -> String:
+	var kinds: Dictionary = ordinary_spawn.get("kinds", {"fletri": 1.0})
+	var min_level: Dictionary = ordinary_spawn.get("min_level", {})
+	var max_alive: Dictionary = ordinary_spawn.get("max_alive", {})
+	var allowed := {}
+	var total := 0.0
+	for k in kinds:
+		if Game.level < int(min_level.get(k, 1)):
+			continue
+		if max_alive.has(k) and enemies.filter(func(e): return e.get("kind_id") == k).size() >= int(max_alive[k]):
+			continue
+		allowed[k] = float(kinds[k])
+		total += float(kinds[k])
+	var pick := rng.randf() * total
+	for k in allowed:
+		pick -= allowed[k]
+		if pick <= 0.0:
+			return k
+	return "fletri"
+
+
+## Tirage d'une élite : rare près de la graine, un peu moins au fond d'une région ; au plus
+## « max_alive » en même temps. Réglages : section « elites » de enemies.json.
+func _roll_elite(e, pos: Vector2) -> void:
+	var cfg: Dictionary = Enemy.ELITES
+	if cfg.is_empty() or Game.level < int(cfg.get("min_level", 1)) or not e.can_be_elite():
+		return
+	var chance := lerpf(float(cfg.get("chance", 0.01)), float(cfg.get("chance_far", 0.03)), _region_depth(pos))
+	if rng.randf() >= chance:
+		return
+	if enemies.filter(func(x): return x.get("elite") == true).size() >= int(cfg.get("max_alive", 2)):
+		return
+	make_elite(e, rng.randf() < float(cfg.get("two_affixes", 0.0)) and Game.level >= int(cfg.get("two_affixes_level", 1)))
+
+
+## Fait d'un ennemi une élite à un ou deux modificateurs tirés selon leurs poids.
+func make_elite(e, two := false) -> void:
+	var pool: Array = e.allowed_affixes()
+	var picked: Array = []
+	for n in (2 if two else 1):
+		var total := 0.0
+		for a in pool:
+			total += float(Enemy.ELITES["affixes"][a].get("weight", 1.0))
+		var pick := rng.randf() * total
+		for a in pool:
+			pick -= float(Enemy.ELITES["affixes"][a].get("weight", 1.0))
+			if pick <= 0.0:
+				picked.append(a)
+				pool.erase(a)
+				break
+	e.make_elite(picked)
 
 
 ## Sorte du roncier à faire naître ici, ou "" pour un Flétri ordinaire. La part des ennemis de la
@@ -605,11 +660,17 @@ func damage_area(center: Vector2, radius: float, amount: float, knockback: float
 func on_enemy_killed(e) -> void:
 	Game.kills += 1
 	Sfx.play("mort", e.position)
-	var o = Orb.new()
-	o.main = self
-	o.position = e.position
-	o.value = e.xp_value
-	orbs_layer.call_deferred("add_child", o)
+	# Une élite laisse une gerbe d'essences, et parfois une greffe (tâche B).
+	var is_elite: bool = e.get("elite") == true
+	var n_orbs := 6 if is_elite else 1
+	for i in n_orbs:
+		var o = Orb.new()
+		o.main = self
+		o.position = e.position + (Vector2.from_angle(TAU * i / n_orbs) * 22.0 if n_orbs > 1 else Vector2.ZERO)
+		o.value = e.xp_value / n_orbs
+		orbs_layer.call_deferred("add_child", o)
+	if is_elite:
+		_on_elite_killed(e)
 	# Chaque Flétri purifié rend un peu de vie au sol.
 	ground.paint(e.position, 46.0 + e.radius, 0.3)
 	if rng.randf() < 0.6:
@@ -657,6 +718,14 @@ func import_ground_grafts(list: Array) -> void:
 			var g = drop_graft(Vector2(float(item[0]), float(item[1])), str(item[2]))
 			if g != null:
 				g.pop = 0.0
+
+
+func _on_elite_killed(e) -> void:
+	fx.ring(e.position, e.radius, e.radius * 4.0, 0.6, Color("f2c75a"), 5.0)
+	fx.text(e.position + Vector2(0, -e.radius - 30), e.elite_name + " vaincu", Color("f2c75a"), 18, 1.6)
+	if rng.randf() < float(Enemy.ELITES.get("graft_chance", 0.0)):
+		drop_graft(e.position)
+	elite_killed.emit(e)
 
 
 func player_died() -> void:
