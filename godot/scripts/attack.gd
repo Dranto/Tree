@@ -256,11 +256,11 @@ static func _dir_to(player, target) -> Vector2:
 	if target is Vector2:
 		at = target
 	elif target is Node2D and is_instance_valid(target):
-		at = target.global_position
-	elif "aim_point" in player:
-		at = player.aim_point
+		at = target.position
+	elif "aim" in player:
+		return player.aim   # pas de cible : la visée du joueur (vers aim_point), comme l'ancien tir
 	if at != null:
-		var off: Vector2 = at - player.global_position
+		var off: Vector2 = at - player.position
 		if off.length() > 1.0:
 			return off.normalized()
 	return player.aim if "aim" in player else Vector2.RIGHT
@@ -291,7 +291,8 @@ static func _directions(st: Dictionary, shot: Dictionary, count: int, spread: fl
 		# Rafale : un léger écart d'un tir à l'autre, toujours le même (rejouable).
 		jitter = float(f["jitter"]) * [0.0, 1.0, -1.0, 0.5, -0.5][int(shot.get("burst", 0)) % 5]
 	for i in count:
-		out.append(dir.rotated(jitter + (i - (count - 1) / 2.0) * spread))
+		# Même calcul que l'ancien tir (angle puis vecteur) : la graine sans modificateur part exactement pareil.
+		out.append(Vector2.from_angle(dir.angle() + jitter + (i - (count - 1) / 2.0) * spread))
 	return out
 
 
@@ -326,14 +327,20 @@ static func _shoot(player, st: Dictionary, shot: Dictionary) -> void:
 			trap_dmg *= float(st["factor"])
 	if shot.get("burst", 0) == 0 and not shot.get("salvo", false):
 		_sfx("tir")
-	for d in _directions(st, shot, count, float(f.get("spread", 0.14))):
-		var dir: Vector2 = d
+	# Traînée d'épines : seul le tir de tête (centre de l'éventail, premier de la rafale) en sème,
+	# pour qu'elle reste lisible et dans son budget de dessin.
+	var quiet := on_hit.duplicate()
+	quiet.erase("trainee")
+	var dirs := _directions(st, shot, count, float(f.get("spread", 0.14)))
+	var lead := -1 if int(shot.get("burst", 0)) > 0 or shot.get("ring", false) else int(dirs.size() / 2)
+	for i in dirs.size():
+		var dir: Vector2 = dirs[i]
 		var p = main.spawn_projectile(player.position + dir * 18.0, dir * speed, dmg, pierce, size)
 		p.life = life
 		p.style = form
 		p.branch = branch
 		p.empowered = empowered
-		p.attack = on_hit
+		p.attack = on_hit if i == lead else quiet
 		if form == "ronce_vive":
 			p.plant = true
 			p.trap_dmg = trap_dmg
