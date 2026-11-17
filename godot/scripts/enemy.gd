@@ -21,6 +21,7 @@ const Blast = preload("res://scripts/enemy_blast.gd")
 const FletriArt = preload("res://scripts/fletri_art.gd")
 const Remains = preload("res://scripts/enemy_remains.gd")
 const DrawBatch = preload("res://scripts/draw_batch.gd")
+const Silhouettes = preload("res://scripts/silhouette_cache.gd")
 
 ## Sortes d'ennemis, dans l'ordre de enemies.json (les trois premières sont les Flétris d'origine).
 static var KINDS: Array = Content._load("enemies").get("kinds", [])
@@ -738,8 +739,13 @@ func _draw_body(ci: CanvasItem) -> void:
 	var f := _body_face if is_processing() else _target_face()
 	# L'ombre tourne avec la silhouette entre deux dessins : on la garde ronde et centrée.
 	var sr := radius * (1.15 if behavior == "nest" else 1.0)
+	var o := pose()
+	if Silhouettes.cacheable(o):
+		Silhouettes.draw(ci, kind_id, radius, sr, f, t, o)
+		return
+	Silhouettes.live += 1
 	_batch.draw_colored_polygon(Art.ellipse(Vector2(0, sr * Art.OMBRE_DECALAGE * 0.5), sr * 1.05, sr * 0.75, 14), Art.c("ombre"))
-	FletriArt.draw(_batch, kind_id, Vector2.ZERO, radius, f, t, pose())
+	FletriArt.draw(_batch, kind_id, Vector2.ZERO, radius, f, t, o)
 	_batch.flush(ci)
 
 

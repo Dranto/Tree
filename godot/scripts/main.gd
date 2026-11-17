@@ -1114,6 +1114,8 @@ func _finish_benchmark() -> void:
 	print("BENCHMARK rendu de la dernière image : %d appels de rendu, %d objets" % [Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)])
 	for line in Prof.report(n):
 		print(line)
+	var sil = Enemy.Silhouettes
+	print("BENCHMARK silhouettes : %d dessins en cache, %d calculées pour le cache (%d maillages gardés), %d calculées en action" % [sil.hits, sil.misses, sil._meshes.size(), sil.live])
 	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
 	get_tree().quit()
 

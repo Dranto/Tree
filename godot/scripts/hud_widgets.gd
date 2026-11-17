@@ -31,6 +31,8 @@ class Slot extends Control:
 	var ready_t := 1.0
 	var born_t := 1.0
 	var _was_skill := false
+	var _applied := false
+	var _drawn_as_key := false
 	## Libellés lus par les tests ; le nom complet est dans l'infobulle.
 	var name_label := Label.new()
 	var key_label := Label.new()
@@ -46,7 +48,14 @@ class Slot extends Control:
 		custom_minimum_size = Vector2(diam + 8.0, diam + (34.0 if k != KEY else 24.0))
 		queue_redraw()
 
+	## Appelée à chaque image par hud.gd : l'emplacement n'est redessiné que si ce qu'il montre change.
 	func apply(new_state: int, id: String, new_ratio: float, secs: float, keys: String, tip: String) -> void:
+		if _applied and new_state == state and id == skill_id and new_ratio == ratio and keys == key_text \
+				and tip == tooltip_text and as_key == _drawn_as_key \
+				and (new_ratio <= 0.0 or _secs_text(secs) == _secs_text(seconds)):
+			return
+		_applied = true
+		_drawn_as_key = as_key
 		if new_state == SKILL and not _was_skill:
 			born_t = 0.0
 		if state == SKILL and new_state == SKILL and ratio > 0.0 and new_ratio <= 0.0:
@@ -87,6 +96,12 @@ class Slot extends Control:
 			born_t += delta
 			queue_redraw()
 
+	## Secondes de recharge affichées (vide sous 0,1 s).
+	static func _secs_text(secs: float) -> String:
+		if secs < 0.1:
+			return ""
+		return "%d" % ceili(secs) if secs >= 1.0 else "%.1f" % secs
+
 	func _draw() -> void:
 		var font := UiTheme.font(true)
 		var c := Vector2(size.x / 2.0, diam / 2.0 + 2.0)
@@ -120,7 +135,7 @@ class Slot extends Control:
 						draw_colored_polygon(pts, veil)
 					draw_arc(c, rr + 3.0, a0, a0 + TAU * (1.0 - ratio), 48, Color(col, 0.9), 2.5, true)
 					if seconds >= 0.1:
-						var txt := "%d" % ceili(seconds) if seconds >= 1.0 else "%.1f" % seconds
+						var txt := _secs_text(seconds)
 						var fs := 20
 						var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
 						var p := Vector2(c.x - w / 2.0, c.y + fs * 0.36)
@@ -179,6 +194,8 @@ class Vital extends Control:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func set_value(v: float, label: String) -> void:
+		if v == ratio and label == text:
+			return
 		if v < _prev - 0.001:
 			flash = 1.0
 		_prev = v
@@ -188,7 +205,10 @@ class Vital extends Control:
 			ghost = ratio
 		queue_redraw()
 
+	## Redessinée seulement pendant l'éclair d'un coup reçu et le rattrapage de la traînée.
 	func _process(delta: float) -> void:
+		if flash <= 0.0 and ghost <= ratio:
+			return
 		if flash > 0.0:
 			flash = maxf(0.0, flash - delta / 0.25)
 		if ghost > ratio:
@@ -232,6 +252,8 @@ class Corner extends Control:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func set_values(lv: int, xp_ratio: float, pts: int, key: String, revived: float, k: int) -> void:
+		if lv == level and xp_ratio == xp and pts == points and key == tree_key and revived == world and k == kills:
+			return
 		if pts > _prev_points:
 			points_t = 0.0
 		if lv > _prev_level:

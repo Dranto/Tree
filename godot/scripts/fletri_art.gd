@@ -123,7 +123,15 @@ static func _xf(pos: Vector2, r: float, face: Vector2, sq := Vector2.ONE) -> Tra
 
 
 ## Écrasement de la pose : marche (rebond), anticipation (ramassé), coup reçu.
+## « no_squash » dans la pose : aucun (silhouette_cache.gd l'applique au dessin, par une transformation).
 static func _squash(o: Dictionary, t: float) -> Vector2:
+	if o.has("no_squash"):
+		return Vector2.ONE
+	return squash(o, t)
+
+
+## Écrasement de la pose, même avec « no_squash ».
+static func squash(o: Dictionary, t: float) -> Vector2:
 	var mv: float = o.get("moving", 0.0)
 	var walk: float = o.get("walk", 0.0)
 	var s := Vector2(1.0 + 0.04 * sin(walk * 2.0) * mv, 1.0 - 0.04 * sin(walk * 2.0) * mv)
