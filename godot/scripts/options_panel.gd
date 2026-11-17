@@ -28,9 +28,7 @@ var slot_buttons: Array = []
 var listening := -1
 var keys_hint: Label
 var _scroll: ScrollContainer
-var _col: VBoxContainer
-## Marge laissée au-dessus et au-dessous du panneau.
-const SCREEN_MARGIN := 40.0
+var _content: VBoxContainer
 const MOBA_ROW := 6
 const SLOT_LABELS := ["Compétence principale 1", "Compétence principale 2", "Compétence secondaire 1", "Compétence secondaire 2", "Compétence secondaire 3", "Compétence secondaire 4"]
 
@@ -38,16 +36,16 @@ const SLOT_LABELS := ["Compétence principale 1", "Compétence principale 2", "C
 func _ready() -> void:
 	theme = UiTheme.make()
 	custom_minimum_size = Vector2(520, 0)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 18)
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# Le panneau dépasse la hauteur de l'écran en 1280x720 : il défile (molette ou focus).
+	# Le contenu défile : à 1280 x 720 le panneau entier ne tient pas à l'écran.
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.follow_focus = true
-	_scroll.add_child(col)
-	_col = col
 	add_child(_scroll)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 18)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(col)
+	_content = col
 	get_viewport().size_changed.connect(_fit)
 
 	var title := Label.new()
@@ -349,24 +347,17 @@ func _update_shake_label() -> void:
 	shake_label.text = "Aucune" if shake_slider.value <= 0.001 else "%d %%" % roundi(shake_slider.value * 100.0)
 
 
-## Hauteur du panneau : tout son contenu s'il tient à l'écran, sinon l'écran moins une marge.
+## Hauteur du panneau : tout le contenu s'il tient, sinon 90 % de la fenêtre (le reste défile).
 func _fit() -> void:
-	if _scroll == null or not is_inside_tree():
+	if _scroll == null:
 		return
-	var h: float = get_viewport_rect().size.y - 2.0 * SCREEN_MARGIN
-	var want := _col.get_combined_minimum_size()
-	_scroll.custom_minimum_size = Vector2(want.x, minf(want.y, h))
-	reset_size()
-	# Toujours centré (ancres au centre) : offsets symétriques autour du centre.
-	var sz := get_combined_minimum_size()
-	offset_left = -sz.x / 2.0
-	offset_right = sz.x / 2.0
-	offset_top = -sz.y / 2.0
-	offset_bottom = sz.y / 2.0
+	var room := get_viewport().get_visible_rect().size.y * 0.9 - 40.0
+	_scroll.custom_minimum_size = Vector2(0, minf(_content.get_combined_minimum_size().y, room))
 
 
 func open() -> void:
 	visible = true
+	_fit.call_deferred()
 	listening = -1
 	keys_hint.text = ""
 	_update_keys()
@@ -381,8 +372,6 @@ func open() -> void:
 	_update_difficulty()
 	_update_move_mode()
 	_update_aim_mode()
-	_fit()
-	_scroll.scroll_vertical = 0
 	volume_slider.grab_focus()
 
 

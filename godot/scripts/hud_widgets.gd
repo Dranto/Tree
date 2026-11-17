@@ -10,7 +10,17 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 ## et « verrouillé » (pas encore débloqué : masqué, il apparaît quand l'Arbre l'ouvre).
 class Slot extends Control:
 	enum { SKILL, FREE, LOCKED }
+	## Diamètre du médaillon : les deux emplacements « souris » sont plus gros que les secondaires.
 	const SIZE := 56.0
+	const SIZE_MOUSE := 66.0
+	## Genre de l'emplacement : touche du clavier, clic gauche ou clic droit de la souris.
+	enum { KEY, MOUSE_LEFT, MOUSE_RIGHT }
+	var kind := KEY
+	## Emplacement « souris » dont l'entrée est une touche (mode MOBA) : il s'affiche avec sa touche.
+	var as_key := false
+	## Demande d'échange de deux emplacements (glisser-déposer) : de, vers.
+	signal swap_requested(from: int, to: int)
+	var diam := SIZE
 	var index := 0
 	var state := LOCKED
 	var skill_id := ""
@@ -29,6 +39,13 @@ class Slot extends Control:
 		custom_minimum_size = Vector2(SIZE + 8.0, SIZE + 24.0)
 		mouse_filter = Control.MOUSE_FILTER_STOP
 
+	## Fixe le genre (et donc la taille) de l'emplacement.
+	func set_kind(k: int) -> void:
+		kind = k
+		diam = SIZE_MOUSE if k != KEY else SIZE
+		custom_minimum_size = Vector2(diam + 8.0, diam + (34.0 if k != KEY else 24.0))
+		queue_redraw()
+
 	func apply(new_state: int, id: String, new_ratio: float, secs: float, keys: String, tip: String) -> void:
 		if new_state == SKILL and not _was_skill:
 			born_t = 0.0
@@ -44,6 +61,26 @@ class Slot extends Control:
 		visible = state != LOCKED
 		queue_redraw()
 
+	## Glisser une compétence : l'emplacement d'arrivée échange sa compétence avec celle-ci.
+	func _get_drag_data(_at: Vector2) -> Variant:
+		if state != SKILL:
+			return null
+		var preview := Control.new()
+		var badge := Control.new()
+		badge.custom_minimum_size = Vector2(SIZE, SIZE)
+		badge.size = Vector2(SIZE, SIZE)
+		badge.position = -badge.size / 2.0
+		badge.draw.connect(func(): Art.icon_badge(badge, skill_id, Rect2(Vector2.ZERO, Vector2(SIZE, SIZE))))
+		preview.add_child(badge)
+		set_drag_preview(preview)
+		return {"slot": index}
+
+	func _can_drop_data(_at: Vector2, data: Variant) -> bool:
+		return state != LOCKED and data is Dictionary and data.has("slot") and int(data["slot"]) != index
+
+	func _drop_data(_at: Vector2, data: Variant) -> void:
+		swap_requested.emit(int(data["slot"]), index)
+
 	func _process(delta: float) -> void:
 		if ready_t < 1.0 or born_t < 1.0:
 			ready_t += delta
@@ -52,8 +89,8 @@ class Slot extends Control:
 
 	func _draw() -> void:
 		var font := UiTheme.font(true)
-		var c := Vector2(size.x / 2.0, SIZE / 2.0 + 2.0)
-		var r := SIZE / 2.0
+		var c := Vector2(size.x / 2.0, diam / 2.0 + 2.0)
+		var r := diam / 2.0
 		match state:
 			FREE:
 				# Débloqué mais vide : un anneau pointillé, presque invisible.
@@ -93,11 +130,35 @@ class Slot extends Control:
 					# Prête : un éclair d'anneau qui s'élargit.
 					var k := ready_t / 0.35
 					draw_arc(c, rr + 3.0 + 8.0 * Anim.ease_out(k), 0.0, TAU, 48, Color(col.lerp(Color.WHITE, 0.5), 1.0 - k), 3.0 * (1.0 - k) + 1.0, true)
-		if state != LOCKED and key_text != "":
+		if state != LOCKED and kind != KEY and not as_key:
+			# Clic de la souris : une petite souris dont le bouton utilisé est allumé.
+			var on2 := state == SKILL
+			var m := Vector2(size.x / 2.0, diam + 16.0)
+			var body_r := Rect2(m + Vector2(-10.0, -13.0), Vector2(20.0, 28.0))
+			var ink := Art.c("texte") if on2 else Art.c("texte_doux")
+			var shell := StyleBoxFlat.new()
+			shell.bg_color = Color(Art.c("contour"), 0.9)
+			shell.border_color = Color(ink, 0.95)
+			shell.set_border_width_all(2)
+			shell.set_corner_radius_all(9)
+			draw_style_box(shell, body_r)
+			# Le bouton utilisé est rempli d'or, l'autre reste vide.
+			var btn := StyleBoxFlat.new()
+			btn.bg_color = Color(Art.c("or"), 0.95 if on2 else 0.55)
+			btn.set_corner_radius_all(0)
+			if kind == MOUSE_LEFT:
+				btn.corner_radius_top_left = 8
+			else:
+				btn.corner_radius_top_right = 8
+			var bx := body_r.position.x + (2.0 if kind == MOUSE_LEFT else 10.0)
+			draw_style_box(btn, Rect2(Vector2(bx, body_r.position.y + 2.0), Vector2(8.0, 10.0)))
+			draw_line(body_r.position + Vector2(10.0, 2.0), body_r.position + Vector2(10.0, 12.0), Color(ink, 0.95), 1.5)
+			draw_line(body_r.position + Vector2(2.0, 12.0), body_r.position + Vector2(18.0, 12.0), Color(ink, 0.95), 1.5)
+		elif state != LOCKED and key_text != "":
 			# Touche : une petite plaque sous le médaillon.
 			var fs2 := 13
 			var w2 := font.get_string_size(key_text, HORIZONTAL_ALIGNMENT_CENTER, -1, fs2).x
-			var plate := Rect2(Vector2(size.x / 2.0 - w2 / 2.0 - 6.0, SIZE + 6.0), Vector2(w2 + 12.0, 17.0))
+			var plate := Rect2(Vector2(size.x / 2.0 - w2 / 2.0 - 6.0, diam + 6.0), Vector2(w2 + 12.0, 17.0))
 			var on := state == SKILL
 			draw_rect(plate, Color(Art.c("contour"), 0.85 if on else 0.5))
 			draw_rect(plate, Color(Art.c("texte_doux"), 0.7 if on else 0.3), false, 1.0)

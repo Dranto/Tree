@@ -175,6 +175,17 @@ func cycle_slot(i: int) -> void:
 	Game.flags["barre"] = ",".join(bar)
 
 
+## Échange les compétences de deux emplacements débloqués (glisser-déposer dans la barre).
+func swap_slots(i: int, j: int) -> void:
+	var open := unlocked_slots()
+	if i == j or i < 0 or j < 0 or i >= open or j >= open:
+		return
+	var tmp: String = bar[i]
+	bar[i] = bar[j]
+	bar[j] = tmp
+	Game.flags["barre"] = ",".join(bar)
+
+
 ## Commandes reçues dans le monde (les clics sur l'interface n'arrivent pas ici) : compétences
 ## de la barre, et clic droit du mode « moba » (nouvelle destination).
 func _unhandled_input(event: InputEvent) -> void:
