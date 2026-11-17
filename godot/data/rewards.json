@@ -1,5 +1,0 @@
-{
-  "_doc": "Points d'arbre et greffes gagnés dans le monde, hors des niveaux (jalon 4) : boss et Cœur de chaque région. Les autels et secrets sont décrits dans le fichier de leur région (data/regions/<id>.json, « altars » et « secrets »). Positions dans une région : « dist » = distance à la graine en pixels, « side » = écart au milieu du secteur, de -1 (bord gauche) à 1 (bord droit). « graft » : greffe donnée (data/grafts.json), ou \"\" pour une greffe tirée parmi celles de la source.",
-  "boss": {"ronce": {"points": 2, "graft": "greffe_mere"}},
-  "coeur": {"ronce": {"points": 1}}
-}

@@ -33,6 +33,8 @@ class FakeMain:
 
 func _init() -> void:
 	errors.append_array(Content.validate(int(SkillTree.RINGS / 4.0)))
+	# Régions (data/regions/<id>.json).
+	errors.append_array(load("res://scripts/regions.gd").validate())
 	# Sortes d'ennemis et apparitions par région (data/enemies.json).
 	errors.append_array(load("res://scripts/enemy.gd").validate_kinds())
 	# Menace, apparitions, courbe d'expérience et modes de difficulté (data/difficulty.json).

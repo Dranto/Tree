@@ -23,7 +23,8 @@ const EDGE := 110.0
 const MAX_REGIONS := 6
 
 ## Dossiers de régions en plus de data/regions/ (la région factice des tests, voir
-## tests/region_engine_test.gd). Aussi par la ligne de commande : -- --regions=res://tests/regions/
+## tests/region_engine_test.gd), à poser avec set_extra_dirs. Aussi par la ligne de commande :
+## -- --regions=res://tests/regions/
 static var extra_dirs: Array = []
 static var _defs: Dictionary = {}
 static var _ids: Array = []
@@ -50,6 +51,13 @@ static func exists(id: String) -> bool:
 ## Branche de l'arbre dont la région occupe le secteur (par défaut, son identifiant).
 static func branch_of(id: String) -> String:
 	return str(def(id).get("branch", id))
+
+
+## Ajoute des dossiers de régions (la région factice des tests) et relit tout. Passer par cette
+## fonction : une affectation de extra_dirs depuis un autre script ne prend pas (Godot 4.3).
+static func set_extra_dirs(dirs: Array) -> void:
+	extra_dirs = dirs
+	reload()
 
 
 ## Relit les régions (après un changement de extra_dirs, dans les tests).
@@ -259,3 +267,101 @@ static func named_colors(palette: Dictionary) -> Dictionary:
 		for k in raw:
 			named[k] = color(raw[k], named)
 	return named
+
+
+# --- Vérification (scripts/check_data.gd) ---
+
+## Erreurs dans les fichiers des régions (liste vide si tout va bien) : champs obligatoires,
+## branches, couleurs, lieux, Cœur, boss et fin. Les apparitions sont vérifiées par
+## enemy.gd › validate_kinds, les récompenses par content.gd.
+static func validate() -> PackedStringArray:
+	var errors := PackedStringArray()
+	var branches: Array = Content.tree().get("branches", [])
+	var kinds := {}
+	for k in Content._load("enemies").get("kinds", []):
+		kinds[str(k.get("id", ""))] = true
+	if ids().size() > MAX_REGIONS:
+		errors.append("régions : %d au plus (une par branche)" % MAX_REGIONS)
+	var by_branch := {}
+	var places := {}
+	for id in ids():
+		var d := def(id)
+		var w := "%s" % d.get("_path", id)
+		for f in ["name", "place", "map_name", "color", "ground", "heart", "boss", "ending"]:
+			if not d.has(f):
+				errors.append("%s : champ « %s » manquant" % [w, f])
+		var br := branch_of(id)
+		if not br in branches:
+			errors.append("%s : branche inconnue « %s » (voir tree.json › branches)" % [w, br])
+		elif by_branch.has(br):
+			errors.append("%s : la branche « %s » a déjà une région (%s)" % [w, br, by_branch[br]])
+		by_branch[br] = id
+		if d.has("color") and not color_ok(d["color"]):
+			errors.append("%s : couleur « color » mal écrite" % w)
+		# Sol : les couleurs obligatoires, écrites avec les couleurs nommées de la palette.
+		var g := section(id, "ground")
+		var named := {}
+		var raw = g.get("colors", {})
+		if raw is Dictionary:
+			for k in raw:
+				if not color_ok(raw[k], named):
+					errors.append("%s, ground › colors : couleur « %s » mal écrite" % [w, k])
+				else:
+					named[k] = color(raw[k], named)
+		for k in ["dead_dark", "dead_light", "purified_dark", "purified_light", "alive_dark", "alive_light", "dot"]:
+			if not g.has(k):
+				errors.append("%s, ground : couleur « %s » manquante" % [w, k])
+			elif not color_ok(g[k], named):
+				errors.append("%s, ground : couleur « %s » mal écrite" % [w, k])
+		# Décor : une sorte connue (scripts/decor_<sorte>.gd).
+		var decor := section(id, "decor")
+		if decor.has("kind") and not ResourceLoader.exists("res://scripts/decor_%s.gd" % decor["kind"]):
+			errors.append("%s, decor : sorte inconnue « %s » (scripts/decor_%s.gd)" % [w, decor["kind"], decor["kind"]])
+		# Lieux : identifiants uniques dans tout le monde, position dans le secteur.
+		for kind in ["sanctuaries", "altars", "secrets", "landmarks"]:
+			var list = d.get(kind, [])
+			if not list is Array:
+				errors.append("%s : « %s » doit être une liste" % [w, kind])
+				continue
+			for spot in list:
+				var key := "%s:%s" % [kind, spot.get("id", "")]
+				if kind != "landmarks":
+					if str(spot.get("id", "")) == "" or places.has(key):
+						errors.append("%s, %s : identifiant absent ou en double « %s »" % [w, kind, spot.get("id", "")])
+					places[key] = true
+				if not (spot.get("dist") is float or spot.get("dist") is int):
+					errors.append("%s, %s « %s » : « dist » manquant" % [w, kind, spot.get("id", spot.get("kind", "?"))])
+				if absf(float(spot.get("side", 0.0))) > 1.0 or absf(float(spot.get("angle", 0.0))) > half_width():
+					errors.append("%s, %s « %s » : hors du secteur" % [w, kind, spot.get("id", spot.get("kind", "?"))])
+		# Cœur : sortes d'ennemis connues.
+		var h := section(id, "heart")
+		var hw: Dictionary = h.get("waves", {})
+		var hk: Array = hw.get("kinds", []).duplicate()
+		for extra in [hw.get("big", ""), h.get("idle", {}).get("kind", "")]:
+			if str(extra) != "":
+				hk.append(extra)
+		for k in hk:
+			if not kinds.has(str(k)):
+				errors.append("%s, heart : sorte d'ennemi inconnue « %s »" % [w, k])
+		if h.has("life_color") and not color_ok(h["life_color"]):
+			errors.append("%s, heart : « life_color » mal écrite" % w)
+		# Boss : un script qui étend BossBase.
+		var b := section(id, "boss")
+		var path := str(b.get("script", ""))
+		if not ResourceLoader.exists(path):
+			errors.append("%s, boss : script introuvable « %s »" % [w, path])
+		elif not "extends BossBase" in FileAccess.get_file_as_string(path):
+			# Lu comme texte : check_data tourne sans les autoloads dont les boss ont besoin.
+			errors.append("%s, boss : « %s » doit étendre BossBase (scripts/boss_base.gd)" % [w, path])
+		for k in ["bar_color"]:
+			if b.has(k) and not color_ok(b[k]):
+				errors.append("%s, boss : « %s » mal écrite" % [w, k])
+		var ar: Dictionary = b.get("arena", {})
+		if ar.has("life_color") and not color_ok(ar["life_color"]):
+			errors.append("%s, boss › arena : « life_color » mal écrite" % w)
+		if float(ar.get("radius_min", 0.0)) > float(ar.get("radius", 470.0)):
+			errors.append("%s, boss › arena : « radius_min » plus grand que « radius »" % w)
+		for f in ["sub", "title", "body"]:
+			if str(section(id, "ending").get(f, "")) == "":
+				errors.append("%s, ending : « %s » manquant" % [w, f])
+	return errors

@@ -6,7 +6,7 @@
 ##   - les phases (phase_limits, phase_for) ;
 ##   - l'entrée en scène (intro), les pauses entre phases (transition), la mort (dying) ;
 ##   - la fin du combat : l'arène (boss_arena.gd) pose le drapeau <région>_boss_vaincu, donne la
-##     récompense de data/rewards.json et lance la séquence « région purifiée ».
+##     récompense de « boss › reward » et lance la séquence « région purifiée ».
 ##
 ## À écrire dans le boss (méthodes à remplacer) :
 ##   - _setup() : régler les nombres du socle ci-dessous (appelé avant la vie et les calques) ;

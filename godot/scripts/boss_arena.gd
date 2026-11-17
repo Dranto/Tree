@@ -20,7 +20,7 @@ const Regions = preload("res://scripts/regions.gd")
 const SHRINK_WARN := 1.6
 const SHRINK_SPEED := 30.0
 const WALL_DAMAGE := 8.0
-## Points du boss si data/rewards.json ne les donne pas.
+## Points du boss si « boss › reward » du fichier de la région ne les donne pas.
 const REWARD_POINTS := 2
 
 var main
@@ -213,7 +213,7 @@ func boss_defeated() -> void:
 	shrink_warn = 0.0
 	main.spawn_paused = false
 	Game.flags[flag] = true
-	# Récompense (data/rewards.json) : points d'arbre, donnés une seule fois, et une greffe au sol.
+	# Récompense (« boss › reward » de la région) : points d'arbre, donnés une seule fois, et une greffe au sol.
 	main.hud.banner(defeated_banner)
 	var reward: Dictionary = Content.rewards().get("boss", {}).get(region, {})
 	Game.grant_points(int(reward.get("points", REWARD_POINTS)), "boss", region + "_boss")

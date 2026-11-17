@@ -1,4 +1,4 @@
-## Autel caché et secret d'une région (data/rewards.json) : des ruines couvertes de cendre qu'on
+## Autel caché et secret d'une région (« altars » et « secrets » de data/regions/<id>.json) : des ruines couvertes de cendre qu'on
 ## devine en s'approchant. Le joueur s'y tient quelques secondes pour le raviver : un point d'arbre
 ## (Game.grant_points, une seule fois) et une greffe qui tombe au sol (main.drop_graft).
 ##
@@ -31,7 +31,7 @@ var t := 0.0
 var _was_near := false
 
 
-## Crée les autels et secrets de rewards.json et les ajoute sous « parent ».
+## Crée les autels et secrets des régions (Content.rewards()) et les ajoute sous « parent ».
 static func spawn_all(m, parent: Node) -> Array:
 	var out: Array = []
 	var r := Content.rewards()

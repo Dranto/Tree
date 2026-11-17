@@ -61,6 +61,8 @@ var _tiles: Dictionary = {}
 ## Échelle de l'écran (pixels par pixel du monde) des carrés en cache.
 var _tile_scale := 0.0
 var _frame := 0
+## Matériau des carrés : recopie opaque, sans mélange (voir shaders/ground_tile.gdshader).
+var _tile_mat: ShaderMaterial
 
 
 func _ready() -> void:
@@ -287,6 +289,10 @@ func _make_tile(key: Vector2i, world: float) -> Dictionary:
 	sprite.scale = Vector2(world, world) / TILE_PX
 	sprite.texture = vp.get_texture()
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	if _tile_mat == null:
+		_tile_mat = ShaderMaterial.new()
+		_tile_mat.shader = preload("res://shaders/ground_tile.gdshader")
+	sprite.material = _tile_mat
 	add_child(sprite)
 	return {"vp": vp, "sprite": sprite, "used": _frame, "rect": Rect2(origin, Vector2(world, world))}
 

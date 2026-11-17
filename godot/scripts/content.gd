@@ -67,12 +67,20 @@ static func grafts() -> Dictionary:
 	return _cache["#grafts"]
 
 
-## Points et greffes du monde : boss et Cœurs (data/rewards.json, par région), autels et secrets
+## Points et greffes du monde : boss, Cœurs, autels et secrets
 ## (lus dans les fichiers des régions, data/regions/<id>.json, chacun avec son champ « region »).
 static func rewards() -> Dictionary:
 	if not _cache.has("#rewards"):
-		var out: Dictionary = _load("rewards").duplicate()
+		var out := {}
 		var Regions = load("res://scripts/regions.gd")
+		# Cœur et boss : « heart › reward » et « boss › reward » du fichier de la région.
+		for kind in ["coeur", "boss"]:
+			var per: Dictionary = out.get(kind, {}).duplicate()
+			for reg in Regions.ids():
+				var section: Dictionary = Regions.section(reg, "heart" if kind == "coeur" else "boss")
+				if section.has("reward"):
+					per[reg] = section["reward"]
+			out[kind] = per
 		for kind in ["altars", "secrets"]:
 			var list: Array = out.get(kind, []).duplicate()
 			for reg in Regions.ids():
@@ -120,7 +128,7 @@ static func _load(name: String) -> Dictionary:
 static func validate(keystones_per_branch := -1) -> PackedStringArray:
 	_cache = {}
 	var errors := PackedStringArray()
-	for name in ["tree", "stats", "skills", "conditions", "grafts", "rewards", "attack"]:
+	for name in ["tree", "stats", "skills", "conditions", "grafts", "attack"]:
 		if _load(name).is_empty():
 			errors.append("%s.json est absent, vide ou illisible" % name)
 	# Chargé à l'exécution : attack.gd lit lui-même ce fichier (pas de dépendance circulaire).
@@ -450,18 +458,19 @@ static func _check_effects(list, where: String, errors: PackedStringArray) -> vo
 			errors.append("stats.json, %s : plafond inconnu « %s »" % [name, def["max"]])
 
 
-## rewards.json et autels / secrets des régions : chaque greffe nommée existe, chaque autel et
+## Récompenses des régions (Cœur, boss, autels, secrets) : chaque greffe nommée existe, chaque autel et
 ## secret a un identifiant unique, une région connue et une position dans le secteur.
 static func _check_rewards(errors: PackedStringArray) -> void:
 	var r := rewards()
-	var regions: Array = tree().get("branches", [])
+	var Regions = load("res://scripts/regions.gd")
+	var regions: Array = Regions.ids()
 	for kind in ["boss", "coeur"]:
 		var per = r.get(kind, {})
 		if not per is Dictionary:
-			errors.append("rewards.json : « %s » doit être un objet par région" % kind)
+			errors.append("régions : « %s » doit être un objet par région" % kind)
 			continue
 		for reg in per:
-			var where := "rewards.json, %s « %s »" % [kind, reg]
+			var where := "région, %s « %s »" % [kind, reg]
 			if not reg in regions:
 				errors.append(where + " : région inconnue")
 			if int(per[reg].get("points", 0)) < 0:
@@ -473,10 +482,10 @@ static func _check_rewards(errors: PackedStringArray) -> void:
 	for kind in ["altars", "secrets"]:
 		var list = r.get(kind, [])
 		if not list is Array:
-			errors.append("rewards.json : « %s » doit être une liste" % kind)
+			errors.append("régions : « %s » doit être une liste" % kind)
 			continue
 		for a in list:
-			var where: String = "rewards.json, %s « %s »" % [kind, a.get("id", "?")]
+			var where: String = "région, %s « %s »" % [kind, a.get("id", "?")]
 			var key: String = kind + ":" + str(a.get("id", ""))
 			if str(a.get("id", "")) == "" or seen.has(key):
 				errors.append(where + " : « id » manquant ou en double")
