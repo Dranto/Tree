@@ -28,12 +28,18 @@ const MAX_MESHES := 8000
 
 static var _meshes := {}
 static var _codes := {}
-static var _batch = DrawBatch.new()
+static var _batch = _lean_batch()
 ## Compteurs (banc de performance).
 static var hits := 0
 static var misses := 0
 ## Silhouettes calculées hors du cache (pose d'action), comptées par enemy.gd.
 static var live := 0
+
+
+static func _lean_batch():
+	var b = DrawBatch.new()
+	b.lean = true
+	return b
 
 
 ## Vrai si cette pose peut venir du cache (pas d'action en cours, pas de rendu spécial).

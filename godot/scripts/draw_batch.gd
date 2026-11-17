@@ -9,6 +9,11 @@ extends RefCounted
 ## Godot 4.3 (draw_circle à 64 points, polyligne en bande de triangles), pour qu'un dessin passé
 ## au lot donne les mêmes pixels qu'avant (décor, fleurs). Faux : tracé allégé des silhouettes.
 var exact := false
+## Tracé « économe » (silhouettes mises en cache, silhouette_cache.gd) : polylignes en une bande à
+## joints en onglet (deux sommets par point au lieu de quatre par segment, plus les disques des
+## coudes) et petits disques à moins de côtés. Moitié moins de sommets : chaque sommet est calculé
+## par le processeur en rendu logiciel. Ignoré si exact est vrai.
+var lean := false
 
 var points := PackedVector2Array()
 var colors := PackedColorArray()
@@ -56,7 +61,7 @@ func draw_circle(c: Vector2, r: float, col: Color, _filled := true, _width := -1
 		_push(_circle_points(c, r), col, CIRCLE_TRI)
 		return
 	# Disque à n côtés (centre + n points) : forme unité en cache, placée par une transformation.
-	var d: Array = _DISCS[clampi(int(r * 0.7) + 8, 10, 28)]
+	var d: Array = _DISCS[clampi(int(r) + 5, 6, 28) if lean else clampi(int(r * 0.7) + 8, 10, 28)]
 	_push(Transform2D(0.0, Vector2(r, r), 0.0, c) * (d[0] as PackedVector2Array), col, d[1])
 
 
@@ -73,7 +78,7 @@ func draw_line(a: Vector2, b: Vector2, col: Color, width := -1.0, _aa := false) 
 func draw_polyline(pts: PackedVector2Array, col: Color, width := -1.0, _aa := false) -> void:
 	if col.a <= 0.0:
 		return
-	if exact:
+	if exact or lean:
 		_strip(pts, col, maxf(width, 1.0))
 		return
 	# Une seule forme pour toute la polyligne (mêmes sommets, même ordre que segment par segment).
@@ -108,8 +113,8 @@ func _joint(c: Vector2, r: float, col: Color) -> void:
 static var _DISCS := _all_discs()
 
 static func _all_discs() -> Dictionary:
-	var out := {6: _disc(6)}
-	for n in range(10, 29):
+	var out := {}
+	for n in range(6, 29):
 		out[n] = _disc(n)
 	return out
 
