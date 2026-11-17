@@ -76,6 +76,7 @@ func _ready() -> void:
 	main.autotest_shots = []
 	main.autotest_done = true
 	add_child(main)
+	main.tree_ui.play_intro = false   # pas d'onde d'ouverture : les captures de l'arbre sont prises tout de suite
 
 	match scenario:
 		"depart":
@@ -729,7 +730,8 @@ func _scenario_interactions() -> void:
 	main.player.clear_destination()
 	Settings.move_mode = "curseur"
 	await _frames(15)
-	# Transitions : ouverture de l'arbre, puis mort et renaissance.
+	# Transitions : ouverture de l'arbre (avec son onde de sève), puis mort et renaissance.
+	main.tree_ui.play_intro = true
 	main.tree_ui.toggle()
 	await _frames(3)
 	await _shot("interaction_arbre_ouverture")
