@@ -9,7 +9,7 @@ const OPS := ["add", "inc", "more", "flat"]
 ## Opérations d'un effet « skill_mod » (mutation d'un réglage de compétence).
 const SKILL_OPS := ["add", "inc", "more", "set"]
 ## Types de nœuds qu'une grappe écrite à la main peut contenir (voir skill_tree.gd).
-const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "graft", "withered"]
+const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "graft", "withered", "attack"]
 ## Moments du jeu auxquels un effet peut réagir (champ « on »).
 ## bleed_tick : à-coup de saignement ; root : ennemi enraciné ; melee_hit : coup au corps à corps.
 ## hurt : le joueur est touché (« base » = dégâts du coup) ; dash : le joueur esquive.
@@ -25,6 +25,7 @@ const ACTIONS := {
 	"heal": ["value"],
 	"burst": ["radius", "factor"],
 	"status_area": ["status", "value", "duration", "radius"],
+	"attack_salvo": ["count"],
 }
 ## Sources possibles d'une greffe (champ « sources » de grafts.json).
 const GRAFT_SOURCES := ["autel", "boss", "secret", "elite", "quete"]
@@ -46,6 +47,11 @@ static func skills() -> Dictionary:
 
 static func conditions() -> Dictionary:
 	return _load("conditions")
+
+
+## Attaque de base : formes et modificateurs (scripts/attack.gd).
+static func attack() -> Dictionary:
+	return _load("attack")
 
 
 ## Greffes : objets à insérer dans un emplacement de greffe de l'arbre.
@@ -101,9 +107,11 @@ static func _load(name: String) -> Dictionary:
 static func validate(keystones_per_branch := -1) -> PackedStringArray:
 	_cache = {}
 	var errors := PackedStringArray()
-	for name in ["tree", "stats", "skills", "conditions", "grafts", "rewards"]:
+	for name in ["tree", "stats", "skills", "conditions", "grafts", "rewards", "attack"]:
 		if _load(name).is_empty():
 			errors.append("%s.json est absent, vide ou illisible" % name)
+	# Chargé à l'exécution : attack.gd lit lui-même ce fichier (pas de dépendance circulaire).
+	errors.append_array(load("res://scripts/attack.gd").validate())
 	var t := tree()
 	_check_effects(t.get("root", {}).get("effects", []), "tree.json, graine", errors)
 	for gid in grafts():
@@ -311,6 +319,16 @@ static func _check_cluster_node(cn: Dictionary, where: String, seen_keys: Dictio
 		"graft":
 			if has_effects:
 				errors.append(where + " : un emplacement de greffe ne porte pas d'effet (c'est la greffe qui en donne)")
+		"attack":
+			if str(cn.get("name", "")) == "":
+				errors.append(where + " : « name » est obligatoire pour un nœud d'attaque")
+			var changes := false
+			if effects is Array:
+				for e in effects:
+					if e is Dictionary and (e.has("attack_form") or e.has("attack_mod")):
+						changes = true
+			if not changes:
+				errors.append(where + " : un nœud d'attaque demande au moins un effet « attack_form » ou « attack_mod »")
 	if kind != "mutation" and kind != "mastery" and cn.has("choices"):
 		errors.append(where + " : « choices » n'existe que pour les types mutation et mastery")
 	if cn.has("excludes") and not cn["excludes"] is Array:
@@ -376,6 +394,25 @@ static func _check_effects(list, where: String, errors: PackedStringArray) -> vo
 				errors.append("%s : un effet « skill_mod » doit avoir un « text » affiché au joueur (ou « hidden »)" % where)
 			if e.has("if"):
 				errors.append("%s : un effet « skill_mod » n'accepte pas de condition" % where)
+		elif e.has("attack_form"):
+			if not attack().get("forms", {}).has(str(e["attack_form"])):
+				errors.append("%s : forme d'attaque inconnue « %s » (attendu : %s)" % [where, e["attack_form"], ", ".join(attack().get("forms", {}).keys())])
+			if e.has("priority") and not (e["priority"] is float or e["priority"] is int):
+				errors.append("%s : « priority » d'un attack_form doit être un nombre" % where)
+			if e.has("if"):
+				errors.append("%s : un effet « attack_form » n'accepte pas de condition" % where)
+		elif e.has("attack_mod"):
+			var defs: Dictionary = attack().get("mods", {})
+			if not defs.has(str(e["attack_mod"])):
+				errors.append("%s : modificateur d'attaque inconnu « %s » (attendu : %s)" % [where, e["attack_mod"], ", ".join(defs.keys())])
+			if not (e.get("value") is float or e.get("value") is int) or float(e.get("value", 0)) <= 0.0:
+				errors.append("%s : « value » d'un attack_mod doit être un nombre positif" % where)
+			elif str(defs.get(str(e["attack_mod"]), {}).get("stack", "sum")) == "min" and float(e["value"]) < 1.0:
+				errors.append("%s : « %s » compte une attaque sur N : « value » doit valoir au moins 1" % [where, e["attack_mod"]])
+			if e.has("factor") and not (e["factor"] is float or e["factor"] is int):
+				errors.append("%s : « factor » d'un attack_mod doit être un nombre" % where)
+			if e.has("if"):
+				errors.append("%s : un effet « attack_mod » n'accepte pas de condition" % where)
 		elif e.has("on"):
 			if not e["on"] in EVENTS:
 				errors.append("%s : évènement inconnu « %s » (attendu : %s)" % [where, e["on"], ", ".join(EVENTS)])
@@ -389,7 +426,7 @@ static func _check_effects(list, where: String, errors: PackedStringArray) -> vo
 			if e.get("text", "") == "":
 				errors.append("%s : un effet déclenché doit avoir un « text » affiché au joueur" % where)
 		else:
-			errors.append("%s : effet sans « stat », « skill », « skill_mod » ni « on »" % where)
+			errors.append("%s : effet sans « stat », « skill », « skill_mod », « attack_form », « attack_mod » ni « on »" % where)
 		if e.has("if"):
 			var cond = e["if"]
 			if not (cond is Dictionary and conditions().has(cond.get("state", ""))):

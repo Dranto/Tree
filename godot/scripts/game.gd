@@ -48,6 +48,9 @@ var flags: Dictionary = {}
 var effects = Effects.new()
 ## Compétences données sans nœud, pour les essayer (« -- --skills=fouet,racines » ou « --skills=all »).
 var test_skills: Dictionary = {}
+## Attaque de base imposée sans nœud, pour l'essayer (« -- --attack=fouet,fourche:2,saignement:0.3 ») :
+## une forme et des modificateurs (nom:valeur, 1 par défaut). Voir attack.gd.
+var test_attack: Array = []
 
 
 func _ready() -> void:
@@ -59,6 +62,13 @@ func _ready() -> void:
 			var list := arg.get_slice("=", 1)
 			for id in (Content.skills().keys() if list == "all" else Array(list.split(","))):
 				test_skills[id] = true
+		elif arg.begins_with("--attack="):
+			for part in arg.get_slice("=", 1).split(","):
+				var name := part.get_slice(":", 0)
+				if Content.attack().get("forms", {}).has(name):
+					test_attack.append({"attack_form": name, "priority": 99})
+				elif Content.attack().get("mods", {}).has(name):
+					test_attack.append({"attack_mod": name, "value": float(part.get_slice(":", 1)) if part.contains(":") else 1.0})
 	for err in Content.validate(int(SkillTree.RINGS / 4.0)):
 		push_error("Données : " + err)
 	tree = SkillTree.new()
@@ -442,11 +452,11 @@ func effect_sources(owned: Dictionary, graft_override = null) -> Array:
 			per_branch[n["branch"]] = int(per_branch.get(n["branch"], 0)) + 1
 		var i := choice_index(id)
 		if i >= 0:
-			out.append({"id": "%d:choix" % id, "effects": n["choices"][i].get("effects", [])})
+			out.append({"id": "%d:choix" % id, "ring": n["ring"], "effects": n["choices"][i].get("effects", [])})
 		if n["type"] == "graft":
 			var g = Content.grafts().get(placed.get(n["uid"], ""))
 			if g is Dictionary:
-				out.append({"id": "%d:greffe:%s" % [id, placed.get(n["uid"], "")], "effects": g.get("effects", [])})
+				out.append({"id": "%d:greffe:%s" % [id, placed.get(n["uid"], "")], "ring": n["ring"], "effects": g.get("effects", [])})
 	for key in tree.clusters:
 		var c: Dictionary = tree.clusters[key]
 		if c["effects"].is_empty():
@@ -472,6 +482,11 @@ func effect_sources(owned: Dictionary, graft_override = null) -> Array:
 ## À lire au moment du lancer : ils changent quand l'arbre change.
 func skill(id: String) -> Dictionary:
 	return effects.skill_settings(id)
+
+
+## Forme et modificateurs de l'attaque de base (attack.gd), selon les nœuds appris.
+func attack() -> Dictionary:
+	return effects.attack_state()
 
 
 func _process(delta: float) -> void:
@@ -500,7 +515,10 @@ func recompute() -> void:
 		var n: Dictionary = tree.nodes[id]
 		if n["key"] != "":
 			keys[n["key"]] = true
-	effects.rebuild(effect_sources(allocated))
+	var sources := effect_sources(allocated)
+	if not test_attack.is_empty():
+		sources.append({"id": "test_attack", "ring": 99, "effects": test_attack})
+	effects.rebuild(sources)
 	for k in effects.skills:
 		keys[k] = true
 	for k in test_skills:

@@ -29,6 +29,13 @@ const HOVER_POP := 0.3
 
 ## Icône d'un nœud : la compétence qu'il donne ou transforme, sinon son premier effet visible.
 static func icon_of(n: Dictionary) -> String:
+	# Nœud d'attaque : l'icône de la forme qu'il donne, sinon celle d'une attaque modifiée.
+	for e in n["effects"]:
+		if e.has("attack_form"):
+			return "attaque_" + str(e["attack_form"])
+	for e in n["effects"]:
+		if e.has("attack_mod"):
+			return "attaque_mod"
 	for e in n["effects"]:
 		for key in ["skill", "skill_mod"]:
 			if e.has(key):

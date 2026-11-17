@@ -24,6 +24,8 @@ static func run(action: String, p: Dictionary, ctx: Dictionary) -> bool:
 			return _burst(p, ctx)
 		"status_area":
 			return _status_area(p, ctx)
+		"attack_salvo":
+			return _attack_salvo(p, ctx)
 	push_warning("Action d'effet inconnue : " + action)
 	return false
 
@@ -149,4 +151,14 @@ static func _status_area(p: Dictionary, ctx: Dictionary) -> bool:
 	for e in main.enemies_near(at, radius):
 		if not e.dead:
 			e.apply_status(p["status"], value, duration)
+	return true
+
+
+## Salve de l'attaque de base tout autour du joueur, avec sa forme et ses modificateurs actuels
+## (attack.gd) : « count » directions.
+static func _attack_salvo(p: Dictionary, ctx: Dictionary) -> bool:
+	var main = ctx["main"]
+	if main == null or not "player" in main or main.player == null or not "attack_rt" in main.player:
+		return false
+	load("res://scripts/attack.gd").salvo(main.player, int(p["count"]))
 	return true
