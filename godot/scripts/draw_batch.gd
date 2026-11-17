@@ -70,7 +70,7 @@ func draw_line(a: Vector2, b: Vector2, col: Color, width := -1.0, _aa := false) 
 		return
 	if exact and width < 0.0:
 		width = 1.0
-	var n := (b - a).orthogonal().normalized() * maxf(width, 1.0) * 0.5
+	var n := (b - a).orthogonal().normalized() * (width if exact else maxf(width, 1.0)) * 0.5
 	_push(PackedVector2Array([a + n, b + n, b - n, a - n]), col, PackedInt32Array([0, 1, 2, 0, 2, 3]))
 
 
@@ -79,7 +79,7 @@ func draw_polyline(pts: PackedVector2Array, col: Color, width := -1.0, _aa := fa
 	if col.a <= 0.0:
 		return
 	if exact or lean:
-		_strip(pts, col, maxf(width, 1.0))
+		_strip(pts, col, width if exact and width > 0.0 else maxf(width, 1.0))
 		return
 	# Une seule forme pour toute la polyligne (mêmes sommets, même ordre que segment par segment).
 	var w := maxf(width, 1.0)

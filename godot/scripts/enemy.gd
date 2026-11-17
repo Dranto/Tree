@@ -740,7 +740,8 @@ func _draw_body(ci: CanvasItem) -> void:
 	# L'ombre tourne avec la silhouette entre deux dessins : on la garde ronde et centrée.
 	var sr := radius * (1.15 if behavior == "nest" else 1.0)
 	var o := pose()
-	if Silhouettes.cacheable(o):
+	# Les Flétris figés (galeries, planches de la charte) gardent le tracé exact de leur pose.
+	if is_processing() and Silhouettes.cacheable(o):
 		Silhouettes.draw(ci, kind_id, radius, sr, f, t, o)
 		return
 	Silhouettes.live += 1

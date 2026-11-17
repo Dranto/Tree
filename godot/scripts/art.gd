@@ -784,7 +784,7 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 
 
 ## Feuille en amande, pointe dans la direction a, longueur l (de la base à la pointe : 2 × l).
-static func _leaf(ci: CanvasItem, p: Vector2, l: float, a: float, col: Color) -> void:
+static func _leaf(ci, p: Vector2, l: float, a: float, col: Color) -> void:
 	var d := Vector2.from_angle(a)
 	var n := d.orthogonal()
 	var pts := PackedVector2Array()
