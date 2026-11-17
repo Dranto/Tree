@@ -2,15 +2,18 @@
 ## Le jeu est en pause tant que l'arbre est ouvert.
 ##
 ## Le dessin est réparti en couches pour ne pas tout redessiner à chaque image :
-## - le fond (ce nœud) : un aplat opaque, redessiné seulement au changement de taille ;
+## - la couche fixe (_static) : fond, silhouette de l'arbre (tronc et maîtresses branches), liens,
+##   nœuds et icônes, en coordonnées de l'arbre. Elle est dessinée dans une image (_cache_vp), un peu
+##   plus grande que l'écran, qui n'est refaite que quand l'arbre change, quand le zoom s'arrête, ou
+##   quand on sort de l'image en se déplaçant. À chaque image, _view ne fait que la poser à l'écran
+##   (agrandie ou réduite pendant un zoom, en attendant d'être refaite) ;
 ## - l'ambiance (_ambient) : pollen de sève qui monte doucement, en coordonnées de l'écran ;
-## - la couche fixe (_world) : anneaux, liens, nœuds et icônes, dessinés en coordonnées de l'arbre.
-##   Se déplacer ne fait que changer sa position ; elle n'est redessinée qu'au zoom ou quand l'arbre change ;
 ## - la couche animée (_anim, enfant de _world) : pulsation des nœuds disponibles et survol ;
 ## - la couche de vie (_life, enfant de _world) : sève, éclosions, halos qui respirent, braises, onde d'ouverture ;
-## Le dessin lui-même (médaillons, fond, animations) est dans tree_art.gd, selon la charte (Art, Anim).
+##   _world ne dessine rien : il place ces deux couches en coordonnées de l'arbre ;
 ## - les libellés (_labels) : noms des branches et des nœuds, en taille fixe à l'écran, placés sans chevauchement ;
-## - l'interface (_overlay) : en-tête et infobulle.
+## - l'interface (_overlay) : en-tête, bandeau des outils et infobulle.
+## Le dessin lui-même (médaillons, silhouette, animations) est dans tree_art.gd, selon la charte (Art, Anim).
 extends Control
 
 ## Ouverture (true) ou fermeture (false) de l'arbre.
@@ -27,7 +30,7 @@ const Content = preload("res://scripts/content.gd")
 
 const RADIUS := {
 	"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0,
-	"skill": 23.0, "mutation": 20.0, "mastery": 19.0, "graft": 17.0, "withered": 18.0, "attack": 20.0,
+	"skill": 23.0, "mutation": 20.0, "mastery": 19.0, "graft": 17.0, "withered": 18.0, "attack": 21.0,
 }
 const KIND_LABEL := {
 	"root": "Origine", "small": "Nœud", "notable": "Nœud notable", "keystone": "Nœud clé",
@@ -43,7 +46,7 @@ const BG := Color(0.03, 0.045, 0.04)
 const HEADER_H := 64.0
 ## Hauteur de la barre d'outils sous l'en-tête (recherche, plan, résumé : tree_panels.gd),
 ## que l'arbre cadré et ses libellés ne doivent pas recouvrir.
-const TOOLBAR_H := 46.0
+const TOOLBAR_H := 52.0
 ## Marge entre le bord de l'écran (ou l'en-tête) et tout ce qui est dessiné.
 const MARGIN := 14.0
 const ZOOM_MAX := 2.5
@@ -71,6 +74,8 @@ const FONT_KEYSTONE := 15
 const FONT_NOTABLE := 13
 const FONT_ROOT := 15
 const TOOLTIP_MAX_W := 380.0
+## Largeur de la colonne du médaillon, à gauche du nom dans l'infobulle.
+const TIP_BADGE := 44.0
 
 var cam := Vector2.ZERO:
 	set(v):
@@ -152,6 +157,60 @@ var _sap: Array = []
 ## Nœuds en train d'éclore : identifiant → temps écoulé.
 var _blooms := {}
 const BLOOM_DUR := 0.95
+## Avant d'éclore, la sève coule jusqu'au nœud depuis son voisin appris : durée du trajet, et
+## décalage entre deux nœuds appris ensemble (un chemin entier s'allume de proche en proche).
+const SAP_FLOW := 0.32
+const SAP_STAGGER := 0.14
+var _bloom_from := {}
+var _bloom_queue := 0.0
+## Lien entre deux nœuds : Vector2i(petit, grand) → indice du lien.
+var _edge_index := {}
+## Squelette de l'arbre (TreeArt.skeleton) : quels liens sont des branches, et leur poids.
+var _skel := {}
+## Hauteur de la sève dans chaque branche (0 à 1 de l'étendue) : le nœud appris le plus éloigné.
+var _branch_sap: Array = []
+## Liens déjà mis en triangles (_link_batches), et numéro des états des nœuds.
+var _link_cache := {}
+var _states_version := 0
+
+## Image de la couche fixe (voir en tête du fichier). CACHE_PAD : marge de l'image autour de l'écran
+## (en part de sa taille). Pendant un zoom à la molette, l'image est seulement agrandie ou réduite,
+## et refaite quand le zoom s'arrête (CACHE_SETTLE s) ou s'écarte trop (CACHE_RATIO).
+const CACHE_PAD := 0.1
+const CACHE_SETTLE := 0.12
+const CACHE_RATIO := Vector2(0.75, 1.45)
+const CACHE_GAP := 0.2
+const CACHE_AHEAD := 0.7
+var _cache_time := -INF
+var _cache_vp: SubViewport
+var _static: Node2D
+## Ce que la couche fixe a enregistré (ses commandes de dessin restent valables tant que les états,
+## le niveau de détail et à peu près le zoom ne changent pas : refaire l'image ne la redessine pas).
+var _rec := {}
+## Fond et silhouette, précalculés une fois dans une image carrée (en coordonnées de l'arbre).
+const BACKDROP_PX := 2048
+var _backdrop_vp: SubViewport
+var _backdrop: Node2D
+var _backdrop_quad: Node2D
+## Vrai quand l'écran de l'arbre, opaque, recouvre tout : la fenêtre n'a pas besoin d'être effacée.
+var _no_clear := false
+var _backdrop_version := -1
+var _backdrop_wait := 0
+var _view: Control
+var _cache_ok := false
+var _cache_zoom := 1.0
+var _cache_cam := Vector2.ZERO
+var _cache_logical := Vector2.ZERO
+var _cache_px := 1.0
+## Temps depuis le dernier changement de vue venu de la souris (molette, glisser).
+var _idle := 0.0
+var _interactive := false
+## Ouverture (0 → 1) : l'arbre grandit un peu et s'éclaire. Fermeture : une image qui s'efface.
+const OPEN_DUR := 0.4
+var _open := 1.0
+var _closing: TextureRect = null
+## Rendu sans mélange pour poser l'image opaque de la couche fixe (moins coûteux en rendu logiciel).
+static var _opaque_mat: ShaderMaterial = null
 
 
 class Layer extends Node2D:
@@ -163,8 +222,12 @@ class Layer extends Node2D:
 				ui._draw_world(self)
 			"anim":
 				ui._draw_anim(self)
-			_:
+			"life":
 				ui._draw_life(self)
+			"backdrop":
+				ui._draw_backdrop(self)
+			"quad":
+				ui._draw_backdrop_quad(self)
 
 
 class Overlay extends Control:
@@ -173,6 +236,8 @@ class Overlay extends Control:
 	func _draw() -> void:
 		if kind == "labels":
 			ui._draw_labels(self)
+		elif kind == "view":
+			ui._draw_view(self)
 		elif kind == "ambient":
 			ui._draw_ambient(self)
 		else:
@@ -185,9 +250,43 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_NONE
 	font = ThemeDB.fallback_font
 	_rings = TreeArt.growth_rings(SkillTree.RINGS, SkillTree.RING_GAP)
+	# Image de la couche fixe : rendue à part, une fois, puis posée à l'écran par _view.
+	_cache_vp = SubViewport.new()
+	_cache_vp.disable_3d = true
+	_cache_vp.transparent_bg = false
+	_cache_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	_cache_vp.size = Vector2i(2, 2)
+	add_child(_cache_vp)
+	_static = Layer.new()
+	_static.ui = self
+	_cache_vp.add_child(_static)
+	if _opaque_mat == null:
+		var sh := Shader.new()
+		sh.code = "shader_type canvas_item;\nrender_mode blend_disabled;\n"
+		_opaque_mat = ShaderMaterial.new()
+		_opaque_mat.shader = sh
+	# Le fond précalculé est opaque : posé sous la couche fixe, sans mélange.
+	_backdrop_quad = Layer.new()
+	_backdrop_quad.ui = self
+	_backdrop_quad.kind = "quad"
+	_backdrop_quad.z_index = -1
+	_backdrop_quad.material = _opaque_mat
+	_static.add_child(_backdrop_quad)
+	_backdrop_vp = SubViewport.new()
+	_backdrop_vp.disable_3d = true
+	_backdrop_vp.transparent_bg = false
+	_backdrop_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	_backdrop_vp.size = Vector2i(BACKDROP_PX, BACKDROP_PX)
+	add_child(_backdrop_vp)
+	_backdrop = Layer.new()
+	_backdrop.ui = self
+	_backdrop.kind = "backdrop"
+	_backdrop_vp.add_child(_backdrop)
+	_view = _make_overlay("view")
 	_ambient = _make_overlay("ambient")
 	_world = Layer.new()
 	_world.ui = self
+	_world.kind = "none"
 	add_child(_world)
 	_anim = Layer.new()
 	_anim.ui = self
@@ -243,6 +342,12 @@ func _input(event: InputEvent) -> void:
 func toggle() -> void:
 	_choice_queue.clear()
 	close_choice(false)
+	if visible:
+		_play_close()
+		_set_no_clear(false)
+	elif _closing != null:
+		_closing.queue_free()
+		_closing = null
 	visible = not visible
 	get_tree().paused = visible
 	dragging = false
@@ -256,7 +361,11 @@ func toggle() -> void:
 		else:
 			zoom = zoom
 		_intro = 0.0 if play_intro and not Settings.reduce_effects else INF
+		_open = 0.0 if play_intro and not Settings.reduce_effects else 1.0
 		_world.modulate.a = 1.0
+		_blooms.clear()
+		_invalidate()
+		_view_changed(true)
 		_redraw_all()
 	toggled.emit(visible)
 
@@ -270,6 +379,7 @@ func fit_view() -> void:
 
 
 func _on_resized() -> void:
+	_invalidate()
 	if not visible or size.x <= 0.0:
 		return
 	min_zoom = fit_zoom() * ZOOM_MIN_FACTOR
@@ -282,6 +392,7 @@ func _on_resized() -> void:
 
 func _on_tree_changed() -> void:
 	_refresh_states()
+	_invalidate()
 	_redraw_all()
 
 
@@ -290,45 +401,70 @@ func _redraw_all() -> void:
 	if not is_node_ready():
 		return
 	queue_redraw()
+	_view.queue_redraw()
 	_ambient.queue_redraw()
-	_world.queue_redraw()
 	_anim.queue_redraw()
 	_life.queue_redraw()
 	_labels.queue_redraw()
 	_overlay.queue_redraw()
 
 
+## La couche fixe doit être refaite (l'arbre ou ses états ont changé, ou la taille de l'écran).
+func _invalidate() -> void:
+	_cache_ok = false
+
+
 func _view_changed(zoom_changed: bool) -> void:
 	if not is_node_ready():
 		return
-	_world.position = size / 2.0 - cam * zoom
-	_world.scale = Vector2(zoom, zoom)
-	# La couche fixe ne se redessine pas quand on se déplace, seulement quand le zoom change
-	# (épaisseurs à l'écran, taille minimale des nœuds, niveau de détail).
+	_idle = 0.0
+	var s := _open_scale()
+	_world.position = view_center() - cam * zoom * s
+	_world.scale = Vector2(zoom, zoom) * s
+	# La couche fixe n'est pas redessinée ici : _process décide quand refaire son image.
 	if zoom_changed:
 		_lod = lod()
-		_world.queue_redraw()
 		_anim.queue_redraw()
 		_life.queue_redraw()
+	_view.queue_redraw()
 	_labels.queue_redraw()
 	_overlay.queue_redraw()
 
 
+## Agrandissement de l'ouverture : l'arbre passe de 94 % à 100 % de sa taille.
+func _open_scale() -> float:
+	return lerpf(0.94, 1.0, Anim.ease_out(_open))
+
+
 func _process(delta: float) -> void:
-	# Les couches fixes ne bougent pas ; l'ambiance, la couche animée et la couche de vie
+	# La couche fixe est une image ; l'ambiance, la couche animée et la couche de vie
 	# (petites, et limitées à ce qui est à l'écran) sont redessinées à chaque image.
 	if not visible:
 		return
 	t += delta
+	_idle += delta
+	if _open < 1.0:
+		_open = minf(_open + delta / OPEN_DUR, 1.0)
+		var s := _open_scale()
+		_world.position = view_center() - cam * zoom * s
+		_world.scale = Vector2(zoom, zoom) * s
+		_view.queue_redraw()
+		_labels.modulate.a = Anim.ease_out(_open)
+	elif _labels.modulate.a < 1.0:
+		_labels.modulate.a = 1.0
+	_update_cache()
 	_hover_since += delta
 	for id in _blooms.keys():
 		_blooms[id] += delta
 		if _blooms[id] >= BLOOM_DUR:
 			_blooms.erase(id)
+			_bloom_from.erase(id)
+	_bloom_queue = maxf(0.0, _bloom_queue - delta)
 	if _intro < TreeArt.INTRO_DUR:
 		_intro += delta
 		# L'arbre se dévoile derrière l'onde de sève.
 		_world.modulate.a = lerpf(0.35, 1.0, Anim.ease_out(minf(_intro / (TreeArt.INTRO_DUR * 0.6), 1.0)))
+		_view.queue_redraw()
 	if not Settings.reduce_effects:
 		_ambient.queue_redraw()
 	_anim.queue_redraw()
@@ -338,19 +474,28 @@ func _process(delta: float) -> void:
 # --- Géométrie ---
 
 func lod() -> int:
-	if zoom < LOD_ALL:
+	return lod_for(zoom)
+
+
+func lod_for(z: float) -> int:
+	if z < LOD_ALL:
 		return LOD_OVERVIEW
-	if zoom >= LOD_NEAR:
+	if z >= LOD_NEAR:
 		return LOD_CLOSE
 	return LOD_MEDIUM
 
 
 func to_tree(p: Vector2) -> Vector2:
-	return (p - size / 2.0) / zoom + cam
+	return (p - view_center()) / zoom + cam
 
 
 func to_screen(p: Vector2) -> Vector2:
-	return (p - cam) * zoom + size / 2.0
+	return (p - cam) * zoom + view_center()
+
+
+## Centre de la zone de l'arbre (sous l'en-tête et la barre d'outils) : là où se place la caméra.
+func view_center() -> Vector2:
+	return _view_area().get_center()
 
 
 ## Rayon de l'arbre (centre au bord du nœud le plus éloigné), en coordonnées de l'arbre.
@@ -382,7 +527,7 @@ func _shown(n: Dictionary, level: int) -> bool:
 func _branch_label_rect(bi: int, z: float, c: Vector2) -> Rect2:
 	var sector := TAU / SkillTree.BRANCHES.size()
 	var d := Vector2.from_angle((bi + 0.5) * sector - PI / 2.0)
-	var anchor := (d * _extent() - c) * z + size / 2.0 + d * 12.0
+	var anchor := (d * _extent() - c) * z + view_center() + d * 12.0
 	var s := _text_size(SkillTree.BRANCHES[bi]["name"], FONT_BRANCH)
 	return Rect2(anchor - Vector2(s.x * (1.0 - d.x) / 2.0, s.y * (1.0 - d.y) / 2.0), s)
 
@@ -399,7 +544,7 @@ func fit_zoom() -> float:
 	var z := ZOOM_MAX
 	while z > 0.02:
 		var rr := _extent() * z
-		var c := size / 2.0
+		var c := view_center()
 		var ok := c.x - rr >= area.position.x and c.x + rr <= area.end.x and c.y - rr >= area.position.y and c.y + rr <= area.end.y
 		if ok:
 			for bi in SkillTree.BRANCHES.size():
@@ -430,8 +575,9 @@ func pick(p: Vector2) -> int:
 
 func zoom_at(p: Vector2, factor: float) -> void:
 	var before := to_tree(p)
+	_interactive = true
 	zoom = zoom * factor
-	cam = before - (p - size / 2.0) / zoom
+	cam = before - (p - view_center()) / zoom
 	_fitted = false
 
 
@@ -466,6 +612,7 @@ func _gui_input(event: InputEvent) -> void:
 		if dragging:
 			drag_moved += mm.relative.length()
 			if mm.relative != Vector2.ZERO:
+				_interactive = true
 				cam -= mm.relative / zoom
 				_fitted = false
 		hover = pick(mouse)
@@ -498,6 +645,7 @@ func _state(id: int) -> String:
 
 
 func _refresh_states() -> void:
+	_states_version += 1
 	_states = {}
 	_available = []
 	_pending = []
@@ -523,6 +671,13 @@ func _refresh_states() -> void:
 				_locks[id] = why
 	_can_buy = Game.points > 0
 	_ensure_curves()
+	_branch_sap = []
+	_branch_sap.resize(SkillTree.BRANCHES.size())
+	_branch_sap.fill(0.0)
+	for id in _owned_ids:
+		var n: Dictionary = Game.tree.nodes[id]
+		if n["branch"] >= 0:
+			_branch_sap[n["branch"]] = maxf(_branch_sap[n["branch"]], minf(n["pos"].length() / (0.93 * _extent()), 1.0))
 	_sap = []
 	var edges: Array = Game.tree.edges
 	for i in edges.size():
@@ -569,7 +724,19 @@ func click(id: int) -> void:
 
 
 func _on_node_allocated(node: Dictionary) -> void:
-	if visible:
+	if visible and not Settings.reduce_effects:
+		# La sève part du voisin déjà appris le plus proche de la graine, puis le nœud éclôt.
+		# Les nœuds d'un même chemin s'allument l'un après l'autre.
+		var id: int = node["id"]
+		var from := -1
+		for m in node["neighbors"]:
+			if Game.allocated.has(m) and (from < 0 or Game.tree.nodes[m]["pos"].length() < Game.tree.nodes[from]["pos"].length()):
+				from = m
+		_blooms[id] = -SAP_FLOW - _bloom_queue if from >= 0 else -_bloom_queue
+		if from >= 0:
+			_bloom_from[id] = from
+		_bloom_queue += SAP_STAGGER
+	elif visible:
 		_blooms[node["id"]] = 0.0
 	if visible and not node["choices"].is_empty() and Game.choice_index(node["id"]) < 0:
 		_choice_queue.append(node["id"])
@@ -697,10 +864,6 @@ func icon_of(n: Dictionary) -> String:
 
 # --- Couche fixe ---
 
-func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), BG)
-
-
 ## Pollen de sève (couche d'ambiance, en coordonnées de l'écran).
 func _draw_ambient(c: CanvasItem) -> void:
 	if not Settings.reduce_effects:
@@ -716,6 +879,10 @@ func _ensure_curves() -> void:
 	_curve_tree = tree
 	_curves = []
 	_icons = {}
+	_edge_index = {}
+	for i in tree.edges.size():
+		_edge_index[tree.edges[i]] = i
+	_skel = TreeArt.skeleton(tree.nodes, tree.edges)
 	for e in tree.edges:
 		var a: Vector2 = tree.nodes[e.x]["pos"]
 		var b: Vector2 = tree.nodes[e.y]["pos"]
@@ -727,6 +894,17 @@ func _ensure_curves() -> void:
 			var k := float(i) / CURVE_SEGS
 			pts.append(a.lerp(ctrl, k).lerp(ctrl.lerp(b, k), k))
 		_curves.append(pts)
+
+
+## Points d'un lien, un sur `step` (la courbe complète a CURVE_SEGS + 1 points).
+func _curve_line(idx: int, step: int) -> PackedVector2Array:
+	var pts: PackedVector2Array = _curves[idx]
+	if step <= 1:
+		return pts
+	var out := PackedVector2Array()
+	for j in range(0, CURVE_SEGS + 1, step):
+		out.append(pts[j])
+	return out
 
 
 ## Ajoute à `out` les segments d'un lien, deux points par segment, avec un point sur `step`.
@@ -750,61 +928,34 @@ func _curve_at(idx: int, k: float, reversed: bool) -> Vector2:
 
 
 func _draw_world(c: CanvasItem) -> void:
+	if _rec.is_empty():
+		return
 	var tree = Game.tree
-	var z := zoom
-	var level := lod()
-	var colors: Array = []
-	for bi in SkillTree.BRANCHES.size():
-		colors.append(tree.branch_color(bi))
-	TreeArt.background(c, _extent(), colors, _rings, z)
+	var z: float = _rec["zoom"]
+	var level := lod_for(z)
+	# Le fond et la silhouette sont posés dessous (_draw_backdrop_quad) ; ici, ce qui est dans la
+	# zone enregistrée.
+	var area: Rect2 = _rec["area"]
+	var keep := area.grow(80.0 / z + 40.0)
+	_backdrop_quad.queue_redraw()
 
-	# Liens courbes : épaisseur minimale d'un pixel à l'écran pour rester visibles dézoomés.
-	# Moins de segments par lien quand on est loin (la courbure n'y est pas visible).
-	_ensure_curves()
-	var step := 4 if level != LOD_CLOSE else 2
-	var dim := PackedVector2Array()
-	# Liens qui partent d'un nœud appris : teintés de leur branche (un lot par branche).
-	var half := {}
-	var owned_w := maxf(6.0, 2.5 / z)
-	var edges: Array = tree.edges
-	for i in edges.size():
-		var e: Vector2i = edges[i]
-		var oa: bool = _states[e.x] == "owned"
-		var ob: bool = _states[e.y] == "owned"
-		if oa and ob:
-			continue
-		if oa or ob:
-			var bi := _edge_branch(e)
-			if not half.has(bi):
-				half[bi] = PackedVector2Array()
-			_curve_segments(half[bi], i, step)
-		else:
-			_curve_segments(dim, i, step)
-	if dim.size() > 0:
-		c.draw_multiline(dim, Color(Art.c("brume").lightened(0.15), 0.3 if level == LOD_OVERVIEW else 0.26), maxf(2.0, 1.0 / z))
-	for bi in half:
-		var hc: Color = tree.branch_color(bi).lerp(Art.c("texte"), 0.35)
-		c.draw_multiline(half[bi], Color(hc, 0.55), maxf(3.0, 1.5 / z))
-	# Branches apprises : écorce sombre dessous, cœur coloré, filet de lumière dessus, feuilles de près.
-	for entry in _sap:
-		var i: int = entry[0]
-		var col: Color = tree.branch_color(_edge_branch(edges[i]))
-		var line := PackedVector2Array()
-		var pts: PackedVector2Array = _curves[i]
-		for j in range(0, CURVE_SEGS + 1, step):
-			line.append(pts[j])
-		c.draw_polyline(line, Color(Art.c("contour"), 0.85), owned_w * 1.8)
-		c.draw_polyline(line, col.darkened(0.25), owned_w * 1.15)
-		c.draw_polyline(line, col, owned_w * 0.75)
-		c.draw_polyline(line, Color(1, 1, 1, 0.28), owned_w * 0.22)
-		if level == LOD_CLOSE:
-			TreeArt.link_leaves(c, pts, col, owned_w * 0.9, i)
+	var batches := _link_batches(level, z)
+	TreeArt.flush(c, batches[0])
+	TreeArt.flush(c, batches[1])
+	if level == LOD_CLOSE:
+		for entry in _sap:
+			var i: int = entry[0]
+			var pts: PackedVector2Array = _curves[i]
+			if keep.has_point(pts[0]) or keep.has_point(pts[CURVE_SEGS]):
+				var col: Color = tree.branch_color(_edge_branch(tree.edges[i]))
+				var w := TreeArt.limb_width(_skel["weight"][i]) if _skel["tree"][i] == 1 else 4.0
+				TreeArt.link_leaves(c, pts, col, clampf(w * 0.7, 5.0, 9.0), i)
 
 	var w := 1.0 / z
-	# Ombres, volume, anneaux intérieurs et reflets seulement de près : le zoom reste fluide.
+	# Ombres, volume, anneaux intérieurs et reflets seulement de près.
 	var detail := level == LOD_CLOSE
 	for n in tree.nodes:
-		if not _shown(n, level):
+		if not _shown(n, level) or not keep.has_point(n["pos"]):
 			continue
 		var st: String = _states[n["id"]]
 		var p: Vector2 = n["pos"]
@@ -817,44 +968,130 @@ func _draw_world(c: CanvasItem) -> void:
 		if kind == "root":
 			TreeArt.seed_node(c, p, r, col, w, detail)
 			continue
-		var ashen := _ashen(n)
-		var shape := shape_points(kind, p, r)
-		var ring_w := maxf(2.0, 1.2 * w) + w
-		if ashen:
-			# Cendre : médaillon gris, quel que soit l'état.
-			TreeArt.medallion(c, shape, p, r, "locked", Art.c("brume").lightened(0.25), w, detail, ring_w)
-		elif kind == "graft" and st == "owned":
-			# Un emplacement reste creux : c'est la greffe qui le remplit.
-			TreeArt.medallion(c, shape, p, r, "available", col, w, detail, ring_w)
+		draw_node(c, n, p, r, st, w, level)
+
+
+## Lots de triangles des liens (écorce, puis branches apprises), gardés tant que les états des
+## nœuds, le niveau de détail et à peu près le zoom ne changent pas : refaire l'image de la couche
+## fixe pendant un zoom ne recalcule pas les liens.
+func _link_batches(level: int, z: float) -> Array:
+	var key := [level, _states_version]
+	if _link_cache.get("key", []) == key and absf(log(z / float(_link_cache["z"]))) < 0.35:
+		return _link_cache["batches"]
+	var tree = Game.tree
+	# Liens : les branches du squelette s'affinent du tronc vers les feuilles (d'autant plus épaisses
+	# qu'elles portent de nœuds) ; les autres liens restent fins. Écorce sombre, sauf ceux qui partent
+	# d'un nœud appris (teintés de leur branche). Tout en un seul lot de triangles.
+	_ensure_curves()
+	var step := 4 if level == LOD_OVERVIEW else (2 if level == LOD_MEDIUM else 1)
+	var px := 1.0 / z
+	var base := TreeArt.batch()
+	var lit := TreeArt.batch()
+	var edges: Array = tree.edges
+	var is_tree: PackedByteArray = _skel["tree"]
+	var weight: PackedFloat32Array = _skel["weight"]
+	for i in edges.size():
+		var e: Vector2i = edges[i]
+		var oa: bool = _states[e.x] == "owned"
+		var ob: bool = _states[e.y] == "owned"
+		var col: Color = tree.branch_color(_edge_branch(e))
+		var line := _curve_line(i, step)
+		var w0: float
+		var w1: float
+		if is_tree[i] == 1:
+			w0 = TreeArt.limb_width(weight[i])
+			w1 = TreeArt.limb_width(maxf(1.0, weight[i] - 1.0)) * 0.85
 		else:
-			TreeArt.medallion(c, shape, p, r, st, col, w, detail, ring_w)
-		if kind == "keystone" and detail:
-			# Nœud clé : une seconde couronne autour du losange.
-			var crown := shape_points(kind, p, r * 1.28)
-			crown.append(crown[0])
-			c.draw_polyline(crown, Color(col, 0.55 if st != "locked" else 0.22), maxf(1.5, w))
-		var ic := Color(0.06, 0.08, 0.07, 0.9) if st == "owned" else Color(col.r, col.g, col.b, 0.9 if st == "available" else 0.55)
-		match kind:
-			"notable", "keystone", "skill", "attack":
-				if level == LOD_CLOSE:
-					TreeArt.node_icon(c, icon_of(n), p, r * (0.66 if kind == "notable" else 0.6), st, col)
-				elif kind == "notable":
-					c.draw_circle(p, r * 0.36, col.lerp(Color.WHITE, 0.6) if st == "owned" else Color(col, 0.45))
-			"mutation":
-				if level != LOD_OVERVIEW:
-					_draw_fork(c, p + Vector2(0, r * 0.12), r * 0.42, ic, maxf(r * 0.11, 1.2 * w))
-			"mastery":
-				if level != LOD_OVERVIEW:
-					_draw_mastery_dots(c, n, p, r, st, ic, w)
-			"graft":
-				_draw_graft(c, n, p, r, st, col, w, level)
-			"withered":
-				if ashen:
-					_draw_ash(c, n, p, r, w)
-				elif level == LOD_CLOSE:
-					TreeArt.node_icon(c, icon_of(n), p, r * 0.66, st, col)
-				else:
-					c.draw_circle(p, r * 0.36, col.lerp(Color.WHITE, 0.6) if st == "owned" else Color(col, 0.45))
+			w0 = 2.4
+			w1 = 2.4
+		# Le lien part du côté de la graine : la ligne est dans le sens de l'arête (e.x → e.y).
+		if int(_skel["outer"][i]) == e.x:
+			var tmp := w0
+			w0 = w1
+			w1 = tmp
+		w0 = maxf(w0, 1.6 * px)
+		w1 = maxf(w1, 1.2 * px)
+		if oa and ob:
+			continue
+		var bk := TreeArt.bark(col)
+		if oa or ob:
+			var hc := col.lerp(Art.c("texte"), 0.3)
+			TreeArt.strip(base, line, w0 + 2.4 * px, w1 + 2.4 * px, Color(Art.c("contour"), 0.7), Color(Art.c("contour"), 0.7))
+			TreeArt.strip(base, line, w0, w1, Color(hc.darkened(0.35), 0.85) if oa else Color(bk, 0.9), Color(hc.darkened(0.35), 0.85) if ob else Color(bk, 0.9))
+		elif is_tree[i] == 1:
+			TreeArt.strip(base, line, w0 + 2.4 * px, w1 + 2.4 * px, Color(Art.c("contour"), 0.55), Color(Art.c("contour"), 0.55))
+			TreeArt.strip(base, line, w0, w1, Color(bk.lightened(0.08), 0.9), Color(bk.lightened(0.08), 0.9))
+			if level != LOD_OVERVIEW:
+				TreeArt.strip(base, line, w0 * 0.3, w1 * 0.3, Color(col.darkened(0.55), 0.35), Color(col.darkened(0.55), 0.35))
+		else:
+			TreeArt.strip(base, line, w0, w1, Color(Art.c("brume").lightened(0.1), 0.22), Color(Art.c("brume").lightened(0.1), 0.22))
+	# Branches apprises : écorce sombre dessous, cœur coloré, filet de sève dessus, feuilles de près.
+	for entry in _sap:
+		var i: int = entry[0]
+		var e: Vector2i = edges[i]
+		var col: Color = tree.branch_color(_edge_branch(e))
+		var line := _curve_line(i, step)
+		var w := TreeArt.limb_width(weight[i]) if is_tree[i] == 1 else 4.0
+		var w0 := maxf(w, 4.0 * px)
+		var w1 := maxf(w * 0.85, 3.0 * px)
+		if int(_skel["outer"][i]) == e.x:
+			var tmp := w0
+			w0 = w1
+			w1 = tmp
+		var light := col.lerp(Art.ec("seve", "clair"), 0.35)
+		TreeArt.strip(lit, line, w0 * 1.3 + 3.0 * px, w1 * 1.3 + 3.0 * px, Color(Art.c("contour"), 0.85), Color(Art.c("contour"), 0.85))
+		TreeArt.strip(lit, line, w0 * 1.15, w1 * 1.15, col.darkened(0.3), col.darkened(0.3))
+		TreeArt.strip(lit, line, w0 * 0.75, w1 * 0.75, col, col)
+		TreeArt.strip(lit, line, maxf(w0 * 0.28, px), maxf(w1 * 0.28, px), Color(light, 0.75), Color(light, 0.75))
+	_link_cache = {"key": key, "z": z, "batches": [base, lit]}
+	return [base, lit]
+
+
+## Dessine un nœud (tout sauf les petits et la graine) : son médaillon à la forme de son type,
+## puis ce qui le distingue (icône, rameau, points de choix, greffe, cendre). Sert à la couche fixe
+## et au médaillon de l'infobulle.
+func draw_node(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w: float, level: int) -> void:
+	var col: Color = Game.tree.branch_color(n["branch"])
+	var kind: String = n["type"]
+	var detail := level == LOD_CLOSE
+	var ashen := _ashen(n)
+	var shape := shape_points(kind, p, r)
+	var ring_w := maxf(2.0, 1.2 * w) + w
+	if ashen:
+		# Cendre : médaillon gris, quel que soit l'état.
+		TreeArt.medallion(c, shape, p, r, "locked", Art.c("brume").lightened(0.25), w, detail, ring_w)
+	elif kind == "graft" and st == "owned":
+		# Un emplacement reste creux : c'est la greffe qui le remplit.
+		TreeArt.medallion(c, shape, p, r, "available", col, w, detail, ring_w)
+	else:
+		TreeArt.medallion(c, shape, p, r, st, col, w, detail, ring_w)
+	if kind == "keystone" and detail:
+		# Nœud clé : une seconde couronne autour du losange.
+		var crown := shape_points(kind, p, r * 1.28)
+		crown.append(crown[0])
+		c.draw_polyline(crown, Color(col, 0.55 if st != "locked" else 0.22), maxf(1.5, w))
+	var ic := Color(0.06, 0.08, 0.07, 0.9) if st == "owned" else Color(col.r, col.g, col.b, 0.9 if st == "available" else 0.55)
+	match kind:
+		"notable", "keystone", "skill", "attack":
+			if level == LOD_CLOSE:
+				TreeArt.node_icon(c, icon_of(n), p, r * (0.66 if kind == "notable" else (0.5 if kind == "attack" else 0.6)), st, col)
+			elif kind == "notable":
+				c.draw_circle(p, r * 0.36, col.lerp(Color.WHITE, 0.6) if st == "owned" else Color(col, 0.45))
+		"mutation":
+			if level != LOD_OVERVIEW:
+				_draw_fork(c, p + Vector2(0, r * 0.12), r * 0.42, ic, maxf(r * 0.11, 1.2 * w))
+		"mastery":
+			if level != LOD_OVERVIEW:
+				_draw_mastery_dots(c, n, p, r, st, ic, w)
+		"graft":
+			_draw_graft(c, n, p, r, st, col, w, level)
+		"withered":
+			if ashen:
+				_draw_ash(c, n, p, r, w)
+			elif level == LOD_CLOSE:
+				TreeArt.node_icon(c, icon_of(n), p, r * 0.66, st, col)
+			else:
+				c.draw_circle(p, r * 0.36, col.lerp(Color.WHITE, 0.6) if st == "owned" else Color(col, 0.45))
 
 
 ## Branche d'un lien : celle de son nœud extérieur (l'origine n'a pas de branche).
@@ -863,8 +1100,10 @@ func _edge_branch(e: Vector2i) -> int:
 	return b if b >= 0 else Game.tree.nodes[e.x]["branch"]
 
 
-## Contour d'un nœud selon son type (vide = cercle) : losange pour un nœud clé, hexagone pour une
-## compétence, triangle pour une mutation, carré pour une maîtrise.
+## Contour d'un nœud selon son type (vide = cercle, pour un notable) : losange pour un nœud clé,
+## hexagone pour une compétence, triangle pour une mutation, carré pour une maîtrise, octogone pour
+## un emplacement de greffe, disque fendu pour un nœud flétri, étoile à quatre épines pour un nœud
+## qui change l'attaque de base.
 func shape_points(kind: String, p: Vector2, r: float) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	match kind:
@@ -879,9 +1118,20 @@ func shape_points(kind: String, p: Vector2, r: float) -> PackedVector2Array:
 		"mastery":
 			var h := r * 0.9
 			pts = PackedVector2Array([p + Vector2(-h, -h), p + Vector2(h, -h), p + Vector2(h, h), p + Vector2(-h, h)])
+		"graft":
+			# Octogone : un écusson où se pose la greffe.
+			for i in 8:
+				pts.append(p + Vector2.from_angle(i * TAU / 8.0 + TAU / 16.0) * r * 1.04)
+		"withered":
+			# Disque fendu : un contour irrégulier, toujours le même.
+			for i in 11:
+				var k := 0.86 + 0.14 * absf(sin(i * 2.7 + 0.6))
+				pts.append(p + Vector2.from_angle(i * TAU / 11.0 - PI / 2.0) * r * k * 1.05)
 		"attack":
-			# Nœud d'attaque : une pointe de flèche (dessin provisoire, la tâche D le reprend).
-			pts = PackedVector2Array([p + Vector2(0, -r * 1.2), p + Vector2(r * 1.05, r * 0.25), p + Vector2(r * 0.5, r * 0.95), p + Vector2(-r * 0.5, r * 0.95), p + Vector2(-r * 1.05, r * 0.25)])
+			# Étoile à quatre épines : l'attaque de base.
+			for i in 8:
+				var rr := r * (1.25 if i % 2 == 0 else 0.62)
+				pts.append(p + Vector2.from_angle(i * TAU / 8.0 - PI / 2.0) * rr)
 	return pts
 
 
@@ -972,6 +1222,193 @@ func _tree_view(margin: float) -> Rect2:
 	return Rect2(to_tree(Vector2.ZERO), size / zoom).grow(margin)
 
 
+# --- Image de la couche fixe ---
+
+## Pixels réels par unité de l'interface (l'étirement de la fenêtre) : l'image est nette à toute résolution.
+func _pixel_scale() -> float:
+	var vp := get_viewport()
+	return vp.get_final_transform().get_scale().x if vp != null else 1.0
+
+
+## Refait l'image de la couche fixe si elle ne correspond plus à la vue. Pendant un zoom ou un
+## déplacement à la souris, l'image en cours est agrandie ou déplacée, et refaite seulement quand
+## le mouvement s'arrête, quand elle s'écarte trop du zoom, ou quand l'écran sort de l'image.
+func _update_cache() -> void:
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+	if _backdrop_wait > 0:
+		_backdrop_wait -= 1
+		if _backdrop_wait == 0:
+			_cache_ok = false
+	if not _cache_ok or not _interactive:
+		if not _cache_ok or zoom != _cache_zoom or cam != _cache_cam:
+			_render_cache()
+		return
+	var k := zoom / _cache_zoom
+	var covered := _cache_rect().encloses(Rect2(Vector2.ZERO, size))
+	# Pendant le mouvement, au plus une image refaite tous les CACHE_GAP s.
+	var rushed := (not covered or k < CACHE_RATIO.x or k > CACHE_RATIO.y) and t - _cache_time >= CACHE_GAP
+	if rushed:
+		# En dézoomant, l'image est faite un peu plus loin que la vue : elle couvre l'écran plus longtemps.
+		_render_cache(zoom * (CACHE_AHEAD if k < 1.0 else 1.0))
+	elif k != 1.0 and _idle >= CACHE_SETTLE:
+		_render_cache()
+	elif _idle >= CACHE_SETTLE and covered:
+		_interactive = false
+
+
+func _render_cache(rz := -1.0) -> void:
+	if rz <= 0.0:
+		rz = zoom
+	var ps := _pixel_scale()
+	_cache_logical = (size * (1.0 + 2.0 * CACHE_PAD)).ceil()
+	var px := Vector2i((_cache_logical * ps).ceil())
+	if _cache_vp.size != px:
+		_cache_vp.size = px
+	_cache_px = ps
+	_cache_zoom = rz
+	_cache_cam = cam
+	if _backdrop_version != _states_version:
+		_render_backdrop()
+	# La couche fixe n'est réenregistrée que si ses états, son niveau de détail ou (de plus de 30 %)
+	# son zoom ont changé, ou si l'image sort de la zone qu'elle a enregistrée.
+	var area := Rect2(cam - _cache_logical / 2.0 / rz, _cache_logical / rz)
+	if _rec.get("version", -1) != _states_version or _rec["level"] != lod_for(rz) or absf(log(rz / float(_rec["zoom"]))) > 0.3 \
+			or not (_rec["area"] as Rect2).encloses(area):
+		_rec = {"version": _states_version, "level": lod_for(rz), "zoom": rz, "area": area.grow(maxf(area.size.x, area.size.y) * 0.5)}
+		_static.queue_redraw()
+	_static.scale = Vector2.ONE * rz * ps
+	_static.position = (_cache_logical / 2.0 - cam * rz) * ps
+	_cache_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_cache_time = t
+	_cache_ok = true
+	_interactive = false
+	_view.queue_redraw()
+
+
+## Rayon (coordonnées de l'arbre) du carré couvert par l'image du fond et de la silhouette.
+func _backdrop_radius() -> float:
+	return _extent() * 1.25
+
+
+## Refait l'image du fond et de la silhouette (la sève monte dans les branches quand on apprend).
+## L'image de la couche fixe est refaite à l'image suivante, une fois celle-ci prête.
+func _render_backdrop() -> void:
+	_backdrop_version = _states_version
+	var k := BACKDROP_PX / (2.0 * _backdrop_radius())
+	_backdrop.scale = Vector2(k, k)
+	_backdrop.position = Vector2.ONE * BACKDROP_PX / 2.0
+	_backdrop.queue_redraw()
+	_backdrop_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_backdrop_wait = 2
+
+
+## Pose l'image du fond (opaque) et remplit de la couleur du fond ce qu'elle ne couvre pas.
+func _draw_backdrop_quad(c: CanvasItem) -> void:
+	if _rec.is_empty():
+		return
+	var area: Rect2 = _rec["area"]
+	var br := _backdrop_radius()
+	var sq := Rect2(-br, -br, 2.0 * br, 2.0 * br)
+	var cut := area.intersection(sq)
+	if cut.size.x <= 0.0 or cut.size.y <= 0.0:
+		c.draw_rect(area, BG)
+		return
+	# Les bandes autour du carré : dessus, dessous, gauche, droite.
+	for r in [Rect2(area.position.x, area.position.y, area.size.x, cut.position.y - area.position.y),
+			Rect2(area.position.x, cut.end.y, area.size.x, area.end.y - cut.end.y),
+			Rect2(area.position.x, cut.position.y, cut.position.x - area.position.x, cut.size.y),
+			Rect2(cut.end.x, cut.position.y, area.end.x - cut.end.x, cut.size.y)]:
+		if r.size.x > 0.0 and r.size.y > 0.0:
+			c.draw_rect(r, BG)
+	c.draw_texture_rect(_backdrop_vp.get_texture(), sq, false)
+
+
+func _draw_backdrop(c: CanvasItem) -> void:
+	var tree = Game.tree
+	var br := _backdrop_radius()
+	c.draw_rect(Rect2(-br, -br, 2.0 * br, 2.0 * br), BG)
+	var colors: Array = []
+	for bi in SkillTree.BRANCHES.size():
+		colors.append(tree.branch_color(bi))
+	var z := _backdrop.scale.x
+	TreeArt.background(c, _extent(), colors, _rings, z)
+	TreeArt.silhouette(c, _extent(), colors, _branch_sap, z)
+
+
+## Où l'image de la couche fixe se pose à l'écran pour la vue actuelle (avec l'agrandissement
+## de l'ouverture, centré sur la zone de l'arbre).
+func _cache_rect() -> Rect2:
+	var s := zoom * _open_scale()
+	var origin := ((-_cache_logical / 2.0) / _cache_zoom + _cache_cam - cam) * s + view_center()
+	return Rect2(origin, _cache_logical * s / _cache_zoom)
+
+
+## Pose l'image de la couche fixe (couche _view). Nette au pixel près quand le zoom est le sien ;
+## sans mélange quand elle est opaque et couvre tout l'écran (le cas habituel).
+func _draw_view(c: CanvasItem) -> void:
+	if not _cache_ok:
+		c.draw_rect(Rect2(Vector2.ZERO, size), BG)
+		return
+	var rect := _cache_rect()
+	var alpha := _world.modulate.a
+	var exact := absf(rect.size.x - _cache_logical.x) < 0.01
+	if exact:
+		rect.position = (rect.position * _cache_px).round() / _cache_px
+	var whole := rect.encloses(Rect2(Vector2.ZERO, size))
+	if not whole or alpha < 1.0:
+		c.draw_rect(Rect2(Vector2.ZERO, size), BG)
+	c.draw_texture_rect(_cache_vp.get_texture(), rect, false, Color(1, 1, 1, alpha))
+	var opaque := whole and alpha >= 1.0
+	if (c.material != null) != opaque:
+		c.set_deferred("material", _opaque_mat if opaque else null)
+	_set_no_clear.call_deferred(opaque)
+	var filter := CanvasItem.TEXTURE_FILTER_NEAREST if exact else CanvasItem.TEXTURE_FILTER_LINEAR
+	if c.texture_filter != filter:
+		c.set_deferred("texture_filter", filter)
+
+
+## L'arbre opaque recouvre toute la fenêtre : inutile de l'effacer avant chaque image.
+func _set_no_clear(on: bool) -> void:
+	on = on and visible and is_inside_tree()
+	if on == _no_clear or not is_inside_tree():
+		return
+	_no_clear = on
+	RenderingServer.viewport_set_clear_mode(get_viewport().get_viewport_rid(),
+		RenderingServer.VIEWPORT_CLEAR_NEVER if on else RenderingServer.VIEWPORT_CLEAR_ALWAYS)
+
+
+func _exit_tree() -> void:
+	_set_no_clear(false)
+
+
+## Fermeture : l'image de l'arbre reste un instant au-dessus du jeu, se réduit et s'efface.
+func _play_close() -> void:
+	if Settings.reduce_effects or not _cache_ok or get_parent() == null:
+		return
+	if _closing != null:
+		_closing.queue_free()
+	var rect := _cache_rect()
+	_closing = TextureRect.new()
+	_closing.texture = _cache_vp.get_texture()
+	_closing.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_closing.stretch_mode = TextureRect.STRETCH_SCALE
+	_closing.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_closing.position = rect.position
+	_closing.size = rect.size
+	_closing.pivot_offset = view_center() - rect.position
+	get_parent().add_child(_closing)
+	var snap := _closing
+	var tw := snap.create_tween().set_parallel(true)
+	tw.tween_property(snap, "modulate:a", 0.0, 0.28).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_property(snap, "scale", Vector2(0.95, 0.95), 0.28).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tw.chain().tween_callback(func():
+		if _closing == snap:
+			_closing = null
+		snap.queue_free())
+
+
+
 func _draw_life(c: CanvasItem) -> void:
 	var tree = Game.tree
 	var level := lod()
@@ -1030,12 +1467,24 @@ func _draw_sap(c: CanvasItem) -> void:
 
 
 ## Éclosion d'un nœud appris (TreeArt.bloom).
+## Avant d'éclore (temps négatif), une goutte de sève coule le long du lien depuis le voisin appris.
 func _draw_blooms(c: CanvasItem) -> void:
 	var tree = Game.tree
 	for id in _blooms:
 		var n: Dictionary = tree.nodes[id]
+		var k: float = _blooms[id]
+		var col: Color = tree.branch_color(n["branch"])
+		if k < 0.0:
+			if k > -SAP_FLOW and _bloom_from.has(id):
+				var from: int = _bloom_from[id]
+				var ei: int = _edge_index.get(Vector2i(mini(id, from), maxi(id, from)), -1)
+				if ei >= 0:
+					var u := 1.0 + k / SAP_FLOW
+					var reversed: bool = tree.edges[ei].x == id
+					TreeArt.sap_drop(c, _curve_at(ei, Anim.ease_in_out(u), reversed), _curve_at(ei, maxf(Anim.ease_in_out(u) - 0.2, 0.0), reversed), col, maxf(6.0, 2.5 / zoom))
+			continue
 		var petals := 6 if n["type"] == "small" else (8 if n["type"] == "notable" else 10)
-		TreeArt.bloom(c, n["pos"], _radius(n, zoom), tree.branch_color(n["branch"]), _blooms[id] / BLOOM_DUR, petals, 1.0 / zoom, id)
+		TreeArt.bloom(c, n["pos"], _radius(n, zoom), col, k / BLOOM_DUR, petals, 1.0 / zoom, id)
 
 
 # --- Libellés ---
@@ -1133,8 +1582,14 @@ func _draw_labels(c: CanvasItem) -> void:
 
 func _draw_overlay(c: CanvasItem) -> void:
 	var tree = Game.tree
+	# En-tête, puis bandeau des outils : l'arbre commence sous eux, rien ne se dessine dessous.
 	c.draw_rect(Rect2(0, 0, size.x, HEADER_H), Color(0.05, 0.07, 0.06))
-	c.draw_line(Vector2(0, HEADER_H), Vector2(size.x, HEADER_H), Color(0.6, 0.8, 0.6, 0.15), 1.0)
+	c.draw_rect(Rect2(0, HEADER_H, size.x, TOOLBAR_H), Color(0.04, 0.055, 0.048))
+	c.draw_line(Vector2(0, HEADER_H), Vector2(size.x, HEADER_H), Color(0.6, 0.8, 0.6, 0.12), 1.0)
+	c.draw_line(Vector2(0, HEADER_H + TOOLBAR_H), Vector2(size.x, HEADER_H + TOOLBAR_H), Color(0.6, 0.8, 0.6, 0.18), 1.0)
+	# Un fondu sous le bandeau, pour que l'arbre y glisse doucement.
+	for i in 6:
+		c.draw_rect(Rect2(0, HEADER_H + TOOLBAR_H + 1 + i * 3, size.x, 3), Color(BG, 0.35 * (1.0 - i / 6.0)))
 	c.draw_string(font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.INK)
 	var pts_col := UiTheme.GOLD if Game.points > 0 else Color(0.7, 0.75, 0.7)
 	c.draw_string(font, Vector2(24, 54), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col)
@@ -1165,11 +1620,10 @@ func _audit_texts() -> void:
 	if hover >= 0:
 		var lines := tooltip_lines(tree.nodes[hover], _states.get(hover, _state(hover)))
 		var rect := tooltip_rect(lines)
-		var y := rect.position.y + 8.0
-		for l in lines:
-			y += l[1] + 4.0
-			UiAudit.text_at("arbre", font, Vector2(rect.position.x + 14, y), l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, l[1], Transform2D.IDENTITY, "infobulle")
-			y += 4.0
+		var places := _tooltip_layout(lines)
+		for i in lines.size():
+			var l: Array = lines[i]
+			UiAudit.text_at("arbre", font, rect.position + Vector2(places[i][0], places[i][1]), l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, l[1], Transform2D.IDENTITY, "infobulle")
 	# Fenêtre de choix d'une maîtrise ou d'une mutation (nœuds Control).
 	if _choice != null:
 		UiAudit.scan_controls("arbre", _choice)
@@ -1263,28 +1717,55 @@ func _wrap(text: String, fs: int, max_w: float) -> PackedStringArray:
 	if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= max_w:
 		out.append(text)
 		return out
+	# Chaque mot n'est mesuré qu'une fois : la largeur d'une ligne est la somme de ses mots et espaces.
 	var indent := "   " if text.begins_with("• ") else ""
+	var space := font.get_string_size(" ", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var indent_w := font.get_string_size(indent, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x if indent != "" else 0.0
 	var line := ""
+	var lw := 0.0
 	for word in text.split(" "):
-		var next := word if line == "" else line + " " + word
-		if line != "" and font.get_string_size(next, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > max_w:
+		var ww := font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		if line != "" and lw + space + ww > max_w:
 			out.append(line)
 			line = indent + word
+			lw = indent_w + ww
+		elif line == "":
+			line = word
+			lw = ww
 		else:
-			line = next
+			line += " " + word
+			lw += space + ww
 	if line != "":
 		out.append(line)
+	return out
+
+
+## Place de chaque ligne de l'infobulle, par rapport à son coin : [décalage x, ligne de base y].
+## Les premières lignes (nom et type) laissent à gauche la place du médaillon du nœud ; un trait
+## les sépare du reste.
+func _tooltip_layout(lines: Array) -> Array:
+	var out: Array = []
+	var y := 10.0
+	var head := true
+	for i in lines.size():
+		var l: Array = lines[i]
+		if head and y >= TIP_BADGE + 6.0:
+			head = false
+			y = maxf(y, TIP_BADGE + 4.0) + 8.0
+		y += l[1] + 4.0
+		out.append([14.0 + (TIP_BADGE if head else 0.0), y])
+		y += 4.0
 	return out
 
 
 ## Rectangle de l'infobulle : à côté de la souris, retourné si besoin, et toujours dans l'écran.
 func tooltip_rect(lines: Array) -> Rect2:
 	var w := 0.0
-	var h := 16.0
-	for l in lines:
-		w = maxf(w, font.get_string_size(l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, l[1]).x)
-		h += l[1] + 8.0
-	w += 28.0
+	var places := _tooltip_layout(lines)
+	for i in lines.size():
+		w = maxf(w, places[i][0] + font.get_string_size(lines[i][0], HORIZONTAL_ALIGNMENT_LEFT, -1, lines[i][1]).x)
+	var h: float = (places[-1][1] if not places.is_empty() else 0.0) + 12.0
+	w += 14.0
 	var pos := mouse + Vector2(18, 18)
 	if pos.x + w > size.x - MARGIN:
 		pos.x = mouse.x - w - 18.0
@@ -1298,10 +1779,32 @@ func tooltip_rect(lines: Array) -> Rect2:
 func _draw_tooltip(c: CanvasItem, n: Dictionary, st: String) -> void:
 	var lines := tooltip_lines(n, st)
 	var rect := tooltip_rect(lines)
-	c.draw_rect(rect, Color(0.06, 0.08, 0.07))
-	c.draw_rect(rect, Color(0.6, 0.8, 0.6, 0.35), false, 1.0)
-	var y := rect.position.y + 8.0
-	for l in lines:
-		y += l[1] + 4.0
-		c.draw_string(font, Vector2(rect.position.x + 14, y), l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, l[1], l[2])
-		y += 4.0
+	var col: Color = Game.tree.branch_color(n["branch"])
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.045, 0.06, 0.05, 0.97)
+	box.border_color = Color(col, 0.45)
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(9)
+	box.shadow_color = Color(0, 0, 0, 0.45)
+	box.shadow_size = 10
+	box.shadow_offset = Vector2(0, 4)
+	box.draw(c.get_canvas_item(), rect)
+	# Liseré à la couleur de la branche en haut.
+	c.draw_rect(Rect2(rect.position + Vector2(10, 0), Vector2(rect.size.x - 20, 3)), col)
+	# Médaillon du nœud, comme dans l'arbre.
+	var bp := rect.position + Vector2(14 + TIP_BADGE * 0.4, 10 + TIP_BADGE * 0.45)
+	var br := TIP_BADGE * 0.36
+	match n["type"]:
+		"small":
+			TreeArt.pearl(c, bp, br * 0.7, st, col, 1.0, true)
+		"root":
+			TreeArt.seed_node(c, bp, br, col, 1.0, true)
+		_:
+			draw_node(c, n, bp, br, st, 1.0, LOD_CLOSE)
+	var places := _tooltip_layout(lines)
+	for i in lines.size():
+		var l: Array = lines[i]
+		if i > 0 and places[i][0] < places[i - 1][0]:
+			var sy: float = rect.position.y + places[i][1] - l[1] - 10.0
+			c.draw_line(Vector2(rect.position.x + 14, sy), Vector2(rect.end.x - 14, sy), Color(col, 0.25), 1.0)
+		c.draw_string(font, rect.position + Vector2(places[i][0], places[i][1]), l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, l[1], l[2])

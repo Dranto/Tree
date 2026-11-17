@@ -34,12 +34,16 @@ func _run() -> void:
 	main.tree_ui.toggle()
 	await _frames(30)
 	var ui = main.tree_ui
+	# Les mesures commencent une fois l'animation d'ouverture terminée.
+	while ui._intro < ui.TreeArt.INTRO_DUR or ui._open < 1.0:
+		await process_frame
+	await _frames(5)
 	print("BANC arbre ouvert")
 	await _measure("immobile", func(_i): pass)
 	var nodes: Array = game.tree.nodes
 	await _measure("survol", func(i):
 		var n: Dictionary = nodes[(i * 7) % nodes.size()]
-		var p: Vector2 = (n["pos"] - ui.cam) * ui.zoom + ui.size / 2.0
+		var p: Vector2 = ui.to_screen(n["pos"])
 		var ev := InputEventMouseMotion.new()
 		ev.position = p
 		ui._gui_input(ev))
