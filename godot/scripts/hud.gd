@@ -168,7 +168,7 @@ func _on_attack_node(node: Dictionary) -> void:
 			changes = true
 	if changes and not bool(Game.flags.get("tuto_attaque", false)):
 		Game.flags["tuto_attaque"] = true
-		banner("Ton attaque a changé : %s. Elle part toujours toute seule, et l'Arbre de vie la fait évoluer encore." % node.get("name", "nouveau nœud"))
+		banner("Ton attaque a changé : %s. L'Arbre de vie la fera encore évoluer." % node.get("name", "nouveau nœud"))
 
 
 func _on_graft_found(id: String) -> void:
