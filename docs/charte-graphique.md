@@ -43,8 +43,9 @@ Chaque élément a une couleur principale, une couleur claire (reflet, cœur d'u
 | Poison | violet | bulles qui montent | affaiblit, se répand en nuage |
 | Cendre | orange braise | braises qui s'envolent | brûle, explose : l'arme des Flétris |
 | Sève | vert lumineux | lueur douce qui respire | la vie : soins, essences, sol ravivé |
+| Vent | bleu ciel pâle | rafales qui filent et s'enroulent | pousse, disperse, accélère : souffles et rafales |
 
-**Daltonisme.** Les couleurs sont choisies pour rester distinctes en protanopie, en deutéranopie et en tritanopie (simulation de Machado 2009). Le rouge du saignement est très sombre, la racine est d'un brun moyen, la cendre est vive et l'épine est claire. Ainsi, même quand les teintes se confondent, les clartés restent différentes. Le test exige un écart perçu (ΔE) d'au moins 20 entre deux éléments, pour chaque forme de daltonisme. Le pire cas actuel est d'environ 21. La planche montre chaque élément tel que le voit chaque forme de daltonisme.
+**Daltonisme.** Les couleurs sont choisies pour rester distinctes en protanopie, en deutéranopie et en tritanopie (simulation de Machado 2009). Le rouge du saignement est très sombre, la racine est d'un brun moyen, la cendre est vive et l'épine est claire. Ainsi, même quand les teintes se confondent, les clartés restent différentes. Le test exige un écart perçu (ΔE) d'au moins 20 entre deux éléments, pour chaque forme de daltonisme. Le pire cas actuel est d'environ 21. Le vent, d'un bleu gris pâle, reste à au moins 30 de tous les autres. La planche montre chaque élément tel que le voit chaque forme de daltonisme.
 
 **Compétences.** Chaque compétence prend l'élément qui la domine (`Art.ELEMENT_DE_COMPETENCE`) :
 - Couronne d'épines, Fouet de ronce, Volée d'épines : épine ;
@@ -113,7 +114,7 @@ La planche « en détail » s'anime en boucle de 2,4 s (respiration, cape, brais
 
 `Art.icon(ci, id, rect, couleur)` dessine une icône. Ce sont des silhouettes pleines, lisibles à 20 px, avec au plus un détail clair. **La même icône sert partout** : barre de compétences, arbre, infobulles, journal, ramassage. Une icône prend par défaut la couleur de son élément ou de son rôle. À partir de 20 px environ, elle prend du relief (une tranche sombre sous la forme). `Art.icon_badge(ci, id, rect)` la pose dans un médaillon (disque sombre, anneau à sa couleur, reflet) : c'est la forme à utiliser dans la barre de compétences, les infobulles et le journal.
 
-- Éléments : épine, saignement, racine, poison, cendre, sève.
+- Éléments : épine, saignement, racine, poison, cendre, sève, vent (trois rafales qui s'enroulent).
 - Arme et compétences : `graine` (l'arme de base), `nova`, `fouet`, `racines`, `volee`, `saignee`, `cloud`, `bloom`. Chacune a une forme propre à 20 px (couronne hérissée, liane en S, trois racines, éventail d'épines, goutte et gouttelettes qui convergent, volutes et bulles, fleur à cinq pétales) et des détails clairs qui n'apparaissent qu'en grand.
 - Statistiques : dégâts, vitesse d'attaque, projectiles, critique, vie, régénération, armure, déplacement, esquive, zones, collecte, compétence.
 - Monde : sanctuaire, autel, Cœur de flétrissure, arène, secret, sève perdue, essence de vie, greffe.
