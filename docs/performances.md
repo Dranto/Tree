@@ -44,11 +44,11 @@ de temps par image quand on le cache (`--hide`).
 | --- | --- | --- |
 | Socle : image vide, logique de jeu (pas fixe) | ~4 ms | moteur, `main.gd`, `enemy.gd` |
 | Flétris (silhouettes, états, élites) | ~8,5 ms (dont ~3 ms de calcul des silhouettes) | `enemy.gd`, `fletri_art.gd` |
-| Sol (shader plein écran) | ~9 ms | `ground.gd`, `shaders/ground.gdshader` |
+| Sol (carrés en cache, une texture plein écran) | ~5,5 ms (~9 ms sans le cache) | `ground.gd`, `shaders/ground.gdshader` |
 | Interface (HUD) | ~2,5 ms | `hud.gd`, `hud_widgets.gd` |
 | Décor et fleurs | ~1,5 ms | `flora.gd` |
 | Héros, effets, ambiance, lieux | ~1,5 ms | `player.gd`, `fx.gd`, `skill_fx.gd`… |
-| **Total** | **~25 ms** (47 ms avant le jalon 6) | |
+| **Total** | **~23,5 ms** (~37 ms avant le jalon 6 sur la même machine, 47 ms mesurés au jalon 5) | |
 
 Budget de la CI : **25 ms** en moyenne, échec au-delà de 15 % de plus (`tools/bench.sh`,
 `.github/workflows/benchmark.yml`). La CI garde la meilleure de deux mesures.
@@ -90,6 +90,7 @@ Budget de la CI : **25 ms** en moyenne, échec au-delà de 15 % de plus (`tools/
 | Séparation des Flétris sur tableaux locaux (`main.gd › _separate`) | ~1 ms | identique (même partie du robot à graine fixe) |
 | Lot de triangles allégé : disques et joints en cache, polyligne en une forme (`draw_batch.gd`) | ~1 ms | identique |
 | Sol sans mélange de couleurs (`render_mode blend_disabled`, il est opaque) | <1 ms | identique |
+| Sol dessiné par carrés de 512 px mis en cache (`ground.gd`, `SubViewport` mis à jour seulement quand le sol change ; `--sol-direct` pour l'ancien chemin) | ~2 à 3 ms | écart de 0,011 % au plus, sous le seuil des tests visuels : références inchangées |
 
 Le rendu direct à l'écran rend l'image illisible par `get_viewport().get_texture()`. Il n'est donc
 actif que dans la scène de jeu lancée normalement et dans le banc, jamais pendant une capture
@@ -97,8 +98,9 @@ actif que dans la scène de jeu lancée normalement et dans le banc, jamais pend
 
 ## Pistes suivantes
 
-- **Sol** (~9 ms) : le dessiner par carrés mis en cache dans des textures, au lieu de calculer
-  chaque pixel à chaque image. Gain estimé ~5 ms, mais décalage de moins d'un pixel sur les petits
-  motifs (cailloux, baies, fleurs) : références à régénérer.
+- **Objectif de 20 ms et 99e centile sous 33 ms** : pas encore atteints (~23,5 ms, 99e centile
+  ~40 ms). Les pics viennent des vagues d'apparition et des morts en série.
+- **Sol** (~5,5 ms) : le remplissage d'une texture plein écran reste cher en rendu logiciel.
 - **Interface** (~2,5 ms) : passer les formes du HUD par le lot de triangles.
 - **Silhouettes** (~3 ms de calcul) : mettre en cache la triangulation des formes fixes.
+- **Nouvelles formes d'attaque (tâche B)** : à remesurer après leur fusion.
