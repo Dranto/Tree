@@ -323,12 +323,52 @@ func _scenario_galerie() -> void:
 		await RenderingServer.frame_post_draw
 		var img := get_viewport().get_texture().get_image()
 		img.convert(Image.FORMAT_RGB8)
-		var c: Vector2i = (ui.size / 2.0).round()
+		var c: Vector2i = ui.view_center().round()
 		var src := Rect2i(c.x - cw / 2, c.y - ch / 2, cw, ch)
 		sheet.blit_rect(img, src, Vector2i((i % 3) * cw, (i / 3) * ch))
 		print("VISUEL cellule %s -> nœud %d" % [cells[i][0], id])
 	await _shot_image("galerie_noeuds", sheet)
 	await _galerie_types(ui, cw, ch)
+	await _galerie_formes(ui)
+
+
+## Planche des formes de nœuds : chaque type (dont le nœud « attack » qui change l'attaque de base)
+## dans ses trois états, tel que l'arbre le dessine de près.
+func _galerie_formes(ui) -> void:
+	var kinds := ["notable", "keystone", "skill", "mutation", "mastery", "graft", "withered", "attack"]
+	var ronce := 0
+	for bi in Game.tree.BRANCHES.size():
+		if Game.tree.BRANCHES[bi]["id"] == "ronce":
+			ronce = bi
+	var board := Control.new()
+	board.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	board.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui.add_child(board)
+	board.draw.connect(func():
+		board.draw_rect(Rect2(Vector2.ZERO, ui.size), ui.BG)
+		var font: Font = ui.font
+		var states := ["locked", "available", "owned"]
+		var names := ["verrouillé", "disponible", "appris"]
+		for si in states.size():
+			board.draw_string(font, Vector2(40, 210 + si * 200), names[si], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.8, 0.85, 0.8))
+		for ki in kinds.size():
+			var kind: String = kinds[ki]
+			var x := 230.0 + ki * 170.0
+			board.draw_string(font, Vector2(x - 80, 110), ui.KIND_LABEL[kind], HORIZONTAL_ALIGNMENT_CENTER, 160, 13, Color(0.8, 0.85, 0.8))
+			var real := _first_of_type(kind)
+			var n: Dictionary
+			if Game.tree.nodes[real]["type"] == kind and kind != "withered":
+				n = Game.tree.nodes[real]
+			else:
+				n = {"id": -2 - ki, "type": kind, "branch": ronce, "effects": [{"attack_form": "fouet"}] if kind == "attack" else [],
+					"choices": [], "requires_flag": "", "uid": "galerie:" + kind, "name": kind}
+			for si in states.size():
+				var p := Vector2(x, 200 + si * 200)
+				ui.draw_node(board, n, p, ui.RADIUS[kind] * 2.2, states[si], 1.0, ui.LOD_CLOSE))
+	await _frames(2)
+	await _shot("galerie_formes", "")
+	board.queue_free()
+	await _frames(1)
 
 
 ## Les types de nœuds des grappes écrites à la main, chacun dans ses deux états, puis la grappe
@@ -384,7 +424,7 @@ func _cell(ui, sheet: Image, label: String, id: int, index: int, cw: int, ch: in
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	img.convert(Image.FORMAT_RGB8)
-	var c: Vector2i = (ui.size / 2.0).round()
+	var c: Vector2i = ui.view_center().round()
 	sheet.blit_rect(img, Rect2i(c.x - cw / 2, c.y - ch / 2, cw, ch), Vector2i((index % 4) * cw, (index / 4) * ch))
 	print("VISUEL cellule %s -> nœud %d" % [label, id])
 
@@ -892,7 +932,7 @@ func _hover(id: int) -> void:
 	var ui = main.tree_ui
 	ui.hover = id
 	if id >= 0:
-		ui.mouse = (Game.tree.nodes[id]["pos"] - ui.cam) * ui.zoom + ui.size / 2.0
+		ui.mouse = ui.to_screen(Game.tree.nodes[id]["pos"])
 	ui.queue_redraw()
 
 

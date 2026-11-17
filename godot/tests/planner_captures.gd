@@ -107,7 +107,7 @@ func _at(ring: int, branch: int, index: int) -> int:
 func _hover(id: int) -> void:
 	ui.hover = id
 	if id >= 0:
-		ui.mouse = (game.tree.nodes[id]["pos"] - ui.cam) * ui.zoom + ui.size / 2.0
+		ui.mouse = ui.to_screen(game.tree.nodes[id]["pos"])
 	ui.queue_redraw()
 
 

@@ -60,7 +60,7 @@ func _run() -> void:
 	ui.grafts_panel.held = "greffe_soeurs"
 	ui.grafts_panel.refresh()
 	ui.hover = target
-	ui.mouse = (game.tree.nodes[target]["pos"] - ui.cam) * ui.zoom + ui.size / 2.0
+	ui.mouse = ui.to_screen(game.tree.nodes[target]["pos"])
 	ui._redraw_all()
 	await _shot("greffes_inventaire")
 	quit(0)

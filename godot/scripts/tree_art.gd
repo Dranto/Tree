@@ -27,8 +27,16 @@ const INTRO_DUR := 0.75
 const HOVER_POP := 0.3
 
 
-## Icône d'un nœud : la compétence qu'il donne ou transforme, sinon son premier effet visible.
+## Icône d'un nœud : la compétence qu'il donne ou transforme, la forme de l'attaque qu'il donne,
+## sinon son premier effet visible.
 static func icon_of(n: Dictionary) -> String:
+	for e in n["effects"]:
+		if e.has("attack_form"):
+			var form := "attaque_" + str(e["attack_form"])
+			return form if Art.icon_ids().has(form) else "attaque"
+	for e in n["effects"]:
+		if e.has("attack_mod"):
+			return "attaque_mod" if Art.icon_ids().has("attaque_mod") else "attaque"
 	for e in n["effects"]:
 		for key in ["skill", "skill_mod"]:
 			if e.has(key):
@@ -42,6 +50,242 @@ static func icon_of(n: Dictionary) -> String:
 		if e.has("do") and ICON_OF_ACTION.has(e["do"]):
 			return ICON_OF_ACTION[e["do"]]
 	return ""
+
+
+# --- Dessin par lots ---
+
+## Triangle sans triangulation (draw_primitive) : jamais d'erreur « triangulation failed », même aplati.
+static func tri(c: CanvasItem, a: Vector2, b: Vector2, d: Vector2, col: Color) -> void:
+	c.draw_primitive(PackedVector2Array([a, b, d]), PackedColorArray([col, col, col]), PackedVector2Array())
+
+
+## Lot de triangles (points, couleurs par sommet, indices), envoyé en un seul appel de dessin.
+static func batch() -> Dictionary:
+	return {"p": PackedVector2Array(), "c": PackedColorArray(), "i": PackedInt32Array()}
+
+
+static func flush(c: CanvasItem, b: Dictionary) -> void:
+	if b["i"].size() > 0:
+		RenderingServer.canvas_item_add_triangle_array(c.get_canvas_item(), b["i"], b["p"], b["c"])
+
+
+## Ajoute au lot une bande qui suit pts et s'affine de w0 (début) à w1 (fin), couleurs c0 → c1.
+static func strip(b: Dictionary, pts: PackedVector2Array, w0: float, w1: float, c0: Color, c1: Color) -> void:
+	var n := pts.size()
+	if n < 2:
+		return
+	var p: PackedVector2Array = b["p"]
+	var start := p.size()
+	for i in n:
+		var d: Vector2
+		if i == 0:
+			d = pts[1] - pts[0]
+		elif i == n - 1:
+			d = pts[n - 1] - pts[n - 2]
+		else:
+			d = pts[i + 1] - pts[i - 1]
+		var o := d.normalized().orthogonal()
+		var k := float(i) / (n - 1)
+		var hw := lerpf(w0, w1, k) * 0.5
+		var col := c0.lerp(c1, k)
+		b["p"].append(pts[i] + o * hw)
+		b["p"].append(pts[i] - o * hw)
+		b["c"].append(col)
+		b["c"].append(col)
+	for i in n - 1:
+		var a := start + i * 2
+		b["i"].append_array(PackedInt32Array([a, a + 1, a + 2, a + 1, a + 3, a + 2]))
+
+
+## Ajoute au lot un disque (éventail de seg triangles).
+static func disc(b: Dictionary, p: Vector2, r: float, col: Color, seg := 20) -> void:
+	var start: int = b["p"].size()
+	b["p"].append(p)
+	b["c"].append(col)
+	for i in seg:
+		b["p"].append(p + Vector2.from_angle(TAU * i / seg) * r)
+		b["c"].append(col)
+	for i in seg:
+		b["i"].append_array(PackedInt32Array([start, start + 1 + i, start + 1 + (i + 1) % seg]))
+
+
+# --- Silhouette ---
+
+## Squelette de l'arbre : chaque nœud est rattaché à son voisin le plus proche de la graine
+## (parcours en largeur), et porte le nombre de nœuds qui en dépendent. Les liens du squelette
+## sont dessinés comme des branches, d'autant plus épaisses qu'elles portent de nœuds.
+## Retourne {"tree": PackedByteArray (1 si le lien i est une branche), "weight": poids du nœud
+## extérieur de chaque lien, "outer": nœud extérieur de chaque lien}.
+static func skeleton(nodes: Array, edges: Array) -> Dictionary:
+	var n := nodes.size()
+	var depth := PackedInt32Array()
+	depth.resize(n)
+	depth.fill(-1)
+	depth[0] = 0
+	var order: Array = [0]
+	var head := 0
+	while head < order.size():
+		var u: int = order[head]
+		head += 1
+		for m in nodes[u]["neighbors"]:
+			if depth[m] < 0:
+				depth[m] = depth[u] + 1
+				order.append(m)
+	var edge_of := {}
+	for i in edges.size():
+		edge_of[edges[i]] = i
+	var parent := PackedInt32Array()
+	parent.resize(n)
+	parent.fill(-1)
+	for u in order:
+		if u == 0:
+			continue
+		var best := -1
+		var bd := INF
+		for m in nodes[u]["neighbors"]:
+			if depth[m] == depth[u] - 1:
+				var d: float = nodes[u]["pos"].distance_squared_to(nodes[m]["pos"])
+				if d < bd:
+					bd = d
+					best = m
+		parent[u] = best
+	var weight := PackedFloat32Array()
+	weight.resize(n)
+	weight.fill(1.0)
+	for j in range(order.size() - 1, 0, -1):
+		var u: int = order[j]
+		if parent[u] >= 0:
+			weight[parent[u]] += weight[u]
+	var is_tree := PackedByteArray()
+	is_tree.resize(edges.size())
+	is_tree.fill(0)
+	var w := PackedFloat32Array()
+	w.resize(edges.size())
+	w.fill(1.0)
+	var outer := PackedInt32Array()
+	outer.resize(edges.size())
+	for i in edges.size():
+		var e: Vector2i = edges[i]
+		outer[i] = e.y if depth[e.y] >= depth[e.x] else e.x
+	for u in order:
+		if parent[u] >= 0:
+			var i: int = edge_of[Vector2i(mini(u, parent[u]), maxi(u, parent[u]))]
+			is_tree[i] = 1
+			w[i] = weight[u]
+			outer[i] = u
+	return {"tree": is_tree, "weight": w, "outer": outer}
+
+
+## Largeur (coordonnées de l'arbre) d'une branche qui porte weight nœuds.
+static func limb_width(weight: float) -> float:
+	return clampf(2.8 * sqrt(weight), 3.0, 30.0)
+
+
+## Écorce d'une branche de la couleur col (bois sombre, teinté).
+static func bark(col: Color) -> Color:
+	return col.darkened(0.72).lerp(Color(0.13, 0.095, 0.07), 0.45)
+
+
+## Silhouette de l'arbre, sous le réseau : le tronc, vu d'en haut autour de la graine, et six
+## maîtresses branches qui en partent et s'affinent, chacune avec quatre rameaux. sap[bi] (0 à 1) :
+## jusqu'où la sève est montée dans la branche bi (le nœud appris le plus éloigné).
+static func silhouette(c: CanvasItem, extent: float, colors: Array, sap: Array, z: float) -> void:
+	var count := colors.size()
+	var sector := TAU / count
+	var under := batch()
+	var body := batch()
+	var light := batch()
+	var sapb := batch()
+	var tips: Array = []
+	for bi in count:
+		var col: Color = colors[bi]
+		var a := (bi + 0.5) * sector - PI / 2.0
+		var line := _limb_line(a, 0.0, 0.93 * extent, bi, extent)
+		var w0 := 0.13 * extent
+		var w1 := 0.01 * extent
+		var bk := limb_bark(col)
+		strip(under, line, w0 + 8.0 / z, w1 + 3.0 / z, Color(Art.c("contour"), 0.7), Color(Art.c("contour"), 0.25))
+		strip(body, line, w0, w1, Color(bk, 0.95), Color(bk, 0.5))
+		# Reflet d'un côté de la branche : elle prend du volume.
+		strip(light, _offset(line, w0 * 0.22, w1 * 0.2), w0 * 0.22, w1 * 0.2, Color(col.lerp(bk, 0.45), 0.4), Color(col.lerp(bk, 0.45), 0.05))
+		# Rameaux : deux de chaque côté, de plus en plus courts.
+		for j in 4:
+			var k: float = [0.26, 0.4, 0.54, 0.68][j]
+			var side := 1.0 if (j + bi) % 2 == 0 else -1.0
+			var q := _at(line, k)
+			var ra := a + side * (0.45 - 0.05 * j)
+			var twig := _limb_line(ra, 0.0, (0.36 - 0.045 * j) * extent, bi * 7 + j, extent, q)
+			var tw0 := lerpf(w0, w1, k) * 0.6
+			strip(under, twig, tw0 + 6.0 / z, 2.0 / z, Color(Art.c("contour"), 0.6), Color(Art.c("contour"), 0.15))
+			strip(body, twig, tw0, w1 * 0.5, Color(bk, 0.9), Color(bk, 0.35))
+			strip(light, _offset(twig, tw0 * 0.2, w1 * 0.1), tw0 * 0.2, w1 * 0.1, Color(col.lerp(bk, 0.45), 0.3), Color(col.lerp(bk, 0.45), 0.0))
+		# Sève montée dans la branche : un filet clair, du tronc jusqu'au nœud appris le plus éloigné.
+		var lvl: float = sap[bi] if bi < sap.size() else 0.0
+		if lvl > 0.0:
+			var part := PackedVector2Array()
+			var steps := line.size() - 1
+			for i in line.size():
+				var k := float(i) / steps
+				if k >= lvl:
+					break
+				part.append(line[i])
+			part.append(_at(line, lvl))
+			if part.size() >= 2:
+				var sc := col.lerp(Art.ec("seve", "clair"), 0.35)
+				var sw := lerpf(w0, w1, lvl) * 0.16
+				strip(sapb, part, w0 * 0.14, sw, Color(sc, 0.55), Color(sc, 0.75))
+				tips.append([part[part.size() - 1], sw, sc])
+	flush(c, under)
+	flush(c, body)
+	flush(c, light)
+	# Le tronc vu d'en haut : un disque d'écorce, ses cernes, puis la sève qui en part.
+	var rt := 0.075 * extent
+	var trunk := limb_bark(Color("b08a5c"))
+	c.draw_circle(Vector2.ZERO, rt + 8.0 / z, Color(Art.c("contour"), 0.75))
+	c.draw_circle(Vector2.ZERO, rt, trunk)
+	for i in 4:
+		var rr := rt * (0.3 + 0.17 * i)
+		c.draw_arc(Vector2.ZERO, rr, 0.0, TAU, 48, Color(trunk.lightened(0.3), 0.4), maxf(1.0, 2.0 / z))
+	c.draw_arc(Vector2.ZERO, rt * 0.96, PI * 1.05, PI * 1.7, 24, Color(trunk.lightened(0.45), 0.6), maxf(1.5, 3.0 / z))
+	flush(c, sapb)
+	for tip in tips:
+		c.draw_circle(tip[0], tip[1] * 2.2, Color(tip[2], 0.25))
+		c.draw_circle(tip[0], tip[1] * 0.9, Color(tip[2], 0.85))
+
+
+## Écorce d'une maîtresse branche : plus claire que celle des liens, teintée de sa branche.
+static func limb_bark(col: Color) -> Color:
+	return col.darkened(0.6).lerp(Color(0.2, 0.15, 0.1), 0.4)
+
+
+## Ligne décalée sur le côté (de d0 au début à d1 à la fin).
+static func _offset(pts: PackedVector2Array, d0: float, d1: float) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var n := pts.size()
+	for i in n:
+		var d := pts[mini(i + 1, n - 1)] - pts[maxi(i - 1, 0)]
+		out.append(pts[i] + d.normalized().orthogonal() * lerpf(d0, d1, float(i) / (n - 1)))
+	return out
+
+
+## Ligne médiane d'une branche (dans la direction a, de r0 à r1), légèrement sinueuse.
+static func _limb_line(a: float, r0: float, r1: float, key: int, extent: float, from := Vector2.ZERO) -> PackedVector2Array:
+	var d := Vector2.from_angle(a)
+	var o := d.orthogonal()
+	var pts := PackedVector2Array()
+	var steps := 18
+	for i in steps + 1:
+		var k := float(i) / steps
+		var wig := sin(k * PI * 1.7 + key * 1.9) * 0.03 * extent * k
+		pts.append(from + d * lerpf(r0, r1, k) + o * wig)
+	return pts
+
+
+## Point d'une ligne brisée à la fraction k (0 à 1) de ses segments.
+static func _at(pts: PackedVector2Array, k: float) -> Vector2:
+	var f := clampf(k, 0.0, 1.0) * (pts.size() - 1)
+	var i := mini(int(f), pts.size() - 2)
+	return pts[i].lerp(pts[i + 1], f - i)
 
 
 # --- Fond ---
@@ -72,6 +316,7 @@ static func background(c: CanvasItem, extent: float, colors: Array, rings: Array
 	# Rayons (en part de l'étendue) : lueur au centre, teinte de la branche plus loin, fondu au bord.
 	# D'un secteur à l'autre, la teinte se mélange à celle du voisin : aucune frontière nette.
 	var radii := [0.03, 0.3, 0.65, 1.0, 1.22]
+	var b := batch()
 	for bi in count:
 		var a0 := bi * sector - PI / 2.0
 		var mixed: Array = []
@@ -80,15 +325,18 @@ static func background(c: CanvasItem, extent: float, colors: Array, rings: Array
 			var other: Color = colors[(bi - 1 + count) % count] if f < 0.5 else colors[(bi + 1) % count]
 			mixed.append((colors[bi] as Color).lerp(other, absf(f - 0.5)))
 		for ri in radii.size() - 1:
-			var pts := PackedVector2Array()
-			var cols := PackedColorArray()
+			# Une bande de quadrilatères par anneau du dégradé (sans triangulation).
+			var start: int = b["p"].size()
 			for i in steps + 1:
-				pts.append(Vector2.from_angle(a0 + sector * i / steps) * extent * radii[ri + 1])
-				cols.append(_bg_tint(ri + 1, mixed[i], glow))
-			for i in range(steps, -1, -1):
-				pts.append(Vector2.from_angle(a0 + sector * i / steps) * extent * radii[ri])
-				cols.append(_bg_tint(ri, mixed[i], glow))
-			c.draw_polygon(pts, cols)
+				var d := Vector2.from_angle(a0 + sector * i / steps)
+				b["p"].append(d * extent * radii[ri])
+				b["c"].append(_bg_tint(ri, mixed[i], glow))
+				b["p"].append(d * extent * radii[ri + 1])
+				b["c"].append(_bg_tint(ri + 1, mixed[i], glow))
+			for i in steps:
+				var q := start + i * 2
+				b["i"].append_array(PackedInt32Array([q, q + 1, q + 2, q + 1, q + 3, q + 2]))
+	flush(c, b)
 	var ring_col := Color(Art.c("brume"), 0.11)
 	var lw := maxf(1.0, 1.0 / z)
 	for pts in rings:
@@ -301,7 +549,7 @@ static func seed_rays(c: CanvasItem, p: Vector2, r: float, col: Color, t: float)
 		var long := 1.0 if i % 2 == 0 else 0.7
 		var base := p + d * r * 1.12
 		var tip := p + d * r * (1.12 + 0.75 * long * b)
-		c.draw_colored_polygon(PackedVector2Array([base + o * r * 0.09, tip, base - o * r * 0.09]), Color(light, 0.32 * long))
+		tri(c, base + o * r * 0.09, tip, base - o * r * 0.09, Color(light, 0.32 * long))
 
 
 ## Halo d'un nœud appris qui respire, décalé d'un nœud à l'autre.
@@ -334,10 +582,19 @@ static func hover_mark(c: CanvasItem, p: Vector2, r: float, col: Color, t: float
 		var o := d.orthogonal()
 		var tip := p + d * (rr + 3.0 * w)
 		var base := p + d * (rr + (3.0 + 11.0 * pop) * w)
-		c.draw_colored_polygon(PackedVector2Array([base + o * 4.0 * w, tip, base - o * 4.0 * w]), light)
+		tri(c, base + o * 4.0 * w, tip, base - o * 4.0 * w, light)
 	if since < HOVER_POP:
 		var k := since / HOVER_POP
 		c.draw_arc(p, rr + 18.0 * w * Anim.ease_out(k), 0.0, TAU, 40, Color(light, 0.7 * (1.0 - k)), 3.0 * w * (1.0 - k) + w)
+
+
+## Goutte de sève qui coule vers un nœud qu'on vient d'apprendre : tête lumineuse et traînée.
+static func sap_drop(c: CanvasItem, head: Vector2, tail: Vector2, col: Color, base: float) -> void:
+	var light := col.lerp(Art.ec("seve", "clair"), 0.5).lerp(Color.WHITE, 0.3)
+	c.draw_line(tail, head, Color(light, 0.55), base * 0.7)
+	c.draw_circle(head, base * 1.6, Color(light, 0.22))
+	c.draw_circle(head, base * 0.7, light)
+	c.draw_circle(head, base * 0.3, Color.WHITE)
 
 
 ## Éclosion d'un nœud qu'on vient d'apprendre (k de 0 à 1) : éclair, onde, feuilles qui s'ouvrent

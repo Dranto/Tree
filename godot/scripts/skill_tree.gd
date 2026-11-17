@@ -25,6 +25,16 @@ const DEFAULT_NAME := {"graft": "Emplacement de greffe", "withered": "Nœud flé
 const CLEAR_NODE := 0.62
 const CLEAR_LINK := 0.36
 const CLEAR_EDGE := 0.34
+## Écartement des grappes (dessin seulement) : rayon de dessin de chaque type de nœud, et marge
+## voulue entre deux nœuds de grappe (place des anneaux d'invitation et des halos). Une grappe trop
+## serrée est agrandie autour de son point d'ancrage, sans jamais approcher un nœud généré à moins
+## de CLEAR_NODE ; les liens, les identifiants et les anneaux ne changent pas.
+const SPREAD_RADIUS := {
+	"small": 11.0, "notable": 18.0, "keystone": 30.0, "skill": 25.0, "mutation": 25.0,
+	"mastery": 19.0, "graft": 18.0, "withered": 19.0, "attack": 22.0,
+}
+const SPREAD_GAP := 30.0
+const SPREAD_MAX := 1.5
 
 const Content = preload("res://scripts/content.gd")
 const Effects = preload("res://scripts/effects.gd")
@@ -231,6 +241,7 @@ func _insert_clusters() -> void:
 	var generated := nodes.size()
 
 	# 3. Nœuds et liens des grappes, puis rattachement des entrées aux nœuds générés voisins.
+	var spread: Array = []
 	for s in specs:
 		var c: Dictionary = s["c"]
 		var bi: int = s["bi"]
@@ -253,6 +264,8 @@ func _insert_clusters() -> void:
 			if ids.has(str(entry)):
 				_link_entry(ids[str(entry)], generated, edge_set)
 		var complete = c.get("complete", {})
+		var anchor := cluster_layout(bi, {"ring": c.get("ring", 1), "angle": c.get("angle", 0.5), "nodes": [{"id": "_", "at": [0, 0]}]})
+		spread.append([ids.values(), anchor["_"]])
 		clusters[key] = {
 			"name": str(c.get("name", "")), "branch": bi, "nodes": ids.values(),
 			"effects": _list(complete.get("effects")) if complete is Dictionary else [],
@@ -260,6 +273,86 @@ func _insert_clusters() -> void:
 
 	# 4. Tout ce qui n'est plus relié à la graine est recousu au plus proche.
 	_reconnect(edge_set, pts)
+	# 5. Les grappes trop serrées sont desserrées (positions seulement).
+	_spread_clusters(spread, generated)
+
+
+## Desserre les grappes : chaque grappe trop serrée est agrandie autour de son point d'ancrage
+## (au plus SPREAD_MAX), puis les nœuds de grappe encore trop proches s'écartent l'un de l'autre.
+## Un nœud de grappe ne s'approche jamais d'un nœud généré à moins de CLEAR_NODE ; le point
+## d'ancrage d'une grappe ne bouge pas.
+func _spread_clusters(spread: Array, generated: int) -> void:
+	# Seuls les nœuds générés proches d'une grappe peuvent la gêner.
+	var near: Array = []
+	for g in generated:
+		for sp in spread:
+			if nodes[g]["pos"].distance_to(sp[1]) < 3.5 * RING_GAP:
+				near.append(g)
+				break
+	var fixed := {}
+	var movable: Array = []
+	for sp in spread:
+		var ids: Array = sp[0]
+		var anchor: Vector2 = sp[1]
+		var need := 1.0
+		for i in ids.size():
+			for j in range(i + 1, ids.size()):
+				var d: float = nodes[ids[i]]["pos"].distance_to(nodes[ids[j]]["pos"])
+				if d > 0.001:
+					need = maxf(need, _spread_want(ids[i], ids[j]) / d)
+		var k := minf(need, SPREAD_MAX)
+		var base := {}
+		for id in ids:
+			base[id] = nodes[id]["pos"]
+			if base[id].distance_to(anchor) < 0.01:
+				fixed[id] = true
+			else:
+				movable.append(id)
+		while k > 1.0:
+			var ok := true
+			for id in ids:
+				if not _spread_free(anchor + (base[id] - anchor) * k, near):
+					ok = false
+					break
+			if ok:
+				for id in ids:
+					nodes[id]["pos"] = anchor + (base[id] - anchor) * k
+				break
+			k -= 0.05
+	# Écartement deux à deux : chaque nœud trop proche d'un autre nœud de grappe s'en éloigne un peu.
+	var all: Array = movable + fixed.keys()
+	for it in 24:
+		var moved := false
+		for id in movable:
+			var p: Vector2 = nodes[id]["pos"]
+			var push := Vector2.ZERO
+			for other in all:
+				if other == id:
+					continue
+				var q: Vector2 = nodes[other]["pos"]
+				var d := p.distance_to(q)
+				var want := _spread_want(id, other)
+				if d < want and d > 0.001:
+					push += (p - q) / d * (want - d) * (0.5 if fixed.has(other) == false else 1.0)
+			if push == Vector2.ZERO:
+				continue
+			var np := p + push * 0.5
+			if _spread_free(np, near):
+				nodes[id]["pos"] = np
+				moved = true
+		if not moved:
+			break
+
+
+func _spread_want(a: int, b: int) -> float:
+	return SPREAD_RADIUS.get(nodes[a]["type"], 18.0) + SPREAD_RADIUS.get(nodes[b]["type"], 18.0) + SPREAD_GAP
+
+
+func _spread_free(p: Vector2, near: Array) -> bool:
+	for g in near:
+		if p.distance_to(nodes[g]["pos"]) < CLEAR_NODE * RING_GAP:
+			return false
+	return true
 
 
 func _cluster_node(id: int, bi: int, cluster: String, cn: Dictionary, pos: Vector2) -> Dictionary:
