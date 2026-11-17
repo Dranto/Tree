@@ -106,15 +106,23 @@ var autosave_enabled := true
 var autosave_timer := AUTOSAVE_EVERY
 var autosave_pending := false
 ## Banc de performance (« -- --benchmark ») : le robot joue face à 120 Flétris pendant
-## BENCH_TIME secondes (après BENCH_WARMUP de mise en route), puis le temps par image s'affiche.
+## bench_time secondes (après BENCH_WARMUP de mise en route), puis le temps par image s'affiche.
+## Options (docs/performances.md) : « --bench-time=S » (durée), « --hide=sol,ennemis,... »
+## (cache des calques pour mesurer leur coût), « --profile » (temps par script, avec
+## tools/perf-profile.sh qui instrumente une copie du projet).
 const BENCH_ENEMIES := 120
 const BENCH_WARMUP := 3.0
-const BENCH_TIME := 30.0
+var bench_time := 30.0
 var benchmark := false
 var bench_clock := 0.0
 var bench_last_usec := 0
 var bench_frames: PackedFloat32Array = PackedFloat32Array()
 var bench_cpu := {"process": 0.0, "physics": 0.0, "samples": 0}
+## Temps de chaque image découpé : scripts et dessins (de process_frame à frame_pre_draw), puis
+## rendu (de frame_pre_draw à frame_post_draw), en microsecondes cumulées.
+var bench_seg := {"script": 0, "render": 0, "n": 0}
+var _seg_start := 0
+var _seg_pre := 0
 
 
 func _ready() -> void:
@@ -129,6 +137,7 @@ func _ready() -> void:
 		autotest = true
 		autotest_shots = []
 	if benchmark:
+		_benchmark_setup()
 		# Le robot joue, sans captures ni fin de partie, et rien n'est sauvegardé.
 		autotest = true
 		autotest_shots = []
@@ -266,6 +275,10 @@ func _ready() -> void:
 	Game.tree_changed.connect(request_autosave)
 	if autotest_boss:
 		arena.autotest_begin()
+	_set_direct_to_screen(get_tree().current_scene == self and (not autotest or benchmark))
+	if benchmark:
+		_benchmark_hide({"sol": ground, "decor": trees_layer, "fleurs": flora, "ennemis": enemies_layer,
+			"joueur": player, "acteurs": actors_layer, "effets": fx, "ambiance": ambience, "hud": hud_layer, "monde": self})
 
 
 ## Demande une sauvegarde automatique, regroupée sur une seconde (fonctionne aussi en pause).
@@ -293,6 +306,7 @@ func _notification(what: int) -> void:
 ## Quitter la scène (« Retour au titre » ou « Quitter » du menu pause) sauvegarde la partie.
 func _exit_tree() -> void:
 	Sfx.listener = null
+	_set_direct_to_screen(false)
 	save_game()
 
 
@@ -1022,13 +1036,15 @@ func _finish_autotest() -> void:
 func _benchmark_frame(delta: float) -> void:
 	var now := Time.get_ticks_usec()
 	bench_clock += delta
+	if bench_clock > BENCH_WARMUP and bench_frames.is_empty():
+		Prof.reset()
 	if bench_clock > BENCH_WARMUP and bench_last_usec > 0:
 		bench_frames.append((now - bench_last_usec) / 1000.0)
 		bench_cpu["process"] += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
 		bench_cpu["physics"] += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
 		bench_cpu["samples"] += 1
 	bench_last_usec = now
-	if bench_clock >= BENCH_WARMUP + BENCH_TIME:
+	if bench_clock >= BENCH_WARMUP + bench_time:
 		_finish_benchmark()
 
 
@@ -1044,8 +1060,50 @@ func _finish_benchmark() -> void:
 	var p99: float = sorted[mini(n - 1, int(n * 0.99))] if n > 0 else 0.0
 	var worst: float = sorted[n - 1] if n > 0 else 0.0
 	var k: float = maxf(1.0, bench_cpu["samples"])
-	print("BENCHMARK %d Flétris, %.0f s, %d images" % [BENCH_ENEMIES, BENCH_TIME, n])
+	print("BENCHMARK %d Flétris, %.0f s, %d images" % [BENCH_ENEMIES, bench_time, n])
 	print("BENCHMARK temps par image : moyen %.2f ms (%.1f images/s), 99e centile %.2f ms, pire %.2f ms" % [avg, 1000.0 / maxf(avg, 0.001), p99, worst])
 	print("BENCHMARK scripts par image : _process %.2f ms, _physics_process %.2f ms" % [bench_cpu["process"] / k, bench_cpu["physics"] / k])
+	var sn: float = maxf(1.0, bench_seg["n"])
+	print("BENCHMARK découpage par image : scripts et dessins %.2f ms, rendu %.2f ms" % [bench_seg["script"] / 1000.0 / sn, bench_seg["render"] / 1000.0 / sn])
+	print("BENCHMARK rendu de la dernière image : %d appels de rendu, %d objets" % [Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)])
+	for line in Prof.report(n):
+		print(line)
 	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
 	get_tree().quit()
+
+
+## Rendu direct à l'écran : le jeu est dessiné droit dans la fenêtre, sans passer par la texture
+## du viewport puis une recopie plein écran. Mêmes pixels (tests/direct_screen_test.gd), mais
+## l'image n'est plus lisible par get_texture() : seulement en jeu (scène principale) et dans le
+## banc, jamais pendant une capture (robot, tests visuels, scripts de test). Gain mesuré :
+## 5 à 15 ms par image en rendu logiciel selon la résolution (docs/performances.md).
+func _set_direct_to_screen(on: bool) -> void:
+	RenderingServer.viewport_set_render_direct_to_screen(get_viewport().get_viewport_rid(), on)
+
+
+
+## Options du banc et découpage de chaque image (voir bench_seg).
+func _benchmark_setup() -> void:
+	Prof.on = "--profile" in OS.get_cmdline_user_args()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--bench-time="):
+			bench_time = maxf(1.0, float(a.substr(13)))
+	get_tree().process_frame.connect(func(): _seg_start = Time.get_ticks_usec())
+	RenderingServer.frame_pre_draw.connect(func(): _seg_pre = Time.get_ticks_usec())
+	RenderingServer.frame_post_draw.connect(func():
+		if bench_clock > BENCH_WARMUP and _seg_start > 0 and _seg_pre >= _seg_start:
+			bench_seg["script"] += _seg_pre - _seg_start
+			bench_seg["render"] += Time.get_ticks_usec() - _seg_pre
+			bench_seg["n"] += 1)
+
+
+## « --hide=sol,ennemis » : cache ces calques pendant le banc (la différence de temps dit leur coût).
+func _benchmark_hide(layers: Dictionary) -> void:
+	for a in OS.get_cmdline_user_args():
+		if not a.begins_with("--hide="):
+			continue
+		for key in a.substr(7).split(","):
+			if layers.has(key):
+				layers[key].visible = false
+			else:
+				push_warning("--hide : calque inconnu « %s » (%s)" % [key, ", ".join(layers.keys())])

@@ -5,6 +5,11 @@
 ## L'ordre des formes est conservé (la dernière est dessinée par-dessus).
 extends RefCounted
 
+## Tracé « fidèle » : cercles, traits, polylignes et arcs découpés exactement comme le fait
+## Godot 4.3 (draw_circle à 64 points, polyligne en bande de triangles), pour qu'un dessin passé
+## au lot donne les mêmes pixels qu'avant (décor, fleurs). Faux : tracé allégé des silhouettes.
+var exact := false
+
 var points := PackedVector2Array()
 var colors := PackedColorArray()
 var indices := PackedInt32Array()
@@ -47,18 +52,19 @@ func polygon_tri(pts: PackedVector2Array, col: Color, tri: PackedInt32Array) -> 
 func draw_circle(c: Vector2, r: float, col: Color, _filled := true, _width := -1.0, _aa := false) -> void:
 	if col.a <= 0.0 or r <= 0.0:
 		return
-	var n := clampi(int(r * 0.7) + 8, 10, 28)
-	var pts := PackedVector2Array([c])
-	var tri := PackedInt32Array()
-	for i in n:
-		pts.append(c + Vector2.from_angle(TAU * i / n) * r)
-		tri.append_array([0, 1 + i, 1 + (i + 1) % n])
-	_push(pts, col, tri)
+	if exact:
+		_push(_circle_points(c, r), col, CIRCLE_TRI)
+		return
+	# Disque à n côtés (centre + n points) : forme unité en cache, placée par une transformation.
+	var d: Array = _DISCS[clampi(int(r * 0.7) + 8, 10, 28)]
+	_push(Transform2D(0.0, Vector2(r, r), 0.0, c) * (d[0] as PackedVector2Array), col, d[1])
 
 
 func draw_line(a: Vector2, b: Vector2, col: Color, width := -1.0, _aa := false) -> void:
 	if col.a <= 0.0 or a == b:
 		return
+	if exact and width < 0.0:
+		width = 1.0
 	var n := (b - a).orthogonal().normalized() * maxf(width, 1.0) * 0.5
 	_push(PackedVector2Array([a + n, b + n, b - n, a - n]), col, PackedInt32Array([0, 1, 2, 0, 2, 3]))
 
@@ -66,6 +72,9 @@ func draw_line(a: Vector2, b: Vector2, col: Color, width := -1.0, _aa := false) 
 ## Polyligne : un quadrilatère par segment, et un disque à chaque coude pour les traits épais.
 func draw_polyline(pts: PackedVector2Array, col: Color, width := -1.0, _aa := false) -> void:
 	if col.a <= 0.0:
+		return
+	if exact:
+		_strip(pts, col, maxf(width, 1.0))
 		return
 	var w := maxf(width, 1.0)
 	for i in range(1, pts.size()):
@@ -75,16 +84,96 @@ func draw_polyline(pts: PackedVector2Array, col: Color, width := -1.0, _aa := fa
 
 
 func _joint(c: Vector2, r: float, col: Color) -> void:
-	var pts := PackedVector2Array([c])
+	var d: Array = _DISCS[6]
+	_push(Transform2D(0.0, Vector2(r, r), 0.0, c) * (d[0] as PackedVector2Array), col, d[1])
+
+
+## Disques unité à n côtés, en cache : [points (centre puis tour), triangles en éventail].
+static var _DISCS := _all_discs()
+
+static func _all_discs() -> Dictionary:
+	var out := {6: _disc(6)}
+	for n in range(10, 29):
+		out[n] = _disc(n)
+	return out
+
+static func _disc(n: int) -> Array:
+	var pts := PackedVector2Array([Vector2.ZERO])
 	var tri := PackedInt32Array()
-	for i in 6:
-		pts.append(c + Vector2.from_angle(TAU * i / 6.0) * r)
-		tri.append_array([0, 1 + i, 1 + (i + 1) % 6])
-	_push(pts, col, tri)
+	for i in n:
+		pts.append(Vector2.from_angle(TAU * i / n))
+		tri.append_array([0, 1 + i, 1 + (i + 1) % n])
+	return [pts, tri]
 
 
 func draw_arc(c: Vector2, r: float, a0: float, a1: float, n: int, col: Color, width := -1.0, _aa := false) -> void:
+	if exact:
+		# Comme CanvasItem.draw_arc : n points, écart d'angle borné à un tour.
+		var span := clampf(a1 - a0, -TAU, TAU)
+		var arc := PackedVector2Array()
+		for i in n:
+			var th := i / (n - 1.0) * span + a0
+			arc.append(c + Vector2(cos(th), sin(th)) * r)
+		draw_polyline(arc, col, width)
+		return
 	var pts := PackedVector2Array()
 	for i in n + 1:
 		pts.append(c + Vector2.from_angle(lerpf(a0, a1, float(i) / n)) * r)
 	draw_polyline(pts, col, width)
+
+
+## --- Tracé fidèle (exact = true) ---
+
+const CIRCLE_POINTS := 64
+static var CIRCLE_TRI := _fan(CIRCLE_POINTS)
+static var _UNIT_CIRCLE := _unit_circle()
+
+
+static func _fan(n: int) -> PackedInt32Array:
+	var tri := PackedInt32Array()
+	for i in n - 2:
+		tri.append_array([0, i + 1, i + 2])
+	return tri
+
+
+static func _unit_circle() -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in CIRCLE_POINTS:
+		var a := i * TAU / CIRCLE_POINTS
+		pts.append(Vector2(cos(a), sin(a)))
+	return pts
+
+
+## Cercle de Godot 4.3 (canvas_item_add_circle) : 64 points, éventail depuis le premier.
+static func _circle_points(c: Vector2, r: float) -> PackedVector2Array:
+	return Transform2D(0.0, Vector2(r, r), 0.0, c) * _UNIT_CIRCLE
+
+
+## Polyligne épaisse de Godot 4.3 (canvas_item_add_polyline sans lissage) : une bande de
+## triangles, décalée en chaque point selon la bissectrice des deux segments voisins.
+## Vérifié pixel à pixel par tests/draw_batch_test.gd.
+func _strip(pts: PackedVector2Array, col: Color, width: float) -> void:
+	var n := pts.size()
+	if n < 2:
+		return
+	var out := PackedVector2Array()
+	out.resize(n * 2)
+	var prev_t := Vector2.ZERO
+	for i in n:
+		var t: Vector2
+		if i == n - 1:
+			t = prev_t
+		else:
+			t = (pts[i + 1] - pts[i]).normalized().orthogonal()
+			if i == 0:
+				prev_t = t
+		# Joint en onglet : la demi-largeur est allongée pour garder l'épaisseur dans le coude.
+		var m := (t + prev_t).normalized()
+		var tan := m * width * 0.5 / maxf(0.1, m.dot(t))
+		out[i * 2] = pts[i] + tan
+		out[i * 2 + 1] = pts[i] - tan
+		prev_t = t
+	var tri := PackedInt32Array()
+	for i in n * 2 - 2:
+		tri.append_array([i, i + 1, i + 2])
+	_push(out, col, tri)

@@ -163,7 +163,8 @@ static func glow(ci: CanvasItem, pos: Vector2, r: float, element := "seve") -> v
 
 ## Remplit une forme avec du volume, lumière venant d'en haut à gauche : côté ombre, face éclairée,
 ## reflet. light règle la force du reflet (0 : mat). Pour les acteurs et les objets importants.
-static func volume(ci: CanvasItem, pts: PackedVector2Array, col: Color, light := 1.0) -> void:
+## ci : un CanvasItem, ou un lot de triangles (draw_batch.gd) qui a les mêmes draw_*.
+static func volume(ci, pts: PackedVector2Array, col: Color, light := 1.0) -> void:
 	var cen := Vector2.ZERO
 	for q in pts:
 		cen += q
@@ -178,7 +179,7 @@ static func volume(ci: CanvasItem, pts: PackedVector2Array, col: Color, light :=
 
 
 ## Disque avec du volume (même lumière que volume()).
-static func volume_circle(ci: CanvasItem, pos: Vector2, r: float, col: Color, light := 1.0) -> void:
+static func volume_circle(ci, pos: Vector2, r: float, col: Color, light := 1.0) -> void:
 	ci.draw_circle(pos, r, col.darkened(0.38))
 	ci.draw_circle(pos + Vector2(-0.07, -0.1) * r, r * 0.84, col)
 	if light > 0.0:
