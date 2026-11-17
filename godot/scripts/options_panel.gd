@@ -27,6 +27,8 @@ var aim_hint: Label
 var slot_buttons: Array = []
 var listening := -1
 var keys_hint: Label
+var _scroll: ScrollContainer
+var _content: VBoxContainer
 const MOBA_ROW := 6
 const SLOT_LABELS := ["Compétence principale 1", "Compétence principale 2", "Compétence secondaire 1", "Compétence secondaire 2", "Compétence secondaire 3", "Compétence secondaire 4"]
 
@@ -34,9 +36,16 @@ const SLOT_LABELS := ["Compétence principale 1", "Compétence principale 2", "C
 func _ready() -> void:
 	theme = UiTheme.make()
 	custom_minimum_size = Vector2(520, 0)
+	# Le contenu défile : à 1280 x 720 le panneau entier ne tient pas à l'écran.
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(_scroll)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 18)
-	add_child(col)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(col)
+	_content = col
+	get_viewport().size_changed.connect(_fit)
 
 	var title := Label.new()
 	title.text = "Options"
@@ -337,8 +346,17 @@ func _update_shake_label() -> void:
 	shake_label.text = "Aucune" if shake_slider.value <= 0.001 else "%d %%" % roundi(shake_slider.value * 100.0)
 
 
+## Hauteur du panneau : tout le contenu s'il tient, sinon 90 % de la fenêtre (le reste défile).
+func _fit() -> void:
+	if _scroll == null:
+		return
+	var room := get_viewport().get_visible_rect().size.y * 0.9 - 40.0
+	_scroll.custom_minimum_size = Vector2(0, minf(_content.get_combined_minimum_size().y, room))
+
+
 func open() -> void:
 	visible = true
+	_fit.call_deferred()
 	listening = -1
 	keys_hint.text = ""
 	_update_keys()

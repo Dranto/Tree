@@ -3,6 +3,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const OptionsPanel = preload("res://scripts/options_panel.gd")
+const ControlsCard = preload("res://scripts/controls_card.gd")
 
 ## Position horizontale (part de la largeur) de la colonne du titre et des boutons.
 const MENU_X := 0.08
@@ -13,6 +14,8 @@ var new_button: Button
 var options_button: Button
 var quit_button: Button
 var options: PanelContainer
+## Rappel des commandes, en bas à gauche (caché quand les options sont ouvertes).
+var controls_card: Control
 var font: Font
 var t := 0.0
 var motes: Array = []
@@ -61,6 +64,22 @@ func _ready() -> void:
 		quit_button.pressed.connect(Flow.quit)
 		menu.add_child(quit_button)
 
+	controls_card = VBoxContainer.new()
+	controls_card.add_theme_constant_override("separation", 6)
+	controls_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	controls_card.anchor_left = MENU_X
+	controls_card.anchor_top = 1.0
+	controls_card.anchor_bottom = 1.0
+	controls_card.offset_bottom = -22
+	controls_card.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	add_child(controls_card)
+	var cc_title := Label.new()
+	cc_title.text = "COMMANDES"
+	cc_title.add_theme_font_size_override("font_size", 12)
+	cc_title.add_theme_color_override("font_color", Color(0.55, 0.65, 0.55))
+	controls_card.add_child(cc_title)
+	controls_card.add_child(ControlsCard.new(14))
+
 	options = OptionsPanel.new()
 	options.visible = false
 	options.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
@@ -85,11 +104,13 @@ func _focus_first() -> void:
 
 func _open_options() -> void:
 	menu.visible = false
+	controls_card.visible = false
 	options.open()
 
 
 func _close_options() -> void:
 	menu.visible = true
+	controls_card.visible = true
 	_focus_first()
 
 

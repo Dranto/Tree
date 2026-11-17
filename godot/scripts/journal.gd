@@ -3,6 +3,7 @@
 extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const ControlsCard = preload("res://scripts/controls_card.gd")
 
 var _panel: PanelContainer
 var _box: VBoxContainer
@@ -96,6 +97,8 @@ func refresh() -> void:
 		head.add_theme_constant_override("line_spacing", 0)
 		for o in rows:
 			_add_row(o, not cur.is_empty() and cur["id"] == o["id"])
+	_label(_box, "COMMANDES", 12, Color(0.55, 0.65, 0.55))
+	_box.add_child(ControlsCard.new(13))
 	_label(_box, "J ou Échap : fermer   ·   M : carte", 12, Color(0.55, 0.6, 0.55))
 	_panel.reset_size()
 
