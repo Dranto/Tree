@@ -27,7 +27,7 @@ touch "$OUT/.gdignore"   # Godot n'importe pas les captures comme ressources
 # Rendu logiciel (llvmpipe) partout, pour que la machine de dev et la CI donnent les mêmes pixels.
 export LIBGL_ALWAYS_SOFTWARE=1
 # Importe le projet (ressources, cache de scripts) avant de lancer les scénarios.
-"$ROOT/tools/godot.sh" --headless --editor --quit >/dev/null 2>&1
+"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1
 
 START=$SECONDS
 status=0

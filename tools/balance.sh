@@ -24,7 +24,7 @@ LIMIT=${LIMIT:-0.30}
 MODE=build
 [[ "${1:-}" == "--run" ]] && MODE=run
 
-"$ROOT/tools/godot.sh" --headless --editor --quit >/dev/null 2>&1
+"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1
 
 if [[ $MODE == run ]]; then
   SEEDS=${SEEDS:-"1"}

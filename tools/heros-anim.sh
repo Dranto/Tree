@@ -9,7 +9,7 @@ GIF="${1:-$OUT/heros_anim.gif}"
 mkdir -p "$OUT"; touch "$OUT/.gdignore"
 rm -rf "$OUT/heros_anim"
 export LIBGL_ALWAYS_SOFTWARE=1
-"$ROOT/tools/godot.sh" --headless --editor --quit >/dev/null 2>&1
+"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1
 "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 2560x1440 --position 0,0 \
   res://tests/visual/runner.tscn -- --scenario=heros --seed=1234 --heros-anim 2>&1 | grep -E "ERROR" || true
 ffmpeg -loglevel error -y -framerate 20 -i "$OUT/heros_anim/%03d.png" \

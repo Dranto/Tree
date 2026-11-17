@@ -2,7 +2,7 @@
 # Lance Godot 4.3 (binaire officiel) sur le projet godot/.
 # Le binaire est téléchargé une fois depuis github.com/godotengine/godot-builds puis mis en cache.
 # Exemples :
-#   tools/godot.sh --headless --editor --quit   # importe le projet et signale les erreurs de script
+#   tools/godot.sh --headless --import   # importe le projet (attend la fin de l'analyse des scripts) et signale les erreurs
 #   tools/godot.sh --headless --quit-after 300  # lance le jeu ~5 s sans fenêtre
 #   tools/godot.sh --xvfb -- --autotest         # partie automatique avec captures dans godot/autotest/
 set -euo pipefail

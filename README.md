@@ -72,7 +72,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 
 `tools/godot.sh` télécharge Godot 4.3 une fois puis le lance sur le projet :
 
-- `tools/godot.sh --headless --editor --quit` : importe le projet et affiche les erreurs de script.
+- `tools/godot.sh --headless --import` : importe le projet et affiche les erreurs de script.
 - `tools/godot.sh --headless -s res://scripts/check_data.gd` : vérifie les fichiers de données de l'arbre.
 - `tools/godot.sh --xvfb -- --autotest` : un robot joue une minute, apprend des nœuds et enregistre des captures dans `godot/autotest/` (sans lire ni écrire de sauvegarde).
 - `tools/godot.sh --headless -s res://tests/save_test.gd -- --new-game` : teste la sauvegarde (aller-retour, nœuds disparus, formats anciens ou trop récents).

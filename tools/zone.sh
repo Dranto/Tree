@@ -12,7 +12,7 @@ SEEDS=${SEEDS:-"1 2 3 4 5"}
 OUT="$ROOT/godot/autotest/zone"
 rm -rf "$OUT"; mkdir -p "$OUT"
 
-"$ROOT/tools/godot.sh" --headless --editor --quit >/dev/null 2>&1
+"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1
 
 for s in $SEEDS; do
   timeout 1800 "$ROOT/tools/godot.sh" --headless --fixed-fps 60 -s res://tests/zone_test.gd -- "--seed=$s" > "$OUT/graine-$s.log" 2>&1 &

@@ -14,7 +14,7 @@ RUNS="${RUNS:-1}"
 OUT="$ROOT/godot/autotest/bench"
 mkdir -p "$OUT"
 export LIBGL_ALWAYS_SOFTWARE=1
-"$ROOT/tools/godot.sh" --headless --editor --quit >/dev/null 2>&1 || true
+"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1 || true
 best=""
 for i in $(seq 1 "$RUNS"); do
   "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy -- --benchmark 2>&1 | grep -E "BENCHMARK|SCRIPT ERROR" > "$OUT/banc_$i.txt"
