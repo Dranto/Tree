@@ -66,7 +66,7 @@ func _run() -> void:
 	check(ronce.size() >= 3 and ronce.size() <= 4, "%d sanctuaires dans le roncier" % ronce.size())
 	var clear := true
 	for s in main.sanctuaries:
-		if s.position.distance_to(main.heart.center) < main.heart.ZONE + 300.0 or s.position.distance_to(main.arena.center) < main.arena.RADIUS + 80.0:
+		if s.position.distance_to(main.heart.center) < main.heart.zone + 300.0 or s.position.distance_to(main.arena.center) < main.arena.max_radius + 80.0:
 			clear = false
 		if main.flora.push_out(s.position, 20.0) != s.position:
 			clear = false
@@ -154,10 +154,10 @@ func _run() -> void:
 
 	print("Siège du Cœur")
 	var heart = main.heart
-	_place(heart.center + Vector2(heart.ZONE * 0.5, 0))
+	_place(heart.center + Vector2(heart.zone * 0.5, 0))
 	await _steps(120)
 	check(heart.state == "siege" and heart.progress > 1.5, "le siège a commencé")
-	await _die_at(heart.center + Vector2(heart.ZONE * 0.5, 0))
+	await _die_at(heart.center + Vector2(heart.zone * 0.5, 0))
 	check(heart.state == "fletri" and heart.progress == 0.0 and not heart.bar.visible, "mourir pendant le siège remet le Cœur à zéro")
 	check("Cœur" in _death_text(), "l'écran de mort le dit")
 	check(main.player.position == lisiere.position, "renaissance à la Lisière")

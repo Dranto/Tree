@@ -79,6 +79,9 @@ var big_enemies: Array = []
 ## Cœur de flétrissure et arène de la Mère-Ronce (région de Ronce).
 var heart
 var arena
+## Cœur et arène de chaque région (identifiant -> nœud), dans l'ordre des régions.
+var hearts: Dictionary = {}
+var arenas: Dictionary = {}
 ## Sanctuaires (sanctuary.gd), points de renaissance ; et sève perdue au sol (lost_sap.gd, ou null).
 var sanctuaries: Array = []
 var lost_sap = null
@@ -240,15 +243,24 @@ func _ready() -> void:
 	pause_menu.main = self
 	pause_layer.add_child(pause_menu)
 
-	# Région de Ronce : leurs marques au sol se dessinent sous les personnages.
-	heart = Heart.new()
-	heart.main = self
-	arena = BossArena.new()
-	arena.main = self
-	arena.heart = heart
-	for n in [heart, arena]:
-		add_child(n)
-		move_child(n, actors_layer.get_index())
+	# Un Cœur et une arène par région (data/regions/<id>.json) : leurs marques au sol se dessinent
+	# sous les personnages. heart et arena restent ceux de la première région.
+	for id in Regions.ids():
+		var h = Heart.new()
+		h.main = self
+		h.region = id
+		var a = BossArena.new()
+		a.main = self
+		a.heart = h
+		a.region = id
+		hearts[id] = h
+		arenas[id] = a
+		for n in [h, a]:
+			add_child(n)
+			move_child(n, actors_layer.get_index())
+		if heart == null or id == focus_region():
+			heart = h
+			arena = a
 	_place_sanctuaries()
 	var rewards_layer := Node2D.new()
 	add_child(rewards_layer)
@@ -491,6 +503,36 @@ func _watch_region_state() -> void:
 
 
 # --- Régions du monde (voir regions.gd) ---
+
+## Région suivie par les robots et le mode « -- --autotest=boss » : celle de « -- --region=<id> »,
+## sinon la première. main.heart et main.arena sont les siens.
+static func focus_region() -> String:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--region="):
+			return arg.substr(9)
+	return Regions.ids()[0] if not Regions.ids().is_empty() else ""
+
+
+## Arène où un combat de boss a lieu, ou null.
+func active_arena():
+	for a in arenas.values():
+		if a.in_combat():
+			return a
+	return null
+
+
+## Vrai pendant un combat de boss, dans n'importe quelle région.
+func in_boss_fight() -> bool:
+	return active_arena() != null
+
+
+## Cœur assiégé en ce moment, ou null.
+func siege_heart():
+	for h in hearts.values():
+		if h.state == "siege":
+			return h
+	return null
+
 
 ## Apparitions de chaque région (« spawn » de data/regions/<id>.json).
 static func _region_spawns() -> Dictionary:
@@ -847,10 +889,13 @@ func player_died() -> void:
 	# Un combat en cours se remet à zéro : siège du Cœur à recommencer, Mère-Ronce rendormie
 	# (elle disparaît avec les autres ennemis, voir boss_arena._fight_lost).
 	var reset := ""
-	if arena.in_combat():
+	var fight = active_arena()
+	if fight != null:
 		reset = "boss"
-	elif heart.reset_siege():
-		reset = "coeur"
+	else:
+		for h in hearts.values():
+			if h.reset_siege():
+				reset = "coeur"
 	for e in enemies:
 		if is_instance_valid(e):
 			e.queue_free()
@@ -864,7 +909,7 @@ func player_died() -> void:
 	Game.xp = 0.0
 	# Tombé face à la Mère-Ronce : la sève attend devant l'arène, pour la reprendre sans relancer
 	# le combat. Ailleurs, là où le joueur est tombé.
-	var sap_at: Vector2 = arena.entrance() if reset == "boss" else player.position
+	var sap_at: Vector2 = fight.entrance() if reset == "boss" else player.position
 	if dropped > 0.0:
 		Game.flags["seve_perdue"] = dropped
 		Game.flags["seve_perdue_x"] = sap_at.x

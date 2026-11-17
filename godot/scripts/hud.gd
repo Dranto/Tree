@@ -96,7 +96,7 @@ func holds_info() -> bool:
 
 
 func in_boss_fight() -> bool:
-	return main != null and main.get("arena") != null and main.arena.in_combat()
+	return main != null and main.get("arena") != null and main.in_boss_fight()
 
 
 ## Passe à l'annonce suivante quand celle qui est affichée a fait son temps. Une annonce de
@@ -327,7 +327,7 @@ func _update_hint() -> void:
 		if float(cd) > 0.0:
 			_hint_skill = true
 			break
-	var fight: bool = in_boss_fight() or p.hurt_flash > 0.0 or (main.heart != null and main.heart.state == "siege")
+	var fight: bool = in_boss_fight() or p.hurt_flash > 0.0 or main.siege_heart() != null
 	if not fight:
 		for e in main.enemies_near(p.position, HINT_ENEMY_NEAR):
 			fight = true

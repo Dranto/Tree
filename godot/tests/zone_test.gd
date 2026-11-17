@@ -145,7 +145,7 @@ func _track() -> void:
 		_log_next += 60.0
 		print("ZONE %4d s  niveau %2d  objectif %-14s robot : %-32s vie %d/%d  morts %d" % [int(t), game.level, obj.current().get("id", "—"), bot.goal, int(main.player.hp), int(game.stats["max_hp"]), main.deaths])
 		if obj.current().get("id", "") == "coeur":
-			print("       Cœur : %s, %.1f s tenues, joueur à %d px du centre (zone %d), %d ennemis" % [main.heart.state, main.heart.progress, int(main.player.position.distance_to(main.heart.center)), int(main.heart.ZONE), main.enemies.size()])
+			print("       Cœur : %s, %.1f s tenues, joueur à %d px du centre (zone %d), %d ennemis" % [main.heart.state, main.heart.progress, int(main.player.position.distance_to(main.heart.center)), int(main.heart.zone), main.enemies.size()])
 
 
 func _finished() -> bool:
@@ -350,7 +350,7 @@ func _forced_events() -> void:
 		await physics_frame
 		check(not arena.in_combat() and arena.state == "ouverte" and not main.spawn_paused, "mort face au boss : arène rouverte, Mère-Ronce rendormie")
 		var sap = main.lost_sap
-		check(sap != null and sap.position.distance_to(arena.center) > arena.RADIUS - 70.0 + 20.0,
+		check(sap != null and sap.position.distance_to(arena.center) > arena.max_radius - 70.0 + 20.0,
 			"sève perdue dans l'arène : posée devant l'entrée, hors de la zone qui réveille la Mère-Ronce")
 		check(main.quest_ui.tracker_shown(), "mort face au boss : le cadre d'objectif revient")
 		_coherence("mort face au boss")

@@ -8,12 +8,10 @@
 ##   - invocation (dès la phase 2) : des bourgeons éclosent en petits Flétris ;
 ##   - en phase 3, l'arène rétrécit (boss_arena.gd) : plus d'anneau à l'abri des fouets.
 ##
-## Elle respecte l'interface d'un ennemi (position, radius, dead, take_damage, apply_poison,
-## apply_status) et s'inscrit dans main.enemies ; trop grosse pour la grille spatiale, elle est
-## aussi dans main.big_enemies (voir main.enemies_near).
-extends Node2D
+## Le socle commun (vie, phases, états, mort, interface d'ennemi) est dans boss_base.gd ; ce
+## fichier ne décrit que ses attaques et son dessin. Nommée dans data/regions/ronce.json › boss.
+extends BossBase
 
-const Difficulty = preload("res://scripts/difficulty.gd")
 const RADIUS := 70.0
 const INTRO := 1.4
 const DEATH_TIME := 1.6
@@ -40,36 +38,6 @@ const ROOTED_CADENCE := 0.55
 const ROOT_IMMUNITY := 6.0
 const BLEED_STACKS := 5
 
-var main
-var arena
-## Rang dans main.enemies (voir main._rebuild_grid).
-var index := -1
-var radius := RADIUS
-var dead := false
-var hp := BASE_HP
-var max_hp := BASE_HP
-var xp_value := 60.0
-var poison_dps := 0.0
-var poison_time := 0.0
-var hit_flash := 0.0
-## États posés par les compétences : nom -> {"value", "time", "stacks"}.
-var statuses: Dictionary = {}
-var root_immune := 0.0
-## Elle ne bouge pas : sa position est rétablie à chaque pas (reculs des coups, séparation).
-var anchor := Vector2.ZERO
-## Interface d'ennemi (ennemis du roncier) : enracinée, aucune résistance de région, comportement propre.
-var anchored := true
-var resist := {}
-var behavior := "boss"
-## Teinte des éclats de sa mort (fx.death).
-var color := Color("3a2a2c")
-var region := ""
-var damage_scale := 1.0
-var phase := 1
-var t := 0.0
-var intro := INTRO
-var transition := 0.0
-var dying := 0.0
 ## Attaque en cours ("" pendant la pause), son étape ("annonce" ou "frappe") et le temps restant.
 var attack := ""
 var stage := ""
@@ -91,107 +59,43 @@ var roots: Array = []
 var whips: Array = []
 ## Bourgeons de l'invocation en cours (positions).
 var buds: Array = []
-var minions: Array = []
-## Figée par les tests visuels : la logique ne tourne plus, la pose reste affichée.
-var frozen := false
-var marks: Node2D
-var overlay: Node2D
 
 
-## Annonces au sol (sous les personnages) et projectiles (au-dessus) : dessinés en coordonnées monde.
-class Layer extends Node2D:
-	var boss
-	var above := false
-
-	func _draw() -> void:
-		if above:
-			boss.draw_overlay(self)
-		else:
-			boss.draw_marks(self)
-
-
-func _ready() -> void:
-	anchor = position
-	# Le choix de difficulté des options (Facile / Normal / Difficile) vaut aussi pour la Mère-Ronce.
-	max_hp = (BASE_HP + HP_PER_LEVEL * Game.level) * Difficulty.hp_mult()
-	hp = max_hp
-	damage_scale = (1.0 + DAMAGE_PER_LEVEL * (Game.level - 1)) * Difficulty.damage_mult()
-	xp_value = 40.0 + 12.0 * Game.level
-	marks = Layer.new()
-	marks.boss = self
-	arena.add_child(marks)
-	overlay = Layer.new()
-	overlay.boss = self
-	overlay.above = true
-	main.projectiles_layer.add_child(overlay)
+## Nombres du socle (boss_base.gd) : ceux de la Mère-Ronce.
+func _setup() -> void:
+	body_radius = RADIUS
+	intro_time = INTRO
+	death_time = DEATH_TIME
+	base_hp = BASE_HP
+	hp_per_level = HP_PER_LEVEL
+	damage_per_level = DAMAGE_PER_LEVEL
+	contact_damage = CONTACT_DAMAGE
+	phase_limits = PHASE_LIMITS
+	rooted_cadence = ROOTED_CADENCE
+	root_immunity = ROOT_IMMUNITY
+	bleed_stacks = BLEED_STACKS
 
 
-func _exit_tree() -> void:
-	main.big_enemies.erase(self)
-	for n in [marks, overlay]:
-		if is_instance_valid(n):
-			n.queue_free()
-
-
-func _process(delta: float) -> void:
-	if frozen:
-		return
-	t += delta
-	redraw()
-
-
-func redraw() -> void:
-	queue_redraw()
-	marks.queue_redraw()
-	overlay.queue_redraw()
-
-
-func phase_for(ratio: float) -> int:
-	if ratio > PHASE_LIMITS[0]:
-		return 1
-	return 2 if ratio > PHASE_LIMITS[1] else 3
-
-
-func _physics_process(delta: float) -> void:
-	if frozen:
-		return
-	position = anchor
-	hit_flash -= delta
-	root_immune -= delta
-	if dead:
-		dying += delta
-		if dying >= DEATH_TIME:
-			queue_free()
-		return
-	_tick_statuses(delta)
-	if dead:
-		return
+func _projectiles_step(delta: float) -> void:
 	_update_thorns(delta)
 	_update_roots(delta)
-	minions = minions.filter(func(e): return is_instance_valid(e) and not e.dead and not e.is_queued_for_deletion())
-	var p = main.player
-	if p.position.distance_to(anchor) < radius + p.radius:
-		p.take_hit(CONTACT_DAMAGE * damage_scale, self)
-	if intro > 0.0:
-		intro -= delta
-		return
-	if transition > 0.0:
-		transition -= delta
-		return
-	var cadence := ROOTED_CADENCE if statuses.has("enracine") else 1.0
+
+
+func _fight_step(delta: float) -> void:
+	var cad := cadence()
 	if attack == "":
 		var wanted := phase_for(hp / max_hp)
 		if wanted > phase:
 			_enter_phase(wanted)
 			return
-		gap -= delta * cadence
+		gap -= delta * cad
 		if gap <= 0.0:
 			var order: Array = PHASES[phase]["order"]
 			_begin(order[cycle % order.size()])
 			cycle += 1
 	elif stage == "annonce":
-		timer -= delta * cadence
-		_announce_step(delta * cadence)
+		timer -= delta * cad
+		_announce_step(delta * cad)
 		if timer <= 0.0:
 			_strike()
 	else:
@@ -431,92 +335,23 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 	return best
 
 
-# --- Interface d'un ennemi ---
-
-func take_damage(amount: float, crit: bool, dot := false) -> void:
-	if dead:
-		return
-	hp -= amount
-	if not dot:
-		hit_flash = 0.08
-		if crit:
-			main.fx.text(position + Vector2(0, -radius * 2.0), str(roundi(amount)), Color("f2d06b"), 20, 0.6)
-	if hp <= 0.0:
-		_die()
-
-
-func apply_poison(dps: float, duration: float) -> void:
-	poison_dps = maxf(poison_dps if poison_time > 0.0 else 0.0, dps)
-	poison_time = maxf(poison_time, duration)
-
-
-## États posés par les compétences de Ronce. « saignement » : dégâts par seconde, cumulable
-## BLEED_STACKS fois. « enracine » : elle est déjà enracinée, mais prépare ses attaques plus
-## lentement tant que l'état dure, puis y résiste ROOT_IMMUNITY secondes.
-func apply_status(status: String, value: float, duration: float) -> void:
-	if dead:
-		return
-	match status:
-		"saignement":
-			var s: Dictionary = statuses.get(status, {"value": 0.0, "time": 0.0, "stacks": 0})
-			s["value"] = maxf(s["value"], value)
-			s["time"] = maxf(s["time"], duration)
-			s["stacks"] = mini(BLEED_STACKS, int(s["stacks"]) + 1)
-			statuses[status] = s
-		"enracine":
-			if root_immune > 0.0 or statuses.has(status):
-				return
-			statuses[status] = {"value": value, "time": minf(duration, 3.0), "stacks": 1}
-			main.fx.text(position + Vector2(0, -radius * 2.0), "Entravée", Color("9af07a"), 18, 0.8)
-		_:
-			statuses[status] = {"value": value, "time": duration, "stacks": 1}
-
-
-## Saignée : fait éclater le saignement d'un coup (même contrat que enemy.gd). Renvoie les dégâts
-## que le saignement aurait encore faits, multipliés par « mult », et retire l'état.
-func burst_bleed(mult: float) -> float:
-	var s: Dictionary = statuses.get("saignement", {})
-	if s.is_empty():
-		return 0.0
-	statuses.erase("saignement")
-	return float(s["value"]) * int(s["stacks"]) * maxf(0.0, float(s["time"])) * mult
-
-
-func is_bleeding() -> bool:
-	return statuses.has("saignement")
-
-
-func _tick_statuses(delta: float) -> void:
-	if poison_time > 0.0:
-		poison_time -= delta
-		take_damage(poison_dps * delta, false, true)
-	for status in statuses.keys():
-		var s: Dictionary = statuses[status]
-		s["time"] -= delta
-		if status == "saignement" and not dead:
-			take_damage(s["value"] * s["stacks"] * delta, false, true)
-		if s["time"] <= 0.0:
-			statuses.erase(status)
-			if status == "enracine":
-				root_immune = ROOT_IMMUNITY
-
-
-func _die() -> void:
-	dead = true
-	dying = 0.0
-	hp = 0.0
+## À sa mort : plus d'attaque en cours, ni d'épines, de racines, de fouets ou de bourgeons.
+func _clear_attacks() -> void:
 	attack = ""
 	stage = ""
 	thorns = []
 	roots = []
 	whips = []
 	buds = []
-	main.big_enemies.erase(self)
-	for e in minions:
-		if is_instance_valid(e) and not e.dead:
-			e.take_damage(e.hp + 1.0, false)
-	main.on_enemy_killed(self)
-	arena.boss_defeated()
+
+
+## Le robot tourne autour d'elle ; tant que l'arène est large, l'anneau extérieur est hors de portée
+## des fouets.
+func bot_ring(arena_radius: float) -> float:
+	var ring := minf(250.0, arena_radius - 60.0)
+	if attack == "fouets" and arena_radius - 60.0 > WHIP["length"] + 40.0:
+		ring = WHIP["length"] + 50.0
+	return ring
 
 
 # --- Dessin ---
@@ -524,21 +359,6 @@ func _die() -> void:
 # Charte graphique : les Flétris sont anguleux, en volume, contour clair, braise dans les fentes.
 # La Mère-Ronce est une rose de cendre : bouton fermé (phase 1), qui s'ouvre (phase 2), puis
 # brûle à cœur ouvert (phase 3). Toutes ses attaques s'annoncent avec Art.telegraph.
-
-const FletriArt = preload("res://scripts/fletri_art.gd")
-
-
-## Couleur d'une partie du corps : éclair du coup reçu, poison, puis cendre pendant la mort.
-func _color(base: Color) -> Color:
-	var c := base
-	if hit_flash > 0.0:
-		c = c.lerp(Art.c("danger_eclair"), 0.6)
-	if poison_time > 0.0:
-		c = c.lerp(Art.ec("poison"), 0.3)
-	if dead:
-		c = c.lerp(FletriArt.ash_color(), Anim.ease_out(clampf(dying / DEATH_TIME * 1.4, 0.0, 1.0)))
-	return c
-
 
 ## Pétale : forme de goutte effilée, de la base vers dir, déchirée au bout en phase 3.
 func _petal(base: Vector2, dir: Vector2, length: float, width: float, torn: float) -> PackedVector2Array:
@@ -826,3 +646,38 @@ func draw_overlay(c: CanvasItem) -> void:
 				c.draw_colored_polygon(PackedVector2Array([foot, tip, foot + Vector2(10, 0)]), body.darkened(0.35))
 				Art.outline(c, PackedVector2Array([foot + Vector2(-10, 0), tip, foot + Vector2(10, 0)]), Art.c("ennemi_contour"), Art.TRAIT_FIN)
 				c.draw_circle(tip, 2.5, Art.ec("epine", "clair"))
+
+
+# --- Dessinés par l'arène (boss_arena.gd), coordonnées de l'arène ---
+
+## La Mère-Ronce endormie : un bouton fermé au centre de l'arène, tant que le combat n'a pas lieu.
+static func draw_sleeper(a: Node2D) -> void:
+	var r := RADIUS * 0.75
+	var c: Vector2 = a.center + Vector2(0, -r * 0.4)
+	for i in 9:
+		var ang := TAU * i / 9.0 + 0.2
+		a.draw_line(a.center, a.center + Vector2.from_angle(ang) * r * 1.9 * Vector2(1.0, 0.7), Color("1c1418"), 9.0)
+	for i in 8:
+		var ang := TAU * i / 8.0
+		var dir := Vector2.from_angle(ang)
+		var side := dir.orthogonal() * r * 0.4
+		a.draw_colored_polygon(PackedVector2Array([c, c + dir * r * 0.6 + side, c + dir * r * 1.05, c + dir * r * 0.6 - side]), Color("3a2630") if i % 2 == 0 else Color("4a2a36"))
+	a.draw_circle(c, r * 0.45, Color("2a1c22"))
+	if a.state == "ouverte":
+		a.draw_circle(c, r * 0.2, Color(1.0, 0.6, 0.3, 0.45 + 0.35 * sin(a.t * 2.0)))
+
+
+## Après la victoire : un grand rosier en fleurs à la place de la Mère-Ronce.
+static func draw_victory(a: Node2D) -> void:
+	var r := RADIUS
+	var c: Vector2 = a.center + Vector2(0, -r * 0.4)
+	for i in 7:
+		var ang := TAU * i / 7.0
+		a.draw_circle(c + Vector2.from_angle(ang) * r * 0.55, r * 0.5, Color("2f6b2a") if i % 2 == 0 else Color("3b7d31"))
+	a.draw_circle(c, r * 0.6, Color("468f38"))
+	for i in 9:
+		var ang := TAU * i / 9.0 + 0.4
+		var rose := c + Vector2.from_angle(ang) * r * (0.35 + 0.5 * (i % 3) / 2.0)
+		for j in 5:
+			a.draw_circle(rose + Vector2.from_angle(TAU * j / 5.0 + i) * 7.0, 6.5, Color("e0675e") if i % 2 == 0 else Color("f48fb1"))
+		a.draw_circle(rose, 4.0, Color("fff3c4"))

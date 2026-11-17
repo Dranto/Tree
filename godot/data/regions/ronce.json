@@ -4,6 +4,7 @@
   "branch": "ronce",
   "name": "Région de Ronce",
   "place": "le roncier",
+  "map_name": "Roncier",
   "color": "#e0675e",
   "ground": {
     "_doc": "Couleurs du sol de la région (voir « Couleurs » dans data/README.md). dead : terre morte tant que le Cœur vit ; purified : terre morte apaisée après la purification ; alive : herbe de la région ; dot : petits points sur l'herbe (baies).",

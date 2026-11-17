@@ -108,8 +108,8 @@ func save_now(main, path := DEFAULT_PATH) -> bool:
 func _player_entry(main) -> Dictionary:
 	var pos: Vector2 = main.player.position
 	var hp: float = main.player.hp
-	if main.get("arena") != null and main.arena.in_combat():
-		pos = main.arena.entrance()
+	if main.get("arena") != null and main.active_arena() != null:
+		pos = main.active_arena().entrance()
 		hp = Game.stats["max_hp"]
 	return {"x": pos.x, "y": pos.y, "hp": hp}
 

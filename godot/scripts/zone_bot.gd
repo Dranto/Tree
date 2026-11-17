@@ -147,7 +147,7 @@ func input(main, p) -> Dictionary:
 	# Siège du Cœur : rester dans la zone prime sur tout le reste (sortir fait reculer le siège).
 	if goal == "siège du Cœur" and where != null:
 		var from_c: float = p.position.distance_to(main.heart.center)
-		if from_c > main.heart.ZONE - 50.0:
+		if from_c > main.heart.zone - 50.0:
 			var back: Vector2 = ((where as Vector2) - p.position).normalized()
 			return {"move": _unstick(p, back).normalized(), "aim": target, "dash": best < 45.0 * 45.0}
 	var dodge: Vector2 = builder._dodge(main, p)
