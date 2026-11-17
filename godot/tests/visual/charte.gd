@@ -130,7 +130,8 @@ func _icones(o: Vector2) -> void:
 	_title(o, "Icônes · les mêmes partout (barre, arbre, infobulles, journal, ramassage)")
 	var y := o.y + 18
 	var names := {"elements": "Éléments", "competences": "Compétences", "statistiques": "Statistiques", "monde": "Monde"}
-	for g in Art.ICONES:
+	# Les formes d'attaque (groupe « attaques ») ont leur propre planche : galerie_attaque.gd.
+	for g in names:
 		_text(Vector2(o.x, y + 24), names[g], 11, Art.c("texte_doux"))
 		var x := o.x + 82
 		for id in Art.ICONES[g]:
