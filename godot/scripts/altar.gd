@@ -35,7 +35,7 @@ static func spawn_all(m, parent: Node) -> Array:
 	var r := Content.rewards()
 	for pair in [["autel", r.get("altars", [])], ["secret", r.get("secrets", [])]]:
 		for a in pair[1]:
-			if not str(a.get("region", "")) in Regions.REGIONS:
+			if not Regions.exists(str(a.get("region", ""))):
 				continue
 			var n = load("res://scripts/altar.gd").new()
 			n.main = m

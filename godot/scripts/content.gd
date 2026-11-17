@@ -67,9 +67,22 @@ static func grafts() -> Dictionary:
 	return _cache["#grafts"]
 
 
-## Points et greffes du monde : boss, Cœurs, autels et secrets (data/rewards.json).
+## Points et greffes du monde : boss et Cœurs (data/rewards.json, par région), autels et secrets
+## (lus dans les fichiers des régions, data/regions/<id>.json, chacun avec son champ « region »).
 static func rewards() -> Dictionary:
-	return _load("rewards")
+	if not _cache.has("#rewards"):
+		var out: Dictionary = _load("rewards").duplicate()
+		var Regions = load("res://scripts/regions.gd")
+		for kind in ["altars", "secrets"]:
+			var list: Array = out.get(kind, []).duplicate()
+			for reg in Regions.ids():
+				for a in Regions.def(reg).get(kind, []):
+					var item: Dictionary = a.duplicate()
+					item["region"] = reg
+					list.append(item)
+			out[kind] = list
+		_cache["#rewards"] = out
+	return _cache["#rewards"]
 
 
 ## Branches dans l'ordre de tree.json (cet ordre fixe leur place autour de la graine).
@@ -437,8 +450,8 @@ static func _check_effects(list, where: String, errors: PackedStringArray) -> vo
 			errors.append("stats.json, %s : plafond inconnu « %s »" % [name, def["max"]])
 
 
-## rewards.json : chaque greffe nommée existe, chaque autel et secret a un identifiant unique,
-## une région connue et une position dans le secteur.
+## rewards.json et autels / secrets des régions : chaque greffe nommée existe, chaque autel et
+## secret a un identifiant unique, une région connue et une position dans le secteur.
 static func _check_rewards(errors: PackedStringArray) -> void:
 	var r := rewards()
 	var regions: Array = tree().get("branches", [])

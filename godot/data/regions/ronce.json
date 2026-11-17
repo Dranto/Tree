@@ -1,0 +1,86 @@
+{
+  "_doc": "Région de Ronce (le roncier). Format décrit dans data/README.md, « Régions ». Positions : « dist » = distance à la graine en pixels ; « side » = écart au milieu du secteur, de -1 (bord gauche) à 1 (bord droit), ou « angle » = écart en radians.",
+  "id": "ronce",
+  "branch": "ronce",
+  "name": "Région de Ronce",
+  "place": "le roncier",
+  "color": "#e0675e",
+  "ground": {
+    "_doc": "Couleurs du sol de la région (voir « Couleurs » dans data/README.md). dead : terre morte tant que le Cœur vit ; purified : terre morte apaisée après la purification ; alive : herbe de la région ; dot : petits points sur l'herbe (baies).",
+    "colors": {
+      "rouille": {"mix": ["sol_mort", "cendre/sombre", 0.42]}
+    },
+    "dead_dark": {"dark": ["$rouille", 0.18]},
+    "dead_light": {"light": ["$rouille", 0.03]},
+    "purified_dark": {"dark": [{"mix": ["sol_mort", "racine/sombre", 0.5]}, 0.12]},
+    "purified_light": {"mix": ["sol_mort", "racine", 0.25]},
+    "alive_dark": {"dark": ["sol_vivant", 0.22]},
+    "alive_light": {"light": [{"mix": ["sol_vivant", "decor_vivant", 0.6]}, 0.08]},
+    "dot": "saignement/clair",
+    "dot_cell": 16.0,
+    "dot_rarity": 0.985,
+    "dot_salt": [91.0, 17.0],
+    "dot_size": 0.18,
+    "dot_strength": 0.85,
+    "alive_mix": 0.85,
+    "alive_mix_purified": 0.35
+  },
+  "decor": {"kind": "roncier", "seed": 8, "brambles": 130, "bushes": 46, "clear_center": 340.0, "clear_seed": 560.0},
+  "landmarks": [
+    {"kind": "grand_arbre", "dist": 1060.0, "angle": -0.05, "size": 1.0},
+    {"kind": "ruine", "dist": 1380.0, "angle": -0.43, "size": 1.0},
+    {"kind": "rocher", "dist": 2000.0, "angle": 0.42, "size": 1.0}
+  ],
+  "spawn": {
+    "kinds": {"tireur": 0.4, "chargeur": 0.4, "nid": 0.2},
+    "share_near": 0.25,
+    "share_far": 0.8,
+    "far": 2400,
+    "nest_min_dist": 900,
+    "max_nests": 3,
+    "nest_fallback": ["chargeur", "tireur"],
+    "purified_factor": 0.4
+  },
+  "sanctuaries": [
+    {"id": "lisiere", "name": "de la Lisière", "dist": 820.0, "angle": -0.3},
+    {"id": "ravin", "name": "du Ravin", "dist": 1250.0, "angle": 0.3},
+    {"id": "veille", "name": "de la Veille", "dist": 1700.0, "angle": -0.38},
+    {"id": "epine", "name": "de l'Épine", "dist": 2200.0, "angle": 0.3}
+  ],
+  "altars": [
+    {"id": "ronce_1", "name": "Autel des épines", "dist": 980, "side": -0.85, "points": 1, "graft": "greffe_soeurs"},
+    {"id": "ronce_2", "name": "Autel de l'écorce", "dist": 1300, "side": 0.72, "points": 1, "graft": "greffe_ecorce"},
+    {"id": "ronce_3", "name": "Autel des racines", "dist": 2050, "side": -0.74, "points": 1, "graft": "greffe_tracante"},
+    {"id": "ronce_4", "name": "Autel de la couronne", "dist": 2600, "side": 0.5, "points": 1, "graft": "greffe_couronne"}
+  ],
+  "secrets": [
+    {"id": "ronce", "name": "La graine enfouie", "dist": 2380, "side": 0.95, "points": 1, "graft": "greffe_graine"}
+  ],
+  "heart": {
+    "name": "Cœur de flétrissure",
+    "zone": 240.0,
+    "hold_time": 30.0,
+    "waves": {"every": 6.0, "base": 4, "growth": 2, "kinds": ["fletri", "cendreux"], "second_share": 0.4, "big": "colosse", "big_from": 2},
+    "idle": {"every": 3.5, "max": 6, "kind": "fletri"},
+    "life_radius": 820.0,
+    "life_color": "saignement/clair",
+    "wake_banner": "Le Cœur de flétrissure s'éveille : tiens la zone !",
+    "purified_banner": "Le Cœur est purifié : l'arène de la Mère-Ronce s'ouvre."
+  },
+  "boss": {
+    "script": "res://scripts/boss_ronce.gd",
+    "name": "La Mère-Ronce",
+    "bar_color": "#c84b44",
+    "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : les bourgeons éclosent", "Phase 3 sur 3 : les ronces se resserrent"],
+    "arena": {"radius": 470.0, "radius_min": 310.0, "offset": 800.0, "life_color": "#e0675e"},
+    "wake_banner": "La Mère-Ronce s'éveille.",
+    "defeated_banner": "La Mère-Ronce est vaincue !"
+  },
+  "ending": {
+    "sub": "Fin de la tranche de Ronce",
+    "title": "Le roncier reverdit",
+    "body": "La Mère-Ronce n'est plus. Là où la cendre étouffait la terre, les racines respirent de nouveau, et l'Arbre de vie étend ses branches vers d'autres horizons.\n\nCinq régions attendent encore ton passage."
+  },
+  "ambience": "roncier",
+  "music": "roncier"
+}

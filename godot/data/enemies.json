@@ -41,13 +41,5 @@
               "cracheur": 0.1, "gardien": 0.05, "boursoufle": 0.08},
     "min_level": {"colosse": 4, "cracheur": 3, "boursoufle": 5, "gardien": 7},
     "max_alive": {"gardien": 3}
-  },
-  "spawn": {
-    "ronce": {
-      "kinds": {"tireur": 0.4, "chargeur": 0.4, "nid": 0.2},
-      "share_near": 0.25, "share_far": 0.8, "far": 2400,
-      "nest_min_dist": 900, "max_nests": 3,
-      "purified_factor": 0.4
-    }
   }
 }

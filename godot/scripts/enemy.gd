@@ -144,13 +144,17 @@ static func validate_kinds() -> PackedStringArray:
 	var inv: Dictionary = ELITES.get("affixes", {}).get("invocateur", {})
 	if not inv.is_empty() and not KIND_INDEX.has(str(inv.get("spawn", ""))):
 		errors.append("enemies.json, élites : sorte invoquée inconnue « %s »" % inv.get("spawn", ""))
-	var spawn: Dictionary = Content._load("enemies").get("spawn", {}).duplicate()
+	# Apparitions de chaque région (data/regions/<id>.json, « spawn ») et Flétris ordinaires.
+	var Regions = load("res://scripts/regions.gd")
+	var spawn := {}
+	for reg in Regions.ids():
+		spawn[reg] = Regions.section(reg, "spawn")
 	spawn["ordinaires"] = Content._load("enemies").get("ordinary", {})
 	for reg in spawn:
 		for field in ["kinds", "min_level", "max_alive"]:
 			for id in spawn[reg].get(field, {}):
 				if not KIND_INDEX.has(id):
-					errors.append("enemies.json, apparitions de %s (%s) : sorte inconnue « %s »" % [reg, field, id])
+					errors.append("apparitions de %s (%s) : sorte inconnue « %s »" % [reg, field, id])
 	return errors
 
 

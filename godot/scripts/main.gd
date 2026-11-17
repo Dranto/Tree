@@ -35,14 +35,14 @@ const Altar = preload("res://scripts/altar.gd")
 const GraftPickup = preload("res://scripts/graft_pickup.gd")
 
 ## Apparitions par région (sortes du roncier, part selon la distance) : res://data/enemies.json.
-var region_spawn: Dictionary = Content._load("enemies").get("spawn", {})
+var region_spawn: Dictionary = _region_spawns()
 ## Flétris ordinaires (poids, niveau minimal, nombre maximal en vie) : « ordinary » de enemies.json.
 var ordinary_spawn: Dictionary = Content._load("enemies").get("ordinary", {})
 
 ## Une élite vient d'être vaincue (contrat partagé : butin, objectif « vaincre trois élites »).
 signal elite_killed(enemy)
-## Dernier état connu de la purification du Cœur de Ronce (contrat avec la tâche D).
-var ronce_purified := false
+## Dernier état connu de la purification du Cœur de chaque région (identifiant -> vrai).
+var regions_purified := {}
 const BuildBot = preload("res://scripts/build_bot.gd")
 
 var world_half := WORLD_HALF
@@ -481,17 +481,28 @@ func _push_out_of_bushes() -> void:
 	player.position = flora.push_out(player.position, player.radius)
 
 
-## Suit les drapeaux d'aventure posés par le Cœur de flétrissure (tâche D) : la région change d'état.
+## Suit les drapeaux d'aventure posés par les Cœurs de flétrissure : chaque région change d'état.
 func _watch_region_state() -> void:
-	var purified := bool(Game.flags.get("ronce_coeur_purifie", false))
-	if purified != ronce_purified:
-		ronce_purified = purified
-		ground.set_purified(1.0 if purified else 0.0)
+	for id in Regions.ids():
+		var purified := bool(Game.flags.get(Regions.heart_flag(id), false))
+		if purified != bool(regions_purified.get(id, false)):
+			regions_purified[id] = purified
+			ground.set_purified(id, 1.0 if purified else 0.0)
 
 
 # --- Régions du monde (voir regions.gd) ---
 
-## Région du monde à cette position : "ronce" dans le roncier, "" ailleurs.
+## Apparitions de chaque région (« spawn » de data/regions/<id>.json).
+static func _region_spawns() -> Dictionary:
+	var out := {}
+	for id in Regions.ids():
+		var sp := Regions.section(id, "spawn")
+		if not sp.is_empty():
+			out[id] = sp
+	return out
+
+
+## Région du monde à cette position : son identifiant ("ronce" dans le roncier), "" ailleurs.
 func region_at(pos: Vector2) -> String:
 	return Regions.region_at(pos)
 
@@ -533,8 +544,8 @@ func power() -> float:
 ## Nombre de Cœurs de flétrissure purifiés (un par région).
 func hearts_purified() -> int:
 	var n := 0
-	for id in Regions.REGIONS:
-		if Game.flags.get(id + "_coeur_purifie", false):
+	for id in Regions.ids():
+		if Game.flags.get(Regions.heart_flag(id), false):
 			n += 1
 	return n
 
@@ -622,7 +633,7 @@ func make_elite(e, two := false) -> void:
 func _region_kind(reg: String, pos: Vector2) -> String:
 	var sp: Dictionary = region_spawn[reg]
 	var share := lerpf(sp.get("share_near", 0.25), sp.get("share_far", 0.8), _region_depth(pos))
-	if Game.flags.get(reg + "_coeur_purifie", false):
+	if Game.flags.get(Regions.heart_flag(reg), false):
 		share *= float(sp.get("purified_factor", 1.0))
 	if rng.randf() >= share:
 		return ""
@@ -640,7 +651,9 @@ func _region_kind(reg: String, pos: Vector2) -> String:
 	if Enemy.KINDS[Enemy.kind_index(id)].get("behavior", "") == "nest":
 		var nests := enemies.filter(func(e): return e.behavior == "nest").size()
 		if pos.length() < float(sp.get("nest_min_dist", 0.0)) or nests >= int(sp.get("max_nests", 3)):
-			id = "chargeur" if rng.randf() < 0.5 else "tireur"
+			# Trop près de la graine ou trop de nids : une des deux sortes de repli, à pile ou face.
+			var fallback: Array = sp.get("nest_fallback", ["chargeur", "tireur"])
+			id = fallback[0] if rng.randf() < 0.5 else fallback[1]
 	return id
 
 
@@ -878,9 +891,10 @@ func player_died() -> void:
 
 # --- Sanctuaires et sève perdue ---
 
-## Pose les sanctuaires de SITES, écartés des buissons d'épines (la graine reste au centre).
+## Pose les sanctuaires (la Graine et ceux des régions), écartés des buissons d'épines (la graine
+## reste au centre).
 func _place_sanctuaries() -> void:
-	for site in Sanctuary.SITES:
+	for site in Sanctuary.sites():
 		var s = Sanctuary.new()
 		s.main = self
 		s.setup(site)

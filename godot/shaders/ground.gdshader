@@ -12,31 +12,39 @@ uniform sampler2D life_map : filter_linear;
 uniform sampler2D noise_tex : filter_linear, repeat_enable;
 uniform vec2 world_size = vec2(6000.0, 6000.0);
 uniform float noise_period = 3000.0;
-// Région du roncier (secteur de la branche Ronce, voir regions.gd) : normales intérieures des
-// deux bords du secteur, distance de la graine où il commence, largeur du fondu.
-// Deux produits scalaires et une longueur : moins cher qu'une texture ou un atan par pixel.
-uniform vec2 ronce_n1 = vec2(0.866, 0.5);
-uniform vec2 ronce_n2 = vec2(-0.866, 0.5);
+// Régions (voir regions.gd et data/regions/<id>.json), REGION_COUNT au plus six : pour chacune,
+// normales intérieures des deux bords de son secteur. Distance de la graine où elles commencent,
+// largeur du fondu. Deux produits scalaires et une longueur par région : moins cher qu'une texture
+// ou un atan par pixel (et le sol n'est recalculé que par carrés, voir ground.gd).
+uniform int region_count = 0;
+uniform vec2 region_n1[6];
+uniform vec2 region_n2[6];
 uniform float region_inner = 430.0;
 uniform float region_edge = 110.0;
-// 0 tant que le Cœur de flétrissure vit, 1 une fois purifié : la rouille s'efface.
-uniform float ronce_purified = 0.0;
+// 0 tant que le Cœur de flétrissure de la région vit, 1 une fois purifié.
+uniform float region_purified[6];
+// Palette de chaque région : terre morte (Cœur vivant), terre apaisée (purifiée), herbe, points
+// sur l'herbe (couleur, case, rareté, sel du hachage, taille, force) et part de l'herbe de la
+// région sur l'herbe commune (avant, et retirée une fois purifiée).
+uniform vec3 region_dead_dark[6];
+uniform vec3 region_dead_light[6];
+uniform vec3 region_calm_dark[6];
+uniform vec3 region_calm_light[6];
+uniform vec3 region_alive_dark[6];
+uniform vec3 region_alive_light[6];
+uniform vec3 region_dot_col[6];
+uniform vec4 region_dot[6];
+uniform vec2 region_dot_salt[6];
+uniform vec2 region_alive_mix[6];
 
 // Palette (ground.gd la remplit depuis Art).
 uniform vec3 dead_dark;
 uniform vec3 dead_light;
 uniform vec3 crack_col;
 uniform vec3 pebble_col;
-uniform vec3 rust_dark;
-uniform vec3 rust_light;
-uniform vec3 calm_dark;
-uniform vec3 calm_light;
 uniform vec3 alive_dark;
 uniform vec3 alive_light;
 uniform vec3 moss_col;
-uniform vec3 thicket_dark;
-uniform vec3 thicket_light;
-uniform vec3 berry_col;
 uniform vec3 bloom_col;
 
 // Hachage entier (exact sur toutes les cartes graphiques) d'une case de la grille.
@@ -72,10 +80,16 @@ void fragment() {
 	float tone = clamp(big + fine, 0.0, 1.0);
 	float tone_alive = clamp(big + fine * 1.4, 0.0, 1.0);
 
-	// Roncier : secteur de la branche Ronce (fondu sur ses bords).
+	// Régions : secteurs des branches (fondu sur leurs bords). Les secteurs ne se chevauchent que
+	// dans leurs fondus.
 	vec2 p = w - world_size * 0.5;
-	float inside = min(min(dot(p, ronce_n1), dot(p, ronce_n2)), length(p) - region_inner);
-	float rw = smoothstep(-region_edge, region_edge, inside + (n - 0.5) * 120.0);
+	float rws[6];
+	float rw_any = 0.0;
+	for (int i = 0; i < region_count; i++) {
+		float inside = min(min(dot(p, region_n1[i]), dot(p, region_n2[i])), length(p) - region_inner);
+		rws[i] = smoothstep(-region_edge, region_edge, inside + (n - 0.5) * 120.0);
+		rw_any = max(rw_any, rws[i]);
+	}
 
 	float l = texture(life_map, UV).r;
 	float edge = smoothstep(0.30, 0.60, l + (n2 - 0.5) * 0.3);
@@ -87,24 +101,31 @@ void fragment() {
 		dead = mix(dead_dark, dead_light, tone);
 		float crack = smoothstep(0.008, 0.0, abs(nz.b - 0.5)) * smoothstep(0.66, 0.8, nz.a);
 		float pebble = dot_in(w, 26.0, 0.975, vec2(3.0, 5.0), 0.16);
-		if (rw > 0.002) {
-			// Rouille tant que le Cœur vit, terre apaisée une fois purifié.
-			vec3 rust = mix(rust_dark, rust_light, tone);
-			vec3 calm = mix(calm_dark, calm_light, tone);
-			dead = mix(dead, mix(rust, calm, ronce_purified), rw);
+		for (int i = 0; i < region_count; i++) {
+			if (rws[i] > 0.002) {
+				// Terre de la région tant que son Cœur vit, terre apaisée une fois purifié.
+				vec3 rust = mix(region_dead_dark[i], region_dead_light[i], tone);
+				vec3 calm = mix(region_calm_dark[i], region_calm_light[i], tone);
+				dead = mix(dead, mix(rust, calm, region_purified[i]), rws[i]);
+			}
 		}
 		dead = mix(dead, crack_col, crack * 0.3);
 		dead = mix(dead, pebble_col, pebble * 0.4);
 	}
 	vec3 alive = vec3(0.0);
 	if (edge > 0.0) {
-		// Terre vivante : herbe calme, rares fleurs ; dans le roncier, herbe plus profonde et baies.
+		// Terre vivante : herbe calme, rares fleurs ; dans une région, son herbe et ses points.
 		alive = mix(alive_dark, alive_light, tone_alive);
-		if (rw > 0.002) {
-			vec3 thicket = mix(thicket_dark, thicket_light, tone_alive);
-			float berry = dot_in(w, 16.0, 0.985, vec2(91.0, 17.0), 0.18);
-			thicket = mix(thicket, berry_col, berry * 0.85);
-			alive = mix(alive, thicket, rw * (0.85 - 0.35 * ronce_purified));
+		if (rw_any > 0.002) {
+			for (int i = 0; i < region_count; i++) {
+				if (rws[i] > 0.002) {
+					vec3 thicket = mix(region_alive_dark[i], region_alive_light[i], tone_alive);
+					vec4 d = region_dot[i];
+					float berry = dot_in(w, d.x, d.y, region_dot_salt[i], d.z);
+					thicket = mix(thicket, region_dot_col[i], berry * d.w);
+					alive = mix(alive, thicket, rws[i] * (region_alive_mix[i].x - region_alive_mix[i].y * region_purified[i]));
+				}
+			}
 		} else {
 			float bloom = dot_in(w, 18.0, 0.982, vec2(41.0, 9.0), 0.2);
 			alive = mix(alive, bloom_col, bloom * 0.7);
