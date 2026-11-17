@@ -31,5 +31,26 @@
     {"key": "tempete", "name": "Tempête", "effects": [
       {"stat": "fire_rate", "op": "more", "value": 1.5}
     ]}
+  ],
+  "clusters": [
+    {
+      "id": "graines",
+      "name": "Graines fendues",
+      "theme": "Attaque qui se divise",
+      "ring": 2.5,
+      "angle": 0.65,
+      "entry": ["a1"],
+      "nodes": [
+        {
+          "id": "a1",
+          "type": "attack",
+          "name": "Graines fendues",
+          "at": [0, 0],
+          "effects": [
+            {"attack_mod": "fourche", "value": 1}
+          ]
+        }
+      ]
+    }
   ]
 }

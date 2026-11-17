@@ -27,5 +27,26 @@
         "text": "Un ennemi empoisonné qui meurt transmet son poison autour de lui."
       }
     ]}
+  ],
+  "clusters": [
+    {
+      "id": "graines",
+      "name": "Graines vénéneuses",
+      "theme": "Attaque empoisonnée",
+      "ring": 2.5,
+      "angle": 0.35,
+      "entry": ["a1"],
+      "nodes": [
+        {
+          "id": "a1",
+          "type": "attack",
+          "name": "Graines vénéneuses",
+          "at": [0, 0],
+          "effects": [
+            {"attack_mod": "poison", "value": 0.15}
+          ]
+        }
+      ]
+    }
   ]
 }

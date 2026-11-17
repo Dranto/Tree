@@ -111,5 +111,29 @@
        "text": "Chaque coup au corps à corps te soigne de 1 % de ta vie maximale."},
       {"stat": "melee_damage", "op": "inc", "value": 0.1}
     ]
+  },
+  "greffe_couronne_graines": {
+    "name": "Couronne de graines",
+    "desc": "Une attaque sur cinq part tout autour de toi.",
+    "sources": ["elite"], "shape": "fleur", "color": "#e8b04a",
+    "effects": [
+      {"attack_mod": "volee", "value": 5}
+    ]
+  },
+  "greffe_eclat": {
+    "name": "Graine éclatée",
+    "desc": "Ce que ton attaque abat éclate en épines.",
+    "sources": ["elite"], "shape": "epine", "color": "#d0574a",
+    "effects": [
+      {"attack_mod": "eclat", "value": 0.5}
+    ]
+  },
+  "greffe_sillage": {
+    "name": "Sillage d'épines",
+    "desc": "Tes traits laissent derrière eux une traînée d'épines.",
+    "sources": ["elite"], "shape": "racine", "color": "#b5674a",
+    "effects": [
+      {"attack_mod": "trainee", "value": 0.4}
+    ]
   }
 }
