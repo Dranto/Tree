@@ -633,7 +633,11 @@ func _leave_remains() -> void:
 	r.face = face
 	r.elite = elite
 	r.position = position
-	parent.call_deferred("add_child", r)
+	# Mort en série : les restes apparaissent au fil des pas suivants (main.death_fx).
+	if main != null and main.has_method("death_fx"):
+		main.death_fx(func(): parent.add_child.call_deferred(r))
+	else:
+		parent.call_deferred("add_child", r)
 
 
 # --- Dessin ---

@@ -360,6 +360,7 @@ func _process(delta: float) -> void:
 ## Le joueur, les Flétris, les graines, les essences et les nuages avancent aussi dans
 ## leur _physics_process ; l'affichage est interpolé entre deux pas (project.godot).
 func _physics_process(delta: float) -> void:
+	_death_fx_step()
 	elapsed += delta
 	# La musique suit la vie du sol sous le joueur.
 	Music.set_mood(ground.life_at(player.position))
@@ -769,13 +770,46 @@ func on_enemy_killed(e) -> void:
 		orbs_layer.call_deferred("add_child", o)
 	if is_elite:
 		_on_elite_killed(e)
-	# Chaque Flétri purifié rend un peu de vie au sol.
-	ground.paint(e.position, 46.0 + e.radius, 0.3)
+	# Chaque Flétri purifié rend un peu de vie au sol. Les tirages se font tout de suite (même
+	# suite de hasard), les effets peuvent attendre quelques pas lors d'une mort en série.
+	var pos: Vector2 = e.position
+	var r: float = e.radius
+	var col: Color = e.color
+	var flower := Vector2.INF
 	if rng.randf() < 0.6:
-		flora.add_flower(e.position + Vector2(rng.randf_range(-14, 14), rng.randf_range(-14, 14)))
-	fx.ring(e.position, e.radius, e.radius * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
-	fx.death(e.position, e.radius, e.color, ground.life_at(e.position) > 0.45)
+		flower = pos + Vector2(rng.randf_range(-14, 14), rng.randf_range(-14, 14))
+	# La vie rendue au sol reste immédiate : le sol regroupe les retouches d'une même image en un
+	# seul nouveau rendu de ses carrés (ground.gd), les étaler en ferait plusieurs.
+	ground.paint(pos, 46.0 + r, 0.3)
+	death_fx(func():
+		if flower != Vector2.INF:
+			flora.add_flower(flower)
+		fx.ring(pos, r, r * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
+		fx.death(pos, r, col, ground.life_at(pos) > 0.45))
 	Game.fire("kill", enemy_ctx(e, 0.0))
+
+
+## Effets d'une mort (fleur, anneau, éclats, restes) : tout de suite, sauf lors d'une
+## mort en série (purification du Cœur, grande attaque) où ils sont étalés sur les pas suivants,
+## DEATH_FX_PER_STEP au plus par pas de jeu. Sans cela, 40 morts d'un coup faisaient une image
+## de plus de 100 ms (docs/performances.md).
+const DEATH_FX_PER_STEP := 6
+var _death_fx_left := DEATH_FX_PER_STEP
+var _death_fx_queue: Array[Callable] = []
+
+func death_fx(c: Callable) -> void:
+	if _death_fx_left > 0 and _death_fx_queue.is_empty():
+		_death_fx_left -= 1
+		c.call()
+	else:
+		_death_fx_queue.append(c)
+
+
+func _death_fx_step() -> void:
+	_death_fx_left = DEATH_FX_PER_STEP
+	while _death_fx_left > 0 and not _death_fx_queue.is_empty():
+		_death_fx_left -= 1
+		_death_fx_queue.pop_front().call()
 
 
 ## Fait tomber une greffe au sol, à ramasser (contrat de la tâche B). id vide : une greffe tirée
