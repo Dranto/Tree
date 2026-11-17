@@ -242,6 +242,16 @@
           "effects": [
             {"attack_mod": "saignement", "value": 0.2}
           ]
+        },
+        {
+          "id": "f12",
+          "type": "attack",
+          "name": "Double lanière",
+          "at": [2.45, 0.8],
+          "links": ["f10"],
+          "effects": [
+            {"attack_mod": "repetition", "value": 1}
+          ]
         }
       ],
       "complete": {
@@ -703,16 +713,6 @@
             {"stat": "root_duration", "op": "more", "value": 1.6},
             {"stat": "melee_damage", "op": "inc", "value": 0.2},
             {"stat": "projectile_damage", "op": "more", "value": 0.7}
-          ]
-        },
-        {
-          "id": "r7",
-          "type": "attack",
-          "name": "Double lanière",
-          "at": [1.0, 0.8],
-          "links": ["r3"],
-          "effects": [
-            {"attack_mod": "repetition", "value": 1}
           ]
         },
         {
