@@ -1,0 +1,163 @@
+{
+  "_": "Attaque de base du Porte-Graine (scripts/attack.gd). Format décrit dans data/README.md, « L'attaque de base ».",
+  "start": "graine",
+  "forms": {
+    "graine": {
+      "name": "Graines",
+      "desc": "Un éventail de graines de sève vers la cible.",
+      "kind": "projectile",
+      "tags": ["projectile"],
+      "element": "seve",
+      "priority": 0,
+      "damage": 1.0,
+      "rate": 1.0,
+      "range": 704,
+      "speed": 640,
+      "spread": 0.14,
+      "pierce": 0,
+      "size": 1.0
+    },
+    "echarde": {
+      "name": "Échardes",
+      "desc": "Une rafale courte d'échardes qui perforent.",
+      "kind": "projectile",
+      "tags": ["projectile"],
+      "branch": "ronce",
+      "element": "epine",
+      "priority": 2,
+      "damage": 0.42,
+      "rate": 1.0,
+      "range": 400,
+      "speed": 920,
+      "spread": 0.1,
+      "burst": 3,
+      "burst_gap": 0.06,
+      "jitter": 0.07,
+      "pierce": 2,
+      "size": 0.8
+    },
+    "fouet": {
+      "name": "Fouet",
+      "desc": "Un coup de fouet en arc, au corps à corps, qui repousse.",
+      "kind": "melee",
+      "tags": ["corps_a_corps"],
+      "branch": "ronce",
+      "element": "epine",
+      "priority": 2,
+      "damage": 1.5,
+      "rate": 0.8,
+      "range": 135,
+      "arc": 1.9,
+      "knockback": 12
+    },
+    "ronce_vive": {
+      "name": "Ronces vives",
+      "desc": "Des graines qui plantent une ronce piégeuse là où elles tombent.",
+      "kind": "projectile",
+      "tags": ["projectile"],
+      "trap_tags": ["zone"],
+      "branch": "ronce",
+      "element": "saignement",
+      "priority": 2,
+      "damage": 0.7,
+      "rate": 0.9,
+      "range": 460,
+      "speed": 560,
+      "spread": 0.18,
+      "pierce": 0,
+      "size": 1.0,
+      "trap_radius": 36,
+      "trap_duration": 2.6,
+      "trap_damage": 0.55,
+      "trap_tick": 0.5,
+      "trap_root": 0.35,
+      "trap_max": 10
+    }
+  },
+  "mods": {
+    "fourche": {
+      "name": "Fourche",
+      "text": "Au premier coup, le projectile se divise : +{v} branche(s).",
+      "stack": "sum",
+      "forms": ["graine", "echarde", "ronce_vive"],
+      "angle": 0.42,
+      "factor": 0.6
+    },
+    "ricochet": {
+      "name": "Ricochet",
+      "text": "Le projectile rebondit vers un autre ennemi : +{v} rebond(s).",
+      "stack": "sum",
+      "forms": ["graine", "echarde", "ronce_vive"],
+      "reach": 240,
+      "factor": 0.8
+    },
+    "eclat": {
+      "name": "Éclat",
+      "text": "Un ennemi tué par l'attaque éclate en épines ({p} % des dégâts).",
+      "stack": "sum",
+      "count": 6,
+      "speed": 430,
+      "life": 0.36
+    },
+    "saignement": {
+      "name": "Saignement",
+      "text": "Chaque coup fait saigner ({p} % des dégâts par seconde).",
+      "stack": "sum",
+      "duration": 4
+    },
+    "enracine": {
+      "name": "Enracinement",
+      "text": "{p} % de chances d'enraciner l'ennemi touché.",
+      "stack": "sum",
+      "cap": 0.6,
+      "duration": 0.8
+    },
+    "trainee": {
+      "name": "Traînée d'épines",
+      "text": "Le projectile sème des épines au sol ({p} % des dégâts par seconde).",
+      "stack": "sum",
+      "forms": ["graine", "echarde", "ronce_vive"],
+      "every": 56,
+      "radius": 18,
+      "duration": 1.6,
+      "tick": 0.4,
+      "max": 40
+    },
+    "renforcee": {
+      "name": "Attaque renforcée",
+      "text": "Une attaque sur {n} est renforcée (dégâts ×{f}, plus grande).",
+      "stack": "min",
+      "factor": 2.0,
+      "size": 1.5,
+      "extra": 2
+    },
+    "taille": {
+      "name": "Taille",
+      "text": "Attaque plus grande : +{p} %.",
+      "stack": "sum"
+    },
+    "portee": {
+      "name": "Portée",
+      "text": "Portée de l'attaque : +{p} %.",
+      "stack": "sum"
+    },
+    "repetition": {
+      "name": "Répétition",
+      "text": "L'attaque frappe {v} fois de plus.",
+      "stack": "sum",
+      "delay": 0.14
+    },
+    "volee": {
+      "name": "Volée",
+      "text": "Une attaque sur {n} part en couronne tout autour de toi.",
+      "stack": "min",
+      "count": 10
+    },
+    "poison": {
+      "name": "Poison",
+      "text": "Chaque coup empoisonne ({p} % des dégâts par seconde).",
+      "stack": "sum",
+      "duration": 3
+    }
+  }
+}

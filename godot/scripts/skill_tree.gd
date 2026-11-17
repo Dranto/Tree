@@ -16,9 +16,10 @@ const RING_GAP := 110.0
 const SEED := 20261109
 
 ## Types de nœuds qu'une grappe peut contenir.
-const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "graft", "withered"]
+## « attack » : nœud qui change la forme ou le comportement de l'attaque de base (attack.gd).
+const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "graft", "withered", "attack"]
 ## Nom par défaut d'un nœud de grappe sans « name ».
-const DEFAULT_NAME := {"graft": "Emplacement de greffe", "withered": "Nœud flétri", "mastery": "Maîtrise", "small": "Nœud"}
+const DEFAULT_NAME := {"graft": "Emplacement de greffe", "withered": "Nœud flétri", "mastery": "Maîtrise", "small": "Nœud", "attack": "Attaque"}
 ## Distances de dégagement autour d'une grappe, en unités d'anneau : un nœud généré plus proche
 ## que CLEAR_NODE d'un nœud de grappe (ou que CLEAR_LINK d'un de ses liens) est écarté ; un lien
 ## généré qui passe à moins de CLEAR_EDGE d'un nœud de grappe est retiré.
@@ -294,6 +295,13 @@ func _cluster_node(id: int, bi: int, cluster: String, cn: Dictionary, pos: Vecto
 	node["requires_flag"] = str(cn.get("requires_flag", ""))
 	node["requires_text"] = str(cn.get("requires_text", ""))
 	node["excludes"] = _list(cn.get("excludes"))
+	# Nœud d'attaque : la forme qu'il donne (vide s'il n'ajoute que des modificateurs), pour son icône
+	# Art.icon("attaque_<forme>") dans l'arbre.
+	node["attack_form"] = ""
+	if kind == "attack":
+		for e in effects:
+			if e is Dictionary and e.has("attack_form"):
+				node["attack_form"] = str(e["attack_form"])
 	if kind == "mutation" or kind == "mastery":
 		for ch in _list(cn.get("choices")):
 			if ch is Dictionary:
@@ -433,6 +441,7 @@ func _make(id: int, ring: int, branch: int, kind: String, pos: Vector2, nm: Stri
 		"uid": "root" if id == 0 else "",
 		# Champs des nœuds de grappe (vides pour un nœud généré).
 		"cluster": "", "local": "", "choices": [], "mutates": "", "requires_flag": "", "requires_text": "", "excludes": [],
+		"attack_form": "",
 	}
 
 

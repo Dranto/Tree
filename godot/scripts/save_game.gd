@@ -13,6 +13,9 @@
 ##             "life_map": <PNG en base64>, "flowers": [[x, y, couleur, taille, pétales], …]}
 ## }
 ##
+## L'attaque de base (forme et modificateurs, attack.gd) n'est pas sauvegardée : elle se recalcule
+## depuis les nœuds appris, les choix et les greffes.
+##
 ## Tolérance à l'évolution du jeu :
 ## - les nœuds sont enregistrés par uid ; un uid disparu ou un nœud qui n'est plus relié
 ##   à la graine est ignoré et son point est rendu (voir Game.restore_allocation) ;

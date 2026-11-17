@@ -27,11 +27,12 @@ const Content = preload("res://scripts/content.gd")
 
 const RADIUS := {
 	"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0,
-	"skill": 23.0, "mutation": 20.0, "mastery": 19.0, "graft": 17.0, "withered": 18.0,
+	"skill": 23.0, "mutation": 20.0, "mastery": 19.0, "graft": 17.0, "withered": 18.0, "attack": 20.0,
 }
 const KIND_LABEL := {
 	"root": "Origine", "small": "Nœud", "notable": "Nœud notable", "keystone": "Nœud clé",
 	"skill": "Compétence", "mutation": "Mutation", "mastery": "Maîtrise", "graft": "Emplacement de greffe", "withered": "Nœud flétri",
+	"attack": "Attaque de base",
 }
 ## Couleurs de la cendre qui couvre un nœud flétri tant qu'il n'est pas libéré.
 const ASH := Color(0.56, 0.55, 0.52)
@@ -61,7 +62,7 @@ const LOD_NEAR := 0.8
 ## Taille minimale à l'écran (en pixels) des nœuds importants, pour qu'ils restent visibles dézoomés.
 const MIN_SCREEN_RADIUS := {
 	"root": 9.0, "keystone": 8.0, "notable": 5.0, "small": 0.0,
-	"skill": 7.0, "mutation": 6.0, "mastery": 6.0, "graft": 5.0, "withered": 5.0,
+	"skill": 7.0, "mutation": 6.0, "mastery": 6.0, "graft": 5.0, "withered": 5.0, "attack": 6.0,
 }
 
 ## Taille des textes (pixels à l'écran, quel que soit le zoom).
@@ -834,7 +835,7 @@ func _draw_world(c: CanvasItem) -> void:
 			c.draw_polyline(crown, Color(col, 0.55 if st != "locked" else 0.22), maxf(1.5, w))
 		var ic := Color(0.06, 0.08, 0.07, 0.9) if st == "owned" else Color(col.r, col.g, col.b, 0.9 if st == "available" else 0.55)
 		match kind:
-			"notable", "keystone", "skill":
+			"notable", "keystone", "skill", "attack":
 				if level == LOD_CLOSE:
 					TreeArt.node_icon(c, icon_of(n), p, r * (0.66 if kind == "notable" else 0.6), st, col)
 				elif kind == "notable":
@@ -878,6 +879,9 @@ func shape_points(kind: String, p: Vector2, r: float) -> PackedVector2Array:
 		"mastery":
 			var h := r * 0.9
 			pts = PackedVector2Array([p + Vector2(-h, -h), p + Vector2(h, -h), p + Vector2(h, h), p + Vector2(-h, h)])
+		"attack":
+			# Nœud d'attaque : une pointe de flèche (dessin provisoire, la tâche D le reprend).
+			pts = PackedVector2Array([p + Vector2(0, -r * 1.2), p + Vector2(r * 1.05, r * 0.25), p + Vector2(r * 0.5, r * 0.95), p + Vector2(-r * 0.5, r * 0.95), p + Vector2(-r * 1.05, r * 0.25)])
 	return pts
 
 

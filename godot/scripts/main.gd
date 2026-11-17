@@ -51,6 +51,9 @@ var fx
 var screen_fx
 ## Signatures visuelles des attaques du héros (skill_fx.gd).
 var skill_fx: SkillFx
+## Attaque de base : signatures (fouet, fourche, ricochet…) et zones au sol (ronces vives, traînée),
+## voir attack_fx.gd. C'est le nœud du dessus ; son jumeau du sol est sous les acteurs.
+var attack_fx: AttackFx
 var player
 var hud
 var tree_ui
@@ -157,6 +160,9 @@ func _ready() -> void:
 	var sfx_pair := SkillFx.make_pair()
 	add_child(sfx_pair[0])
 	skill_fx = sfx_pair[1]
+	var afx_pair := AttackFx.make_pair(self)
+	add_child(afx_pair[0])
+	attack_fx = afx_pair[1]
 	# Repère de destination du déplacement au clic droit (mode « moba »), sous les acteurs.
 	move_marker = MoveMarker.new()
 	move_marker.main = self
@@ -171,6 +177,7 @@ func _ready() -> void:
 	projectiles_layer = Node2D.new()
 	add_child(projectiles_layer)
 	add_child(skill_fx)
+	add_child(attack_fx)
 	fx = Fx.new()
 	fx.main = self
 	add_child(fx)
