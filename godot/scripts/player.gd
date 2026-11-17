@@ -11,6 +11,8 @@ const HOME_LIFE := 0.45
 ## Statistique de dégâts de chaque famille d'attaque (champ « tags » de skills.json).
 const TAG_STATS := {"corps_a_corps": "melee_damage", "projectile": "projectile_damage", "zone": "area_damage"}
 const Content = preload("res://scripts/content.gd")
+## Attaque de base : forme et modificateurs donnés par l'arbre (attack.gd, data/attack.json).
+const AttackScript = preload("res://scripts/attack.gd")
 ## Déplacement à la souris (Settings.move_mode).
 ## « curseur » : zone morte autour du héros (il s'arrête quand la souris est tout près), puis la
 ## vitesse monte jusqu'au plein régime FOLLOW_FULL pixels plus loin. Assez large pour viser sans bouger.
@@ -24,6 +26,8 @@ var main
 var radius := 14.0
 var hp := 100.0
 var fire_cd := 0.0
+## État de tir de l'attaque de base (compteur d'attaques, tirs en file), tenu par attack.gd.
+var attack_rt: Dictionary = {}
 var dash_cd := 0.0
 var dash_time := 0.0
 var dash_dir := Vector2.RIGHT
@@ -356,9 +360,10 @@ func _physics_process(delta: float) -> void:
 		regen *= 3.0
 	heal(regen * delta)
 
+	AttackScript.step(self, delta)
 	if want_attack and fire_cd <= 0.0:
-		_shoot(s)
-		fire_cd = 1.0 / s["fire_rate"]
+		AttackScript.fire(self, call("auto_target") if has_method("auto_target") else null)
+		fire_cd = AttackScript.interval(s)
 
 	for k in want:
 		if Game.has_key(k) and cds.get(k, 1.0) <= 0.0:
@@ -410,18 +415,6 @@ func fighting_at_home() -> bool:
 	if not main.has_method("region_at"):
 		return false
 	return main.region_at(position) == "ronce" and main.ground.life_at(position) > HOME_LIFE
-
-
-func _shoot(s: Dictionary) -> void:
-	Sfx.play("tir")
-	var n: int = s["projectiles"]
-	var spread := 0.14
-	for i in n:
-		var a := aim.angle() + (i - (n - 1) / 2.0) * spread
-		var dir := Vector2.from_angle(a)
-		main.spawn_projectile(position + dir * 18.0, dir * 640.0, current_damage() * s["projectile_damage"], s["pierce"], s["projectile_size"])
-	shoot_anim = SHOOT_ANIM
-	_sig("graine_depart", {"pos": position + aim * radius * 1.5, "dir": aim})
 
 
 func _cast_nova(s: Dictionary) -> void:

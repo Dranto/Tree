@@ -17,6 +17,7 @@ signal plan_changed
 const Content = preload("res://scripts/content.gd")
 const Effects = preload("res://scripts/effects.gd")
 const SkillTree = preload("res://scripts/skill_tree.gd")
+const AttackScript = preload("res://scripts/attack.gd")
 
 ## Drapeau de Game.flags qui porte le plan : les uid des nœuds prévus, séparés par des virgules.
 const FLAG := "plan_arbre"
@@ -24,6 +25,7 @@ const UNDO_MAX := 50
 const KIND_WORDS := {
 	"root": "origine graine", "small": "noeud", "notable": "notable", "keystone": "cle",
 	"skill": "competence", "mutation": "mutation", "mastery": "maitrise", "graft": "greffe emplacement", "withered": "fletri cendre",
+	"attack": "attaque",
 }
 const ACCENTS := {
 	"à": "a", "â": "a", "ä": "a", "ç": "c", "é": "e", "è": "e", "ê": "e", "ë": "e", "î": "i", "ï": "i",
@@ -277,12 +279,14 @@ func simulate(add: Array = [], remove: Array = [], grafts_override = null) -> Di
 	engine.rebuild(nodes)
 	for k in engine.skills:
 		keys[k] = true
-	return {"stats": engine.stats, "skills": engine.skills, "keys": keys, "nodes": set.size()}
+	return {"stats": engine.stats, "skills": engine.skills, "keys": keys, "nodes": set.size(), "attack": engine.attack_state()}
 
 
-## Différences de statistiques (avant → après) si l'on apprenait « add » et oubliait « remove ».
+## Différences de statistiques (avant → après) si l'on apprenait « add » et oubliait « remove »,
+## suivies des changements de l'attaque de base (forme, modificateurs : attack.gd).
 func preview(add: Array = [], remove: Array = []) -> Array:
-	return diff(game.effects.stats, simulate(add, remove)["stats"])
+	var sim := simulate(add, remove)
+	return diff(game.effects.stats, sim["stats"]) + AttackScript.diff(game.effects.attack_state(), sim["attack"])
 
 
 ## Différences de statistiques si la greffe « graft » était posée dans l'emplacement « slot »
@@ -295,7 +299,9 @@ func preview_graft(slot: int, graft: String) -> Array:
 	placed[game.tree.nodes[slot]["uid"]] = graft
 	var add: Array = [] if game.allocated.has(slot) else [slot]
 	var before: Dictionary = game.effects.stats if add.is_empty() else simulate(add)["stats"]
-	return diff(before, simulate(add, [], placed)["stats"])
+	var attack_before: Dictionary = game.effects.attack_state() if add.is_empty() else simulate(add)["attack"]
+	var after := simulate(add, [], placed)
+	return diff(before, after["stats"]) + AttackScript.diff(attack_before, after["attack"])
 
 
 ## Liste des statistiques qui changent entre deux jeux de valeurs, dans l'ordre de stats.json :
