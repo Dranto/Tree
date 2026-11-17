@@ -67,9 +67,13 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(REFERENCE_DIR))
 
-	# Déplacement par défaut (suivre le curseur), quelles que soient les options du poste : l'aide
-	# de départ des captures en dépend. Sans mouvement de souris, le héros ne la suit pas.
-	Settings.move_mode = "curseur"
+	# Commandes par défaut (clavier, visée automatique, clics et A E R F), quelles que soient les
+	# options du poste : l'aide de départ et la barre des captures en dépendent.
+	Settings.move_mode = Settings.MOVE_MODE_DEFAULT
+	Settings.aim_mode = "auto"
+	Settings.bindings = Settings.BINDING_DEFAULTS.duplicate()
+	Settings.moba_main_2_key = Settings.MOBA_MAIN_2_DEFAULT
+	Settings.apply_bindings()
 	main = MainScene.instantiate()
 	# Le robot du mode autotest joue à la place de la souris, sans ses captures ni sa fin de partie.
 	# Activé avant l'ajout à la scène : la partie ne lit ni n'écrit aucune sauvegarde.
@@ -744,7 +748,7 @@ func _scenario_interactions() -> void:
 	await _frames(30)
 	await _shot("interaction_destination")
 	main.player.clear_destination()
-	Settings.move_mode = "curseur"
+	Settings.move_mode = Settings.MOVE_MODE_DEFAULT
 	await _frames(15)
 	# Transitions : ouverture de l'arbre (avec son onde de sève), puis mort et renaissance.
 	main.tree_ui.play_intro = true

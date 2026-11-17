@@ -1,4 +1,4 @@
-## Panneau d'options : volume, plein écran, aide de départ, difficulté, déplacement, touches de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
+## Panneau d'options : volume, plein écran, aide de départ, difficulté, déplacement, visée, commandes de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
 extends PanelContainer
 
 signal closed
@@ -20,10 +20,19 @@ var difficulty_hint: Label
 var back_button: Button
 var move_select: OptionButton
 var move_hint: Label
-## Boutons des touches de la barre (un par emplacement) et emplacement en attente d'une touche.
+var aim_select: OptionButton
+var aim_hint: Label
+## Boutons des commandes de la barre (un par emplacement, plus la touche du clic droit en mode
+## « moba », MOBA_ROW) et emplacement en attente d'une touche ou d'un clic.
 var slot_buttons: Array = []
 var listening := -1
 var keys_hint: Label
+var _scroll: ScrollContainer
+var _col: VBoxContainer
+## Marge laissée au-dessus et au-dessous du panneau.
+const SCREEN_MARGIN := 40.0
+const MOBA_ROW := 6
+const SLOT_LABELS := ["Compétence principale 1", "Compétence principale 2", "Compétence secondaire 1", "Compétence secondaire 2", "Compétence secondaire 3", "Compétence secondaire 4"]
 
 
 func _ready() -> void:
@@ -31,7 +40,15 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(520, 0)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 18)
-	add_child(col)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Le panneau dépasse la hauteur de l'écran en 1280x720 : il défile (molette ou focus).
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.follow_focus = true
+	_scroll.add_child(col)
+	_col = col
+	add_child(_scroll)
+	get_viewport().size_changed.connect(_fit)
 
 	var title := Label.new()
 	title.text = "Options"
@@ -135,21 +152,43 @@ func _ready() -> void:
 	col.add_child(move_hint)
 	_update_move_mode()
 
+	# Visée de l'attaque automatique : l'ennemi le plus proche du curseur, ou toujours le curseur.
+	var aim_row := HBoxContainer.new()
+	aim_row.add_theme_constant_override("separation", 14)
+	col.add_child(aim_row)
+	var aim_name := Label.new()
+	aim_name.text = "Visée"
+	aim_name.custom_minimum_size = Vector2(110, 0)
+	aim_row.add_child(aim_name)
+	aim_select = OptionButton.new()
+	aim_select.focus_mode = Control.FOCUS_ALL
+	aim_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for id in Settings.AIM_MODES:
+		aim_select.add_item(Settings.AIM_MODE_NAMES[id])
+	aim_select.item_selected.connect(_on_aim_mode)
+	aim_row.add_child(aim_select)
+	aim_hint = Label.new()
+	aim_hint.add_theme_font_size_override("font_size", 13)
+	aim_hint.add_theme_color_override("font_color", Color(0.7, 0.75, 0.7))
+	aim_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(aim_hint)
+	_update_aim_mode()
+
 	var keys_title := Label.new()
-	keys_title.text = "Touches de la barre de compétences"
+	keys_title.text = "Commandes des compétences"
 	col.add_child(keys_title)
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 8)
 	col.add_child(grid)
-	for i in Settings.SLOT_COUNT:
+	for i in Settings.SLOT_COUNT + 1:
 		var l := Label.new()
-		l.text = "Emplacement %d  (%d ou" % [i + 1, i + 1]
+		l.text = "Principale 2, mode MOBA" if i == MOBA_ROW else SLOT_LABELS[i].replace("Compétence p", "P").replace("Compétence s", "S")
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(l)
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(76, 0)
+		b.custom_minimum_size = Vector2(100, 0)
 		b.focus_mode = Control.FOCUS_ALL
 		b.pressed.connect(_listen.bind(i))
 		grid.add_child(b)
@@ -214,36 +253,57 @@ func _listen(i: int) -> void:
 func _update_keys() -> void:
 	for i in slot_buttons.size():
 		var b: Button = slot_buttons[i]
-		b.text = "…" if listening == i else Settings.key_name(Settings.slot_keys[i]) + ")"
-	if listening >= 0:
-		keys_hint.text = "Appuie sur une touche pour l'emplacement %d (Échap : annuler, Retour arrière : aucune)." % (listening + 1)
+		if listening == i:
+			b.text = "…"
+		elif i == MOBA_ROW:
+			b.text = Settings.code_name(Settings.moba_main_2_key)
+		else:
+			var digit: int = Settings.SLOT_DIGITS[i]
+			var name := Settings.code_name(Settings.bindings[i])
+			b.text = name if digit == KEY_NONE else "%s (ou %s)" % [name, Settings.key_name(digit)]
+	if listening == MOBA_ROW:
+		keys_hint.text = "Appuie sur une touche pour la compétence principale 2 en mode MOBA (Échap : annuler)."
+	elif listening >= 0:
+		keys_hint.text = "Appuie sur une touche ou un bouton de la souris pour : %s (Échap : annuler, Retour arrière : aucune)." % SLOT_LABELS[listening].to_lower()
 	elif keys_hint.text.begins_with("Appuie"):
 		keys_hint.text = ""
 
 
-## Pendant l'attente d'une touche : la touche pressée est assignée à l'emplacement, sauf si
-## une autre commande du jeu (déplacement, esquive, arbre) l'utilise déjà.
+## Pendant l'attente d'une commande : la touche ou le bouton de souris pressé est assigné à
+## l'emplacement, sauf si une autre commande du jeu (déplacement, esquive, arbre) l'utilise déjà.
+## La ligne du mode MOBA n'accepte qu'une touche (le clic droit y sert à marcher).
 func _input(event: InputEvent) -> void:
 	if listening < 0 or not visible:
 		return
+	var code := KEY_NONE
 	var k := event as InputEventKey
-	if k == null or not k.pressed or k.echo:
+	var m := event as InputEventMouseButton
+	if k != null and k.pressed and not k.echo:
+		code = k.physical_keycode
+	elif m != null and m.pressed and listening != MOBA_ROW and m.button_index in Settings.MOUSE_BUTTONS:
+		code = -m.button_index
+	else:
 		return
 	get_viewport().set_input_as_handled()
 	var i := listening
 	listening = -1
-	if k.physical_keycode == KEY_ESCAPE:
+	if code == KEY_ESCAPE:
 		pass
-	elif k.physical_keycode == KEY_BACKSPACE:
-		Settings.set_slot_key(i, KEY_NONE)
+	elif code == KEY_BACKSPACE and i != MOBA_ROW:
+		Settings.set_binding(i, KEY_NONE)
 		Settings.save_settings()
-	elif Settings.key_owner(k.physical_keycode) != "":
-		keys_hint.text = "%s est déjà utilisée par une autre commande." % Settings.key_name(k.physical_keycode)
+	elif code > 0 and Settings.key_owner(code) != "":
+		keys_hint.text = "%s est déjà utilisée par une autre commande." % Settings.code_name(code)
+	elif i == MOBA_ROW:
+		Settings.set_moba_main_2_key(code)
+		Settings.save_settings()
+		keys_hint.text = ""
 	else:
-		Settings.set_slot_key(i, k.physical_keycode)
+		Settings.set_binding(i, code)
 		Settings.save_settings()
 		keys_hint.text = ""
 	_update_keys()
+	_update_move_mode()
 
 
 func _on_difficulty(index: int) -> void:
@@ -268,6 +328,17 @@ func _update_move_mode() -> void:
 	move_hint.text = Settings.move_mode_text(Settings.move_mode)
 
 
+func _on_aim_mode(index: int) -> void:
+	Settings.set_aim_mode(Settings.AIM_MODES[index])
+	Settings.save_settings()
+	_update_aim_mode()
+
+
+func _update_aim_mode() -> void:
+	aim_select.select(maxi(0, Settings.AIM_MODES.find(Settings.aim_mode)))
+	aim_hint.text = Settings.aim_mode_text(Settings.aim_mode)
+
+
 func _on_shake(v: float) -> void:
 	Settings.set_shake(v)
 	Settings.save_settings()
@@ -276,6 +347,22 @@ func _on_shake(v: float) -> void:
 
 func _update_shake_label() -> void:
 	shake_label.text = "Aucune" if shake_slider.value <= 0.001 else "%d %%" % roundi(shake_slider.value * 100.0)
+
+
+## Hauteur du panneau : tout son contenu s'il tient à l'écran, sinon l'écran moins une marge.
+func _fit() -> void:
+	if _scroll == null or not is_inside_tree():
+		return
+	var h: float = get_viewport_rect().size.y - 2.0 * SCREEN_MARGIN
+	var want := _col.get_combined_minimum_size()
+	_scroll.custom_minimum_size = Vector2(want.x, minf(want.y, h))
+	reset_size()
+	# Toujours centré (ancres au centre) : offsets symétriques autour du centre.
+	var sz := get_combined_minimum_size()
+	offset_left = -sz.x / 2.0
+	offset_right = sz.x / 2.0
+	offset_top = -sz.y / 2.0
+	offset_bottom = sz.y / 2.0
 
 
 func open() -> void:
@@ -293,6 +380,9 @@ func open() -> void:
 	reduce_box.button_pressed = Settings.reduce_effects
 	_update_difficulty()
 	_update_move_mode()
+	_update_aim_mode()
+	_fit()
+	_scroll.scroll_vertical = 0
 	volume_slider.grab_focus()
 
 
