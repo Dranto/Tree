@@ -29,6 +29,8 @@ var save
 var main
 var bot
 var seed_n := 1
+## Région jouée (« -- --region=<id> », Ronce par défaut) et ses drapeaux.
+var region := "ronce"
 var path := ""
 var t := 0.0
 var last_progress := 0.0
@@ -85,11 +87,20 @@ func _run() -> void:
 	path = "user://tests/zone_%d.json" % seed_n
 	save.delete_save(path)
 	game.reset()
-	bot = load("res://scripts/zone_bot.gd").new()
+	region = load("res://scripts/main.gd").focus_region()
+	# Le build du robot : « fouet » pour Ronce, sinon le premier build de la branche de la région.
+	var build := "fouet"
+	if region != "ronce":
+		var all: Dictionary = load("res://scripts/build_bot.gd").load_all()
+		for k in all:
+			if str(all[k].get("branch", "")) == load("res://scripts/regions.gd").branch_of(region):
+				build = k
+				break
+	bot = load("res://scripts/zone_bot.gd").new(build, region)
 	await _new_main()
 	obj.completed.connect(_on_completed)
 	print("ZONE graine %d : nouvelle partie" % seed_n)
-	check(obj.current().get("id", "") in ["premier_noeud", "sanctuaire"], "nouvelle partie : l'aventure commence par le premier nœud")
+	check(obj.current(region).get("id", "") == obj.main_list()[0]["id"] or obj.current(region).get("region", "") == region, "nouvelle partie : l'aventure commence par le premier nœud")
 	check(main.hud.hint_visible(), "l'aide de départ est affichée")
 
 	while true:
@@ -149,7 +160,7 @@ func _track() -> void:
 
 
 func _finished() -> bool:
-	if not obj.current().is_empty() or not game.flags.get("fin_ronce_vue", false):
+	if not obj.current(region).is_empty() or not game.flags.get(region + "_fin_vue", false):
 		return false
 	for g in main.orbs_layer.get_children():
 		if _is_graft(g):
@@ -224,8 +235,8 @@ func _coherence(where: String) -> void:
 	for o in obj.list():
 		if obj.condition_met(o) and not obj.is_done(o["id"]):
 			problems.append("« %s » rempli mais pas accompli" % o["id"])
-	var purified: bool = game.flags.get("ronce_coeur_purifie", false)
-	var beaten: bool = game.flags.get("ronce_boss_vaincu", false)
+	var purified: bool = game.flags.get(main.heart.flag, false)
+	var beaten: bool = game.flags.get(main.arena.flag, false)
 	if purified != (main.heart.state == "purifie"):
 		problems.append("Cœur %s, drapeau %s" % [main.heart.state, purified])
 	if beaten and main.arena.state != "vaincue":
@@ -423,7 +434,7 @@ func _resolutions(where: String) -> void:
 func _ending() -> void:
 	var q = main.quest_ui
 	check(not main.hud.get_parent().visible and not q._tracker_layer.visible, "fin de la tranche : rien de l'interface de jeu par-dessus")
-	check(paused and game.flags.get("fin_ronce_vue", false), "fin de la tranche : jeu en pause, fin notée comme vue")
+	check(paused and game.flags.get(region + "_fin_vue", false), "fin de la tranche : jeu en pause, fin notée comme vue")
 	# Une greffe ramassée pendant la séquence de fin (transition) n'est pas perdue.
 	for g in main.orbs_layer.get_children():
 		if _is_graft(g) and not g.is_queued_for_deletion():
@@ -441,9 +452,11 @@ func _ending() -> void:
 func _final() -> void:
 	print("Bilan")
 	for o in obj.main_list():
-		check(obj.is_done(o["id"]), "objectif principal « %s » accompli" % o["title"])
-	check(game.flags.get("fin_ronce_vue", false) and not obj.ending_due(), "fin vue une seule fois")
-	check(game.has_graft("greffe_mere"), "greffe de la Mère-Ronce dans l'inventaire")
+		if str(o.get("region", "")) in ["", region]:
+			check(obj.is_done(o["id"]), "objectif principal « %s » accompli" % o["title"])
+	check(game.flags.get(region + "_fin_vue", false) and not obj.ending_due(), "fin vue une seule fois")
+	var boss_graft := str(load("res://scripts/content.gd").rewards().get("boss", {}).get(region, {}).get("graft", ""))
+	check(boss_graft == "" or game.has_graft(boss_graft), "greffe du boss dans l'inventaire")
 	check(done_events.has("mort_siege") and done_events.has("mort_boss") and done_events.has("reprise_boss"), "morts et reprises provoquées en route (%s)" % ", ".join(done_events.keys()))
 	check(reloads >= 8, "au moins 8 reprises (%d)" % reloads)
 	var deaths: int = deaths_before + main.deaths

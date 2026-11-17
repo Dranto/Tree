@@ -1,11 +1,12 @@
-## Robot « zone complète » : joue la région de Ronce d'une nouvelle partie jusqu'à la Mère-Ronce,
-## en suivant l'objectif principal en cours (Objectives.current), comme un joueur qui lit le cadre
-## d'objectif. Utilisé par tests/zone_test.gd (tools/zone.sh), qui le fait passer par des
+## Robot « zone complète » : joue une région (celle de « -- --region=<id> », Ronce par défaut) d'une
+## nouvelle partie jusqu'à son boss, en suivant l'objectif principal en cours de cette région
+## (Objectives.current(region)), comme un joueur qui lit le cadre d'objectif. Utilisé par tests/zone_test.gd (tools/zone.sh), qui le fait passer par des
 ## sauvegardes, des reprises et des morts en route.
 ##
 ## Le robot gagne de l'expérience plus vite qu'un joueur (LEVEL_SECONDS par niveau, en plus des
 ## Flétris vaincus) : le but est la fiabilité de l'aventure, pas l'équilibrage (tools/balance.sh).
-## Il apprend d'abord le chemin vers le nœud clé de Ronce le plus proche, puis le build « fouet ».
+## Il apprend d'abord le chemin vers le nœud clé le plus proche de la branche de la région, puis
+## son build (« fouet » pour Ronce).
 ##
 ## Sans état dans le jeu : il ne garde que ses mesures, et survit donc aux reprises (le test lui
 ## rattache la nouvelle scène de jeu).
@@ -15,6 +16,7 @@ const BuildBot = preload("res://scripts/build_bot.gd")
 const TreePlanner = preload("res://scripts/tree_planner.gd")
 const Content = preload("res://scripts/content.gd")
 const GraftPickup = preload("res://scripts/graft_pickup.gd")
+const Regions = preload("res://scripts/regions.gd")
 
 ## Secondes de jeu par niveau gagnées en plus des ennemis vaincus.
 const LEVEL_SECONDS := 18.0
@@ -26,6 +28,8 @@ const FLEE_BELOW := 0.35
 const BACK_ABOVE := 0.8
 
 var builder
+## Région jouée.
+var region := "ronce"
 ## Ce que fait le robot en ce moment (journal du test).
 var goal := ""
 var recovering := false
@@ -39,7 +43,8 @@ var _t := 0.0
 var hold := false
 
 
-func _init(build := "fouet") -> void:
+func _init(build := "fouet", reg := "") -> void:
+	region = reg if reg != "" else ("ronce" if Regions.exists("ronce") else Regions.ids()[0])
 	var all := BuildBot.load_all()
 	builder = BuildBot.new()
 	builder.name = build
@@ -48,9 +53,10 @@ func _init(build := "fouet") -> void:
 	builder.start_level = 1
 
 
-## Nœud clé de Ronce le plus proche des nœuds appris (uid), "" s'il y en a déjà un d'appris.
+## Nœud clé de la branche de la région le plus proche des nœuds appris (uid), "" s'il y en a déjà
+## un d'appris.
 func _nearest_keystone() -> String:
-	var ronce: int = Content.tree().get("branches", []).find("ronce")
+	var ronce: int = Content.tree().get("branches", []).find(Regions.branch_of(region))
 	var best := ""
 	var best_len := 1 << 30
 	for n in Game.tree.nodes:
@@ -91,23 +97,25 @@ func _goal_pos(main, p):
 		if g is GraftPickup and not g.is_queued_for_deletion() and g.position.distance_to(p.position) < 900.0:
 			goal = "greffe " + g.graft_id
 			return g.position
-	var o: Dictionary = Objectives.current()
+	var o: Dictionary = Objectives.current(region)
 	var id: String = o.get("id", "")
-	match id:
-		"premier_noeud", "noeud_cle":
+	# Ce qu'il faut faire se lit dans la cible de l'objectif : rien (apprendre), un lieu, le Cœur
+	# ou l'arène.
+	match str(o.get("target", {}).get("type", "none")) if not o.is_empty() else "fini":
+		"none", "seed":
 			goal = "apprendre (%s)" % id
 			return null
-		"sanctuaire", "autel":
+		"group":
 			goal = id
 			return Objectives.target_pos(o)
-		"coeur":
+		"heart":
 			if Game.level < HEART_LEVEL:
 				goal = "monter de niveau avant le Cœur"
 				return null
 			goal = "siège du Cœur"
 			var c: Vector2 = main.heart.center
 			return c - c.normalized() * 130.0
-		"boss":
+		"arena":
 			if Game.level < BOSS_LEVEL and not main.arena.in_combat():
 				goal = "monter de niveau avant la Mère-Ronce"
 				return null

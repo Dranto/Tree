@@ -73,7 +73,7 @@ func _setup() -> void:
 	phase_limits = PHASE_LIMITS
 	rooted_cadence = ROOTED_CADENCE
 	root_immunity = ROOT_IMMUNITY
-	bleed_stacks = BLEED_STACKS
+	max_bleed_stacks = BLEED_STACKS
 
 
 func _projectiles_step(delta: float) -> void:

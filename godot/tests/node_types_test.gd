@@ -218,7 +218,7 @@ func _run() -> void:
 	var want_stats: Dictionary = game.stats.duplicate()
 	var want_uids: Array = game.allocated_uids()
 	var data: Dictionary = save.capture(null)
-	check(data["version"] == 3 and data["tree"]["choices"].size() == 2 and data["tree"]["grafts"].size() == 1, "format 3 : choix et greffes enregistrés")
+	check(data["version"] == 4 and data["tree"]["choices"].size() == 2 and data["tree"]["grafts"].size() == 1, "format 4 : choix et greffes enregistrés")
 	_write(data)
 	game.reset()
 	check(game.choices.is_empty() and game.grafts.is_empty(), "une nouvelle partie n'a ni choix ni greffe")

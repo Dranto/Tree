@@ -2,3 +2,4 @@
 extends Node2D
 
 var id := ""
+var region := "ronce"

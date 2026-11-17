@@ -22,6 +22,8 @@ var main
 var kind := "autel"
 var data: Dictionary = {}
 var id := ""
+## Région de l'autel ou du secret.
+var region := ""
 var active := false
 var progress := 0.0
 var seen := 0.0
@@ -42,6 +44,7 @@ static func spawn_all(m, parent: Node) -> Array:
 			n.kind = pair[0]
 			n.data = a
 			n.id = str(a["id"])
+			n.region = str(a.get("region", ""))
 			n.position = position_of(a, m)
 			parent.add_child(n)
 			out.append(n)

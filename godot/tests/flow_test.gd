@@ -100,7 +100,7 @@ func _run() -> void:
 	obj.check()
 	check(obj.is_done("boss") and boss_done.size() == 1, "le boss vaincu accomplit son objectif")
 	q._process(q.ENDING_DELAY + 0.5)
-	check(q.ending.active and bool(game.flags.get("fin_ronce_vue", false)), "la fin se déclenche")
+	check(q.ending.active and bool(game.flags.get("ronce_fin_vue", false)), "la fin se déclenche")
 	q.ending.set_time(10.0)
 	q.ending._on_continue()
 	check(not paused_now(), "« Continuer à jouer » reprend la partie")

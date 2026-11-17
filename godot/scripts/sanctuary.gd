@@ -33,6 +33,8 @@ const SEED_SITE := {"id": "graine", "name": "de la Graine", "region": "", "dist"
 
 var main
 var id := ""
+## Région du sanctuaire ("" pour celui de la Graine).
+var region := ""
 ## Complément du nom : « sanctuaire de la Lisière ».
 var place := ""
 ## Secondes passées dans le cercle (jusqu'à LIGHT_TIME).
@@ -66,6 +68,7 @@ static func site_position(site: Dictionary) -> Vector2:
 
 func setup(site: Dictionary) -> void:
 	id = site["id"]
+	region = str(site.get("region", ""))
 	place = site["name"]
 	name = "Sanctuaire_" + id
 	# Groupe lu par les objectifs et la carte (tâche E) : chaque nœud a une propriété « id ».

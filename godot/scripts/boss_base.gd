@@ -44,7 +44,7 @@ var phase_limits: Array = [0.66, 0.33]
 ## Enraciné, il prépare ses attaques plus lentement (rooted_cadence), puis y résiste un moment.
 var rooted_cadence := 0.55
 var root_immunity := 6.0
-var bleed_stacks := 5
+var max_bleed_stacks := 5
 
 var main
 var arena
@@ -248,7 +248,7 @@ func apply_poison(dps: float, duration: float) -> void:
 	poison_time = maxf(poison_time, duration)
 
 
-## États posés par les compétences. « saignement » : dégâts par seconde, cumulable bleed_stacks
+## États posés par les compétences. « saignement » : dégâts par seconde, cumulable max_bleed_stacks
 ## fois. « enracine » : il est déjà enraciné, mais prépare ses attaques plus lentement tant que
 ## l'état dure, puis y résiste root_immunity secondes.
 func apply_status(status: String, value: float, duration: float) -> void:
@@ -259,7 +259,7 @@ func apply_status(status: String, value: float, duration: float) -> void:
 			var s: Dictionary = statuses.get(status, {"value": 0.0, "time": 0.0, "stacks": 0})
 			s["value"] = maxf(s["value"], value)
 			s["time"] = maxf(s["time"], duration)
-			s["stacks"] = mini(bleed_stacks, int(s["stacks"]) + 1)
+			s["stacks"] = mini(max_bleed_stacks, int(s["stacks"]) + 1)
 			statuses[status] = s
 		"enracine":
 			if root_immune > 0.0 or statuses.has(status):
