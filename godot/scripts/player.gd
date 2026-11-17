@@ -8,8 +8,9 @@ const DASH_TIME := 0.16
 ## les suivants les secondaires (A E R F). Commandes : Settings.slot_action(i).
 const MAX_SLOTS := 6
 ## Attaque automatique : portée (du centre du héros au bord du corps de l'ennemi). Une graine
-## vole 640 px/s pendant 1,1 s, soit environ 700 px : la portée reste en deçà pour qu'elle arrive.
-const ATTACK_RANGE := 600.0
+## vole 640 px/s pendant 1,1 s, soit environ 700 px : la portée est cette course (un ennemi qui
+## approche est touché un peu plus près).
+const ATTACK_RANGE := 700.0
 ## Changement de cible : une autre cible doit être nettement plus près du curseur (ou du héros)
 ## pour prendre la place de la cible actuelle, sinon le repère sauterait d'un ennemi à l'autre.
 const TARGET_STICK := 0.75

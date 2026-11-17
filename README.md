@@ -22,7 +22,7 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 | Journal des objectifs | J (le jeu se met en pause) |
 | Carte du monde | M (le jeu se met en pause) |
 
-L'ennemi visé par l'attaque automatique est marqué au sol par trois arcs à la couleur du héros ; quand des ennemis approchent sans être à portée (600 px), un cercle pointillé discret montre la portée.
+L'ennemi visé par l'attaque automatique est marqué au sol par trois arcs à la couleur du héros ; quand des ennemis approchent sans être à portée (700 px, la course d.une graine), un cercle pointillé discret montre la portée.
 
 **Modes de déplacement** (Options → Déplacement, enregistré avec les autres réglages ; un choix déjà enregistré est gardé) :
 
