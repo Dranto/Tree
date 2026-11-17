@@ -179,6 +179,19 @@ func binding_name(i: int) -> String:
 	return code_name(effective_binding(i))
 
 
+## Nom court de la liaison de l'emplacement i, pour la barre (« Clic G », « A »).
+func binding_short(i: int) -> String:
+	var code := effective_binding(i)
+	if code < 0:
+		match -code:
+			MOUSE_BUTTON_LEFT: return "Clic G"
+			MOUSE_BUTTON_RIGHT: return "Clic D"
+			MOUSE_BUTTON_MIDDLE: return "Clic M"
+			MOUSE_BUTTON_XBUTTON1: return "B4"
+			MOUSE_BUTTON_XBUTTON2: return "B5"
+	return code_name(code)
+
+
 ## Nom affiché d'une liaison : bouton de souris, ou touche selon la disposition du clavier.
 func code_name(code: int) -> String:
 	if code < 0:

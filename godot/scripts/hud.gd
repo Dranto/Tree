@@ -246,9 +246,9 @@ func _on_slot_input(event: InputEvent, i: int) -> void:
 
 
 ## Commandes d'un emplacement : la liaison choisie dans les options et le chiffre
-## (« Clic gauche », « A · 1 »).
+## (« Clic G », « A · 1 »).
 func slot_keys_text(i: int) -> String:
-	var name := Settings.binding_name(i)
+	var name := Settings.binding_short(i)
 	var digit: int = Settings.SLOT_DIGITS[i]
 	if digit == KEY_NONE:
 		return name
