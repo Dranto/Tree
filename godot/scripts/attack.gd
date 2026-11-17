@@ -239,7 +239,7 @@ static func step(player, delta: float) -> void:
 			q.remove_at(i)
 			# Une cible encore en vie est suivie ; sinon le tir garde sa direction.
 			var tg = shot.get("target")
-			if tg is Node2D and is_instance_valid(tg) and not tg.get("dead"):
+			if is_instance_valid(tg) and tg is Node2D and not tg.get("dead"):
 				shot["dir"] = _dir_to(player, tg)
 			_emit(player, st, shot)
 		else:
@@ -255,7 +255,7 @@ static func _dir_to(player, target) -> Vector2:
 	var at = null
 	if target is Vector2:
 		at = target
-	elif target is Node2D and is_instance_valid(target):
+	elif is_instance_valid(target) and target is Node2D:
 		at = target.position
 	elif "aim" in player:
 		return player.aim   # pas de cible : la visée du joueur (vers aim_point), comme l'ancien tir
