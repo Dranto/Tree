@@ -71,14 +71,14 @@ func _run() -> void:
 
 	print("Données")
 	var grafts := Content.grafts()
-	check(grafts.size() >= 10 and grafts.size() <= 12 and not grafts.has("greffe_test") and not grafts.has("_doc"), "%d greffes de Ronce, plus de greffe d'essai" % grafts.size())
+	check(grafts.size() >= 10 and grafts.size() <= 16 and not grafts.has("greffe_test") and not grafts.has("_doc"), "%d greffes de Ronce, plus de greffe d'essai" % grafts.size())
 	var with_play := 0
 	for id in grafts:
 		for e in grafts[id]["effects"]:
-			if e.has("on") or e.has("skill_mod"):
+			if e.has("on") or e.has("skill_mod") or e.has("attack_mod") or e.has("attack_form"):
 				with_play += 1
 				break
-	check(with_play >= 8, "%d greffes changent la façon de jouer (réaction ou transformation de compétence)" % with_play)
+	check(with_play >= 8, "%d greffes changent la façon de jouer (réaction, transformation de compétence ou de l'attaque)" % with_play)
 	var r := Content.rewards()
 	var world_points: int = int(r["boss"]["ronce"]["points"]) + int(r["coeur"]["ronce"]["points"])
 	var world_grafts := {r["boss"]["ronce"]["graft"]: true}
