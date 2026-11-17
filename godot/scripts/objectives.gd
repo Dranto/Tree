@@ -205,27 +205,30 @@ func progress(o: Dictionary) -> Array:
 func _count_flags(c: Dictionary, o := {}) -> int:
 	var n := 0
 	var skip: Array = c.get("exclude", [])
-	# « region_only » : seulement les lieux (sanctuaires, autels, secrets) de la région de l'objectif.
-	var only = _region_places(str(o.get("region", ""))) if c.get("region_only", false) else null
+	# « region_only » : sans les lieux (sanctuaires, autels, secrets) des autres régions.
+	var others = _other_places(str(o.get("region", ""))) if c.get("region_only", false) else null
 	for k in Game.flags:
 		var key := str(k)
 		# « autel_<id>_vu », « secret_<id>_vu » : aperçu seulement, pas encore ravivé ni trouvé.
 		if key.ends_with("_vu"):
 			continue
 		if key.begins_with(str(c["prefix"])) and not key in skip and bool(Game.flags[k]):
-			if only != null and not key.substr(str(c["prefix"]).length()) in only:
+			if others != null and key.substr(str(c["prefix"]).length()) in others:
 				continue
 			n += 1
 	return n
 
 
-## Identifiants des lieux d'une région : ses sanctuaires, autels et secrets.
-func _region_places(region: String) -> Dictionary:
+## Identifiants des lieux (sanctuaires, autels, secrets) des régions autres que celle-ci.
+func _other_places(region: String) -> Dictionary:
 	var out := {}
-	var d := Regions.def(region)
-	for kind in ["sanctuaries", "altars", "secrets"]:
-		for p in d.get(kind, []):
-			out[str(p.get("id", ""))] = true
+	for reg in Regions.ids():
+		if reg == region:
+			continue
+		var d := Regions.def(reg)
+		for kind in ["sanctuaries", "altars", "secrets"]:
+			for p in d.get(kind, []):
+				out[str(p.get("id", ""))] = true
 	return out
 
 
@@ -312,7 +315,8 @@ func target_pos(o: Dictionary):
 			for n in main.get_tree().get_nodes_in_group(t["group"]):
 				if Game.flags.get(str(t.get("done_prefix", "")) + str(n.get("id")), false):
 					continue
-				if reg != "" and str(n.get("region")) != reg:
+				var nr = n.get("region")
+				if reg != "" and nr != null and str(nr) != "" and str(nr) != reg:
 					continue
 				var d: float = n.position.distance_squared_to(main.player.position)
 				if d < best_d:

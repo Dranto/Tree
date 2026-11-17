@@ -75,6 +75,13 @@ func _run() -> void:
 	check(s != null and s.region == "essai", "le sanctuaire de la Halte est posé dans la région d'essai")
 	check(s != null and Regions.region_at(s.position) == "essai", "à l'intérieur de son secteur")
 
+	print("Objectifs")
+	game.flags["sanctuaire_essai_halte"] = true
+	var count := {"prefix": "sanctuaire_", "exclude": ["sanctuaire_graine"], "region_only": true}
+	check(objectives._count_flags(count, {"region": "ronce"}) == 0, "un sanctuaire d'essai ne compte pas pour les objectifs de Ronce")
+	check(objectives._count_flags(count, {"region": "essai"}) == 1, "il compte pour ceux de la région d'essai")
+	game.flags.erase("sanctuaire_essai_halte")
+
 	print("Cœur")
 	var heart = main.hearts.get("essai")
 	var arena = main.arenas.get("essai")

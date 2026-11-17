@@ -298,7 +298,7 @@ Les points passent par `Game.grant_points(n, source, clé)` : une même clé ne 
 | --- | --- |
 | `nodes` (`count`) | au moins `count` nœuds sont appris (la graine ne compte pas) |
 | `flag` (`flag`) | `Game.flags[flag]` est vrai |
-| `flag_count` (`prefix`, `count`, `exclude`, `region_only`) | au moins `count` drapeaux vrais commencent par `prefix` (sauf ceux de `exclude`) ; avec `"region_only": true`, seulement ceux des lieux de la région de l'objectif |
+| `flag_count` (`prefix`, `count`, `exclude`, `region_only`) | au moins `count` drapeaux vrais commencent par `prefix` (sauf ceux de `exclude`) ; avec `"region_only": true`, sans ceux des lieux des autres régions |
 | `counter` (`flag`, `count`) | `Game.flags[flag]` vaut au moins `count` |
 | `keystone` (`branch`) | un nœud clé de la branche est appris |
 
