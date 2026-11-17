@@ -5,6 +5,8 @@ extends SceneTree
 
 const DrawBatch = preload("res://scripts/draw_batch.gd")
 const SIZE := Vector2i(480, 360)
+## Pixels de bord tolérés par cas (arrondis des angles d'arc, voir _compare).
+const ROUNDING_PIXELS := 4
 
 var failures := 0
 
@@ -57,11 +59,12 @@ func _compare(label: String, shapes: Callable) -> void:
 			worst = maxi(worst, d)
 			if d > 0:
 				diff += 1
-	var ok := diff == 0
+	# Quelques pixels de bord peuvent basculer : Godot calcule les arcs en flottants 32 bits.
+	var ok := diff <= ROUNDING_PIXELS
 	if not ok:
 		failures += 1
-		ia.save_png("/tmp/claude-0/s/batch_%s_natif.png" % label)
-		ib.save_png("/tmp/claude-0/s/batch_%s_lot.png" % label)
+		ia.save_png("user://lot_%s_natif.png" % label)
+		ib.save_png("user://lot_%s_lot.png" % label)
 	print("LOT %-10s %s  pixels différents %d, écart max %d" % [label, "OK" if ok else "ÉCHEC", diff, worst])
 	a.queue_free()
 	b.queue_free()
@@ -92,6 +95,14 @@ func _run() -> void:
 			for j in 6:
 				pts.append(Vector2(30 + i * 55 + sin(j * 1.7 + i) * 18.0, 30 + j * 40.3 + cos(j + i) * 9.0))
 			ci.draw_polyline(pts, Color(col, 0.8), 1.0 + i * 0.8))
+	await _compare("coudes", func(ci):
+		# Coudes aigus (tiges de ronce) : l'onglet de Godot est borné.
+		for i in 10:
+			var turn := deg_to_rad([100.0, 120.0, 140.0, 145.0, 148.0, 151.0, 154.0, 157.0, 165.0, 179.0][i])
+			var b := Vector2(30 + i * 45, 120)
+			var a := b + Vector2(0, 90)
+			var c := b + Vector2.from_angle(PI / 2.0 - (PI - turn)) * 80.0
+			ci.draw_polyline(PackedVector2Array([a, b, c]), Color(col, 0.9), 2.0 + (i % 4)))
 	await _compare("arcs", func(ci):
 		for i in 10:
 			ci.draw_arc(Vector2(50 + (i % 5) * 90, 90 + (i / 5) * 170), 20.0 + i * 3.3, 0.3 * i, 0.3 * i + 1.0 + i * 0.6, 6 + i * 4, Color(col, 0.85), 1.0 + i * 0.5))

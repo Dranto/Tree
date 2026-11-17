@@ -141,6 +141,8 @@ func draw_arc(c: Vector2, r: float, a0: float, a1: float, n: int, col: Color, wi
 ## --- Tracé fidèle (exact = true) ---
 
 const CIRCLE_POINTS := 64
+## Allongement maximal d'un joint en onglet, comme Godot 4.3 (vérifié par tests/draw_batch_test.gd).
+const MITER_LIMIT := 3.0
 static var CIRCLE_TRI := _fan(CIRCLE_POINTS)
 static var _UNIT_CIRCLE := _unit_circle()
 
@@ -183,9 +185,10 @@ func _strip(pts: PackedVector2Array, col: Color, width: float) -> void:
 			t = (pts[i + 1] - pts[i]).normalized().orthogonal()
 			if i == 0:
 				prev_t = t
-		# Joint en onglet : la demi-largeur est allongée pour garder l'épaisseur dans le coude.
+		# Joint en onglet : la demi-largeur est allongée pour garder l'épaisseur dans le coude,
+		# au plus MITER_LIMIT fois (coudes aigus des tiges de ronce).
 		var m := (t + prev_t).normalized()
-		var tan := m * width * 0.5 / maxf(0.1, m.dot(t))
+		var tan := m * width * 0.5 * minf(1.0 / maxf(m.dot(t), 0.0001), MITER_LIMIT)
 		out[i * 2] = pts[i] + tan
 		out[i * 2 + 1] = pts[i] - tan
 		prev_t = t

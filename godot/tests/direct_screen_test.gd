@@ -49,7 +49,7 @@ func _run() -> void:
 				diff += 1
 				worst = maxi(worst, d)
 	if diff > 0:
-		a.save_png("/tmp/direct_texture.png")
-		b.save_png("/tmp/direct_ecran.png")
+		a.save_png("user://direct_texture.png")
+		b.save_png("user://direct_ecran.png")
 	print("DIRECT %s : %d pixels différents sur %d (écart max %d)" % ["OK" if diff == 0 else "ÉCHEC", diff, a.get_width() * a.get_height(), worst])
 	quit(0 if diff == 0 else 1)
