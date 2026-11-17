@@ -155,7 +155,7 @@ static func multiplier(player, tags: Array, branch: String) -> float:
 	var m := 1.0
 	for tag in tags:
 		m *= float(s.get(TAG_STATS.get(tag, ""), 1.0))
-	if branch == "ronce" and player != null and player.has_method("fighting_at_home") and player.fighting_at_home():
+	if branch != "" and player != null and player.has_method("fighting_at_home") and player.fighting_at_home(branch):
 		m *= 1.0 + HOME_BONUS
 	return m
 
