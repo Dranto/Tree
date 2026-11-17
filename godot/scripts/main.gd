@@ -407,24 +407,62 @@ func enemies_near(center: Vector2, radius: float, touch_body := true) -> Array:
 
 ## Évite que les Flétris s'empilent en un seul point (voisins trouvés par la grille).
 func _separate() -> void:
-	for a in enemies:
-		for b in grid.query(a.position, a.radius + Enemy.MAX_RADIUS):
-			if b.index <= a.index:
-				continue
-			var d: Vector2 = b.position - a.position
-			var min_d: float = a.radius + b.radius
-			var l2 := d.length_squared()
-			if l2 < min_d * min_d and l2 > 0.01:
-				var l := sqrt(l2)
-				var push := d / l * (min_d - l) * 0.5
-				# Un ennemi ancré (Nid) ne bouge pas : l'autre est poussé deux fois plus.
-				if a.anchored:
-					b.position += push * (0.0 if b.anchored else 2.0)
-				elif b.anchored:
-					a.position -= push * 2.0
-				else:
-					a.position -= push
-					b.position += push
+	# Même calcul, même ordre que de pousser les nœuds un à un, mais sur des tableaux locaux :
+	# lire et écrire la position d'un nœud coûte cher, et ce calcul touche des centaines de paires
+	# par pas (docs/performances.md). Les positions sont recopiées dans les nœuds à la fin.
+	var n := enemies.size()
+	var pos := PackedVector2Array()
+	var rad := PackedFloat64Array()
+	var anchored := PackedByteArray()
+	pos.resize(n)
+	rad.resize(n)
+	anchored.resize(n)
+	var cells := {}
+	for i in n:
+		var e = enemies[i]
+		pos[i] = e.position
+		rad[i] = e.radius
+		anchored[i] = 1 if e.anchored else 0
+		var key := Vector2i(floori(pos[i].x / SpatialGrid.CELL), floori(pos[i].y / SpatialGrid.CELL))
+		if cells.has(key):
+			cells[key].append(i)
+		else:
+			cells[key] = PackedInt32Array([i])
+	var moved := false
+	for i in n:
+		# Même recherche que grid.query(position, rayon + MAX_RADIUS), avec la position du moment.
+		var reach: float = rad[i] + Enemy.MAX_RADIUS
+		var c0 := pos[i] - Vector2(reach, reach)
+		var c1 := pos[i] + Vector2(reach, reach)
+		var lo := Vector2i(floori(c0.x / SpatialGrid.CELL), floori(c0.y / SpatialGrid.CELL))
+		var hi := Vector2i(floori(c1.x / SpatialGrid.CELL), floori(c1.y / SpatialGrid.CELL))
+		for cy in range(lo.y, hi.y + 1):
+			for cx in range(lo.x, hi.x + 1):
+				var list = cells.get(Vector2i(cx, cy))
+				if list == null:
+					continue
+				for j in list:
+					if j <= i:
+						continue
+					var d: Vector2 = pos[j] - pos[i]
+					var min_d: float = rad[i] + rad[j]
+					var l2 := d.length_squared()
+					if l2 < min_d * min_d and l2 > 0.01:
+						var l := sqrt(l2)
+						var push := d / l * (min_d - l) * 0.5
+						# Un ennemi ancré (Nid) ne bouge pas : l'autre est poussé deux fois plus.
+						if anchored[i]:
+							pos[j] += push * (0.0 if anchored[j] else 2.0)
+						elif anchored[j]:
+							pos[i] -= push * 2.0
+						else:
+							pos[i] -= push
+							pos[j] += push
+						moved = true
+	if moved:
+		for i in n:
+			if enemies[i].position != pos[i]:
+				enemies[i].position = pos[i]
 
 
 ## Les buissons d'épines du roncier sont des obstacles pour le joueur et les ennemis.

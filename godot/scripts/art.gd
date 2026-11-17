@@ -187,10 +187,8 @@ static func volume_circle(ci, pos: Vector2, r: float, col: Color, light := 1.0) 
 
 
 static func _xform(pts: PackedVector2Array, cen: Vector2, k: float, off: Vector2) -> PackedVector2Array:
-	var out := PackedVector2Array()
-	for q in pts:
-		out.append(cen + (q - cen) * k + off)
-	return out
+	# cen + (q - cen) * k + off pour chaque point, calculé par le moteur (chemin chaud des silhouettes).
+	return Transform2D(0.0, Vector2(k, k), 0.0, cen - cen * k + off) * pts
 
 
 ## Polygone d'une ellipse (rayons rx, ry) : sert aux ombres et aux zones vues en perspective.

@@ -76,11 +76,27 @@ func draw_polyline(pts: PackedVector2Array, col: Color, width := -1.0, _aa := fa
 	if exact:
 		_strip(pts, col, maxf(width, 1.0))
 		return
+	# Une seule forme pour toute la polyligne (mêmes sommets, même ordre que segment par segment).
 	var w := maxf(width, 1.0)
-	for i in range(1, pts.size()):
-		draw_line(pts[i - 1], pts[i], col, w)
-		if w >= 3.0 and i < pts.size() - 1:
-			_joint(pts[i], w * 0.5, col)
+	var n := pts.size()
+	var joints := w >= 3.0
+	var hex: PackedVector2Array = _DISCS[6][0]
+	var out := PackedVector2Array()
+	var tri := PackedInt32Array()
+	for i in range(1, n):
+		var a := pts[i - 1]
+		var b := pts[i]
+		if a != b:
+			var k := out.size()
+			var o := (b - a).orthogonal().normalized() * w * 0.5
+			out.append_array([a + o, b + o, b - o, a - o])
+			tri.append_array([k, k + 1, k + 2, k, k + 2, k + 3])
+		if joints and i < n - 1:
+			var k := out.size()
+			out.append_array(Transform2D(0.0, Vector2(w * 0.5, w * 0.5), 0.0, b) * hex)
+			tri.append_array([k, k + 1, k + 2, k, k + 2, k + 3, k, k + 3, k + 4, k, k + 4, k + 5, k, k + 5, k + 6, k, k + 6, k + 1])
+	if not tri.is_empty():
+		_push(out, col, tri)
 
 
 func _joint(c: Vector2, r: float, col: Color) -> void:
