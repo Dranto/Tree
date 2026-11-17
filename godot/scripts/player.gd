@@ -13,7 +13,7 @@ const ATTACK_RANGE := 600.0
 ## Changement de cible : une autre cible doit être nettement plus près du curseur (ou du héros)
 ## pour prendre la place de la cible actuelle, sinon le repère sauterait d'un ennemi à l'autre.
 const TARGET_STICK := 0.75
-## Recherche de la cible : tous les TARGET_EVERY pas, et à chaque tir.
+## Recherche de la cible : tous les TARGET_EVERY pas, et à chaque tir sur une cible.
 const TARGET_EVERY := 6
 ## « Se battre chez soi » : bonus des compétences de Ronce sur une terre ravivée de sa région.
 const HOME_BONUS := 0.15
@@ -415,7 +415,7 @@ func _physics_process(delta: float) -> void:
 	if target != null and (not is_instance_valid(target) or target.dead):
 		target = null
 	_target_tick -= 1
-	if _target_tick <= 0 or fire_cd <= 0.0:
+	if _target_tick <= 0 or (fire_cd <= 0.0 and target != null):
 		_target_tick = TARGET_EVERY
 		target = auto_target()
 	if fire_cd <= 0.0:
