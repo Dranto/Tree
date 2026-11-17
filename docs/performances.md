@@ -44,7 +44,7 @@ de temps par image quand on le cache (`--hide`).
 | --- | --- | --- |
 | Socle : image vide, logique de jeu (pas fixe) | ~4 ms | moteur, `main.gd`, `enemy.gd` |
 | Flétris (silhouettes, états, élites) | ~8,5 ms (dont ~3 ms de calcul des silhouettes) | `enemy.gd`, `fletri_art.gd` |
-| Sol (carrés en cache, une texture plein écran) | ~5,5 ms (~9 ms sans le cache) | `ground.gd`, `shaders/ground.gdshader` |
+| Sol (carrés en cache, une texture plein écran) | ~5,5 ms (~9 ms sans le cache), puis ~1 ms de moins avec la recopie opaque des carrés (jalon 7) | `ground.gd`, `shaders/ground.gdshader`, `shaders/ground_tile.gdshader` |
 | Interface (HUD) | ~2,5 ms | `hud.gd`, `hud_widgets.gd` |
 | Décor et fleurs | ~1,5 ms | `flora.gd` |
 | Héros, effets, ambiance, lieux | ~1,5 ms | `player.gd`, `fx.gd`, `skill_fx.gd`… |
@@ -91,6 +91,7 @@ Budget de la CI : **25 ms** en moyenne, échec au-delà de 15 % de plus (`tools/
 | Lot de triangles allégé : disques et joints en cache, polyligne en une forme (`draw_batch.gd`) | ~1 ms | identique |
 | Sol sans mélange de couleurs (`render_mode blend_disabled`, il est opaque) | <1 ms | identique |
 | Sol dessiné par carrés de 512 px mis en cache (`ground.gd`, `SubViewport` mis à jour seulement quand le sol change ; `--sol-direct` pour l'ancien chemin) | ~2 à 3 ms | écart de 0,011 % au plus, sous le seuil des tests visuels : références inchangées |
+| Carrés du sol recopiés sans mélange ni lumière (`shaders/ground_tile.gdshader`, `blend_disabled, unshaded`) ; le shader du sol calcule l'appartenance aux régions une seule fois par pixel pour N régions (jalon 7) | ~1 ms (sol : 6,5 → 5,4 ms, mesuré par paires avec `--hide=sol`) | identique |
 
 Le rendu direct à l'écran rend l'image illisible par `get_viewport().get_texture()`. Il n'est donc
 actif que dans la scène de jeu lancée normalement et dans le banc, jamais pendant une capture
@@ -100,7 +101,7 @@ actif que dans la scène de jeu lancée normalement et dans le banc, jamais pend
 
 - **Objectif de 20 ms et 99e centile sous 33 ms** : pas encore atteints (~23,5 ms, 99e centile
   ~40 ms). Les pics viennent des vagues d'apparition et des morts en série.
-- **Sol** (~5,5 ms) : le remplissage d'une texture plein écran reste cher en rendu logiciel.
+- **Sol** (~5,4 ms) : le remplissage d'une texture plein écran reste cher en rendu logiciel. Une région de plus ne coûte rien tant que les carrés sont en cache (le shader ne tourne qu'au rendu d'un carré).
 - **Interface** (~2,5 ms) : passer les formes du HUD par le lot de triangles.
 - **Silhouettes** (~3 ms de calcul) : mettre en cache la triangulation des formes fixes.
 - **Nouvelles formes d'attaque (tâche B)** : à remesurer après leur fusion.
