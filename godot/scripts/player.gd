@@ -11,6 +11,14 @@ const HOME_LIFE := 0.45
 ## Statistique de dégâts de chaque famille d'attaque (champ « tags » de skills.json).
 const TAG_STATS := {"corps_a_corps": "melee_damage", "projectile": "projectile_damage", "zone": "area_damage"}
 const Content = preload("res://scripts/content.gd")
+## Déplacement à la souris (Settings.move_mode).
+## « curseur » : zone morte autour du héros (il s'arrête quand la souris est tout près), puis la
+## vitesse monte jusqu'au plein régime FOLLOW_FULL pixels plus loin. Assez large pour viser sans bouger.
+const FOLLOW_DEAD := 46.0
+const FOLLOW_FULL := 70.0
+## « moba » : distance d'arrivée, et abandon de la destination quand le héros bute (buisson, arène).
+const ARRIVE := 1.0
+const STUCK_TIME := 0.35
 
 var main
 var radius := 14.0
@@ -24,6 +32,21 @@ var still_time := 0.0
 var hurt_flash := 0.0
 var aim := Vector2.RIGHT
 var aim_point := Vector2.ZERO
+## Destination du mode « moba » (clic droit) et son repère au sol (move_marker.gd).
+var has_dest := false
+var dest := Vector2.ZERO
+## Nombre de clics droits posés (le repère rejoue son « ping » à chaque nouveau clic).
+var dest_clicks := 0
+## Clic droit tenu dans le monde (pas sur l'interface) : la destination suit le curseur.
+var _right_held := false
+var _stuck := 0.0
+var _expected := 0.0
+var _step_start := Vector2.ZERO
+## La souris a bougé dans la fenêtre depuis qu'elle y est entrée : sans cela, le héros ne la
+## suit pas (pas de course vers une position périmée au lancement, ni souris hors de la fenêtre).
+var mouse_live := false
+## Bancs de test sans écran : position de souris imposée (dans le monde), à la place de la vraie.
+var test_mouse = null
 ## Réglages des compétences actives, lus dans res://data/skills.json.
 var skills: Dictionary = Content.skills()
 var skill_cd: Dictionary = {}
@@ -130,6 +153,97 @@ func cycle_slot(i: int) -> void:
 	Game.flags["barre"] = ",".join(bar)
 
 
+## Clic droit dans le monde (les clics sur l'interface n'arrivent pas ici) : nouvelle destination.
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		mouse_live = true
+		return
+	var mb := event as InputEventMouseButton
+	if mb == null or mb.button_index != MOUSE_BUTTON_RIGHT:
+		return
+	if not mb.pressed:
+		_right_held = false
+		return
+	mouse_live = true
+	if Settings.move_mode != "moba" or main == null or main.autotest:
+		return
+	_right_held = true
+	set_destination(mouse_world(), true)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_MOUSE_EXIT or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		mouse_live = false
+		_right_held = false
+
+
+func mouse_world() -> Vector2:
+	return test_mouse if test_mouse != null else get_global_mouse_position()
+
+
+## Pose la destination du mode « moba » (bornée au monde). click : nouveau clic (le repère pulse).
+func set_destination(p: Vector2, click := false) -> void:
+	var h: float = main.world_half if main != null else 1.0e9
+	dest = p.clamp(Vector2(-h, -h), Vector2(h, h))
+	has_dest = true
+	_stuck = 0.0
+	if click:
+		dest_clicks += 1
+
+
+func clear_destination() -> void:
+	has_dest = false
+	_right_held = false
+
+
+## Mode « moba » : le héros qui n'avance presque plus vers sa destination (repoussé par un
+## buisson, le mur de l'arène ou le bord du monde) l'abandonne au lieu de piétiner.
+func _watch_stuck(delta: float) -> void:
+	var moved := position.distance_to(_step_start)
+	_step_start = position
+	if not has_dest or _expected < 0.5:
+		_stuck = 0.0
+		return
+	_stuck = _stuck + delta if moved < _expected * 0.35 else 0.0
+	if _stuck >= STUCK_TIME:
+		clear_destination()
+
+
+## Direction de marche (longueur 0 à 1) voulue par la souris selon le mode de déplacement.
+## Le clavier reste prioritaire : une touche de direction tenue annule la destination.
+func mouse_move(keys: Vector2, delta: float) -> Vector2:
+	if keys.length() > 0.1:
+		if has_dest:
+			clear_destination()
+		return keys
+	match Settings.move_mode:
+		"curseur":
+			if not mouse_live or Input.is_action_pressed("attack"):
+				return Vector2.ZERO   # tir posté : clic gauche tenu, le héros s'arrête pour tirer
+			var off := aim_point - global_position
+			var d := off.length()
+			if d <= FOLLOW_DEAD:
+				return Vector2.ZERO
+			return off / d * clampf((d - FOLLOW_DEAD) / FOLLOW_FULL, 0.0, 1.0)
+		"moba":
+			if _right_held:
+				if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+					set_destination(aim_point)
+				else:
+					_right_held = false
+			if not has_dest:
+				return Vector2.ZERO
+			var off := dest - global_position
+			var d := off.length()
+			if d <= ARRIVE:
+				clear_destination()
+				return Vector2.ZERO
+			# Dernier pas raccourci pour s'arrêter pile sur la destination.
+			var step_len: float = maxf(Game.stats["move_speed"] * delta, 0.001)
+			return off / d * minf(1.0, d / step_len)
+	return keys
+
+
 ## Animation seulement (marche, lanterne, feuilles, états) : suit la fréquence d'affichage.
 func _process(delta: float) -> void:
 	t += delta
@@ -187,14 +301,17 @@ func _physics_process(delta: float) -> void:
 	for k in cds:
 		cds[k] = maxf(0.0, cds[k] - delta)
 
+	_watch_stuck(delta)
 	var mv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	aim_point = get_global_mouse_position()
+	aim_point = mouse_world()
 	var want_attack := Input.is_action_pressed("attack")
 	var want_dash := Input.is_action_just_pressed("dash")
 	var want := {}
 	for i in bar.size():
 		if bar[i] != "" and Input.is_action_just_pressed("slot_%d" % (i + 1)):
 			want[bar[i]] = true
+	if not main.autotest:
+		mv = mouse_move(mv, delta)
 	if main.autotest:
 		var bot: Dictionary = main.bot_input(self)
 		mv = bot["move"]
@@ -209,7 +326,11 @@ func _physics_process(delta: float) -> void:
 		aim = to_aim.normalized()
 
 	if want_dash and dash_cd <= 0.0:
-		dash_dir = mv.normalized() if mv.length() > 0.1 else aim
+		# Au clavier, l'esquive suit la direction de marche ; à la souris, elle part vers le curseur.
+		var keyboard: bool = main.autotest or Settings.move_mode == "clavier" or Input.get_vector("move_left", "move_right", "move_up", "move_down").length() > 0.1
+		dash_dir = mv.normalized() if keyboard and mv.length() > 0.1 else aim
+		if has_dest:
+			clear_destination()
 		dash_time = DASH_TIME
 		dash_cd = s["dash_cd"]
 		invuln = maxf(invuln, DASH_TIME + 0.08)
@@ -223,6 +344,7 @@ func _physics_process(delta: float) -> void:
 		position += mv * s["move_speed"] * delta
 	var h: float = main.world_half
 	position = position.clamp(Vector2(-h, -h), Vector2(h, h))
+	_expected = 0.0 if dash_time > 0.0 else mv.length() * s["move_speed"] * delta
 
 	still_time = still_time + delta if mv.length() < 0.1 else 0.0
 	Game.set_state("immobile", still_time)
@@ -459,6 +581,8 @@ func respawn(at := Vector2.ZERO) -> void:
 	_sig("chute", {"pos": position, "facing": aim.angle()})
 	position = at
 	_last_pos = at
+	_step_start = at
+	clear_destination()
 	reborn = 0.0
 	leaves.clear()
 	hp = Game.stats["max_hp"]
