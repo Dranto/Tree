@@ -66,6 +66,9 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(REFERENCE_DIR))
 
+	# Déplacement par défaut (suivre le curseur), quelles que soient les options du poste : l'aide
+	# de départ des captures en dépend. Sans mouvement de souris, le héros ne la suit pas.
+	Settings.move_mode = "curseur"
 	main = MainScene.instantiate()
 	# Le robot du mode autotest joue à la place de la souris, sans ses captures ni sa fin de partie.
 	# Activé avant l'ajout à la scène : la partie ne lit ni n'écrit aucune sauvegarde.
@@ -653,7 +656,7 @@ func _death_shots() -> void:
 
 
 ## Interactions et retours (tâche G du jalon 5) : un ramassage d'essence, une greffe, la sève perdue,
-## un coup reçu, un critique, l'invite d'un sanctuaire, l'ouverture de l'arbre, la mort et la
+## un coup reçu, un critique, l'invite d'un sanctuaire, le repère du clic droit, l'ouverture de l'arbre, la mort et la
 ## renaissance. Le jeu est figé (ni robot ni Flétris) ; chaque image est prise à un instant précis.
 func _scenario_interactions() -> void:
 	main.autotest = false
@@ -717,6 +720,16 @@ func _scenario_interactions() -> void:
 	await _frames(12)
 	await _shot("interaction_sanctuaire_anneau")
 	await _place_player(spot)
+	# Déplacement au clic droit (mode « moba ») : le repère se resserre sur le point, puis reste posé.
+	Settings.move_mode = "moba"
+	main.player.set_destination(spot + Vector2(190, -70), true)
+	await _frames(4)
+	await _shot("interaction_destination_clic")
+	await _frames(30)
+	await _shot("interaction_destination")
+	main.player.clear_destination()
+	Settings.move_mode = "curseur"
+	await _frames(15)
 	# Transitions : ouverture de l'arbre (avec son onde de sève), puis mort et renaissance.
 	main.tree_ui.play_intro = true
 	main.tree_ui.toggle()

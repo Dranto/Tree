@@ -12,13 +12,21 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 
 | Action | Clavier / souris |
 | --- | --- |
-| Se déplacer | Z Q S D (AZERTY) ou W A S D (QWERTY), ou flèches |
+| Se déplacer | Au choix dans les options (**Déplacement**), voir ci-dessous |
 | Lancer des graines | Clic gauche maintenu (vise la souris) |
 | Esquive | Espace ou Maj |
 | Barre de compétences (6 emplacements) | 1 à 6, et A, E, R (AZERTY) / Q, E, R (QWERTY) pour les trois premiers ; touches réassignables dans les options. Clic sur un emplacement : y mettre une compétence acquise qui n'a pas de place |
 | Arbre de vie | Tab ou T (le jeu se met en pause) |
 | Journal des objectifs | J (le jeu se met en pause) |
 | Carte du monde | M (le jeu se met en pause) |
+
+**Modes de déplacement** (Options → Déplacement, enregistré avec les autres réglages) :
+
+- **Suivre le curseur** (par défaut) : le héros marche vers la souris et s'arrête quand elle est tout près de lui (zone morte d'environ 46 px, plein régime 70 px plus loin), ce qui permet de viser sans bouger en gardant la souris près de lui. Clic gauche tenu : il s'arrête pour tirer (« tir posté »), sinon chaque tir le ferait foncer sur sa cible. Il ne suit la souris qu'une fois qu'elle a bougé dans la fenêtre, et s'arrête si elle en sort.
+- **Clic droit (MOBA)** : un clic droit fixe une destination, marquée par un repère au sol ; clic droit tenu, la destination suit le curseur. Le héros continue d'avancer pendant qu'il tire ailleurs (on peut reculer en tirant). Il s'arrête pile sur le point, et abandonne la destination s'il bute (buisson d'épines, mur de l'arène). Un clic droit sur l'interface ne compte pas.
+- **Clavier** : Z Q S D (W A S D en QWERTY) ou les flèches ; la souris ne sert qu'à viser.
+
+Dans les deux modes à la souris, les touches de direction marchent aussi et prennent la main (elles annulent la destination). L'esquive part vers le curseur, au clavier dans la direction de marche.
 
 Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer. Une maîtrise ou une mutation ouvre une fenêtre de choix quand on l'apprend ; un clic sur une maîtrise apprise permet d'en changer. Les greffes trouvées dans le monde (autels cachés du roncier, secret, boss, élites) apparaissent en bas à gauche : glisser une greffe sur un emplacement de greffe (anneau creux) l'y pose, un clic sur l'emplacement la retire. L'arbre s'ouvre en vue d'ensemble ; en zoomant apparaissent tous les nœuds, puis les icônes et les noms des notables.
 
@@ -80,6 +88,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --headless -s res://tests/enemies_test.gd` : teste les ennemis variés et les élites (fuite et tir du Cracheur, protection du Gardien, poche de spores du Boursouflé, tirage par niveau, chaque modificateur d'élite, `main.elite_killed` et butin).
 - `tools/balance.sh` : équilibrage. Le robot joue les builds types de Ronce (`godot/data/builds.json` : épines, fouet, saignement) au niveau 20, sur plusieurs graines, sans affichage et en parallèle (moins de 2 minutes), et compare les ennemis vaincus par minute ; échec si l'écart dépasse 30 %. Un seul build : `tools/godot.sh --headless --fixed-fps 60 -- --autotest=build:fouet`.
 - `tools/balance.sh --run` : partie complète. Le robot part du niveau 1 avec chaque build, apprend ses nœuds au fil des niveaux, s'enfonce dans le roncier à mesure qu'il progresse (il assiège le Cœur au niveau 15), esquive les épines tirées et les charges, se replie quand sa vie baisse, et note chaque minute son niveau, la menace des ennemis, le temps pour tuer un Flétri, les dégâts reçus et ses morts (journaux dans `godot/autotest/balance-run/`, environ 20 minutes par graine). Échec si un niveau prend plus de deux fois la durée visée, si un build meurt plus de trois fois avant le niveau 20, ou si les builds atteignent le niveau 20 avec plus de 30 % d’écart. Un seul build : `tools/godot.sh --headless --fixed-fps 60 -- --autotest=run:fouet` (`--run-freeze --build-level=12` : niveau figé, pour mesurer l'expérience gagnée par minute à ce niveau).
+- `tools/godot.sh --xvfb --fixed-fps 60 --audio-driver Dummy -s res://tests/move_test.gd` : teste les modes de déplacement (suivi du curseur et sa zone morte, tir posté, clic droit et repère, arrivée, obstacle, clic sur l'interface, clavier prioritaire, esquive, sanctuaire ravivé dans chaque mode, option enregistrée et relue, aide de départ).
 - `tools/godot.sh --headless -s res://tests/art_test.gd` : teste la charte graphique (`art.gd`, `anim.gd`) : palette et hiérarchie de lecture, éléments distincts aussi pour les daltoniens, icônes, formes d'annonce, courbes d'animation.
 - `tools/godot.sh --headless -s res://tests/difficulty_test.gd` : teste la difficulté (menace indépendante du temps, selon le niveau, la zone et les Cœurs purifiés ; plafonds d'apparition ; courbe d'expérience ; Facile / Normal / Difficile).
 - `tools/godot.sh --headless --fixed-fps 60 -s res://tests/grafts_test.gd` : teste les points et greffes du monde (points donnés une seule fois par source, inventaire, tirage des élites, pose et retrait, autels et secret, Cœur et boss, effets des greffes, sauvegarde et migration d'une sauvegarde du jalon 3).

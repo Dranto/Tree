@@ -159,6 +159,17 @@ func _on_graft_found(id: String) -> void:
 
 
 ## Nom de la touche selon la disposition du clavier du joueur (Z sur AZERTY pour « avancer »).
+## Première ligne de l'aide de départ : se déplacer (selon le mode choisi dans les options), tirer, esquiver.
+func move_hint_line() -> String:
+	var dash := key_label("dash")
+	match Settings.move_mode:
+		"curseur":
+			return "La souris guide le héros   ·   Clic gauche : s'arrêter et lancer des graines   ·   %s : esquive" % dash
+		"moba":
+			return "Clic droit : marcher jusqu'au point   ·   Clic gauche : lancer des graines   ·   %s : esquive" % dash
+	return "%s %s %s %s : se déplacer   ·   Clic gauche : lancer des graines   ·   %s : esquive" % [key_label("move_up"), key_label("move_left"), key_label("move_down"), key_label("move_right"), dash]
+
+
 func key_label(action: String) -> String:
 	if _labels.has(action):
 		return _labels[action]
@@ -329,7 +340,7 @@ func _refresh() -> void:
 	_hint_box.modulate.a = clampf(hint_time / 2.0, 0.0, 1.0) if show_hint else 0.0
 	_hint_box.visible = show_hint
 	var lines := [
-		"%s %s %s %s : se déplacer   ·   Clic gauche : lancer des graines   ·   %s : esquive" % [key_label("move_up"), key_label("move_left"), key_label("move_down"), key_label("move_right"), key_label("dash")],
+		move_hint_line(),
 		"%s : ouvrir l'Arbre de vie. Chaque nœud appris ravive une région du monde." % key_label("toggle_tree"),
 	]
 	for i in 2:

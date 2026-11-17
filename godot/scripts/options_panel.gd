@@ -1,4 +1,4 @@
-## Panneau d'options : volume, plein écran, aide de départ, difficulté, touches de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
+## Panneau d'options : volume, plein écran, aide de départ, difficulté, déplacement, touches de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
 extends PanelContainer
 
 signal closed
@@ -18,6 +18,8 @@ var reduce_box: CheckBox
 var difficulty_select: OptionButton
 var difficulty_hint: Label
 var back_button: Button
+var move_select: OptionButton
+var move_hint: Label
 ## Boutons des touches de la barre (un par emplacement) et emplacement en attente d'une touche.
 var slot_buttons: Array = []
 var listening := -1
@@ -110,6 +112,28 @@ func _ready() -> void:
 	difficulty_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(difficulty_hint)
 	_update_difficulty()
+
+	# Déplacement : suivre le curseur (par défaut), clic droit façon MOBA, ou clavier.
+	var move_row := HBoxContainer.new()
+	move_row.add_theme_constant_override("separation", 14)
+	col.add_child(move_row)
+	var move_name := Label.new()
+	move_name.text = "Déplacement"
+	move_name.custom_minimum_size = Vector2(110, 0)
+	move_row.add_child(move_name)
+	move_select = OptionButton.new()
+	move_select.focus_mode = Control.FOCUS_ALL
+	move_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for id in Settings.MOVE_MODES:
+		move_select.add_item(Settings.MOVE_MODE_NAMES[id])
+	move_select.item_selected.connect(_on_move_mode)
+	move_row.add_child(move_select)
+	move_hint = Label.new()
+	move_hint.add_theme_font_size_override("font_size", 13)
+	move_hint.add_theme_color_override("font_color", Color(0.7, 0.75, 0.7))
+	move_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(move_hint)
+	_update_move_mode()
 
 	var keys_title := Label.new()
 	keys_title.text = "Touches de la barre de compétences"
@@ -233,6 +257,17 @@ func _update_difficulty() -> void:
 	difficulty_hint.text = str(Difficulty.mode(Settings.difficulty).get("text", ""))
 
 
+func _on_move_mode(index: int) -> void:
+	Settings.set_move_mode(Settings.MOVE_MODES[index])
+	Settings.save_settings()
+	_update_move_mode()
+
+
+func _update_move_mode() -> void:
+	move_select.select(maxi(0, Settings.MOVE_MODES.find(Settings.move_mode)))
+	move_hint.text = Settings.move_mode_text(Settings.move_mode)
+
+
 func _on_shake(v: float) -> void:
 	Settings.set_shake(v)
 	Settings.save_settings()
@@ -257,6 +292,7 @@ func open() -> void:
 	shake_slider.value = Settings.shake
 	reduce_box.button_pressed = Settings.reduce_effects
 	_update_difficulty()
+	_update_move_mode()
 	volume_slider.grab_focus()
 
 

@@ -1,4 +1,4 @@
-## Réglages du joueur (volume, plein écran, aide, touches de la barre de compétences) :
+## Réglages du joueur (volume, plein écran, aide, déplacement, touches de la barre de compétences) :
 ## chargés et enregistrés dans user://settings.cfg.
 extends Node
 
@@ -27,6 +27,12 @@ var shake := 0.6
 ## dégâts des ennemis (réglages dans res://data/difficulty.json, section « modes »).
 const DIFFICULTIES := ["facile", "normal", "difficile"]
 var difficulty := "normal"
+## Déplacement du héros : « curseur » (par défaut, il marche vers la souris), « moba » (un clic
+## droit fixe une destination) ou « clavier » (Z Q S D ou flèches). Dans les deux modes à la
+## souris, le clavier reste utilisable et prend la main tant qu'une touche de direction est tenue.
+const MOVE_MODES := ["curseur", "moba", "clavier"]
+const MOVE_MODE_NAMES := {"curseur": "Suivre le curseur", "moba": "Clic droit (MOBA)", "clavier": "Clavier (Z Q S D)"}
+var move_mode := "curseur"
 ## Réduit les effets de jeu : plus de secousse ni de micro-pause, très peu de particules, ambiance coupée.
 var reduce_effects := false
 
@@ -53,6 +59,8 @@ func load_settings() -> void:
 	reduce_effects = bool(cfg.get_value("gameplay", "reduce_effects", reduce_effects))
 	var diff := str(cfg.get_value("gameplay", "difficulty", difficulty))
 	difficulty = diff if diff in DIFFICULTIES else "normal"
+	var mode := str(cfg.get_value("controls", "move_mode", move_mode))
+	move_mode = mode if mode in MOVE_MODES else "curseur"
 
 
 func save_settings() -> void:
@@ -68,6 +76,7 @@ func save_settings() -> void:
 	cfg.set_value("gameplay", "shake", shake)
 	cfg.set_value("gameplay", "reduce_effects", reduce_effects)
 	cfg.set_value("gameplay", "difficulty", difficulty)
+	cfg.set_value("controls", "move_mode", move_mode)
 	cfg.save(PATH)
 
 
@@ -178,6 +187,22 @@ func set_reduce_effects(on: bool) -> void:
 func set_difficulty(id: String) -> void:
 	difficulty = id if id in DIFFICULTIES else "normal"
 	changed.emit()
+
+
+## Change le mode de déplacement (voir MOVE_MODES).
+func set_move_mode(id: String) -> void:
+	move_mode = id if id in MOVE_MODES else "curseur"
+	changed.emit()
+
+
+## Explication d'un mode de déplacement, affichée sous le choix dans les options.
+static func move_mode_text(id: String) -> String:
+	match id:
+		"moba":
+			return "Clic droit : le héros marche jusqu'à l'endroit cliqué (un repère s'affiche au sol) ; clic droit tenu : il suit le curseur. Il continue d'avancer pendant les tirs. L'esquive part vers le curseur."
+		"clavier":
+			return "Z Q S D (W A S D en QWERTY) ou les flèches. La souris ne sert qu'à viser."
+	return "Le héros marche vers la souris et s'arrête quand elle est tout près de lui. Clic gauche tenu : il s'arrête pour tirer. L'esquive part vers le curseur."
 
 
 ## Force réellement appliquée de la secousse d'écran (0 si les effets sont réduits).

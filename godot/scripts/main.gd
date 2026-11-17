@@ -12,6 +12,7 @@ const Fx = preload("res://scripts/fx.gd")
 const ScreenFx = preload("res://scripts/screen_fx.gd")
 const Ambience = preload("res://scripts/ambience.gd")
 const Player = preload("res://scripts/player.gd")
+const MoveMarker = preload("res://scripts/move_marker.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Projectile = preload("res://scripts/projectile.gd")
 const Orb = preload("res://scripts/orb.gd")
@@ -57,6 +58,8 @@ var pause_menu
 ## Objectifs : suivi à l'écran, journal (J), carte (M) et fin de la tranche (quest_ui.gd).
 var quest_ui
 var orbs_layer: Node2D
+## Repère au sol de la destination du clic droit (mode de déplacement « moba »).
+var move_marker: Node2D
 var enemies_layer: Node2D
 var projectiles_layer: Node2D
 ## Calque trié en profondeur (Y-sort) : arbres du décor, Flétris et joueur.
@@ -154,6 +157,10 @@ func _ready() -> void:
 	var sfx_pair := SkillFx.make_pair()
 	add_child(sfx_pair[0])
 	skill_fx = sfx_pair[1]
+	# Repère de destination du déplacement au clic droit (mode « moba »), sous les acteurs.
+	move_marker = MoveMarker.new()
+	move_marker.main = self
+	add_child(move_marker)
 	add_child(actors_layer)
 	enemies_layer = Node2D.new()
 	enemies_layer.y_sort_enabled = true
