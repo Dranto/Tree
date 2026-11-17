@@ -163,7 +163,8 @@ static func glow(ci: CanvasItem, pos: Vector2, r: float, element := "seve") -> v
 
 ## Remplit une forme avec du volume, lumière venant d'en haut à gauche : côté ombre, face éclairée,
 ## reflet. light règle la force du reflet (0 : mat). Pour les acteurs et les objets importants.
-static func volume(ci: CanvasItem, pts: PackedVector2Array, col: Color, light := 1.0) -> void:
+## ci : un CanvasItem, ou un lot de triangles (draw_batch.gd) qui a les mêmes draw_*.
+static func volume(ci, pts: PackedVector2Array, col: Color, light := 1.0) -> void:
 	var cen := Vector2.ZERO
 	for q in pts:
 		cen += q
@@ -178,7 +179,7 @@ static func volume(ci: CanvasItem, pts: PackedVector2Array, col: Color, light :=
 
 
 ## Disque avec du volume (même lumière que volume()).
-static func volume_circle(ci: CanvasItem, pos: Vector2, r: float, col: Color, light := 1.0) -> void:
+static func volume_circle(ci, pos: Vector2, r: float, col: Color, light := 1.0) -> void:
 	ci.draw_circle(pos, r, col.darkened(0.38))
 	ci.draw_circle(pos + Vector2(-0.07, -0.1) * r, r * 0.84, col)
 	if light > 0.0:
@@ -186,10 +187,8 @@ static func volume_circle(ci: CanvasItem, pos: Vector2, r: float, col: Color, li
 
 
 static func _xform(pts: PackedVector2Array, cen: Vector2, k: float, off: Vector2) -> PackedVector2Array:
-	var out := PackedVector2Array()
-	for q in pts:
-		out.append(cen + (q - cen) * k + off)
-	return out
+	# cen + (q - cen) * k + off pour chaque point, calculé par le moteur (chemin chaud des silhouettes).
+	return Transform2D(0.0, Vector2(k, k), 0.0, cen - cen * k + off) * pts
 
 
 ## Polygone d'une ellipse (rayons rx, ry) : sert aux ombres et aux zones vues en perspective.
@@ -402,6 +401,8 @@ const ICONES := {
 	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom"],
 	"statistiques": ["degats", "attaque", "projectile", "critique", "vie", "regen", "armure", "vitesse", "esquive", "zone", "collecte", "competence"],
 	"monde": ["sanctuaire", "autel", "coeur", "arene", "secret", "seve_perdue", "essence", "greffe"],
+	# Formes de l'attaque de base (data/attack.json) et nœud qui la modifie : Art.icon("attaque_<forme>").
+	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_mod"],
 }
 ## Nom affiché de chaque icône (planche, infobulles).
 const NOM_ICONE := {
@@ -412,6 +413,12 @@ const NOM_ICONE := {
 	"zone": "Zones", "collecte": "Collecte", "competence": "Compétence",
 	"sanctuaire": "Sanctuaire", "autel": "Autel", "coeur": "Cœur de flétrissure", "arene": "Arène",
 	"secret": "Secret", "seve_perdue": "Sève perdue", "essence": "Essence de vie", "greffe": "Greffe",
+	"attaque_graine": "Attaque : graines", "attaque_echarde": "Attaque : échardes", "attaque_fouet": "Attaque : fouet",
+	"attaque_ronce_vive": "Attaque : ronces vives", "attaque_mod": "Attaque modifiée",
+}
+## Élément de chaque forme de l'attaque de base (le même que dans data/attack.json).
+const ELEMENT_D_ATTAQUE := {
+	"attaque_graine": "seve", "attaque_echarde": "epine", "attaque_fouet": "epine", "attaque_ronce_vive": "saignement",
 }
 ## Couleur par défaut d'une icône qui n'est pas un élément.
 const COULEUR_ICONE := {
@@ -419,7 +426,7 @@ const COULEUR_ICONE := {
 	"regen": "accent", "armure": "texte", "vitesse": "texte", "esquive": "texte", "zone": "texte",
 	"collecte": "butin", "competence": "or",
 	"sanctuaire": "interactif", "autel": "interactif", "coeur": "elite", "arene": "danger", "secret": "or",
-	"seve_perdue": "joueur_accent", "essence": "joueur_accent", "greffe": "butin",
+	"seve_perdue": "joueur_accent", "essence": "joueur_accent", "greffe": "butin", "attaque_mod": "or",
 }
 
 ## Couleur naturelle d'une icône (celle de son élément, sinon celle de son rôle).
@@ -428,6 +435,8 @@ static func icon_color(id: String) -> Color:
 		return ec(id)
 	if ELEMENT_DE_COMPETENCE.has(id):
 		return ec(ELEMENT_DE_COMPETENCE[id])
+	if ELEMENT_D_ATTAQUE.has(id):
+		return ec(ELEMENT_D_ATTAQUE[id])
 	return c(COULEUR_ICONE.get(id, "texte"))
 
 
@@ -664,6 +673,69 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 			ci.draw_line(P.call(-0.6, -0.1), P.call(-0.6, -0.7), col, lw * 1.6, true)
 			ci.draw_line(P.call(0.6, -0.1), P.call(0.6, -0.7), col, lw * 1.6, true)
 			ci.draw_circle(P.call(0, 0.0), s * 0.18, clair)
+		# Formes de l'attaque de base : toutes partent du bas à gauche (la main) vers le haut à droite.
+		"attaque_graine":
+			# Trois graines en éventail, la plus grande au centre.
+			for i in 3:
+				var a := -PI / 4.0 + (i - 1) * 0.55
+				var c0: Vector2 = P.call(-0.55, 0.55) + Vector2.from_angle(a) * s * (1.05 if i == 1 else 0.85)
+				var body := PackedVector2Array()
+				for j in 12:
+					var b := j * TAU / 12.0
+					body.append(c0 + Vector2(cos(b) * 0.36, sin(b) * 0.24).rotated(a) * s * (1.0 if i == 1 else 0.8))
+				ci.draw_colored_polygon(body, col)
+				if col != sombre:
+					ci.draw_circle(c0 + Vector2.from_angle(a + PI * 0.7) * s * 0.1, s * 0.08, clair)
+			ci.draw_circle(P.call(-0.6, 0.6), s * 0.16, col)
+		"attaque_echarde":
+			# Trois échardes fines et parallèles, en rafale, la première devant.
+			for i in 3:
+				var base: Vector2 = P.call(-0.75 + i * 0.22, 0.45 + i * 0.12)
+				var d := Vector2(1, -1).normalized()
+				var n := d.orthogonal()
+				var len := s * (1.3 - i * 0.22)
+				var tip := base + d * len
+				ci.draw_colored_polygon(PackedVector2Array([tip, base + n * s * 0.11, base - d * s * 0.08, base - n * s * 0.11]), col)
+				if col != sombre:
+					ci.draw_line(base + d * len * 0.2, tip, clair, lw * 0.5, true)
+		"attaque_fouet":
+			# Un croissant : le balayage du fouet, hérissé de trois épines vers l'extérieur.
+			var c0: Vector2 = P.call(-0.45, 0.45)
+			var pts := PackedVector2Array()
+			for i in 13:
+				pts.append(c0 + Vector2.from_angle(lerpf(-PI * 0.95, 0.1, i / 12.0)) * s * 1.2)
+			for i in range(12, -1, -1):
+				pts.append(c0 + Vector2.from_angle(lerpf(-PI * 0.85, 0.0, i / 12.0)) * s * 0.85)
+			ci.draw_colored_polygon(pts, col)
+			for i in 3:
+				var a := lerpf(-PI * 0.8, -0.15, (i + 0.5) / 3.0)
+				var q := c0 + Vector2.from_angle(a) * s * 1.18
+				var d := Vector2.from_angle(a)
+				var n := d.orthogonal()
+				ci.draw_colored_polygon(PackedVector2Array([q + n * s * 0.12, q + d * s * 0.3, q - n * s * 0.12]), (col if col == sombre else clair))
+			ci.draw_circle(c0, s * 0.16, col)
+		"attaque_ronce_vive":
+			# Une graine plantée, d'où sort un cercle de ronce griffue.
+			ci.draw_arc(P.call(0, 0.1), s * 0.72, 0.0, TAU, 24, col, lw * 1.2, true)
+			for i in 5:
+				var a := -PI / 2.0 + i * TAU / 5.0
+				var q: Vector2 = P.call(0, 0.1) + Vector2.from_angle(a) * s * 0.72
+				var d := Vector2.from_angle(a + 0.9)
+				var n := d.orthogonal()
+				ci.draw_colored_polygon(PackedVector2Array([q + n * s * 0.1, q + d * s * 0.32, q - n * s * 0.1]), col)
+			var seed := PackedVector2Array()
+			for j in 12:
+				var b := j * TAU / 12.0
+				seed.append(P.call(0, 0.15) + Vector2(cos(b) * 0.24, sin(b) * 0.32) * s)
+			ci.draw_colored_polygon(seed, (col if col == sombre else clair))
+		"attaque_mod":
+			# Un trait qui se divise : la fourche, signe d'une attaque transformée.
+			ci.draw_line(P.call(-0.75, 0.75), P.call(-0.05, 0.05), col, lw * 1.5, true)
+			ci.draw_line(P.call(-0.05, 0.05), P.call(0.7, -0.35), col, lw * 1.3, true)
+			ci.draw_line(P.call(-0.05, 0.05), P.call(0.35, -0.75), col, lw * 1.3, true)
+			ci.draw_circle(P.call(0.7, -0.35), s * 0.17, col)
+			ci.draw_circle(P.call(0.35, -0.75), s * 0.17, col)
+			ci.draw_circle(P.call(-0.05, 0.05), s * 0.14, (col if col == sombre else clair))
 		"competence":
 			ci.draw_circle(p, s * 0.38, col)
 			for i in 6:

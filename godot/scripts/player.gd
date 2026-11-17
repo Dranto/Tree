@@ -1,19 +1,28 @@
-## Le Porte-Graine : déplacement, tir de graines, esquive et compétences actives.
+## Le Porte-Graine : déplacement, attaque de base automatique, esquive et compétences actives.
 extends Node2D
 
 const DASH_SPEED := 950.0
 const DASH_TIME := 0.16
 ## Barre de compétences : MAX_SLOTS emplacements, dont Game.stats["skill_slots"] débloqués.
+## Les deux premiers sont les compétences principales (clics gauche et droit, Settings.MOUSE_SLOTS),
+## les suivants les secondaires (A E R F). Commandes : Settings.slot_action(i).
 const MAX_SLOTS := 6
+## Changement de cible : une autre cible doit être nettement plus près du curseur (ou du héros)
+## pour prendre la place de la cible actuelle, sinon le repère sauterait d'un ennemi à l'autre.
+const TARGET_STICK := 0.75
+## Recherche de la cible : tous les TARGET_EVERY pas, et à chaque tir sur une cible.
+const TARGET_EVERY := 6
 ## « Se battre chez soi » : bonus des compétences de Ronce sur une terre ravivée de sa région.
 const HOME_BONUS := 0.15
 const HOME_LIFE := 0.45
 ## Statistique de dégâts de chaque famille d'attaque (champ « tags » de skills.json).
 const TAG_STATS := {"corps_a_corps": "melee_damage", "projectile": "projectile_damage", "zone": "area_damage"}
 const Content = preload("res://scripts/content.gd")
+## Attaque de base : forme et modificateurs donnés par l'arbre (attack.gd, data/attack.json).
+const AttackScript = preload("res://scripts/attack.gd")
 ## Déplacement à la souris (Settings.move_mode).
 ## « curseur » : zone morte autour du héros (il s'arrête quand la souris est tout près), puis la
-## vitesse monte jusqu'au plein régime FOLLOW_FULL pixels plus loin. Assez large pour viser sans bouger.
+## vitesse monte jusqu'au plein régime FOLLOW_FULL pixels plus loin.
 const FOLLOW_DEAD := 46.0
 const FOLLOW_FULL := 70.0
 ## « moba » : distance d'arrivée, et abandon de la destination quand le héros bute (buisson, arène).
@@ -24,14 +33,27 @@ var main
 var radius := 14.0
 var hp := 100.0
 var fire_cd := 0.0
+## État de tir de l'attaque de base (compteur d'attaques, tirs en file), tenu par attack.gd.
+var attack_rt: Dictionary = {}
 var dash_cd := 0.0
 var dash_time := 0.0
 var dash_dir := Vector2.RIGHT
 var invuln := 0.0
 var still_time := 0.0
 var hurt_flash := 0.0
+## Direction et point visés par les compétences (le curseur ; pour le robot, sa cible).
 var aim := Vector2.RIGHT
 var aim_point := Vector2.ZERO
+## Attaque automatique : cible actuelle (voir auto_target), direction du dernier tir et temps
+## depuis ce tir (le héros regarde sa cible un instant après chaque tir).
+var target = null
+var shot_dir := Vector2.RIGHT
+var since_shot := 10.0
+var _target_tick := 0
+## Commandes de la barre reçues dans le monde (pas sur l'interface) : emplacements pressés
+## depuis le dernier pas, et emplacements tenus (la compétence repart dès qu'elle est prête).
+var _pressed := {}
+var _held := {}
 ## Destination du mode « moba » (clic droit) et son repère au sol (move_marker.gd).
 var has_dest := false
 var dest := Vector2.ZERO
@@ -153,11 +175,28 @@ func cycle_slot(i: int) -> void:
 	Game.flags["barre"] = ",".join(bar)
 
 
-## Clic droit dans le monde (les clics sur l'interface n'arrivent pas ici) : nouvelle destination.
+## Échange les compétences de deux emplacements débloqués (glisser-déposer dans la barre).
+func swap_slots(i: int, j: int) -> void:
+	var open := unlocked_slots()
+	if i == j or i < 0 or j < 0 or i >= open or j >= open:
+		return
+	var tmp: String = bar[i]
+	bar[i] = bar[j]
+	bar[j] = tmp
+	Game.flags["barre"] = ",".join(bar)
+
+
+## Commandes reçues dans le monde (les clics sur l'interface n'arrivent pas ici) : compétences
+## de la barre, et clic droit du mode « moba » (nouvelle destination).
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		mouse_live = true
 		return
+	for i in MAX_SLOTS:
+		var action := Settings.slot_action(i)
+		if InputMap.has_action(action) and event.is_action_pressed(action):
+			_pressed[i] = true
+			_held[i] = true
 	var mb := event as InputEventMouseButton
 	if mb == null or mb.button_index != MOUSE_BUTTON_RIGHT:
 		return
@@ -175,6 +214,26 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_MOUSE_EXIT or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		mouse_live = false
 		_right_held = false
+		_held.clear()
+
+
+## Lance l'emplacement i comme si sa commande venait d'être pressée (tests, raccourcis).
+func trigger_slot(i: int) -> void:
+	_pressed[i] = true
+
+
+## Compétences voulues ce pas : emplacements pressés, ou tenus et dont la commande l'est encore.
+func _wanted_skills() -> Dictionary:
+	var want := {}
+	for i in bar.size():
+		var action := Settings.slot_action(i)
+		var down := InputMap.has_action(action) and Input.is_action_pressed(action)
+		if _held.has(i) and not down:
+			_held.erase(i)
+		if bar[i] != "" and (_pressed.has(i) or _held.has(i)):
+			want[bar[i]] = true
+	_pressed.clear()
+	return want
 
 
 func mouse_world() -> Vector2:
@@ -218,8 +277,8 @@ func mouse_move(keys: Vector2, delta: float) -> Vector2:
 		return keys
 	match Settings.move_mode:
 		"curseur":
-			if not mouse_live or Input.is_action_pressed("attack"):
-				return Vector2.ZERO   # tir posté : clic gauche tenu, le héros s'arrête pour tirer
+			if not mouse_live:
+				return Vector2.ZERO
 			var off := aim_point - global_position
 			var d := off.length()
 			if d <= FOLLOW_DEAD:
@@ -247,6 +306,7 @@ func mouse_move(keys: Vector2, delta: float) -> Vector2:
 ## Animation seulement (marche, lanterne, feuilles, états) : suit la fréquence d'affichage.
 func _process(delta: float) -> void:
 	t += delta
+	since_shot += delta
 	cast_anim = maxf(0.0, cast_anim - delta)
 	shoot_anim = maxf(0.0, shoot_anim - delta)
 	hurt_anim = maxf(0.0, hurt_anim - delta)
@@ -304,20 +364,16 @@ func _physics_process(delta: float) -> void:
 	_watch_stuck(delta)
 	var mv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	aim_point = mouse_world()
-	var want_attack := Input.is_action_pressed("attack")
 	var want_dash := Input.is_action_just_pressed("dash")
-	var want := {}
-	for i in bar.size():
-		if bar[i] != "" and Input.is_action_just_pressed("slot_%d" % (i + 1)):
-			want[bar[i]] = true
+	var want := _wanted_skills()
 	if not main.autotest:
 		mv = mouse_move(mv, delta)
 	if main.autotest:
 		var bot: Dictionary = main.bot_input(self)
 		mv = bot["move"]
 		aim_point = bot["aim"]
-		want_attack = true
 		want_dash = bot["dash"]
+		want.clear()
 		# Le robot essaie toutes les compétences acquises, même sans emplacement.
 		for k in skills:
 			want[k] = true
@@ -356,9 +412,25 @@ func _physics_process(delta: float) -> void:
 		regen *= 3.0
 	heal(regen * delta)
 
-	if want_attack and fire_cd <= 0.0:
-		_shoot(s)
-		fire_cd = 1.0 / s["fire_rate"]
+	# Attaque automatique : même chemin pour le joueur et le robot.
+	if target != null and (not is_instance_valid(target) or target.dead):
+		target = null
+	_target_tick -= 1
+	if _target_tick <= 0 or (fire_cd <= 0.0 and target != null):
+		_target_tick = TARGET_EVERY
+		target = auto_target()
+	AttackScript.step(self, delta)
+	if fire_cd <= 0.0:
+		# Mode « curseur » : la visée suit la souris (pas de cible) ; sinon, la cible automatique.
+		var shot := {}
+		if Settings.aim_mode == "curseur" and not main.autotest:
+			shot = AttackScript.fire(self, null)
+		elif target != null:
+			shot = AttackScript.fire(self, target)
+		if not shot.is_empty():
+			fire_cd = AttackScript.interval(s)
+			shot_dir = shot["dir"]   # le héros se tourne vers son tir (_facing)
+			since_shot = 0.0
 
 	for k in want:
 		if Game.has_key(k) and cds.get(k, 1.0) <= 0.0:
@@ -412,16 +484,36 @@ func fighting_at_home() -> bool:
 	return main.region_at(position) == "ronce" and main.ground.life_at(position) > HOME_LIFE
 
 
-func _shoot(s: Dictionary) -> void:
-	Sfx.play("tir")
-	var n: int = s["projectiles"]
-	var spread := 0.14
-	for i in n:
-		var a := aim.angle() + (i - (n - 1) / 2.0) * spread
-		var dir := Vector2.from_angle(a)
-		main.spawn_projectile(position + dir * 18.0, dir * 640.0, current_damage() * s["projectile_damage"], s["pierce"], s["projectile_size"])
-	shoot_anim = SHOOT_ANIM
-	_sig("graine_depart", {"pos": position + aim * radius * 1.5, "dir": aim})
+## Portée de l'attaque automatique : celle de la forme d'attaque actuelle (Attack.reach,
+## 704 px pour la graine, bien moins pour le fouet).
+func attack_range() -> float:
+	return AttackScript.reach()
+
+
+## L'ennemi visé par l'attaque de base, ou null : parmi les ennemis à portée, le plus proche du
+## curseur (pour le robot, de son point visé) ; à défaut de curseur (souris pas encore bougée
+## dans la fenêtre), le plus proche du héros. La cible actuelle reste visée tant qu'une autre
+## n'est pas nettement plus proche (TARGET_STICK).
+func auto_target():
+	if main == null:
+		return null
+	var cursor_known: bool = main.autotest or mouse_live or test_mouse != null
+	var from: Vector2 = aim_point if cursor_known else global_position
+	var best = null
+	var best_d := INF
+	var keep := INF
+	for e in main.enemies_near(global_position, attack_range()):
+		if e.dead:
+			continue
+		var d: float = e.position.distance_squared_to(from)
+		if e == target:
+			keep = d
+		if d < best_d:
+			best_d = d
+			best = e
+	if keep < INF and best_d >= keep * TARGET_STICK * TARGET_STICK:
+		return target
+	return best
 
 
 func _cast_nova(s: Dictionary) -> void:
@@ -589,6 +681,14 @@ func respawn(at := Vector2.ZERO) -> void:
 	invuln = 2.0
 
 
+## Regard du héros : vers sa cible juste après un tir automatique, sinon vers le curseur
+## (le lancer d'une compétence reprend aussitôt le curseur).
+func facing() -> Vector2:
+	if since_shot < 0.45 and cast_anim <= 0.0:
+		return shot_dir
+	return aim
+
+
 ## Pose actuelle du héros pour HeroArt (états lus sur le jeu, sans le modifier).
 func pose() -> Dictionary:
 	var ratio: float = clampf(hp / maxf(Game.stats["max_hp"], 1.0), 0.0, 1.0)
@@ -628,7 +728,7 @@ func _draw() -> void:
 		for i in 3:
 			var q := -dash_dir * (i + 1) * 13.0
 			draw_circle(q, radius * (0.85 - i * 0.18), Color(Art.ec("seve"), 0.22 - i * 0.06))
-	HeroArt.draw(self, Vector2.ZERO, radius, aim.angle(), pose())
+	HeroArt.draw(self, Vector2.ZERO, radius, facing().angle(), pose())
 	# Barre de vie : fine, sous les pieds, cachée quand la vie est pleine.
 	var ratio: float = clampf(hp / Game.stats["max_hp"], 0.0, 1.0)
 	if ratio < 0.999 and reborn >= 1.0:

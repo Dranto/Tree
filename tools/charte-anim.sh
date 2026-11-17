@@ -9,7 +9,7 @@ GIF="${1:-$OUT/charte_details.gif}"
 mkdir -p "$OUT"; touch "$OUT/.gdignore"
 rm -rf "$OUT/charte_anim"
 export LIBGL_ALWAYS_SOFTWARE=1
-"$ROOT/tools/godot.sh" --headless --editor --quit >/dev/null 2>&1
+"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1
 "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 2560x1440 --position 0,0 \
   res://tests/visual/runner.tscn -- --scenario=charte --seed=1234 --charte-anim 2>&1 | grep -E "ERROR" || true
 ffmpeg -loglevel error -y -framerate 20 -i "$OUT/charte_anim/%03d.png" \

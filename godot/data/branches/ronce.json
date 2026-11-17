@@ -211,6 +211,47 @@
           "name": "Greffon de la lanière",
           "at": [1.95, 0.1],
           "links": ["f6"]
+        },
+        {
+          "id": "f9",
+          "type": "attack",
+          "name": "Fouet vif",
+          "at": [0.25, 0.8],
+          "links": ["f3"],
+          "effects": [
+            {"attack_form": "fouet"}
+          ]
+        },
+        {
+          "id": "f10",
+          "type": "attack",
+          "name": "Lanière longue",
+          "at": [1.95, 0.6],
+          "links": ["f6"],
+          "effects": [
+            {"attack_mod": "portee", "value": 0.35},
+            {"attack_mod": "taille", "value": 0.15}
+          ]
+        },
+        {
+          "id": "f11",
+          "type": "attack",
+          "name": "Graines barbelées",
+          "at": [1.5, -0.8],
+          "links": ["f7"],
+          "effects": [
+            {"attack_mod": "saignement", "value": 0.2}
+          ]
+        },
+        {
+          "id": "f12",
+          "type": "attack",
+          "name": "Double lanière",
+          "at": [2.45, 0.8],
+          "links": ["f10"],
+          "effects": [
+            {"attack_mod": "repetition", "value": 1}
+          ]
         }
       ],
       "complete": {
@@ -226,7 +267,7 @@
       "theme": "Épines renvoyées",
       "ring": 5,
       "angle": 0.78,
-      "entry": ["e1", "e2"],
+      "entry": ["e1", "e2", "e7"],
       "nodes": [
         {
           "id": "e1",
@@ -340,6 +381,50 @@
             {"stat": "armor", "op": "add", "value": 0.15},
             {"stat": "move_speed", "op": "more", "value": 0.8},
             {"stat": "projectile_damage", "op": "inc", "value": 0.5}
+          ]
+        },
+        {
+          "id": "e7",
+          "type": "attack",
+          "name": "Échardes",
+          "at": [-0.5, 0],
+          "links": ["e1", "e2"],
+          "effects": [
+            {"attack_form": "echarde"}
+          ]
+        },
+        {
+          "id": "e8",
+          "type": "attack",
+          "name": "Échardes fourchues",
+          "at": [0.5, 0.85],
+          "links": ["e3"],
+          "excludes": ["e9"],
+          "effects": [
+            {"attack_mod": "fourche", "value": 2}
+          ]
+        },
+        {
+          "id": "e9",
+          "type": "attack",
+          "name": "Échardes ricochantes",
+          "at": [1.05, 1.0],
+          "links": ["e3"],
+          "excludes": ["e8"],
+          "effects": [
+            {"attack_mod": "ricochet", "value": 2}
+          ]
+        },
+        {
+          "id": "e10",
+          "type": "keystone",
+          "key": "riposte",
+          "name": "Riposte de ronce",
+          "at": [1.55, 0.8],
+          "links": ["e5"],
+          "desc": "Chaque coup reçu te fait tirer une salve tout autour de toi.",
+          "effects": [
+            {"on": "hurt", "do": "attack_salvo", "count": 10, "cooldown": 0.5, "text": "Quand un coup te touche, tu tires une salve de ton attaque de base tout autour de toi (10 traits, au plus toutes les 0,5 s)."}
           ]
         }
       ],
@@ -485,6 +570,17 @@
           "effects": [
             {"on": "bleed_tick", "do": "heal", "value": 0.002, "cooldown": 0.25, "text": "Chaque saignement qui coule te rend un peu de vie (au plus 4 fois par seconde)."}
           ]
+        },
+        {
+          "id": "s8",
+          "type": "attack",
+          "name": "Ronces vives",
+          "at": [2.0, -0.5],
+          "links": ["s5"],
+          "effects": [
+            {"attack_form": "ronce_vive"},
+            {"attack_mod": "saignement", "value": 0.1}
+          ]
         }
       ],
       "complete": {
@@ -618,6 +714,16 @@
             {"stat": "melee_damage", "op": "inc", "value": 0.2},
             {"stat": "projectile_damage", "op": "more", "value": 0.7}
           ]
+        },
+        {
+          "id": "r8",
+          "type": "attack",
+          "name": "Coups qui enracinent",
+          "at": [1.0, -0.8],
+          "links": ["r2"],
+          "effects": [
+            {"attack_mod": "enracine", "value": 0.12}
+          ]
         }
       ],
       "complete": {
@@ -721,6 +827,16 @@
                 {"skill_mod": "nova", "param": "damage", "op": "more", "value": 0.8, "text": "−20 % dégâts de la Couronne d'épines"}
               ]
             }
+          ]
+        },
+        {
+          "id": "v6",
+          "type": "attack",
+          "name": "Coup affamé",
+          "at": [1.0, -0.75],
+          "links": ["v2"],
+          "effects": [
+            {"attack_mod": "renforcee", "value": 4, "factor": 2.5}
           ]
         }
       ],

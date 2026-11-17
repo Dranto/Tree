@@ -45,6 +45,34 @@ func _run() -> void:
 	game.allocate(nid)
 	check(lvl > 1 and game.allocated.has(nid), "progression simulée (niveau %d)" % lvl)
 
+	print("Aide des commandes")
+	var hud = current_scene.hud
+	var settings = root.get_node("Settings")
+	settings.set_move_mode("clavier")
+	check(hud.move_hint_line().contains("l'attaque part toute seule") and hud.move_hint_line().contains("se déplacer"), "aide : le clavier se déplace, l'attaque part seule")
+	check(hud.skills_hint_line().contains("Clic gauche") and hud.skills_hint_line().contains("Clic droit"), "aide : clic gauche et clic droit pour les compétences")
+	settings.set_move_mode("moba")
+	check(hud.move_hint_line().contains("Clic droit") and not hud.skills_hint_line().contains("Clic droit"), "mode MOBA : le clic droit marche, la compétence 2 passe sur une touche")
+	settings.set_move_mode("clavier")
+	check(hud.slot_keys_text(0) == "" and hud.slot_is_key(0) == false, "la barre : le clic gauche est dessiné, sans texte")
+	check(hud.slot_keys_text(2).contains(" · 1"), "la barre : une secondaire donne sa touche et son chiffre")
+	var pl = current_scene.player
+	var before: Array = pl.bar.duplicate()
+	pl.swap_slots(0, 1)
+	check(pl.bar[0] == before[1] and pl.bar[1] == before[0], "glisser-déposer : deux emplacements échangent leur compétence")
+	pl.swap_slots(0, 1)
+	check(pl.bar == before, "l'échange est réversible")
+	game.flags.erase("tuto_attaque")
+	hud.banner_queue.clear()
+	hud.banner_time = 0.0
+	hud._on_attack_node({"type": "attack", "name": "Échardes", "effects": [{"attack_form": "echarde"}]})
+	check(hud.banner_text.contains("Échardes") and game.flags.get("tuto_attaque", false), "tutoriel : la première transformation de l'attaque est annoncée")
+	hud.banner_time = 0.0
+	hud.banner_queue.clear()
+	hud._on_attack_node({"type": "attack", "name": "Autre", "effects": [{"attack_form": "fouet"}]})
+	check(hud.banner_queue.is_empty() and not hud.banner_text.contains("Autre"), "tutoriel : annoncée une seule fois")
+	game.flags.erase("tuto_attaque")
+
 	print("Retour au titre")
 	flow.go_title()
 	await _frames(5)

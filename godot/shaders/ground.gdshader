@@ -6,6 +6,7 @@
 // Le bruit vient d'une texture précalculée (ground.gd) et les détails d'un hachage entier :
 // aucun sin() ni calcul flottant sensible à la carte graphique, le rendu est le même partout.
 shader_type canvas_item;
+render_mode blend_disabled;
 
 uniform sampler2D life_map : filter_linear;
 uniform sampler2D noise_tex : filter_linear, repeat_enable;

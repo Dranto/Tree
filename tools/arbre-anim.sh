@@ -9,7 +9,7 @@ GIF="${1:-$OUT/arbre_anim.gif}"
 mkdir -p "$OUT"; touch "$OUT/.gdignore"
 rm -rf "$OUT/arbre_anim"
 export LIBGL_ALWAYS_SOFTWARE=1
-"$ROOT/tools/godot.sh" --headless --editor --quit >/dev/null 2>&1
+"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1
 "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0 \
   -s res://tests/tree_anim.gd 2>&1 | grep -E "SCRIPT ERROR" || true
 ffmpeg -loglevel error -y -framerate 20 -i "$OUT/arbre_anim/%03d.png" \

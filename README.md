@@ -12,21 +12,27 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 
 | Action | Clavier / souris |
 | --- | --- |
-| Se déplacer | Au choix dans les options (**Déplacement**), voir ci-dessous |
-| Lancer des graines | Clic gauche maintenu (vise la souris) |
-| Esquive | Espace ou Maj |
-| Barre de compétences (6 emplacements) | 1 à 6, et A, E, R (AZERTY) / Q, E, R (QWERTY) pour les trois premiers ; touches réassignables dans les options. Clic sur un emplacement : y mettre une compétence acquise qui n'a pas de place |
+| Se déplacer | Z Q S D (W A S D en QWERTY) ou les flèches par défaut ; autres modes dans les options (**Déplacement**), voir ci-dessous |
+| Attaque de base | **Automatique** : part toute seule à sa cadence sur l'ennemi à portée le plus proche du curseur (à défaut, du héros). Options → **Visée** : « Vers le curseur » tire toujours vers la souris, même sans ennemi |
+| Compétences principales | Clic gauche et clic droit, lancées vers le curseur (tenir le clic relance la compétence dès qu'elle est prête) |
+| Compétences secondaires | A, E, R, F (AZERTY) / Q, E, R, F (QWERTY), et 1 à 4 |
+| Esquive | Espace ou Maj (Espace seulement en mode MOBA) |
+| Barre de compétences (6 emplacements) | 2 emplacements « souris » puis 4 secondaires ; commandes réassignables dans les options (touche ou bouton de souris). Clic sur un emplacement : y mettre une compétence acquise qui n'a pas de place |
 | Arbre de vie | Tab ou T (le jeu se met en pause) |
 | Journal des objectifs | J (le jeu se met en pause) |
 | Carte du monde | M (le jeu se met en pause) |
 
-**Modes de déplacement** (Options → Déplacement, enregistré avec les autres réglages) :
+L'ennemi visé par l'attaque automatique est marqué au sol par trois arcs à la couleur du héros ; quand des ennemis approchent sans être à portée (700 px, la course d.une graine), un cercle pointillé discret montre la portée.
 
-- **Suivre le curseur** (par défaut) : le héros marche vers la souris et s'arrête quand elle est tout près de lui (zone morte d'environ 46 px, plein régime 70 px plus loin), ce qui permet de viser sans bouger en gardant la souris près de lui. Clic gauche tenu : il s'arrête pour tirer (« tir posté »), sinon chaque tir le ferait foncer sur sa cible. Il ne suit la souris qu'une fois qu'elle a bougé dans la fenêtre, et s'arrête si elle en sort.
-- **Clic droit (MOBA)** : un clic droit fixe une destination, marquée par un repère au sol ; clic droit tenu, la destination suit le curseur. Le héros continue d'avancer pendant qu'il tire ailleurs (on peut reculer en tirant). Il s'arrête pile sur le point, et abandonne la destination s'il bute (buisson d'épines, mur de l'arène). Un clic droit sur l'interface ne compte pas.
-- **Clavier** : Z Q S D (W A S D en QWERTY) ou les flèches ; la souris ne sert qu'à viser.
+**Modes de déplacement** (Options → Déplacement, enregistré avec les autres réglages ; un choix déjà enregistré est gardé) :
+
+- **Clavier** (par défaut) : Z Q S D (W A S D en QWERTY) ou les flèches ; la souris vise les compétences.
+- **Suivre le curseur** : le héros marche vers la souris et s'arrête quand elle est tout près de lui (zone morte d'environ 46 px, plein régime 70 px plus loin). Les clics restent des compétences. Il ne suit la souris qu'une fois qu'elle a bougé dans la fenêtre, et s'arrête si elle en sort.
+- **Clic droit (MOBA)** : un clic droit fixe une destination, marquée par un repère au sol ; clic droit tenu, la destination suit le curseur. Le héros s'arrête pile sur le point, et abandonne la destination s'il bute (buisson d'épines, mur de l'arène). Un clic droit sur l'interface ne compte pas. Dans ce mode seulement, la compétence du clic droit passe sur une touche (Maj par défaut, réglable), et l'esquive reste sur Espace.
 
 Dans les deux modes à la souris, les touches de direction marchent aussi et prennent la main (elles annulent la destination). L'esquive part vers le curseur, au clavier dans la direction de marche.
+
+**Barre de compétences et rappels** (`hud.gd`, `controls_text.gd`) : les deux emplacements de gauche, plus gros, sont les compétences principales ; une petite souris dont le bouton utilisé est allumé indique le clic gauche ou le clic droit (en mode MOBA, la compétence 2 s'affiche avec sa touche). Les quatre suivants sont les secondaires et montrent leur touche. La recharge se lit en arc autour du médaillon. Un clic sur un emplacement y place une compétence acquise sans place ; glisser une compétence sur un autre emplacement échange les deux. Tous les textes de commandes (aide de départ en trois lignes, rappel du journal et de l'écran titre, infobulles) sont composés par `controls_text.gd` à partir des touches réelles : changer une touche dans les options les met tous à jour. La première transformation de l'attaque de base (nœud `attack`) est annoncée une fois en jeu. Les options défilent quand la fenêtre est petite.
 
 Dans l'arbre : clic pour apprendre, clic droit pour oublier, glisser pour se déplacer, molette pour zoomer. Une maîtrise ou une mutation ouvre une fenêtre de choix quand on l'apprend ; un clic sur une maîtrise apprise permet d'en changer. Les greffes trouvées dans le monde (autels cachés du roncier, secret, boss, élites) apparaissent en bas à gauche : glisser une greffe sur un emplacement de greffe (anneau creux) l'y pose, un clic sur l'emplacement la retire. L'arbre s'ouvre en vue d'ensemble ; en zoomant apparaissent tous les nœuds, puis les icônes et les noms des notables.
 
@@ -66,7 +72,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 
 `tools/godot.sh` télécharge Godot 4.3 une fois puis le lance sur le projet :
 
-- `tools/godot.sh --headless --editor --quit` : importe le projet et affiche les erreurs de script.
+- `tools/godot.sh --headless --import` : importe le projet et affiche les erreurs de script.
 - `tools/godot.sh --headless -s res://scripts/check_data.gd` : vérifie les fichiers de données de l'arbre.
 - `tools/godot.sh --xvfb -- --autotest` : un robot joue une minute, apprend des nœuds et enregistre des captures dans `godot/autotest/` (sans lire ni écrire de sauvegarde).
 - `tools/godot.sh --headless -s res://tests/save_test.gd -- --new-game` : teste la sauvegarde (aller-retour, nœuds disparus, formats anciens ou trop récents).
@@ -77,6 +83,8 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --xvfb -s res://tests/planner_captures.gd` : enregistre une capture de chaque outil de l'arbre dans `godot/tests/visual/out/`.
 - `tools/godot.sh --headless -s res://tests/node_types_test.gd` : teste les grappes écrites à la main et les types de nœuds (compétence, maîtrise, mutation, nœud flétri, greffe, exclusion, grappe complète, résonance, sauvegarde et migration de la version 1).
 - `TEST_ONLY=heros tools/visual-tests.sh` : galerie du héros (chaque pose et chaque état) et des attaques (la graine et les sept compétences, en trois temps) ; `tools/heros-anim.sh` en fait un GIF animé.
+- `tools/godot.sh --headless --fixed-fps 60 -s res://tests/attack_test.gd` : teste l'attaque de base (forme de départ identique à l'ancien tir, priorité entre formes, cumul des modificateurs, chaque forme et chaque modificateur en jeu, salve sur un évènement, nœud de type `attack`, aperçu du planificateur sans effet de bord).
+- `tools/godot.sh --xvfb -- --attack=fouet,repetition:1,saignement:0.3` : impose une forme et des modificateurs à l'attaque de base, sans passer par l'arbre (voir `godot/data/README.md`, « L'attaque de base ») ; marche aussi avec `--autotest`.
 - `tools/godot.sh --headless -s res://tests/skills_test.gd` : teste les compétences de Ronce, le saignement, l'enracinement, les nouveaux évènements et la barre de compétences.
 - `tools/godot.sh --xvfb -- --autotest --skills=all` : donne toutes les compétences sans passer par l'arbre (`--skills=fouet,racines,volee,saignee` pour en choisir), pour les essayer ; marche aussi sans `--autotest`.
 - `tools/godot.sh --headless -s res://tests/flow_test.gd` : teste le parcours des menus (Nouvelle partie, Retour au titre qui sauvegarde, Continuer qui reprend). Remplace la sauvegarde par défaut.
@@ -95,7 +103,12 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --xvfb -s res://tests/grafts_captures.gd` : captures d'un autel (avant et après), d'une greffe au sol et de l'inventaire de l'arbre dans `godot/tests/visual/out/`.
 - `tools/godot.sh --xvfb -s res://tests/ronce_captures.gd` : captures de la branche Ronce et de chacune de ses grappes dans `godot/tests/visual/out/`.
 - `tools/zone.sh` : robot « zone complète » (`godot/tests/zone_test.gd`, `scripts/zone_bot.gd`). Sur 5 graines en parallèle, sans affichage (environ 2 minutes), le robot part d'une nouvelle partie et suit l'objectif en cours jusqu'à la Mère-Ronce et la fin de la tranche (il gagne de l'expérience plus vite qu'un joueur). En route : sauvegarde et reprise après chaque objectif principal, en plein siège, en plein combat de boss et avec la sève au sol ; une mort pendant le siège et une face au boss ; une greffe ramassée Arbre ouvert et pendant la fin ; trois changements de résolution. À chaque image il vérifie qu'une seule annonce est visible, jamais sur le cadre d'objectif ni sur une barre de combat, que rien ne passe sur l'écran de mort ni sur la fin, et que pendant le boss seules les informations du combat restent. Échoue sur une erreur de script, un blocage, un état incohérent (cadre, journal, Cœur, arène, autels, sanctuaires, sève) ou une reprise qui ne retrouve pas la partie. Une graine : `SEEDS=3 tools/zone.sh` ; journaux dans `godot/autotest/zone/`.
-- `tools/godot.sh --xvfb -- --benchmark` : banc de performance. Le robot joue face à 120 Flétris pendant 30 s, puis le temps moyen, le 99e centile et le pire temps par image s'affichent.
+- `tools/godot.sh --xvfb -- --benchmark` : banc de performance. Le robot joue face à 120 Flétris pendant 30 s, puis le temps moyen, le 99e centile et le pire temps par image s'affichent. Options et budget de chaque poste : `docs/performances.md`.
+- `tools/bench.sh` : garde-fou de performance (aussi en CI) : échoue si le temps moyen par image du banc dépasse son budget de plus de 15 %.
+- `tools/perf-profile.sh` : profil du banc, temps de chaque `_process`, `_physics_process` et `_draw` (sur une copie instrumentée du projet).
+- `tools/godot.sh --xvfb -s res://tests/draw_batch_test.gd` : le lot de triangles fidèle (`draw_batch.gd`) donne les mêmes pixels que les `draw_*` de Godot.
+- `tools/godot.sh --xvfb --fixed-fps 60 --resolution 1600x900 --position 0,0 -s res://tests/direct_screen_test.gd` : le rendu direct à l'écran donne la même image que la texture du viewport.
+- `tools/godot.sh --headless -s res://tests/fletri_bench.gd` : temps de calcul d'une silhouette de chaque sorte de Flétri.
 
 La règle dans `.claude/settings.json` autorise ce script pour les sessions Claude.
 
@@ -113,6 +126,7 @@ La règle dans `.claude/settings.json` autorise ce script pour les sessions Clau
 | `roncier` | `roncier_mort`, `roncier_vague_1` à `_3` (la vague de vie avance), `roncier_ravive`, `roncier_purifie` (drapeau `ronce_coeur_purifie`), puis `sanctuaire_reprise` (sanctuaire à moitié ravivé), `sanctuaire_ravive`, `mort_ecran` (écran de mort et flèche vers la sève) et `seve_perdue` |
 | `resolution` | `jeu_`, `arbre_` et `titre_` en 1280x720, 1920x1080, 2560x1440 et 3440x1440 (un processus par résolution) |
 | `charte` | `charte` en 2560x1440 : la planche de la charte graphique (palette, éléments et leur rendu pour trois daltonismes, icônes, annonces de danger, silhouettes par rôle, règle d'une action), voir `docs/charte-graphique.md` |
+| `attaque` | `galerie_attaque` : l'attaque de base, chaque forme (graines, échardes, fouet, ronces vives) et chaque modificateur, avec les icônes des formes |
 | `quetes` | Le journal (`journal_`), la carte (`carte_`) et la fin de la tranche (`fin_`) en 1280x720, 1920x1080, 2560x1440 et 3440x1440 ; en 1920x1080 aussi `jeu_objectif` (suivi et flèche vers le Cœur) et `fin_arbre` (l'Arbre en train de fleurir) |
 
 - `tools/visual-tests.sh` : compare. Échoue si plus de 0,05 % des pixels d'une capture ont changé, ou si un défaut d'interface nouveau est détecté. Résultats, écarts en rouge (`*.diff.png`), `rapport.html` et `resume.md` dans `godot/tests/visual/out/`.
@@ -144,6 +158,7 @@ La CI (workflow « Tests visuels ») lance le tout sur chaque pull request, écr
   - `content.gd`, `effects.gd`, `effect_actions.gd` : lecture des données et moteur d'effets des nœuds.
   - `game.gd` : état global (niveau, points, statistiques, drapeaux d'aventure).
   - `save_game.gd` : sauvegarde versionnée (format 2 : choix des maîtrises et mutations, greffes posées). Les nœuds y sont notés par identifiant stable (`uid`), pour qu'une sauvegarde survive aux changements de l'arbre.
+  - `attack.gd`, `attack_fx.gd` et `data/attack.json` : l'attaque de base, ses formes et ses modificateurs donnés par l'arbre (`Attack.fire(joueur, cible)`), son rendu et ses zones au sol.
   - `main.gd`, `player.gd`, `enemy.gd`, `projectile.gd`, `orb.gd` : le jeu. La logique avance à pas fixe (`_physics_process`, 60 pas par seconde) et l'affichage est interpolé entre deux pas ; l'animation pure reste dans `_process`.
   - `heart.gd`, `boss_arena.gd`, `boss.gd`, `boss_bar.gd` : le Cœur de flétrissure, l'arène et la Mère-Ronce, boss de la région de Ronce, avec leur barre en haut de l'écran. Ils posent `Game.flags["ronce_coeur_purifie"]` et `Game.flags["ronce_boss_vaincu"]`.
   - `objectives.gd` (autoload `Objectives`) et `data/objectives.json` : les objectifs de la tranche. Aucun état propre : tout est dans `Game.flags` (`obj_<id>`, `elites_tuees`, `stat_morts`, `fin_ronce_vue`), donc dans la sauvegarde. `quest_ui.gd` assemble le suivi et la flèche (`objective_tracker.gd`), le journal (`journal.gd`), la carte (`world_map.gd`) et la fin (`ending.gd`). `Objectives.complete("<id>")` accomplit un objectif à la main ; les autres systèmes n'ont rien d'autre à faire que de poser leurs drapeaux (voir `data/README.md`, « Objectifs »).

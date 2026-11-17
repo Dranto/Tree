@@ -7,6 +7,9 @@
 ##   {"on": "kill", "do": "reduce_cooldown", ...}           réagit à un évènement
 ##   {"skill_mod": "nova", "param": "radius", "op": "more", "value": 1.5, "text": "…"}
 ##                                                          transforme un réglage d'une compétence
+##   {"attack_form": "fouet"}                              change la forme de l'attaque de base
+##   {"attack_mod": "fourche", "value": 1}                 ajoute un modificateur à l'attaque de base
+##                                                          (voir attack.gd et data/attack.json)
 ## Un effet peut porter une condition : "if": {"state": "immobile", "min": 0.5}.
 ##
 ## Valeur d'une statistique :
@@ -16,6 +19,7 @@ extends RefCounted
 
 const Content = preload("res://scripts/content.gd")
 const Actions = preload("res://scripts/effect_actions.gd")
+const AttackScript = preload("res://scripts/attack.gd")
 
 var stats: Dictionary = {}
 var skills: Dictionary = {}
@@ -26,6 +30,10 @@ var _cooldowns: Dictionary = {}  # uid -> secondes restantes
 var _signature := ""
 var _skill_mods: Dictionary = {}   # compétence -> [effets skill_mod]
 var _skill_cache: Dictionary = {}
+## Attaque de base : formes proposées ({"form", "priority", "ring", "order"}) et modificateurs.
+var _attack_forms: Array = []
+var _attack_mods: Array = []
+var _attack_cache: Dictionary = {}
 
 
 ## Reconstruit la liste des effets actifs à partir des nœuds appris.
@@ -34,12 +42,20 @@ func rebuild(nodes: Array) -> void:
 	_triggers = {}
 	_skill_mods = {}
 	_skill_cache = {}
+	_attack_forms = []
+	_attack_mods = []
+	_attack_cache = {}
 	skills = {}
 	for n in nodes:
 		var list: Array = n["effects"]
 		for i in list.size():
 			var e: Dictionary = list[i]
-			if e.has("stat"):
+			if e.has("attack_form"):
+				_attack_forms.append({"form": e["attack_form"], "priority": e.get("priority"),
+					"ring": float(n.get("ring", 0)), "order": _attack_forms.size()})
+			elif e.has("attack_mod"):
+				_attack_mods.append(e)
+			elif e.has("stat"):
 				_mods.append(e)
 			elif e.has("skill"):
 				skills[e["skill"]] = true
@@ -98,6 +114,14 @@ func skill_settings(id: String) -> Dictionary:
 			out[param] = (float(v) + acc[param]["add"]) * (1.0 + acc[param]["inc"]) * acc[param]["more"]
 	_skill_cache[id] = out
 	return out
+
+
+## État de l'attaque de base (forme et modificateurs, voir attack.gd), mis en cache jusqu'au
+## prochain rebuild.
+func attack_state() -> Dictionary:
+	if _attack_cache.is_empty():
+		_attack_cache = AttackScript.resolve(_attack_forms, _attack_mods)
+	return _attack_cache
 
 
 func _resolve(name: String, defs: Dictionary, acc: Dictionary):
@@ -203,6 +227,8 @@ static func describe(e: Dictionary) -> String:
 		return ""
 	if e.has("text"):
 		return e["text"]
+	if e.has("attack_form") or e.has("attack_mod"):
+		return AttackScript.describe_effect(e)
 	if e.has("skill"):
 		return Content.skills().get(e["skill"], {}).get("desc", "Nouvelle compétence")
 	if not e.has("stat"):

@@ -1,0 +1,40 @@
+# Garde-fou de performance : le banc de jeu (120 Flétris, rendu logiciel) doit rester dans son
+# budget de temps par image (tools/bench.sh, docs/performances.md).
+name: Banc de performance
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, "claude/project-thread-9liy48"]
+  workflow_dispatch:
+
+jobs:
+  bench:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer l'écran virtuel et le rendu logiciel
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1
+
+      - name: Cache de Godot
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/godot
+          key: godot-4.3-stable
+
+      - name: Banc de jeu (meilleure de 2 mesures)
+        run: RUNS=2 tools/bench.sh | tee bench.txt
+
+      - name: Résumé du job
+        if: always()
+        run: |
+          {
+            echo "### Banc de performance"
+            echo '```'
+            cat bench.txt 2>/dev/null
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

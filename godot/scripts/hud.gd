@@ -11,6 +11,9 @@ const REVIVABLE := 0.67
 ## Emplacements de compétences : toujours MAX_SLOTS affichés, dont skill_slots débloqués
 ## (4 au départ) ; un emplacement vide est « libre », un emplacement pas encore débloqué « verrouillé ».
 const MAX_SLOTS := 6
+## Les deux premiers emplacements sont les compétences principales, lancées par les clics de la souris ;
+## les suivants sont les compétences secondaires, lancées par une touche.
+const MOUSE_SLOTS := 2
 const MARGIN := 20
 
 ## Durée d'affichage d'une annonce (s), dont une seconde de fondu à la fin.
@@ -31,9 +34,10 @@ var banner_kind := "info"
 ## Pendant un combat de boss et l'écran de mort, les annonces ordinaires attendent la fin.
 var banner_queue: Array = []
 var hint_time := HINT_TIME
-## Aide de départ : le joueur s'est déplacé, a tiré (les deux gestes qu'elle enseigne).
+## Aide de départ : le joueur s'est déplacé, a lancé une compétence (les deux gestes qu'elle enseigne :
+## l'attaque de base part toute seule).
 var _hint_moved := false
-var _hint_shot := false
+var _hint_skill := false
 var _hint_start = null
 
 var _labels := {}
@@ -47,6 +51,7 @@ var death_screen
 
 
 const Widgets = preload("res://scripts/hud_widgets.gd")
+const Controls = preload("res://scripts/controls_text.gd")
 
 
 func _ready() -> void:
@@ -63,6 +68,7 @@ func _ready() -> void:
 	Settings.changed.connect(func(): _labels.clear())
 	Game.points_granted.connect(_on_points_granted)
 	Game.graft_found.connect(_on_graft_found)
+	Game.node_allocated.connect(_on_attack_node)
 	_refresh()
 
 
@@ -153,38 +159,37 @@ func _on_points_granted(n: int, source: String) -> void:
 	banner("%s : +%d point%s de l'Arbre de vie (%s)" % [Game.point_source_label(source), n, "s" if n > 1 else "", key_label("toggle_tree")])
 
 
+## Premier nœud qui change la forme de l'attaque de base : une annonce explique ce qui vient de se passer
+## (tutoriel : l'attaque évolue avec l'arbre, voir attack.gd). Les nœuds sans effet « attack_form » n'en déclenchent pas.
+func _on_attack_node(node: Dictionary) -> void:
+	var changes := str(node.get("type", "")) == "attack"
+	for e in node.get("effects", []):
+		if e is Dictionary and e.has("attack_form"):
+			changes = true
+	if changes and not bool(Game.flags.get("tuto_attaque", false)):
+		Game.flags["tuto_attaque"] = true
+		banner("Ton attaque a changé : %s. L'Arbre de vie la fera encore évoluer." % node.get("name", "nouveau nœud"))
+
+
 func _on_graft_found(id: String) -> void:
 	var g: Dictionary = Content.grafts().get(id, {})
 	banner("Greffe trouvée : %s. Pose-la dans l'Arbre de vie (%s)" % [g.get("name", id), key_label("toggle_tree")])
 
 
-## Nom de la touche selon la disposition du clavier du joueur (Z sur AZERTY pour « avancer »).
-## Première ligne de l'aide de départ : se déplacer (selon le mode choisi dans les options), tirer, esquiver.
+## Première ligne de l'aide de départ : se déplacer (selon le mode choisi dans les options), l'attaque automatique, l'esquive.
 func move_hint_line() -> String:
-	var dash := key_label("dash")
-	match Settings.move_mode:
-		"curseur":
-			return "La souris guide le héros   ·   Clic gauche : s'arrêter et lancer des graines   ·   %s : esquive" % dash
-		"moba":
-			return "Clic droit : marcher jusqu'au point   ·   Clic gauche : lancer des graines   ·   %s : esquive" % dash
-	return "%s %s %s %s : se déplacer   ·   Clic gauche : lancer des graines   ·   %s : esquive" % [key_label("move_up"), key_label("move_left"), key_label("move_down"), key_label("move_right"), dash]
+	return Controls.move_line()
+
+## Deuxième ligne : les compétences principales (souris) et secondaires.
+func skills_hint_line() -> String:
+	return Controls.skills_line()
 
 
+## Nom de la touche selon la disposition du clavier du joueur (Z sur AZERTY pour « avancer »).
 func key_label(action: String) -> String:
-	if _labels.has(action):
-		return _labels[action]
-	var label := "?"
-	if InputMap.has_action(action):
-		for ev in InputMap.action_get_events(action):
-			var key_ev := ev as InputEventKey
-			if key_ev:
-				var kc := key_ev.physical_keycode
-				if DisplayServer.get_name() != "headless":
-					kc = DisplayServer.keyboard_get_keycode_from_physical(kc)
-				label = OS.get_keycode_string(kc)
-				break
-	_labels[action] = label
-	return label
+	if not _labels.has(action):
+		_labels[action] = Controls.action_label(action, true)
+	return _labels[action]
 
 
 func _label(parent: Node, size_px: int, color: Color) -> Label:
@@ -221,7 +226,7 @@ func _build_bottom_center() -> void:
 	_hint_box = VBoxContainer.new()
 	_hint_box.add_theme_constant_override("separation", 4)
 	v.add_child(_hint_box)
-	for i in 2:
+	for i in 3:
 		var l := _label(_hint_box, 16, Color(0.9, 0.95, 0.85))
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var row := HBoxContainer.new()
@@ -229,9 +234,18 @@ func _build_bottom_center() -> void:
 	row.add_theme_constant_override("separation", 6)
 	v.add_child(row)
 	for i in MAX_SLOTS:
+		if i == MOUSE_SLOTS:
+			# Un espace sépare les deux compétences de la souris des compétences secondaires.
+			var gap := Control.new()
+			gap.custom_minimum_size = Vector2(14, 0)
+			gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(gap)
 		var s := Widgets.Slot.new()
 		s.index = i
+		s.set_kind(Widgets.Slot.MOUSE_LEFT if i == 0 else (Widgets.Slot.MOUSE_RIGHT if i == 1 else Widgets.Slot.KEY))
+		s.size_flags_vertical = Control.SIZE_SHRINK_END
 		s.gui_input.connect(_on_slot_input.bind(i))
+		s.swap_requested.connect(_on_slot_swap)
 		row.add_child(s)
 		_slots.append(s)
 
@@ -243,12 +257,36 @@ func _on_slot_input(event: InputEvent, i: int) -> void:
 		main.player.cycle_slot(i)
 
 
-## Touches d'un emplacement : la touche choisie dans les options et le chiffre (« A · 1 »).
+## Touche d'un emplacement (« A · 1 ») ; vide pour un clic de souris, que l'emplacement dessine lui-même.
+## En mode MOBA, le clic droit sert à marcher : la compétence principale 2 se lance alors à la touche.
 func slot_keys_text(i: int) -> String:
-	var digit := str(i + 1)
-	var k: int = Settings.slot_keys[i]
-	return digit if k == KEY_NONE else "%s · %s" % [Settings.key_name(k), digit]
+	if i < MOUSE_SLOTS:
+		return Controls.main_label(i + 1) if slot_is_key(i) else ""
+	var digit := Settings.key_name(Settings.SLOT_DIGITS[i])
+	return digit if Settings.effective_binding(i) == KEY_NONE else "%s · %s" % [Settings.binding_name(i), digit]
 
+
+## Commande d'un emplacement : « Clic gauche », « Clic droit » ou la touche secondaire.
+func slot_control(i: int) -> String:
+	return Settings.binding_name(i)
+
+
+## Nom d'un emplacement pour l'infobulle : « Compétence principale 1 (Clic gauche) ».
+func slot_title(i: int) -> String:
+	if i < MOUSE_SLOTS:
+		return "Compétence principale %d (%s)" % [i + 1, slot_control(i)]
+	return "Compétence secondaire %d (%s)" % [i - MOUSE_SLOTS + 1, slot_control(i)]
+
+
+## Un emplacement « souris » dont l'entrée est une touche (compétence 2 en mode MOBA) s'affiche comme une touche.
+func slot_is_key(i: int) -> bool:
+	return i < MOUSE_SLOTS and not Settings.binding_is_mouse(i)
+
+
+## Glisser une compétence sur un autre emplacement échange les deux (voir Widgets.Slot).
+func _on_slot_swap(from: int, to: int) -> void:
+	if main and main.player:
+		main.player.swap_slots(from, to)
 
 func _build_banner() -> void:
 	_banner = Label.new()
@@ -285,14 +323,16 @@ func _update_hint() -> void:
 		_hint_start = p.position
 	if p.position.distance_to(_hint_start) > 60.0:
 		_hint_moved = true
-	if p.fire_cd > 0.0:
-		_hint_shot = true
+	for cd in p.cds.values():
+		if float(cd) > 0.0:
+			_hint_skill = true
+			break
 	var fight: bool = in_boss_fight() or p.hurt_flash > 0.0 or (main.heart != null and main.heart.state == "siege")
 	if not fight:
 		for e in main.enemies_near(p.position, HINT_ENEMY_NEAR):
 			fight = true
 			break
-	var done: bool = (_hint_moved and _hint_shot) or fight or Game.allocated.size() > 1
+	var done: bool = (_hint_moved and _hint_skill) or fight or Game.allocated.size() > 1
 	if done:
 		hint_time = minf(hint_time, 0.5)
 
@@ -317,13 +357,14 @@ func _refresh() -> void:
 			slot.apply(Widgets.Slot.LOCKED, "", 0.0, 0.0, "", "")
 		elif id == "":
 			slot.name_label.text = "libre"
-			slot.apply(Widgets.Slot.FREE, "", 0.0, 0.0, slot_keys_text(i), "Emplacement libre")
+			slot.as_key = slot_is_key(i)
+			slot.apply(Widgets.Slot.FREE, "", 0.0, 0.0, slot_keys_text(i), "%s : emplacement libre.\nClique pour y placer une compétence acquise, ou glisse-en une dessus." % slot_title(i))
 		else:
 			var k: Dictionary = Content.skills()[id]
 			var cd: float = p.cds.get(id, 0.0)
 			var maxcd: float = maxf(0.01, p.skill_cd.get(id, 1.0))
 			slot.name_label.text = k.get("short", id)
-			slot.apply(Widgets.Slot.SKILL, id, cd / maxcd if cd > 0.0 else 0.0, cd, slot_keys_text(i), "%s\n%s" % [k.get("name", id), k.get("desc", "")])
+			slot.apply(Widgets.Slot.SKILL, id, cd / maxcd if cd > 0.0 else 0.0, cd, slot_keys_text(i), "%s  (%s)\n%s\nClique pour changer de compétence, ou glisse-la sur un autre emplacement." % [k.get("name", id), slot_control(i), k.get("desc", "")])
 
 	if _banner.text != banner_text:
 		_banner.text = banner_text
@@ -341,7 +382,8 @@ func _refresh() -> void:
 	_hint_box.visible = show_hint
 	var lines := [
 		move_hint_line(),
+		skills_hint_line(),
 		"%s : ouvrir l'Arbre de vie. Chaque nœud appris ravive une région du monde." % key_label("toggle_tree"),
 	]
-	for i in 2:
+	for i in 3:
 		(_hint_box.get_child(i) as Label).text = lines[i]

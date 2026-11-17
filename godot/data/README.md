@@ -24,11 +24,12 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
 | `difficulty.json` | Difficulté (`scripts/difficulty.gd`) : menace des ennemis (`threat` : par niveau, selon la profondeur dans la région, par Cœur purifié, plafond), effet de la menace sur leurs statistiques (`scaling`), courbe d'expérience et durée visée par niveau (`xp`), apparitions (`spawn` : cadence, plafond d'ennemis et salves près de la graine et au fond de la région), modes Facile / Normal / Difficile (`modes`), élites (`elites` : chance près/loin, niveau minimal, nombre en vie, chance d'un second modificateur, multiplicateurs de vie, dégâts, taille et expérience, chance de greffe, sortes exclues, et `affixes` : nom affiché, couleur, poids et réglages de chaque modificateur). Vérifiée par `check_data.gd` ; le rythme se mesure avec `tools/balance.sh --run`. |
 | `objectives.json` | Les objectifs de la tranche : principaux (dans l'ordre), facultatifs, drapeau de fin. Voir « Objectifs ». |
+| `attack.json` | L'attaque de base du Porte-Graine (`scripts/attack.gd`) : forme de départ, formes (graine, échardes, fouet, ronces vives) et modificateurs cumulables. Voir « L'attaque de base ». |
 | `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest`/`kite`/`guard`/`bomber` et ses réglages, `region`, `resist` par branche, `no_affix` : modificateurs d'élite interdits), Flétris ordinaires (`ordinary` : poids, `min_level` niveau d'apparition, `max_alive` nombre maximal en vie) et apparitions par région (`spawn` : sortes et poids, part près/loin de la graine, nombre de nids, effet de la purification du Cœur). Les élites sont réglées dans `difficulty.json`. Les trois premières sortes sont les Flétris d'origine. |
 
 ## Les effets
 
-Un nœud porte une liste `effects`. Chaque effet est d'une de ces quatre sortes.
+Un nœud porte une liste `effects`. Chaque effet est d'une de ces cinq sortes.
 
 ### 1. Modifier une statistique
 
@@ -95,6 +96,7 @@ Les compétences acquises se rangent dans la barre de compétences (6 emplacemen
 | `heal` | `value` | Soigne une fraction de la vie maximale |
 | `burst` | `radius`, `factor`, `at` (`player` par défaut, ou `enemy`), `color` | Onde d'épines autour du joueur ou de l'ennemi de l'évènement : `factor` × dégâts du joueur × dégâts de zone, rayon × taille des zones. Coup de Ronce |
 | `status_area` | `status`, `value`, `duration`, `radius`, `at`, `scale` (`damage`) | Pose un état sur tous les ennemis de la zone (mêmes règles que `apply_status`) |
+| `attack_salvo` | `count` | Salve de l'attaque de base tout autour du joueur, en `count` directions, avec sa forme et ses modificateurs actuels (par exemple `{"on": "hurt", "do": "attack_salvo", "count": 8, "cooldown": 0.6, "text": "…"}`) |
 
 ### États des ennemis
 
@@ -108,6 +110,15 @@ Les compétences acquises se rangent dans la barre de compétences (6 emplacemen
 ```
 
 Modifie un réglage d'une compétence de `skills.json`. `op` vaut `add`, `inc`, `more` (même calcul que pour une statistique : `(réglage + add) × (1 + inc) × more`) ou `set` (remplace la valeur, y compris par un texte ou un booléen, pour un réglage que le code de la compétence sait lire). `text` est obligatoire, sauf avec `"hidden": true` quand une autre ligne décrit déjà l'ensemble. Le code lit les réglages par `Game.skill("nova")` au moment du lancer.
+
+### 5. Transformer l'attaque de base
+
+```json
+{"attack_form": "fouet"}
+{"attack_mod": "fourche", "value": 1}
+```
+
+`attack_form` change la forme de l'attaque de base, `attack_mod` lui ajoute un modificateur. Les formes et les modificateurs sont décrits dans `attack.json` (voir « L'attaque de base »). Le texte de l'infobulle est produit à partir de `attack.json` ; `text` le remplace si besoin. Ces deux effets n'acceptent pas de condition.
 
 ### Conditions
 
@@ -160,12 +171,62 @@ Chaque nœud a un `id` local, un `type`, une position `at: [x, y]` en unités d'
 | `mastery` | `name`, exactement 3 `choices` | Un bonus à choisir, modifiable ensuite sans rien dépenser. | Carré à trois points |
 | `graft` | aucun effet | Emplacement qui reçoit une greffe de `grafts.json` (`Game.set_graft(id, greffe)`). La greffe n'agit que si l'emplacement est appris. | Anneau creux |
 | `withered` | `name`, `effects`, `requires_flag`, `requires_text` facultatif | Verrouillé et couvert de cendre tant que `Game.flags[requires_flag]` n'est pas vrai. `requires_text` complète la phrase « Couvert de cendre : … ». | Cercle fissuré |
+| `attack` | `name`, `effects` avec au moins un `attack_form` ou `attack_mod` | Change la forme ou le comportement de l'attaque de base. Icône `Art.icon("attaque_<forme>")`, ou `attaque_mod` s'il n'ajoute que des modificateurs. | Pointe de flèche (provisoire) |
 
 Un choix s'écrit `{"id": "...", "name": "...", "effects": [...]}`. `id` est facultatif (par défaut la position du choix dans la liste) mais conseillé : c'est lui que la sauvegarde retient, et il permet de réordonner les choix plus tard. Tant qu'aucun choix n'est fait, le nœud ne donne que ses `effects` propres ; la fenêtre de choix s'ouvre à l'apprentissage, et le nœud pulse en doré tant que le choix reste à faire.
 
 `excludes` (sur n'importe quel nœud de grappe) liste des nœuds incompatibles : un identifiant local de la même grappe, la `key` d'un nœud clé ou un identifiant stable complet. L'exclusion vaut dans les deux sens : apprendre l'un verrouille l'autre.
 
 Une grappe ne doit recouvrir ni la graine, ni un nœud clé généré (anneaux 4, 8 et 12, au milieu du secteur), ni une autre grappe : `check_data.gd` le signale.
+
+## L'attaque de base
+
+L'attaque de base part toute seule à sa cadence. Elle a une **forme** et des **modificateurs**, donnés par les nœuds (`attack_form`, `attack_mod`), les choix des maîtrises et les greffes. Rien n'est sauvegardé en plus : l'attaque est recalculée depuis les nœuds appris (`Game.attack()`, `scripts/attack.gd`). Sans aucun effet, c'est la forme `start` (`graine`), avec exactement les chiffres de l'ancien tir.
+
+```json
+{
+  "start": "graine",
+  "forms": {"fouet": {"name": "Fouet", "desc": "…", "kind": "melee", "tags": ["corps_a_corps"], "branch": "ronce",
+                      "element": "epine", "priority": 2, "damage": 1.5, "rate": 0.8, "range": 135, "arc": 1.9, "knockback": 12}},
+  "mods": {"fourche": {"name": "Fourche", "text": "… +{v} branche(s).", "stack": "sum", "forms": ["graine", "echarde", "ronce_vive"], "angle": 0.42, "factor": 0.6}}
+}
+```
+
+**Champs d'une forme**
+
+| Champ | Rôle |
+| --- | --- |
+| `name`, `desc` | Nom et phrase de l'infobulle. |
+| `kind` | `projectile` (éventail de projectiles) ou `melee` (coup en arc autour du joueur). |
+| `tags` | Familles du coup : chacune multiplie les dégâts par sa statistique (`projectile_damage`, `melee_damage`, `area_damage`), comme pour les compétences. `trap_tags` : familles du piège d'une ronce vive. |
+| `branch` | `ronce` : coup de Ronce (résistance des ennemis du roncier, bonus « se battre chez soi »). |
+| `element` | Élément de la charte pour le dessin (`seve`, `epine`, `saignement`…). |
+| `priority` | Règle de priorité entre formes, voir plus bas. |
+| `damage`, `rate`, `range` | Facteur des dégâts de base, facteur de la vitesse d'attaque (`fire_rate`), portée en pixels. |
+| `speed`, `spread`, `pierce`, `size` | Projectiles : vitesse, écart entre projectiles de l'éventail (la statistique `projectiles` en donne le nombre), perforation ajoutée à `pierce`, facteur de `projectile_size`. |
+| `burst`, `burst_gap`, `jitter` | Rafale : nombre de tirs par attaque, écart entre eux (s), petit écart d'angle d'un tir à l'autre. |
+| `arc`, `knockback` | Corps à corps : ouverture de l'arc (radians), recul. |
+| `trap_radius`, `trap_duration`, `trap_damage`, `trap_tick`, `trap_root`, `trap_max` | Ronce vive : le piège planté là où la graine tombe (rayon × `area`, durée, dégâts par seconde en part des dégâts de base, à-coups, immobilisation à l'entrée, nombre de pièges à la fois). |
+
+**Règle de priorité.** Une seule forme est active. La `priority` la plus haute l'emporte : celle de l'effet si elle est écrite (`{"attack_form": "fouet", "priority": 5}`, pour un nœud clé), sinon celle de la forme dans `attack.json` (la graine vaut 0, les autres 2). À égalité, le nœud le plus loin de la graine (anneau le plus grand) l'emporte : sur un même chemin, on l'a forcément pris après. À égalité encore, la dernière source dans l'ordre du moteur.
+
+**Modificateurs.** `{"attack_mod": "<nom>", "value": v}`. Tous se cumulent selon leur `stack` : `sum` additionne les valeurs, `min` garde la plus petite (une attaque sur N), `max` la plus grande. `forms` limite les formes sur lesquelles le modificateur agit (toutes par défaut) ; l'infobulle signale un modificateur sans effet sur la forme active. Dans `text`, `{v}` est la valeur, `{p}` la valeur en pourcentage, `{n}` le N d'« une sur N », `{f}` le facteur.
+
+| Modificateur | `value` | Effet |
+| --- | --- | --- |
+| `fourche` | branches en plus | Au premier coup, le projectile se divise (`angle`, dégâts × `factor`). |
+| `ricochet` | rebonds | Quand il ne perfore plus, le projectile rebondit vers l'ennemi le plus proche (`reach`, dégâts × `factor` à chaque rebond). |
+| `eclat` | facteur de dégâts | Un ennemi tué par l'attaque éclate en `count` épines. |
+| `saignement` | part des dégâts par seconde | Chaque coup fait saigner (`duration` × durée du saignement). Vaut aussi pour les ennemis qui traversent une ronce vive. |
+| `enracine` | chance | Chance d'enraciner l'ennemi touché (`duration` × durée d'immobilisation), plafonnée à `cap`. |
+| `trainee` | part des dégâts par seconde | Le projectile sème une touffe d'épines au sol tous les `every` pixels. |
+| `renforcee` | N | Une attaque sur N est renforcée : dégâts × `factor` (le plus grand `factor` écrit sur les effets, sinon celui d'`attack.json`), taille × `size`, `extra` projectiles en plus, arc plus large. |
+| `taille`, `portee` | +x % | Taille des projectiles, du piège et de l'arc ; portée (durée de vol, allonge du fouet). |
+| `repetition` | coups en plus | L'attaque repart après `delay` secondes (le fouet frappe deux fois). |
+| `volee` | N | Une attaque sur N part en couronne tout autour du joueur (`count` directions). |
+| `poison` | part des dégâts par seconde | Chaque coup empoisonne (`duration`). |
+
+L'infobulle d'un nœud montre l'aperçu avant → après de l'attaque (« Attaque : Graines → Fouet », « Attaque : + fourche… »), comme pour les statistiques. Pour essayer une attaque sans passer par l'arbre : `tools/godot.sh --xvfb -- --attack=fouet,repetition:1,saignement:0.3` (marche aussi avec `--autotest`). `tools/godot.sh --headless --fixed-fps 60 -s res://tests/attack_test.gd` teste le moteur.
 
 ## Résonance de branche
 

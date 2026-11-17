@@ -93,19 +93,23 @@ func _run() -> void:
 	game.recompute()
 	game.tree_changed.emit()
 
-	print("Touches")
-	check(InputMap.has_action("slot_1") and InputMap.has_action("slot_6"), "actions slot_1 à slot_6")
-	var before: Array = settings.slot_keys.duplicate()
-	settings.set_slot_key(3, KEY_Q)
-	check(settings.slot_keys[3] == KEY_Q and settings.slot_keys[0] == KEY_NONE, "une touche réassignée est retirée de l'ancien emplacement")
+	print("Commandes")
+	for action in ["skill_main_1", "skill_main_2", "slot_1", "slot_4"]:
+		check(InputMap.has_action(action), "action %s" % action)
+	check(not InputMap.has_action("attack"), "plus d'action « attack » : l'attaque part toute seule")
+	var before: Array = settings.bindings.duplicate()
+	settings.set_binding(5, KEY_Q)
+	check(settings.bindings[5] == KEY_Q and settings.bindings[2] == KEY_NONE, "une touche réassignée est retirée de l'ancien emplacement")
 	var has_q := false
 	for ev in InputMap.action_get_events("slot_4"):
 		if ev is InputEventKey and ev.physical_keycode == KEY_Q:
 			has_q = true
 	check(has_q, "l'action suit la nouvelle touche")
+	settings.set_binding(2, -MOUSE_BUTTON_LEFT)
+	check(settings.bindings[2] == -MOUSE_BUTTON_LEFT and settings.bindings[0] == KEY_NONE, "un clic réassigné est retiré de l'ancien emplacement")
 	check(settings.key_owner(KEY_W) == "move_up", "une touche de déplacement est signalée comme prise")
 	for i in before.size():
-		settings.slot_keys[i] = before[i]
+		settings.bindings[i] = before[i]
 	settings.apply_bindings()
 
 	print("Saignement")
