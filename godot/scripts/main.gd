@@ -119,6 +119,10 @@ const BENCH_ENEMIES := 120
 const BENCH_WARMUP := 3.0
 var bench_time := 30.0
 var benchmark := false
+## Scène du banc (« --bench-scene=coeur » ou « boss », vide : 120 Flétris). « coeur » : le siège
+## du Cœur avec ses vagues jusqu'à la purification ; « boss » : le combat de la Mère-Ronce, du
+## début à la victoire. Le héros a le build du robot du boss (niveau 12, points dans Ronce).
+var bench_scene := ""
 var bench_clock := 0.0
 var bench_last_usec := 0
 var bench_frames: PackedFloat32Array = PackedFloat32Array()
@@ -289,6 +293,8 @@ func _ready() -> void:
 	if autotest_boss:
 		arena.autotest_begin()
 	_set_direct_to_screen(get_tree().current_scene == self and (not autotest or benchmark))
+	if benchmark and bench_scene == "coeur":
+		_bench_coeur_begin()
 	if benchmark:
 		_benchmark_hide({"sol": ground, "decor": trees_layer, "fleurs": flora, "ennemis": enemies_layer,
 			"joueur": player, "acteurs": actors_layer, "effets": fx, "ambiance": ambience, "hud": hud_layer, "monde": self})
@@ -365,7 +371,7 @@ func _physics_process(delta: float) -> void:
 	enemies = enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
 	if benchmark:
 		player.invuln = maxf(player.invuln, 1.0)
-		while enemies.size() < BENCH_ENEMIES:
+		while bench_scene == "" and enemies.size() < BENCH_ENEMIES:
 			_spawn_enemy()
 	_rebuild_grid()
 	_separate()
@@ -993,6 +999,8 @@ func bot_input(p) -> Dictionary:
 		return zone_bot.input(self, p)
 	if autotest_boss:
 		return arena.bot_input(p)
+	if benchmark and bench_scene == "coeur":
+		return _bench_coeur_input(p)
 	var target: Vector2 = p.position + Vector2.RIGHT * 100.0
 	var best := INF
 	for e in enemies:
@@ -1018,7 +1026,11 @@ func _autotest_step(delta: float) -> void:
 		zone_bot.step(self, delta)
 		return
 	if autotest_boss:
-		arena.autotest_step(delta)
+		if benchmark:
+			if arena.state == "vaincue" and bench_clock > BENCH_WARMUP + 1.0:
+				_finish_benchmark()
+		else:
+			arena.autotest_step(delta)
 		return
 	autotest_time += delta
 	if build_bot != null and build_bot.run:
@@ -1106,7 +1118,13 @@ func _finish_benchmark() -> void:
 	var p99: float = sorted[mini(n - 1, int(n * 0.99))] if n > 0 else 0.0
 	var worst: float = sorted[n - 1] if n > 0 else 0.0
 	var k: float = maxf(1.0, bench_cpu["samples"])
-	print("BENCHMARK %d Flétris, %.0f s, %d images" % [BENCH_ENEMIES, bench_time, n])
+	match bench_scene:
+		"coeur":
+			print("BENCHMARK vague du Cœur, %.0f s, %d images (siège : %s)" % [bench_clock - BENCH_WARMUP, n, heart.state])
+		"boss":
+			print("BENCHMARK combat du boss, %.0f s, %d images (arène : %s)" % [bench_clock - BENCH_WARMUP, n, arena.state])
+		_:
+			print("BENCHMARK %d Flétris, %.0f s, %d images" % [BENCH_ENEMIES, bench_time, n])
 	print("BENCHMARK temps par image : moyen %.2f ms (%.1f images/s), 99e centile %.2f ms, pire %.2f ms" % [avg, 1000.0 / maxf(avg, 0.001), p99, worst])
 	print("BENCHMARK scripts par image : _process %.2f ms, _physics_process %.2f ms" % [bench_cpu["process"] / k, bench_cpu["physics"] / k])
 	var sn: float = maxf(1.0, bench_seg["n"])
@@ -1134,6 +1152,12 @@ func _set_direct_to_screen(on: bool) -> void:
 func _benchmark_setup() -> void:
 	Prof.on = "--profile" in OS.get_cmdline_user_args()
 	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--bench-scene="):
+			bench_scene = a.substr(14)
+			# Durées par défaut : le siège dure 30 s, puis la purification ; le boss, 60 s de combat.
+			bench_time = 36.0 if bench_scene == "coeur" else 60.0
+			autotest_boss = bench_scene == "boss"
+	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--bench-time="):
 			bench_time = maxf(1.0, float(a.substr(13)))
 	get_tree().process_frame.connect(func(): _seg_start = Time.get_ticks_usec())
@@ -1155,3 +1179,39 @@ func _benchmark_hide(layers: Dictionary) -> void:
 				layers[key].visible = false
 			else:
 				push_warning("--hide : calque inconnu « %s » (%s)" % [key, ", ".join(layers.keys())])
+
+
+## Banc « coeur » : le build du robot du boss, le héros posé au bord de la zone du Cœur.
+func _bench_coeur_begin() -> void:
+	while Game.level < 12:
+		Game.add_xp(Game.xp_to_next())
+	while Game.points > 0:
+		var options: Array = []
+		for n in Game.tree.nodes:
+			if n["branch"] == 0 and Game.can_allocate(n["id"]):
+				options.append(n)
+		if options.is_empty():
+			break
+		options.sort_custom(func(a, b):
+			if (a["type"] == "keystone") != (b["type"] == "keystone"):
+				return a["type"] == "keystone"
+			return a["ring"] < b["ring"] if a["ring"] != b["ring"] else a["id"] < b["id"])
+		Game.allocate(options[0]["id"])
+	player.hp = Game.stats["max_hp"]
+	player.position = heart.center + Vector2(0, heart.ZONE * 0.6)
+
+
+## Banc « coeur » : le robot reste dans la zone et vise le Flétri le plus proche.
+func _bench_coeur_input(p) -> Dictionary:
+	var target: Vector2 = p.position + Vector2.RIGHT * 100.0
+	var best := INF
+	for e in enemies:
+		if is_instance_valid(e) and not e.dead:
+			var d: float = e.position.distance_squared_to(p.position)
+			if d < best:
+				best = d
+				target = e.position
+	var spot: Vector2 = heart.center + Vector2.from_angle(elapsed * 0.5) * heart.ZONE * 0.6
+	var mv: Vector2 = spot - p.position
+	mv = mv.normalized() if mv.length() > 30.0 else Vector2.ZERO
+	return {"move": mv, "aim": target, "dash": false}

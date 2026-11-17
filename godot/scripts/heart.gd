@@ -104,7 +104,7 @@ func _physics_process(delta: float) -> void:
 	if state == "purifie":
 		_life_wave_step(delta)
 		return
-	if main.benchmark:
+	if main.benchmark and main.bench_scene != "coeur":
 		return
 	var p = main.player
 	var to: Vector2 = p.position - center
