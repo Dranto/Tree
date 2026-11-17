@@ -12,19 +12,23 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 
 | Action | Clavier / souris |
 | --- | --- |
-| Se déplacer | Au choix dans les options (**Déplacement**), voir ci-dessous |
-| Lancer des graines | Clic gauche maintenu (vise la souris) |
-| Esquive | Espace ou Maj |
-| Barre de compétences (6 emplacements) | 1 à 6, et A, E, R (AZERTY) / Q, E, R (QWERTY) pour les trois premiers ; touches réassignables dans les options. Clic sur un emplacement : y mettre une compétence acquise qui n'a pas de place |
+| Se déplacer | Z Q S D (W A S D en QWERTY) ou les flèches par défaut ; autres modes dans les options (**Déplacement**), voir ci-dessous |
+| Attaque de base | **Automatique** : part toute seule à sa cadence sur l'ennemi à portée le plus proche du curseur (à défaut, du héros). Options → **Visée** : « Vers le curseur » tire toujours vers la souris, même sans ennemi |
+| Compétences principales | Clic gauche et clic droit, lancées vers le curseur (tenir le clic relance la compétence dès qu'elle est prête) |
+| Compétences secondaires | A, E, R, F (AZERTY) / Q, E, R, F (QWERTY), et 1 à 4 |
+| Esquive | Espace ou Maj (Espace seulement en mode MOBA) |
+| Barre de compétences (6 emplacements) | 2 emplacements « souris » puis 4 secondaires ; commandes réassignables dans les options (touche ou bouton de souris). Clic sur un emplacement : y mettre une compétence acquise qui n'a pas de place |
 | Arbre de vie | Tab ou T (le jeu se met en pause) |
 | Journal des objectifs | J (le jeu se met en pause) |
 | Carte du monde | M (le jeu se met en pause) |
 
-**Modes de déplacement** (Options → Déplacement, enregistré avec les autres réglages) :
+L'ennemi visé par l'attaque automatique est marqué au sol par trois arcs à la couleur du héros ; quand des ennemis approchent sans être à portée (600 px), un cercle pointillé discret montre la portée.
 
-- **Suivre le curseur** (par défaut) : le héros marche vers la souris et s'arrête quand elle est tout près de lui (zone morte d'environ 46 px, plein régime 70 px plus loin), ce qui permet de viser sans bouger en gardant la souris près de lui. Clic gauche tenu : il s'arrête pour tirer (« tir posté »), sinon chaque tir le ferait foncer sur sa cible. Il ne suit la souris qu'une fois qu'elle a bougé dans la fenêtre, et s'arrête si elle en sort.
-- **Clic droit (MOBA)** : un clic droit fixe une destination, marquée par un repère au sol ; clic droit tenu, la destination suit le curseur. Le héros continue d'avancer pendant qu'il tire ailleurs (on peut reculer en tirant). Il s'arrête pile sur le point, et abandonne la destination s'il bute (buisson d'épines, mur de l'arène). Un clic droit sur l'interface ne compte pas.
-- **Clavier** : Z Q S D (W A S D en QWERTY) ou les flèches ; la souris ne sert qu'à viser.
+**Modes de déplacement** (Options → Déplacement, enregistré avec les autres réglages ; un choix déjà enregistré est gardé) :
+
+- **Clavier** (par défaut) : Z Q S D (W A S D en QWERTY) ou les flèches ; la souris vise les compétences.
+- **Suivre le curseur** : le héros marche vers la souris et s'arrête quand elle est tout près de lui (zone morte d'environ 46 px, plein régime 70 px plus loin). Les clics restent des compétences. Il ne suit la souris qu'une fois qu'elle a bougé dans la fenêtre, et s'arrête si elle en sort.
+- **Clic droit (MOBA)** : un clic droit fixe une destination, marquée par un repère au sol ; clic droit tenu, la destination suit le curseur. Le héros s'arrête pile sur le point, et abandonne la destination s'il bute (buisson d'épines, mur de l'arène). Un clic droit sur l'interface ne compte pas. Dans ce mode seulement, la compétence du clic droit passe sur une touche (Maj par défaut, réglable), et l'esquive reste sur Espace.
 
 Dans les deux modes à la souris, les touches de direction marchent aussi et prennent la main (elles annulent la destination). L'esquive part vers le curseur, au clavier dans la direction de marche.
 

@@ -373,7 +373,7 @@ func _auto_attack() -> void:
 	var a = _spawn(spot + Vector2(250, 0))
 	var b = _spawn(spot + Vector2(-200, 0))
 	p.test_mouse = spot + Vector2(400, 0)
-	await _steps(2)
+	await _steps(p.TARGET_EVERY + 2)
 	check(p.target == a, "cible : l'ennemi à portée le plus proche du curseur")
 	check(p.fire_cd > 0.0 and p.shot_dir.x > 0.99, "l'attaque part toute seule vers la cible")
 	await _steps(15)
