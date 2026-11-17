@@ -35,6 +35,29 @@ var dirty := false
 ## Vagues de vie en cours : {center, radius, add, t, done} (« done » = rayon déjà peint).
 var waves: Array = []
 var mat: ShaderMaterial
+## Rectangle de la carte de vie (en texels) changé depuis le dernier envoi : ses carrés de sol en
+## cache sont à redessiner. Vide : rien n'a changé.
+var _dirty_rect := Rect2i()
+var _rect: ColorRect
+
+## --- Sol en cache (docs/performances.md) ---
+## Le shader du sol coûtait ~9 ms par image en rendu logiciel : il est maintenant dessiné une fois
+## par carré de TILE_PX pixels d'écran dans une texture (SubViewport), et chaque image ne fait que
+## recopier les carrés visibles. Un carré est redessiné quand la vie change sous lui (vague, peinture,
+## chargement), quand la rouille s'efface, ou quand l'échelle de l'écran change.
+## Écart avec le calcul direct : moins d'un pixel (la grille des carrés suit le monde, pas l'écran).
+const TILE_PX := 512
+## Carrés gardés en plus de ceux visibles (les plus anciens hors écran sont libérés au-delà).
+const TILE_SPARE := 12
+## Marge autour de la vue (pixels du monde) où les carrés sont déjà prêts.
+const TILE_MARGIN := 96.0
+## Vrai : sol en cache (le jeu) ; faux : shader dessiné directement à chaque image (comparaison).
+var cached := true
+## Carrés en cache : Vector2i -> {vp: SubViewport, sprite: Sprite2D, used: int}.
+var _tiles: Dictionary = {}
+## Échelle de l'écran (pixels par pixel du monde) des carrés en cache.
+var _tile_scale := 0.0
+var _frame := 0
 
 
 func _ready() -> void:
@@ -42,10 +65,8 @@ func _ready() -> void:
 	data.fill(0)
 	img = Image.create_from_data(RES, RES, false, Image.FORMAT_R8, data)
 	tex = ImageTexture.create_from_image(img)
-	var rect := ColorRect.new()
-	rect.position = Vector2(-SIZE / 2.0, -SIZE / 2.0)
-	rect.size = Vector2(SIZE, SIZE)
-	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rect := _make_rect()
+	_rect = rect
 	mat = ShaderMaterial.new()
 	mat.shader = preload("res://shaders/ground.gdshader")
 	mat.set_shader_parameter("life_map", tex)
@@ -63,6 +84,17 @@ func _ready() -> void:
 		mat.set_shader_parameter(k, Vector3(col.r, col.g, col.b))
 	rect.material = mat
 	add_child(rect)
+	if "--sol-direct" in OS.get_cmdline_user_args():
+		cached = false
+
+
+## Le monde entier, couvert par le shader du sol.
+static func _make_rect() -> ColorRect:
+	var rect := ColorRect.new()
+	rect.position = Vector2(-SIZE / 2.0, -SIZE / 2.0)
+	rect.size = Vector2(SIZE, SIZE)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
 
 
 ## Couleurs du sol passées au shader, toutes tirées de la charte (Art) : le fond reste sourd.
@@ -138,6 +170,92 @@ func _process(_delta: float) -> void:
 		dirty = false
 		img.set_data(RES, RES, false, Image.FORMAT_R8, data)
 		tex.update(img)
+		if _dirty_rect.has_area():
+			# Un texel de marge : le shader lit la carte en filtrage linéaire.
+			var k := SIZE / RES
+			var r := _dirty_rect.grow(1)
+			_invalidate(Rect2(Vector2(r.position) * k - Vector2(SIZE, SIZE) / 2.0, Vector2(r.size) * k))
+			_dirty_rect = Rect2i()
+	_update_tiles()
+
+
+# --- Carrés de sol en cache ---
+
+## Rend les carrés visibles, libère les plus anciens hors de l'écran.
+func _update_tiles() -> void:
+	_rect.visible = not cached
+	if not cached or not is_visible_in_tree():
+		return
+	_frame += 1
+	var vp := get_viewport()
+	var xf := vp.get_final_transform() * get_canvas_transform()
+	var s := xf.get_scale().x
+	if s <= 0.0:
+		return
+	if not is_equal_approx(s, _tile_scale):
+		_clear_tiles()
+		_tile_scale = s
+	var world := TILE_PX / s
+	# Marge : la caméra (lissage, secousse) bouge encore après ce calcul, dans la même image.
+	var view := (xf.affine_inverse() * Rect2(Vector2.ZERO, vp.get_visible_rect().size * vp.get_final_transform().get_scale())).grow(TILE_MARGIN)
+	var lo := Vector2i(floori(view.position.x / world), floori(view.position.y / world))
+	var hi := Vector2i(floori(view.end.x / world), floori(view.end.y / world))
+	for ty in range(lo.y, hi.y + 1):
+		for tx in range(lo.x, hi.x + 1):
+			var key := Vector2i(tx, ty)
+			if not _tiles.has(key):
+				_tiles[key] = _make_tile(key, world)
+			_tiles[key]["used"] = _frame
+	var keep := (hi.x - lo.x + 1) * (hi.y - lo.y + 1) + TILE_SPARE
+	if _tiles.size() > keep:
+		var old := _tiles.keys()
+		old.sort_custom(func(a, b): return _tiles[a]["used"] < _tiles[b]["used"])
+		for i in _tiles.size() - keep:
+			_free_tile(old[i])
+
+
+## Un carré : le shader du sol dessiné une fois dans une texture, montrée par un sprite posé au même
+## endroit du monde (un pixel de texture par pixel d'écran).
+func _make_tile(key: Vector2i, world: float) -> Dictionary:
+	var origin := Vector2(key) * world
+	var vp := SubViewport.new()
+	vp.size = Vector2i(TILE_PX, TILE_PX)
+	vp.disable_3d = true
+	vp.transparent_bg = false
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	var rect := _make_rect()
+	rect.material = mat
+	vp.add_child(rect)
+	add_child(vp)
+	# Après l'entrée dans l'arbre : le canevas du SubViewport n'existe qu'à ce moment.
+	vp.canvas_transform = Transform2D(0.0, Vector2(_tile_scale, _tile_scale), 0.0, -origin * _tile_scale)
+	var sprite := Sprite2D.new()
+	sprite.centered = false
+	sprite.position = origin
+	sprite.scale = Vector2(world, world) / TILE_PX
+	sprite.texture = vp.get_texture()
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(sprite)
+	return {"vp": vp, "sprite": sprite, "used": _frame, "rect": Rect2(origin, Vector2(world, world))}
+
+
+func _free_tile(key: Vector2i) -> void:
+	var t: Dictionary = _tiles[key]
+	t["sprite"].queue_free()
+	t["vp"].queue_free()
+	_tiles.erase(key)
+
+
+func _clear_tiles() -> void:
+	for key in _tiles.keys():
+		_free_tile(key)
+
+
+## Redessine les carrés qui touchent ce rectangle du monde (tous s'il est infini).
+func _invalidate(area: Rect2) -> void:
+	for t in _tiles.values():
+		if not area.is_finite() or (t["rect"] as Rect2).intersects(area):
+			t["vp"].render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 ## Les vagues de vie avancent à pas fixe : la vie du sol compte pour le jeu (soin, Flétris ralentis).
@@ -160,6 +278,7 @@ func _physics_process(delta: float) -> void:
 ## La région de Ronce a été purifiée (son Cœur) : la rouille du sol s'efface.
 func set_purified(value: float) -> void:
 	mat.set_shader_parameter("ronce_purified", value)
+	_invalidate(Rect2(-Vector2.INF, Vector2.INF))
 
 
 func _to_map(p: Vector2) -> Vector2:
@@ -217,6 +336,7 @@ func _paint_ring(world_pos: Vector2, radius: float, strength: float, r_in: float
 				data[i] = nv
 				total_bytes += nv - old
 				dirty = true
+				_dirty_rect = Rect2i(x, y, 1, 1) if not _dirty_rect.has_area() else _dirty_rect.expand(Vector2i(x, y)).expand(Vector2i(x + 1, y + 1))
 
 
 func life_at(world_pos: Vector2) -> float:
@@ -247,6 +367,7 @@ func import_map(png: PackedByteArray) -> bool:
 	if loaded.get_width() != RES or loaded.get_height() != RES:
 		loaded.resize(RES, RES, Image.INTERPOLATE_BILINEAR)
 	data = loaded.get_data()
+	_dirty_rect = Rect2i(0, 0, RES, RES)
 	total_bytes = 0
 	for v in data:
 		total_bytes += v

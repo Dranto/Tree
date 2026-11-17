@@ -95,7 +95,12 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --xvfb -s res://tests/grafts_captures.gd` : captures d'un autel (avant et après), d'une greffe au sol et de l'inventaire de l'arbre dans `godot/tests/visual/out/`.
 - `tools/godot.sh --xvfb -s res://tests/ronce_captures.gd` : captures de la branche Ronce et de chacune de ses grappes dans `godot/tests/visual/out/`.
 - `tools/zone.sh` : robot « zone complète » (`godot/tests/zone_test.gd`, `scripts/zone_bot.gd`). Sur 5 graines en parallèle, sans affichage (environ 2 minutes), le robot part d'une nouvelle partie et suit l'objectif en cours jusqu'à la Mère-Ronce et la fin de la tranche (il gagne de l'expérience plus vite qu'un joueur). En route : sauvegarde et reprise après chaque objectif principal, en plein siège, en plein combat de boss et avec la sève au sol ; une mort pendant le siège et une face au boss ; une greffe ramassée Arbre ouvert et pendant la fin ; trois changements de résolution. À chaque image il vérifie qu'une seule annonce est visible, jamais sur le cadre d'objectif ni sur une barre de combat, que rien ne passe sur l'écran de mort ni sur la fin, et que pendant le boss seules les informations du combat restent. Échoue sur une erreur de script, un blocage, un état incohérent (cadre, journal, Cœur, arène, autels, sanctuaires, sève) ou une reprise qui ne retrouve pas la partie. Une graine : `SEEDS=3 tools/zone.sh` ; journaux dans `godot/autotest/zone/`.
-- `tools/godot.sh --xvfb -- --benchmark` : banc de performance. Le robot joue face à 120 Flétris pendant 30 s, puis le temps moyen, le 99e centile et le pire temps par image s'affichent.
+- `tools/godot.sh --xvfb -- --benchmark` : banc de performance. Le robot joue face à 120 Flétris pendant 30 s, puis le temps moyen, le 99e centile et le pire temps par image s'affichent. Options et budget de chaque poste : `docs/performances.md`.
+- `tools/bench.sh` : garde-fou de performance (aussi en CI) : échoue si le temps moyen par image du banc dépasse son budget de plus de 15 %.
+- `tools/perf-profile.sh` : profil du banc, temps de chaque `_process`, `_physics_process` et `_draw` (sur une copie instrumentée du projet).
+- `tools/godot.sh --xvfb -s res://tests/draw_batch_test.gd` : le lot de triangles fidèle (`draw_batch.gd`) donne les mêmes pixels que les `draw_*` de Godot.
+- `tools/godot.sh --xvfb --fixed-fps 60 --resolution 1600x900 --position 0,0 -s res://tests/direct_screen_test.gd` : le rendu direct à l'écran donne la même image que la texture du viewport.
+- `tools/godot.sh --headless -s res://tests/fletri_bench.gd` : temps de calcul d'une silhouette de chaque sorte de Flétri.
 
 La règle dans `.claude/settings.json` autorise ce script pour les sessions Claude.
 
