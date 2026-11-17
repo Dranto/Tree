@@ -117,11 +117,11 @@
       "text": "Le projectile sème des épines au sol ({p} % des dégâts par seconde).",
       "stack": "sum",
       "forms": ["graine", "echarde", "ronce_vive"],
-      "every": 44,
+      "every": 56,
       "radius": 18,
       "duration": 1.6,
       "tick": 0.4,
-      "max": 72
+      "max": 40
     },
     "renforcee": {
       "name": "Attaque renforcée",
