@@ -159,15 +159,17 @@ func _on_graft_found(id: String) -> void:
 
 
 ## Nom de la touche selon la disposition du clavier du joueur (Z sur AZERTY pour « avancer »).
-## Première ligne de l'aide de départ : se déplacer (selon le mode choisi dans les options), tirer, esquiver.
+## Première ligne de l'aide de départ : se déplacer (selon le mode choisi dans les options), attaque
+## automatique, compétences des clics, esquive.
 func move_hint_line() -> String:
 	var dash := key_label("dash")
+	var skills := "%s et %s : compétences" % [Settings.binding_name(0), Settings.binding_name(1).to_lower() if Settings.binding_is_mouse(1) else Settings.binding_name(1)]
 	match Settings.move_mode:
 		"curseur":
-			return "La souris guide le héros   ·   Clic gauche : s'arrêter et lancer des graines   ·   %s : esquive" % dash
+			return "La souris guide le héros   ·   L'attaque part toute seule   ·   %s   ·   %s : esquive" % [skills, dash]
 		"moba":
-			return "Clic droit : marcher jusqu'au point   ·   Clic gauche : lancer des graines   ·   %s : esquive" % dash
-	return "%s %s %s %s : se déplacer   ·   Clic gauche : lancer des graines   ·   %s : esquive" % [key_label("move_up"), key_label("move_left"), key_label("move_down"), key_label("move_right"), dash]
+			return "Clic droit : marcher jusqu'au point   ·   L'attaque part toute seule   ·   %s   ·   %s : esquive" % [skills, dash]
+	return "%s %s %s %s : se déplacer   ·   L'attaque part toute seule   ·   %s   ·   %s : esquive" % [key_label("move_up"), key_label("move_left"), key_label("move_down"), key_label("move_right"), skills, dash]
 
 
 func key_label(action: String) -> String:
@@ -243,11 +245,15 @@ func _on_slot_input(event: InputEvent, i: int) -> void:
 		main.player.cycle_slot(i)
 
 
-## Touches d'un emplacement : la touche choisie dans les options et le chiffre (« A · 1 »).
+## Commandes d'un emplacement : la liaison choisie dans les options et le chiffre
+## (« Clic gauche », « A · 1 »).
 func slot_keys_text(i: int) -> String:
-	var digit := str(i + 1)
-	var k: int = Settings.slot_keys[i]
-	return digit if k == KEY_NONE else "%s · %s" % [Settings.key_name(k), digit]
+	var name := Settings.binding_name(i)
+	var digit: int = Settings.SLOT_DIGITS[i]
+	if digit == KEY_NONE:
+		return name
+	var d := Settings.key_name(digit)
+	return d if Settings.effective_binding(i) == KEY_NONE else "%s · %s" % [name, d]
 
 
 func _build_banner() -> void:

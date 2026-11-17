@@ -13,6 +13,7 @@ const ScreenFx = preload("res://scripts/screen_fx.gd")
 const Ambience = preload("res://scripts/ambience.gd")
 const Player = preload("res://scripts/player.gd")
 const MoveMarker = preload("res://scripts/move_marker.gd")
+const TargetMarker = preload("res://scripts/target_marker.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Projectile = preload("res://scripts/projectile.gd")
 const Orb = preload("res://scripts/orb.gd")
@@ -60,6 +61,7 @@ var quest_ui
 var orbs_layer: Node2D
 ## Repère au sol de la destination du clic droit (mode de déplacement « moba »).
 var move_marker: Node2D
+var target_marker: Node2D
 var enemies_layer: Node2D
 var projectiles_layer: Node2D
 ## Calque trié en profondeur (Y-sort) : arbres du décor, Flétris et joueur.
@@ -161,6 +163,10 @@ func _ready() -> void:
 	move_marker = MoveMarker.new()
 	move_marker.main = self
 	add_child(move_marker)
+	# Cible de l'attaque automatique et portée, sous les acteurs.
+	target_marker = TargetMarker.new()
+	target_marker.main = self
+	add_child(target_marker)
 	add_child(actors_layer)
 	enemies_layer = Node2D.new()
 	enemies_layer.y_sort_enabled = true
@@ -301,15 +307,10 @@ func _setup_input() -> void:
 	_keys("move_down", [KEY_S, KEY_DOWN])
 	_keys("move_left", [KEY_A, KEY_LEFT])
 	_keys("move_right", [KEY_D, KEY_RIGHT])
-	_keys("dash", [KEY_SPACE, KEY_SHIFT])
-	# Emplacements de la barre de compétences : touches 1 à 6 et A E R, réassignables (settings.gd).
+	# Esquive et barre de compétences (clics gauche et droit, A E R F et 1 à 4, réassignables) :
+	# settings.gd, qui les adapte au mode de déplacement. L'attaque de base part toute seule.
 	Settings.apply_bindings()
 	_keys("toggle_tree", [KEY_TAB, KEY_T])
-	if not InputMap.has_action("attack"):
-		InputMap.add_action("attack")
-		var ev := InputEventMouseButton.new()
-		ev.button_index = MOUSE_BUTTON_LEFT
-		InputMap.action_add_event("attack", ev)
 
 
 ## Les touches sont des positions physiques (QWERTY) : W A S D devient Z Q S D sur un clavier AZERTY.
