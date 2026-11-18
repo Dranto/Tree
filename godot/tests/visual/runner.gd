@@ -1020,8 +1020,8 @@ func _scenario_quetes() -> void:
 	main.ground.paint(ronce * 0.45, 330.0, 1.0)
 	main.ground.paint(ronce * 0.6 + Vector2(-320, 240), 200.0, 1.0)
 	Game.flags["sanctuaire_graine"] = true
-	Game.flags["sanctuaire_ronce_1"] = true
-	Game.flags["autel_ronce_a"] = true
+	Game.flags["sanctuaire_lisiere"] = true
+	Game.flags["autel_ronce_1"] = true
 	Game.flags[Objectives.ELITES] = 2
 	Game.level = 14
 	Game.kills = 312
