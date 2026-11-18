@@ -71,7 +71,7 @@ func _run() -> void:
 
 	print("Données")
 	var grafts := Content.grafts()
-	check(grafts.size() >= 10 and grafts.size() <= 16 and not grafts.has("greffe_test") and not grafts.has("_doc"), "%d greffes de Ronce, plus de greffe d'essai" % grafts.size())
+	check(grafts.size() >= 20 and grafts.size() <= 40 and not grafts.has("greffe_test") and not grafts.has("_doc"), "%d greffes de Ronce et de Spore, plus de greffe d'essai" % grafts.size())
 	var with_play := 0
 	for id in grafts:
 		for e in grafts[id]["effects"]:

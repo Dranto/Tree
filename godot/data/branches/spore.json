@@ -158,9 +158,9 @@
       "id": "graines",
       "name": "Graines vénéneuses",
       "theme": "Attaque empoisonnée",
-      "ring": 2.3,
-      "angle": 0.12,
-      "entry": ["a1"],
+      "ring": 2.0,
+      "angle": 0.5,
+      "entry": ["a1", "a4"],
       "nodes": [
         {
           "id": "a1",
@@ -203,7 +203,7 @@
           "id": "a4",
           "type": "notable",
           "name": "Sève aigre",
-          "at": [1.05, 0],
+          "at": [1.1, 0],
           "links": ["a2", "a3"],
           "effects": [
             {
@@ -234,8 +234,8 @@
       "id": "nuee",
       "name": "Vesse-de-loup",
       "theme": "Champignons-pièges et spores lobées",
-      "ring": 2.6,
-      "angle": 0.8,
+      "ring": 2.4,
+      "angle": 0.86,
       "entry": ["n1"],
       "nodes": [
         {
@@ -482,8 +482,8 @@
       "id": "brume",
       "name": "Brume toxique",
       "theme": "Nuage de spores",
-      "ring": 6.0,
-      "angle": 0.84,
+      "ring": 4.9,
+      "angle": 0.68,
       "entry": ["b1"],
       "nodes": [
         {
@@ -508,7 +508,7 @@
           "id": "b2",
           "type": "notable",
           "name": "Nappe",
-          "at": [0.5, -0.4],
+          "at": [0.5, 0.4],
           "links": ["b1"],
           "effects": [
             {
@@ -524,7 +524,7 @@
           "id": "b3",
           "type": "notable",
           "name": "Spores collantes",
-          "at": [0.5, 0.4],
+          "at": [0.5, -0.4],
           "links": ["b1"],
           "effects": [
             {
@@ -591,7 +591,7 @@
           "type": "mutation",
           "name": "Nuage transformé",
           "mutates": "cloud",
-          "at": [1.45, -0.35],
+          "at": [1.45, 0.35],
           "links": ["b4"],
           "choices": [
             {
@@ -661,7 +661,7 @@
           "type": "keystone",
           "name": "Brouillard vivant",
           "key": "brouillard",
-          "at": [1.5, 0.3],
+          "at": [1.5, -0.3],
           "links": ["b4"],
           "excludes": ["pandemie"],
           "desc": "Ton Nuage de spores naît sur toi et te suit, un peu plus petit. Exclut Pandémie.",
@@ -717,7 +717,7 @@
           "id": "b8",
           "type": "attack",
           "name": "Pluie de spores",
-          "at": [2.0, -0.5],
+          "at": [2.0, 0.5],
           "links": ["b5"],
           "effects": [
             {
@@ -748,7 +748,7 @@
       "name": "Toxines",
       "theme": "Éclosion du poison",
       "ring": 5.0,
-      "angle": 0.16,
+      "angle": 0.5,
       "entry": ["t1"],
       "nodes": [
         {
@@ -944,8 +944,8 @@
           "id": "t7",
           "type": "attack",
           "name": "Dards empoisonnés",
-          "at": [1.0, 0.85],
-          "links": ["t3"],
+          "at": [1.0, -0.85],
+          "links": ["t2"],
           "effects": [
             {
               "attack_mod": "poison",
@@ -969,8 +969,8 @@
       "id": "propagation",
       "name": "Propagation",
       "theme": "Essaim et contagion",
-      "ring": 7.8,
-      "angle": 0.2,
+      "ring": 5.0,
+      "angle": 0.18,
       "entry": ["c1"],
       "nodes": [
         {

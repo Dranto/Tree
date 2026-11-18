@@ -48,7 +48,7 @@
     "branch": "spore", "tags": ["zone"],
     "desc": "Nouvelle compétence : un champignon-piège pousse à l'endroit visé et éclate en nuage de spores quand un ennemi s'approche.",
     "range": 380, "max": 3, "arm": 0.5, "life": 9, "trigger": 70,
-    "radius": 95, "damage": 1.6, "cloud_duration": 3, "cloud_damage": 0.5, "poison": 0
+    "radius": 95, "damage": 2.2, "cloud_duration": 3, "cloud_damage": 0.5, "poison": 0
   },
   "essaim": {
     "name": "Essaim", "short": "Essaim", "color": "#c49be8", "cooldown": 3.5,
@@ -60,6 +60,6 @@
     "name": "Éclosion", "short": "Éclosion", "color": "#7d4fb0", "cooldown": 6,
     "branch": "spore", "tags": ["zone"],
     "desc": "Nouvelle compétence : le poison des ennemis proches éclot d'un coup ; leurs spores empoisonnent leurs voisins.",
-    "radius": 280, "damage": 0.3, "burst": 1.0, "splash": 90, "keep": 0
+    "radius": 280, "damage": 0.4, "burst": 1.4, "splash": 90, "keep": 0
   }
 }
