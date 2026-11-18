@@ -4,6 +4,7 @@
 extends SceneTree
 
 const Synth = preload("res://scripts/synth.gd")
+const RegionAudio = preload("res://scripts/region_audio.gd")
 
 
 func _initialize() -> void:
@@ -14,7 +15,13 @@ func _initialize() -> void:
 		total += _save("res://assets/sounds/%s.wav" % name, Synth.render(name))
 	total += _save("res://assets/music/sombre.wav", Synth.music_dark())
 	total += _save("res://assets/music/lumineux.wav", Synth.music_bright())
-	print("GEN %d sons + 2 pistes, %d Ko" % [Synth.SOUNDS.size(), total / 1024])
+	# Musique propre à chaque région qui en règle une (data/audio.json, section « audio » des régions).
+	var styles: Dictionary = RegionAudio.all_music_styles()
+	for id in styles:
+		for file in RegionAudio.LAYERS:
+			var samples: PackedFloat32Array = Synth.music_dark(styles[id]) if file == "sombre" else Synth.music_bright(styles[id])
+			total += _save(RegionAudio.music_path(id, file), samples)
+	print("GEN %d sons + %d pistes, %d Ko" % [Synth.SOUNDS.size(), 2 + 2 * styles.size(), total / 1024])
 	quit()
 
 

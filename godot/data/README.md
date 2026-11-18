@@ -275,6 +275,31 @@ Une région est décrite tout entière par `regions/<id>.json`. `scripts/regions
 
 **Couleurs.** Partout dans un fichier de région, une couleur s'écrit `"#rrggbb"`, avec un rôle de la charte (`"sol_mort"`), un élément et sa variante (`"cendre/sombre"`, `"vent"`), une couleur nommée (`"$rouille"`), ou une recette qui reprend les calculs de la charte : `{"mix": [a, b, t]}`, `{"dark": [a, part]}`, `{"light": [a, part]}`.
 
+## Son et ambiance
+
+`data/audio.json` (clé `regions`, une entrée par identifiant de région) règle ce qu'on entend et voit d'une région. La région peut aussi porter une section `audio` dans son propre fichier, qui prime. Une région sans réglage garde la musique et les particules de Ronce. `check_data.gd` vérifie tout (sons connus, boucle de musique, formes et couleurs).
+
+```json
+"spore": {
+  "music": {
+    "seed": 23, "roots": [-2, -7, -4, -9],
+    "dark":   {"chord": [0, 3, 6, 10], "wind": 0.5, "wind_lp": 0.012, "wind_period": 4.0},
+    "bright": {"chord": [0, 3, 7, 10], "pattern": [0, 3, 7, 10, 14, 10, 7, 3]}
+  },
+  "ambience": {
+    "butterflies": 0,
+    "dead":  {"shape": "glow", "color": "poison/sombre", "alpha": 0.5, "vel": [4, -14], "sway": [10, 3], "size": [1.6, 3.4]},
+    "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.7, "vel": [170, 8], "sway": [24, 8], "size": [1, 1.8], "length": 26}
+  },
+  "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort"}
+}
+```
+
+- **`music`** : `roots` (quatre fondamentales en demi-tons depuis le ré, une par accord de 3 s), `seed` (hasard du vent), puis `dark` (terre morte) et `bright` (terre vivante), dont chaque réglage est facultatif (valeurs de Ronce par défaut, `Synth.DEFAULT_DARK` et `DEFAULT_BRIGHT`). `dark` : `chord` (demi-tons), `vol`, `vol2`, `detune`, `wind` (niveau du vent), `wind_lp` (clarté du vent), `wind_period` (**doit diviser 12 s**, pour que la boucle ne claque pas), `wind_fade` (estompe du vent aux bouts, pour un vent fort), `bell`. `bright` : `chord`, `octave`, `pattern` (1 à 24 notes réparties sur 3 s), `pad`, `pluck`, `sparkle`, `sparkle_note`. `tools/gen-sounds.sh` écrit `assets/music/<id>_sombre.wav` et `<id>_lumineux.wav` ; commiter les `.wav` (`sound_test.gd` échoue s'ils sont périmés).
+- **`ambience`** : `dead` et `alive` (terre morte ou vivante là où naît la particule), chacun avec `shape` (`dot`, `glow` halo qui scintille, `streak` brin qui file), `color` (couleur de région : `"#rrggbb"`, `"élément/variante"`…), `alpha`, `vel` (vitesse en pixels par seconde), `sway` (ondulation), `size` (min, max) et `length` (pour `streak`). `butterflies` à 0 supprime les papillons dans la région. « Réduire les effets » coupe toutes les particules.
+- **Sons choisis par les données** : `"sound"` dans une compétence (`skills.json`, joué après son lancement) ou dans une forme d'attaque (`attack.json`, remplace `tir`), `"sound_hit"`, `"sound_crit"` et `"sound_death"` dans une sorte d'ennemi (`enemies.json`). Le nom doit exister dans `Synth.SOUNDS` (`check_data.gd` le vérifie).
+- **`boss`** : sons d'éveil (le combat commence), de phase (le boss change de phase) et de mort, joués par le socle `BossBase`. Un boss peut en jouer d'autres lui-même (`Sfx.play`).
+
 ## Points et greffes du monde
 
 Chaque région décrit ce qu'elle donne, hors des niveaux : `heart › reward` et `boss › reward` (`{"points": 2, "graft": "greffe_mere"}`), `altars` et `secrets` :
