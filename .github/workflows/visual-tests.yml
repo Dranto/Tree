@@ -39,11 +39,12 @@ jobs:
             echo "Le rapport HTML complet est dans l'artefact « tests-visuels » (rapport.html)." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Durée sous 5 minutes
+      - name: Durée sous 6 minutes
         run: |
           total=$(awk '{s+=$3} END{print s}' godot/tests/visual/out/durees.txt)
           echo "Durée des scénarios : ${total} s"
-          [ "$total" -le 300 ] || { echo "Plus de 5 minutes : alléger les scénarios"; exit 1; }
+          # 6 minutes : la vague 2 du jalon 7 ajoute deux régions (scénarios marais et plateaux, ~55 s).
+          [ "$total" -le 360 ] || { echo "Plus de 6 minutes : alléger les scénarios"; exit 1; }
 
       - name: Publier les captures et le rapport
         if: always()
