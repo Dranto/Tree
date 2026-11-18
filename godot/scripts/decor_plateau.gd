@@ -54,7 +54,7 @@ func spawn() -> void:
 	var rocks := int(cfg.get("rocks", 64))
 	var clear_center := float(cfg.get("clear_center", 340.0))
 	var clear_seed := float(cfg.get("clear_seed", 560.0))
-	for i in rocks + int(cfg.get("grass", 150)):
+	for i in rocks + int(cfg.get("grass", 320)):
 		var rock := i < rocks
 		var a := mid + r.randf_range(-half, half) * 0.97
 		var d := sqrt(r.randf_range(pow(Regions.INNER + 30.0, 2), pow(4000.0, 2)))
@@ -220,21 +220,26 @@ class Grass extends Flora.DecorTree:
 		var s := size
 		var g := growth()
 		var side := signf(lean) if lean != 0.0 else 1.0
-		var dry := Art.c("decor").lerp(Art.c("brume"), 0.45)
-		var blond := Art.c("decor_vivant").lerp(Art.c("or"), 0.35)
-		var tufts := 1 + r.randi() % 2
+		var dry := Art.c("decor").lerp(Art.c("brume"), 0.62)
+		var blond := Art.c("decor_vivant").lerp(Art.c("or"), 0.5)
+		var tufts := 2 + r.randi() % 2
 		for tf in tufts:
-			var at := Vector2(r.randf_range(-16.0, 16.0), r.randf_range(-6.0, 6.0)) * s * tf
-			var n := 3 + r.randi() % 3
+			var at := Vector2(r.randf_range(-18.0, 18.0), r.randf_range(-7.0, 7.0)) * s * tf
+			var n := 4 + r.randi() % 3
 			for i in n:
-				var base := at + Vector2((i - n / 2.0) * 2.4 * s, 0)
-				var len := r.randf_range(12.0, 20.0) * s * (1.0 + 0.3 * g)
+				var base := at + Vector2((i - n / 2.0) * 3.0 * s, 0)
+				var len := r.randf_range(18.0, 30.0) * s * (1.0 + 0.3 * g)
 				# Le brin monte un peu puis se couche : plus il est vivant, plus il se redresse.
 				var rise := 0.35 + 0.25 * g + r.randf_range(-0.08, 0.08)
 				var tip := base + Vector2(side * len * (1.0 - rise * 0.5), -len * rise)
 				var mid := base.lerp(tip, 0.5) + Vector2(0, -len * 0.12)
 				var col := dry.lerp(blond.darkened(0.08 * (i % 3)), g)
-				_b.draw_colored_polygon(PackedVector2Array([base + Vector2(-1.3 * s, 0), mid, tip, mid + Vector2(0, 1.2 * s), base + Vector2(1.3 * s, 0)]), col)
+				if i == 0:
+					# Ombre de la touffe : un liseré sombre au pied, qui la détache du sol.
+					_b.draw_colored_polygon(Art.ellipse(at + Vector2(side * 4.0, 1.5) * s, 10.0 * s, 3.0 * s, 10), Color(Art.c("ombre"), 0.25))
+				# Brin effilé : un quadrilatère pied → milieu → pointe, sans croisement quel que soit le côté.
+				var nrm := (tip - base).orthogonal().normalized()
+				_b.draw_colored_polygon(PackedVector2Array([base - nrm * 1.8 * s, mid - nrm * 1.1 * s, tip, mid + nrm * 1.1 * s, base + nrm * 1.8 * s]), col)
 				var k := bud(i, n + 1)
 				if k > 0.01 and i % 2 == 0:
 					# Épi clair au bout du brin.

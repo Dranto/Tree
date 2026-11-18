@@ -122,7 +122,7 @@ func _run() -> void:
 		if _finished():
 			break
 		if t - last_progress > STALL:
-			check(false, "BLOCAGE : aucun objectif principal accompli depuis %d s (objectif « %s », robot : %s, niveau %d)" % [int(t - last_progress), obj.current().get("id", ""), bot.goal, game.level])
+			check(false, "BLOCAGE : aucun objectif principal accompli depuis %d s (objectif « %s », robot : %s, niveau %d)" % [int(t - last_progress), obj.current(region).get("id", ""), bot.goal, game.level])
 			break
 		if t > MAX_TIME:
 			check(false, "partie trop longue (%d s), objectif « %s »" % [int(t), obj.current().get("id", "")])
@@ -154,8 +154,8 @@ func _track() -> void:
 		boss_fight_time = 0.0
 	if t >= _log_next:
 		_log_next += 60.0
-		print("ZONE %4d s  niveau %2d  objectif %-14s robot : %-32s vie %d/%d  morts %d" % [int(t), game.level, obj.current().get("id", "—"), bot.goal, int(main.player.hp), int(game.stats["max_hp"]), main.deaths])
-		if obj.current().get("id", "") == "coeur":
+		print("ZONE %4d s  niveau %2d  objectif %-14s robot : %-32s vie %d/%d  morts %d" % [int(t), game.level, obj.current(region).get("id", "—"), bot.goal, int(main.player.hp), int(game.stats["max_hp"]), main.deaths])
+		if obj.current(region).get("target", {}).get("type", "") == "heart":
 			print("       Cœur : %s, %.1f s tenues, joueur à %d px du centre (zone %d), %d ennemis" % [main.heart.state, main.heart.progress, int(main.player.position.distance_to(main.heart.center)), int(main.heart.zone), main.enemies.size()])
 
 
@@ -208,7 +208,7 @@ func _invariants() -> void:
 		if bar.visible and tracker_on and q.tracker._panel.get_global_rect().intersects(_bar_rect(bar)):
 			_bad("cadre d'objectif sur une barre de combat")
 	# Le cadre suit l'objectif en cours.
-	var cur: Dictionary = obj.current()
+	var cur: Dictionary = obj.followed()
 	var want: String = cur.get("title", "Tous les objectifs sont accomplis")
 	if q.tracker._title.text != want:
 		_bad("cadre d'objectif en retard", "%s au lieu de %s" % [q.tracker._title.text, want])
@@ -226,8 +226,9 @@ func _bar_rect(bar) -> Rect2:
 func _coherence(where: String) -> void:
 	obj.check()
 	var problems: Array = []
-	var mains: Array = obj.main_list()
-	var cur: Dictionary = obj.current()
+	# Objectifs de la région jouée et objectifs communs : les autres régions attendent leur tour.
+	var mains: Array = obj.main_list().filter(func(o): return str(o.get("region", "")) in ["", region])
+	var cur: Dictionary = obj.current(region)
 	var ci: int = mains.find(cur)
 	for i in mains.size():
 		if ci >= 0 and i > ci and mains[i].get("milestone", false) and obj.is_done(mains[i]["id"]):
@@ -258,14 +259,17 @@ func _coherence(where: String) -> void:
 	# Suivi, journal et carte lisent le même objectif.
 	var q = main.quest_ui
 	q.tracker.refresh()
-	var want: String = cur.get("title", "Tous les objectifs sont accomplis")
+	# Le cadre et le journal suivent la région où se tient le joueur (Objectives.followed).
+	var shown: Dictionary = obj.followed()
+	var want: String = shown.get("title", "Tous les objectifs sont accomplis")
 	if q.tracker._title.text != want:
 		problems.append("cadre « %s » au lieu de « %s »" % [q.tracker._title.text, want])
-	if not cur.is_empty() and q.tracker._head.text.find("%d / " % obj.current_rank()) < 0:
+	if not shown.is_empty() and q.tracker._head.text.find("%d / " % obj.current_rank(obj.followed_region())) < 0:
 		problems.append("rang du cadre « %s »" % q.tracker._head.text)
 	q.journal.refresh()
 	var titles: Array = q.journal.find_children("*", "Label", true, false).map(func(l): return l.text)
-	for o in mains:
+	var shown_mains: Array = obj.main_list().filter(func(o): return str(o.get("region", "")) in ["", obj.followed_region()])
+	for o in shown_mains:
 		if not titles.any(func(x): return str(x).begins_with(o["title"])):
 			problems.append("journal sans « %s »" % o["title"])
 	check(problems.is_empty(), "%s : état cohérent %s" % [where, "" if problems.is_empty() else str(problems)])
@@ -280,6 +284,17 @@ func _snapshot() -> Dictionary:
 		"grafts": game.grafts.duplicate(), "flags": game.flags.duplicate(true),
 		"ground": main.export_ground_grafts(),
 	}
+
+
+## Greffes au sol : mêmes greffes, au même endroit à quelques pixels près (une greffe proche du
+## joueur est déjà attirée vers lui pendant les images qui suivent le chargement).
+func _same_ground(a: Array, b: Array) -> bool:
+	if a.size() != b.size():
+		return false
+	for i in a.size():
+		if str(a[i][2]) != str(b[i][2]) or Vector2(a[i][0], a[i][1]).distance_to(Vector2(b[i][0], b[i][1])) > 20.0:
+			return false
+	return true
 
 
 func _same(a, b) -> bool:
@@ -324,6 +339,8 @@ func _reload(why: String) -> void:
 			for f in after["flags"]:
 				if not before["flags"].has(f):
 					diff.append("%s ajouté" % f)
+		elif k == "ground" and _same_ground(before[k], after[k]):
+			pass
 		elif not _same(before[k], after[k]):
 			diff.append("%s: %s -> %s" % [k, before[k], after[k]])
 	check(diff.is_empty(), "reprise %s : partie retrouvée à l'identique %s" % [why, "" if diff.is_empty() else str(diff)])
@@ -345,7 +362,7 @@ func _forced_events() -> void:
 		await physics_frame
 		check(heart.state == "fletri" and heart.progress == 0.0, "mort pendant le siège : le Cœur se rendort")
 		check(main.hud.death_screen.is_showing(), "mort pendant le siège : écran de mort")
-		check(obj.current().get("id", "") == "coeur", "mort pendant le siège : l'objectif reste le Cœur")
+		check(obj.current(region).get("target", {}).get("type", "") == "heart", "mort pendant le siège : l'objectif reste le Cœur")
 		_coherence("mort pendant le siège")
 	elif heart.state == "siege" and heart.progress > 8.0 and done_events.has("mort_siege") and not done_events.has("reprise_siege"):
 		done_events["reprise_siege"] = true

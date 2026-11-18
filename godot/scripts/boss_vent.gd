@@ -431,7 +431,7 @@ func _clear_attacks() -> void:
 
 ## Le robot reste hors du battement d'ailes.
 func bot_ring(arena_radius: float) -> float:
-	var ring := minf(300.0, arena_radius - 60.0)
+	var ring := minf(240.0, arena_radius - 60.0)
 	if attack == "battement":
 		ring = minf(BEAT["radius"] + 60.0, arena_radius - 50.0)
 	return ring

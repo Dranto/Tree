@@ -10,14 +10,14 @@
     "_doc": "Plateaux : roche d'ardoise couverte de cendre tant que le Cœur vit, steppe d'herbe blonde une fois ravivée, petites fleurs claires du vent.",
     "colors": {
       "ardoise": {"mix": ["sol_mort", "vent/sombre", 0.5]},
-      "steppe": {"mix": ["sol_vivant", "racine", 0.38]}
+      "steppe": {"mix": [{"mix": ["sol_vivant", "racine", 0.42]}, "or", 0.14]}
     },
     "dead_dark": {"dark": ["$ardoise", 0.16]},
     "dead_light": {"light": ["$ardoise", 0.06]},
     "purified_dark": {"dark": [{"mix": ["sol_mort", "vent", 0.22]}, 0.12]},
     "purified_light": {"mix": ["sol_mort", "vent", 0.3]},
     "alive_dark": {"dark": ["$steppe", 0.2]},
-    "alive_light": {"light": [{"mix": ["$steppe", "or", 0.18]}, 0.06]},
+    "alive_light": {"light": [{"mix": ["$steppe", "or", 0.26]}, 0.06]},
     "dot": "vent/clair",
     "dot_cell": 14.0,
     "dot_rarity": 0.988,
@@ -27,7 +27,7 @@
     "alive_mix": 0.85,
     "alive_mix_purified": 0.35
   },
-  "decor": {"kind": "plateau", "seed": 21, "rocks": 64, "grass": 150, "clear_center": 340.0, "clear_seed": 560.0},
+  "decor": {"kind": "plateau", "seed": 21, "rocks": 64, "grass": 320, "clear_center": 340.0, "clear_seed": 560.0},
   "wind": {
     "_doc": "Rafales : direction du vent dominant (« angle », en radians, depuis l'axe de la région), calme entre deux rafales (secondes, de … à …), annonce (« warn », les traînées se lèvent), durée d'une rafale, poussée sur le joueur (px/s au plus fort) et accélération des projectiles (px/s²). Réglable et coupable dans les options (Settings.wind).",
     "angle": 1.75,

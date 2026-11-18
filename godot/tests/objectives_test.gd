@@ -52,7 +52,9 @@ func _run() -> void:
 	obj.completed.connect(func(id): done_log.append(id))
 
 	print("Départ")
-	check(obj.list().size() == 9 and obj.main_total() == 6, "9 objectifs dont 6 principaux")
+	# Les objectifs de Ronce et les communs (les autres régions ajoutent les leurs après).
+	var ronce_objs: Array = obj.list().filter(func(o): return str(o.get("region", "")) in ["", "ronce"])
+	check(ronce_objs.size() == 9 and ronce_objs.filter(func(o): return o.get("main", false)).size() == 6, "9 objectifs dont 6 principaux")
 	check(obj.current().get("id", "") == "premier_noeud", "le premier objectif est le premier nœud")
 	check(obj.main_done_count() == 0, "aucun objectif accompli")
 	check(main.quest_ui != null and obj.main == main, "l'interface des objectifs est branchée")
@@ -134,7 +136,7 @@ func _run() -> void:
 	check(not obj.ending_due(), "pas de fin avant le boss")
 	game.flags["ronce_boss_vaincu"] = true
 	obj.check()
-	check(obj.is_done("boss") and obj.current().is_empty(), "boss vaincu : tous les objectifs principaux sont faits")
+	check(obj.is_done("boss") and obj.current("ronce").is_empty(), "boss vaincu : tous les objectifs principaux de Ronce sont faits")
 	check(done_log.count("boss") == 1, "l'objectif du boss est accompli une seule fois")
 	check(obj.complete("boss") == false, "accomplir deux fois ne fait rien")
 

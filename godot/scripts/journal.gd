@@ -4,6 +4,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const ControlsCard = preload("res://scripts/controls_card.gd")
+const Regions = preload("res://scripts/regions.gd")
 
 var _panel: PanelContainer
 var _box: VBoxContainer
@@ -87,10 +88,15 @@ func refresh() -> void:
 		_box.remove_child(c)
 		c.queue_free()
 	_label(_box, "Journal", 30, UiTheme.GOLD, true)
-	_subtitle = _label(_box, "Tranche de Ronce : %d / %d objectifs principaux accomplis" % [Objectives.main_done_count(), Objectives.main_total()], 14, Color(0.7, 0.78, 0.7))
-	var cur: Dictionary = Objectives.current()
+	# Une région à la fois : celle que suit le joueur (Objectives.followed_region), et les objectifs communs.
+	var reg: String = Objectives.followed_region()
+	var reg_name := "Ronce"
+	if reg != "":
+		reg_name = str(Regions.def(reg).get("name", reg)).trim_prefix("Région de ")
+	_subtitle = _label(_box, "Tranche de %s : %d / %d objectifs principaux accomplis" % [reg_name, Objectives.main_done_count(reg), Objectives.main_total(reg)], 14, Color(0.7, 0.78, 0.7))
+	var cur: Dictionary = Objectives.followed()
 	for pass_main in [true, false]:
-		var rows: Array = Objectives.list().filter(func(o): return bool(o.get("main", false)) == pass_main)
+		var rows: Array = Objectives.list().filter(func(o): return bool(o.get("main", false)) == pass_main and (reg == "" or str(o.get("region", "")) in ["", reg]))
 		if rows.is_empty():
 			continue
 		var head := _label(_box, "OBJECTIFS PRINCIPAUX" if pass_main else "FACULTATIFS", 12, Color(0.55, 0.65, 0.55))

@@ -97,6 +97,8 @@ func _clear_enemies() -> void:
 
 func _run() -> void:
 	settings = root.get_node("Settings")
+	# Les rafales des plateaux de Vent soufflent jusqu'au bord de la clairière : ce test ne regarde que les commandes.
+	settings.wind = 0.0
 	game = root.get_node("Game")
 	Enemy = load("res://scripts/enemy.gd")
 	var old_mode: String = settings.move_mode

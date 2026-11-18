@@ -2,13 +2,14 @@
 ## (poussée, projectiles, réglage des options), les quatre Flétris des plateaux (Piqueur, Souffleur,
 ## Planeur de cendre, Menhir), le Cœur des rafales, puis le Harfang de cendre (attaques, piqué hors
 ## d'atteinte, tempête, victoire) et la sauvegarde de ses drapeaux.
-## Lancer : tools/godot.sh --headless --fixed-fps 60 -s res://tests/vent_test.gd
+## Lancer : tools/godot.sh --headless --fixed-fps 60 -s res://tests/plateaux_test.gd
 extends SceneTree
 
 const Regions = preload("res://scripts/regions.gd")
-const Wind = preload("res://scripts/wind.gd")
-const Enemy = preload("res://scripts/enemy.gd")
-const Plateau = preload("res://scripts/decor_plateau.gd")
+## Chargés au lancement (load) : ils citent des autoloads, inconnus quand ce script est compilé.
+var Wind
+var Enemy
+var Plateau
 
 var failures := 0
 var main
@@ -54,6 +55,9 @@ func _clear() -> void:
 
 func _run() -> void:
 	game = root.get_node("Game")
+	Wind = load("res://scripts/wind.gd")
+	Enemy = load("res://scripts/enemy.gd")
+	Plateau = load("res://scripts/decor_plateau.gd")
 	var settings = root.get_node("Settings")
 	var save = root.get_node("SaveGame")
 	main = load("res://scenes/main.tscn").instantiate()
@@ -80,11 +84,11 @@ func _run() -> void:
 	for t in main.flora.trees:
 		if main.region_at(t.position) != "vent":
 			continue
-		if t is Plateau.Stone:
+		if is_instance_of(t, Plateau.Stone):
 			stones += 1
-		elif t is Plateau.Grass:
+		elif is_instance_of(t, Plateau.Grass):
 			grass += 1
-		elif t is Plateau.Twisted:
+		elif is_instance_of(t, Plateau.Twisted):
 			twisted += 1
 	check(stones > 20, "des rochers font obstacle sur les plateaux (%d)" % stones)
 	check(twisted > 10 and grass > 60, "arbres tordus (%d) et herbe couchée (%d)" % [twisted, grass])
@@ -136,6 +140,8 @@ func _run() -> void:
 	p.invuln = 0.0
 
 	print("Flétris des plateaux")
+	# Le joueur ne tire pas : les Flétris doivent vivre le temps de montrer leurs attaques.
+	p.fire_cd = 1.0e9
 	for k in ["plongeur", "souffleur", "planeur", "menhir"]:
 		check(Enemy.kind_index(k) >= 0, "sorte « %s » dans enemies.json" % k)
 	var spot := c + Vector2(0, -400)
@@ -200,6 +206,7 @@ func _run() -> void:
 	_clear()
 
 	print("Cœur des rafales")
+	p.fire_cd = 0.0
 	var heart = main.hearts["vent"]
 	var arena = main.arenas["vent"]
 	check(heart.state == "fletri" and arena.state == "fermee", "Cœur flétri, arène fermée")
@@ -213,6 +220,7 @@ func _run() -> void:
 	_clear()
 
 	print("Le Harfang de cendre")
+	p.fire_cd = 1.0e9
 	_place(arena.center + Vector2(0, 250))
 	await _steps(5)
 	var boss = arena.boss

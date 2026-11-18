@@ -44,7 +44,7 @@ func _run() -> void:
 	var c: Vector2 = main.region_center("ronce")
 	check(main.region_at(c) == "ronce", "le centre de la région est dans le roncier")
 	check(main.region_at(Vector2.ZERO) == "", "la graine n'est dans aucune région")
-	check(main.region_at(-c) == "", "le côté opposé n'est pas le roncier")
+	check(main.region_at(-c) != "ronce", "le côté opposé n'est pas le roncier")
 	var ronce_dir := Vector2.from_angle(Regions.angle_of("ronce"))
 	var node_dir := Vector2.ZERO
 	for n in game.tree.nodes:
@@ -68,7 +68,9 @@ func _run() -> void:
 	check(main.flora.bushes.size() > 20, "le roncier a des buissons d'épines (%d)" % main.flora.bushes.size())
 	var inside_region := true
 	var clear_center := true
-	for b in main.flora.bushes:
+	# Les obstacles des autres régions (rochers des plateaux…) sont dans leur propre région.
+	var ronce_bushes: Array = main.flora.bushes.filter(func(b): return not main.region_at(b.position) in Regions.ids() or main.region_at(b.position) == "ronce")
+	for b in ronce_bushes:
 		inside_region = inside_region and main.region_at(b.position) == "ronce"
 		clear_center = clear_center and b.position.distance_to(c) >= float(Regions.section("ronce", "decor").get("clear_center", 340.0))
 	check(inside_region, "tous les buissons sont dans la région")

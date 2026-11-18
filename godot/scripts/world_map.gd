@@ -135,7 +135,7 @@ func close() -> void:
 
 
 func _refresh_goal() -> void:
-	var o: Dictionary = Objectives.current()
+	var o: Dictionary = Objectives.followed()
 	_goal_title.text = o["title"] if not o.is_empty() else "Tranche accomplie"
 	_goal_text.text = o["text"] if not o.is_empty() else "Le roncier est libre."
 	_layout()
@@ -207,7 +207,7 @@ func draw_map(v: Control) -> void:
 		_text(v, font, ac + Vector2(-70, 4), "Arène", Color("e9e2c8"))
 
 	# Objectif : un anneau qui bat autour de la cible.
-	var goal = Objectives.target_pos(Objectives.current())
+	var goal = Objectives.target_pos(Objectives.followed())
 	if goal != null:
 		var gc := to_map(goal, s)
 		var pulse := 0.5 + 0.5 * sin(t * 4.0)
