@@ -98,6 +98,10 @@ func refresh() -> void:
 	_panel.reset_size()
 
 
+## Objectif suivi lu à la dernière image (_process), pour la flèche.
+var _followed: Dictionary = {}
+
+
 func _process(delta: float) -> void:
 	t += delta
 	# Une étiquette qui se replie peut annoncer une hauteur trop grande avant son premier
@@ -106,6 +110,7 @@ func _process(delta: float) -> void:
 		_panel.reset_size()
 	# Le texte du compteur suit les drapeaux sans attendre un changement de liste.
 	var o: Dictionary = Objectives.followed()
+	_followed = o
 	if not o.is_empty():
 		var pr: Array = Objectives.progress(o)
 		var s := "%d / %d" % [pr[0], pr[1]] if not pr.is_empty() else ""
@@ -118,7 +123,8 @@ func _draw() -> void:
 	UiAudit.begin("fleche")
 	if main == null or not is_instance_valid(main) or main.player == null:
 		return
-	var o: Dictionary = Objectives.followed()
+	# L'objectif suivi vient d'être lu par _process (même image) : on ne le recalcule pas.
+	var o: Dictionary = _followed
 	var target = Objectives.target_pos(o)
 	if target == null:
 		return
