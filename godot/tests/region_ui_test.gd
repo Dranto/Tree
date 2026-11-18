@@ -56,7 +56,7 @@ func _run() -> void:
 	main.player.set_physics_process(false)
 
 	print("Régions")
-	check(Regions.ids().size() == 2 and "essai" in Regions.ids(), "Ronce et la région d'essai")
+	check(Regions.ids()[0] == "ronce" and "essai" in Regions.ids(), "Ronce d'abord, et la région d'essai (%s)" % [Regions.ids()])
 	check(RegionUi.full_name("essai") == "Région d'essai" and RegionUi.short_name("essai") == "Essai", "noms lus dans le fichier de la région")
 	var p: Dictionary = RegionUi.progress("essai", {})
 	check(p["sanctuaires"] == [0, 1] and not p["coeur"] and not p["boss"], "avancement de départ : rien de fait")
@@ -67,7 +67,7 @@ func _run() -> void:
 
 	print("Son et ambiance de la région")
 	check(RegionAudio.of("essai").has("music"), "la section « audio » du fichier de la région prime")
-	check(RegionAudio.music_regions() == ["essai"], "une seule région a sa musique ici : %s" % [RegionAudio.music_regions()])
+	check("essai" in RegionAudio.music_regions() and not "ronce" in RegionAudio.music_regions(), "les régions qui ont leur musique (pas Ronce, qui garde la musique de base) : %s" % [RegionAudio.music_regions()])
 	check(RegionAudio.boss_sound("essai", "eveil") == "vent_boss_eveil" and RegionAudio.boss_sound("essai", "phase") == "", "sons du boss : ceux qui sont réglés")
 	check(RegionAudio.boss_sound("ronce", "mort") == "", "Ronce : aucun son de boss ajouté")
 	check(RegionAudio.validate().is_empty(), "réglages valides : %s" % [RegionAudio.validate()])

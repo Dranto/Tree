@@ -133,13 +133,27 @@ func _run() -> void:
 	game.flags.erase("ronce_coeur_purifie")
 	var outside := 0
 	main.spawn_timer = 0.0
-	main.player.position = -c
+	# Un point hors de toute région (à l'opposé de Ronce, ou en tournant autour de la graine
+	# s'il tombe dans une autre région : Spore, Vent…), loin de leurs bords.
+	var away := -c
+	for k in 36:
+		var p := c.rotated(PI + k * TAU / 36.0)
+		if main.region_at(p) == "" and main.region_at(p.rotated(0.6)) == "" and main.region_at(p.rotated(-0.6)) == "":
+			away = p
+			break
+	main.player.position = away
 	await _steps(2)
 	main.spawn_timer = 1.0e9
+	# Les apparitions tombent à 760-980 px du joueur, parfois dans une région voisine : on ne
+	# compte que les Flétris nés hors de toute région.
+	var born_outside := 0
 	for e in main.enemies:
+		if main.region_at(e.position) != "":
+			continue
+		born_outside += 1
 		if e.region != "":
 			outside += 1
-	check(outside == 0 and main.enemies.size() > 0, "hors de la région, seuls des Flétris ordinaires naissent")
+	check(outside == 0 and born_outside > 0, "hors de la région, seuls des Flétris ordinaires naissent (%d nés hors des régions)" % born_outside)
 	for e in main.enemies:
 		e.queue_free()
 	main.enemies.clear()

@@ -125,7 +125,7 @@ func _run() -> void:
 	game.flags["ronce_coeur_purifie"] = true
 	obj.check()
 	main.quest_ui.tracker.refresh()
-	check(main.quest_ui.tracker._title.text == obj.get_def("boss")["title"] and main.quest_ui.tracker._head.text.find("6 / %d" % obj.main_total()) >= 0, "le cadre d'objectif montre le boss, 6 / %d" % obj.main_total())
+	check(main.quest_ui.tracker._title.text == obj.get_def("boss")["title"] and main.quest_ui.tracker._head.text.find("6 / %d" % obj.main_total("ronce")) >= 0, "le cadre d'objectif montre le boss, 6 / %d (Ronce)" % obj.main_total("ronce"))
 	game.flags = flags_saved
 
 	print("Cœur et boss")
