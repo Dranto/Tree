@@ -301,6 +301,9 @@ func _ready() -> void:
 	if autotest_boss:
 		arena.autotest_begin()
 	_set_direct_to_screen(get_tree().current_scene == self and (not autotest or benchmark))
+	# En jeu et dans le banc, les carrés de sol salis sont refaits peu à peu (pas pendant une capture).
+	if get_tree().current_scene == self and (not autotest or benchmark):
+		ground.tile_budget = ground.TILE_BUDGET
 	if benchmark:
 		_benchmark_hide({"sol": ground, "decor": trees_layer, "fleurs": flora, "ennemis": enemies_layer,
 			"joueur": player, "acteurs": actors_layer, "effets": fx, "ambiance": ambience, "hud": hud_layer, "monde": self})

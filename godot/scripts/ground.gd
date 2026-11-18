@@ -56,6 +56,12 @@ const TILE_SPARE := 12
 const TILE_MARGIN := 96.0
 ## Vrai : sol en cache (le jeu) ; faux : shader dessiné directement à chaque image (comparaison).
 var cached := true
+## Carrés à refaire au plus par image (0 : tous tout de suite, pour les captures et les tests).
+## Refaire un carré coûte ~1 ms en rendu logiciel : une mort en salit 1 à 4, la purification d'un
+## Cœur tous. Les autres attendent les images suivantes, les plus proches du centre de l'écran
+## d'abord (main.gd le règle à TILE_BUDGET en jeu et dans le banc).
+var tile_budget := 0
+const TILE_BUDGET := 2
 ## Carrés en cache : Vector2i -> {vp: SubViewport, sprite: Sprite2D, used: int}.
 var _tiles: Dictionary = {}
 ## Échelle de l'écran (pixels par pixel du monde) des carrés en cache.
@@ -260,6 +266,7 @@ func _update_tiles() -> void:
 			if not _tiles.has(key):
 				_tiles[key] = _make_tile(key, world)
 			_tiles[key]["used"] = _frame
+	_refresh_dirty(view.get_center())
 	var keep := (hi.x - lo.x + 1) * (hi.y - lo.y + 1) + TILE_SPARE
 	if _tiles.size() > keep:
 		var old := _tiles.keys()
@@ -309,11 +316,31 @@ func _clear_tiles() -> void:
 		_free_tile(key)
 
 
-## Redessine les carrés qui touchent ce rectangle du monde (tous s'il est infini).
+## Redessine les carrés qui touchent ce rectangle du monde (tous s'il est infini) : tout de suite,
+## ou dans la limite de tile_budget par image (voir _refresh_dirty).
 func _invalidate(area: Rect2) -> void:
 	for t in _tiles.values():
 		if not area.is_finite() or (t["rect"] as Rect2).intersects(area):
-			t["vp"].render_target_update_mode = SubViewport.UPDATE_ONCE
+			if tile_budget > 0:
+				t["dirty"] = true
+			else:
+				t["vp"].render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+## Refait au plus tile_budget carrés salis, les plus proches de « center » d'abord.
+func _refresh_dirty(center: Vector2) -> void:
+	if tile_budget <= 0:
+		return
+	var dirty_tiles: Array = []
+	for t in _tiles.values():
+		if t.get("dirty", false):
+			dirty_tiles.append(t)
+	if dirty_tiles.is_empty():
+		return
+	dirty_tiles.sort_custom(func(a, b): return (a["rect"] as Rect2).get_center().distance_squared_to(center) < (b["rect"] as Rect2).get_center().distance_squared_to(center))
+	for i in mini(tile_budget, dirty_tiles.size()):
+		dirty_tiles[i]["dirty"] = false
+		dirty_tiles[i]["vp"].render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 ## Les vagues de vie avancent à pas fixe : la vie du sol compte pour le jeu (soin, Flétris ralentis).

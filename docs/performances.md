@@ -92,6 +92,7 @@ Budget de la CI : **25 ms** en moyenne, échec au-delà de 15 % de plus (`tools/
 | Sol sans mélange de couleurs (`render_mode blend_disabled`, il est opaque) | <1 ms | identique |
 | Sol dessiné par carrés de 512 px mis en cache (`ground.gd`, `SubViewport` mis à jour seulement quand le sol change ; `--sol-direct` pour l'ancien chemin) | ~2 à 3 ms | écart de 0,011 % au plus, sous le seuil des tests visuels : références inchangées |
 | Carrés du sol recopiés sans mélange ni lumière (`shaders/ground_tile.gdshader`, `blend_disabled, unshaded`) ; le shader du sol calcule l'appartenance aux régions une seule fois par pixel pour N régions (jalon 7) | ~1 ms (sol : 6,5 → 5,4 ms, mesuré par paires avec `--hide=sol`) | identique |
+| Carrés du sol salis refaits au plus deux par image, les plus proches du centre d'abord (`ground.tile_budget`, en jeu et dans le banc, pas en capture) | pics : 99e centile ~46 → ~42 ms ; moyenne avec la ligne précédente : ~26,3 → ~24,8 ms (4 paires) | identique en capture ; en jeu, un carré lointain peut garder l'ancien sol quelques images |
 
 Le rendu direct à l'écran rend l'image illisible par `get_viewport().get_texture()`. Il n'est donc
 actif que dans la scène de jeu lancée normalement et dans le banc, jamais pendant une capture
