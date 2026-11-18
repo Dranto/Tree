@@ -71,8 +71,9 @@ func _label(parent: Node, size_px: int, color: Color) -> Label:
 
 ## Remet les textes à jour (changement d'objectif, d'avancement ou de touches).
 func refresh() -> void:
-	var o: Dictionary = Objectives.current()
-	var total: int = Objectives.main_total()
+	var o: Dictionary = Objectives.followed()
+	var reg: String = Objectives.followed_region()
+	var total: int = Objectives.main_total(reg)
 	if o.is_empty():
 		_title.text = "Tous les objectifs sont accomplis"
 		if Regions.ids().size() > 1:
@@ -84,11 +85,10 @@ func refresh() -> void:
 		_progress.text = ""
 	else:
 		# Rang dans la suite (pas le nombre d'objectifs faits : une étape sautée ne décale rien).
-		_head.text = "OBJECTIF  ·  %d / %d" % [Objectives.current_rank(), total]
+		_head.text = "OBJECTIF  ·  %d / %d" % [Objectives.current_rank(reg), total]
 		# Avec plusieurs régions, on dit laquelle : la flèche peut mener d'une région à l'autre.
-		var reg := str(o.get("region", ""))
-		if reg != "" and Regions.ids().size() > 1:
-			_head.text += "  ·  " + RegionUi.short_name(reg)
+		if str(o.get("region", "")) != "" and Regions.ids().size() > 1:
+			_head.text += "  ·  " + RegionUi.short_name(str(o["region"]))
 		_title.text = o["title"]
 		_text.text = o["text"]
 		var pr: Array = Objectives.progress(o)
@@ -105,7 +105,7 @@ func _process(delta: float) -> void:
 	if _panel.size.y > _panel.get_combined_minimum_size().y + 1.0:
 		_panel.reset_size()
 	# Le texte du compteur suit les drapeaux sans attendre un changement de liste.
-	var o: Dictionary = Objectives.current()
+	var o: Dictionary = Objectives.followed()
 	if not o.is_empty():
 		var pr: Array = Objectives.progress(o)
 		var s := "%d / %d" % [pr[0], pr[1]] if not pr.is_empty() else ""
@@ -118,7 +118,7 @@ func _draw() -> void:
 	UiAudit.begin("fleche")
 	if main == null or not is_instance_valid(main) or main.player == null:
 		return
-	var o: Dictionary = Objectives.current()
+	var o: Dictionary = Objectives.followed()
 	var target = Objectives.target_pos(o)
 	if target == null:
 		return

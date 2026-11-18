@@ -85,6 +85,9 @@ func _run() -> void:
 	r["secrets"] = r["secrets"].filter(func(a): return a.get("region", "") == "ronce")
 	var world_points: int = int(r["boss"]["ronce"]["points"]) + int(r["coeur"]["ronce"]["points"])
 	var world_grafts := {r["boss"]["ronce"]["graft"]: true}
+	# Les autels et le secret de Ronce (les autres régions ont les leurs, vérifiés dans leurs tests).
+	r["altars"] = r["altars"].filter(func(a): return str(a.get("region", "ronce")) == "ronce")
+	r["secrets"] = r["secrets"].filter(func(a): return str(a.get("region", "ronce")) == "ronce")
 	for a in r["altars"] + r["secrets"]:
 		world_points += int(a["points"])
 		if a["graft"] != "":

@@ -127,7 +127,8 @@ func refresh() -> void:
 	if multi:
 		sub += "   ·   %d / %d régions purifiées" % [purified, Regions.ids().size()]
 	_subtitle = _label(_box, sub, 14, Color(0.7, 0.78, 0.7))
-	var cur: Dictionary = Objectives.current()
+	# La section dépliée par défaut est celle de la région que suit le joueur (Objectives.followed).
+	var cur: Dictionary = Objectives.followed()
 	var cur_region := str(cur.get("region", ""))
 	# Sections : l'aventure (objectifs sans région) puis chaque région qui a des objectifs.
 	var sections: Array = [""]

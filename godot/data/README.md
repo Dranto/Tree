@@ -280,6 +280,7 @@ Une région est décrite tout entière par `regions/<id>.json`. `scripts/regions
 | `boss` | Le boss : `script` (un fichier qui étend `BossBase`, voir `scripts/boss_base.gd`), `name`, `bar_color`, `phases` (noms affichés), `arena` (`radius`, `radius_min`, `offset` depuis le Cœur, `life_color`), `reward`, bannières. |
 | `ending` | Séquence « région purifiée » : `sub`, `title`, `body`. |
 | `ambience`, `music` | Humeur de l'ambiance sonore et de la musique. |
+| `wind` | Rafales de la région (Vent : `scripts/wind.gd`, posé par `decor_plateau.gd`) : `angle` (écart du vent dominant au milieu du secteur, en radians), `calm` (durée du calme, [min, max] s), `warn` (annonce, s), `gust` (rafale, s), `player_push` (px/s au plus fort), `projectile_push` (px/s²), `streaks` (traînées dessinées). Le joueur règle leur force dans les options (« Rafales », `Settings.wind`, de 0 à 1). |
 
 **Positions.** `dist` : distance à la graine en pixels. `side` : écart au milieu du secteur, de -1 (bord gauche) à 1 (bord droit), ou `angle` : écart en radians.
 
@@ -350,6 +351,8 @@ La séquence « région purifiée » se déclenche cinq secondes après la victo
 - **Une région** : voir « Régions » et « Ajouter une région » dans le README du projet.
 - **Une compétence** : son fichier `scripts/skills/<id>.gd` (classe `Skill` : `cast`, `tick` facultatif) et ses réglages dans `skills.json`.
 - **Un comportement d'ennemi** : `scripts/enemy_behaviors/<nom>.gd` (classe `EnemyBehavior` : `step`, `draw_attack`, `on_death`), nommé par `behavior` dans `enemies.json`.
+- **Le dessin d'une sorte hors de `fletri_art.gd`** : `"art": "<nom>"` dans sa sorte de `enemies.json`, et le fichier `scripts/enemy_art/<nom>.gd` (fonctions statiques `body_color(kind_id)` et `draw(ci, kind_id, pos, r, face, t, o)`). Les Flétris des plateaux sont dans `enemy_art/vent.gd`.
+- **Comportements des plateaux de Vent** : `diver` (le Piqueur tourne autour du joueur puis plonge en ligne droite : `orbit`, `windup`, `dive_speed`, `dive_dist`, `charge_damage`, `recover`), `blower` (le Souffleur garde ses distances et souffle en cône : `keep_min`, `keep_max`, `range`, `cone`, `windup`, `blow_damage`, `blow_push`, `blow_time`), `glider` (le Planeur prend de la hauteur quand on l'approche et esquive alors tout coup direct, `EnemyBehavior.dodge` : `reach`, `flee`, plumes `shots`, `spread`, `shot_speed`, `shot_damage`, `shot_life`). `"no_push": true` : la sorte ne recule ni ne se laisse aspirer (le Menhir).
 - **Une statistique** : l'ajouter dans `stats.json`, puis la lire dans le code avec `Game.stats["nom"]`.
 - **Une action ou un évènement** : écrire l'action dans `scripts/effect_actions.gd` et la déclarer dans `Content.ACTIONS` (`scripts/content.gd`) ; pour un évènement, l'ajouter à `Content.EVENTS` et appeler `Game.fire("nom", {...})` à l'endroit voulu.
 - **Un état pour les conditions** : le déclarer dans `conditions.json` et le tenir à jour avec `Game.set_state("nom", valeur)`.

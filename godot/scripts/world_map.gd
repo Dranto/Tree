@@ -167,7 +167,7 @@ func close() -> void:
 
 
 func _refresh_goal() -> void:
-	var o: Dictionary = Objectives.current()
+	var o: Dictionary = Objectives.followed()
 	var reg := str(o.get("region", ""))
 	_goal_region.text = RegionUi.full_name(reg) if reg != "" and Regions.ids().size() > 1 else ""
 	_goal_region.add_theme_color_override("font_color", RegionUi.tint(reg).lightened(0.25) if _goal_region.text != "" else Color.WHITE)
@@ -250,7 +250,7 @@ func draw_map(v: Control) -> void:
 		_text(v, font, ac + Vector2(-70, 4), "Arène", Color("e9e2c8"))
 
 	# Objectif : un anneau qui bat autour de la cible.
-	var goal = Objectives.target_pos(Objectives.current())
+	var goal = Objectives.target_pos(Objectives.followed())
 	if goal != null:
 		var gc := to_map(goal, s)
 		# Le trajet du joueur à l'objectif, en pointillés : il passe d'une région à l'autre.

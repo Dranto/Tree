@@ -51,10 +51,11 @@ func _run() -> void:
 	print("Fichiers")
 	var ronce_center := Regions.center("ronce")
 	Regions.set_extra_dirs(["res://tests/regions/"])
-	# Les vraies régions (Ronce, Spore…) d'abord, la région d'essai (branche Aube) après, dans l'ordre des branches.
 	var ids: Array = Regions.ids()
-	var ei := ids.find("essai")
-	check(ids[0] == "ronce" and ei == ids.size() - 1 and ei >= 1, "la région d'essai s'ajoute après Ronce, dans l'ordre des branches (%s)" % [ids])
+	var branches: Array = load("res://scripts/content.gd").tree().get("branches", [])
+	var ordered := ids.duplicate()
+	ordered.sort_custom(func(a, b): return branches.find(Regions.branch_of(a)) < branches.find(Regions.branch_of(b)))
+	check(ids.has("ronce") and ids.has("essai") and ids.find("ronce") < ids.find("essai") and ids == ordered, "la région d'essai s'ajoute aux autres, dans l'ordre des branches (%s)" % [ids])
 	check(Regions.validate().is_empty(), "ses fichiers sont valides (check_data) %s" % [Regions.validate()])
 	check(Regions.center("ronce") == ronce_center, "Ronce ne bouge pas")
 	var c := Regions.center("essai")
@@ -67,11 +68,13 @@ func _run() -> void:
 
 	print("Sol teinté")
 	var mat: ShaderMaterial = main.ground.mat
-	check(int(mat.get_shader_parameter("region_count")) == ids.size(), "le shader reçoit toutes les régions, celle d'essai comprise")
+	var n_reg: int = Regions.ids().size()
+	var ie: int = Regions.ids().find("essai")
+	check(int(mat.get_shader_parameter("region_count")) == n_reg, "le shader reçoit toutes les régions (%d)" % n_reg)
 	var pal := Ground.region_palette("essai")
 	var dead: PackedVector3Array = mat.get_shader_parameter("region_dead_dark")
-	check(dead.size() == ids.size() and dead[ei].is_equal_approx(Vector3(pal["dead_dark"].r, pal["dead_dark"].g, pal["dead_dark"].b)), "la terre morte de la région d'essai a sa couleur")
-	check(dead.size() == ids.size() and not dead[ei].is_equal_approx(dead[0]), "et elle diffère de celle de Ronce")
+	check(dead.size() == n_reg and dead[ie].is_equal_approx(Vector3(pal["dead_dark"].r, pal["dead_dark"].g, pal["dead_dark"].b)), "la terre morte de la région d'essai a sa couleur")
+	check(dead.size() == n_reg and not dead[ie].is_equal_approx(dead[0]), "et elle diffère de celle de Ronce")
 
 	print("Sanctuaire")
 	var s = main.sanctuary("essai_halte")
@@ -124,13 +127,14 @@ func _run() -> void:
 	check(objectives.ending_texts("essai").get("title", "") == "La clairière respire", "avec ses textes")
 	check(not Regions.all_purified(game.flags), "l'aventure n'est pas finie : Ronce reste à purifier")
 	objectives.mark_ending_seen("essai")
-	# Les autres vraies régions (Spore…) sont déjà purifiées : Ronce est la dernière.
-	for id in ids:
-		if not id in ["ronce", "essai"]:
+	# Les autres régions (Ronce, et celles des branches suivantes) : leurs boss vaincus, Ronce en dernier.
+	for id in Regions.ids():
+		if id != "essai" and id != "ronce":
 			game.flags[Regions.boss_flag(id)] = true
 			objectives.mark_ending_seen(id)
+	check(not Regions.all_purified(game.flags), "Ronce reste à purifier")
 	game.flags["ronce_boss_vaincu"] = true
-	check(Regions.all_purified(game.flags), "les deux boss vaincus : toutes les régions sont purifiées")
+	check(Regions.all_purified(game.flags), "tous les boss vaincus : toutes les régions sont purifiées")
 	check(objectives.ending_region() == "ronce" and objectives.ending_texts("ronce").get("sub", "") == Content._load("objectives").get("adventure_ending", {}).get("sub", "?"), "la dernière fin est celle de l'aventure")
 
 	Regions.set_extra_dirs([])
