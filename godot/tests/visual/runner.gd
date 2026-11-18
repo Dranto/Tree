@@ -71,7 +71,7 @@ func _ready() -> void:
 
 	# Commandes par défaut (clavier, visée automatique, clics et A E R F), quelles que soient les
 	# options du poste : l'aide de départ et la barre des captures en dépendent.
-	Settings.move_mode = Settings.MOVE_MODE_DEFAULT
+	Settings.set_move_mode(Settings.MOVE_MODE_DEFAULT)
 	Settings.aim_mode = "auto"
 	Settings.bindings = Settings.BINDING_DEFAULTS.duplicate()
 	Settings.moba_main_2_key = Settings.MOBA_MAIN_2_DEFAULT
@@ -208,7 +208,7 @@ func _scenario_charte() -> void:
 ## -- --heros-anim : enregistre aussi la page animée (20 images/s) dans out/heros_anim/.
 func _scenario_heros() -> void:
 	main.set_process(false)
-	for pg in ["heros", "competences_1", "competences_2"]:
+	for pg in ["heros", "competences_1", "competences_2", "competences_3"]:
 		var layer := _pixel_layer()
 		var sheet = HerosScript.new()
 		sheet.view = Vector2(DisplayServer.window_get_size())
@@ -990,14 +990,14 @@ func _scenario_interactions() -> void:
 	await _shot("interaction_sanctuaire_anneau")
 	await _place_player(spot)
 	# Déplacement au clic droit (mode « moba ») : le repère se resserre sur le point, puis reste posé.
-	Settings.move_mode = "moba"
+	Settings.set_move_mode("moba")
 	main.player.set_destination(spot + Vector2(190, -70), true)
 	await _frames(4)
 	await _shot("interaction_destination_clic")
 	await _frames(30)
 	await _shot("interaction_destination")
 	main.player.clear_destination()
-	Settings.move_mode = Settings.MOVE_MODE_DEFAULT
+	Settings.set_move_mode(Settings.MOVE_MODE_DEFAULT)
 	await _frames(15)
 	# Transitions : ouverture de l'arbre (avec son onde de sève), puis mort et renaissance.
 	main.tree_ui.play_intro = true

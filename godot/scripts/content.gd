@@ -25,6 +25,8 @@ const ACTIONS := {
 	"heal": ["value"],
 	"burst": ["radius", "factor"],
 	"status_area": ["status", "value", "duration", "radius"],
+	"gust": ["radius", "factor"],
+	"tornado": ["factor"],
 	"attack_salvo": ["count"],
 	"cloud": ["radius", "duration", "factor"],
 }

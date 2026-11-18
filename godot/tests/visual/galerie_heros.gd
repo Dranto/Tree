@@ -12,11 +12,13 @@ const ProjectileScript = preload("res://scripts/projectile.gd")
 const PERIODE := 2.4
 ## Compétences de la galerie, dans l'ordre de la barre (la graine est l'arme de base).
 const SKILLS := ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom"]
+## Compétences de la branche Vent (troisième page).
+const VENT := ["tornade", "ruee", "appel_air"]
 const PHASES := ["début", "coup", "fin"]
 
 var view := Vector2(2560, 1440)
 var page := "heros"
-## Page des compétences : les quatre premières (1) ou les quatre suivantes (2).
+## Page des compétences : les quatre premières (1), les quatre suivantes (2), celles de Vent (3).
 var part := 1
 var t := 0.0
 var font: Font
@@ -30,6 +32,8 @@ func _ready() -> void:
 
 ## Compétences de la page (quatre par page, pour que chaque zone tienne dans sa case).
 func _skills() -> Array:
+	if part == 3:
+		return VENT
 	return SKILLS.slice((part - 1) * 4, part * 4)
 
 
@@ -163,11 +167,13 @@ const PHASE_K := {
 	"graine": [0.4, 0.25, 0.7], "nova": [0.08, 0.32, 0.75], "fouet": [0.09, 0.33, 0.72],
 	"racines": [0.06, 0.16, 0.95], "volee": [0.3, 0.5, 0.4], "saignee": [0.12, 0.38, 0.72],
 	"cloud": [0.03, 0.4, 0.95], "bloom": [0.12, 0.42, 0.8],
+	"tornade": [0.04, 0.4, 0.95], "ruee": [0.1, 0.35, 0.8], "appel_air": [0.3, 0.68, 0.88],
 }
 ## Échelle de chaque ligne : la zone de la compétence tient dans sa case.
 const CELL_SCALE := {
 	"graine": 2.0, "nova": 0.82, "fouet": 1.0, "racines": 1.3,
 	"volee": 1.6, "saignee": 0.68, "cloud": 1.25, "bloom": 0.95,
+	"tornade": 0.9, "ruee": 1.2, "appel_air": 0.55,
 }
 
 
@@ -197,6 +203,8 @@ func _page_competences() -> void:
 			_ground(r, i * 3 + j)
 			draw_set_transform_matrix(Transform2D.IDENTITY)
 			_skill_cell(id, r, PHASE_K[id][j], j)
+	if part == 3:
+		_vent_attaques()
 
 
 ## Une case : le héros (à gauche) et la signature de la compétence à l'instant k de sa durée.
@@ -231,7 +239,7 @@ func _skill_cell(id: String, r: Rect2, k: float, phase: int) -> void:
 ## La signature d'une compétence, dans le repère du héros (héros en 0, visée vers la droite).
 func _effect(id: String, target: Vector2, k: float, width: float) -> Dictionary:
 	var e := {"id": id, "t": 0.0, "pos": Vector2.ZERO, "dir": Vector2.RIGHT}
-	e["dur"] = SkillFx.DUREE.get(id, 0.4)
+	e["dur"] = SkillFx.DUREE.get(id, VentFx.DUREE.get(id, 0.4))
 	match id:
 		"graine":
 			e["id"] = "graine_depart" if k > 0.35 else "graine_impact"
@@ -264,6 +272,18 @@ func _effect(id: String, target: Vector2, k: float, width: float) -> Dictionary:
 			e["dur"] = 5.0
 		"bloom":
 			e["r"] = 150.0
+		"tornade":
+			e["pos"] = target
+			e["r"] = 90.0
+			e["dur"] = 4.0
+			e["seed"] = 3
+		"ruee":
+			e["from"] = Vector2(-150, 0)
+			e["w"] = 48.0
+		"appel_air":
+			e["pos"] = target
+			e["r"] = 230.0
+			e["pull"] = 0.6
 	return e
 
 
@@ -279,6 +299,12 @@ func _targets(id: String, target: Vector2) -> Array:
 			return [target]
 		"nova", "bloom":
 			return [Vector2(150, -40), Vector2(-140, 60)]
+		"tornade":
+			return [target + Vector2(-25, 12), target + Vector2(40, -20)]
+		"ruee":
+			return [Vector2(-70, 52), Vector2(-120, -50)]
+		"appel_air":
+			return [target + Vector2(-30, 15), target + Vector2(28, -12), target + Vector2(5, 35)]
 	return []
 
 
@@ -295,6 +321,8 @@ func _fletri(p: Vector2) -> void:
 
 ## Projectiles réels (projectile.gd) dans les cases de la graine et de la volée.
 func _add_projectiles() -> void:
+	if part == 3:
+		return
 	if part == 1:
 		_projectile(_cell_rect(0, 1), Vector2(130, 0), false, 0.0)
 		return
@@ -431,3 +459,52 @@ func _text(pos: Vector2, s: String, size: int, col: Color, _bold := false) -> vo
 
 func _text_c(center: Vector2, s: String, size: int, col: Color, width: float, _bold := false) -> void:
 	draw_string(font, center - Vector2(width / 2.0, 0), s, HORIZONTAL_ALIGNMENT_CENTER, width, size, col)
+
+
+# --- Attaque de base de Vent (page 3) ---
+
+## Dernière ligne de la page de Vent : les deux formes de l'attaque (lames de vent qui reviennent,
+## bourrasque en cône) et le modificateur « repousse », dessinés par projectile.gd et attack_fx.gd.
+func _vent_attaques() -> void:
+	var r0 := _cell_rect(3, 0)
+	Art.icon_badge(self, "attaque_lame", Rect2(30, r0.position.y + r0.size.y / 2.0 - 70, 96, 96))
+	_text(Vector2(30, r0.position.y + r0.size.y / 2.0 + 54), "Attaque de Vent", 22, Art.c("texte"), true)
+	var labels := ["Lames de vent : aller-retour", "Bourrasque : cône qui repousse", "Repousse et élan"]
+	for j in 3:
+		var r := _cell_rect(3, j)
+		_ground(r, 40 + j)
+		var hero := r.position + Vector2(r.size.x * 0.3, r.size.y * 0.55)
+		var xf := Transform2D(0.0, Vector2(1.2, 1.2), 0.0, hero)
+		draw_set_transform_matrix(xf)
+		match j:
+			0:
+				_fletri(Vector2(170, -40))
+				_fletri(Vector2(200, 45))
+				for i in 7:
+					draw_line(Vector2(40 + i * 24, 14), Vector2(52 + i * 24, 14), Color(Art.ec("vent", "clair"), 0.6), 2.0, true)
+				_lame(xf, Vector2(130, -42))
+				_lame(xf, Vector2(235, 44))
+			1:
+				_fletri(Vector2(130, -30))
+				_fletri(Vector2(140, 34))
+				AttackFx.draw_effect(self, {"id": "bourrasque", "pos": Vector2.ZERO, "dir": Vector2.RIGHT, "r": 185.0, "arc": 1.3, "t": 0.12, "dur": 0.26})
+			2:
+				_fletri(Vector2(190, 0))
+				for i in 3:
+					draw_arc(Vector2(160 - i * 10, 0), 16.0 + i * 6.0, -0.8, 0.8, 8, Color(Art.ec("vent", "clair"), 0.8 - 0.2 * i), 2.0, true)
+				for i in 3:
+					draw_line(Vector2(-14 - i * 8, -12 + i * 12), Vector2(-50 - i * 8, -12 + i * 12), Color(Art.ec("vent", "clair"), 0.7), 2.0, true)
+				_lame(xf, Vector2(110, 0))
+		draw_set_transform_matrix(Transform2D.IDENTITY)
+		HeroArt.base = xf
+		HeroArt.draw(self, Vector2.ZERO, 14.0, 0.0, {"t": 0.3, "cast": 0.5 if j == 1 else 0.0, "cast_col": Art.ec("vent"), "shoot": 0.5 if j != 1 else 0.0})
+		HeroArt.base = Transform2D.IDENTITY
+		draw_set_transform_matrix(Transform2D.IDENTITY)
+		_text(r.position + Vector2(12, 30), labels[j], 22, Art.c("texte"))
+
+
+## Une lame de vent à « at » (repère xf de la case), un peu tournée.
+func _lame(xf: Transform2D, at: Vector2) -> void:
+	draw_set_transform_matrix(xf * Transform2D(0.4, at))
+	ProjectileScript.draw_shot(self, "lame", Vector2.RIGHT, 7.8)
+	draw_set_transform_matrix(xf)

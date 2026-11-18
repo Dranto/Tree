@@ -111,6 +111,39 @@
       "spread": 0.12,
       "pierce": 1,
       "size": 0.75
+    },
+    "lame": {
+      "name": "Lames de vent",
+      "desc": "Des lames de vent qui fendent tout sur leur passage, puis reviennent à toi.",
+      "kind": "projectile",
+      "tags": ["projectile"],
+      "branch": "vent",
+      "element": "vent",
+      "priority": 2,
+      "damage": 0.5,
+      "rate": 0.8,
+      "range": 560,
+      "speed": 820,
+      "spread": 0.32,
+      "pierce": 99,
+      "size": 1.3,
+      "return": true
+    },
+    "bourrasque": {
+      "name": "Bourrasque",
+      "desc": "Un souffle en cône devant toi, qui blesse et repousse.",
+      "kind": "melee",
+      "tags": ["corps_a_corps"],
+      "branch": "vent",
+      "element": "vent",
+      "priority": 2,
+      "damage": 1.0,
+      "rate": 0.95,
+      "range": 185,
+      "arc": 1.3,
+      "knockback": 55,
+      "fx": "bourrasque",
+      "sfx": "bourrasque"
     }
   },
   "mods": {
@@ -118,7 +151,7 @@
       "name": "Fourche",
       "text": "Au premier coup, le projectile se divise : +{v} branche(s).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive", "dard"],
+      "forms": ["graine", "echarde", "ronce_vive", "dard", "lame"],
       "angle": 0.42,
       "factor": 0.6
     },
@@ -214,6 +247,16 @@
       "duration": 2.4,
       "tick": 0.5,
       "max": 10
+    },
+    "elan": {
+      "name": "Élan",
+      "text": "En mouvement, l'attaque fait {p} % de dégâts en plus.",
+      "stack": "sum"
+    },
+    "repousse": {
+      "name": "Repousse",
+      "text": "Chaque coup repousse l'ennemi de {v} pixels.",
+      "stack": "sum"
     }
   }
 }

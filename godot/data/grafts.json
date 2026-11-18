@@ -226,5 +226,97 @@
       {"attack_mod": "saut", "value": 1},
       {"attack_mod": "poison", "value": 0.1}
     ]
+  },
+  "greffe_plume_vive": {
+    "name": "Plume vive",
+    "desc": "Ton esquive lâche une salve de ton attaque tout autour de toi.",
+    "sources": ["autel"], "shape": "feuille", "color": "#c8dcef",
+    "effects": [
+      {"on": "dash", "do": "attack_salvo", "count": 8, "cooldown": 0.5,
+       "text": "Chaque esquive tire une salve de ton attaque de base tout autour de toi (8 traits, au plus toutes les 0,5 s)."}
+    ]
+  },
+  "greffe_girouette": {
+    "name": "Girouette",
+    "desc": "Chaque victoire relance le vent : ruée et tornade reviennent plus vite.",
+    "sources": ["autel"], "shape": "fleur", "color": "#a4bcd4",
+    "effects": [
+      {"on": "kill", "do": "reduce_cooldown", "target": "ruee", "value": 0.25,
+       "text": "Chaque ennemi vaincu réduit la recharge de la ruée de 0,25 s."},
+      {"on": "kill", "do": "reduce_cooldown", "target": "tornade", "value": 0.25,
+       "text": "Chaque ennemi vaincu réduit la recharge de la tornade de 0,25 s."}
+    ]
+  },
+  "greffe_alize": {
+    "name": "Alizé jumeau",
+    "desc": "La tornade naît en double.",
+    "sources": ["autel"], "shape": "feuille", "color": "#8fb0cc",
+    "effects": [
+      {"skill_mod": "tornade", "param": "count", "op": "add", "value": 1, "text": "Tornade : une tornade de plus."},
+      {"skill_mod": "tornade", "param": "damage", "op": "more", "value": 0.85, "text": "Tornade : dégâts ×0,85."}
+    ]
+  },
+  "greffe_cerf_volant": {
+    "name": "Cerf-volant",
+    "desc": "L'appel d'air s'ouvre sur toi, plus large.",
+    "sources": ["autel"], "shape": "fleur", "color": "#b8cfe4",
+    "effects": [
+      {"skill_mod": "appel_air", "param": "range", "op": "set", "value": 0, "text": "Appel d'air : s'ouvre sur toi au lieu de l'endroit visé."},
+      {"skill_mod": "appel_air", "param": "radius", "op": "more", "value": 1.3, "text": "Appel d'air : rayon ×1,3."}
+    ]
+  },
+  "greffe_oeil_tempete": {
+    "name": "Œil du Harfang",
+    "desc": "Ce qui tombe sous tes coups se relève en tornade.",
+    "sources": ["boss"], "shape": "coeur", "color": "#a4bcd4",
+    "effects": [
+      {"on": "kill", "do": "tornado", "at": "enemy", "factor": 0.5, "cooldown": 2.5,
+       "text": "Un ennemi vaincu laisse une tornade là où il tombe (50 % des dégâts et de la durée de la tornade, au plus toutes les 2,5 s)."}
+    ]
+  },
+  "greffe_souffle_ancien": {
+    "name": "Souffle ancien",
+    "desc": "Un souffle venu des hauteurs, qui porte et qui soigne.",
+    "sources": ["secret"], "shape": "fleur", "color": "#e8f2fa",
+    "effects": [
+      {"stat": "dash_cd", "op": "inc", "value": -0.2},
+      {"on": "dash", "do": "heal", "value": 0.03, "cooldown": 1,
+       "text": "Chaque esquive te rend 3 % de ta vie maximale (au plus une fois par seconde)."}
+    ]
+  },
+  "greffe_vortex": {
+    "name": "Vortex",
+    "desc": "L'appel d'air revient plus souvent, un peu moins fort.",
+    "sources": ["elite"], "shape": "fleur", "color": "#7f9fbd",
+    "effects": [
+      {"skill_mod": "appel_air", "param": "cooldown", "op": "more", "value": 0.6, "text": "Appel d'air : recharge ×0,6."},
+      {"skill_mod": "appel_air", "param": "damage", "op": "more", "value": 0.8, "text": "Appel d'air : dégâts ×0,8."}
+    ]
+  },
+  "greffe_bise": {
+    "name": "Bise",
+    "desc": "Tes coups prennent de l'élan quand tu bouges.",
+    "sources": ["elite"], "shape": "feuille", "color": "#c8dcef",
+    "effects": [
+      {"attack_mod": "elan", "value": 0.25},
+      {"stat": "move_speed", "op": "inc", "value": 0.05}
+    ]
+  },
+  "greffe_trombe": {
+    "name": "Trombe",
+    "desc": "La ruée laisse une tornade derrière elle.",
+    "sources": ["elite"], "shape": "epine", "color": "#a4bcd4",
+    "effects": [
+      {"skill_mod": "ruee", "param": "wake", "op": "set", "value": 0.5, "text": "Ruée : une tornade naît au bout de la ruée (50 % de ses dégâts et de sa durée)."}
+    ]
+  },
+  "greffe_vent_coupant": {
+    "name": "Vent coupant",
+    "desc": "Chaque coup de ton attaque repousse l'ennemi.",
+    "sources": ["elite"], "shape": "epine", "color": "#8fb0cc",
+    "effects": [
+      {"attack_mod": "repousse", "value": 20},
+      {"stat": "projectile_damage", "op": "inc", "value": 0.1}
+    ]
   }
 }

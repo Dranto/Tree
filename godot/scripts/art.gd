@@ -124,6 +124,7 @@ const ELEMENT_DE_COMPETENCE := {
 	"graine": "seve", "nova": "epine", "fouet": "epine", "volee": "epine", "racines": "racine",
 	"saignee": "saignement", "cloud": "poison", "bloom": "seve",
 	"vesse": "poison", "essaim": "poison", "eclosion": "poison",
+	"tornade": "vent", "ruee": "vent", "appel_air": "vent",
 }
 
 # --- Traits, ombres, lumière ---
@@ -420,11 +421,11 @@ static func delta_e(a: Color, b: Color) -> float:
 # Silhouettes pleines, lisibles à 20 px ; un détail clair au plus.
 const ICONES := {
 	"elements": ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent"],
-	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom", "vesse", "essaim", "eclosion"],
+	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom", "vesse", "essaim", "eclosion", "tornade", "ruee", "appel_air"],
 	"statistiques": ["degats", "attaque", "projectile", "critique", "vie", "regen", "armure", "vitesse", "esquive", "zone", "collecte", "competence"],
 	"monde": ["sanctuaire", "autel", "coeur", "arene", "secret", "seve_perdue", "essence", "greffe"],
 	# Formes de l'attaque de base (data/attack.json) et nœud qui la modifie : Art.icon("attaque_<forme>").
-	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_spore_lobee", "attaque_dard", "attaque_mod"],
+	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_spore_lobee", "attaque_dard", "attaque_lame", "attaque_bourrasque", "attaque_mod"],
 }
 ## Nom affiché de chaque icône (planche, infobulles).
 const NOM_ICONE := {
@@ -439,11 +440,14 @@ const NOM_ICONE := {
 	"attaque_graine": "Attaque : graines", "attaque_echarde": "Attaque : échardes", "attaque_fouet": "Attaque : fouet",
 	"attaque_ronce_vive": "Attaque : ronces vives", "attaque_spore_lobee": "Attaque : spores lobées",
 	"attaque_dard": "Attaque : dards fongiques", "attaque_mod": "Attaque modifiée",
+	"tornade": "Tornade", "ruee": "Ruée", "appel_air": "Appel d'air",
+	"attaque_lame": "Attaque : lames de vent", "attaque_bourrasque": "Attaque : bourrasque",
 }
 ## Élément de chaque forme de l'attaque de base (le même que dans data/attack.json).
 const ELEMENT_D_ATTAQUE := {
 	"attaque_graine": "seve", "attaque_echarde": "epine", "attaque_fouet": "epine", "attaque_ronce_vive": "saignement",
 	"attaque_spore_lobee": "poison", "attaque_dard": "poison",
+	"attaque_lame": "vent", "attaque_bourrasque": "vent",
 }
 ## Couleur par défaut d'une icône qui n'est pas un élément.
 const COULEUR_ICONE := {
@@ -871,7 +875,9 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 			ci.draw_line(P.call(-0.45, 0.45), P.call(-0.85, 0.85), sombre.lightened(0.2), lw * 1.2, true)
 			ci.draw_line(P.call(-0.5, 0.5), P.call(0.55, -0.55), sombre, lw * 0.7, true)
 		_:
-			ci.draw_circle(p, s * 0.35, col)
+			# Icônes de la branche Vent (vent_fx.gd).
+			if not VentFx.icon(ci, id, p, s, col, clair, sombre, lw):
+				ci.draw_circle(p, s * 0.35, col)
 
 
 ## Feuille en amande, pointe dans la direction a, longueur l (de la base à la pointe : 2 × l).

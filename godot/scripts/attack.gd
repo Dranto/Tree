@@ -19,6 +19,8 @@ class_name Attack
 extends RefCounted
 
 const Content = preload("res://scripts/content.gd")
+## Branche Vent : pousser et aspirer les ennemis (recul de la bourrasque, modificateur « repousse »).
+const VentScript = preload("res://scripts/vent.gd")
 ## Statistique de dégâts de chaque famille d'attaque (comme les compétences, player.gd).
 const TAG_STATS := {"corps_a_corps": "melee_damage", "projectile": "projectile_damage", "zone": "area_damage"}
 ## « Se battre chez soi » : bonus d'une forme de Ronce sur une terre ravivée de sa région (player.gd).
@@ -165,7 +167,12 @@ static func multiplier(player, tags: Array, branch: String) -> float:
 static func hit_damage(player, st: Dictionary) -> float:
 	var f := form_def(st)
 	var base: float = player.current_damage() if player != null and player.has_method("current_damage") else float(_stats().get("damage", 1.0))
-	return base * float(f.get("damage", 1.0)) * multiplier(player, f.get("tags", []), str(f.get("branch", "")))
+	var dmg: float = base * float(f.get("damage", 1.0)) * multiplier(player, f.get("tags", []), str(f.get("branch", "")))
+	# Élan (Vent) : bonus tant que le joueur se déplace (ou vient de bouger).
+	var elan := mod(st, "elan")
+	if elan > 0.0 and player != null and "still_time" in player and float(player.still_time) < 0.25:
+		dmg *= 1.0 + elan
+	return dmg
 
 
 # --- Tir ---
@@ -345,6 +352,10 @@ static func _shoot(player, st: Dictionary, shot: Dictionary) -> void:
 		p.branch = branch
 		p.empowered = empowered
 		p.attack = on_hit if i == lead else quiet
+		if f.get("return", false):
+			# Lame de vent : elle part jusqu'à la portée, puis revient au joueur (projectile.gd).
+			p.home = player
+			p.returning = true
 		if form == "ronce_vive":
 			p.plant = true
 			p.trap_dmg = trap_dmg
@@ -399,11 +410,11 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 		arc = TAU
 	arc = minf(arc, TAU)
 	if shot.get("burst", 0) == 0:
-		_sfx("fouet")
-	_afx(main, "fouet", {"pos": player.position, "dir": dir, "r": r, "arc": arc, "follow": player,
+		_sfx(str(f.get("sfx", "fouet")))
+	_afx(main, str(f.get("fx", "fouet")), {"pos": player.position, "dir": dir, "r": r, "arc": arc, "follow": player,
 		"empowered": empowered, "flip": int(shot.get("repeat", 0)) % 2 == 1})
 	if empowered:
-		_afx(main, "renforcee", {"pos": player.position, "follow": player, "element": "epine"})
+		_afx(main, "renforcee", {"pos": player.position, "follow": player, "element": str(f.get("element", "epine"))})
 	var on_hit := _hit_mods(st)
 	var kb := float(f.get("knockback", 0.0))
 	for e in main.enemies_near(player.position, r):
@@ -414,8 +425,8 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 		apply_on_hit(main, on_hit, e, dmg, e.position)
 		if e.dead:
 			continue
-		if kb > 0.0 and d.length() > 0.1 and not e.anchored:
-			e.position += d.normalized() * kb
+		if kb > 0.0 and d.length() > 0.1:
+			VentScript.push(e, d.normalized() * kb)
 		if main.has_method("on_melee_hit"):
 			main.on_melee_hit(e, dmg)
 
@@ -437,6 +448,10 @@ static func apply_on_hit(main, m: Dictionary, e, dmg: float, at: Vector2) -> voi
 		e.apply_status("saignement", dmg * float(m["saignement"]), float(defs["saignement"].get("duration", 4.0)) * float(s.get("bleed_duration", 1.0)))
 	if m.has("poison"):
 		e.apply_poison(dmg * float(m["poison"]), float(defs["poison"].get("duration", 3.0)))
+	if m.has("repousse") and "player" in main and main.player != null:
+		var away: Vector2 = e.position - main.player.position
+		if away.length() > 0.1:
+			VentScript.push(e, away.normalized() * float(m["repousse"]))
 	if m.has("enracine") and main.rng.randf() < float(m["enracine"]):
 		e.apply_status("enracine", 1.0, float(defs["enracine"].get("duration", 0.8)) * float(s.get("root_duration", 1.0)))
 		_afx(main, "enracine", {"pos": e.position, "r": float(e.radius)})
