@@ -10,7 +10,7 @@ const N := 1500
 func _initialize() -> void:
 	var b = DrawBatch.new()
 	var total := 0.0
-	for kind in ["fletri", "cendreux", "colosse", "cracheur", "gardien", "boursoufle", "tireur", "chargeur", "nid", "rejeton"]:
+	for kind in ["fletri", "cendreux", "colosse", "cracheur", "gardien", "boursoufle", "tireur", "chargeur", "nid", "rejeton", "traine_vase", "scissipore", "sporule", "lichen"]:
 		var t0 := Time.get_ticks_usec()
 		var verts := 0
 		for i in N:

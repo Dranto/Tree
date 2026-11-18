@@ -80,6 +80,9 @@ func _run() -> void:
 				break
 	check(with_play >= 8, "%d greffes changent la façon de jouer (réaction, transformation de compétence ou de l'attaque)" % with_play)
 	var r := Content.rewards()
+	# Les lieux de la région de Ronce seulement (chaque région a les siens).
+	r["altars"] = r["altars"].filter(func(a): return a.get("region", "") == "ronce")
+	r["secrets"] = r["secrets"].filter(func(a): return a.get("region", "") == "ronce")
 	var world_points: int = int(r["boss"]["ronce"]["points"]) + int(r["coeur"]["ronce"]["points"])
 	var world_grafts := {r["boss"]["ronce"]["graft"]: true}
 	for a in r["altars"] + r["secrets"]:
@@ -178,10 +181,11 @@ func _run() -> void:
 	game.recompute()
 
 	print("Autels et secret")
-	check(main.altars.size() == r["altars"].size() + r["secrets"].size(), "autels et secret placés dans le monde")
-	for a in main.altars:
+	var ronce_altars: Array = main.altars.filter(func(a): return a.region == "ronce")
+	check(ronce_altars.size() == r["altars"].size() + r["secrets"].size(), "autels et secret placés dans le monde")
+	for a in ronce_altars:
 		check(main.region_at(a.position) == "ronce", "« %s » est dans le roncier" % a.data["name"])
-	var altar = main.altars[0]
+	var altar = ronce_altars[0]
 	var before: int = game.points
 	_place(altar.position + Vector2(0, -400))
 	await _steps(2)
@@ -199,7 +203,7 @@ func _run() -> void:
 	altar.active = false
 	altar.activate()
 	check(game.points == before + 1, "raviver deux fois ne redonne pas de point")
-	var secret = main.altars[main.altars.size() - 1]
+	var secret = ronce_altars[ronce_altars.size() - 1]
 	check(secret.kind == "secret", "le secret est placé")
 	_place(secret.position)
 	await _steps(int(secret.HOLD["secret"] * 60.0) + 40)
