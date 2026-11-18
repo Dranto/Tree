@@ -1,11 +1,14 @@
-## Carte du monde (touche M), dessinée par le code : terre ravivée, région de Ronce, sanctuaires,
-## autels découverts, Cœur de flétrissure, arène de la Mère-Ronce, position du joueur et objectif.
-## Le jeu est en pause tant qu'elle est ouverte (voir quest_ui.gd).
+## Carte du monde (touche M), dessinée par le code : terre ravivée, le secteur de chaque région (Ronce, Spore,
+## Vent…), sanctuaires, autels découverts, Cœur et arène de chaque région, position du joueur et objectif.
+## La légende et l'avancement de chaque région sont lus dans data/regions/<id>.json et les drapeaux de la partie :
+## une région ajoutée par ses fichiers apparaît d'elle-même. Le jeu est en pause tant qu'elle est ouverte
+## (voir quest_ui.gd).
 extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const Regions = preload("res://scripts/regions.gd")
 const Content = preload("res://scripts/content.gd")
+const RegionUi = preload("res://scripts/region_ui.gd")
 
 const TEX_SIZE := 160
 const DEAD := Color(0.17, 0.16, 0.18)
@@ -16,6 +19,8 @@ var _view: Control
 var _panel: PanelContainer
 var _goal_title: Label
 var _goal_text: Label
+var _goal_region: Label
+var _legend: VBoxContainer
 var t := 0.0
 
 
@@ -64,6 +69,7 @@ func _ready() -> void:
 	v.add_theme_constant_override("separation", 6)
 	_panel.add_child(v)
 	_label(v, "OBJECTIF", 12, UiTheme.GOLD)
+	_goal_region = _label(v, "", 12, Color(0.78, 0.85, 0.78))
 	_goal_title = _label(v, "", 17, UiTheme.INK, true)
 	_goal_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_goal_title.custom_minimum_size.x = 250.0
@@ -72,29 +78,54 @@ func _ready() -> void:
 	_goal_text.custom_minimum_size.x = 250.0
 	v.add_child(HSeparator.new())
 	_label(v, "LÉGENDE", 12, Color(0.55, 0.65, 0.55))
-	for e in [
-		["land", Color("5c9a45"), "Terre ravivée"],
-		["region", Color("e0675e"), "Région de Ronce"],
-		["seed", UiTheme.GOLD, "La graine"],
-		["sanctuary", Color("9ad7ff"), "Sanctuaire"],
-		["altar", Color("f2d06b"), "Autel découvert"],
-		["heart", Color("c84b44"), "Cœur de flétrissure"],
-		["arena", Color("e0675e"), "Arène de la Mère-Ronce"],
-		["player", Color.WHITE, "Toi"],
-	]:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10)
-		var holder := HBoxContainer.new()
-		var g := Glyph.new()
-		g.kind = e[0]
-		g.color = e[1]
-		g.painter = self
-		holder.add_child(g)
-		row.add_child(holder)
-		_label(row, e[2], 13, Color(0.82, 0.88, 0.82))
-		v.add_child(row)
+	_legend = VBoxContainer.new()
+	_legend.add_theme_constant_override("separation", 6)
+	v.add_child(_legend)
 	_label(v, "M ou Échap : fermer   ·   J : journal", 12, Color(0.55, 0.6, 0.55))
 	resized.connect(_layout)
+
+
+## La légende : un signe par région (avec son avancement), puis les signes communs. Reconstruite à chaque
+## ouverture, car l'avancement change.
+func _build_legend() -> void:
+	for c in _legend.get_children():
+		_legend.remove_child(c)
+		c.queue_free()
+	_legend_row(["land", Color("5c9a45"), "Terre ravivée", ""])
+	for reg in Regions.ids():
+		var sub := RegionUi.summary(reg)
+		var st := RegionUi.state(reg)
+		_legend_row(["region", RegionUi.tint(reg), RegionUi.full_name(reg), sub + ("  ·  " + st if st != "" and sub != "" else st)])
+	for e in [
+		["seed", UiTheme.GOLD, "La graine", ""],
+		["sanctuary", Color("9ad7ff"), "Sanctuaire", ""],
+		["altar", Color("f2d06b"), "Autel découvert", ""],
+		["heart", Color("c84b44"), "Cœur de flétrissure", ""],
+		["arena", Color("e0675e"), "Arène du boss", ""],
+		["player", Color.WHITE, "Toi", ""],
+	]:
+		_legend_row(e)
+
+
+func _legend_row(e: Array) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var holder := HBoxContainer.new()
+	var g := Glyph.new()
+	g.kind = e[0]
+	g.color = e[1]
+	g.painter = self
+	holder.add_child(g)
+	row.add_child(holder)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	row.add_child(col)
+	_label(col, e[2], 13, Color(0.82, 0.88, 0.82))
+	if str(e[3]) != "":
+		var sub := _label(col, e[3], 11, Color(0.6, 0.68, 0.6))
+		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		sub.custom_minimum_size.x = 215.0
+	_legend.add_child(row)
 
 
 func _label(parent: Node, text: String, size_px: int, color: Color, bold := false) -> Label:
@@ -123,6 +154,7 @@ func _draw() -> void:
 
 
 func open() -> void:
+	_build_legend()
 	_layout()
 	_rebuild_texture()
 	_refresh_goal()
@@ -136,8 +168,19 @@ func close() -> void:
 
 func _refresh_goal() -> void:
 	var o: Dictionary = Objectives.current()
-	_goal_title.text = o["title"] if not o.is_empty() else "Tranche accomplie"
-	_goal_text.text = o["text"] if not o.is_empty() else "Le roncier est libre."
+	var reg := str(o.get("region", ""))
+	_goal_region.text = RegionUi.full_name(reg) if reg != "" and Regions.ids().size() > 1 else ""
+	_goal_region.add_theme_color_override("font_color", RegionUi.tint(reg).lightened(0.25) if _goal_region.text != "" else Color.WHITE)
+	_goal_region.visible = _goal_region.text != ""
+	if not o.is_empty():
+		_goal_title.text = o["title"]
+		_goal_text.text = o["text"]
+	elif Regions.ids().size() > 1:
+		_goal_title.text = "Aventure accomplie"
+		_goal_text.text = "Toutes les régions sont purifiées."
+	else:
+		_goal_title.text = "Tranche accomplie"
+		_goal_text.text = "Le roncier est libre."
 	_layout()
 
 
@@ -203,13 +246,25 @@ func draw_map(v: Control) -> void:
 		var arena = main.arenas[reg]
 		var beaten := bool(Game.flags.get(arena.flag, false))
 		var ac := to_map(arena.center, s)
-		draw_glyph(v, "arena", ac, Color("7fd36b") if beaten else Color("e0675e"), true, 1.0)
+		draw_glyph(v, "arena", ac, Color("7fd36b") if beaten else RegionUi.tint(reg).lightened(0.15), true, 1.0)
 		_text(v, font, ac + Vector2(-70, 4), "Arène", Color("e9e2c8"))
 
 	# Objectif : un anneau qui bat autour de la cible.
 	var goal = Objectives.target_pos(Objectives.current())
 	if goal != null:
 		var gc := to_map(goal, s)
+		# Le trajet du joueur à l'objectif, en pointillés : il passe d'une région à l'autre.
+		var from := to_map(main.player.position, s)
+		var dash := 9.0
+		var span := from.distance_to(gc)
+		var dir := (gc - from).normalized()
+		var k := fmod(t * 24.0, dash * 2.0)
+		while k < span - 14.0:
+			var a := from + dir * maxf(k, 14.0)
+			var b := from + dir * minf(k + dash, span - 14.0)
+			if k + dash > 14.0:
+				v.draw_line(a, b, Color(UiTheme.GOLD, 0.45), 2.0)
+			k += dash * 2.0
 		var pulse := 0.5 + 0.5 * sin(t * 4.0)
 		v.draw_arc(gc, 13.0 + 4.0 * pulse, 0.0, TAU, 28, Color(UiTheme.GOLD, 0.9 - 0.4 * pulse), 2.0)
 

@@ -452,6 +452,10 @@ func cast(id: String, s: Dictionary) -> void:
 	var obj = skill_object(id)
 	if obj != null:
 		obj.cast(self, s)
+	# Son choisi par les données (skills.json › « sound »), pour les compétences dont le script n'en joue pas.
+	var snd := str(skill(id).get("sound", ""))
+	if snd != "":
+		Sfx.play(snd, position)
 
 
 ## Registre des compétences : l'objet Skill de scripts/skills/<id>.gd, chargé la première fois.

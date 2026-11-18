@@ -1,7 +1,14 @@
 ## Ambiance du monde : cendres en suspension sur la terre morte, pollen et papillons sur la terre
 ## vivante, et une légère vignette sur l'écran. Tout est dessiné par le code.
 ## « Réduire les effets » (options) coupe les particules ; la vignette reste.
+##
+## Une région peut avoir ses propres particules (data/audio.json › regions › <id> › ambience, voir
+## region_audio.gd) : spores qui montent dans le marais, brins d'herbe et rafales sur les plateaux.
+## Une particule prend le style de la région où elle naît ; sans réglage, c'est la cendre et le pollen de Ronce.
 extends Node2D
+
+const RegionAudio = preload("res://scripts/region_audio.gd")
+const Regions = preload("res://scripts/regions.gd")
 
 const MOTES := 22
 const BUTTERFLIES := 4
@@ -16,6 +23,9 @@ var vignette_layer: CanvasLayer
 var _rng := RandomNumberGenerator.new()
 var _t := 0.0
 var _skip := false
+## Papillons permis là où se trouve le joueur (faux dans les régions qui règlent « butterflies » à 0).
+var _butterflies_ok := true
+var _region_timer := 0.0
 
 
 func _ready() -> void:
@@ -88,8 +98,23 @@ func _new_mote(rect: Rect2, anywhere: bool) -> Dictionary:
 		# Ressort sur un bord de l'écran, côté du vent pour la cendre.
 		pos = Vector2(rect.position.x if _rng.randf() < 0.5 else rect.end.x, rect.position.y + _rng.randf() * rect.size.y)
 	var living: bool = main.ground.life_at(pos) > 0.4
-	return {"pos": pos, "living": living, "ph": _rng.randf() * TAU, "size": _rng.randf_range(1.2, 2.6),
+	var m := {"pos": pos, "living": living, "ph": _rng.randf() * TAU, "size": _rng.randf_range(1.2, 2.6),
 		"ember": not living and _rng.randf() < 0.12, "speed": _rng.randf_range(0.6, 1.4)}
+	var amb := RegionAudio.ambience(Regions.region_at(pos))
+	var sty = amb.get("alive" if living else "dead", null)
+	if sty is Dictionary:
+		# Particule de région : tout est lu une fois ici, pas à chaque image.
+		var vel: Array = sty.get("vel", [0.0, 0.0])
+		var sway: Array = sty.get("sway", [0.0, 0.0])
+		var sz: Array = sty.get("size", [1.2, 2.6])
+		m["shape"] = str(sty.get("shape", "dot"))
+		m["col"] = Regions.color(sty.get("color", "#ffffff"))
+		m["alpha"] = float(sty.get("alpha", 0.6))
+		m["vel"] = Vector2(vel[0], vel[1])
+		m["sway"] = Vector2(sway[0], sway[1])
+		m["len"] = float(sty.get("length", 14.0))
+		m["size"] = _rng.randf_range(sz[0], sz[1])
+	return m
 
 
 func _process(delta: float) -> void:
@@ -103,12 +128,19 @@ func _process(delta: float) -> void:
 			queue_redraw()
 		return
 	_t = maxf(_t, 0.0) + delta
+	_region_timer -= delta
+	if _region_timer <= 0.0:
+		_region_timer = 0.5
+		var amb := RegionAudio.ambience(Regions.region_at(main.player.position))
+		_butterflies_ok = int(amb.get("butterflies", BUTTERFLIES)) > 0
 	var rect := _view_rect()
 	var far := rect.grow(MARGIN * 2.0)
 	for i in motes.size():
 		var m: Dictionary = motes[i]
 		var v: Vector2
-		if m["living"]:
+		if m.has("shape"):
+			v = m["vel"] + Vector2(m["sway"].x * sin(_t * 0.8 + m["ph"]), m["sway"].y * sin(_t * 0.5 + m["ph"] * 2.0))
+		elif m["living"]:
 			v = Vector2(sin(_t * 0.8 + m["ph"]) * 14.0, -10.0 - 6.0 * sin(_t * 0.5 + m["ph"]))
 		else:
 			v = Vector2(22.0 + 8.0 * sin(_t * 0.6 + m["ph"]), 12.0 + 6.0 * sin(_t * 0.9 + m["ph"] * 2.0))
@@ -125,7 +157,7 @@ func _process(delta: float) -> void:
 
 func _step_butterfly(b: Dictionary, delta: float, rect: Rect2, far: Rect2) -> void:
 	var life: float = main.ground.life_at(b["pos"])
-	var want := smoothstep(0.4, 0.6, life)
+	var want := smoothstep(0.4, 0.6, life) if _butterflies_ok else 0.0
 	b["a"] = move_toward(b["a"], want, delta * 0.8)
 	# Vol saccadé : le cap change doucement, la vitesse pulse.
 	b["heading"] += sin(_t * 1.7 + b["ph"]) * 2.2 * delta
@@ -149,7 +181,9 @@ func _draw() -> void:
 	for m in motes:
 		var p: Vector2 = m["pos"]
 		var tw := 0.5 + 0.5 * sin(_t * 2.0 + m["ph"] * 3.0)
-		if m["living"]:
+		if m.has("shape"):
+			_draw_region_mote(m, p, tw)
+		elif m["living"]:
 			var col := Color(1.0, 0.95, 0.6, 0.35 + 0.4 * tw)
 			draw_circle(p, m["size"] * 0.9, col)
 		elif m["ember"]:
@@ -160,6 +194,21 @@ func _draw() -> void:
 	for b in butterflies:
 		if b["a"] > 0.02:
 			_draw_butterfly(b)
+
+
+## Particule de région : point, halo qui scintille, ou brin qui file dans le sens du vent.
+func _draw_region_mote(m: Dictionary, p: Vector2, tw: float) -> void:
+	var col: Color = m["col"]
+	var a: float = m["alpha"]
+	match m["shape"]:
+		"glow":
+			draw_circle(p, m["size"] * 2.6, Color(col, a * 0.16 * (0.5 + tw)))
+			draw_circle(p, m["size"] * 0.8, Color(col, a * (0.55 + 0.4 * tw)))
+		"streak":
+			var d: Vector2 = (m["vel"] + Vector2(0.0, m["sway"].y * sin(_t * 0.5 + m["ph"] * 2.0))).normalized()
+			draw_line(p - d * m["len"], p, Color(col, a * (0.5 + 0.5 * tw)), m["size"])
+		_:
+			draw_circle(p, m["size"], Color(col, a * (0.55 + 0.4 * tw)))
 
 
 func _draw_butterfly(b: Dictionary) -> void:

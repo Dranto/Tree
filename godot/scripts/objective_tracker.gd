@@ -3,6 +3,8 @@
 extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const Regions = preload("res://scripts/regions.gd")
+const RegionUi = preload("res://scripts/region_ui.gd")
 
 const MARGIN := 20
 const WIDTH := 330.0
@@ -72,13 +74,21 @@ func refresh() -> void:
 	var o: Dictionary = Objectives.current()
 	var total: int = Objectives.main_total()
 	if o.is_empty():
-		_head.text = "TRANCHE DE RONCE"
 		_title.text = "Tous les objectifs sont accomplis"
-		_text.text = "Le roncier est libre. Les autres branches de l'Arbre t'attendent."
+		if Regions.ids().size() > 1:
+			_head.text = "FIN DE L'AVENTURE"
+			_text.text = "Toutes les régions sont purifiées. L'Arbre de vie est en fleurs."
+		else:
+			_head.text = "TRANCHE DE RONCE"
+			_text.text = "Le roncier est libre. Les autres branches de l'Arbre t'attendent."
 		_progress.text = ""
 	else:
 		# Rang dans la suite (pas le nombre d'objectifs faits : une étape sautée ne décale rien).
 		_head.text = "OBJECTIF  ·  %d / %d" % [Objectives.current_rank(), total]
+		# Avec plusieurs régions, on dit laquelle : la flèche peut mener d'une région à l'autre.
+		var reg := str(o.get("region", ""))
+		if reg != "" and Regions.ids().size() > 1:
+			_head.text += "  ·  " + RegionUi.short_name(reg)
 		_title.text = o["title"]
 		_text.text = o["text"]
 		var pr: Array = Objectives.progress(o)

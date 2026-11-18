@@ -378,7 +378,7 @@ func _physics_process(delta: float) -> void:
 	_death_fx_step()
 	elapsed += delta
 	# La musique suit la vie du sol sous le joueur.
-	Music.set_mood(ground.life_at(player.position))
+	Music.set_mood(ground.life_at(player.position), Regions.region_at(player.position))
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
 		save_game()
@@ -759,7 +759,7 @@ func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void
 	fx.hit_element = "racine" if root_hit_base > 0.0 else ("epine" if branch == "ronce" else "")
 	e.take_damage(dmg, crit)
 	fx.hit_element = ""
-	Sfx.play("critique" if crit else "impact", e.position)
+	Sfx.play(enemy_sound(e, "sound_crit" if crit else "sound_hit", "critique" if crit else "impact"), e.position)
 	if s["poison"] > 0.0:
 		e.apply_poison(dmg * s["poison"], 3.0)
 	if s["bleed"] > 0.0 and not e.dead:
@@ -814,9 +814,18 @@ func damage_area(center: Vector2, radius: float, amount: float, knockback: float
 			e.position += d.normalized() * knockback
 
 
+## Son d'un ennemi : celui de sa sorte dans enemies.json (« sound_hit », « sound_crit », « sound_death »),
+## à défaut « fallback ». Les boss n'ont pas de sorte : leur son vient de leur script.
+func enemy_sound(e, key: String, fallback: String) -> String:
+	var k = e.get("kind")
+	if k is int and k >= 0 and k < Enemy.KINDS.size():
+		return str(Enemy.KINDS[k].get(key, fallback))
+	return fallback
+
+
 func on_enemy_killed(e) -> void:
 	Game.kills += 1
-	Sfx.play("mort", e.position)
+	Sfx.play(enemy_sound(e, "sound_death", "mort"), e.position)
 	# Une élite laisse une gerbe d'essences, et parfois une greffe (tâche B).
 	var is_elite: bool = e.get("elite") == true
 	var n_orbs := 6 if is_elite else 1

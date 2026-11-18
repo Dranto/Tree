@@ -37,6 +37,8 @@ func _init() -> void:
 	errors.append_array(load("res://scripts/regions.gd").validate())
 	# Sortes d'ennemis et apparitions par région (data/enemies.json).
 	errors.append_array(load("res://scripts/enemy.gd").validate_kinds())
+	errors.append_array(load("res://scripts/region_audio.gd").validate())
+	errors.append_array(load("res://scripts/sound_refs.gd").validate())
 	# Menace, apparitions, courbe d'expérience et modes de difficulté (data/difficulty.json).
 	errors.append_array(load("res://scripts/difficulty.gd").validate())
 	# Objectifs de la tranche (data/objectives.json).

@@ -37,6 +37,30 @@ const SOUNDS := {
 	"seve": {"wave": SINE, "f0": 392.0, "f1": 392.0, "dur": 0.7, "att": 0.01, "lp": 0.0, "vol": 0.3, "arp": [0, 5, 9, 12], "vib": [0.01, 6.0]},
 	"clic": {"wave": SQUARE, "f0": 900.0, "f1": 700.0, "dur": 0.04, "att": 0.001, "lp": 4000.0, "vol": 0.16, "duty": 0.5},
 	"survol": {"wave": SINE, "f0": 1200.0, "f1": 1400.0, "dur": 0.03, "att": 0.002, "lp": 0.0, "vol": 0.08},
+	# --- Spore (poison, nuages, propagation) : sons provisoires du jalon 7, à réécouter et retoucher. ---
+	# Sourds, mouillés, avec un grain de bruit : rien de métallique.
+	"spore_eclat": {"wave": NOISE, "f0": 900.0, "f1": 260.0, "dur": 0.22, "att": 0.01, "lp": 1400.0, "vol": 0.3, "body": 120.0, "vib": [0.2, 22.0]},
+	"spore_nuage": {"wave": NOISE, "f0": 700.0, "f1": 340.0, "dur": 0.7, "att": 0.18, "lp": 1100.0, "vol": 0.26, "vib": [0.2, 7.0], "voice2": -7.0},
+	"spore_propage": {"wave": SINE, "f0": 300.0, "f1": 620.0, "dur": 0.5, "att": 0.02, "lp": 1800.0, "vol": 0.26, "arp": [0, 3, 6, 9, 12], "vib": [0.04, 11.0]},
+	"spore_piege": {"wave": SQUARE, "f0": 220.0, "f1": 110.0, "dur": 0.3, "att": 0.003, "lp": 900.0, "vol": 0.3, "duty": 0.25, "body": 70.0},
+	"spore_toxine": {"wave": SAW, "f0": 180.0, "f1": 520.0, "dur": 0.42, "att": 0.01, "lp": 1500.0, "vol": 0.32, "body": 80.0, "voice2": 6.0, "vib": [0.05, 16.0]},
+	"spore_flaque": {"wave": NOISE, "f0": 500.0, "f1": 180.0, "dur": 0.26, "att": 0.03, "lp": 700.0, "vol": 0.3, "body": 60.0, "vib": [0.3, 12.0]},
+	"spore_division": {"wave": TRI, "f0": 420.0, "f1": 210.0, "dur": 0.24, "att": 0.004, "lp": 2200.0, "vol": 0.28, "voice2": -12.0, "vib": [0.1, 20.0]},
+	"spore_boss_eveil": {"wave": SAW, "f0": 70.0, "f1": 190.0, "dur": 1.1, "att": 0.4, "lp": 900.0, "vol": 0.36, "body": 45.0, "voice2": -3.0, "vib": [0.05, 6.0]},
+	"spore_boss_phase": {"wave": SAW, "f0": 240.0, "f1": 90.0, "dur": 0.9, "att": 0.02, "lp": 1100.0, "vol": 0.36, "body": 50.0, "voice2": 1.0, "vib": [0.08, 9.0]},
+	"spore_boss_mort": {"wave": SINE, "f0": 220.0, "f1": 60.0, "dur": 1.8, "att": 0.02, "lp": 800.0, "vol": 0.4, "body": 40.0, "voice2": -5.0, "vib": [0.04, 4.0]},
+	# --- Vent (vitesse, projectiles, mobilité) : sons provisoires du jalon 7. ---
+	# Souffles et sifflements clairs : bruit filtré haut, glissandos.
+	"vent_lame": {"wave": NOISE, "f0": 5200.0, "f1": 2400.0, "dur": 0.12, "att": 0.002, "lp": 7000.0, "vol": 0.22, "click": true, "vib": [0.1, 40.0]},
+	"vent_rafale": {"wave": NOISE, "f0": 2200.0, "f1": 4800.0, "dur": 0.38, "att": 0.08, "lp": 5600.0, "vol": 0.26, "vib": [0.1, 6.0]},
+	"vent_tornade": {"wave": NOISE, "f0": 1500.0, "f1": 2600.0, "dur": 0.9, "att": 0.25, "lp": 3200.0, "vol": 0.28, "vib": [0.25, 5.0], "voice2": 5.0},
+	"vent_ruee": {"wave": NOISE, "f0": 800.0, "f1": 5000.0, "dur": 0.24, "att": 0.01, "lp": 6000.0, "vol": 0.3, "click": true, "body": 100.0},
+	"vent_appel": {"wave": SINE, "f0": 160.0, "f1": 420.0, "dur": 0.6, "att": 0.2, "lp": 1600.0, "vol": 0.3, "body": 80.0, "vib": [0.06, 8.0]},
+	"vent_plongeon": {"wave": SAW, "f0": 1400.0, "f1": 300.0, "dur": 0.26, "att": 0.004, "lp": 3600.0, "vol": 0.26, "vib": [0.04, 30.0]},
+	"vent_repousse": {"wave": NOISE, "f0": 1000.0, "f1": 300.0, "dur": 0.3, "att": 0.004, "lp": 2000.0, "vol": 0.34, "body": 90.0},
+	"vent_boss_eveil": {"wave": NOISE, "f0": 500.0, "f1": 3400.0, "dur": 1.2, "att": 0.5, "lp": 4200.0, "vol": 0.34, "body": 60.0, "voice2": 7.0, "vib": [0.15, 4.0]},
+	"vent_boss_phase": {"wave": NOISE, "f0": 3600.0, "f1": 700.0, "dur": 0.8, "att": 0.03, "lp": 4600.0, "vol": 0.34, "body": 70.0, "vib": [0.1, 12.0]},
+	"vent_boss_mort": {"wave": SINE, "f0": 520.0, "f1": 90.0, "dur": 1.8, "att": 0.02, "lp": 2400.0, "vol": 0.38, "body": 50.0, "voice2": 7.0, "vib": [0.05, 7.0]},
 }
 
 
@@ -120,44 +144,67 @@ static func _hz(root: int, semis: float, octave := 0) -> float:
 	return D2 * pow(2.0, (root + semis) / 12.0 + octave)
 
 
+## Réglages de musique d'une région (data/audio.json › regions › <id> › music, ou « audio › music » de son
+## fichier) : {"seed", "roots", "dark": {...}, "bright": {...}}. Sans réglage, la musique de Ronce.
+## « dark » : chord (accord, en demi-tons), vol et vol2 (notes tenues, et leur double désaccordé), detune, wind (niveau du vent),
+##   wind_lp (couleur du vent : plus grand, plus clair), wind_period (secondes, doit diviser 12), wind_fade (secondes d'estompe aux bouts de la boucle, pour un vent fort), bell (volume de la cloche).
+## « bright » : chord, octave, pattern (arpège, un nombre de notes qui divise 3 s), pad (volume de l'accord),
+##   pluck (volume des notes), sparkle (volume du scintillement), sparkle_note (demi-tons).
+const DEFAULT_DARK := {"chord": [0, 7, 12, 15], "vol": 0.09, "vol2": 0.05, "detune": 1.004, "wind": 0.9, "wind_lp": 0.03, "wind_period": 6.0, "wind_fade": 0.0, "bell": 0.10}
+const DEFAULT_BRIGHT := {"chord": [0, 4, 7, 12], "octave": 1, "pattern": [0, 4, 7, 12, 16, 12, 7, 4], "pad": 0.07, "pluck": 0.12, "sparkle": 0.05, "sparkle_note": 19}
+
+
+static func _style(style: Dictionary, layer: String, defaults: Dictionary) -> Dictionary:
+	var out := defaults.duplicate()
+	out.merge(style.get(layer, {}), true)
+	return out
+
+
 ## Couche sombre (terre morte) : accords mineurs tenus, vent grave, rien de brillant.
-static func music_dark() -> PackedFloat32Array:
-	var out := _blank(CHORD_TIME * ROOTS.size())
+static func music_dark(style := {}) -> PackedFloat32Array:
+	var st := _style(style, "dark", DEFAULT_DARK)
+	var roots: Array = style.get("roots", ROOTS)
+	var out := _blank(CHORD_TIME * roots.size())
 	var rng := RandomNumberGenerator.new()
-	rng.seed = 11
-	var minor := [0, 7, 12, 15]
-	for c in ROOTS.size():
-		for s in minor:
-			var f := _hz(ROOTS[c], s)
-			_swell(out, c * CHORD_TIME, CHORD_TIME, f, 0.09, 0.35)
-			_swell(out, c * CHORD_TIME, CHORD_TIME, f * 1.004, 0.05, 0.35)
+	rng.seed = int(style.get("seed", 11))
+	for c in roots.size():
+		for s in st["chord"]:
+			var f := _hz(roots[c], s)
+			_swell(out, c * CHORD_TIME, CHORD_TIME, f, st["vol"], 0.35)
+			_swell(out, c * CHORD_TIME, CHORD_TIME, f * st["detune"], st["vol2"], 0.35)
 	# Vent : bruit filtré en continu, modulé lentement (période 6 s, donc 2 cycles par boucle).
 	var lp := 0.0
 	for i in out.size():
 		var t := float(i) / RATE
-		lp += 0.03 * (rng.randf_range(-1.0, 1.0) - lp)
-		out[i] += lp * (0.7 + 0.5 * sin(TAU * t / 6.0)) * 0.9
+		lp += st["wind_lp"] * (rng.randf_range(-1.0, 1.0) - lp)
+		var edge := 1.0
+		if st["wind_fade"] > 0.0:
+			# Un vent fort ne finit pas à zéro : on l'estompe aux deux bouts pour que la boucle ne claque pas.
+			edge = minf(1.0, minf(t, out.size() / float(RATE) - t) / st["wind_fade"])
+		out[i] += lp * (0.7 + 0.5 * sin(TAU * t / st["wind_period"])) * st["wind"] * edge
 	# Cloche sourde au début de chaque accord.
-	for c in ROOTS.size():
-		_pluck(out, c * CHORD_TIME, _hz(ROOTS[c], 0, 1), 0.10, 2.4)
+	for c in roots.size():
+		_pluck(out, c * CHORD_TIME, _hz(roots[c], 0, 1), st["bell"], 2.4)
 	return _limit(out, 0.8)
 
 
 ## Couche lumineuse (terre vivante) : mêmes fondamentales, accords majeurs et arpèges.
-static func music_bright() -> PackedFloat32Array:
-	var out := _blank(CHORD_TIME * ROOTS.size())
-	var major := [0, 4, 7, 12]
-	for c in ROOTS.size():
-		for s in major:
-			_swell(out, c * CHORD_TIME, CHORD_TIME, _hz(ROOTS[c], s, 1), 0.07, 0.3)
-		# Arpège en croches : 3 s ÷ 0,375 s = 8 notes par accord.
-		var pattern := [0, 4, 7, 12, 16, 12, 7, 4]
+static func music_bright(style := {}) -> PackedFloat32Array:
+	var st := _style(style, "bright", DEFAULT_BRIGHT)
+	var roots: Array = style.get("roots", ROOTS)
+	var out := _blank(CHORD_TIME * roots.size())
+	var pattern: Array = st["pattern"]
+	var step := CHORD_TIME / pattern.size()
+	for c in roots.size():
+		for s in st["chord"]:
+			_swell(out, c * CHORD_TIME, CHORD_TIME, _hz(roots[c], s, st["octave"]), st["pad"], 0.3)
+		# Arpège : un pas égal par note (croches de 0,375 s pour huit notes).
 		for j in pattern.size():
-			var start: float = c * CHORD_TIME + j * 0.375
-			_pluck(out, start, _hz(ROOTS[c], pattern[j], 2), 0.12, 0.9)
+			var start: float = c * CHORD_TIME + j * step
+			_pluck(out, start, _hz(roots[c], pattern[j], st["octave"] + 1), st["pluck"], 0.9)
 	# Scintillement aigu, léger.
-	for c in ROOTS.size():
-		_pluck(out, c * CHORD_TIME + 1.5, _hz(ROOTS[c], 19, 2), 0.05, 1.4)
+	for c in roots.size():
+		_pluck(out, c * CHORD_TIME + 1.5, _hz(roots[c], st["sparkle_note"], 2), st["sparkle"], 1.4)
 	return _limit(out, 0.8)
 
 

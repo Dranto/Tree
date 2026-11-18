@@ -326,7 +326,7 @@ static func _shoot(player, st: Dictionary, shot: Dictionary) -> void:
 		if empowered:
 			trap_dmg *= float(st["factor"])
 	if shot.get("burst", 0) == 0 and not shot.get("salvo", false):
-		_sfx("tir")
+		_sfx(str(f.get("sound", "tir")))
 	# Traînée d'épines : seul le tir de tête (centre de l'éventail, premier de la rafale) en sème,
 	# pour qu'elle reste lisible et dans son budget de dessin.
 	var quiet := on_hit.duplicate()

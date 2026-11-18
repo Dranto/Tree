@@ -46,6 +46,20 @@
     "arena": {"radius": 360.0, "radius_min": 300.0, "offset": 700.0, "life_color": "vent/clair"},
     "reward": {"points": 2}
   },
+  "audio": {
+    "music": {
+      "seed": 5,
+      "roots": [0, -5, -2, -7],
+      "dark": {"chord": [0, 5, 10], "wind_period": 2.0},
+      "bright": {"chord": [0, 5, 9], "pattern": [0, 5, 9, 5]}
+    },
+    "ambience": {
+      "butterflies": 0,
+      "dead": {"shape": "dot", "color": "#8899aa", "alpha": 0.4, "vel": [5.0, 5.0], "sway": [4.0, 2.0], "size": [1.0, 2.0]},
+      "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.6, "vel": [120.0, 0.0], "sway": [10.0, 4.0], "size": [1.0, 1.5], "length": 20.0}
+    },
+    "boss": {"eveil": "vent_boss_eveil", "mort": "vent_boss_mort"}
+  },
   "ending": {
     "sub": "Fin de la région d'essai",
     "title": "La clairière respire",

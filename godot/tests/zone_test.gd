@@ -265,9 +265,9 @@ func _coherence(where: String) -> void:
 		problems.append("rang du cadre « %s »" % q.tracker._head.text)
 	q.journal.refresh()
 	var titles: Array = q.journal.find_children("*", "Label", true, false).map(func(l): return l.text)
-	for o in mains:
-		if not titles.any(func(x): return str(x).begins_with(o["title"])):
-			problems.append("journal sans « %s »" % o["title"])
+	# Le journal déplie la section de l'objectif en cours : son titre y est, les autres sections sont repliées.
+	if not cur.is_empty() and not titles.any(func(x): return str(x).begins_with(cur["title"])):
+		problems.append("journal sans « %s »" % cur["title"])
 	check(problems.is_empty(), "%s : état cohérent %s" % [where, "" if problems.is_empty() else str(problems)])
 
 
