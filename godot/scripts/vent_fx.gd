@@ -99,7 +99,7 @@ static func _tornade(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		var q := i / float(rings - 1)
 		var w := r * (0.28 + 0.75 * q) * appear * (1.0 + 0.35 * fade)
 		var h := w * 0.32
-		var c := p + Vector2(sin(spin * 0.5 + q * 2.4) * r * 0.12, -q * r * 1.5 * appear)
+		var c := p + Vector2(sin(spin * 0.5 + q * 2.4) * r * 0.12, -q * r * 1.05 * appear)
 		var al := (0.55 + 0.3 * q) * a
 		ci.draw_colored_polygon(Art.ellipse(c, w, h, 18), Color(col, 0.16 * al))
 		var s0 := spin + q * 1.3
@@ -109,7 +109,7 @@ static func _tornade(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 	for i in 6:
 		var q := fposmod(i * 0.37 + t * 0.6, 1.0)
 		var ang := spin * 1.3 + i * 1.7
-		var c := p + Vector2(cos(ang) * r * (0.3 + 0.7 * q), -q * r * 1.4 + sin(ang) * r * 0.2 * q) * appear
+		var c := p + Vector2(cos(ang) * r * (0.3 + 0.7 * q), -q * r * 1.0 + sin(ang) * r * 0.2 * q) * appear
 		ci.draw_circle(c, 2.0 + 1.5 * (1.0 - q), Color(sombre.lightened(0.2), 0.8 * a))
 
 

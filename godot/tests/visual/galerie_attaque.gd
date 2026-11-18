@@ -8,16 +8,12 @@ const ProjectileScript = preload("res://scripts/projectile.gd")
 const FORMES := [
 	["graine", "Graines (départ)"], ["echarde", "Échardes : rafale perforante"],
 	["fouet", "Fouet : arc au corps à corps"], ["ronce_vive", "Ronces vives : piège planté"],
-	["lame", "Lames de vent : aller-retour"], ["bourrasque", "Bourrasque : cône qui repousse"],
 ]
 const MODS := [
 	["fourche", "Fourche"], ["ricochet", "Ricochet"], ["eclat", "Éclat à la mort"], ["saignement", "Saignement"],
 	["enracine", "Enracinement"], ["trainee", "Traînée d'épines"], ["renforcee", "Une sur N renforcée"], ["volee", "Une sur N en volée"],
 	["taille", "Taille"], ["portee", "Portée"], ["repetition", "Répétition (fouet)"], ["poison", "Poison"],
-	["elan", "Élan (en mouvement)"], ["repousse", "Repousse"],
 ]
-## Modificateurs par ligne.
-const PAR_LIGNE := 7
 
 var view := Vector2(1600, 900)
 var font: Font
@@ -30,15 +26,15 @@ func _ready() -> void:
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, view), Color(Art.c("panneau").darkened(0.3), 1.0))
 	_text(Vector2(24, 34), "Attaque de base : formes", 22, Art.c("texte"))
-	var cw := (view.x - 48) / float(FORMES.size())
+	var cw := (view.x - 48) / 4.0
 	for i in FORMES.size():
 		var r := Rect2(24 + i * cw, 46, cw - 10, 250)
 		_cell(r, FORMES[i][1], i)
 		_form(FORMES[i][0], r)
 	_text(Vector2(24, 328), "Modificateurs (cumulables)", 22, Art.c("texte"))
-	var mw := (view.x - 48) / float(PAR_LIGNE)
+	var mw := (view.x - 48) / 6.0
 	for i in MODS.size():
-		var r := Rect2(24 + (i % PAR_LIGNE) * mw, 340 + (i / PAR_LIGNE) * 228, mw - 10, 218)
+		var r := Rect2(24 + (i % 6) * mw, 340 + (i / 6) * 228, mw - 10, 218)
 		_cell(r, MODS[i][1], 10 + i)
 		_mod(MODS[i][0], r)
 	# Icônes des formes et du nœud qui modifie l'attaque (arbre, infobulles).
@@ -84,22 +80,6 @@ func _form(id: String, r: Rect2) -> void:
 			var d := Vector2(1, 0.35).normalized()
 			_shot("ronce_vive", hero + d * 120.0, d, 6.0)
 			_hero(hero, 0.0, {"shoot": 0.4})
-		"lame":
-			# Une lame part, l'autre revient (flèche de retour en pointillés).
-			_fletri(hero + Vector2(150, -30))
-			_fletri(hero + Vector2(170, 40))
-			_shot("lame", hero + Vector2(120, -32), aim, 7.8)
-			_shot("lame", hero + Vector2(190, 40), aim, 7.8)
-			for i in 6:
-				var x := 40.0 + i * 24.0
-				draw_line(hero + Vector2(x, 12), hero + Vector2(x + 12, 12), Color(Art.ec("vent", "clair"), 0.6), 2.0, true)
-			_hero(hero, 0.0, {"shoot": 0.6})
-		"bourrasque":
-			var c := hero + Vector2(20, 0)
-			_fletri(c + Vector2(120, -25))
-			_fletri(c + Vector2(130, 30))
-			AttackFx.draw_effect(self, {"id": "bourrasque", "pos": c, "dir": aim, "r": 160.0, "arc": 1.3, "t": 0.12, "dur": 0.26})
-			_hero(c, 0.0, {"cast": 0.6, "cast_col": Art.ec("vent")})
 
 
 # --- Modificateurs ---
@@ -172,19 +152,6 @@ func _mod(id: String, r: Rect2) -> void:
 			AttackFx.draw_effect(self, {"id": "fouet", "pos": at, "dir": aim, "r": 115.0, "arc": 1.9, "t": 0.17, "dur": 0.22})
 			AttackFx.draw_effect(self, {"id": "fouet", "pos": at, "dir": aim, "r": 115.0, "arc": 1.9, "t": 0.08, "dur": 0.22, "flip": true})
 			_hero(at, 0.0, {"cast": 0.5, "cast_col": Art.ec("epine")})
-		"elan":
-			# Le héros file (traînée de feuilles) et sa lame part plus fort.
-			for i in 3:
-				draw_line(hero + Vector2(-8 - i * 10, -10 + i * 10), hero + Vector2(-30 - i * 10, -10 + i * 10), Color(Art.ec("vent", "clair"), 0.7), 2.0, true)
-			_shot("lame", hero + Vector2(110, 0), aim, 8.5, true)
-			_hero(hero, 0.0, {"walk": 1.0})
-		"repousse":
-			var at := c + Vector2(30, 0)
-			_fletri(at)
-			for i in 3:
-				draw_arc(at - Vector2(26 + i * 9, 0), 14.0 + i * 5.0, -0.8, 0.8, 8, Color(Art.ec("vent", "clair"), 0.8 - 0.2 * i), 2.0, true)
-			_shot("graine", at + Vector2(-40, 0), aim, 6.0)
-			_hero(hero, 0.0, {"shoot": 0.5})
 
 
 # --- Outils ---
