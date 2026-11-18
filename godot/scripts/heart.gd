@@ -1,7 +1,9 @@
-## Cœur de flétrissure de la région de Ronce : une structure qui fait naître des Flétris tant
-## qu'elle vit. Pour la purifier, le Porte-Graine tient la zone qui l'entoure pendant HOLD_TIME
-## secondes, sous des vagues d'ennemis. La purification pose Game.flags["ronce_coeur_purifie"],
-## lance une grande vague de vie et ouvre l'arène de la Mère-Ronce (boss_arena.gd).
+## Cœur de flétrissure d'une région (un par région, posé par main.gd) : une structure qui fait
+## naître des Flétris tant qu'elle vit. Pour la purifier, le Porte-Graine tient la zone qui l'entoure
+## pendant hold_time secondes, sous des vagues d'ennemis. La purification pose
+## Game.flags["<région>_coeur_purifie"], lance une grande vague de vie et ouvre l'arène du boss de la
+## région (boss_arena.gd). Ses réglages (zone, durée, vagues, textes) sont lus dans la section
+## « heart » de data/regions/<région>.json ; sans elle, ceux du Cœur de Ronce.
 ##
 ## Ce nœud est au niveau du sol (sous les personnages) : il dessine la zone à tenir. Le Cœur
 ## lui-même (Body) est rangé dans le calque trié en profondeur, avec les arbres et les personnages.
@@ -11,35 +13,52 @@ signal purified
 
 const BossBar = preload("res://scripts/boss_bar.gd")
 const Content = preload("res://scripts/content.gd")
+const Regions = preload("res://scripts/regions.gd")
+const EnemyScript = preload("res://scripts/enemy.gd")
 
-const FLAG := "ronce_coeur_purifie"
-## Position de repli tant que main.region_center("ronce") n'existe pas : dans la direction de la
-## branche Ronce de l'arbre (milieu de son secteur), à mi-distance du bord du monde.
+## Position de repli sans scène de jeu (main.region_center) : dans la direction de la branche
+## Ronce de l'arbre (milieu de son secteur), à mi-distance du bord du monde.
 const FALLBACK_CENTER := Vector2(750.0, -1299.0)
-## Rayon de la zone à tenir, et durée à y passer.
-const ZONE := 240.0
-const HOLD_TIME := 30.0
 ## Hors de la zone, l'avancée retombe lentement (jamais d'un coup, même après une mort).
 const DECAY := 0.5
 ## Rayon du Cœur lui-même (obstacle).
 const BODY_RADIUS := 44.0
 ## Le Cœur ne s'anime et ne fait naître des Flétris que si le joueur est à moins de WAKE.
 const WAKE := 800.0
-const SPAWN_EVERY := 3.5
-const MAX_IDLE_SPAWNS := 6
-## Vagues pendant le siège : une toutes les WAVE_EVERY secondes, de plus en plus fournies.
-const WAVE_EVERY := 6.0
-const WAVE_BASE := 4
-const WAVE_GROWTH := 2
-## Grande vague de vie à la purification : rayon final et durée.
-const LIFE_RADIUS := 820.0
+## Grande vague de vie à la purification : durée.
 const LIFE_TIME := 2.2
 
 var main
+## Région du Cœur (data/regions/<région>.json) et son drapeau de purification.
+var region := "ronce"
+var flag := "ronce_coeur_purifie"
+var title := "Cœur de flétrissure"
+## Rayon de la zone à tenir, et durée à y passer.
+var zone := 240.0
+var hold_time := 30.0
+## Flétris nés au repos : un toutes les spawn_every secondes, idle_max en même temps au plus.
+var spawn_every := 3.5
+var idle_max := 6
+var idle_kind := "fletri"
+## Vagues pendant le siège : une toutes les wave_every secondes, de plus en plus fournies
+## (wave_base + wave_growth par vague). Chaque ennemi est l'une des deux sortes de wave_kinds (la
+## seconde avec la chance second_share) ; à partir de la vague big_from, le premier est big_kind.
+var wave_every := 6.0
+var wave_base := 4
+var wave_growth := 2
+var wave_kinds: Array = ["fletri", "cendreux"]
+var second_share := 0.4
+var big_kind := "colosse"
+var big_from := 2
+## Grande vague de vie à la purification : rayon final et couleur des fleurs.
+var life_radius := 820.0
+var life_color := Color.WHITE
+var wake_banner := "Le Cœur de flétrissure s'éveille : tiens la zone !"
+var purified_banner := "Le Cœur est purifié : l'arène s'ouvre."
 var center := FALLBACK_CENTER
 ## "fletri" (en sommeil), "siege" (zone tenue, vagues) ou "purifie".
 var state := "fletri"
-## Secondes passées à tenir la zone (0 à HOLD_TIME).
+## Secondes passées à tenir la zone (0 à hold_time).
 var progress := 0.0
 var wave_index := 0
 var wave_timer := 0.0
@@ -67,10 +86,38 @@ class Body extends Node2D:
 		heart.draw_body(self)
 
 
+## Lit les réglages du Cœur dans le fichier de la région (appelé par _ready).
+func configure(id: String) -> void:
+	region = id
+	flag = Regions.heart_flag(id)
+	var h := Regions.section(id, "heart")
+	title = str(h.get("name", title))
+	zone = float(h.get("zone", zone))
+	hold_time = float(h.get("hold_time", hold_time))
+	var w: Dictionary = h.get("waves", {})
+	wave_every = float(w.get("every", wave_every))
+	wave_base = int(w.get("base", wave_base))
+	wave_growth = int(w.get("growth", wave_growth))
+	wave_kinds = w.get("kinds", wave_kinds)
+	second_share = float(w.get("second_share", second_share))
+	big_kind = str(w.get("big", big_kind))
+	big_from = int(w.get("big_from", big_from))
+	var idle: Dictionary = h.get("idle", {})
+	spawn_every = float(idle.get("every", spawn_every))
+	idle_max = int(idle.get("max", idle_max))
+	idle_kind = str(idle.get("kind", idle_kind))
+	life_radius = float(h.get("life_radius", life_radius))
+	life_color = Regions.color(h.get("life_color", "saignement/clair"))
+	wake_banner = str(h.get("wake_banner", wake_banner))
+	purified_banner = str(h.get("purified_banner", purified_banner))
+
+
 func _ready() -> void:
+	configure(region)
 	if main.has_method("region_center"):
-		center = main.region_center("ronce")
-	Game.seed_rng(rng, 3)
+		center = main.region_center(region)
+	# Tirage propre à chaque Cœur (celui de la première région garde l'ancien).
+	Game.seed_rng(rng, 3 + 10 * maxi(0, Regions.ids().find(region)))
 	var shape := RandomNumberGenerator.new()
 	shape.seed = 41
 	for i in 11:
@@ -99,7 +146,7 @@ func _physics_process(delta: float) -> void:
 	if frozen:
 		return
 	# Le drapeau fait foi : une partie chargée retrouve le Cœur déjà purifié.
-	if Game.flags.get(FLAG, false) and state != "purifie":
+	if Game.flags.get(flag, false) and state != "purifie":
 		_set_purified(false)
 	if state == "purifie":
 		_life_wave_step(delta)
@@ -112,12 +159,12 @@ func _physics_process(delta: float) -> void:
 	if d < BODY_RADIUS + p.radius and d > 0.01:
 		p.position = center + to / d * (BODY_RADIUS + p.radius)
 	spawned = spawned.filter(func(e): return is_instance_valid(e) and not e.dead and not e.is_queued_for_deletion())
-	if d < ZONE:
+	if d < zone:
 		if state == "fletri":
 			state = "siege"
 			wave_index = 0
 			wave_timer = 1.0
-			main.hud.banner("Le Cœur de flétrissure s'éveille : tiens la zone !", "combat")
+			main.hud.banner(wake_banner, "combat")
 		progress += delta
 	else:
 		progress = maxf(0.0, progress - delta * DECAY)
@@ -126,19 +173,19 @@ func _physics_process(delta: float) -> void:
 	if state == "siege":
 		wave_timer -= delta
 		if wave_timer <= 0.0:
-			wave_timer = WAVE_EVERY
+			wave_timer = wave_every
 			_spawn_wave()
-		update_bar(d < ZONE)
-		if progress >= HOLD_TIME:
+		update_bar(d < zone)
+		if progress >= hold_time:
 			purify()
 	else:
 		bar.hide_bar()
 		if d < WAKE:
 			spawn_timer -= delta
 			if spawn_timer <= 0.0:
-				spawn_timer = SPAWN_EVERY
-				if spawned.size() < MAX_IDLE_SPAWNS:
-					_spawn(center + Vector2.from_angle(rng.randf() * TAU) * (BODY_RADIUS + 30.0), 0)
+				spawn_timer = spawn_every
+				if spawned.size() < idle_max:
+					_spawn(center + Vector2.from_angle(rng.randf() * TAU) * (BODY_RADIUS + 30.0), idle_kind)
 
 
 ## Le joueur est mort pendant le siège : le Cœur se rendort, tout est à recommencer.
@@ -158,26 +205,26 @@ func reset_siege() -> bool:
 
 ## Barre du siège : ce qu'il reste de flétrissure, et le temps à tenir encore.
 func update_bar(inside: bool) -> void:
-	bar.show_bar("Cœur de flétrissure", 1.0 - progress / HOLD_TIME,
-		"Tiens la zone : %d s" % ceili(HOLD_TIME - progress) if inside else "Reviens dans la zone : la flétrissure regagne du terrain", Art.ec("cendre", "sombre").lerp(Art.c("danger"), 0.5))
+	bar.show_bar(title, 1.0 - progress / hold_time,
+		"Tiens la zone : %d s" % ceili(hold_time - progress) if inside else "Reviens dans la zone : la flétrissure regagne du terrain", Art.ec("cendre", "sombre").lerp(Art.c("danger"), 0.5))
 
 
 ## Une vague arrive d'un même côté, en arc, juste hors de la zone.
 func _spawn_wave() -> void:
-	var count := WAVE_BASE + WAVE_GROWTH * wave_index
+	var count := wave_base + wave_growth * wave_index
 	var base := rng.randf() * TAU
 	for i in count:
-		var kind := 1 if rng.randf() < 0.4 else 0
-		if wave_index >= 2 and i == 0:
-			kind = 2
+		var kind: String = wave_kinds[1] if rng.randf() < second_share else wave_kinds[0]
+		if wave_index >= big_from and i == 0:
+			kind = big_kind
 		var a := base + rng.randf_range(-0.7, 0.7)
-		_spawn(center + Vector2.from_angle(a) * rng.randf_range(ZONE + 190.0, ZONE + 300.0), kind)
-	main.fx.ring(center, BODY_RADIUS, ZONE, 0.5, Color(Art.ec("cendre"), 0.7), 4.0)
+		_spawn(center + Vector2.from_angle(a) * rng.randf_range(zone + 190.0, zone + 300.0), kind)
+	main.fx.ring(center, BODY_RADIUS, zone, 0.5, Color(Art.ec("cendre"), 0.7), 4.0)
 	wave_index += 1
 
 
-func _spawn(pos: Vector2, kind: int) -> void:
-	var e = main.spawn_enemy_at(pos, kind)
+func _spawn(pos: Vector2, kind: String) -> void:
+	var e = main.spawn_enemy_at(pos, EnemyScript.kind_index(kind))
 	spawned.append(e)
 
 
@@ -185,15 +232,15 @@ func _spawn(pos: Vector2, kind: int) -> void:
 func purify() -> void:
 	if state == "purifie":
 		return
-	Game.flags[FLAG] = true
+	Game.flags[flag] = true
 	_set_purified(true)
 	Sfx.play("coeur", center)
-	main.hud.banner("Le Cœur est purifié : l'arène de la Mère-Ronce s'ouvre.")
-	var reward: Dictionary = Content.rewards().get("coeur", {}).get("ronce", {})
-	Game.grant_points(int(reward.get("points", 1)), "coeur", "ronce_coeur")
+	main.hud.banner(purified_banner)
+	var reward: Dictionary = Content.rewards().get("coeur", {}).get(region, {})
+	Game.grant_points(int(reward.get("points", 1)), "coeur", region + "_coeur")
 	for i in 3:
-		main.fx.ring(center, BODY_RADIUS, LIFE_RADIUS * (0.4 + 0.3 * i), 0.9 + 0.5 * i, Color(Art.ec("seve"), 0.9), 6.0)
-	for e in main.enemies_near(center, ZONE + 420.0):
+		main.fx.ring(center, BODY_RADIUS, life_radius * (0.4 + 0.3 * i), 0.9 + 0.5 * i, Color(Art.ec("seve"), 0.9), 6.0)
+	for e in main.enemies_near(center, zone + 420.0):
 		e.take_damage(e.hp + 1.0, false)
 	main.request_autosave()
 	purified.emit()
@@ -201,7 +248,7 @@ func purify() -> void:
 
 func _set_purified(with_wave: bool) -> void:
 	state = "purifie"
-	progress = HOLD_TIME
+	progress = hold_time
 	spawned = []
 	life_wave = 0.0 if with_wave else -1.0
 	life_step = 0.0
@@ -220,9 +267,9 @@ func _life_wave_step(delta: float) -> void:
 	if life_step <= 0.0:
 		life_step = 0.12
 		var k := clampf(life_wave / LIFE_TIME, 0.0, 1.0)
-		var r := lerpf(140.0, LIFE_RADIUS, k)
+		var r := lerpf(140.0, life_radius, k)
 		main.ground.paint(center, r, 0.3)
-		main.flora.spawn_patch(center, r, 7, Art.ec("saignement", "clair"))
+		main.flora.spawn_patch(center, r, 7, life_color)
 	if life_wave >= LIFE_TIME:
 		life_wave = -1.0
 
@@ -233,19 +280,19 @@ func _draw() -> void:
 	var seve := Art.ec("seve")
 	if state == "purifie":
 		var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
-		draw_circle(center, ZONE * 0.62, Color(seve, 0.05 + 0.03 * b))
-		draw_arc(center, ZONE * 0.62, 0.0, TAU, 72, Color(seve, 0.12 + 0.06 * b), Art.TRAIT, true)
+		draw_circle(center, zone * 0.62, Color(seve, 0.05 + 0.03 * b))
+		draw_arc(center, zone * 0.62, 0.0, TAU, 72, Color(seve, 0.12 + 0.06 * b), Art.TRAIT, true)
 		return
-	var k := clampf(progress / HOLD_TIME, 0.0, 1.0)
+	var k := clampf(progress / hold_time, 0.0, 1.0)
 	var braise := Art.ec("cendre")
 	var siege := state == "siege"
-	draw_circle(center, ZONE, Color(Art.ec("cendre", "sombre"), 0.16 if siege else 0.1))
+	draw_circle(center, zone, Color(Art.ec("cendre", "sombre"), 0.16 if siege else 0.1))
 	for v in _veins:
 		var a: float = v[0]
 		var pts := PackedVector2Array()
 		for i in 7:
 			var u := i / 6.0
-			pts.append(center + Vector2.from_angle(a + v[2] * u * u) * lerpf(BODY_RADIUS * 0.6, ZONE * v[1], u))
+			pts.append(center + Vector2.from_angle(a + v[2] * u * u) * lerpf(BODY_RADIUS * 0.6, zone * v[1], u))
 		# La vie remonte les veines depuis le bord à mesure que la zone est tenue.
 		draw_polyline(pts, Color(Art.c("ennemi").darkened(0.45), 0.7).lerp(Color(Art.c("decor_vivant"), 0.7), k), 5.0, true)
 		var glow := braise.lerp(seve, k)
@@ -258,18 +305,18 @@ func _draw() -> void:
 	var dashes := 40
 	for i in dashes:
 		var a0 := TAU * i / dashes + t * 0.08
-		draw_arc(center, ZONE, a0, a0 + TAU / dashes * 0.55, 4, ring, Art.TRAIT_FORT if siege else Art.TRAIT, true)
+		draw_arc(center, zone, a0, a0 + TAU / dashes * 0.55, 4, ring, Art.TRAIT_FORT if siege else Art.TRAIT, true)
 	if k > 0.0:
-		draw_arc(center, ZONE - 10.0, 0.0, TAU, 96, Color(Art.c("contour"), 0.35), 8.0, true)
-		draw_arc(center, ZONE - 10.0, -PI / 2.0, -PI / 2.0 + TAU * k, 96, seve, 6.0, true)
-		draw_circle(center + Vector2.from_angle(-PI / 2.0 + TAU * k) * (ZONE - 10.0), 5.0, Art.ec("seve", "clair"))
+		draw_arc(center, zone - 10.0, 0.0, TAU, 96, Color(Art.c("contour"), 0.35), 8.0, true)
+		draw_arc(center, zone - 10.0, -PI / 2.0, -PI / 2.0 + TAU * k, 96, seve, 6.0, true)
+		draw_circle(center + Vector2.from_angle(-PI / 2.0 + TAU * k) * (zone - 10.0), 5.0, Art.ec("seve", "clair"))
 
 
 ## Le Cœur : un bulbe anguleux de Flétri (forme cassée, contour clair), couronné d'épines et fendu
 ## de braises ; des braises en montent et se voient de loin. Il vire au vert à mesure qu'il cède.
 ## Purifié : une grande rose en volume.
 func draw_body(c: CanvasItem) -> void:
-	var k := clampf(progress / HOLD_TIME, 0.0, 1.0)
+	var k := clampf(progress / hold_time, 0.0, 1.0)
 	var siege := state == "siege"
 	var beat := 1.0 + 0.05 * sin(t * (7.0 if siege else TAU / Anim.DUREE["respiration"]))
 	# Dessiné un peu plus grand que son obstacle : on le repère de loin.

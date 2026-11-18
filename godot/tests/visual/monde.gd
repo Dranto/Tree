@@ -99,7 +99,7 @@ func _ready() -> void:
 		h.frozen = true
 		h.t = T
 		h.state = ["fletri", "siege", "purifie"][i]
-		h.progress = [0.0, HeartScript.HOLD_TIME * 0.45, HeartScript.HOLD_TIME][i]
+		h.progress = [0.0, h.hold_time * 0.45, h.hold_time][i]
 		h.set_process(false)
 		h.set_physics_process(false)
 		h.queue_redraw()

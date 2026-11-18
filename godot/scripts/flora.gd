@@ -6,9 +6,10 @@
 ## Les arbres sont triés en profondeur (Y-sort) avec les personnages : il suffit de les placer
 ## dans le même calque trié (« trees_parent »).
 ##
-## Roncier (région de Ronce, voir regions.gd) : les arbres y sont remplacés par des ronces mortes
-## et grises qui verdissent et fleurissent quand la vie revient, et des buissons d'épines font
-## obstacle (push_out, collision par cercles rangés dans une grille). Une vague de vie fait
+## Régions (voir regions.gd) : chacune a son décor (DECOR), qui remplace les arbres du monde dans son
+## secteur et y ajoute le sien ; dans le roncier (decor_roncier.gd), des ronces mortes et grises qui
+## verdissent et fleurissent quand la vie revient, et des buissons d'épines qui font obstacle
+## (push_out, collision par cercles rangés dans une grille). Une vague de vie fait
 ## pousser les feuilles progressivement (GROW_TIME) et éclore les fleurs au passage du front.
 extends Node2D
 
@@ -21,20 +22,14 @@ const CHUNK := 512.0
 const ALIVE := 0.45
 ## Durée de la pousse des feuilles d'un arbre ou d'une ronce qui reverdit pendant une vague.
 const GROW_TIME := 1.1
-const BRAMBLE_COUNT := 130
-const BUSH_COUNT := 46
 ## Taille des cases de la grille des buissons d'épines.
 const BUSH_CELL := 256.0
-## Zones gardées libres de buissons : l'oasis de départ et le centre de la région (Cœur, arène).
-const BUSH_CLEAR_CENTER := 340.0
-const BUSH_CLEAR_SEED := 560.0
-## Points de repère du roncier : « dist » depuis la graine, « angle » (radians) par rapport à
-## l'axe de la région (même repère que les sanctuaires).
-const LANDMARKS := [
-	{"kind": "grand_arbre", "dist": 1060.0, "angle": -0.05, "size": 1.0},
-	{"kind": "ruine", "dist": 1380.0, "angle": -0.43, "size": 1.0},
-	{"kind": "rocher", "dist": 2000.0, "angle": 0.42, "size": 1.0},
-]
+## Décor propre à chaque sorte de région (« decor » : {"kind": …} dans data/regions/<id>.json) : voir
+## decor_roncier.gd pour ce qu'une sorte doit fournir. Une sorte absente d'ici est cherchée dans
+## scripts/decor_<sorte>.gd.
+const DECOR := {
+	"roncier": preload("res://scripts/decor_roncier.gd"),
+}
 
 var ground
 ## Calque trié en profondeur où ranger les arbres (par défaut : ce nœud).
@@ -57,6 +52,7 @@ var tree_cells: Dictionary = {}
 var bloom_timer := 0.0
 ## Points de repère (DecorLandmark).
 var landmarks: Array = []
+var _decors: Dictionary = {}
 const BLOOM_STEP := 0.25
 
 
@@ -475,8 +471,12 @@ func _ready() -> void:
 		var p := Vector2(rng.randf_range(-2900, 2900), rng.randf_range(-2900, 2900))
 		if p.length() < 180.0:
 			continue
-		# Dans le roncier, l'arbre laisse la place à une ronce (même tirage, mêmes autres arbres).
-		var t: DecorTree = DecorBramble.new() if Regions.weight(p, "ronce") > 0.5 else DecorTree.new()
+		# Dans une région, l'arbre laisse la place à son décor (ronce du roncier…) : même tirage,
+		# mêmes autres arbres.
+		var reg := Regions.region_weighted(p)
+		var t = decor_of(reg).make_tree(p) if reg != "" and decor_of(reg) != null else null
+		if t == null:
+			t = DecorTree.new()
 		t.position = p
 		# Même tirage qu'avant, étalé sur plus de tailles (plus de variété, même placement).
 		t.size = remap(rng.randf_range(0.8, 1.6), 0.8, 1.6, 0.6, 1.9)
@@ -484,8 +484,10 @@ func _ready() -> void:
 		t.alive = ground.life_at(p) > ALIVE
 		trees_parent.add_child(t)
 		_add_tree(t)
-	_spawn_thicket()
-	_spawn_landmarks()
+	for reg in Regions.ids():
+		if decor_of(reg) != null:
+			decor_of(reg).spawn()
+		_spawn_landmarks(reg)
 	Game.seed_rng(rng, 1)
 	ground.painted.connect(_on_painted)
 
@@ -498,52 +500,47 @@ func _add_tree(t: DecorTree) -> void:
 	tree_cells[key].append(t)
 
 
-## Ronces et buissons d'épines du roncier : tirage à part (graine fixe), pour ne pas déplacer
-## les arbres du reste du monde. Le centre de la région et l'oasis restent libres d'obstacles.
-func _spawn_thicket() -> void:
-	var r := RandomNumberGenerator.new()
-	r.seed = 8
-	var mid := Regions.angle_of("ronce")
-	var half := Regions.half_width()
-	var center := Regions.center("ronce")
-	var h := 2850.0
-	for i in BRAMBLE_COUNT + BUSH_COUNT:
-		var bush := i >= BRAMBLE_COUNT
-		var a := mid + r.randf_range(-half, half) * 0.97
-		var d := sqrt(r.randf_range(pow(Regions.INNER + 30.0, 2), pow(4000.0, 2)))
-		var p := Vector2.from_angle(a) * d
-		var sz := r.randf_range(0.8, 1.4)
-		var sd := r.randi()
-		if absf(p.x) > h or absf(p.y) > h or Regions.weight(p, "ronce") < 0.6:
-			continue
-		if bush and (p.distance_to(center) < BUSH_CLEAR_CENTER or p.length() < BUSH_CLEAR_SEED):
-			continue
-		var t: DecorTree = DecorBush.new() if bush else DecorBramble.new()
-		t.position = p
-		t.size = sz
-		t.tree_seed = sd
-		t.alive = ground.life_at(p) > ALIVE
-		if bush:
-			t.radius = 20.0 + 12.0 * (sz - 0.8) / 0.6
-			bushes.append(t)
-			var key := Vector2i(floori(p.x / BUSH_CELL), floori(p.y / BUSH_CELL))
-			if not bush_cells.has(key):
-				bush_cells[key] = []
-			bush_cells[key].append(t)
-			bush_bounds = Rect2(p, Vector2.ZERO) if bushes.size() == 1 else bush_bounds.expand(p)
-		trees_parent.add_child(t)
-		_add_tree(t)
+## Décor de la région (une instance par région, null si elle n'en a pas ou s'il est inconnu).
+func decor_of(reg: String):
+	if not _decors.has(reg):
+		var cfg := Regions.section(reg, "decor")
+		var kind := str(cfg.get("kind", ""))
+		var script = DECOR.get(kind)
+		if script == null and kind != "" and ResourceLoader.exists("res://scripts/decor_%s.gd" % kind):
+			script = load("res://scripts/decor_%s.gd" % kind)
+		var d = null
+		if script != null:
+			d = script.new()
+			d.flora = self
+			d.region = reg
+			d.cfg = cfg
+		elif kind != "":
+			push_error("Décor de région inconnu : « %s » (%s)" % [kind, reg])
+		_decors[reg] = d
+	return _decors[reg]
 
 
-## Points de repère du roncier : posés à la main (distance à la graine, écart à l'axe de la
-## région), loin des sanctuaires, des autels, du Cœur et de l'arène. Ils ne font pas obstacle.
-func _spawn_landmarks() -> void:
-	for l in LANDMARKS:
-		var p := Vector2.from_angle(Regions.angle_of("ronce") + float(l["angle"])) * float(l["dist"])
+## Ajoute un obstacle du décor (buisson d'épines…) : il a un « radius », et push_out en écarte
+## le joueur, les ennemis et les épines tirées.
+func add_obstacle(t) -> void:
+	bushes.append(t)
+	var key := Vector2i(floori(t.position.x / BUSH_CELL), floori(t.position.y / BUSH_CELL))
+	if not bush_cells.has(key):
+		bush_cells[key] = []
+	bush_cells[key].append(t)
+	bush_bounds = Rect2(t.position, Vector2.ZERO) if bushes.size() == 1 else bush_bounds.expand(t.position)
+
+
+## Points de repère d'une région (« landmarks » de son fichier) : posés à la main (distance à la
+## graine, écart à l'axe de la région), loin des sanctuaires, des autels, du Cœur et de l'arène.
+## Ils ne font pas obstacle.
+func _spawn_landmarks(reg: String) -> void:
+	for l in Regions.def(reg).get("landmarks", []):
+		var p := Regions.place(reg, l)
 		var t := DecorLandmark.new()
 		t.kind = l["kind"]
 		t.position = push_out(p, 70.0)
-		t.size = float(l["size"])
+		t.size = float(l.get("size", 1.0))
 		t.tree_seed = hash(l["kind"])
 		t.alive = ground.life_at(t.position) > ALIVE
 		landmarks.append(t)

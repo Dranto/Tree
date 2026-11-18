@@ -522,22 +522,22 @@ func _scenario_boss() -> void:
 	heart.progress = 17.0
 	heart.update_bar(true)
 	for i in 7:
-		_frozen_enemy(heart.center + Vector2.from_angle(-0.5 + i * 0.22) * (heart.ZONE + 60.0 + 37.0 * (i % 3)), 2 if i == 3 else i % 2)
+		_frozen_enemy(heart.center + Vector2.from_angle(-0.5 + i * 0.22) * (heart.zone + 60.0 + 37.0 * (i % 3)), 2 if i == 3 else i % 2)
 	await _boss_shot("coeur_siege", near)
 
 	# Purifié : la vague de vie est passée.
 	_clear_enemies()
-	Game.flags[heart.FLAG] = true
+	Game.flags[heart.flag] = true
 	heart._set_purified(false)
-	main.ground.paint(heart.center, heart.LIFE_RADIUS, 1.0)
-	main.flora.spawn_patch(heart.center, heart.LIFE_RADIUS * 0.8, 90, Color("e0675e"))
+	main.ground.paint(heart.center, heart.life_radius, 1.0)
+	main.flora.spawn_patch(heart.center, heart.life_radius * 0.8, 90, Color("e0675e"))
 	await _boss_shot("coeur_purifie", near)
 
 	# L'arène ouverte : la brèche du côté du Cœur, la Mère-Ronce endormie.
 	var gate: Vector2 = (heart.center - arena.center).normalized()
 	arena.state = "ouverte"
 	arena.gap_open = 1.0
-	await _boss_shot("arene_ouverte", arena.center + gate * (arena.RADIUS + 60.0))
+	await _boss_shot("arene_ouverte", arena.center + gate * (arena.max_radius + 60.0))
 
 	# Le combat. Le joueur se tient au sud-est du boss.
 	var spot: Vector2 = arena.center + Vector2(120, 150)
@@ -612,8 +612,8 @@ func _scenario_boss() -> void:
 	await _boss_shot("boss_mort", spot)
 	boss.queue_free()
 	arena.life_wave = -1.0
-	main.ground.paint(arena.center, arena.RADIUS * 1.25, 1.0)
-	main.flora.spawn_patch(arena.center, arena.RADIUS, 70, Color("e0675e"))
+	main.ground.paint(arena.center, arena.max_radius * 1.25, 1.0)
+	main.flora.spawn_patch(arena.center, arena.max_radius, 70, Color("e0675e"))
 	main.fx.rings = []
 	main.hud.banner_time = 0.0
 	await _boss_shot("boss_vaincu", spot)

@@ -70,7 +70,7 @@ func _run() -> void:
 	var clear_center := true
 	for b in main.flora.bushes:
 		inside_region = inside_region and main.region_at(b.position) == "ronce"
-		clear_center = clear_center and b.position.distance_to(c) >= main.flora.BUSH_CLEAR_CENTER
+		clear_center = clear_center and b.position.distance_to(c) >= float(Regions.section("ronce", "decor").get("clear_center", 340.0))
 	check(inside_region, "tous les buissons sont dans la région")
 	check(clear_center, "le centre de la région (Cœur, arène) reste libre")
 	var bush = main.flora.bushes[0]

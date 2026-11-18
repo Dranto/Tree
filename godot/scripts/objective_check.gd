@@ -1,8 +1,9 @@
-## Contrôle des objectifs de la tranche (data/objectives.json), appelé par check_data.gd.
+## Contrôle des objectifs de l'aventure (data/objectives.json), appelé par check_data.gd.
 ## Sans aucun autoload : utilisable depuis un script lancé avec « -s ».
 extends RefCounted
 
 const Content = preload("res://scripts/content.gd")
+const Regions = preload("res://scripts/regions.gd")
 const CONDITION_TYPES := ["nodes", "flag", "flag_count", "keystone", "counter"]
 const TARGET_TYPES := ["none", "group", "heart", "arena", "seed"]
 
@@ -22,6 +23,9 @@ static func validate() -> Array:
 				errors.append("objectif %s : « %s » manque" % [id, k])
 		if o.get("main", false):
 			mains += 1
+		var reg := str(o.get("region", ""))
+		if reg != "" and not Regions.exists(reg):
+			errors.append("objectif %s : région inconnue « %s » (data/regions/)" % [id, reg])
 		var c: Dictionary = o.get("condition", {})
 		var ct := str(c.get("type", ""))
 		if not ct in CONDITION_TYPES:
@@ -34,6 +38,8 @@ static func validate() -> Array:
 			errors.append("objectif %s : « count » doit valoir au moins 1" % id)
 		elif ct == "flag_count" and str(c.get("prefix", "")) == "":
 			errors.append("objectif %s : « prefix » manque" % id)
+		elif ct == "flag_count" and c.get("region_only", false) and reg == "":
+			errors.append("objectif %s : « region_only » demande une « region »" % id)
 		var tt := str(o.get("target", {}).get("type", "none"))
 		if not tt in TARGET_TYPES:
 			errors.append("objectif %s : cible inconnue « %s »" % [id, tt])
@@ -41,6 +47,10 @@ static func validate() -> Array:
 			errors.append("objectif %s : « group » manque" % id)
 	if mains == 0:
 		errors.append("objectives.json : aucun objectif principal")
-	if str(data.get("ending_flag", "")) == "":
-		errors.append("objectives.json : « ending_flag » manque")
+	var adv = data.get("adventure_ending", {})
+	if not adv is Dictionary or str(adv.get("title", "")) == "":
+		errors.append("objectives.json : « adventure_ending » (sub, title, body) manque")
+	for reg in Regions.ids():
+		if str(Regions.section(reg, "ending").get("title", "")) == "":
+			errors.append("data/regions/%s.json : « ending » (sub, title, body) manque" % reg)
 	return errors

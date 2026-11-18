@@ -28,7 +28,10 @@ static var KINDS: Array = Content._load("enemies").get("kinds", [])
 static var KIND_INDEX: Dictionary = _index_kinds()
 ## Réglages des élites et de leurs modificateurs (section « elites » de difficulty.json).
 static var ELITES: Dictionary = Content._load("difficulty").get("elites", {})
-const BEHAVIORS := ["chase", "shooter", "charger", "nest", "kite", "guard", "bomber"]
+## Comportements : un fichier par comportement dans BEHAVIORS_DIR (classe EnemyBehavior), choisi
+## par le champ « behavior » de la sorte (registre : behavior_of).
+const BEHAVIORS_DIR := "res://scripts/enemy_behaviors/"
+static var _behaviors: Dictionary = {}
 
 ## Rayon du plus gros ennemi (Nid de ronces) : marge des recherches dans la grille spatiale.
 ## validate_kinds() vérifie qu'aucune sorte ne le dépasse.
@@ -40,6 +43,8 @@ var index := -1
 var kind := 0
 var kind_id := "fletri"
 var behavior := "chase"
+## Objet du comportement (partagé entre tous les ennemis qui l'ont).
+var _behavior: EnemyBehavior = null
 var region := ""
 var data: Dictionary = {}
 var power := 1.0
@@ -108,6 +113,19 @@ static func _index_kinds() -> Dictionary:
 	return out
 
 
+## Comportement partagé de ce nom (scripts/enemy_behaviors/<nom>.gd), chargé la première fois ;
+## à défaut, la marche droit sur le joueur.
+static func behavior_of(name: String) -> EnemyBehavior:
+	if not _behaviors.has(name):
+		var path := BEHAVIORS_DIR + name + ".gd"
+		if ResourceLoader.exists(path):
+			_behaviors[name] = load(path).new()
+		else:
+			push_error("Comportement d'ennemi inconnu : " + name)
+			_behaviors[name] = EnemyBehavior.new()
+	return _behaviors[name]
+
+
 static func kind_index(id: String) -> int:
 	return KIND_INDEX.get(id, -1)
 
@@ -126,7 +144,7 @@ static func validate_kinds() -> PackedStringArray:
 		for f in ["name", "hp", "speed", "damage", "radius", "xp", "color"]:
 			if not k.has(f):
 				errors.append("enemies.json, %s : champ « %s » manquant" % [id, f])
-		if not str(k.get("behavior", "")) in BEHAVIORS:
+		if not ResourceLoader.exists(BEHAVIORS_DIR + str(k.get("behavior", "")) + ".gd"):
 			errors.append("enemies.json, %s : comportement inconnu « %s »" % [id, k.get("behavior", "")])
 		if float(k.get("radius", 0.0)) > MAX_RADIUS:
 			errors.append("enemies.json, %s : rayon supérieur à MAX_RADIUS (%d)" % [id, MAX_RADIUS])
@@ -144,13 +162,17 @@ static func validate_kinds() -> PackedStringArray:
 	var inv: Dictionary = ELITES.get("affixes", {}).get("invocateur", {})
 	if not inv.is_empty() and not KIND_INDEX.has(str(inv.get("spawn", ""))):
 		errors.append("enemies.json, élites : sorte invoquée inconnue « %s »" % inv.get("spawn", ""))
-	var spawn: Dictionary = Content._load("enemies").get("spawn", {}).duplicate()
+	# Apparitions de chaque région (data/regions/<id>.json, « spawn ») et Flétris ordinaires.
+	var Regions = load("res://scripts/regions.gd")
+	var spawn := {}
+	for reg in Regions.ids():
+		spawn[reg] = Regions.section(reg, "spawn")
 	spawn["ordinaires"] = Content._load("enemies").get("ordinary", {})
 	for reg in spawn:
 		for field in ["kinds", "min_level", "max_alive"]:
 			for id in spawn[reg].get(field, {}):
 				if not KIND_INDEX.has(id):
-					errors.append("enemies.json, apparitions de %s (%s) : sorte inconnue « %s »" % [reg, field, id])
+					errors.append("apparitions de %s (%s) : sorte inconnue « %s »" % [reg, field, id])
 	return errors
 
 
@@ -160,9 +182,10 @@ func setup(k, p: float) -> void:
 	data = KINDS[kind]
 	kind_id = data["id"]
 	behavior = data.get("behavior", "chase")
+	_behavior = behavior_of(behavior)
 	region = data.get("region", "")
 	resist = data.get("resist", {})
-	anchored = behavior == "nest"
+	anchored = _behavior.anchored
 	# Mise à l'échelle selon la menace (main.threat) et le choix de difficulté des options.
 	power = p
 	damage_scale = Difficulty.damage_factor(p) * Difficulty.damage_mult()
@@ -244,19 +267,7 @@ func _physics_process(delta: float) -> void:
 		# Enraciné : immobile (le tir et la charge sont suspendus), il frappe toujours au contact.
 		root_time -= delta
 	else:
-		match behavior:
-			"shooter":
-				_shooter(delta, dir, dist, slow)
-			"charger":
-				_charger(delta, dir, dist, slow)
-			"nest":
-				_nest(delta, dist)
-			"kite":
-				_kite(delta, dir, dist, slow)
-			"guard":
-				_guard(dir, dist, slow, delta)
-			_:
-				position += dir * speed * slow * delta
+		_behavior.step(self, delta, dir, dist, slow)
 		if elite:
 			_elite_step(delta, dist)
 	if guard_time > 0.0:
@@ -337,139 +348,11 @@ func is_bleeding() -> bool:
 	return not bleed_stacks.is_empty()
 
 
-func _shooter(delta: float, dir: Vector2, dist: float, slow: float) -> void:
-	cd -= delta
-	if state == "windup":
-		state_t -= delta
-		if state_t <= 0.0:
-			state = ""
-			cd = float(data["cooldown"]) * cd_mult
-			var th = Thorn.new()
-			th.main = main
-			th.position = position + attack_dir * (radius + 6.0)
-			th.vel = attack_dir * float(data["shot_speed"])
-			th.damage = float(data["shot_damage"]) * damage_scale
-			th.life = data["shot_life"]
-			main.projectiles_layer.add_child(th)
-			strike_t = 0.0
-		return
-	if cd <= 0.0 and dist < float(data["range"]):
-		state = "windup"
-		state_t = data["windup"]
-		attack_dir = dir
-		return
-	var mv := Vector2.ZERO
-	if dist > float(data["keep_max"]):
-		mv = dir
-	elif dist < float(data["keep_min"]):
-		mv = -dir
-	else:
-		mv = dir.orthogonal() * strafe * 0.6
-	position += mv * speed * slow * delta
-
-
-func _charger(delta: float, dir: Vector2, dist: float, slow: float) -> void:
-	cd -= delta
-	match state:
-		"windup":
-			state_t -= delta
-			if state_t <= 0.0:
-				state = "charge"
-				travelled = 0.0
-		"charge":
-			var step: float = float(data["charge_speed"]) * delta
-			var before := position
-			position += attack_dir * step
-			travelled += step
-			# Un buisson d'épines arrête la charge net (et l'étourdit un peu plus longtemps).
-			var pushed: Vector2 = main.flora.push_out(position, radius) if main.flora else position
-			if pushed.distance_squared_to(position) > 0.5:
-				position = pushed
-				_end_charge(1.6)
-			elif travelled >= float(data["charge_dist"]) or before == position:
-				_end_charge(1.0)
-		"recover":
-			state_t -= delta
-			if state_t <= 0.0:
-				state = ""
-		_:
-			if cd <= 0.0 and dist < float(data["range"]):
-				state = "windup"
-				state_t = data["windup"]
-				attack_dir = dir
-			else:
-				position += dir * speed * slow * delta
-
-
-func _end_charge(factor: float) -> void:
-	state = "recover"
-	state_t = float(data["recover"]) * factor
-	cd = float(data["cooldown"]) * cd_mult
-
-
-func _nest(delta: float, dist: float) -> void:
-	young = young.filter(func(y): return is_instance_valid(y) and not y.dead)
-	if state == "windup":
-		state_t -= delta
-		if state_t <= 0.0:
-			state = ""
-			cd = data["cooldown"]
-			var a := randf() * TAU
-			main.spawn_enemy_kind(data["spawn"], position + Vector2.from_angle(a) * (radius + 12.0), power, self)
-		return
-	cd -= delta
-	if cd <= 0.0 and dist < float(data["range"]) and young.size() < int(data["max_young"]):
-		state = "windup"
-		state_t = data["windup"]
-
-
 ## Progression de l'annonce en cours, de 0 (début) à 1 (l'attaque part).
 func windup_ratio() -> float:
 	if state != "windup":
 		return 0.0
 	return clampf(1.0 - state_t / maxf(0.01, float(data.get("windup", 1.0))), 0.0, 1.0)
-
-
-## Cracheur de cendre : fuit le joueur trop proche, puis s'arrête et crache un éventail de cendre.
-func _kite(delta: float, dir: Vector2, dist: float, slow: float) -> void:
-	cd -= delta
-	if state == "windup":
-		state_t -= delta
-		if state_t <= 0.0:
-			state = ""
-			cd = float(data["cooldown"]) * cd_mult
-			var n := int(data.get("shots", 3))
-			var spread := float(data.get("spread", 0.3))
-			for i in n:
-				var a := attack_dir.angle() + (i - (n - 1) / 2.0) * spread
-				_shoot(Vector2.from_angle(a), float(data["shot_speed"]), float(data["shot_damage"]), float(data["shot_life"]), "cendre")
-			strike_t = 0.0
-		return
-	if cd <= 0.0 and dist < float(data["range"]) and dist > float(data["keep_min"]) * 0.7:
-		state = "windup"
-		state_t = data["windup"]
-		attack_dir = dir
-		return
-	var mv := Vector2.ZERO
-	if dist < float(data["keep_min"]):
-		mv = -dir * float(data.get("flee", 1.3))
-	elif dist > float(data["keep_max"]):
-		mv = dir
-	else:
-		mv = dir.orthogonal() * strafe * 0.45
-	position += mv * speed * slow * delta
-
-
-## Gardien d'écorce : avance sans se jeter sur le joueur et protège les ennemis autour de lui.
-func _guard(dir: Vector2, dist: float, slow: float, delta: float) -> void:
-	if dist > float(data.get("keep_back", 0.0)):
-		position += dir * speed * slow * delta
-	var cut := float(data.get("guard", 0.5))
-	for e in main.enemies_near(position, float(data.get("aura", 160.0)), false):
-		if e != self and not e.dead and "guard_cut" in e and e.behavior != "guard":
-			e.guard_cut = cut
-			e.guard_time = 0.25
-			e.guard_from = position
 
 
 ## Tire une épine (ou une boule de cendre) depuis le bord de la silhouette.
@@ -565,24 +448,10 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 		main.fx.impact(position, shown, crit, radius)
 	if hp <= 0.0:
 		dead = true
-		if behavior == "bomber":
-			_burst()
+		_behavior.on_death(self)
 		_leave_remains()
 		main.on_enemy_killed(self)
 		queue_free()
-
-
-## Boursouflé : laisse une poche de spores qui éclate après une annonce au sol.
-func _burst() -> void:
-	var b = Blast.new()
-	b.main = main
-	b.position = position
-	b.radius = float(data.get("blast_radius", 90.0))
-	b.delay = float(data.get("blast_delay", 0.9))
-	b.damage = float(data.get("blast_damage", 20.0)) * damage_scale
-	b.enemy_damage = float(data.get("blast_enemy_damage", 50.0)) * power
-	b.color = color
-	main.projectiles_layer.call_deferred("add_child", b)
 
 
 # --- Animation (apparence seulement : rien ici ne change le jeu) ---
@@ -778,23 +647,7 @@ func _draw_bar(ci: CanvasItem) -> void:
 func _draw_attack(f: Vector2) -> void:
 	var k := windup_ratio()
 	var hit := strike_t / STRIKE_TIME if strike_t >= 0.0 else -1.0
-	match behavior:
-		"shooter":
-			if state == "windup" or hit >= 0.0:
-				var reach := minf(float(data["range"]), 440.0)
-				Art.telegraph(self, {"type": "ligne", "de": attack_dir * (radius + 4.0), "a": attack_dir * reach, "largeur": 10.0}, k, hit, t)
-		"kite":
-			if state == "windup" or hit >= 0.0:
-				var n := int(data.get("shots", 3))
-				var spread := float(data.get("spread", 0.3))
-				Art.telegraph(self, {"type": "cone", "centre": attack_dir * radius * 0.5, "direction": attack_dir.angle(), "ouverture": spread * (n - 1) + 0.22, "rayon": 240.0}, k, hit, t)
-		"charger":
-			var ln := float(data["charge_dist"])
-			if state == "windup":
-				Art.telegraph(self, {"type": "ligne", "de": Vector2.ZERO, "a": attack_dir * ln, "largeur": radius * 2.0}, k, -1.0, t)
-			elif state == "charge":
-				var from := -attack_dir * travelled
-				Art.telegraph(self, {"type": "ligne", "de": from, "a": from + attack_dir * ln, "largeur": radius * 2.0}, 1.0, travelled / ln, t)
+	_behavior.draw_attack(self, k, hit)
 	if elite and aff_state == "epines":
 		Art.telegraph(self, {"type": "cercle", "centre": Vector2.ZERO, "rayon": radius * 2.8}, affix_ratio(), -1.0, t)
 	elif elite and hit >= 0.0 and behavior in ["chase", "guard", "charger", "bomber"] and "epines" in affixes:

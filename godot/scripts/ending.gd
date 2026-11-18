@@ -1,13 +1,17 @@
-## Fin de la tranche de Ronce : le monde reverdit, un texte de fin, les statistiques de la partie,
-## puis « Continuer à jouer » ou « Retour au titre ». Tout est dessiné par le code (voir _draw) ;
-## les textes et les boutons sont des nœuds Control avec le thème commun.
-## Se déclenche une seule fois : Game.flags["fin_ronce_vue"] est posé dès le début de la séquence.
+## Séquence « région purifiée », lancée quand le boss d'une région est vaincu : le monde reverdit,
+## un texte de fin, les statistiques de la partie, puis « Continuer à jouer » ou « Retour au titre ».
+## Les textes viennent de la région (« ending » de data/regions/<id>.json) ; quand toutes les
+## régions sont purifiées, c'est la fin de l'aventure (Objectives.ending_texts). Tout est dessiné
+## par le code (voir _draw) ; les textes et les boutons sont des nœuds Control avec le thème commun.
+## Se déclenche une seule fois par région : Game.flags["<région>_fin_vue"] est posé dès le début de
+## la séquence (Objectives.mark_ending_seen).
 extends Control
 
 ## La séquence est refermée (« Continuer à jouer »).
 signal closed
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const Regions = preload("res://scripts/regions.gd")
 
 ## Instants (secondes) où chaque élément apparaît.
 const T_TITLE := 3.5
@@ -19,6 +23,9 @@ var main
 var t := 0.0
 var active := false
 var stats: Array = []
+## Région purifiée et textes montrés ({sub, title, body}).
+var region := ""
+var texts: Dictionary = {}
 
 var _left: VBoxContainer
 var _title: Label
@@ -52,11 +59,11 @@ func _build() -> void:
 	_left.anchor_top = 0.14
 	_left.grow_vertical = Control.GROW_DIRECTION_END
 	add_child(_left)
-	_sub = _label(_left, "Fin de la tranche de Ronce", 16, Color(0.8, 0.88, 0.8))
-	_title = _label(_left, "Le roncier reverdit", 36, UiTheme.GOLD, true)
+	_sub = _label(_left, str(texts.get("sub", "Région purifiée")), 16, Color(0.8, 0.88, 0.8))
+	_title = _label(_left, str(texts.get("title", "La région reverdit")), 36, UiTheme.GOLD, true)
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_title.custom_minimum_size.x = 300.0
-	_body = _label(_left, "La Mère-Ronce n'est plus. Là où la cendre étouffait la terre, les racines respirent de nouveau, et l'Arbre de vie étend ses branches vers d'autres horizons.\n\nCinq régions attendent encore ton passage.", 16, Color(0.9, 0.93, 0.85))
+	_body = _label(_left, str(texts.get("body", "")), 16, Color(0.9, 0.93, 0.85))
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.custom_minimum_size.x = 300.0
 
@@ -116,11 +123,16 @@ static func collect_stats(m) -> Array:
 	]
 
 
-## Lance la séquence : drapeau posé (elle ne reviendra pas), sauvegarde, jeu en pause.
-func begin(m) -> void:
+## Lance la séquence de la région (par défaut, celle qui est due) : drapeau posé (elle ne reviendra
+## pas), sauvegarde, jeu en pause.
+func begin(m, reg := "") -> void:
 	main = m
+	region = reg if reg != "" else Objectives.ending_region()
+	if region == "":
+		region = Regions.ids()[0] if not Regions.ids().is_empty() else ""
+	texts = Objectives.ending_texts(region)
 	stats = collect_stats(m)
-	Game.flags[Objectives.ENDING_SEEN] = true
+	Objectives.mark_ending_seen(region)
 	m.save_game()
 	for c in get_children():
 		remove_child(c)

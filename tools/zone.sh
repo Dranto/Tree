@@ -4,8 +4,9 @@
 # graines en parallèle, sans affichage. Échoue (code 1) si une graine échoue, bloque ou affiche
 # une erreur de script. Journaux dans godot/autotest/zone/.
 #
-#   tools/zone.sh               # graines 1 à 5
+#   tools/zone.sh               # graines 1 à 5, région de Ronce
 #   SEEDS="3" tools/zone.sh
+#   tools/zone.sh --region=spore   # une autre région (data/regions/<id>.json), jouée de la même façon
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SEEDS=${SEEDS:-"1 2 3 4 5"}
@@ -15,7 +16,7 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 "$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1
 
 for s in $SEEDS; do
-  timeout 1800 "$ROOT/tools/godot.sh" --headless --fixed-fps 60 -s res://tests/zone_test.gd -- "--seed=$s" > "$OUT/graine-$s.log" 2>&1 &
+  timeout 1800 "$ROOT/tools/godot.sh" --headless --fixed-fps 60 -s res://tests/zone_test.gd -- "--seed=$s" "$@" > "$OUT/graine-$s.log" 2>&1 &
 done
 wait
 

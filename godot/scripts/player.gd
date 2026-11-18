@@ -20,6 +20,9 @@ const TAG_STATS := {"corps_a_corps": "melee_damage", "projectile": "projectile_d
 const Content = preload("res://scripts/content.gd")
 ## Attaque de base : forme et modificateurs donnés par l'arbre (attack.gd, data/attack.json).
 const AttackScript = preload("res://scripts/attack.gd")
+const Regions = preload("res://scripts/regions.gd")
+## Une compétence par fichier : scripts/skills/<id>.gd (classe Skill).
+const SKILLS_DIR := "res://scripts/skills/"
 ## Déplacement à la souris (Settings.move_mode).
 ## « curseur » : zone morte autour du héros (il s'arrête quand la souris est tout près), puis la
 ## vitesse monte jusqu'au plein régime FOLLOW_FULL pixels plus loin.
@@ -72,6 +75,8 @@ var test_mouse = null
 ## Réglages des compétences actives, lus dans res://data/skills.json.
 var skills: Dictionary = Content.skills()
 var skill_cd: Dictionary = {}
+## Objets Skill déjà chargés (id -> Skill, ou null sans fichier).
+var _skill_objects: Dictionary = {}
 var cds: Dictionary = {}
 ## Compétence de chaque emplacement de la barre ("" = vide), gardée dans Game.flags (voir sync_bar).
 var bar: Array = []
@@ -435,6 +440,7 @@ func _physics_process(delta: float) -> void:
 	for k in want:
 		if Game.has_key(k) and cds.get(k, 1.0) <= 0.0:
 			cast(k, s)
+	_tick_skills(delta)
 
 
 ## Lance une compétence (sa recharge est remise à plein).
@@ -443,15 +449,34 @@ func cast(id: String, s: Dictionary) -> void:
 	cds[id] = skill_cd[id]
 	cast_anim = CAST_ANIM
 	cast_col = Art.ec(Art.ELEMENT_DE_COMPETENCE.get(id, "seve"))
-	match id:
-		"nova": _cast_nova(s)
-		"cloud": _cast_cloud(s)
-		"bloom": _cast_bloom(s)
-		"fouet": _cast_fouet(s)
-		"racines": _cast_racines(s)
-		"volee": _cast_volee(s)
-		"saignee": _cast_saignee(s)
-		_: push_warning("Compétence sans comportement : " + id)
+	var obj = skill_object(id)
+	if obj != null:
+		obj.cast(self, s)
+
+
+## Registre des compétences : l'objet Skill de scripts/skills/<id>.gd, chargé la première fois.
+## null (et un avertissement) si la compétence n'a pas de fichier.
+func skill_object(id: String):
+	if not _skill_objects.has(id):
+		var path := SKILLS_DIR + id + ".gd"
+		var obj = null
+		if ResourceLoader.exists(path):
+			obj = load(path).new()
+			obj.id = id
+			obj.player = self
+		else:
+			push_warning("Compétence sans comportement : " + id)
+		_skill_objects[id] = obj
+	return _skill_objects[id]
+
+
+## Fait avancer d'un pas les compétences acquises (Skill.tick).
+func _tick_skills(delta: float) -> void:
+	for k in skills:
+		if Game.has_key(k):
+			var obj = skill_object(k)
+			if obj != null:
+				obj.tick(delta)
 
 
 func current_damage() -> float:
@@ -459,7 +484,7 @@ func current_damage() -> float:
 
 
 ## Dégâts d'une compétence : dégâts de base × facteur de la compétence × statistiques de ses
-## familles (corps à corps, projectile, zone) × bonus « se battre chez soi » pour Ronce.
+## familles (corps à corps, projectile, zone) × bonus « se battre chez soi ».
 func skill_damage(id: String) -> float:
 	return current_damage() * float(skill(id).get("damage", 1.0)) * skill_multiplier(id)
 
@@ -471,17 +496,18 @@ func skill_multiplier(id: String) -> float:
 	var m := 1.0
 	for tag in k.get("tags", []):
 		m *= float(s.get(TAG_STATS.get(tag, ""), 1.0))
-	if k.get("branch", "") == "ronce" and fighting_at_home():
+	if fighting_at_home(str(k.get("branch", ""))):
 		m *= 1.0 + HOME_BONUS
 	return m
 
 
-## Vrai sur une terre ravivée de la région de Ronce (main.region_at, fourni avec la région ;
-## sans elle, jamais).
-func fighting_at_home() -> bool:
-	if not main.has_method("region_at"):
+## Vrai sur une terre ravivée de la région de cette branche de l'arbre (main.region_at ; sans
+## scène de jeu, jamais) : chaque branche se bat mieux chez elle.
+func fighting_at_home(branch := "ronce") -> bool:
+	if branch == "" or not main.has_method("region_at"):
 		return false
-	return main.region_at(position) == "ronce" and main.ground.life_at(position) > HOME_LIFE
+	var reg: String = main.region_at(position)
+	return reg != "" and Regions.branch_of(reg) == branch and main.ground.life_at(position) > HOME_LIFE
 
 
 ## Portée de l'attaque automatique : celle de la forme d'attaque actuelle (Attack.reach,
@@ -514,129 +540,6 @@ func auto_target():
 	if keep < INF and best_d >= keep * TARGET_STICK * TARGET_STICK:
 		return target
 	return best
-
-
-func _cast_nova(s: Dictionary) -> void:
-	var k: Dictionary = skill("nova")
-	var r: float = k["radius"] * s["area"]
-	Sfx.play("nova")
-	_sig("nova", {"pos": position, "r": r})
-	main.fx.shake(0.25)
-	main.damage_area(position, r, skill_damage("nova"), k["knockback"], "ronce")
-
-
-func _cast_cloud(s: Dictionary) -> void:
-	var k: Dictionary = skill("cloud")
-	var target := aim_point
-	var off := target - position
-	if off.length() > k["range"]:
-		target = position + off.normalized() * k["range"]
-	var per_factor := current_damage() * skill_multiplier("cloud")
-	Sfx.play("nuage")
-	main.fx.cloud(target, k["radius"] * s["area"], k["duration"], per_factor * (k["damage"] + s["poison"]))
-	if "skill_fx" in main and main.skill_fx != null:
-		main.fx.clouds[-1]["dessin"] = "skill_fx"   # le nuage est dessiné par sa signature
-	_sig("cloud", {"pos": target, "r": k["radius"] * s["area"], "dur": float(k["duration"])})
-
-
-func _cast_bloom(s: Dictionary) -> void:
-	var k: Dictionary = skill("bloom")
-	Sfx.play("floraison")
-	heal(s["max_hp"] * k["heal"])
-	var r: float = k["radius"] * s["area"]
-	_sig("bloom", {"pos": position, "r": r, "follow": self})
-	main.fx.shake(0.3)
-	main.damage_area(position, r, skill_damage("bloom"), k["knockback"])
-	main.ground.paint(position, r, k["life"])
-	main.flora.spawn_patch(position, r * 0.8, 10, Color(k["color"]))
-
-
-## Fouet : arc devant le joueur. Chaque ennemi touché saigne et déclenche « melee_hit ».
-func _cast_fouet(s: Dictionary) -> void:
-	Sfx.play("fouet")
-	var k: Dictionary = skill("fouet")
-	var reach: float = k["range"] * s["area"]
-	var half_arc: float = k["arc"] / 2.0
-	_sig("fouet", {"pos": position, "dir": aim, "r": reach, "arc": float(k["arc"]), "follow": self})
-	var base := skill_damage("fouet")
-	for e in main.enemies_near(position, reach):
-		var d: Vector2 = e.position - position
-		if d.length() > 1.0 and absf(aim.angle_to(d)) > half_arc + e.radius / maxf(d.length(), 1.0):
-			continue
-		main.player_hit_enemy(e, base, true, "ronce")
-		if e.dead:
-			continue
-		e.apply_status("saignement", base * k["bleed"], k["bleed_duration"] * s["bleed_duration"])
-		if d.length() > 0.1:
-			e.position += d.normalized() * k["knockback"]
-		main.on_melee_hit(e, base)
-
-
-## Racines : à l'endroit visé, blessent et immobilisent les ennemis de la zone.
-func _cast_racines(s: Dictionary) -> void:
-	Sfx.play("racines")
-	var k: Dictionary = skill("racines")
-	var target := aim_point
-	var off := target - position
-	if off.length() > k["range"]:
-		target = position + off.normalized() * k["range"]
-	var r: float = k["radius"] * s["area"]
-	var hold: float = minf(float(k["root_duration"]) * s["root_duration"], 3.0)
-	_sig("racines", {"pos": target, "r": r, "dur": 0.3 + hold + 0.35, "seed": int(t * 1000.0) + 1})
-	var base := skill_damage("racines")
-	main.root_hit_base = base
-	for e in main.enemies_near(target, r):
-		main.player_hit_enemy(e, base, true, "ronce")
-		if not e.dead:
-			e.apply_status("enracine", 1.0, k["root_duration"] * s["root_duration"])
-	main.root_hit_base = 0.0
-
-
-## Volée d'épines : un éventail d'épines perforantes, chacune fait saigner ce qu'elle touche.
-func _cast_volee(s: Dictionary) -> void:
-	Sfx.play("volee")
-	var k: Dictionary = skill("volee")
-	var n: int = maxi(1, int(k["count"]))
-	var spread: float = k["spread"]
-	var dmg := skill_damage("volee")
-	_sig("volee", {"pos": position, "dir": aim, "spread": spread, "count": n})
-	for i in n:
-		var a: float = aim.angle()
-		if n > 1:
-			a += (i / float(n - 1) - 0.5) * spread
-		var dir := Vector2.from_angle(a)
-		var pr = main.spawn_projectile(position + dir * 18.0, dir * float(k["speed"]), dmg, int(k["pierce"]) + int(s["pierce"]), s["projectile_size"])
-		pr.thorn = true
-		pr.color = Color(k["color"])
-		pr.bleed = float(k["bleed"])
-		pr.bleed_duration = float(k["bleed_duration"]) * s["bleed_duration"]
-
-
-## Saignée : chaque ennemi proche qui saigne voit ses saignements éclater d'un coup
-## (burst × dégâts restants) ; une part de ces dégâts soigne le joueur.
-func _cast_saignee(s: Dictionary) -> void:
-	Sfx.play("saignee")
-	var k: Dictionary = skill("saignee")
-	var r: float = k["radius"] * s["area"]
-	var hit := skill_damage("saignee")
-	# Le multiplicateur des dégâts de zone et le bonus « chez soi » s'appliquent aussi à l'éclatement.
-	var mult: float = float(k["burst"]) * skill_multiplier("saignee")
-	var total := 0.0
-	var bled: Array = []
-	for e in main.enemies_near(position, r):
-		# L'éclatement est un coup de Ronce : les ennemis du roncier y résistent aussi.
-		var amount: float = e.burst_bleed(mult) * main.branch_factor(e, "ronce")
-		if amount > 0.0:
-			if bled.size() < 12:
-				bled.append(e.position)
-			e.take_damage(amount, false)
-			total += amount
-			main.on_bleed_tick(e, amount)
-		if not e.dead:
-			main.player_hit_enemy(e, hit, true, "ronce")
-	_sig("saignee", {"pos": position, "r": r, "targets": bled, "follow": self})
-	if total > 0.0:
-		heal(total * float(k["heal"]))
 
 
 func heal(v: float) -> void:

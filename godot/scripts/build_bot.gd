@@ -13,6 +13,7 @@
 extends RefCounted
 
 const Regions = preload("res://scripts/regions.gd")
+const Content = preload("res://scripts/content.gd")
 const Difficulty = preload("res://scripts/difficulty.gd")
 const Thorn = preload("res://scripts/enemy_thorn.gd")
 
@@ -26,6 +27,9 @@ const DEFAULT_LEVEL := 20
 const DEATH_PENALTY := 10.0
 
 var name := ""
+## Branche du build (builds.json › branch) et région où il s'enfonce en partie complète.
+var branch := "ronce"
+var region := "ronce"
 var targets: Array = []
 var choices: Dictionary = {}
 ## Façon de jouer du robot : « distance » (tourne autour de la graine en tirant, par défaut),
@@ -95,6 +99,8 @@ static func from_cmdline():
 	bot.targets = all[wanted].get("targets", [])
 	bot.choices = all[wanted].get("choices", {})
 	bot.style = all[wanted].get("style", "distance")
+	bot.branch = str(all[wanted].get("branch", "ronce"))
+	bot.region = bot.branch if Regions.exists(bot.branch) else (Regions.ids()[0] if not Regions.ids().is_empty() else "")
 	bot.run = is_run
 	if is_run:
 		bot.targets = all[wanted].get("opening", []) + bot.targets
@@ -143,11 +149,12 @@ func _next(game) -> int:
 			if game.can_allocate(id):
 				return id
 			break  # chemin bloqué (exclusion, nœud verrouillé) : cible suivante
-	# Cibles épuisées : le nœud de Ronce disponible le plus proche de la graine.
+	# Cibles épuisées : le nœud de la branche du build disponible le plus proche de la graine.
 	var best := -1
 	var best_ring := 999
+	var bi := maxi(0, Content.tree().get("branches", []).find(branch))
 	for n in tree.nodes:
-		if n["branch"] == 0 and n["ring"] < best_ring and game.can_allocate(n["id"]):
+		if n["branch"] == bi and n["ring"] < best_ring and game.can_allocate(n["id"]):
 			best = n["id"]
 			best_ring = n["ring"]
 	if best < 0:
@@ -201,16 +208,16 @@ func report(game, elapsed: float, deaths: int) -> String:
 
 # --- Partie complète ---
 
-## Point autour duquel le robot se bat : il quitte la graine et s'enfonce dans la région de Ronce
+## Point autour duquel le robot se bat : il quitte la graine et s'enfonce dans la région de son build
 ## à mesure qu'il monte de niveau, comme un joueur qui avance dans l'aventure.
 func run_anchor(main) -> Vector2:
-	var heart = main.heart
+	var heart = main.hearts.get(region, main.heart) if "hearts" in main else main.heart
 	if Game.level >= HEART_LEVEL and Game.level < HEART_LEVEL + 3 and heart != null and heart.state != "purifie" \
-			and not Game.flags.get("ronce_coeur_purifie", false):
+			and not Game.flags.get(Regions.heart_flag(region), false):
 		return heart.center
 	var k := clampf((Game.level - 2) / 18.0, 0.0, 1.0)
 	var dist := lerpf(150.0, 2200.0, k)
-	return Vector2.from_angle(Regions.angle_of("ronce") + PATH_OFFSET) * dist
+	return Vector2.from_angle(Regions.angle_of(region) + PATH_OFFSET) * dist
 
 
 ## Commandes du robot en partie complète, à la façon d'un joueur prudent : il s'éloigne de la
@@ -382,6 +389,6 @@ func _sample(main) -> void:
 		depth = main._region_depth(main.player.position)
 	print("RUN %s min=%.0f niveau=%d xp=%.0f/%.0f menace=%.2f ttk=%.2f degats=%.0f vie_max=%.0f morts=%d tues=%d ennemis=%d profondeur=%.2f coeur=%d" % [
 		name, _t / 60.0, Game.level, Game.xp, Game.xp_to_next(), total / maxf(1, n), ttk, _minute_dmg,
-		Game.stats["max_hp"], main.deaths, kills, n, depth, 1 if Game.flags.get("ronce_coeur_purifie", false) else 0])
+		Game.stats["max_hp"], main.deaths, kills, n, depth, 1 if Game.flags.get(Regions.heart_flag(region), false) else 0])
 	_ttk.clear()
 	_minute_dmg = 0.0

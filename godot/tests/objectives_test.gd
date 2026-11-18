@@ -73,22 +73,22 @@ func _run() -> void:
 	check(obj.current().get("id", "") == "noeud_cle", "sans sanctuaire ni autel dans le monde, ces objectifs sont passés")
 
 	print("Sanctuaires et autels")
-	var s1 := _fake("sanctuaire", "ronce_1", Vector2(800, -700))
-	_fake("autel", "ronce_a", Vector2(1100, -900))
+	var s1 := _fake("sanctuaire", "lisiere", Vector2(800, -700))
+	_fake("autel", "ronce_1", Vector2(1100, -900))
 	check(obj.current().get("id", "") == "sanctuaire", "avec un sanctuaire dans le monde, c'est l'objectif en cours")
 	check(obj.target_pos(obj.current()) == s1.position, "la flèche vise le sanctuaire")
 	game.flags["sanctuaire_graine"] = true
 	obj.check()
 	check(not obj.is_done("sanctuaire"), "le sanctuaire de la graine ne compte pas")
-	game.flags["sanctuaire_ronce_1"] = true
+	game.flags["sanctuaire_lisiere"] = true
 	obj.check()
 	check(obj.is_done("sanctuaire"), "un sanctuaire de Ronce ravivé accomplit l'objectif")
 	check(obj.current().get("id", "") == "autel", "l'autel suit")
-	game.flags["autel_ronce_a_vu"] = true
+	game.flags["autel_ronce_1_vu"] = true
 	game.flags["secret_ronce_vu"] = true
 	obj.check()
 	check(not obj.is_done("autel") and not obj.is_done("secret"), "apercevoir un autel ou le secret n'accomplit rien")
-	game.flags["autel_ronce_a"] = true
+	game.flags["autel_ronce_1"] = true
 	obj.check()
 	check(obj.is_done("autel") and not obj.is_done("autels"), "un autel accomplit l'objectif, pas « tous les autels »")
 
@@ -111,7 +111,7 @@ func _run() -> void:
 	print("Étape sautée")
 	var flags_saved: Dictionary = game.flags.duplicate(true)
 	game.flags.erase("obj_autel")
-	game.flags.erase("autel_ronce_a")
+	game.flags.erase("autel_ronce_1")
 	game.flags["ronce_coeur_purifie"] = true
 	obj.check()
 	check(obj.current().get("id", "") == "boss", "Cœur purifié avant l'autel : l'objectif en cours est le boss, pas l'autel")
@@ -177,7 +177,7 @@ func _run() -> void:
 	check(not q.ending.active, "elle n'a pas lieu avant le délai")
 	q._process(2.0)
 	check(q.ending.active and paused, "elle se lance après le délai, jeu en pause")
-	check(bool(game.flags.get("fin_ronce_vue", false)) and not obj.ending_due(), "elle est marquée comme vue")
+	check(bool(game.flags.get("ronce_fin_vue", false)) and not obj.ending_due(), "elle est marquée comme vue")
 	q.ending.set_time(10.0)
 	var texts: Array = q.ending.find_children("*", "Label", true, false).map(func(l): return l.text)
 	check("Le roncier reverdit" in texts and "Temps de jeu" in texts, "le texte de fin et les statistiques s'affichent")

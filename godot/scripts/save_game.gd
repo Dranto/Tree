@@ -26,7 +26,7 @@
 extends Node
 
 const FORMAT := "seve-save"
-const VERSION := 3
+const VERSION := 4
 const DEFAULT_PATH := "user://saves/partie.json"
 
 ## Dernière erreur de chargement, lisible (vide si tout va bien).
@@ -108,8 +108,8 @@ func save_now(main, path := DEFAULT_PATH) -> bool:
 func _player_entry(main) -> Dictionary:
 	var pos: Vector2 = main.player.position
 	var hp: float = main.player.hp
-	if main.get("arena") != null and main.arena.in_combat():
-		pos = main.arena.entrance()
+	if main.get("arena") != null and main.active_arena() != null:
+		pos = main.active_arena().entrance()
 		hp = Game.stats["max_hp"]
 	return {"x": pos.x, "y": pos.y, "hp": hp}
 
@@ -218,6 +218,22 @@ func _migrate(data: Dictionary) -> Dictionary:
 		if data.get("world") is Dictionary:
 			data["world"]["ground_grafts"] = []
 		data["version"] = 3
+	# Version 4 (jalon 7, plusieurs régions) : la fin de la tranche de Ronce devient la séquence
+	# « région purifiée » de Ronce (« fin_ronce_vue » -> « ronce_fin_vue »). La fin de l'aventure
+	# (« fin_aventure_vue ») n'est pas notée : d'autres régions attendent maintenant le joueur.
+	if int(data["version"]) == 3:
+		if not data.get("game") is Dictionary:
+			data["game"] = {}
+		if not data["game"].get("flags") is Dictionary:
+			data["game"]["flags"] = {}
+		var f: Dictionary = data["game"]["flags"]
+		for old in f.keys():
+			var key := str(old)
+			if key.begins_with("fin_") and key.ends_with("_vue") and key != "fin_aventure_vue":
+				var reg := key.substr(4, key.length() - 8)
+				f[reg + "_fin_vue"] = f[old]
+				f.erase(old)
+		data["version"] = 4
 	return data
 
 

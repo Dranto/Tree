@@ -35,14 +35,14 @@ const Altar = preload("res://scripts/altar.gd")
 const GraftPickup = preload("res://scripts/graft_pickup.gd")
 
 ## Apparitions par région (sortes du roncier, part selon la distance) : res://data/enemies.json.
-var region_spawn: Dictionary = Content._load("enemies").get("spawn", {})
+var region_spawn: Dictionary = _region_spawns()
 ## Flétris ordinaires (poids, niveau minimal, nombre maximal en vie) : « ordinary » de enemies.json.
 var ordinary_spawn: Dictionary = Content._load("enemies").get("ordinary", {})
 
 ## Une élite vient d'être vaincue (contrat partagé : butin, objectif « vaincre trois élites »).
 signal elite_killed(enemy)
-## Dernier état connu de la purification du Cœur de Ronce (contrat avec la tâche D).
-var ronce_purified := false
+## Dernier état connu de la purification du Cœur de chaque région (identifiant -> vrai).
+var regions_purified := {}
 const BuildBot = preload("res://scripts/build_bot.gd")
 
 var world_half := WORLD_HALF
@@ -79,6 +79,9 @@ var big_enemies: Array = []
 ## Cœur de flétrissure et arène de la Mère-Ronce (région de Ronce).
 var heart
 var arena
+## Cœur et arène de chaque région (identifiant -> nœud), dans l'ordre des régions.
+var hearts: Dictionary = {}
+var arenas: Dictionary = {}
 ## Sanctuaires (sanctuary.gd), points de renaissance ; et sève perdue au sol (lost_sap.gd, ou null).
 var sanctuaries: Array = []
 var lost_sap = null
@@ -240,15 +243,24 @@ func _ready() -> void:
 	pause_menu.main = self
 	pause_layer.add_child(pause_menu)
 
-	# Région de Ronce : leurs marques au sol se dessinent sous les personnages.
-	heart = Heart.new()
-	heart.main = self
-	arena = BossArena.new()
-	arena.main = self
-	arena.heart = heart
-	for n in [heart, arena]:
-		add_child(n)
-		move_child(n, actors_layer.get_index())
+	# Un Cœur et une arène par région (data/regions/<id>.json) : leurs marques au sol se dessinent
+	# sous les personnages. heart et arena restent ceux de la première région.
+	for id in Regions.ids():
+		var h = Heart.new()
+		h.main = self
+		h.region = id
+		var a = BossArena.new()
+		a.main = self
+		a.heart = h
+		a.region = id
+		hearts[id] = h
+		arenas[id] = a
+		for n in [h, a]:
+			add_child(n)
+			move_child(n, actors_layer.get_index())
+		if heart == null or id == focus_region():
+			heart = h
+			arena = a
 	_place_sanctuaries()
 	var rewards_layer := Node2D.new()
 	add_child(rewards_layer)
@@ -289,6 +301,9 @@ func _ready() -> void:
 	if autotest_boss:
 		arena.autotest_begin()
 	_set_direct_to_screen(get_tree().current_scene == self and (not autotest or benchmark))
+	# En jeu et dans le banc, les carrés de sol salis sont refaits peu à peu (pas pendant une capture).
+	if get_tree().current_scene == self and (not autotest or benchmark):
+		ground.tile_budget = ground.TILE_BUDGET
 	if benchmark:
 		_benchmark_hide({"sol": ground, "decor": trees_layer, "fleurs": flora, "ennemis": enemies_layer,
 			"joueur": player, "acteurs": actors_layer, "effets": fx, "ambiance": ambience, "hud": hud_layer, "monde": self})
@@ -481,17 +496,58 @@ func _push_out_of_bushes() -> void:
 	player.position = flora.push_out(player.position, player.radius)
 
 
-## Suit les drapeaux d'aventure posés par le Cœur de flétrissure (tâche D) : la région change d'état.
+## Suit les drapeaux d'aventure posés par les Cœurs de flétrissure : chaque région change d'état.
 func _watch_region_state() -> void:
-	var purified := bool(Game.flags.get("ronce_coeur_purifie", false))
-	if purified != ronce_purified:
-		ronce_purified = purified
-		ground.set_purified(1.0 if purified else 0.0)
+	for id in Regions.ids():
+		var purified := bool(Game.flags.get(Regions.heart_flag(id), false))
+		if purified != bool(regions_purified.get(id, false)):
+			regions_purified[id] = purified
+			ground.set_purified(id, 1.0 if purified else 0.0)
 
 
 # --- Régions du monde (voir regions.gd) ---
 
-## Région du monde à cette position : "ronce" dans le roncier, "" ailleurs.
+## Région suivie par les robots et le mode « -- --autotest=boss » : celle de « -- --region=<id> »,
+## sinon la première. main.heart et main.arena sont les siens.
+static func focus_region() -> String:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--region="):
+			return arg.substr(9)
+	return Regions.ids()[0] if not Regions.ids().is_empty() else ""
+
+
+## Arène où un combat de boss a lieu, ou null.
+func active_arena():
+	for a in arenas.values():
+		if a.in_combat():
+			return a
+	return null
+
+
+## Vrai pendant un combat de boss, dans n'importe quelle région.
+func in_boss_fight() -> bool:
+	return active_arena() != null
+
+
+## Cœur assiégé en ce moment, ou null.
+func siege_heart():
+	for h in hearts.values():
+		if h.state == "siege":
+			return h
+	return null
+
+
+## Apparitions de chaque région (« spawn » de data/regions/<id>.json).
+static func _region_spawns() -> Dictionary:
+	var out := {}
+	for id in Regions.ids():
+		var sp := Regions.section(id, "spawn")
+		if not sp.is_empty():
+			out[id] = sp
+	return out
+
+
+## Région du monde à cette position : son identifiant ("ronce" dans le roncier), "" ailleurs.
 func region_at(pos: Vector2) -> String:
 	return Regions.region_at(pos)
 
@@ -533,8 +589,8 @@ func power() -> float:
 ## Nombre de Cœurs de flétrissure purifiés (un par région).
 func hearts_purified() -> int:
 	var n := 0
-	for id in Regions.REGIONS:
-		if Game.flags.get(id + "_coeur_purifie", false):
+	for id in Regions.ids():
+		if Game.flags.get(Regions.heart_flag(id), false):
 			n += 1
 	return n
 
@@ -622,7 +678,7 @@ func make_elite(e, two := false) -> void:
 func _region_kind(reg: String, pos: Vector2) -> String:
 	var sp: Dictionary = region_spawn[reg]
 	var share := lerpf(sp.get("share_near", 0.25), sp.get("share_far", 0.8), _region_depth(pos))
-	if Game.flags.get(reg + "_coeur_purifie", false):
+	if Game.flags.get(Regions.heart_flag(reg), false):
 		share *= float(sp.get("purified_factor", 1.0))
 	if rng.randf() >= share:
 		return ""
@@ -640,7 +696,9 @@ func _region_kind(reg: String, pos: Vector2) -> String:
 	if Enemy.KINDS[Enemy.kind_index(id)].get("behavior", "") == "nest":
 		var nests := enemies.filter(func(e): return e.behavior == "nest").size()
 		if pos.length() < float(sp.get("nest_min_dist", 0.0)) or nests >= int(sp.get("max_nests", 3)):
-			id = "chargeur" if rng.randf() < 0.5 else "tireur"
+			# Trop près de la graine ou trop de nids : une des deux sortes de repli, à pile ou face.
+			var fallback: Array = sp.get("nest_fallback", ["chargeur", "tireur"])
+			id = fallback[0] if rng.randf() < 0.5 else fallback[1]
 	return id
 
 
@@ -834,10 +892,13 @@ func player_died() -> void:
 	# Un combat en cours se remet à zéro : siège du Cœur à recommencer, Mère-Ronce rendormie
 	# (elle disparaît avec les autres ennemis, voir boss_arena._fight_lost).
 	var reset := ""
-	if arena.in_combat():
+	var fight = active_arena()
+	if fight != null:
 		reset = "boss"
-	elif heart.reset_siege():
-		reset = "coeur"
+	else:
+		for h in hearts.values():
+			if h.reset_siege():
+				reset = "coeur"
 	for e in enemies:
 		if is_instance_valid(e):
 			e.queue_free()
@@ -851,7 +912,7 @@ func player_died() -> void:
 	Game.xp = 0.0
 	# Tombé face à la Mère-Ronce : la sève attend devant l'arène, pour la reprendre sans relancer
 	# le combat. Ailleurs, là où le joueur est tombé.
-	var sap_at: Vector2 = arena.entrance() if reset == "boss" else player.position
+	var sap_at: Vector2 = fight.entrance() if reset == "boss" else player.position
 	if dropped > 0.0:
 		Game.flags["seve_perdue"] = dropped
 		Game.flags["seve_perdue_x"] = sap_at.x
@@ -878,9 +939,10 @@ func player_died() -> void:
 
 # --- Sanctuaires et sève perdue ---
 
-## Pose les sanctuaires de SITES, écartés des buissons d'épines (la graine reste au centre).
+## Pose les sanctuaires (la Graine et ceux des régions), écartés des buissons d'épines (la graine
+## reste au centre).
 func _place_sanctuaries() -> void:
-	for site in Sanctuary.SITES:
+	for site in Sanctuary.sites():
 		var s = Sanctuary.new()
 		s.main = self
 		s.setup(site)

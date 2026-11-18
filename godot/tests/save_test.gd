@@ -98,6 +98,12 @@ func _run() -> void:
 	check(game.level == 3 and game.allocated.size() == 1, "valeurs par défaut pour les champs manquants")
 	_write({"autre": true})
 	check(not save.load_into(main, PATH), "un fichier étranger est refusé")
+	# Version 3 -> 4 (plusieurs régions) : la fin de la tranche de Ronce devient la séquence
+	# « région purifiée » de Ronce ; la fin de l'aventure reste à voir.
+	_write({"format": "seve-save", "version": 3, "game": {"level": 20, "flags": {"ronce_boss_vaincu": true, "fin_ronce_vue": true, "obj_boss": true}}})
+	check(save.load_into(main, PATH), "une sauvegarde du format 3 se charge")
+	check(game.flags.get("ronce_fin_vue", false) and not game.flags.has("fin_ronce_vue"), "« fin_ronce_vue » devient « ronce_fin_vue »")
+	check(not game.flags.has("fin_aventure_vue") and game.flags.get("ronce_boss_vaincu", false), "la fin de l'aventure n'est pas marquée vue, le boss reste vaincu")
 
 	save.delete_save(PATH)
 	for f in DirAccess.get_files_at("user://tests"):
