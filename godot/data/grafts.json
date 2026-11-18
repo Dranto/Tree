@@ -1,5 +1,5 @@
 {
-  "_doc": "Greffes de Ronce : objets trouvés dans le monde, à poser dans un emplacement de greffe de l'Arbre de vie. « sources » : d'où elles peuvent venir (autel, boss, secret, elite) ; une greffe fixée par data/rewards.json vient de cet endroit précis. « shape » : dessin de la greffe au sol et dans l'inventaire (feuille, epine, racine, fleur, coeur).",
+  "_doc": "Greffes de Ronce et de Spore : objets trouvés dans le monde, à poser dans un emplacement de greffe de l'Arbre de vie. « sources » : d'où elles peuvent venir (autel, boss, secret, elite) ; une greffe fixée par data/rewards.json vient de cet endroit précis. « shape » : dessin de la greffe au sol et dans l'inventaire (feuille, epine, racine, fleur, coeur).",
   "greffe_soeurs": {
     "name": "Épines sœurs",
     "desc": "Chaque tir lance deux graines de plus, un peu moins fortes.",
@@ -134,6 +134,97 @@
     "sources": ["elite"], "shape": "racine", "color": "#b5674a",
     "effects": [
       {"attack_mod": "trainee", "value": 0.4}
+    ]
+  },
+  "greffe_vesse": {
+    "name": "Vesse fumante",
+    "desc": "Ton esquive laisse derrière toi un nuage de spores.",
+    "sources": ["autel"], "shape": "fleur", "color": "#9b6fd0",
+    "effects": [
+      {"on": "dash", "do": "cloud", "radius": 110, "duration": 3, "factor": 0.8,
+       "text": "L'esquive laisse un nuage de spores là où tu étais (×0,8 dégâts par seconde, 3 s)."}
+    ]
+  },
+  "greffe_mycelium": {
+    "name": "Mycélium",
+    "desc": "Tes nuages s'étendent et durent plus longtemps.",
+    "sources": ["autel"], "shape": "racine", "color": "#8a6ab0",
+    "effects": [
+      {"skill_mod": "cloud", "param": "radius", "op": "more", "value": 1.3, "text": "Nuage de spores : rayon ×1,3."},
+      {"skill_mod": "cloud", "param": "duration", "op": "add", "value": 2, "text": "Nuage de spores : +2 s de durée."},
+      {"skill_mod": "vesse", "param": "cloud_duration", "op": "add", "value": 1.5, "text": "Vesse-de-loup : nuage +1,5 s."}
+    ]
+  },
+  "greffe_amadou": {
+    "name": "Amadou",
+    "desc": "Un coup critique sur une cible empoisonnée la fait éclater.",
+    "sources": ["autel"], "shape": "feuille", "color": "#c49a5a",
+    "effects": [
+      {"on": "crit", "if": {"state": "cible_empoisonnee"}, "do": "explode", "radius": 90, "factor": 0.8, "color": "#b48ae0", "cooldown": 0.2,
+       "text": "Un coup critique sur une cible empoisonnée blesse ses voisins (80 % du coup, au plus toutes les 0,2 s)."},
+      {"stat": "crit", "op": "add", "value": 0.04}
+    ]
+  },
+  "greffe_lichen": {
+    "name": "Lichen",
+    "desc": "Immobile, tu te couvres de lichen : ton poison redouble.",
+    "sources": ["autel"], "shape": "feuille", "color": "#8fae7a",
+    "effects": [
+      {"stat": "poison", "op": "more", "value": 1.6, "if": {"state": "immobile", "min": 0.5}},
+      {"stat": "armor", "op": "add", "value": 0.04}
+    ]
+  },
+  "greffe_sporange": {
+    "name": "Sporange de l'Amanite-Mère",
+    "desc": "Ce qui tombe sous tes coups libère un nuage de spores.",
+    "sources": ["boss"], "shape": "coeur", "color": "#b48ae0",
+    "effects": [
+      {"on": "kill", "do": "cloud", "at": "enemy", "radius": 80, "duration": 2.5, "factor": 0.6, "cooldown": 0.25,
+       "text": "Un ennemi vaincu libère un nuage de spores (×0,6 dégâts par seconde, 2,5 s ; au plus toutes les 0,25 s)."}
+    ]
+  },
+  "greffe_truffe": {
+    "name": "Truffe noire",
+    "desc": "Une truffe enfouie au fond du marais, qui ouvre un emplacement de compétence.",
+    "sources": ["secret"], "shape": "coeur", "color": "#5a4a6a",
+    "effects": [
+      {"stat": "skill_slots", "op": "add", "value": 1},
+      {"stat": "area", "op": "inc", "value": 0.1}
+    ]
+  },
+  "greffe_essaim_double": {
+    "name": "Essaim jumeau",
+    "desc": "L'Essaim saute plus loin et plus souvent.",
+    "sources": ["elite"], "shape": "epine", "color": "#c49be8",
+    "effects": [
+      {"skill_mod": "essaim", "param": "jumps", "op": "add", "value": 3, "text": "Essaim : +3 sauts."},
+      {"skill_mod": "essaim", "param": "reach", "op": "more", "value": 1.2, "text": "Essaim : portée des sauts ×1,2."}
+    ]
+  },
+  "greffe_eclosion": {
+    "name": "Éclosion en chaîne",
+    "desc": "L'Éclosion porte plus loin et rend un peu de vie.",
+    "sources": ["elite"], "shape": "fleur", "color": "#7d4fb0",
+    "effects": [
+      {"skill_mod": "eclosion", "param": "radius", "op": "more", "value": 1.35, "text": "Éclosion : rayon ×1,35."},
+      {"stat": "lifesteal", "op": "add", "value": 0.01}
+    ]
+  },
+  "greffe_spore_lourde": {
+    "name": "Spore lourde",
+    "desc": "Ce que ton attaque abat éclate en nuage de spores.",
+    "sources": ["elite"], "shape": "fleur", "color": "#9b6fd0",
+    "effects": [
+      {"attack_mod": "bouffee", "value": 0.5}
+    ]
+  },
+  "greffe_aiguille": {
+    "name": "Aiguille de moisissure",
+    "desc": "Tes traits sautent d'ennemi empoisonné en ennemi empoisonné.",
+    "sources": ["elite"], "shape": "epine", "color": "#b48ae0",
+    "effects": [
+      {"attack_mod": "saut", "value": 1},
+      {"attack_mod": "poison", "value": 0.1}
     ]
   }
 }

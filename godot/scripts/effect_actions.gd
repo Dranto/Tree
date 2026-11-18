@@ -26,6 +26,8 @@ static func run(action: String, p: Dictionary, ctx: Dictionary) -> bool:
 			return _status_area(p, ctx)
 		"attack_salvo":
 			return _attack_salvo(p, ctx)
+		"cloud":
+			return _cloud(p, ctx)
 	push_warning("Action d'effet inconnue : " + action)
 	return false
 
@@ -161,4 +163,20 @@ static func _attack_salvo(p: Dictionary, ctx: Dictionary) -> bool:
 	if main == null or not "player" in main or main.player == null or not "attack_rt" in main.player:
 		return false
 	load("res://scripts/attack.gd").salvo(main.player, int(p["count"]))
+	return true
+
+
+## Nuage de spores au sol autour du joueur ou de l'ennemi de l'évènement (« at ») : pendant
+## « duration » s, « factor » × dégâts du joueur × dégâts de zone par seconde aux ennemis dedans,
+## qu'il empoisonne aussi (rayon × taille des zones). C'est un coup de Spore.
+static func _cloud(p: Dictionary, ctx: Dictionary) -> bool:
+	var at = _center(p, ctx)
+	if at == null:
+		return false
+	var main = ctx["main"]
+	var s: Dictionary = ctx["stats"]
+	var tick := 0.5
+	var dps: float = s.get("damage", 0.0) * float(p["factor"]) * s.get("area_damage", 1.0)
+	load("res://scripts/attack.gd").cloud(main, at, float(p["radius"]) * s.get("area", 1.0), float(p["duration"]), tick,
+		dps * tick, int(p.get("max", 12)), "effet")
 	return true

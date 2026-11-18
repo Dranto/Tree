@@ -17,6 +17,7 @@ const DUREE := {
 	"graine_depart": 0.12, "graine_impact": 0.3, "epine_impact": 0.3,
 	"nova": 0.6, "fouet": 0.34, "racines": 0.6, "volee": 0.24, "saignee": 0.7,
 	"cloud": 5.0, "bloom": 1.0, "chute": 1.1,
+	"vesse": 9.0, "essaim": 0.3, "eclosion": 0.7,
 }
 
 ## Vrai pour le nœud du sol, faux pour celui du dessus.
@@ -114,6 +115,13 @@ static func draw_effect(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 		"chute":
 			if not on_ground:
 				_chute(ci, e, k)
+		"vesse":
+			_vesse(ci, e, on_ground)
+		"essaim":
+			if not on_ground:
+				_essaim(ci, e, k)
+		"eclosion":
+			_eclosion(ci, e, k, on_ground)
 
 
 # --- Graines ---
@@ -551,3 +559,120 @@ static func _chute(ci: CanvasItem, e: Dictionary, k: float) -> void:
 		var q := p + Vector2.from_angle(la) * (6.0 + 40.0 * Anim.ease_out(u)) + Vector2(30.0 * u * u + sin(u * 6.0 + i) * 6.0, 10.0 * u)
 		var lc := Art.c("joueur_accent").darkened(0.3).lerp(Art.c("decor").lightened(0.3), u)
 		ci.draw_colored_polygon(HeroArt.leaf_pts(q, 5.0, u * 6.0 + i), Color(lc, 1.0 - u))
+
+
+# --- Spore ---
+
+## Vesse-de-loup : le champignon sort de terre (anticipation), respire en lâchant une spore de temps
+## en temps tant qu'il guette (armé : un anneau de pointillés au sol marque sa portée), puis éclate
+## en collerette de poussière violette (coup) qui retombe (fin). « burst » : instant de l'éclatement.
+static func _vesse(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
+	var p: Vector2 = e["pos"]
+	var r: float = e.get("r", 90.0)
+	var t: float = e["t"]
+	var col := Art.ec("poison")
+	var clair := Art.ec("poison", "clair")
+	var sombre := Art.ec("poison", "sombre")
+	if e.has("burst"):
+		var bk := clampf((t - float(e["burst"])) / 0.45, 0.0, 1.0)
+		var g := Anim.ease_out(bk)
+		var a := 1.0 - bk
+		if on_ground:
+			ci.draw_circle(p, r * (0.4 + 0.6 * g), Color(sombre, 0.3 * a))
+			return
+		ci.draw_arc(p, r * (0.3 + 0.75 * g), 0.0, TAU, 40, Color(clair, 0.9 * a), 4.0 * a + 0.5, true)
+		for i in 10:
+			var d := Vector2.from_angle(i * TAU / 10.0 + 0.2)
+			ci.draw_circle(p + d * r * (0.15 + 0.8 * g) + Vector2(0, -12.0 * sin(bk * PI)), (5.0 - 3.0 * bk), Color(col, a))
+		ci.draw_circle(p, 10.0 * (1.0 - g), Color(clair, a))
+		return
+	var grow := Anim.pop(clampf(t / 0.3, 0.0, 1.0))
+	var armed: bool = t >= float(e.get("arm", 0.5))
+	var breathe := 1.0 + 0.06 * sin(t * 4.0)
+	if on_ground:
+		ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, 4), 15.0 * grow, 6.0 * grow, 14), Color(Art.c("ombre"), 0.5))
+		if armed:
+			var segs := 14
+			for i in segs:
+				var a0 := i * TAU / segs + t * 0.3
+				ci.draw_arc(p, r * 0.75, a0, a0 + TAU / segs * 0.4, 3, Color(clair, 0.3), Art.TRAIT_FIN, true)
+		return
+	# Pied clair, chapeau rond violet tacheté, contour de la charte.
+	var s := 13.0 * grow
+	ci.draw_rect(Rect2(p + Vector2(-s * 0.28, -s * 0.5), Vector2(s * 0.56, s * 0.9)), Art.ec("poison", "clair").lightened(0.3))
+	var cap := Art.ellipse(p + Vector2(0, -s * 0.6), s * breathe, s * 0.75 * breathe, 18)
+	var edge := cap.duplicate()
+	edge.append(cap[0])
+	ci.draw_colored_polygon(cap, col)
+	ci.draw_polyline(edge, Art.c("contour"), Art.TRAIT, true)
+	ci.draw_circle(p + Vector2(-s * 0.35, -s * 0.85), s * 0.18, clair)
+	ci.draw_circle(p + Vector2(s * 0.3, -s * 0.6), s * 0.14, clair)
+	ci.draw_circle(p + Vector2(s * 0.0, -s * 1.05), s * 0.1, clair)
+	if armed:
+		# Une spore monte du chapeau toutes les 0,8 s.
+		var bk := fposmod(t, 0.8) / 0.8
+		ci.draw_circle(p + Vector2(sin(t * 3.0) * 4.0, -s * 1.4 - bk * 22.0), 2.5 * (1.0 - bk) + 0.5, Color(clair, 1.0 - bk))
+
+
+## Essaim : un filament de spores file d'un ennemi à l'autre, une boule de spores à sa tête,
+## et un éclat au point touché.
+static func _essaim(ci: CanvasItem, e: Dictionary, k: float) -> void:
+	var p: Vector2 = e["pos"]
+	var to: Vector2 = e.get("to", p)
+	var col := Art.ec("poison")
+	var clair := Art.ec("poison", "clair")
+	var head := Anim.ease_out(clampf(k / 0.5, 0.0, 1.0))
+	var a := 1.0 - clampf((k - 0.5) / 0.5, 0.0, 1.0)
+	var d := to - p
+	var n := d.orthogonal().normalized() * minf(18.0, d.length() * 0.15)
+	var pts := PackedVector2Array()
+	for i in 9:
+		var u := i / 8.0 * head
+		pts.append(p + d * u + n * sin(u * TAU) * (1.0 - u))
+	ci.draw_polyline(pts, Color(col, 0.8 * a), 3.0, true)
+	ci.draw_polyline(pts, Color(clair, 0.5 * a), 1.2, true)
+	var q: Vector2 = pts[pts.size() - 1]
+	for i in 4:
+		ci.draw_circle(q + Vector2.from_angle(i * TAU / 4.0 + k * 8.0) * 4.0, 3.0, Color(col, a))
+	ci.draw_circle(q, 3.5, Color(clair, a))
+	if k > 0.45:
+		var bk := (k - 0.45) / 0.55
+		ci.draw_arc(to, 6.0 + 14.0 * Anim.ease_out(bk), 0.0, TAU, 16, Color(clair, 0.8 * (1.0 - bk)), 2.0, true)
+
+
+## Éclosion : un anneau violet se resserre sur le héros (anticipation), le poison de chaque Flétri
+## touché éclot en fleur de spores (coup), et la poussière retombe en s'élargissant (fin).
+static func _eclosion(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> void:
+	var p: Vector2 = e["pos"]
+	var r: float = e["r"]
+	var col := Art.ec("poison")
+	var clair := Art.ec("poison", "clair")
+	var sombre := Art.ec("poison", "sombre")
+	var close := 0.25
+	var targets: Array = e.get("targets", [])
+	if on_ground:
+		var c := Anim.ease_in(clampf(k / close, 0.0, 1.0))
+		var a := 1.0 - clampf((k - close) / 0.3, 0.0, 1.0)
+		ci.draw_circle(p, r, Color(sombre, 0.16 * a))
+		ci.draw_arc(p, lerpf(r, 28.0, c), 0, TAU, 56, Color(col, 0.7 * a), 4.0, true)
+		for q: Vector2 in targets:
+			var bk := clampf((k - close * 0.6) / 0.5, 0.0, 1.0)
+			ci.draw_circle(q, 30.0 * Anim.ease_out(bk), Color(sombre, 0.25 * (1.0 - bk)))
+		return
+	for q: Vector2 in targets:
+		var bk := clampf((k - close * 0.6) / 0.6, 0.0, 1.0)
+		if bk <= 0.0 or bk >= 1.0:
+			continue
+		var b := Anim.ease_out(bk)
+		var a := 1.0 - bk
+		# Fleur de spores : cinq pétales ronds qui s'ouvrent, cœur clair, poussière qui monte.
+		for i in 5:
+			var d := Vector2.from_angle(i * TAU / 5.0 - PI / 2.0)
+			ci.draw_circle(q + d * 14.0 * b, 7.0 * (1.0 - 0.4 * bk), Color(col, 0.8 * a))
+		ci.draw_circle(q, 5.0 * (1.0 - bk) + 1.0, Color(clair, a))
+		for i in 6:
+			var d := Vector2.from_angle(i * TAU / 6.0 + 0.4)
+			ci.draw_circle(q + d * 26.0 * b + Vector2(0, -16.0 * bk), 2.0, Color(clair, 0.8 * a))
+	if k > 0.6:
+		var hk := (k - 0.6) / 0.4
+		ci.draw_arc(p, 18.0 + 16.0 * Anim.ease_out(hk), 0, TAU, 32, Color(clair, 0.7 * (1.0 - hk)), 3.0, true)

@@ -2,39 +2,164 @@
   "id": "spore",
   "name": "Spore",
   "color": "#b48ae0",
-  "blurb": "Poison et zones",
+  "blurb": "Poison, nuages et propagation",
   "small": [
-    {"stat": "poison", "op": "add", "value": 0.06},
-    {"stat": "area", "op": "inc", "value": 0.05}
+    {
+      "stat": "poison",
+      "op": "add",
+      "value": 0.05
+    },
+    {
+      "stat": "area",
+      "op": "inc",
+      "value": 0.04
+    }
   ],
   "notable": {
-    "effects": [{"stat": "poison", "op": "add", "value": 0.1}],
+    "effects": [
+      {
+        "stat": "poison",
+        "op": "add",
+        "value": 0.08
+      },
+      {
+        "stat": "area_damage",
+        "op": "inc",
+        "value": 0.05
+      }
+    ],
     "names": [
       ["Hyphe", "Spore", "Moisissure", "Filament", "Sporée", "Trame"],
       ["sombre", "tissée", "fertile", "muette", "rampante", "violette"]
     ]
   },
   "keystones": [
-    {"key": "cloud", "name": "Nuage de spores", "effects": [{"skill": "cloud"}]},
-    {"key": "mycose", "name": "Mycose", "effects": [
-      {"stat": "poison", "op": "more", "value": 2},
-      {"stat": "poison", "op": "flat", "value": 0.15}
-    ]},
-    {"key": "contagion", "name": "Contagion", "effects": [
-      {
-        "on": "kill", "if": {"state": "cible_empoisonnee"},
-        "do": "spread_poison", "radius": 110, "duration": 3, "color": "#b48ae0",
-        "text": "Un ennemi empoisonné qui meurt transmet son poison autour de lui."
-      }
-    ]}
+    {
+      "key": "cloud",
+      "name": "Nuage de spores",
+      "desc": "Le nuage te ralentit un peu : tu marches moins vite.",
+      "effects": [
+        {
+          "skill": "cloud"
+        },
+        {
+          "stat": "poison",
+          "op": "add",
+          "value": 0.05
+        },
+        {
+          "stat": "move_speed",
+          "op": "inc",
+          "value": -0.04
+        }
+      ]
+    },
+    {
+      "key": "mycose",
+      "name": "Mycose",
+      "desc": "Ton poison redouble, mais tes coups directs faiblissent.",
+      "effects": [
+        {
+          "stat": "poison",
+          "op": "more",
+          "value": 2
+        },
+        {
+          "stat": "poison",
+          "op": "flat",
+          "value": 0.15
+        },
+        {
+          "stat": "damage",
+          "op": "more",
+          "value": 0.85
+        }
+      ]
+    },
+    {
+      "key": "contagion",
+      "name": "Contagion",
+      "effects": [
+        {
+          "on": "kill",
+          "if": {
+            "state": "cible_empoisonnee"
+          },
+          "do": "spread_poison",
+          "radius": 110,
+          "duration": 3,
+          "color": "#b48ae0",
+          "text": "Un ennemi empoisonné qui meurt transmet son poison autour de lui."
+        }
+      ]
+    }
+  ],
+  "resonance": [
+    {
+      "count": 10,
+      "name": "Résonance de la Spore I",
+      "effects": [
+        {
+          "stat": "poison",
+          "op": "add",
+          "value": 0.04
+        },
+        {
+          "stat": "area_damage",
+          "op": "inc",
+          "value": 0.08
+        }
+      ]
+    },
+    {
+      "count": 25,
+      "name": "Résonance de la Spore II",
+      "effects": [
+        {
+          "stat": "area",
+          "op": "inc",
+          "value": 0.15
+        },
+        {
+          "stat": "skill_slots",
+          "op": "add",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "count": 50,
+      "name": "Résonance de la Spore III",
+      "effects": [
+        {
+          "stat": "damage",
+          "op": "more",
+          "value": 1.12
+        },
+        {
+          "stat": "skill_slots",
+          "op": "add",
+          "value": 1
+        },
+        {
+          "on": "kill",
+          "if": {
+            "state": "cible_empoisonnee"
+          },
+          "do": "heal",
+          "value": 0.01,
+          "text": "Chaque ennemi empoisonné vaincu te rend 1 % de ta vie maximale."
+        }
+      ]
+    }
   ],
   "clusters": [
     {
       "id": "graines",
       "name": "Graines vénéneuses",
       "theme": "Attaque empoisonnée",
-      "ring": 2.5,
-      "angle": 0.35,
+      "ring": 2.3,
+      "angle": 0.12,
       "entry": ["a1"],
       "nodes": [
         {
@@ -43,8 +168,1422 @@
           "name": "Graines vénéneuses",
           "at": [0, 0],
           "effects": [
-            {"attack_mod": "poison", "value": 0.15}
+            {
+              "attack_mod": "poison",
+              "value": 0.15
+            }
           ]
+        },
+        {
+          "id": "a2",
+          "type": "attack",
+          "name": "Dards fongiques",
+          "at": [0.55, -0.4],
+          "links": ["a1"],
+          "effects": [
+            {
+              "attack_form": "dard"
+            }
+          ]
+        },
+        {
+          "id": "a3",
+          "type": "attack",
+          "name": "Graines sauteuses",
+          "at": [0.55, 0.4],
+          "links": ["a1"],
+          "effects": [
+            {
+              "attack_mod": "saut",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "id": "a4",
+          "type": "notable",
+          "name": "Sève aigre",
+          "at": [1.05, 0],
+          "links": ["a2", "a3"],
+          "effects": [
+            {
+              "stat": "poison",
+              "op": "add",
+              "value": 0.04
+            },
+            {
+              "stat": "projectile_damage",
+              "op": "inc",
+              "value": 0.12
+            }
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Graines complètes",
+        "effects": [
+          {
+            "stat": "poison",
+            "op": "more",
+            "value": 1.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "nuee",
+      "name": "Vesse-de-loup",
+      "theme": "Champignons-pièges et spores lobées",
+      "ring": 2.6,
+      "angle": 0.8,
+      "entry": ["n1"],
+      "nodes": [
+        {
+          "id": "n1",
+          "type": "skill",
+          "name": "Première vesse",
+          "at": [0, 0],
+          "effects": [
+            {
+              "skill": "vesse"
+            }
+          ]
+        },
+        {
+          "id": "n2",
+          "type": "notable",
+          "name": "Chapeau gonflé",
+          "at": [0.55, -0.35],
+          "links": ["n1"],
+          "effects": [
+            {
+              "stat": "area",
+              "op": "inc",
+              "value": 0.08
+            },
+            {
+              "stat": "area_damage",
+              "op": "inc",
+              "value": 0.12
+            }
+          ]
+        },
+        {
+          "id": "n3",
+          "type": "notable",
+          "name": "Spores légères",
+          "at": [0.55, 0.35],
+          "links": ["n1"],
+          "effects": [
+            {
+              "on": "kill",
+              "do": "reduce_cooldown",
+              "target": "vesse",
+              "value": 0.15,
+              "cooldown": 0.1,
+              "text": "Chaque ennemi vaincu réduit la recharge de la Vesse-de-loup de 0,15 s."
+            },
+            {
+              "stat": "move_speed",
+              "op": "inc",
+              "value": 0.05
+            }
+          ]
+        },
+        {
+          "id": "n4",
+          "type": "mastery",
+          "name": "Maîtrise des spores",
+          "at": [1.05, 0],
+          "links": ["n2", "n3"],
+          "choices": [
+            {
+              "id": "spores_denses",
+              "name": "Spores denses",
+              "effects": [
+                {
+                  "stat": "area_damage",
+                  "op": "inc",
+                  "value": 0.2
+                }
+              ]
+            },
+            {
+              "id": "spores_vastes",
+              "name": "Spores vastes",
+              "effects": [
+                {
+                  "stat": "area",
+                  "op": "inc",
+                  "value": 0.12
+                }
+              ]
+            },
+            {
+              "id": "spores_vives",
+              "name": "Spores vives",
+              "effects": [
+                {
+                  "stat": "fire_rate",
+                  "op": "inc",
+                  "value": 0.1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n5",
+          "type": "mutation",
+          "name": "Vesse transformée",
+          "mutates": "vesse",
+          "at": [1.5, -0.3],
+          "links": ["n4"],
+          "choices": [
+            {
+              "id": "vesse_geante",
+              "name": "Vesse géante",
+              "effects": [
+                {
+                  "skill_mod": "vesse",
+                  "param": "radius",
+                  "op": "more",
+                  "value": 1.4,
+                  "text": "+40 % rayon de la Vesse-de-loup"
+                },
+                {
+                  "skill_mod": "vesse",
+                  "param": "cooldown",
+                  "op": "more",
+                  "value": 1.25,
+                  "text": "+25 % recharge de la Vesse-de-loup"
+                }
+              ]
+            },
+            {
+              "id": "colonie",
+              "name": "Colonie",
+              "effects": [
+                {
+                  "skill_mod": "vesse",
+                  "param": "max",
+                  "op": "add",
+                  "value": 2,
+                  "text": "+2 champignons à la fois"
+                },
+                {
+                  "skill_mod": "vesse",
+                  "param": "damage",
+                  "op": "more",
+                  "value": 0.8,
+                  "text": "−20 % dégâts de la Vesse-de-loup"
+                }
+              ]
+            },
+            {
+              "id": "vesse_veneneuse",
+              "name": "Vesse vénéneuse",
+              "effects": [
+                {
+                  "skill_mod": "vesse",
+                  "param": "poison",
+                  "op": "set",
+                  "value": 0.6,
+                  "text": "L'éclatement empoisonne (60 % de ses dégâts par seconde, 4 s)"
+                },
+                {
+                  "skill_mod": "vesse",
+                  "param": "cloud_duration",
+                  "op": "more",
+                  "value": 1.5,
+                  "text": "+50 % durée du nuage de la Vesse-de-loup"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n6",
+          "type": "attack",
+          "name": "Spores lobées",
+          "at": [0.25, 0.8],
+          "links": ["n3"],
+          "effects": [
+            {
+              "attack_form": "spore_lobee"
+            }
+          ]
+        },
+        {
+          "id": "n7",
+          "type": "notable",
+          "name": "Moisissure",
+          "at": [1.5, 0.35],
+          "links": ["n4"],
+          "effects": [
+            {
+              "stat": "poison",
+              "op": "add",
+              "value": 0.03
+            },
+            {
+              "stat": "area_damage",
+              "op": "inc",
+              "value": 0.1
+            }
+          ]
+        },
+        {
+          "id": "n8",
+          "type": "graft",
+          "name": "Greffon de la vesse",
+          "at": [1.95, 0.1],
+          "links": ["n7"]
+        },
+        {
+          "id": "n9",
+          "type": "attack",
+          "name": "Spores lourdes",
+          "at": [1.95, 0.6],
+          "links": ["n7"],
+          "effects": [
+            {
+              "attack_mod": "taille",
+              "value": 0.3
+            }
+          ]
+        },
+        {
+          "id": "n10",
+          "type": "attack",
+          "name": "Bouffées",
+          "at": [2.45, 0.8],
+          "links": ["n9"],
+          "effects": [
+            {
+              "attack_mod": "bouffee",
+              "value": 0.35
+            }
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Vesse complète",
+        "effects": [
+          {
+            "stat": "area_damage",
+            "op": "more",
+            "value": 1.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "brume",
+      "name": "Brume toxique",
+      "theme": "Nuage de spores",
+      "ring": 6.0,
+      "angle": 0.84,
+      "entry": ["b1"],
+      "nodes": [
+        {
+          "id": "b1",
+          "type": "notable",
+          "name": "Brume lourde",
+          "at": [0, 0],
+          "effects": [
+            {
+              "stat": "area_damage",
+              "op": "inc",
+              "value": 0.15
+            },
+            {
+              "stat": "poison",
+              "op": "add",
+              "value": 0.02
+            }
+          ]
+        },
+        {
+          "id": "b2",
+          "type": "notable",
+          "name": "Nappe",
+          "at": [0.5, -0.4],
+          "links": ["b1"],
+          "effects": [
+            {
+              "skill_mod": "cloud",
+              "param": "duration",
+              "op": "add",
+              "value": 1.5,
+              "text": "Nuage de spores : +1,5 s de durée."
+            }
+          ]
+        },
+        {
+          "id": "b3",
+          "type": "notable",
+          "name": "Spores collantes",
+          "at": [0.5, 0.4],
+          "links": ["b1"],
+          "effects": [
+            {
+              "on": "kill",
+              "if": {
+                "state": "cible_empoisonnee"
+              },
+              "do": "reduce_cooldown",
+              "target": "cloud",
+              "value": 0.3,
+              "cooldown": 0.1,
+              "text": "Un ennemi empoisonné vaincu réduit la recharge du Nuage de spores de 0,3 s."
+            }
+          ]
+        },
+        {
+          "id": "b4",
+          "type": "mastery",
+          "name": "Maîtrise de la brume",
+          "at": [1.0, 0],
+          "links": ["b2", "b3"],
+          "choices": [
+            {
+              "id": "brume_epaisse",
+              "name": "Brume épaisse",
+              "effects": [
+                {
+                  "skill_mod": "cloud",
+                  "param": "damage",
+                  "op": "more",
+                  "value": 1.25,
+                  "text": "Nuage de spores : dégâts ×1,25."
+                }
+              ]
+            },
+            {
+              "id": "brume_large",
+              "name": "Brume large",
+              "effects": [
+                {
+                  "stat": "area",
+                  "op": "inc",
+                  "value": 0.15
+                }
+              ]
+            },
+            {
+              "id": "brume_rapide",
+              "name": "Brume rapide",
+              "effects": [
+                {
+                  "skill_mod": "cloud",
+                  "param": "cooldown",
+                  "op": "more",
+                  "value": 0.8,
+                  "text": "Nuage de spores : −20 % de recharge."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b5",
+          "type": "mutation",
+          "name": "Nuage transformé",
+          "mutates": "cloud",
+          "at": [1.45, -0.35],
+          "links": ["b4"],
+          "choices": [
+            {
+              "id": "grand_nuage",
+              "name": "Grand nuage",
+              "effects": [
+                {
+                  "skill_mod": "cloud",
+                  "param": "radius",
+                  "op": "more",
+                  "value": 1.5,
+                  "text": "+50 % rayon du Nuage de spores"
+                },
+                {
+                  "skill_mod": "cloud",
+                  "param": "damage",
+                  "op": "more",
+                  "value": 0.8,
+                  "text": "−20 % dégâts du Nuage de spores"
+                }
+              ]
+            },
+            {
+              "id": "nuage_dense",
+              "name": "Nuage dense",
+              "effects": [
+                {
+                  "skill_mod": "cloud",
+                  "param": "damage",
+                  "op": "more",
+                  "value": 1.6,
+                  "text": "+60 % dégâts du Nuage de spores"
+                },
+                {
+                  "skill_mod": "cloud",
+                  "param": "duration",
+                  "op": "more",
+                  "value": 0.6,
+                  "text": "−40 % durée du Nuage de spores"
+                }
+              ]
+            },
+            {
+              "id": "nuage_tenace",
+              "name": "Nuage tenace",
+              "effects": [
+                {
+                  "skill_mod": "cloud",
+                  "param": "duration",
+                  "op": "more",
+                  "value": 2.0,
+                  "text": "Durée du Nuage de spores doublée"
+                },
+                {
+                  "skill_mod": "cloud",
+                  "param": "cooldown",
+                  "op": "more",
+                  "value": 1.3,
+                  "text": "+30 % recharge du Nuage de spores"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "b6",
+          "type": "keystone",
+          "name": "Brouillard vivant",
+          "key": "brouillard",
+          "at": [1.5, 0.3],
+          "links": ["b4"],
+          "excludes": ["pandemie"],
+          "desc": "Ton Nuage de spores naît sur toi et te suit, un peu plus petit. Exclut Pandémie.",
+          "effects": [
+            {
+              "skill_mod": "cloud",
+              "param": "follow",
+              "op": "set",
+              "value": true,
+              "text": "Le Nuage de spores naît sur toi et te suit."
+            },
+            {
+              "skill_mod": "cloud",
+              "param": "radius",
+              "op": "more",
+              "value": 0.85,
+              "text": "−15 % rayon du Nuage de spores"
+            },
+            {
+              "skill_mod": "cloud",
+              "param": "duration",
+              "op": "more",
+              "value": 1.5,
+              "text": "+50 % durée du Nuage de spores"
+            },
+            {
+              "stat": "armor",
+              "op": "add",
+              "value": 0.05
+            }
+          ]
+        },
+        {
+          "id": "b7",
+          "type": "notable",
+          "name": "Nappe dormante",
+          "at": [1.95, 0],
+          "links": ["b5", "b6"],
+          "effects": [
+            {
+              "stat": "area",
+              "op": "inc",
+              "value": 0.1
+            },
+            {
+              "stat": "regen",
+              "op": "add",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "id": "b8",
+          "type": "attack",
+          "name": "Pluie de spores",
+          "at": [2.0, -0.5],
+          "links": ["b5"],
+          "effects": [
+            {
+              "attack_mod": "renforcee",
+              "value": 3
+            }
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Brume complète",
+        "effects": [
+          {
+            "stat": "area",
+            "op": "inc",
+            "value": 0.1
+          },
+          {
+            "stat": "poison",
+            "op": "more",
+            "value": 1.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "toxines",
+      "name": "Toxines",
+      "theme": "Éclosion du poison",
+      "ring": 5.0,
+      "angle": 0.16,
+      "entry": ["t1"],
+      "nodes": [
+        {
+          "id": "t1",
+          "type": "skill",
+          "name": "Éclosion",
+          "at": [0, 0],
+          "effects": [
+            {
+              "skill": "eclosion"
+            },
+            {
+              "stat": "poison",
+              "op": "add",
+              "value": 0.03
+            }
+          ]
+        },
+        {
+          "id": "t2",
+          "type": "notable",
+          "name": "Venin concentré",
+          "at": [0.5, -0.4],
+          "links": ["t1"],
+          "effects": [
+            {
+              "stat": "poison",
+              "op": "add",
+              "value": 0.05
+            }
+          ]
+        },
+        {
+          "id": "t3",
+          "type": "notable",
+          "name": "Spores mûres",
+          "at": [0.5, 0.4],
+          "links": ["t1"],
+          "effects": [
+            {
+              "on": "kill",
+              "if": {
+                "state": "cible_empoisonnee"
+              },
+              "do": "reduce_cooldown",
+              "target": "eclosion",
+              "value": 0.3,
+              "cooldown": 0.1,
+              "text": "Un ennemi empoisonné vaincu réduit la recharge de l'Éclosion de 0,3 s."
+            }
+          ]
+        },
+        {
+          "id": "t4",
+          "type": "mastery",
+          "name": "Maîtrise des toxines",
+          "at": [1.0, 0],
+          "links": ["t2", "t3"],
+          "choices": [
+            {
+              "id": "toxines_fortes",
+              "name": "Toxines fortes",
+              "effects": [
+                {
+                  "stat": "poison",
+                  "op": "inc",
+                  "value": 0.25
+                }
+              ]
+            },
+            {
+              "id": "toxines_vastes",
+              "name": "Toxines vastes",
+              "effects": [
+                {
+                  "skill_mod": "eclosion",
+                  "param": "radius",
+                  "op": "more",
+                  "value": 1.3,
+                  "text": "Éclosion : rayon ×1,3."
+                }
+              ]
+            },
+            {
+              "id": "toxines_vives",
+              "name": "Toxines vives",
+              "effects": [
+                {
+                  "stat": "fire_rate",
+                  "op": "inc",
+                  "value": 0.1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "t5",
+          "type": "mutation",
+          "name": "Éclosion transformée",
+          "mutates": "eclosion",
+          "at": [1.45, -0.35],
+          "links": ["t4"],
+          "choices": [
+            {
+              "id": "eclosion_lente",
+              "name": "Éclosion lente",
+              "effects": [
+                {
+                  "skill_mod": "eclosion",
+                  "param": "keep",
+                  "op": "set",
+                  "value": 0.5,
+                  "text": "L'Éclosion ne consomme que la moitié du poison"
+                },
+                {
+                  "skill_mod": "eclosion",
+                  "param": "burst",
+                  "op": "more",
+                  "value": 0.7,
+                  "text": "−30 % dégâts de l'Éclosion"
+                }
+              ]
+            },
+            {
+              "id": "eclosion_violente",
+              "name": "Éclosion violente",
+              "effects": [
+                {
+                  "skill_mod": "eclosion",
+                  "param": "burst",
+                  "op": "more",
+                  "value": 1.5,
+                  "text": "+50 % dégâts de l'Éclosion"
+                },
+                {
+                  "skill_mod": "eclosion",
+                  "param": "splash",
+                  "op": "more",
+                  "value": 0.0,
+                  "text": "Les spores n'éclaboussent plus les voisins"
+                }
+              ]
+            },
+            {
+              "id": "eclosion_contagieuse",
+              "name": "Éclosion contagieuse",
+              "effects": [
+                {
+                  "skill_mod": "eclosion",
+                  "param": "splash",
+                  "op": "more",
+                  "value": 2.0,
+                  "text": "Rayon d'éclaboussure de l'Éclosion doublé"
+                },
+                {
+                  "skill_mod": "eclosion",
+                  "param": "burst",
+                  "op": "more",
+                  "value": 0.85,
+                  "text": "−15 % dégâts de l'Éclosion"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "t6",
+          "type": "keystone",
+          "name": "Chair fongique",
+          "key": "chair_fongique",
+          "at": [1.5, 0.3],
+          "links": ["t4"],
+          "desc": "Ton corps se couvre de moisissure : chaque coup reçu relâche un nuage de spores, mais ta vie maximale baisse.",
+          "effects": [
+            {
+              "on": "hurt",
+              "do": "cloud",
+              "radius": 120,
+              "duration": 3,
+              "factor": 1.2,
+              "cooldown": 0.8,
+              "text": "Quand un coup te touche, un nuage de spores éclot autour de toi (×1,2 dégâts par seconde, 3 s ; toutes les 0,8 s au plus)."
+            },
+            {
+              "stat": "max_hp",
+              "op": "more",
+              "value": 0.85
+            }
+          ]
+        },
+        {
+          "id": "t7",
+          "type": "attack",
+          "name": "Dards empoisonnés",
+          "at": [1.0, 0.85],
+          "links": ["t3"],
+          "effects": [
+            {
+              "attack_mod": "poison",
+              "value": 0.25
+            }
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Toxines complètes",
+        "effects": [
+          {
+            "stat": "poison",
+            "op": "more",
+            "value": 1.15
+          }
+        ]
+      }
+    },
+    {
+      "id": "propagation",
+      "name": "Propagation",
+      "theme": "Essaim et contagion",
+      "ring": 7.8,
+      "angle": 0.2,
+      "entry": ["c1"],
+      "nodes": [
+        {
+          "id": "c1",
+          "type": "skill",
+          "name": "Essaim",
+          "at": [0, 0],
+          "effects": [
+            {
+              "skill": "essaim"
+            },
+            {
+              "stat": "poison",
+              "op": "add",
+              "value": 0.03
+            }
+          ]
+        },
+        {
+          "id": "c2",
+          "type": "notable",
+          "name": "Hyphes",
+          "at": [0.5, -0.4],
+          "links": ["c1"],
+          "effects": [
+            {
+              "skill_mod": "essaim",
+              "param": "jumps",
+              "op": "add",
+              "value": 2,
+              "text": "Essaim : +2 sauts."
+            }
+          ]
+        },
+        {
+          "id": "c3",
+          "type": "notable",
+          "name": "Porteur",
+          "at": [0.5, 0.4],
+          "links": ["c1"],
+          "effects": [
+            {
+              "on": "kill",
+              "if": {
+                "state": "cible_empoisonnee"
+              },
+              "do": "reduce_cooldown",
+              "target": "essaim",
+              "value": 0.25,
+              "cooldown": 0.1,
+              "text": "Un ennemi empoisonné vaincu réduit la recharge de l'Essaim de 0,25 s."
+            },
+            {
+              "stat": "projectile_damage",
+              "op": "inc",
+              "value": 0.1
+            }
+          ]
+        },
+        {
+          "id": "c4",
+          "type": "mastery",
+          "name": "Maîtrise de la contagion",
+          "at": [1.0, 0],
+          "links": ["c2", "c3"],
+          "choices": [
+            {
+              "id": "virulence",
+              "name": "Virulence",
+              "effects": [
+                {
+                  "stat": "poison",
+                  "op": "add",
+                  "value": 0.05
+                }
+              ]
+            },
+            {
+              "id": "contagion_rapide",
+              "name": "Contagion rapide",
+              "effects": [
+                {
+                  "skill_mod": "essaim",
+                  "param": "hop",
+                  "op": "more",
+                  "value": 0.6,
+                  "text": "Essaim : sauts 40 % plus rapides."
+                }
+              ]
+            },
+            {
+              "id": "longue_portee",
+              "name": "Longue portée",
+              "effects": [
+                {
+                  "skill_mod": "essaim",
+                  "param": "reach",
+                  "op": "more",
+                  "value": 1.35,
+                  "text": "Essaim : portée des sauts ×1,35."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c5",
+          "type": "mutation",
+          "name": "Essaim transformé",
+          "mutates": "essaim",
+          "at": [1.45, 0.35],
+          "links": ["c4"],
+          "choices": [
+            {
+              "id": "essaim_double",
+              "name": "Essaim double",
+              "effects": [
+                {
+                  "skill_mod": "essaim",
+                  "param": "split",
+                  "op": "set",
+                  "value": true,
+                  "text": "Au premier ennemi, l'Essaim se divise en deux"
+                },
+                {
+                  "skill_mod": "essaim",
+                  "param": "damage",
+                  "op": "more",
+                  "value": 0.75,
+                  "text": "−25 % dégâts de l'Essaim"
+                }
+              ]
+            },
+            {
+              "id": "essaim_long",
+              "name": "Essaim tenace",
+              "effects": [
+                {
+                  "skill_mod": "essaim",
+                  "param": "jumps",
+                  "op": "add",
+                  "value": 4,
+                  "text": "+4 sauts de l'Essaim"
+                },
+                {
+                  "skill_mod": "essaim",
+                  "param": "cooldown",
+                  "op": "more",
+                  "value": 1.2,
+                  "text": "+20 % recharge de l'Essaim"
+                }
+              ]
+            },
+            {
+              "id": "essaim_virulent",
+              "name": "Essaim virulent",
+              "effects": [
+                {
+                  "skill_mod": "essaim",
+                  "param": "poison",
+                  "op": "more",
+                  "value": 1.6,
+                  "text": "+60 % poison de l'Essaim"
+                },
+                {
+                  "skill_mod": "essaim",
+                  "param": "jumps",
+                  "op": "add",
+                  "value": -2,
+                  "text": "−2 sauts de l'Essaim"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c6",
+          "type": "keystone",
+          "name": "Pandémie",
+          "key": "pandemie",
+          "at": [1.5, -0.3],
+          "links": ["c4"],
+          "excludes": ["brouillard"],
+          "desc": "Tout passe par le poison : il se transmet tout seul, mais tes coups ne sont plus jamais critiques. Exclut Brouillard vivant.",
+          "effects": [
+            {
+              "on": "kill",
+              "if": {
+                "state": "cible_empoisonnee"
+              },
+              "do": "spread_poison",
+              "radius": 130,
+              "duration": 3,
+              "color": "#b48ae0",
+              "cooldown": 0.15,
+              "text": "Un ennemi empoisonné qui meurt transmet son poison autour de lui."
+            },
+            {
+              "stat": "poison",
+              "op": "more",
+              "value": 1.35
+            },
+            {
+              "stat": "crit",
+              "op": "more",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "c7",
+          "type": "attack",
+          "name": "Graines contagieuses",
+          "at": [1.0, -0.85],
+          "links": ["c2"],
+          "effects": [
+            {
+              "attack_mod": "saut",
+              "value": 1
+            },
+            {
+              "attack_mod": "poison",
+              "value": 0.1
+            }
+          ]
+        },
+        {
+          "id": "c8",
+          "type": "notable",
+          "name": "Fièvre",
+          "at": [1.95, 0],
+          "links": ["c5", "c6"],
+          "effects": [
+            {
+              "on": "kill",
+              "if": {
+                "state": "cible_empoisonnee"
+              },
+              "do": "explode",
+              "radius": 80,
+              "factor": 0.4,
+              "color": "#b48ae0",
+              "cooldown": 0.2,
+              "text": "Un ennemi empoisonné qui meurt éclate et blesse ses voisins (40 % du coup, au plus toutes les 0,2 s)."
+            }
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Propagation complète",
+        "effects": [
+          {
+            "stat": "poison",
+            "op": "more",
+            "value": 1.15
+          }
+        ]
+      }
+    },
+    {
+      "id": "pourriture",
+      "name": "Pourriture",
+      "theme": "Poison profond",
+      "ring": 10.0,
+      "angle": 0.3,
+      "entry": ["r1"],
+      "nodes": [
+        {
+          "id": "r1",
+          "type": "notable",
+          "name": "Bois pourri",
+          "at": [0, 0],
+          "effects": [
+            {
+              "stat": "poison",
+              "op": "add",
+              "value": 0.04
+            },
+            {
+              "stat": "area_damage",
+              "op": "inc",
+              "value": 0.1
+            }
+          ]
+        },
+        {
+          "id": "r2",
+          "type": "notable",
+          "name": "Spores noires",
+          "at": [0.5, -0.4],
+          "links": ["r1"],
+          "effects": [
+            {
+              "stat": "poison",
+              "op": "inc",
+              "value": 0.2
+            }
+          ]
+        },
+        {
+          "id": "r3",
+          "type": "notable",
+          "name": "Humus",
+          "at": [0.5, 0.4],
+          "links": ["r1"],
+          "effects": [
+            {
+              "stat": "regen",
+              "op": "add",
+              "value": 1
+            },
+            {
+              "on": "kill",
+              "if": {
+                "state": "cible_empoisonnee"
+              },
+              "do": "heal",
+              "value": 0.005,
+              "cooldown": 0.2,
+              "text": "Un ennemi empoisonné vaincu te rend 0,5 % de ta vie maximale (au plus 5 fois par seconde)."
+            }
+          ]
+        },
+        {
+          "id": "r4",
+          "type": "mastery",
+          "name": "Maîtrise de la pourriture",
+          "at": [1.0, 0],
+          "links": ["r2", "r3"],
+          "choices": [
+            {
+              "id": "venin",
+              "name": "Venin",
+              "effects": [
+                {
+                  "stat": "poison",
+                  "op": "inc",
+                  "value": 0.2
+                }
+              ]
+            },
+            {
+              "id": "spores",
+              "name": "Spores",
+              "effects": [
+                {
+                  "stat": "area",
+                  "op": "inc",
+                  "value": 0.12
+                }
+              ]
+            },
+            {
+              "id": "seve_noire",
+              "name": "Sève noire",
+              "effects": [
+                {
+                  "stat": "max_hp",
+                  "op": "inc",
+                  "value": 0.12
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "r5",
+          "type": "attack",
+          "name": "Spores jumelles",
+          "at": [1.0, -0.8],
+          "links": ["r2"],
+          "effects": [
+            {
+              "attack_mod": "repetition",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": "r6",
+          "type": "attack",
+          "name": "Dards fourchus",
+          "at": [1.0, 0.8],
+          "links": ["r3"],
+          "effects": [
+            {
+              "attack_mod": "fourche",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "id": "r7",
+          "type": "graft",
+          "name": "Greffon de la pourriture",
+          "at": [1.5, 0],
+          "links": ["r4"]
+        }
+      ],
+      "complete": {
+        "name": "Pourriture complète",
+        "effects": [
+          {
+            "stat": "damage",
+            "op": "more",
+            "value": 1.05
+          }
+        ]
+      }
+    },
+    {
+      "id": "coeur",
+      "name": "Cœur de moisissure",
+      "theme": "Après l'Amanite-Mère",
+      "ring": 10.6,
+      "angle": 0.75,
+      "entry": ["h1"],
+      "nodes": [
+        {
+          "id": "h1",
+          "type": "notable",
+          "name": "Mycélium ancien",
+          "at": [0, 0],
+          "effects": [
+            {
+              "stat": "poison",
+              "op": "add",
+              "value": 0.05
+            },
+            {
+              "stat": "area_damage",
+              "op": "inc",
+              "value": 0.15
+            }
+          ]
+        },
+        {
+          "id": "h2",
+          "type": "withered",
+          "name": "Spores purifiées",
+          "at": [0.5, -0.45],
+          "links": ["h1"],
+          "effects": [
+            {
+              "stat": "max_hp",
+              "op": "inc",
+              "value": 0.15
+            },
+            {
+              "stat": "area",
+              "op": "inc",
+              "value": 0.12
+            }
+          ],
+          "requires_flag": "spore_coeur_purifie",
+          "requires_text": "Couvert de cendre tant que le Cœur de moisissure n'est pas purifié."
+        },
+        {
+          "id": "h3",
+          "type": "withered",
+          "name": "Héritage de l'Amanite-Mère",
+          "at": [0.5, 0.45],
+          "links": ["h1"],
+          "effects": [
+            {
+              "stat": "poison",
+              "op": "inc",
+              "value": 0.3
+            },
+            {
+              "stat": "area_damage",
+              "op": "inc",
+              "value": 0.2
+            },
+            {
+              "on": "kill",
+              "do": "reduce_cooldown",
+              "target": "cloud",
+              "value": 0.2,
+              "text": "Chaque ennemi vaincu réduit la recharge du Nuage de spores de 0,2 s."
+            }
+          ],
+          "requires_flag": "spore_boss_vaincu",
+          "requires_text": "Couvert de cendre tant que l'Amanite-Mère n'est pas vaincue."
+        },
+        {
+          "id": "h4",
+          "type": "graft",
+          "name": "Greffon de moisissure",
+          "at": [1.0, 0],
+          "links": ["h1", "h2", "h3"]
+        }
+      ],
+      "complete": {
+        "name": "Cœur complet",
+        "effects": [
+          {
+            "stat": "damage",
+            "op": "more",
+            "value": 1.08
+          },
+          {
+            "stat": "poison",
+            "op": "inc",
+            "value": 0.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "terreau",
+      "name": "Terreau",
+      "theme": "Frontière de la Sève",
+      "ring": 8.8,
+      "angle": 1.0,
+      "entry": ["u1"],
+      "nodes": [
+        {
+          "id": "u1",
+          "type": "notable",
+          "name": "Terreau",
+          "at": [0, 0],
+          "effects": [
+            {
+              "stat": "poison",
+              "op": "add",
+              "value": 0.03
+            },
+            {
+              "stat": "regen",
+              "op": "add",
+              "value": 0.5
+            }
+          ]
+        },
+        {
+          "id": "u2",
+          "type": "notable",
+          "name": "Pourriture féconde",
+          "at": [0.5, -0.35],
+          "links": ["u1"],
+          "effects": [
+            {
+              "stat": "max_hp",
+              "op": "inc",
+              "value": 0.1
+            }
+          ]
+        },
+        {
+          "id": "u3",
+          "type": "notable",
+          "name": "Spores de sève",
+          "at": [0.5, 0.35],
+          "links": ["u1"],
+          "effects": [
+            {
+              "on": "kill",
+              "do": "heal",
+              "value": 0.004,
+              "cooldown": 0.2,
+              "text": "Chaque ennemi vaincu te rend 0,4 % de ta vie maximale (au plus 5 fois par seconde)."
+            }
+          ]
+        },
+        {
+          "id": "u4",
+          "type": "mastery",
+          "name": "Maîtrise du terreau",
+          "at": [1.0, 0],
+          "links": ["u2", "u3"],
+          "choices": [
+            {
+              "id": "terreau_riche",
+              "name": "Terreau riche",
+              "effects": [
+                {
+                  "stat": "regen",
+                  "op": "inc",
+                  "value": 0.4
+                }
+              ]
+            },
+            {
+              "id": "terreau_acide",
+              "name": "Terreau acide",
+              "effects": [
+                {
+                  "stat": "poison",
+                  "op": "inc",
+                  "value": 0.15
+                }
+              ]
+            },
+            {
+              "id": "terreau_profond",
+              "name": "Terreau profond",
+              "effects": [
+                {
+                  "stat": "armor",
+                  "op": "add",
+                  "value": 0.05
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "u5",
+          "type": "graft",
+          "name": "Greffon du terreau",
+          "at": [1.5, 0],
+          "links": ["u4"]
         }
       ]
     }

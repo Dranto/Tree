@@ -123,6 +123,7 @@ static func ec(element: String, variante := "couleur") -> Color:
 const ELEMENT_DE_COMPETENCE := {
 	"graine": "seve", "nova": "epine", "fouet": "epine", "volee": "epine", "racines": "racine",
 	"saignee": "saignement", "cloud": "poison", "bloom": "seve",
+	"vesse": "poison", "essaim": "poison", "eclosion": "poison",
 }
 
 # --- Traits, ombres, lumière ---
@@ -419,27 +420,30 @@ static func delta_e(a: Color, b: Color) -> float:
 # Silhouettes pleines, lisibles à 20 px ; un détail clair au plus.
 const ICONES := {
 	"elements": ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent"],
-	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom"],
+	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom", "vesse", "essaim", "eclosion"],
 	"statistiques": ["degats", "attaque", "projectile", "critique", "vie", "regen", "armure", "vitesse", "esquive", "zone", "collecte", "competence"],
 	"monde": ["sanctuaire", "autel", "coeur", "arene", "secret", "seve_perdue", "essence", "greffe"],
 	# Formes de l'attaque de base (data/attack.json) et nœud qui la modifie : Art.icon("attaque_<forme>").
-	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_mod"],
+	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_spore_lobee", "attaque_dard", "attaque_mod"],
 }
 ## Nom affiché de chaque icône (planche, infobulles).
 const NOM_ICONE := {
 	"graine": "Graines", "nova": "Couronne d'épines", "fouet": "Fouet de ronce", "racines": "Racines voraces",
 	"volee": "Volée d'épines", "saignee": "Saignée", "cloud": "Nuage de spores", "bloom": "Floraison",
+	"vesse": "Vesse-de-loup", "essaim": "Essaim", "eclosion": "Éclosion",
 	"degats": "Dégâts", "attaque": "Vitesse d'attaque", "projectile": "Projectiles", "critique": "Critique",
 	"vie": "Vie", "regen": "Régénération", "armure": "Armure", "vitesse": "Déplacement", "esquive": "Esquive",
 	"zone": "Zones", "collecte": "Collecte", "competence": "Compétence",
 	"sanctuaire": "Sanctuaire", "autel": "Autel", "coeur": "Cœur de flétrissure", "arene": "Arène",
 	"secret": "Secret", "seve_perdue": "Sève perdue", "essence": "Essence de vie", "greffe": "Greffe",
 	"attaque_graine": "Attaque : graines", "attaque_echarde": "Attaque : échardes", "attaque_fouet": "Attaque : fouet",
-	"attaque_ronce_vive": "Attaque : ronces vives", "attaque_mod": "Attaque modifiée",
+	"attaque_ronce_vive": "Attaque : ronces vives", "attaque_spore_lobee": "Attaque : spores lobées",
+	"attaque_dard": "Attaque : dards fongiques", "attaque_mod": "Attaque modifiée",
 }
 ## Élément de chaque forme de l'attaque de base (le même que dans data/attack.json).
 const ELEMENT_D_ATTAQUE := {
 	"attaque_graine": "seve", "attaque_echarde": "epine", "attaque_fouet": "epine", "attaque_ronce_vive": "saignement",
+	"attaque_spore_lobee": "poison", "attaque_dard": "poison",
 }
 ## Couleur par défaut d'une icône qui n'est pas un élément.
 const COULEUR_ICONE := {
@@ -639,6 +643,42 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 				ci.draw_arc(P.call(0.05, -0.12), s * 0.26, PI, PI * 1.7, 8, clair, lw * 0.7, true)
 				ci.draw_circle(P.call(-0.2, 0.3), s * 0.08, sombre)
 				ci.draw_circle(P.call(0.3, 0.38), s * 0.06, sombre)
+		"vesse":
+			var relief := col == sombre
+			# Champignon : chapeau rond tacheté sur un pied court, une spore qui s'échappe.
+			ci.draw_rect(Rect2(P.call(-0.2, 0.0), Vector2(0.4, 0.85) * s), (sombre if relief else clair.lerp(col, 0.3)))
+			var cap := PackedVector2Array()
+			for i in 13:
+				var a := PI + i * PI / 12.0
+				cap.append(P.call(cos(a) * 0.85, 0.1 + sin(a) * 0.75))
+			ci.draw_colored_polygon(cap, col)
+			if not relief:
+				ci.draw_circle(P.call(-0.35, -0.25), s * 0.13, clair)
+				ci.draw_circle(P.call(0.3, -0.4), s * 0.11, clair)
+				ci.draw_circle(P.call(0.05, -0.05), s * 0.09, clair)
+			ci.draw_arc(P.call(0.6, -0.85), s * 0.12, 0.0, TAU, 8, (sombre if relief else clair), lw * 0.8, true)
+		"essaim":
+			var relief := col == sombre
+			# Un filament qui serpente d'un point à l'autre, trois spores le long du fil.
+			var pts := PackedVector2Array()
+			for i in 9:
+				var u := i / 8.0
+				pts.append(P.call(-0.85 + 1.7 * u, 0.7 - 1.4 * u + 0.3 * sin(u * TAU)))
+			ci.draw_polyline(pts, col, lw * 1.1, true)
+			for j: int in [0, 4, 8]:
+				ci.draw_circle(pts[j], s * (0.26 if j == 8 else 0.19), col)
+				if not relief:
+					ci.draw_circle(pts[j] + Vector2(-s * 0.06, -s * 0.06), s * 0.07, clair)
+		"eclosion":
+			var relief := col == sombre
+			# Fleur de spores qui éclot : cinq pétales ronds autour d'un cœur clair, poussière autour.
+			for i in 5:
+				var d := Vector2.from_angle(i * TAU / 5.0 - PI / 2.0)
+				ci.draw_circle(p + d * s * 0.42, s * 0.3, col)
+			ci.draw_circle(p, s * 0.26, (sombre if relief else clair))
+			for i in 5:
+				var d := Vector2.from_angle(i * TAU / 5.0 - PI / 2.0 + PI / 5.0)
+				ci.draw_circle(p + d * s * 0.88, s * 0.08, (sombre if relief else clair))
 		"bloom":
 			var relief := col == sombre
 			# Fleur à cinq pétales sur deux feuilles, cœur doré.
@@ -754,6 +794,31 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 				var b := j * TAU / 12.0
 				seed.append(P.call(0, 0.15) + Vector2(cos(b) * 0.24, sin(b) * 0.32) * s)
 			ci.draw_colored_polygon(seed, (col if col == sombre else clair))
+		"attaque_spore_lobee":
+			# Une spore lancée en cloche : la courbe pointillée de son vol, la boule de spores au sommet
+			# qui redescend, et l'éclat au sol.
+			var relief := col == sombre
+			for i in 5:
+				var u := i / 4.0
+				var q: Vector2 = P.call(-0.8 + 1.4 * u, 0.75 - 1.5 * sin(u * PI * 0.8))
+				ci.draw_circle(q, s * 0.07, col)
+			ci.draw_circle(P.call(0.35, -0.35), s * 0.36, col)
+			if not relief:
+				ci.draw_circle(P.call(0.25, -0.45), s * 0.1, clair)
+				ci.draw_circle(P.call(0.47, -0.27), s * 0.08, clair)
+			for i in 4:
+				var a := -PI + i * PI / 3.0
+				ci.draw_line(P.call(0.6, 0.85), P.call(0.6, 0.85) + Vector2.from_angle(a) * s * 0.32, col, lw, true)
+		"attaque_dard":
+			# Trois aiguilles fines en éventail, une goutte de poison à la base de chacune.
+			var relief := col == sombre
+			for i in 3:
+				var d := Vector2.from_angle(-PI / 4.0 + (i - 1) * 0.38)
+				var nn := d.orthogonal()
+				var base: Vector2 = P.call(-0.6, 0.6) + d * s * 0.2
+				var tip := base + d * s * (1.45 if i == 1 else 1.2)
+				ci.draw_colored_polygon(PackedVector2Array([tip, base + nn * s * 0.09, base - nn * s * 0.09]), col)
+				ci.draw_circle(base, s * 0.13, (col if relief else clair))
 		"attaque_mod":
 			# Un trait qui se divise : la fourche, signe d'une attaque transformée.
 			ci.draw_line(P.call(-0.75, 0.75), P.call(-0.05, 0.05), col, lw * 1.5, true)
