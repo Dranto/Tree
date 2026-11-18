@@ -12,11 +12,13 @@ const ProjectileScript = preload("res://scripts/projectile.gd")
 const PERIODE := 2.4
 ## Compétences de la galerie, dans l'ordre de la barre (la graine est l'arme de base).
 const SKILLS := ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom"]
+## Compétences de la branche Vent (troisième page).
+const VENT := ["tornade", "ruee", "appel_air"]
 const PHASES := ["début", "coup", "fin"]
 
 var view := Vector2(2560, 1440)
 var page := "heros"
-## Page des compétences : les quatre premières (1) ou les quatre suivantes (2).
+## Page des compétences : les quatre premières (1), les quatre suivantes (2), celles de Vent (3).
 var part := 1
 var t := 0.0
 var font: Font
@@ -30,6 +32,8 @@ func _ready() -> void:
 
 ## Compétences de la page (quatre par page, pour que chaque zone tienne dans sa case).
 func _skills() -> Array:
+	if part == 3:
+		return VENT
 	return SKILLS.slice((part - 1) * 4, part * 4)
 
 
@@ -163,11 +167,13 @@ const PHASE_K := {
 	"graine": [0.4, 0.25, 0.7], "nova": [0.08, 0.32, 0.75], "fouet": [0.09, 0.33, 0.72],
 	"racines": [0.06, 0.16, 0.95], "volee": [0.3, 0.5, 0.4], "saignee": [0.12, 0.38, 0.72],
 	"cloud": [0.03, 0.4, 0.95], "bloom": [0.12, 0.42, 0.8],
+	"tornade": [0.04, 0.4, 0.95], "ruee": [0.1, 0.35, 0.8], "appel_air": [0.3, 0.68, 0.88],
 }
 ## Échelle de chaque ligne : la zone de la compétence tient dans sa case.
 const CELL_SCALE := {
 	"graine": 2.0, "nova": 0.82, "fouet": 1.0, "racines": 1.3,
 	"volee": 1.6, "saignee": 0.68, "cloud": 1.25, "bloom": 0.95,
+	"tornade": 1.2, "ruee": 1.2, "appel_air": 0.8,
 }
 
 
@@ -231,7 +237,7 @@ func _skill_cell(id: String, r: Rect2, k: float, phase: int) -> void:
 ## La signature d'une compétence, dans le repère du héros (héros en 0, visée vers la droite).
 func _effect(id: String, target: Vector2, k: float, width: float) -> Dictionary:
 	var e := {"id": id, "t": 0.0, "pos": Vector2.ZERO, "dir": Vector2.RIGHT}
-	e["dur"] = SkillFx.DUREE.get(id, 0.4)
+	e["dur"] = SkillFx.DUREE.get(id, VentFx.DUREE.get(id, 0.4))
 	match id:
 		"graine":
 			e["id"] = "graine_depart" if k > 0.35 else "graine_impact"
@@ -264,6 +270,18 @@ func _effect(id: String, target: Vector2, k: float, width: float) -> Dictionary:
 			e["dur"] = 5.0
 		"bloom":
 			e["r"] = 150.0
+		"tornade":
+			e["pos"] = target
+			e["r"] = 90.0
+			e["dur"] = 4.0
+			e["seed"] = 3
+		"ruee":
+			e["from"] = Vector2(-150, 0)
+			e["w"] = 48.0
+		"appel_air":
+			e["pos"] = target
+			e["r"] = 230.0
+			e["pull"] = 0.6
 	return e
 
 
@@ -279,6 +297,12 @@ func _targets(id: String, target: Vector2) -> Array:
 			return [target]
 		"nova", "bloom":
 			return [Vector2(150, -40), Vector2(-140, 60)]
+		"tornade":
+			return [target + Vector2(-25, 12), target + Vector2(40, -20)]
+		"ruee":
+			return [Vector2(-70, 52), Vector2(-120, -50)]
+		"appel_air":
+			return [target + Vector2(-30, 15), target + Vector2(28, -12), target + Vector2(5, 35)]
 	return []
 
 
@@ -295,6 +319,8 @@ func _fletri(p: Vector2) -> void:
 
 ## Projectiles réels (projectile.gd) dans les cases de la graine et de la volée.
 func _add_projectiles() -> void:
+	if part == 3:
+		return
 	if part == 1:
 		_projectile(_cell_rect(0, 1), Vector2(130, 0), false, 0.0)
 		return

@@ -104,7 +104,7 @@ func _run() -> void:
 				if n["pos"].distance_to(tree.nodes[id]["pos"]) < SkillTree.CLEAR_NODE * SkillTree.RING_GAP:
 					too_close += 1
 	for n in plain.nodes:
-		if n["type"] == "keystone":
+		if n["type"] == "keystone" and n["cluster"] == "":
 			keystones_before += 1
 	check(too_close == 0, "aucun nœud généré ne reste sous la grappe")
 	check(keystones_after == keystones_before, "aucun nœud clé généré n'a été écarté")

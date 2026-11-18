@@ -81,9 +81,9 @@
       "branch": "vent",
       "element": "vent",
       "priority": 2,
-      "damage": 0.85,
+      "damage": 0.5,
       "rate": 0.8,
-      "range": 620,
+      "range": 560,
       "speed": 820,
       "spread": 0.32,
       "pierce": 99,
@@ -100,9 +100,9 @@
       "priority": 2,
       "damage": 1.0,
       "rate": 0.95,
-      "range": 175,
+      "range": 185,
       "arc": 1.3,
-      "knockback": 40,
+      "knockback": 55,
       "fx": "bourrasque",
       "sfx": "bourrasque"
     }

@@ -62,7 +62,7 @@ Le texte de l'infobulle est produit à partir de l'effet : il ne peut donc pas c
 
 L'identifiant renvoie à `skills.json`. Le comportement de la compétence reste écrit dans `scripts/player.gd` ; ses réglages sont dans les données.
 
-Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores), `bloom` (Floraison), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) `volee` (Volée d'épines : éventail d'épines perforantes qui font saigner) et `saignee` (Saignée : fait éclater les saignements des ennemis proches en dégâts immédiats, une part soigne). Champs communs de `skills.json` :
+Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores), `bloom` (Floraison), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) `volee` (Volée d'épines : éventail d'épines perforantes qui font saigner) et `saignee` (Saignée : fait éclater les saignements des ennemis proches en dégâts immédiats, une part soigne) ; pour Vent `tornade` (une tornade avance vers l'endroit visé, aspire et blesse par à-coups : `damage` par seconde, `duration`, `speed`, `radius`, `tick`, `pull` ; mutations `count`, `speed` 0, `orbit`), `ruee` (Ruée : le joueur fend l'air sur `length` pixels, intouchable, et frappe une fois chaque ennemi du passage ; `dash` vrai : compte comme une esquive ; `wake` : une tornade naît à l'arrivée) et `appel_air` (Appel d'air : aspire les ennemis du `radius` vers l'endroit visé pendant `pull_time`, puis éclate ; `root` : immobilise ensuite). Le vent ne déplace pas un ennemi ancré, un boss, ni une sorte marquée `"no_push": true` dans `enemies.json` (`scripts/vent.gd`). Champs communs de `skills.json` :
 
 | Champ | Rôle |
 | --- | --- |
@@ -96,6 +96,8 @@ Les compétences acquises se rangent dans la barre de compétences (6 emplacemen
 | `heal` | `value` | Soigne une fraction de la vie maximale |
 | `burst` | `radius`, `factor`, `at` (`player` par défaut, ou `enemy`), `color` | Onde d'épines autour du joueur ou de l'ennemi de l'évènement : `factor` × dégâts du joueur × dégâts de zone, rayon × taille des zones. Coup de Ronce |
 | `status_area` | `status`, `value`, `duration`, `radius`, `at`, `scale` (`damage`) | Pose un état sur tous les ennemis de la zone (mêmes règles que `apply_status`) |
+| `gust` | `radius`, `factor`, `push`, `at` | Rafale de Vent autour du joueur ou de l'ennemi : `factor` × dégâts du joueur × dégâts de zone, et recul de `push` pixels |
+| `tornado` | `factor`, `at` | Fait naître une tornade (réglages de `tornade`, dégâts et durée × `factor`) sur le joueur ou l'ennemi de l'évènement, même sans la compétence |
 | `attack_salvo` | `count` | Salve de l'attaque de base tout autour du joueur, en `count` directions, avec sa forme et ses modificateurs actuels (par exemple `{"on": "hurt", "do": "attack_salvo", "count": 8, "cooldown": 0.6, "text": "…"}`) |
 
 ### États des ennemis
@@ -225,6 +227,10 @@ L'attaque de base part toute seule à sa cadence. Elle a une **forme** et des **
 | `repetition` | coups en plus | L'attaque repart après `delay` secondes (le fouet frappe deux fois). |
 | `volee` | N | Une attaque sur N part en couronne tout autour du joueur (`count` directions). |
 | `poison` | part des dégâts par seconde | Chaque coup empoisonne (`duration`). |
+| `elan` | +x % | Tant que le joueur bouge (ou vient de bouger), l'attaque fait x % de dégâts en plus (Vent). |
+| `repousse` | pixels | Chaque coup repousse l'ennemi touché, à l'opposé du joueur (Vent). |
+
+Formes de Vent : `lame` (Lames de vent : `"return": true`, la lame part jusqu'à sa portée puis revient au joueur en frappant de nouveau ; elle perfore tout) et `bourrasque` (cône au corps à corps qui repousse ; `fx` et `sfx` nomment sa signature et son son).
 
 L'infobulle d'un nœud montre l'aperçu avant → après de l'attaque (« Attaque : Graines → Fouet », « Attaque : + fourche… »), comme pour les statistiques. Pour essayer une attaque sans passer par l'arbre : `tools/godot.sh --xvfb -- --attack=fouet,repetition:1,saignement:0.3` (marche aussi avec `--autotest`). `tools/godot.sh --headless --fixed-fps 60 -s res://tests/attack_test.gd` teste le moteur.
 

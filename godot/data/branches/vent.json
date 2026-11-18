@@ -136,10 +136,10 @@
           "name": "Couronne de lames",
           "at": [2.0, -0.05],
           "links": ["l5"],
-          "effects": [{"attack_mod": "volee", "value": 4}]
+          "effects": [{"attack_mod": "volee", "value": 4}, {"stat": "projectile_damage", "op": "inc", "value": 0.2}]
         }
       ],
-      "complete": {"name": "Lames complètes", "effects": [{"stat": "projectile_damage", "op": "more", "value": 1.1}]}
+      "complete": {"name": "Lames complètes", "effects": [{"stat": "projectile_damage", "op": "more", "value": 1.2}]}
     },
     {
       "id": "course",
@@ -165,7 +165,11 @@
           "name": "Coup de vent",
           "at": [0.5, 0.4],
           "links": ["r1"],
-          "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.25}, {"stat": "armor", "op": "add", "value": 0.04}]
+          "effects": [
+            {"stat": "melee_damage", "op": "inc", "value": 0.25},
+            {"stat": "armor", "op": "add", "value": 0.06},
+            {"stat": "max_hp", "op": "inc", "value": 0.15}
+          ]
         },
         {
           "id": "r4",
@@ -565,8 +569,8 @@
       "id": "coeur",
       "name": "Cœur des rafales",
       "theme": "Après le Harfang de cendre",
-      "ring": 10.9,
-      "angle": 0.3,
+      "ring": 10.8,
+      "angle": 0.32,
       "entry": ["h1"],
       "nodes": [
         {
