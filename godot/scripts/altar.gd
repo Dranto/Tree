@@ -1,4 +1,4 @@
-## Autel caché et secret d'une région (data/rewards.json) : des ruines couvertes de cendre qu'on
+## Autel caché et secret d'une région (« altars » et « secrets » de data/regions/<id>.json) : des ruines couvertes de cendre qu'on
 ## devine en s'approchant. Le joueur s'y tient quelques secondes pour le raviver : un point d'arbre
 ## (Game.grant_points, une seule fois) et une greffe qui tombe au sol (main.drop_graft).
 ##
@@ -22,6 +22,8 @@ var main
 var kind := "autel"
 var data: Dictionary = {}
 var id := ""
+## Région de l'autel ou du secret.
+var region := ""
 var active := false
 var progress := 0.0
 var seen := 0.0
@@ -29,19 +31,20 @@ var t := 0.0
 var _was_near := false
 
 
-## Crée les autels et secrets de rewards.json et les ajoute sous « parent ».
+## Crée les autels et secrets des régions (Content.rewards()) et les ajoute sous « parent ».
 static func spawn_all(m, parent: Node) -> Array:
 	var out: Array = []
 	var r := Content.rewards()
 	for pair in [["autel", r.get("altars", [])], ["secret", r.get("secrets", [])]]:
 		for a in pair[1]:
-			if not str(a.get("region", "")) in Regions.REGIONS:
+			if not Regions.exists(str(a.get("region", ""))):
 				continue
 			var n = load("res://scripts/altar.gd").new()
 			n.main = m
 			n.kind = pair[0]
 			n.data = a
 			n.id = str(a["id"])
+			n.region = str(a.get("region", ""))
 			n.position = position_of(a, m)
 			parent.add_child(n)
 			out.append(n)

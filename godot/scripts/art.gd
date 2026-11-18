@@ -103,8 +103,13 @@ const ELEMENTS := {
 		"couleur": Color("8af5c0"), "clair": Color("eafff4"), "sombre": Color("1f6a4a"),
 		"motif": "lueur",
 	},
+	"vent": {
+		"nom": "Vent", "sens": "pousse, disperse, accélère : souffles et rafales",
+		"couleur": Color("a4bcd4"), "clair": Color("e8f2fa"), "sombre": Color("2e4458"),
+		"motif": "rafales",
+	},
 }
-const ELEMENT_IDS := ["epine", "saignement", "racine", "poison", "cendre", "seve"]
+const ELEMENT_IDS := ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent"]
 
 ## Couleur d'un élément : variante "couleur" (par défaut), "clair" ou "sombre".
 static func ec(element: String, variante := "couleur") -> Color:
@@ -259,6 +264,11 @@ static func status(ci: CanvasItem, element: String, pos: Vector2, r: float, t :=
 			# Halo vert qui respire.
 			var b := 0.5 + 0.5 * sin(t * 3.0)
 			ci.draw_arc(pos, r * (1.25 + 0.1 * b), 0.0, TAU, 32, Color(e["couleur"], 0.35 + 0.35 * b), TRAIT, true)
+		"vent":
+			# Rafales qui tournent autour du corps.
+			for i in 3:
+				var a := t * 2.4 + i * TAU / 3.0
+				ci.draw_arc(pos, r * (1.2 + 0.12 * i), a, a + 1.1, 12, Color(e["clair"], 0.85 - 0.2 * i), TRAIT_FIN, true)
 
 
 static func _motif_unit(ci: CanvasItem, element: String, p: Vector2, s: float, t: float) -> void:
@@ -280,6 +290,9 @@ static func _motif_unit(ci: CanvasItem, element: String, p: Vector2, s: float, t
 		"lueur":
 			ci.draw_circle(p, s * 0.9, Color(e["couleur"], 0.22))
 			ci.draw_circle(p, s * 0.35, e["clair"])
+		"rafales":
+			_gust(ci, p + Vector2(-s * 0.2, -s * 0.35), s * 1.3, e["clair"], TRAIT_FIN)
+			_gust(ci, p + Vector2(s * 0.2, s * 0.4), s * 0.9, e["couleur"], TRAIT_FIN)
 
 
 ## Une pointe d'épine : base large, pointe dans la direction d.
@@ -292,6 +305,14 @@ static func _thorn(ci: CanvasItem, base: Vector2, d: Vector2, len: float, col: C
 static func _drop(ci: CanvasItem, p: Vector2, s: float, col: Color) -> void:
 	ci.draw_circle(p, s, col)
 	ci.draw_colored_polygon(PackedVector2Array([p + Vector2(-s * 0.92, -s * 0.3), p + Vector2(0, -s * 2.1), p + Vector2(s * 0.92, -s * 0.3)]), col)
+
+
+## Une rafale : un trait qui file et s'enroule au bout (vers la droite).
+static func _gust(ci: CanvasItem, p: Vector2, len: float, col: Color, width: float) -> void:
+	var end := p + Vector2(len * 0.5, 0)
+	ci.draw_line(p - Vector2(len * 0.5, 0), end, col, width, true)
+	var r := len * 0.18
+	ci.draw_arc(end + Vector2(0, -r), r, PI * 0.5, PI * 2.0, 10, col, width, true)
 
 
 ## Une braise : losange.
@@ -397,7 +418,7 @@ static func delta_e(a: Color, b: Color) -> float:
 # La même partout : barre de compétences, arbre, infobulles, journal, ramassage.
 # Silhouettes pleines, lisibles à 20 px ; un détail clair au plus.
 const ICONES := {
-	"elements": ["epine", "saignement", "racine", "poison", "cendre", "seve"],
+	"elements": ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent"],
 	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom"],
 	"statistiques": ["degats", "attaque", "projectile", "critique", "vie", "regen", "armure", "vitesse", "esquive", "zone", "collecte", "competence"],
 	"monde": ["sanctuaire", "autel", "coeur", "arene", "secret", "seve_perdue", "essence", "greffe"],
@@ -508,6 +529,11 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 			ci.draw_circle(p, s * 0.95, Color(col, 0.25))
 			_leaf(ci, p, s * 0.8, -PI / 4.0, col)
 			ci.draw_line(P.call(-0.45, 0.45), P.call(0.35, -0.35), sombre, lw * 0.7, true)
+		"vent":
+			# Trois rafales qui s'enroulent, la plus longue au milieu.
+			_gust(ci, P.call(-0.15, -0.45), s * 1.3, col, lw * 1.3)
+			_gust(ci, P.call(0.05, 0.1), s * 1.6, col, lw * 1.5)
+			_gust(ci, P.call(-0.25, 0.65), s * 1.0, clair if col != sombre else col, lw * 1.1)
 		# Compétences et arme. Chacune garde une forme propre à 20 px ; les détails clairs ne
 		# servent qu'en grand (barre, infobulles). relief : vrai pendant la passe de la tranche.
 		"graine":
@@ -784,7 +810,7 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 
 
 ## Feuille en amande, pointe dans la direction a, longueur l (de la base à la pointe : 2 × l).
-static func _leaf(ci: CanvasItem, p: Vector2, l: float, a: float, col: Color) -> void:
+static func _leaf(ci, p: Vector2, l: float, a: float, col: Color) -> void:
 	var d := Vector2.from_angle(a)
 	var n := d.orthogonal()
 	var pts := PackedVector2Array()

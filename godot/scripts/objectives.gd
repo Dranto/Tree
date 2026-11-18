@@ -1,11 +1,12 @@
-## Objectifs de la tranche (autoload « Objectives ») : une suite d'objectifs principaux qui mène
-## du premier nœud à la Mère-Ronce, et quelques objectifs facultatifs. La liste est dans
-## res://data/objectives.json (format décrit dans data/README.md).
+## Objectifs de l'aventure (autoload « Objectives ») : une suite d'objectifs principaux qui mène
+## du premier nœud au boss de chaque région, et quelques objectifs facultatifs. La liste est dans
+## res://data/objectives.json (format décrit dans data/README.md) ; un objectif propre à une région
+## porte son identifiant (« region »).
 ##
 ## Les objectifs ne gardent aucun état propre : tout vit dans Game.flags, donc dans la sauvegarde.
 ## - Game.flags["obj_<id>"] = true : l'objectif est accompli (posé une seule fois, voir complete) ;
-## - les conditions lisent des drapeaux que les autres systèmes posent déjà : « ronce_coeur_purifie »,
-##   « ronce_boss_vaincu », « sanctuaire_<id> » (sanctuaires ravivés), « autel_<id> » (autels
+## - les conditions lisent des drapeaux que les autres systèmes posent déjà : « <région>_coeur_purifie »,
+##   « <région>_boss_vaincu », « sanctuaire_<id> » (sanctuaires ravivés), « autel_<id> » (autels
 ##   découverts), « secret_<id> », et le compteur « elites_tuees » (tenu ici, voir attach).
 ## Un système qui préfère annoncer lui-même l'évènement appelle Objectives.complete("<id>").
 ##
@@ -27,7 +28,9 @@ const FLAG_PREFIX := "obj_"
 ## Drapeaux de statistiques de partie gardés pour l'écran de fin.
 const STAT_DEATHS := "stat_morts"
 const ELITES := "elites_tuees"
-const ENDING_SEEN := "fin_ronce_vue"
+## Fin de l'aventure déjà montrée (toutes les régions purifiées). La séquence « région purifiée »
+## de chaque région a son drapeau : Regions.ending_flag(id) (« <région>_fin_vue »).
+const ENDING_SEEN := "fin_aventure_vue"
 
 var main = null
 var _timer := 0.0
@@ -109,16 +112,19 @@ func available(o: Dictionary) -> bool:
 	return not main.get_tree().get_nodes_in_group(g).is_empty()
 
 
-## Objectif principal à suivre : le premier qui n'est pas accompli après la dernière grande étape
-## accomplie (« milestone » : le Cœur, le boss). Les petites étapes du début se font dans n'importe
-## quel ordre ; mais un joueur qui purifie le Cœur avant d'avoir ravivé un sanctuaire n'est pas
-## renvoyé en arrière : les étapes sautées restent ouvertes dans le journal (voir skipped) et
-## s'accomplissent encore si leur condition se remplit. {} quand la tranche est finie.
-func current() -> Dictionary:
+## Objectif principal à suivre : le premier qui n'est pas accompli ni sauté (voir skipped). Les
+## petites étapes du début se font dans n'importe quel ordre ; mais un joueur qui purifie le Cœur
+## avant d'avoir ravivé un sanctuaire n'est pas renvoyé en arrière : les étapes sautées restent
+## ouvertes dans le journal et s'accomplissent encore si leur condition se remplit. Les régions se
+## suivent dans l'ordre de la liste. {} quand l'aventure est finie.
+## « region » : seulement les objectifs de cette région et les objectifs communs (robots).
+func current(region := "") -> Dictionary:
 	var mains := main_list()
-	for i in range(_last_main_done(mains) + 1, mains.size()):
+	for i in mains.size():
 		var o: Dictionary = mains[i]
-		if not is_done(o["id"]) and available(o):
+		if region != "" and not str(o.get("region", "")) in ["", region]:
+			continue
+		if not is_done(o["id"]) and available(o) and not _skipped_at(mains, i):
 			return o
 	return {}
 
@@ -137,13 +143,28 @@ func _last_main_done(mains: Array) -> int:
 	return last
 
 
-## Objectif principal pas accompli alors qu'une grande étape plus loin dans la suite l'est déjà.
+## Objectif principal pas accompli alors qu'une grande étape plus loin dans la suite l'est déjà :
+## une étape de la même région, ou de n'importe quelle région pour un objectif commun.
 func skipped(o: Dictionary) -> bool:
 	if not o.get("main", false) or is_done(o["id"]):
 		return false
 	var mains := main_list()
 	var i := mains.find(o)
-	return i >= 0 and i < _last_main_done(mains)
+	return i >= 0 and _skipped_at(mains, i)
+
+
+func _skipped_at(mains: Array, i: int) -> bool:
+	var reg := str(mains[i].get("region", ""))
+	for j in range(i + 1, mains.size()):
+		var m: Dictionary = mains[j]
+		if m.get("milestone", false) and is_done(m["id"]) and (reg == "" or str(m.get("region", "")) == reg):
+			return true
+	return false
+
+
+## Objectifs d'une région (ou communs, avec ""), dans l'ordre de la liste.
+func for_region(region: String) -> Array:
+	return list().filter(func(o): return str(o.get("region", "")) == region)
 
 
 ## Rang (à partir de 1) de l'objectif principal en cours dans la suite, 0 quand tout est fait.
@@ -175,23 +196,40 @@ func progress(o: Dictionary) -> Array:
 	var c: Dictionary = o.get("condition", {})
 	match c.get("type", ""):
 		"flag_count":
-			return [mini(_count_flags(c), int(c["count"])), int(c["count"])]
+			return [mini(_count_flags(c, o), int(c["count"])), int(c["count"])]
 		"counter":
 			return [mini(int(Game.flags.get(c["flag"], 0)), int(c["count"])), int(c["count"])]
 	return []
 
 
-func _count_flags(c: Dictionary) -> int:
+func _count_flags(c: Dictionary, o := {}) -> int:
 	var n := 0
 	var skip: Array = c.get("exclude", [])
+	# « region_only » : sans les lieux (sanctuaires, autels, secrets) des autres régions.
+	var others = _other_places(str(o.get("region", ""))) if c.get("region_only", false) else null
 	for k in Game.flags:
 		var key := str(k)
 		# « autel_<id>_vu », « secret_<id>_vu » : aperçu seulement, pas encore ravivé ni trouvé.
 		if key.ends_with("_vu"):
 			continue
 		if key.begins_with(str(c["prefix"])) and not key in skip and bool(Game.flags[k]):
+			if others != null and key.substr(str(c["prefix"]).length()) in others:
+				continue
 			n += 1
 	return n
+
+
+## Identifiants des lieux (sanctuaires, autels, secrets) des régions autres que celle-ci.
+func _other_places(region: String) -> Dictionary:
+	var out := {}
+	for reg in Regions.ids():
+		if reg == region:
+			continue
+		var d := Regions.def(reg)
+		for kind in ["sanctuaries", "altars", "secrets"]:
+			for p in d.get(kind, []):
+				out[str(p.get("id", ""))] = true
+	return out
 
 
 func condition_met(o: Dictionary) -> bool:
@@ -202,7 +240,7 @@ func condition_met(o: Dictionary) -> bool:
 		"flag":
 			return bool(Game.flags.get(c["flag"], false))
 		"flag_count":
-			return _count_flags(c) >= int(c["count"])
+			return _count_flags(c, o) >= int(c["count"])
 		"counter":
 			return int(Game.flags.get(c["flag"], 0)) >= int(c["count"])
 		"keystone":
@@ -263,15 +301,22 @@ func target_pos(o: Dictionary):
 		"seed":
 			return Vector2.ZERO
 		"heart":
-			return main.heart.center if main.heart != null else null
+			var h = main.hearts.get(str(o.get("region", "")), main.heart) if "hearts" in main else main.heart
+			return h.center if h != null else null
 		"arena":
-			return main.arena.center if main.arena != null else null
+			var a = main.arenas.get(str(o.get("region", "")), main.arena) if "arenas" in main else main.arena
+			return a.center if a != null else null
 		"group":
-			# Le plus proche des sanctuaires (ou autels) pas encore trouvés.
+			# Le plus proche des sanctuaires (ou autels) pas encore trouvés, dans la région de
+			# l'objectif s'il en a une.
 			var best = null
 			var best_d := INF
+			var reg := str(o.get("region", ""))
 			for n in main.get_tree().get_nodes_in_group(t["group"]):
 				if Game.flags.get(str(t.get("done_prefix", "")) + str(n.get("id")), false):
+					continue
+				var nr = n.get("region")
+				if reg != "" and nr != null and str(nr) != "" and str(nr) != reg:
 					continue
 				var d: float = n.position.distance_squared_to(main.player.position)
 				if d < best_d:
@@ -289,7 +334,31 @@ func deaths_total() -> int:
 	return int(Game.flags.get(STAT_DEATHS, 0)) + extra
 
 
-## Vrai quand le boss est vaincu et que la fin n'a pas encore été montrée.
+## Vrai quand le boss d'une région est vaincu et que sa séquence « région purifiée » n'a pas encore
+## été montrée (voir ending_region).
 func ending_due() -> bool:
-	var flag: String = Content._load("objectives").get("ending_flag", "")
-	return flag != "" and bool(Game.flags.get(flag, false)) and not bool(Game.flags.get(ENDING_SEEN, false))
+	return ending_region() != ""
+
+
+## Région dont la séquence « région purifiée » est due, "" sinon.
+func ending_region() -> String:
+	for id in Regions.ids():
+		if bool(Game.flags.get(Regions.boss_flag(id), false)) and not bool(Game.flags.get(Regions.ending_flag(id), false)):
+			return id
+	return ""
+
+
+## Textes de la séquence de fin pour cette région : ceux de la région (« ending » de son fichier),
+## ou ceux de la fin de l'aventure (« adventure_ending » de objectives.json) quand toutes les
+## régions sont purifiées et qu'il y en a plus d'une. {sub, title, body}.
+func ending_texts(region: String) -> Dictionary:
+	if Regions.all_purified(Game.flags) and Regions.ids().size() > 1:
+		return Content._load("objectives").get("adventure_ending", {})
+	return Regions.section(region, "ending")
+
+
+## Note la séquence de fin de cette région comme vue (et la fin de l'aventure, si c'est elle).
+func mark_ending_seen(region: String) -> void:
+	Game.flags[Regions.ending_flag(region)] = true
+	if Regions.all_purified(Game.flags):
+		Game.flags[ENDING_SEEN] = true

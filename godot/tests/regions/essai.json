@@ -1,0 +1,54 @@
+{
+  "_doc": "Région factice des tests (tests/region_engine_test.gd) : elle prouve qu'une région s'ajoute avec des fichiers seulement, sans toucher au moteur. Jamais chargée par le jeu : seulement avec « -- --regions=res://tests/regions/ » ou Regions.extra_dirs.",
+  "id": "essai",
+  "branch": "aube",
+  "name": "Région d'essai",
+  "place": "la clairière d'essai",
+  "map_name": "Essai",
+  "color": "#7ab0e0",
+  "ground": {
+    "dead_dark": "#3a3448",
+    "dead_light": "#5a5070",
+    "purified_dark": "#34404a",
+    "purified_light": "#56687a",
+    "alive_dark": "#2e5a6a",
+    "alive_light": "#5aa0b4",
+    "dot": "vent/clair",
+    "dot_rarity": 0.99,
+    "dot_strength": 0.6
+  },
+  "spawn": {
+    "kinds": {"chargeur": 1.0},
+    "share_near": 0.2,
+    "share_far": 0.6,
+    "far": 2400,
+    "purified_factor": 0.4
+  },
+  "sanctuaries": [
+    {"id": "essai_halte", "name": "de la Halte", "dist": 900.0, "angle": 0.1}
+  ],
+  "heart": {
+    "name": "Cœur d'essai",
+    "zone": 200.0,
+    "hold_time": 5.0,
+    "waves": {"every": 4.0, "base": 2, "growth": 1, "kinds": ["fletri"]},
+    "idle": {"every": 5.0, "max": 2, "kind": "fletri"},
+    "life_color": "vent/clair",
+    "reward": {"points": 1},
+    "wake_banner": "Le Cœur d'essai s'éveille.",
+    "purified_banner": "Le Cœur d'essai est purifié."
+  },
+  "boss": {
+    "script": "res://tests/regions/boss_essai.gd",
+    "name": "Le Souffle d'essai",
+    "bar_color": "vent",
+    "phases": ["Phase 1 sur 2", "Phase 2 sur 2"],
+    "arena": {"radius": 360.0, "radius_min": 300.0, "offset": 700.0, "life_color": "vent/clair"},
+    "reward": {"points": 2}
+  },
+  "ending": {
+    "sub": "Fin de la région d'essai",
+    "title": "La clairière respire",
+    "body": "Région factice des tests."
+  }
+}

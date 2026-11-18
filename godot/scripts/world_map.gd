@@ -176,9 +176,52 @@ func draw_map(v: Control) -> void:
 	var s := v.size
 	var font := UiTheme.font(true)
 	v.draw_texture_rect(_tex, Rect2(Vector2.ZERO, s), false)
-	# Région de Ronce : un secteur teinté, borné par ses deux bords et le cercle intérieur.
-	var reg := "ronce"
-	var tint: Color = Game.tree.branch_color(Content.tree().get("branches", []).find(reg))
+	# Chaque région : un secteur teinté, borné par ses deux bords et le cercle intérieur.
+	for reg in Regions.ids():
+		_draw_region(v, reg, s, font)
+
+	# La graine.
+	var seed_at := to_map(Vector2.ZERO, s)
+	draw_glyph(v, "seed", seed_at, UiTheme.GOLD, true, 1.0)
+	_text(v, font, seed_at + Vector2(14, 5), "Graine", Color(UiTheme.GOLD, 0.9))
+
+	# Sanctuaires et autels du monde (groupes « sanctuaire » et « autel »).
+	for n in main.get_tree().get_nodes_in_group("sanctuaire"):
+		var lit: bool = Game.flags.get("sanctuaire_" + str(n.get("id")), false)
+		draw_glyph(v, "sanctuary", to_map(n.position, s), Color("9ad7ff"), lit, 1.0)
+	for n in main.get_tree().get_nodes_in_group("autel"):
+		if Game.flags.get("autel_" + str(n.get("id")), false):
+			draw_glyph(v, "altar", to_map(n.position, s), Color("f2d06b"), true, 1.0)
+
+	# Le Cœur et l'arène de chaque région.
+	for reg in main.hearts:
+		var heart = main.hearts[reg]
+		var purified := bool(Game.flags.get(heart.flag, false))
+		var hc := to_map(heart.center, s)
+		draw_glyph(v, "heart", hc, Color("7fd36b") if purified else Color("c84b44"), true, 1.0)
+		_text(v, font, hc + Vector2(-60, 24), "Cœur", Color("e9e2c8"))
+		var arena = main.arenas[reg]
+		var beaten := bool(Game.flags.get(arena.flag, false))
+		var ac := to_map(arena.center, s)
+		draw_glyph(v, "arena", ac, Color("7fd36b") if beaten else Color("e0675e"), true, 1.0)
+		_text(v, font, ac + Vector2(-70, 4), "Arène", Color("e9e2c8"))
+
+	# Objectif : un anneau qui bat autour de la cible.
+	var goal = Objectives.target_pos(Objectives.current())
+	if goal != null:
+		var gc := to_map(goal, s)
+		var pulse := 0.5 + 0.5 * sin(t * 4.0)
+		v.draw_arc(gc, 13.0 + 4.0 * pulse, 0.0, TAU, 28, Color(UiTheme.GOLD, 0.9 - 0.4 * pulse), 2.0)
+
+	# Le joueur, tourné vers sa visée.
+	draw_glyph(v, "player", to_map(main.player.position, s), Color.WHITE, true, 1.0, main.player.aim.angle())
+	v.draw_rect(Rect2(Vector2.ZERO, s), Color(0.6, 0.8, 0.6, 0.5), false, 2.0)
+	UiAudit.scan_controls("carte", self)
+
+
+## Secteur d'une région sur la carte, et son nom (« map_name » de data/regions/<id>.json).
+func _draw_region(v: Control, reg: String, s: Vector2, font: Font) -> void:
+	var tint: Color = Game.tree.branch_color(Content.tree().get("branches", []).find(Regions.branch_of(reg)))
 	var a := Regions.angle_of(reg)
 	var h := Regions.half_width()
 	var far: float = main.world_half * 2.0
@@ -197,46 +240,10 @@ func draw_map(v: Control) -> void:
 		arc.append(to_map(Vector2.from_angle(a - h + 2.0 * h * i / 24.0) * Regions.INNER, s))
 	v.draw_polyline(arc, Color(tint, 0.55), 1.5)
 	# Nom de la région, vers le milieu du secteur.
+	var label := str(Regions.def(reg).get("map_name", reg.capitalize()))
 	var name_at := to_map(Vector2.from_angle(a) * 1000.0, s)
-	var name_w := font.get_string_size("Roncier", HORIZONTAL_ALIGNMENT_CENTER, -1, 15).x
-	UiAudit.draw_text(v, "carte", font, name_at + Vector2(-name_w / 2.0, 0), "Roncier", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(tint.lightened(0.25), 0.95), v.get_global_transform())
-
-	# La graine.
-	var seed_at := to_map(Vector2.ZERO, s)
-	draw_glyph(v, "seed", seed_at, UiTheme.GOLD, true, 1.0)
-	_text(v, font, seed_at + Vector2(14, 5), "Graine", Color(UiTheme.GOLD, 0.9))
-
-	# Sanctuaires et autels du monde (groupes « sanctuaire » et « autel »).
-	for n in main.get_tree().get_nodes_in_group("sanctuaire"):
-		var lit: bool = Game.flags.get("sanctuaire_" + str(n.get("id")), false)
-		draw_glyph(v, "sanctuary", to_map(n.position, s), Color("9ad7ff"), lit, 1.0)
-	for n in main.get_tree().get_nodes_in_group("autel"):
-		if Game.flags.get("autel_" + str(n.get("id")), false):
-			draw_glyph(v, "altar", to_map(n.position, s), Color("f2d06b"), true, 1.0)
-
-	# Le Cœur et l'arène.
-	if main.heart != null:
-		var purified := bool(Game.flags.get("ronce_coeur_purifie", false))
-		var hc := to_map(main.heart.center, s)
-		draw_glyph(v, "heart", hc, Color("7fd36b") if purified else Color("c84b44"), true, 1.0)
-		_text(v, font, hc + Vector2(-60, 24), "Cœur", Color("e9e2c8"))
-	if main.arena != null:
-		var beaten := bool(Game.flags.get("ronce_boss_vaincu", false))
-		var ac := to_map(main.arena.center, s)
-		draw_glyph(v, "arena", ac, Color("7fd36b") if beaten else Color("e0675e"), true, 1.0)
-		_text(v, font, ac + Vector2(-70, 4), "Arène", Color("e9e2c8"))
-
-	# Objectif : un anneau qui bat autour de la cible.
-	var goal = Objectives.target_pos(Objectives.current())
-	if goal != null:
-		var gc := to_map(goal, s)
-		var pulse := 0.5 + 0.5 * sin(t * 4.0)
-		v.draw_arc(gc, 13.0 + 4.0 * pulse, 0.0, TAU, 28, Color(UiTheme.GOLD, 0.9 - 0.4 * pulse), 2.0)
-
-	# Le joueur, tourné vers sa visée.
-	draw_glyph(v, "player", to_map(main.player.position, s), Color.WHITE, true, 1.0, main.player.aim.angle())
-	v.draw_rect(Rect2(Vector2.ZERO, s), Color(0.6, 0.8, 0.6, 0.5), false, 2.0)
-	UiAudit.scan_controls("carte", self)
+	var name_w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, 15).x
+	UiAudit.draw_text(v, "carte", font, name_at + Vector2(-name_w / 2.0, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(tint.lightened(0.25), 0.95), v.get_global_transform())
 
 
 ## Texte posé sur la carte, avec un liseré sombre pour rester lisible sur toutes les teintes.

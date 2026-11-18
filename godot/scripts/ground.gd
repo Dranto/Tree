@@ -39,6 +39,9 @@ var mat: ShaderMaterial
 ## cache sont à redessiner. Vide : rien n'a changé.
 var _dirty_rect := Rect2i()
 var _rect: ColorRect
+## Régions passées au shader (dans l'ordre de ses tableaux) et leur état purifié (0 ou 1).
+var _region_ids: Array = []
+var _purified := PackedFloat32Array()
 
 ## --- Sol en cache (docs/performances.md) ---
 ## Le shader du sol coûtait ~9 ms par image en rendu logiciel : il est maintenant dessiné une fois
@@ -53,11 +56,19 @@ const TILE_SPARE := 12
 const TILE_MARGIN := 96.0
 ## Vrai : sol en cache (le jeu) ; faux : shader dessiné directement à chaque image (comparaison).
 var cached := true
+## Carrés à refaire au plus par image (0 : tous tout de suite, pour les captures et les tests).
+## Refaire un carré coûte ~1 ms en rendu logiciel : une mort en salit 1 à 4, la purification d'un
+## Cœur tous. Les autres attendent les images suivantes, les plus proches du centre de l'écran
+## d'abord (main.gd le règle à TILE_BUDGET en jeu et dans le banc).
+var tile_budget := 0
+const TILE_BUDGET := 2
 ## Carrés en cache : Vector2i -> {vp: SubViewport, sprite: Sprite2D, used: int}.
 var _tiles: Dictionary = {}
 ## Échelle de l'écran (pixels par pixel du monde) des carrés en cache.
 var _tile_scale := 0.0
 var _frame := 0
+## Matériau des carrés : recopie opaque, sans mélange (voir shaders/ground_tile.gdshader).
+var _tile_mat: ShaderMaterial
 
 
 func _ready() -> void:
@@ -73,15 +84,13 @@ func _ready() -> void:
 	mat.set_shader_parameter("world_size", Vector2(SIZE, SIZE))
 	mat.set_shader_parameter("noise_tex", noise_texture())
 	mat.set_shader_parameter("noise_period", NOISE_PERIOD)
-	# Région du roncier : secteur de la branche Ronce (sol teinté de rouille).
-	var normals := Regions.edge_normals("ronce")
-	mat.set_shader_parameter("ronce_n1", normals[0])
-	mat.set_shader_parameter("ronce_n2", normals[1])
 	mat.set_shader_parameter("region_inner", Regions.INNER)
 	mat.set_shader_parameter("region_edge", Regions.EDGE)
+	var pal := palette()
 	for k in PALETTE_SOL:
-		var col: Color = palette()[k]
+		var col: Color = pal[k]
 		mat.set_shader_parameter(k, Vector3(col.r, col.g, col.b))
+	_set_regions()
 	rect.material = mat
 	add_child(rect)
 	if "--sol-direct" in OS.get_cmdline_user_args():
@@ -98,34 +107,85 @@ static func _make_rect() -> ColorRect:
 
 
 ## Couleurs du sol passées au shader, toutes tirées de la charte (Art) : le fond reste sourd.
-const PALETTE_SOL := ["dead_dark", "dead_light", "crack_col", "pebble_col", "rust_dark", "rust_light",
-	"calm_dark", "calm_light", "alive_dark", "alive_light", "moss_col", "thicket_dark", "thicket_light",
-	"berry_col", "bloom_col"]
+## Celles de chaque région viennent de son fichier (data/regions/<id>.json, « ground »).
+const PALETTE_SOL := ["dead_dark", "dead_light", "crack_col", "pebble_col", "alive_dark", "alive_light",
+	"moss_col", "bloom_col"]
 
 static func palette() -> Dictionary:
 	var mort := Art.c("sol_mort")
 	var vivant := Art.c("sol_vivant")
-	var rouille := mort.lerp(Art.ec("cendre", "sombre"), 0.42)
 	return {
 		# Terre morte : deux tons proches (le sol bouge sans faire de bruit).
 		"dead_dark": mort.darkened(0.14),
 		"dead_light": mort.lightened(0.02),
 		"crack_col": Art.c("decor").darkened(0.35),
 		"pebble_col": mort.lightened(0.16),
-		# Roncier : rouille tant que le Cœur vit ; apaisé (purifié), une terre brune et calme.
-		"rust_dark": rouille.darkened(0.18),
-		"rust_light": rouille.lightened(0.03),
-		"calm_dark": mort.lerp(Art.ec("racine", "sombre"), 0.5).darkened(0.12),
-		"calm_light": mort.lerp(Art.ec("racine"), 0.25),
 		# Terre vivante : herbe, et liseré de mousse à la frontière de la vie.
 		"alive_dark": vivant.lightened(0.02),
 		"alive_light": vivant.lerp(Art.c("decor_vivant"), 0.7).lightened(0.2),
 		"moss_col": Art.c("decor_vivant").lerp(Art.ec("racine", "clair"), 0.45),
-		"thicket_dark": vivant.darkened(0.22),
-		"thicket_light": vivant.lerp(Art.c("decor_vivant"), 0.6).lightened(0.08),
-		"berry_col": Art.ec("saignement", "clair"),
 		"bloom_col": Art.c("interactif"),
 	}
+
+
+## Palette du sol d'une région, lue dans son fichier : couleurs de la terre morte (« dead »), apaisée
+## (« purified »), de l'herbe (« alive ») et des points sur l'herbe (« dot »), plus leurs réglages.
+static func region_palette(id: String) -> Dictionary:
+	var g := Regions.section(id, "ground")
+	var named := Regions.named_colors(g)
+	var out := {}
+	for k in REGION_COLORS:
+		out[k] = Regions.color(g.get(k, "sol_mort"), named)
+	var salt: Array = g.get("dot_salt", [0.0, 0.0])
+	out["dot_params"] = Vector4(float(g.get("dot_cell", 16.0)), float(g.get("dot_rarity", 1.0)), float(g.get("dot_size", 0.18)), float(g.get("dot_strength", 0.0)))
+	out["dot_salt"] = Vector2(float(salt[0]), float(salt[1]))
+	out["alive_mix"] = Vector2(float(g.get("alive_mix", 0.85)), float(g.get("alive_mix_purified", 0.35)))
+	return out
+
+## Couleurs obligatoires de « ground » dans le fichier d'une région.
+const REGION_COLORS := ["dead_dark", "dead_light", "purified_dark", "purified_light", "alive_dark", "alive_light", "dot"]
+## Nom de chaque couleur de région dans le shader.
+const REGION_UNIFORMS := {"dead_dark": "region_dead_dark", "dead_light": "region_dead_light",
+	"purified_dark": "region_calm_dark", "purified_light": "region_calm_light", "alive_dark": "region_alive_dark",
+	"alive_light": "region_alive_light", "dot": "region_dot_col"}
+
+
+## Passe au shader le secteur, la palette et l'état purifié de chaque région.
+func _set_regions() -> void:
+	var ids := Regions.ids().slice(0, Regions.MAX_REGIONS)
+	_region_ids = ids
+	var n1 := PackedVector2Array()
+	var n2 := PackedVector2Array()
+	var cols := {}
+	for k in REGION_UNIFORMS:
+		cols[k] = PackedVector3Array()
+	# vec4 en tableau : passé comme couleurs (quatre nombres).
+	var dots := PackedColorArray()
+	var salts := PackedVector2Array()
+	var mixes := PackedVector2Array()
+	for id in ids:
+		var normals := Regions.edge_normals(id)
+		n1.append(normals[0])
+		n2.append(normals[1])
+		var pal := region_palette(id)
+		for k in REGION_UNIFORMS:
+			var c: Color = pal[k]
+			cols[k].append(Vector3(c.r, c.g, c.b))
+		var d: Vector4 = pal["dot_params"]
+		dots.append(Color(d.x, d.y, d.z, d.w))
+		salts.append(pal["dot_salt"])
+		mixes.append(pal["alive_mix"])
+	mat.set_shader_parameter("region_count", ids.size())
+	mat.set_shader_parameter("region_n1", n1)
+	mat.set_shader_parameter("region_n2", n2)
+	for k in REGION_UNIFORMS:
+		mat.set_shader_parameter(REGION_UNIFORMS[k], cols[k])
+	mat.set_shader_parameter("region_dot", dots)
+	mat.set_shader_parameter("region_dot_salt", salts)
+	mat.set_shader_parameter("region_alive_mix", mixes)
+	_purified.resize(ids.size())
+	_purified.fill(0.0)
+	mat.set_shader_parameter("region_purified", _purified)
 
 
 ## Bruit du sol, une couche par canal, qui se répète sans couture :
@@ -206,6 +266,7 @@ func _update_tiles() -> void:
 			if not _tiles.has(key):
 				_tiles[key] = _make_tile(key, world)
 			_tiles[key]["used"] = _frame
+	_refresh_dirty(view.get_center())
 	var keep := (hi.x - lo.x + 1) * (hi.y - lo.y + 1) + TILE_SPARE
 	if _tiles.size() > keep:
 		var old := _tiles.keys()
@@ -235,6 +296,10 @@ func _make_tile(key: Vector2i, world: float) -> Dictionary:
 	sprite.scale = Vector2(world, world) / TILE_PX
 	sprite.texture = vp.get_texture()
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	if _tile_mat == null:
+		_tile_mat = ShaderMaterial.new()
+		_tile_mat.shader = preload("res://shaders/ground_tile.gdshader")
+	sprite.material = _tile_mat
 	add_child(sprite)
 	return {"vp": vp, "sprite": sprite, "used": _frame, "rect": Rect2(origin, Vector2(world, world))}
 
@@ -251,11 +316,31 @@ func _clear_tiles() -> void:
 		_free_tile(key)
 
 
-## Redessine les carrés qui touchent ce rectangle du monde (tous s'il est infini).
+## Redessine les carrés qui touchent ce rectangle du monde (tous s'il est infini) : tout de suite,
+## ou dans la limite de tile_budget par image (voir _refresh_dirty).
 func _invalidate(area: Rect2) -> void:
 	for t in _tiles.values():
 		if not area.is_finite() or (t["rect"] as Rect2).intersects(area):
-			t["vp"].render_target_update_mode = SubViewport.UPDATE_ONCE
+			if tile_budget > 0:
+				t["dirty"] = true
+			else:
+				t["vp"].render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+## Refait au plus tile_budget carrés salis, les plus proches de « center » d'abord.
+func _refresh_dirty(center: Vector2) -> void:
+	if tile_budget <= 0:
+		return
+	var dirty_tiles: Array = []
+	for t in _tiles.values():
+		if t.get("dirty", false):
+			dirty_tiles.append(t)
+	if dirty_tiles.is_empty():
+		return
+	dirty_tiles.sort_custom(func(a, b): return (a["rect"] as Rect2).get_center().distance_squared_to(center) < (b["rect"] as Rect2).get_center().distance_squared_to(center))
+	for i in mini(tile_budget, dirty_tiles.size()):
+		dirty_tiles[i]["dirty"] = false
+		dirty_tiles[i]["vp"].render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 ## Les vagues de vie avancent à pas fixe : la vie du sol compte pour le jeu (soin, Flétris ralentis).
@@ -275,9 +360,13 @@ func _physics_process(delta: float) -> void:
 	waves = waves.filter(func(w): return w["done"] < w["radius"])
 
 
-## La région de Ronce a été purifiée (son Cœur) : la rouille du sol s'efface.
-func set_purified(value: float) -> void:
-	mat.set_shader_parameter("ronce_purified", value)
+## Le Cœur d'une région a été purifié : la terre morte de la région s'apaise.
+func set_purified(region: String, value: float) -> void:
+	var i := _region_ids.find(region)
+	if i < 0 or _purified[i] == value:
+		return
+	_purified[i] = value
+	mat.set_shader_parameter("region_purified", _purified)
 	_invalidate(Rect2(-Vector2.INF, Vector2.INF))
 
 

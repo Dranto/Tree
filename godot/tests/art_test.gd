@@ -40,7 +40,7 @@ func _initialize() -> void:
 	check(ui.INK == Art.c("texte") and ui.LEAF == Art.c("accent") and ui.GOLD == Art.c("or") and ui.PANEL_BG == Art.c("panneau"), "ui_theme.gd lit ses couleurs dans Art")
 
 	print("Éléments")
-	check(Art.ELEMENT_IDS.size() == 6, "six éléments")
+	check(Art.ELEMENT_IDS.size() == 7, "sept éléments")
 	var motifs := {}
 	for id in Art.ELEMENT_IDS:
 		var e: Dictionary = Art.ELEMENTS[id]
@@ -48,7 +48,7 @@ func _initialize() -> void:
 			check(e.has(k), "%s : « %s »" % [id, k])
 		motifs[e["motif"]] = true
 		check(id in Art.ICONES["elements"], "%s a une icône" % id)
-	check(motifs.size() == 6, "un motif différent par élément")
+	check(motifs.size() == Art.ELEMENT_IDS.size(), "un motif différent par élément")
 	for kind in [""] + Art.DALTONISMES.keys():
 		var worst := 1000.0
 		var pair := ""

@@ -8,10 +8,15 @@ on:
     branches: [main, master, "claude/project-thread-9liy48"]
   workflow_dispatch:
 
+# Budgets du banc des pics sur la machine de la CI (docs/performances.md).
+env:
+  COEUR_BUDGET_MS: 45
+  COEUR_P99_MS: 90
+
 jobs:
   bench:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -26,8 +31,19 @@ jobs:
           path: ~/.cache/godot
           key: godot-4.3-stable
 
+      # pipefail : sans lui, « | tee » rendait le code de tee et un dépassement passait inaperçu.
       - name: Banc de jeu (meilleure de 2 mesures)
-        run: RUNS=2 tools/bench.sh | tee bench.txt
+        shell: bash
+        run: |
+          set -o pipefail
+          RUNS=2 tools/bench.sh | tee bench.txt
+
+      - name: Banc des pics, siège du Cœur (meilleure de 2 mesures)
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          SCENE=coeur RUNS=2 BUDGET_MS=${{ env.COEUR_BUDGET_MS }} P99_MS=${{ env.COEUR_P99_MS }} tools/bench.sh | tee bench_coeur.txt
 
       - name: Résumé du job
         if: always()
@@ -36,5 +52,9 @@ jobs:
             echo "### Banc de performance"
             echo '```'
             cat bench.txt 2>/dev/null
+            echo '```'
+            echo "### Banc des pics (siège du Cœur)"
+            echo '```'
+            cat bench_coeur.txt 2>/dev/null
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

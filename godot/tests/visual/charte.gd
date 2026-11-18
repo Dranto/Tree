@@ -67,7 +67,10 @@ func _palette(o: Vector2) -> void:
 func _elements(o: Vector2) -> void:
 	_title(o, "Éléments · couleur, motif, icône, état")
 	_text(Vector2(o.x + 290, o.y), "en bas : vus en protanopie (P), deutéranopie (D), tritanopie (T)", 11, Art.c("texte_doux"))
-	var w := 126.0
+	# Colonnes aussi larges que possible avant la colonne de droite.
+	var w := minf(126.0, (R - L - 16.0) / Art.ELEMENT_IDS.size())
+	var sw := (w - 20.0) / 3.0
+	var box := minf(34.0, (w - 16.0) / 3.0 - 4.0)
 	for i in Art.ELEMENT_IDS.size():
 		var id: String = Art.ELEMENT_IDS[i]
 		var e: Dictionary = Art.ELEMENTS[id]
@@ -78,11 +81,11 @@ func _elements(o: Vector2) -> void:
 		# Icône sur un disque sombre
 		Art.icon_badge(self, id, Rect2(cx - 32, y + 6, 64, 64))
 		_text_c(Vector2(cx, y + 90), e["nom"], 15, e["couleur"].lerp(Color.WHITE, 0.25), w - 8, true)
-		draw_multiline_string(font, Vector2(x + 6, y + 108), e["sens"], HORIZONTAL_ALIGNMENT_CENTER, w - 20, 10, 3, Art.c("texte_doux"))
+		draw_multiline_string(font, Vector2(x + 6, y + 108), e["sens"], HORIZONTAL_ALIGNMENT_CENTER, w - 14, 10 if w >= 126.0 else 9, 3, Art.c("texte_doux"))
 		# Trois teintes
 		for k in 3:
 			var v: String = ["sombre", "couleur", "clair"][k]
-			draw_rect(Rect2(x + 10 + k * 36, y + 148, 34, 12), e[v])
+			draw_rect(Rect2(x + 10 + k * sw, y + 148, sw - 2.0, 12), e[v])
 		# Motif
 		Art.motif(self, id, Rect2(x + 8, y + 166, w - 24, 54), 0.4)
 		# État sur un Flétri (corps neutre)
@@ -94,11 +97,11 @@ func _elements(o: Vector2) -> void:
 		# Daltonismes
 		var k2 := 0
 		for kind in Art.DALTONISMES:
-			var r := Rect2(x + 6 + k2 * 38, y + 274, 34, 34)
+			var r := Rect2(x + 6 + k2 * (box + 4.0), y + 274, box, 34)
 			draw_rect(r, Art.c("contour"))
-			draw_rect(Rect2(r.position, Vector2(34, 6)), Art.simulate(e["couleur"], kind))
-			Art.icon(self, id, Rect2(r.position + Vector2(5, 8), Vector2(24, 24)), Art.simulate(e["couleur"], kind))
-			_text_c(Vector2(r.get_center().x, y + 318), DALTO_ABR[kind], 9, Art.c("texte_doux"), 34)
+			draw_rect(Rect2(r.position, Vector2(box, 6)), Art.simulate(e["couleur"], kind))
+			Art.icon(self, id, Rect2(r.position + Vector2((box - 24.0) / 2.0, 8), Vector2(24, 24)), Art.simulate(e["couleur"], kind))
+			_text_c(Vector2(r.get_center().x, y + 318), DALTO_ABR[kind], 9, Art.c("texte_doux"), box)
 			k2 += 1
 
 

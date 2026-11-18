@@ -133,7 +133,7 @@ func _veil() -> void:
 ## Le suivi s'efface par-dessus l'Arbre de vie (il couvre tout l'écran), pendant la fin et pendant
 ## le combat de boss (seules les informations du combat restent).
 func tracker_shown() -> bool:
-	return not main.tree_ui.visible and not ending.active and not main.arena.in_combat()
+	return not main.tree_ui.visible and not ending.active and not main.in_boss_fight()
 
 
 func _on_ending_closed() -> void:

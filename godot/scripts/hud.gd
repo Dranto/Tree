@@ -96,7 +96,7 @@ func holds_info() -> bool:
 
 
 func in_boss_fight() -> bool:
-	return main != null and main.get("arena") != null and main.arena.in_combat()
+	return main != null and main.get("arena") != null and main.in_boss_fight()
 
 
 ## Passe à l'annonce suivante quand celle qui est affichée a fait son temps. Une annonce de
@@ -327,7 +327,7 @@ func _update_hint() -> void:
 		if float(cd) > 0.0:
 			_hint_skill = true
 			break
-	var fight: bool = in_boss_fight() or p.hurt_flash > 0.0 or (main.heart != null and main.heart.state == "siege")
+	var fight: bool = in_boss_fight() or p.hurt_flash > 0.0 or main.siege_heart() != null
 	if not fight:
 		for e in main.enemies_near(p.position, HINT_ENEMY_NEAR):
 			fight = true
@@ -357,14 +357,13 @@ func _refresh() -> void:
 			slot.apply(Widgets.Slot.LOCKED, "", 0.0, 0.0, "", "")
 		elif id == "":
 			slot.name_label.text = "libre"
-			slot.as_key = slot_is_key(i)
-			slot.apply(Widgets.Slot.FREE, "", 0.0, 0.0, slot_keys_text(i), "%s : emplacement libre.\nClique pour y placer une compétence acquise, ou glisse-en une dessus." % slot_title(i))
+			slot.as_key = _cached("slot_is_key:%d" % i, slot_is_key.bind(i))
+			slot.apply(Widgets.Slot.FREE, "", 0.0, 0.0, _cached("slot_keys:%d" % i, slot_keys_text.bind(i)), _cached("slot_free:%d" % i, _free_tip.bind(i)))
 		else:
-			var k: Dictionary = Content.skills()[id]
 			var cd: float = p.cds.get(id, 0.0)
 			var maxcd: float = maxf(0.01, p.skill_cd.get(id, 1.0))
-			slot.name_label.text = k.get("short", id)
-			slot.apply(Widgets.Slot.SKILL, id, cd / maxcd if cd > 0.0 else 0.0, cd, slot_keys_text(i), "%s  (%s)\n%s\nClique pour changer de compétence, ou glisse-la sur un autre emplacement." % [k.get("name", id), slot_control(i), k.get("desc", "")])
+			slot.name_label.text = _cached("short:" + id, func(): return Content.skills()[id].get("short", id))
+			slot.apply(Widgets.Slot.SKILL, id, cd / maxcd if cd > 0.0 else 0.0, cd, _cached("slot_keys:%d" % i, slot_keys_text.bind(i)), _cached("slot_tip:%d:%s" % [i, id], _skill_tip.bind(i, id)))
 
 	if _banner.text != banner_text:
 		_banner.text = banner_text
@@ -380,6 +379,8 @@ func _refresh() -> void:
 	var show_hint := hint_time > 0.0 and Settings.show_hints and not in_boss_fight()
 	_hint_box.modulate.a = clampf(hint_time / 2.0, 0.0, 1.0) if show_hint else 0.0
 	_hint_box.visible = show_hint
+	if not show_hint:
+		return
 	var lines := [
 		move_hint_line(),
 		skills_hint_line(),
@@ -387,3 +388,20 @@ func _refresh() -> void:
 	]
 	for i in 3:
 		(_hint_box.get_child(i) as Label).text = lines[i]
+
+
+## Textes de l'interface qui ne dépendent que des réglages (touches, noms) : calculés une fois, puis
+## gardés jusqu'au prochain changement des réglages (les noms des touches coûtent cher à chaque image).
+func _cached(key: String, make: Callable):
+	if not _labels.has(key):
+		_labels[key] = make.call()
+	return _labels[key]
+
+
+func _free_tip(i: int) -> String:
+	return "%s : emplacement libre.\nClique pour y placer une compétence acquise, ou glisse-en une dessus." % slot_title(i)
+
+
+func _skill_tip(i: int, id: String) -> String:
+	var k: Dictionary = Content.skills()[id]
+	return "%s  (%s)\n%s\nClique pour changer de compétence, ou glisse-la sur un autre emplacement." % [k.get("name", id), slot_control(i), k.get("desc", "")]

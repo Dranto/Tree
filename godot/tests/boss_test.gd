@@ -55,20 +55,20 @@ func _run() -> void:
 	check(heart.state == "fletri" and arena.state == "fermee", "Cœur flétri, arène fermée")
 	_place(arena.center)
 	await _steps(3)
-	check(main.player.position.distance_to(arena.center) > arena.RADIUS, "le mur de ronces repousse le joueur hors de l'arène fermée")
+	check(main.player.position.distance_to(arena.center) > arena.max_radius, "le mur de ronces repousse le joueur hors de l'arène fermée")
 
 	print("Siège du Cœur")
-	_place(heart.center + Vector2(heart.ZONE * 0.6, 0))
+	_place(heart.center + Vector2(heart.zone * 0.6, 0))
 	await _steps(90)
 	check(heart.state == "siege" and heart.progress > 1.0, "tenir la zone lance le siège")
 	check(heart.spawned.size() > 0, "une vague d'ennemis est arrivée")
 	check(heart.bar.visible, "la barre du Cœur est affichée")
-	_place(heart.center + Vector2(heart.ZONE + 200.0, 0))
+	_place(heart.center + Vector2(heart.zone + 200.0, 0))
 	var before: float = heart.progress
 	await _steps(30)
 	check(heart.progress < before and heart.progress > 0.0, "hors de la zone, l'avancée retombe lentement")
-	_place(heart.center + Vector2(heart.ZONE * 0.6, 0))
-	heart.progress = heart.HOLD_TIME - 0.2
+	_place(heart.center + Vector2(heart.zone * 0.6, 0))
+	heart.progress = heart.hold_time - 0.2
 	await _steps(30)
 	check(heart.state == "purifie" and game.flags.get("ronce_coeur_purifie", false) == true, "30 s tenues : Cœur purifié, drapeau posé")
 	check(arena.state == "ouverte", "l'arène s'ouvre")
@@ -99,7 +99,7 @@ func _run() -> void:
 	check(await _until(func(): return boss.phase == 2), "sous 66 % de vie : phase 2")
 	boss.take_damage(boss.max_hp * 0.3, false)
 	check(await _until(func(): return boss.phase == 3), "sous 33 % de vie : phase 3")
-	check(await _until(func(): return arena.radius < arena.RADIUS), "en phase 3 l'arène rétrécit")
+	check(await _until(func(): return arena.radius < arena.max_radius), "en phase 3 l'arène rétrécit")
 	_place(arena.center + Vector2(0, 250))
 	await _steps(2)
 
@@ -109,7 +109,7 @@ func _run() -> void:
 	check(arena.state == "ouverte" and not main.spawn_paused, "le combat s'arrête, l'arène reste ouverte")
 	check(game.flags.get("ronce_coeur_purifie", false) == true and heart.state == "purifie", "le Cœur reste purifié")
 	check(main.player.position.distance_to(main.respawn_point()) < 10.0, "le joueur renaît au dernier sanctuaire ravivé")
-	check(not arena.bar.visible and arena.radius == arena.RADIUS, "barre cachée, arène à sa taille")
+	check(not arena.bar.visible and arena.radius == arena.max_radius, "barre cachée, arène à sa taille")
 
 	print("Victoire")
 	_place(arena.center + Vector2(0, 250))

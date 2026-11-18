@@ -6,7 +6,7 @@
 ## Revenir dans le cercle d'un sanctuaire déjà ravivé en refait le point de renaissance et
 ## rend aussi toute la vie. Celui de la Graine est ravivé dès le départ.
 ##
-## Les sanctuaires sont posés par main.gd à partir de SITES ; chacun est un nœud au niveau du sol
+## Les sanctuaires sont posés par main.gd à partir de sites() ; chacun est un nœud au niveau du sol
 ## (sous les personnages). Ils ne font rien pour le robot d'équilibrage ni pendant le banc de
 ## performance (frozen), pour ne pas changer leurs mesures.
 extends Node2D
@@ -24,18 +24,17 @@ const DECAY := 1.0
 const LIFE_RADIUS := 170.0
 const STONES := 7
 
-## Emplacements : « dist » depuis la graine et « angle » (radians) par rapport à l'axe de la région.
-## Ils restent hors de la zone du Cœur et de l'arène, et sont écartés des buissons d'épines.
-const SITES := [
-	{"id": "graine", "name": "de la Graine", "region": "", "dist": 0.0, "angle": 0.0},
-	{"id": "lisiere", "name": "de la Lisière", "region": "ronce", "dist": 820.0, "angle": -0.3},
-	{"id": "ravin", "name": "du Ravin", "region": "ronce", "dist": 1250.0, "angle": 0.3},
-	{"id": "veille", "name": "de la Veille", "region": "ronce", "dist": 1700.0, "angle": -0.38},
-	{"id": "epine", "name": "de l'Épine", "region": "ronce", "dist": 2200.0, "angle": 0.3},
-]
+## Sanctuaire de la Graine, au centre du monde. Les autres sont décrits par les régions
+## (« sanctuaries » de data/regions/<id>.json) : « dist » depuis la graine et « side » (ou « angle »,
+## en radians) par rapport à l'axe de la région. Ils restent hors de la zone du Cœur et de l'arène,
+## et sont écartés des buissons d'épines.
+const SEED_SITE := {"id": "graine", "name": "de la Graine", "region": "", "dist": 0.0, "angle": 0.0}
+
 
 var main
 var id := ""
+## Région du sanctuaire ("" pour celui de la Graine).
+var region := ""
 ## Complément du nom : « sanctuaire de la Lisière ».
 var place := ""
 ## Secondes passées dans le cercle (jusqu'à LIGHT_TIME).
@@ -49,15 +48,27 @@ var flash := 0.0
 var _stones: Array = []
 
 
-## Position d'un emplacement de SITES dans le monde (avant l'écart des buissons).
+## Tous les emplacements : la Graine, puis ceux de chaque région (dans l'ordre des régions).
+static func sites() -> Array:
+	var out: Array = [SEED_SITE]
+	for reg in Regions.ids():
+		for site in Regions.def(reg).get("sanctuaries", []):
+			var s: Dictionary = site.duplicate()
+			s["region"] = reg
+			out.append(s)
+	return out
+
+
+## Position d'un emplacement dans le monde (avant l'écart des buissons).
 static func site_position(site: Dictionary) -> Vector2:
 	if site["region"] == "":
 		return Vector2.ZERO
-	return Vector2.from_angle(Regions.angle_of(site["region"]) + float(site["angle"])) * float(site["dist"])
+	return Regions.place(site["region"], site)
 
 
 func setup(site: Dictionary) -> void:
 	id = site["id"]
+	region = str(site.get("region", ""))
 	place = site["name"]
 	name = "Sanctuaire_" + id
 	# Groupe lu par les objectifs et la carte (tâche E) : chaque nœud a une propriété « id ».
