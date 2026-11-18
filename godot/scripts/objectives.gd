@@ -40,6 +40,7 @@ var _catch_up := true
 var _last_deaths := 0
 ## Dernière région suivie (followed_region), pour prévenir le cadre quand elle change.
 var _followed := ""
+var _here := "?"
 
 
 func _ready() -> void:
@@ -75,12 +76,16 @@ func _on_elite_killed(_enemy = null) -> void:
 
 
 func _process(delta: float) -> void:
-	# Le joueur passe d'une région à l'autre : le cadre et le journal changent tout de suite.
-	if main != null and is_instance_valid(main):
-		var r := followed_region()
-		if r != _followed:
-			_followed = r
-			changed.emit()
+	# Le joueur passe d'une région à l'autre : le cadre et le journal changent tout de suite
+	# (la région sous le joueur est lue à chaque image, la suite seulement quand elle change).
+	if main != null and is_instance_valid(main) and main.player != null:
+		var here := Regions.region_at(main.player.position)
+		if here != _here:
+			_here = here
+			var r := followed_region()
+			if r != _followed:
+				_followed = r
+				changed.emit()
 	_timer -= delta
 	if _timer > 0.0:
 		return

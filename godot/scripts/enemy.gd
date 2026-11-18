@@ -565,7 +565,7 @@ func _ready() -> void:
 
 ## Redessine ce qui bouge, et seulement cela (appelé par _process).
 func _redraw_parts(delta: float) -> void:
-	var busy := state != "" or hit_flash > 0.0 or strike_t >= 0.0 or aff_state != ""
+	var busy := (state != "" and not _behavior.calm(self)) or hit_flash > 0.0 or strike_t >= 0.0 or aff_state != ""
 	if busy or behavior == "guard" or elite:
 		queue_redraw()
 	_body_clock -= delta

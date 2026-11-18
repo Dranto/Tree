@@ -56,6 +56,11 @@ func step(e, delta: float, dir: Vector2, dist: float, slow: float) -> void:
 
 
 ## En vol haut, il esquive les coups directs (et le montre).
+## Le vol haut dure tant que le joueur est proche : dessiné au rythme ordinaire (performances).
+func calm(e) -> bool:
+	return e.state == "vol"
+
+
 func dodge(e) -> bool:
 	if e.state != "vol":
 		return false
