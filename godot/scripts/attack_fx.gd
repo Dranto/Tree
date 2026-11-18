@@ -56,7 +56,7 @@ func play(id: String, d := {}) -> Dictionary:
 	e["id"] = id
 	e["t"] = 0.0
 	if not e.has("dur"):
-		e["dur"] = DUREE.get(id, 0.3)
+		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, 0.3))
 	if Settings.reduce_effects and id in ["fourche", "ricochet", "eclat", "enracine"]:
 		return e
 	while effects.size() >= MAX_EFFECTS:
@@ -221,6 +221,9 @@ static func _spike(ci, base: Vector2, d: Vector2, length: float, col: Color) -> 
 ## Dessine une signature à son instant e["t"].
 static func draw_effect(ci: CanvasItem, e: Dictionary) -> void:
 	var k: float = clampf(e["t"] / maxf(e["dur"], 0.001), 0.0, 1.0)
+	if VentFx.draws(e["id"]):
+		VentFx.draw(ci, e, false)
+		return
 	match e["id"]:
 		"fouet":
 			_fouet(ci, e, k)

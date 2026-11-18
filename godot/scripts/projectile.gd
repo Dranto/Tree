@@ -27,6 +27,11 @@ var forked := false
 var bounces := 0
 var plant := false
 var trap_dmg := 0.0
+## Lame de vent (forme « lame », attack.json › "return") : elle part jusqu'à sa portée, puis revient
+## vers « home » (le joueur) en frappant de nouveau ce qu'elle croise ; elle disparaît en l'atteignant.
+var returning := false
+var home = null
+var _back := false
 ## Traînée d'épines : distance parcourue depuis la dernière touffe semée.
 var _trail := 0.0
 ## Âge (s) : la graine « éclot » à sa sortie (dessin seulement).
@@ -40,6 +45,13 @@ func _ready() -> void:
 
 ## La sortie ne dure que quelques images : on redessine seulement pendant ce temps.
 func _process(delta: float) -> void:
+	if style == "lame":
+		# La lame tourne sur elle-même : seule la rotation du nœud change, rien n'est redessiné.
+		rotation += delta * 15.0
+		if age < SORTIE:
+			age += delta
+			queue_redraw()
+		return
 	if age < SORTIE:
 		age += delta
 		queue_redraw()
@@ -65,6 +77,20 @@ func _physics_process(delta: float) -> void:
 		if _trail >= every:
 			_trail -= every
 			AttackScript.trail(main, position, damage, float(attack["trainee"]))
+	if _back:
+		if home == null or not is_instance_valid(home):
+			queue_free()
+			return
+		var to: Vector2 = home.position - position
+		if to.length() < 26.0:
+			queue_free()
+			return
+		vel = to.normalized() * vel.length()
+	elif returning and life <= 0.0:
+		# Demi-tour : la lame peut retoucher les ennemis déjà frappés à l'aller.
+		_back = true
+		hit.clear()
+		life = 4.0
 	if life <= 0.0:
 		if plant:
 			AttackScript.plant(main, position, trap_dmg, attack)
@@ -91,7 +117,8 @@ func _physics_process(delta: float) -> void:
 func _draw() -> void:
 	# Sortie : la graine grossit en dépassant un peu sa taille (Anim.pop).
 	var g := Anim.pop(clampf(age / SORTIE, 0.0, 1.0)) if age < SORTIE else 1.0
-	draw_shot(self, "epine" if thorn else style, vel.normalized(), radius * maxf(g, 0.2), empowered)
+	var d := Vector2.RIGHT if style == "lame" else vel.normalized()
+	draw_shot(self, "epine" if thorn else style, d, radius * maxf(g, 0.2), empowered)
 
 
 ## Dessine un projectile centré sur l'origine, dans la direction dir, de rayon r (galerie comprise).
@@ -104,6 +131,8 @@ static func draw_shot(ci: CanvasItem, style: String, dir: Vector2, r: float, emp
 		ci.draw_circle(Vector2.ZERO, r * 2.6, Color(Art.c("or"), 0.16))
 		ci.draw_arc(Vector2.ZERO, r * 2.1, 0.0, TAU, 16, Color(Art.c("or"), 0.7), maxf(1.5, r * 0.25), true)
 	match style:
+		"lame":
+			VentFx.draw_lame(ci, dir, r)
 		"epine", "eclat":
 			# Épine d'os : pointe claire vers l'avant, une moitié dans l'ombre, base teintée de sang.
 			var clair := Art.ec("epine", "clair")

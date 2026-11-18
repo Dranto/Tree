@@ -81,5 +81,74 @@
     ],
     "choices": {"c:ronce:sang:s4": "sang_epais", "c:ronce:sang:s5": "saignee_brutale", "c:ronce:venin:p4": "venin_et_sang"},
     "style": "melee"
+  },
+  "lames": {
+    "name": "Lames",
+    "branch": "vent",
+    "opening": ["c:vent:lames:l1", "c:vent:lames:l2"],
+    "targets": [
+      "c:vent:lames:l1",
+      "c:vent:lames:l2",
+      "c:vent:lames:l3",
+      "c:vent:lames:l4",
+      "c:vent:lames:l5",
+      "c:vent:graines:a1",
+      "key:rafale",
+      "c:vent:lames:l7",
+      "c:vent:vif:v1",
+      "c:vent:vif:v3",
+      "c:vent:vif:v2",
+      "c:vent:vif:v4",
+      "c:vent:vif:v6",
+      "key:insaisissable",
+      "key:pas_du_vent"
+    ],
+    "choices": {"c:vent:lames:l4": "lames_acerees", "c:vent:vif:v4": "vif_argent"},
+    "style": "distance"
+  },
+  "ruee": {
+    "name": "Ruée",
+    "branch": "vent",
+    "opening": ["c:vent:course:r6", "c:vent:course:r1"],
+    "targets": [
+      "c:vent:course:r6",
+      "c:vent:course:r1",
+      "c:vent:course:r3",
+      "c:vent:course:r2",
+      "c:vent:course:r4",
+      "c:vent:course:r7",
+      "c:vent:course:r5",
+      "c:vent:course:r8",
+      "key:pas_du_vent",
+      "c:vent:vif:v1",
+      "c:vent:vif:v2",
+      "c:vent:vif:v3",
+      "c:vent:vif:v4",
+      "key:insaisissable"
+    ],
+    "choices": {"c:vent:course:r4": "impact", "c:vent:course:r5": "ruee_fantome", "c:vent:vif:v4": "souffle_long"},
+    "style": "melee"
+  },
+  "tornade": {
+    "name": "Tornade",
+    "branch": "vent",
+    "opening": ["c:vent:cyclone:t1"],
+    "targets": [
+      "c:vent:cyclone:t1",
+      "c:vent:cyclone:t2",
+      "c:vent:cyclone:t3",
+      "c:vent:cyclone:t4",
+      "c:vent:cyclone:t5",
+      "c:vent:cyclone:t6",
+      "key:pas_du_vent",
+      "c:vent:appel:p1",
+      "c:vent:appel:p2",
+      "c:vent:appel:p3",
+      "c:vent:appel:p4",
+      "c:vent:appel:p5",
+      "key:haute_pression"
+    ],
+    "choices": {"c:vent:cyclone:t4": "cyclone_violent", "c:vent:cyclone:t5": "tornades_jumelles", "c:vent:appel:p4": "appel_brutal", "c:vent:appel:p5": "oeil_calme"},
+    "style": "distance"
   }
 }

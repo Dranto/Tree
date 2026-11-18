@@ -470,13 +470,13 @@ func skill_object(id: String):
 	return _skill_objects[id]
 
 
-## Fait avancer d'un pas les compétences acquises (Skill.tick).
+## Fait avancer d'un pas les compétences déjà chargées (Skill.tick) : celles qu'on a lancées, et
+## celles dont un effet a fait naître quelque chose (une tornade semée par une greffe de Vent).
 func _tick_skills(delta: float) -> void:
-	for k in skills:
-		if Game.has_key(k):
-			var obj = skill_object(k)
-			if obj != null:
-				obj.tick(delta)
+	for k in _skill_objects.keys():
+		var obj = _skill_objects[k]
+		if obj != null:
+			obj.tick(delta)
 
 
 func current_damage() -> float:

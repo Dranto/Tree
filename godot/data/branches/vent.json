@@ -2,35 +2,77 @@
   "id": "vent",
   "name": "Vent",
   "color": "#7fd0e0",
-  "blurb": "Vitesse d'attaque et de déplacement",
-  "small": [
-    {"stat": "fire_rate", "op": "inc", "value": 0.04},
-    {"stat": "move_speed", "op": "inc", "value": 0.025}
-  ],
+  "blurb": "Vitesse, lames de vent et tornades",
+  "small": [{"stat": "fire_rate", "op": "inc", "value": 0.04}, {"stat": "move_speed", "op": "inc", "value": 0.025}],
   "notable": {
-    "effects": [
-      {"stat": "pickup", "op": "inc", "value": 0.2},
-      {"stat": "dash_cd", "op": "inc", "value": -0.05}
-    ],
-    "names": [
-      ["Souffle", "Bourrasque", "Pollen", "Brise", "Plume", "Envol"],
-      ["léger", "vif", "errant", "frais", "agile", "libre"]
-    ]
+    "effects": [{"stat": "pickup", "op": "inc", "value": 0.2}, {"stat": "dash_cd", "op": "inc", "value": -0.05}],
+    "names": [["Souffle", "Bourrasque", "Pollen", "Brise", "Plume", "Envol"], ["léger", "vif", "errant", "frais", "agile", "libre"]]
   },
   "keystones": [
-    {"key": "rafale", "name": "Rafale", "effects": [
-      {"stat": "projectiles", "op": "add", "value": 2},
-      {"stat": "damage", "op": "more", "value": 0.85}
-    ]},
-    {"key": "pas_du_vent", "name": "Pas du vent", "effects": [
-      {
-        "on": "kill", "do": "reduce_cooldown", "target": "dash", "value": 0.3,
-        "text": "Chaque ennemi vaincu réduit la recharge de l'esquive de 0,3 s."
-      }
-    ]},
-    {"key": "tempete", "name": "Tempête", "effects": [
-      {"stat": "fire_rate", "op": "more", "value": 1.5}
-    ]}
+    {
+      "key": "rafale",
+      "name": "Rafale",
+      "desc": "Plus de traits à chaque attaque, chacun un peu moins fort.",
+      "effects": [{"stat": "projectiles", "op": "add", "value": 2}, {"stat": "damage", "op": "more", "value": 0.85}]
+    },
+    {
+      "key": "pas_du_vent",
+      "name": "Pas du vent",
+      "desc": "Chaque victoire te rend ton esquive plus vite.",
+      "effects": [
+        {
+          "on": "kill",
+          "do": "reduce_cooldown",
+          "target": "dash",
+          "value": 0.3,
+          "text": "Chaque ennemi vaincu réduit la recharge de l'esquive de 0,3 s."
+        },
+        {
+          "on": "kill",
+          "do": "reduce_cooldown",
+          "target": "ruee",
+          "value": 0.15,
+          "text": "Chaque ennemi vaincu réduit la recharge de la ruée de 0,15 s."
+        }
+      ]
+    },
+    {
+      "key": "tempete",
+      "name": "Tempête",
+      "desc": "Tes attaques s'emballent, mais le vent t'use : moins de vie.",
+      "effects": [{"stat": "fire_rate", "op": "more", "value": 1.5}, {"stat": "max_hp", "op": "more", "value": 0.8}]
+    }
+  ],
+  "resonance": [
+    {
+      "count": 10,
+      "name": "Résonance du Vent I",
+      "effects": [{"stat": "move_speed", "op": "inc", "value": 0.05}, {"stat": "fire_rate", "op": "inc", "value": 0.06}]
+    },
+    {
+      "count": 25,
+      "name": "Résonance du Vent II",
+      "effects": [
+        {"stat": "dash_cd", "op": "inc", "value": -0.1},
+        {"stat": "projectile_damage", "op": "inc", "value": 0.08},
+        {"stat": "skill_slots", "op": "add", "value": 1}
+      ]
+    },
+    {
+      "count": 50,
+      "name": "Résonance du Vent III",
+      "effects": [
+        {"stat": "damage", "op": "more", "value": 1.12},
+        {"stat": "skill_slots", "op": "add", "value": 1},
+        {
+          "on": "dash",
+          "do": "heal",
+          "value": 0.03,
+          "cooldown": 1,
+          "text": "Chaque esquive te rend 3 % de ta vie maximale (au plus une fois par seconde)."
+        }
+      ]
+    }
   ],
   "clusters": [
     {
@@ -40,17 +82,538 @@
       "ring": 2.5,
       "angle": 0.65,
       "entry": ["a1"],
+      "nodes": [{"id": "a1", "type": "attack", "name": "Graines fendues", "at": [0, 0], "effects": [{"attack_mod": "fourche", "value": 1}]}]
+    },
+    {
+      "id": "lames",
+      "name": "Lames de vent",
+      "theme": "Lames qui partent et reviennent",
+      "ring": 3.0,
+      "angle": 0.95,
+      "entry": ["l1"],
+      "nodes": [
+        {"id": "l1", "type": "attack", "name": "Lames de vent", "at": [0, 0], "effects": [{"attack_form": "lame"}]},
+        {
+          "id": "l2",
+          "type": "notable",
+          "name": "Fil du vent",
+          "at": [0.55, -0.35],
+          "links": ["l1"],
+          "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.2}, {"stat": "fire_rate", "op": "inc", "value": 0.06}]
+        },
+        {
+          "id": "l3",
+          "type": "notable",
+          "name": "Vol plané",
+          "at": [0.55, 0.35],
+          "links": ["l1"],
+          "effects": [{"stat": "move_speed", "op": "inc", "value": 0.06}, {"stat": "projectile_size", "op": "inc", "value": 0.12}]
+        },
+        {
+          "id": "l4",
+          "type": "mastery",
+          "name": "Maîtrise des lames",
+          "at": [1.05, 0],
+          "links": ["l2", "l3"],
+          "choices": [
+            {"id": "lames_acerees", "name": "Lames acérées", "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.2}]},
+            {"id": "lames_larges", "name": "Lames larges", "effects": [{"stat": "projectile_size", "op": "inc", "value": 0.25}]},
+            {"id": "lames_vives", "name": "Lames vives", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.1}]}
+          ]
+        },
+        {
+          "id": "l5",
+          "type": "attack",
+          "name": "Lames jumelles",
+          "at": [1.5, -0.3],
+          "links": ["l4"],
+          "effects": [{"attack_mod": "repetition", "value": 1}]
+        },
+        {"id": "l6", "type": "graft", "name": "Greffon des lames", "at": [1.5, 0.35], "links": ["l4"]},
+        {
+          "id": "l7",
+          "type": "attack",
+          "name": "Couronne de lames",
+          "at": [2.0, -0.05],
+          "links": ["l5"],
+          "effects": [{"attack_mod": "volee", "value": 4}]
+        }
+      ],
+      "complete": {"name": "Lames complètes", "effects": [{"stat": "projectile_damage", "op": "more", "value": 1.1}]}
+    },
+    {
+      "id": "course",
+      "name": "Course du vent",
+      "theme": "Ruée et coups en mouvement",
+      "ring": 5.0,
+      "angle": 0.18,
+      "entry": ["r6"],
+      "nodes": [
+        {"id": "r6", "type": "attack", "name": "Bourrasque", "at": [-0.5, 0], "effects": [{"attack_form": "bourrasque"}]},
+        {"id": "r1", "type": "skill", "key": "ruee", "name": "Ruée", "at": [0, 0], "links": ["r6"], "effects": [{"skill": "ruee"}]},
+        {
+          "id": "r2",
+          "type": "notable",
+          "name": "Pied léger",
+          "at": [0.5, -0.4],
+          "links": ["r1"],
+          "effects": [{"stat": "move_speed", "op": "inc", "value": 0.1}, {"stat": "dash_cd", "op": "inc", "value": -0.08}]
+        },
+        {
+          "id": "r3",
+          "type": "notable",
+          "name": "Coup de vent",
+          "at": [0.5, 0.4],
+          "links": ["r1"],
+          "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.25}, {"stat": "armor", "op": "add", "value": 0.04}]
+        },
+        {
+          "id": "r4",
+          "type": "mastery",
+          "name": "Maîtrise de la course",
+          "at": [1.0, 0],
+          "links": ["r2", "r3"],
+          "choices": [
+            {"id": "foulee", "name": "Foulée", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.08}]},
+            {"id": "impact", "name": "Impact", "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.2}]},
+            {"id": "souffle_court", "name": "Souffle court", "effects": [{"stat": "dash_cd", "op": "inc", "value": -0.12}]}
+          ]
+        },
+        {
+          "id": "r5",
+          "type": "mutation",
+          "mutates": "ruee",
+          "name": "Ruée transformée",
+          "at": [1.45, -0.35],
+          "links": ["r4"],
+          "choices": [
+            {
+              "id": "ruee_fantome",
+              "name": "Ruée fantôme",
+              "effects": [
+                {
+                  "skill_mod": "ruee",
+                  "param": "dash",
+                  "op": "set",
+                  "value": true,
+                  "text": "La ruée compte comme une esquive (effets « à l'esquive »)."
+                },
+                {"skill_mod": "ruee", "param": "cooldown", "op": "more", "value": 0.85, "text": "−15 % recharge de la ruée"}
+              ]
+            },
+            {
+              "id": "sillage_tempete",
+              "name": "Sillage de tempête",
+              "effects": [
+                {
+                  "skill_mod": "ruee",
+                  "param": "wake",
+                  "op": "set",
+                  "value": 0.6,
+                  "text": "Une tornade naît au bout de la ruée (60 % de ses dégâts et de sa durée)."
+                }
+              ]
+            },
+            {
+              "id": "ruee_longue",
+              "name": "Longue ruée",
+              "effects": [
+                {"skill_mod": "ruee", "param": "length", "op": "more", "value": 1.5, "text": "+50 % distance de la ruée"},
+                {"skill_mod": "ruee", "param": "damage", "op": "more", "value": 0.85, "text": "−15 % dégâts de la ruée"}
+              ]
+            }
+          ]
+        },
+        {"id": "r7", "type": "attack", "name": "Élan", "at": [1.0, 0.8], "links": ["r3"], "effects": [{"attack_mod": "elan", "value": 0.3}]},
+        {
+          "id": "r8",
+          "type": "attack",
+          "name": "Bourrasque double",
+          "at": [1.95, 0.0],
+          "links": ["r5"],
+          "effects": [{"attack_mod": "repetition", "value": 1}]
+        }
+      ],
+      "complete": {
+        "name": "Course complète",
+        "effects": [{"stat": "melee_damage", "op": "more", "value": 1.1}, {"stat": "move_speed", "op": "inc", "value": 0.05}]
+      }
+    },
+    {
+      "id": "cyclone",
+      "name": "Œil du cyclone",
+      "theme": "Tornades qui aspirent",
+      "ring": 5.6,
+      "angle": 0.2,
+      "entry": ["t1"],
+      "nodes": [
+        {"id": "t1", "type": "skill", "key": "tornade", "name": "Tornade", "at": [0, 0], "effects": [{"skill": "tornade"}]},
+        {
+          "id": "t2",
+          "type": "notable",
+          "name": "Vent tournant",
+          "at": [0.5, -0.4],
+          "links": ["t1"],
+          "effects": [{"stat": "area_damage", "op": "inc", "value": 0.25}, {"stat": "area", "op": "inc", "value": 0.08}]
+        },
+        {
+          "id": "t3",
+          "type": "notable",
+          "name": "Air lourd",
+          "at": [0.5, 0.4],
+          "links": ["t1"],
+          "effects": [{"stat": "area_damage", "op": "inc", "value": 0.15}, {"stat": "max_hp", "op": "inc", "value": 0.08}]
+        },
+        {
+          "id": "t4",
+          "type": "mastery",
+          "name": "Maîtrise du cyclone",
+          "at": [1.0, 0],
+          "links": ["t2", "t3"],
+          "choices": [
+            {"id": "cyclone_large", "name": "Cyclone large", "effects": [{"stat": "area", "op": "inc", "value": 0.15}]},
+            {"id": "cyclone_violent", "name": "Cyclone violent", "effects": [{"stat": "area_damage", "op": "inc", "value": 0.25}]},
+            {
+              "id": "cyclone_long",
+              "name": "Cyclone durable",
+              "effects": [{"skill_mod": "tornade", "param": "duration", "op": "more", "value": 1.3, "text": "+30 % durée de la tornade"}]
+            }
+          ]
+        },
+        {
+          "id": "t5",
+          "type": "mutation",
+          "mutates": "tornade",
+          "name": "Tornade transformée",
+          "at": [1.45, -0.35],
+          "links": ["t4"],
+          "choices": [
+            {
+              "id": "tornades_jumelles",
+              "name": "Tornades jumelles",
+              "effects": [
+                {"skill_mod": "tornade", "param": "count", "op": "add", "value": 1, "text": "+1 tornade par lancer"},
+                {"skill_mod": "tornade", "param": "damage", "op": "more", "value": 0.75, "text": "−25 % dégâts de chaque tornade"}
+              ]
+            },
+            {
+              "id": "oeil_fixe",
+              "name": "Œil fixe",
+              "effects": [
+                {"skill_mod": "tornade", "param": "speed", "op": "set", "value": 0, "text": "La tornade reste où elle naît."},
+                {"skill_mod": "tornade", "param": "radius", "op": "more", "value": 1.35, "text": "+35 % rayon de la tornade"},
+                {"skill_mod": "tornade", "param": "duration", "op": "more", "value": 1.3, "text": "+30 % durée de la tornade"}
+              ]
+            },
+            {
+              "id": "tourbillon_gardien",
+              "name": "Tourbillon gardien",
+              "effects": [
+                {"skill_mod": "tornade", "param": "orbit", "op": "set", "value": true, "text": "La tornade tourne autour de toi au lieu d'avancer."},
+                {"skill_mod": "tornade", "param": "duration", "op": "more", "value": 1.5, "text": "+50 % durée de la tornade"},
+                {"skill_mod": "tornade", "param": "damage", "op": "more", "value": 0.85, "text": "−15 % dégâts de la tornade"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "t6",
+          "type": "attack",
+          "name": "Graines du vent",
+          "at": [1.0, 0.8],
+          "links": ["t3"],
+          "effects": [{"attack_mod": "repousse", "value": 24}]
+        },
+        {"id": "t7", "type": "graft", "name": "Greffon du cyclone", "at": [1.95, 0.05], "links": ["t5"]}
+      ],
+      "complete": {"name": "Cyclone complet", "effects": [{"stat": "area_damage", "op": "more", "value": 1.1}]}
+    },
+    {
+      "id": "vif",
+      "name": "Vif-argent",
+      "theme": "Esquive et coups vifs",
+      "ring": 7.2,
+      "angle": 0.82,
+      "entry": ["v1"],
       "nodes": [
         {
-          "id": "a1",
+          "id": "v1",
+          "type": "notable",
+          "name": "Vif",
+          "at": [0, 0],
+          "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.1}, {"stat": "move_speed", "op": "inc", "value": 0.05}]
+        },
+        {
+          "id": "v2",
+          "type": "notable",
+          "name": "Feinte",
+          "at": [0.5, -0.4],
+          "links": ["v1"],
+          "effects": [
+            {
+              "on": "dash",
+              "do": "gust",
+              "radius": 150,
+              "factor": 1.0,
+              "push": 60,
+              "cooldown": 0.5,
+              "text": "Chaque esquive libère une rafale qui blesse (×1 dégâts de zone) et repousse les ennemis proches."
+            }
+          ]
+        },
+        {
+          "id": "v3",
+          "type": "notable",
+          "name": "Plume",
+          "at": [0.5, 0.4],
+          "links": ["v1"],
+          "effects": [{"stat": "crit", "op": "add", "value": 0.05}, {"stat": "crit_mult", "op": "add", "value": 0.25}]
+        },
+        {
+          "id": "v4",
+          "type": "mastery",
+          "name": "Maîtrise du vif-argent",
+          "at": [1.0, 0],
+          "links": ["v2", "v3"],
+          "choices": [
+            {"id": "vif_argent", "name": "Vif-argent", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.12}]},
+            {"id": "oeil_vif", "name": "Œil vif", "effects": [{"stat": "crit", "op": "add", "value": 0.06}]},
+            {"id": "souffle_long", "name": "Souffle long", "effects": [{"stat": "dash_cd", "op": "inc", "value": -0.15}]}
+          ]
+        },
+        {
+          "id": "v5",
+          "type": "keystone",
+          "key": "insaisissable",
+          "name": "Insaisissable",
+          "at": [1.5, 0],
+          "links": ["v4"],
+          "desc": "Tu esquives sans cesse, mais tu es plus fragile.",
+          "effects": [
+            {"stat": "dash_cd", "op": "more", "value": 0.6},
+            {"stat": "max_hp", "op": "more", "value": 0.85},
+            {
+              "on": "dash",
+              "do": "attack_salvo",
+              "count": 8,
+              "cooldown": 0.4,
+              "text": "Chaque esquive tire une salve de ton attaque de base tout autour de toi (8 traits, au plus toutes les 0,4 s)."
+            }
+          ]
+        },
+        {
+          "id": "v6",
           "type": "attack",
-          "name": "Graines fendues",
+          "name": "Coup porté",
+          "at": [1.0, -0.8],
+          "links": ["v2"],
+          "effects": [{"attack_mod": "renforcee", "value": 4, "factor": 2.2}]
+        },
+        {"id": "v7", "type": "graft", "name": "Greffon du vif-argent", "at": [1.5, 0.6], "links": ["v3"]}
+      ],
+      "complete": {"name": "Vif-argent complet", "effects": [{"stat": "crit", "op": "add", "value": 0.05}, {"stat": "fire_rate", "op": "more", "value": 1.06}]}
+    },
+    {
+      "id": "appel",
+      "name": "Appel des hauteurs",
+      "theme": "Aspirer puis frapper",
+      "ring": 8.6,
+      "angle": 0.78,
+      "entry": ["p1"],
+      "nodes": [
+        {"id": "p1", "type": "skill", "key": "appel_air", "name": "Appel d'air", "at": [0, 0], "effects": [{"skill": "appel_air"}]},
+        {
+          "id": "p2",
+          "type": "notable",
+          "name": "Dépression",
+          "at": [0.5, -0.4],
+          "links": ["p1"],
+          "effects": [{"stat": "area", "op": "inc", "value": 0.1}, {"stat": "area_damage", "op": "inc", "value": 0.2}]
+        },
+        {
+          "id": "p3",
+          "type": "notable",
+          "name": "Air raréfié",
+          "at": [0.5, 0.4],
+          "links": ["p1"],
+          "effects": [{"stat": "crit", "op": "add", "value": 0.04}, {"stat": "area_damage", "op": "inc", "value": 0.12}]
+        },
+        {
+          "id": "p4",
+          "type": "mastery",
+          "name": "Maîtrise de l'appel",
+          "at": [1.0, 0],
+          "links": ["p2", "p3"],
+          "choices": [
+            {"id": "grand_appel", "name": "Grand appel", "effects": [{"stat": "area", "op": "inc", "value": 0.15}]},
+            {"id": "appel_brutal", "name": "Appel brutal", "effects": [{"stat": "area_damage", "op": "inc", "value": 0.25}]},
+            {
+              "id": "appel_vif",
+              "name": "Appel vif",
+              "effects": [{"skill_mod": "appel_air", "param": "cooldown", "op": "more", "value": 0.8, "text": "−20 % recharge de l'appel d'air"}]
+            }
+          ]
+        },
+        {
+          "id": "p5",
+          "type": "mutation",
+          "mutates": "appel_air",
+          "name": "Appel transformé",
+          "at": [1.45, -0.35],
+          "links": ["p4"],
+          "choices": [
+            {
+              "id": "oeil_calme",
+              "name": "Œil calme",
+              "effects": [{"skill_mod": "appel_air", "param": "root", "op": "set", "value": 1.5, "text": "Les ennemis regroupés sont immobilisés 1,5 s."}]
+            },
+            {
+              "id": "implosion",
+              "name": "Implosion",
+              "effects": [
+                {"skill_mod": "appel_air", "param": "damage", "op": "more", "value": 1.6, "text": "+60 % dégâts de l'appel d'air"},
+                {"skill_mod": "appel_air", "param": "radius", "op": "more", "value": 0.8, "text": "−20 % rayon de l'appel d'air"}
+              ]
+            },
+            {
+              "id": "grand_vide",
+              "name": "Grand vide",
+              "effects": [
+                {"skill_mod": "appel_air", "param": "radius", "op": "more", "value": 1.4, "text": "+40 % rayon de l'appel d'air"},
+                {"skill_mod": "appel_air", "param": "cooldown", "op": "add", "value": 2, "text": "+2 s de recharge de l'appel d'air"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "p6",
+          "type": "keystone",
+          "key": "haute_pression",
+          "name": "Haute pression",
+          "at": [1.5, 0.35],
+          "links": ["p4"],
+          "desc": "Tes zones écrasent tout, mais tes traits s'alourdissent.",
+          "effects": [{"stat": "area_damage", "op": "more", "value": 1.35}, {"stat": "projectile_damage", "op": "more", "value": 0.8}]
+        }
+      ],
+      "complete": {"name": "Appel complet", "effects": [{"stat": "area", "op": "inc", "value": 0.1}, {"stat": "area_damage", "op": "more", "value": 1.08}]}
+    },
+    {
+      "id": "alizes",
+      "name": "Alizés",
+      "theme": "Le vent qui porte",
+      "ring": 9.8,
+      "angle": 0.2,
+      "entry": ["z1"],
+      "nodes": [
+        {
+          "id": "z1",
+          "type": "notable",
+          "name": "Alizé",
+          "at": [0, 0],
+          "effects": [{"stat": "damage", "op": "inc", "value": 0.12}, {"stat": "move_speed", "op": "inc", "value": 0.04}]
+        },
+        {
+          "id": "z2",
+          "type": "notable",
+          "name": "Courant porteur",
+          "at": [0.5, -0.4],
+          "links": ["z1"],
+          "effects": [
+            {
+              "on": "kill",
+              "do": "reduce_cooldown",
+              "target": "tornade",
+              "value": 0.2,
+              "text": "Chaque ennemi vaincu réduit la recharge de la tornade de 0,2 s."
+            },
+            {"stat": "area_damage", "op": "inc", "value": 0.1}
+          ]
+        },
+        {
+          "id": "z3",
+          "type": "notable",
+          "name": "Ciel ouvert",
+          "at": [0.5, 0.4],
+          "links": ["z1"],
+          "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.15}, {"stat": "melee_damage", "op": "inc", "value": 0.15}]
+        },
+        {
+          "id": "z4",
+          "type": "mastery",
+          "name": "Maîtrise des alizés",
+          "at": [1.0, 0],
+          "links": ["z2", "z3"],
+          "choices": [
+            {"id": "alize_fort", "name": "Alizé fort", "effects": [{"stat": "damage", "op": "inc", "value": 0.1}]},
+            {"id": "alize_porteur", "name": "Alizé porteur", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.08}]},
+            {"id": "alize_doux", "name": "Alizé doux", "effects": [{"stat": "max_hp", "op": "inc", "value": 0.12}]}
+          ]
+        },
+        {
+          "id": "z5",
+          "type": "attack",
+          "name": "Vent de face",
+          "at": [1.5, 0],
+          "links": ["z4"],
+          "effects": [{"attack_mod": "portee", "value": 0.3}, {"attack_mod": "taille", "value": 0.15}]
+        }
+      ],
+      "complete": {"name": "Alizés complets", "effects": [{"stat": "damage", "op": "more", "value": 1.06}]}
+    },
+    {
+      "id": "coeur",
+      "name": "Cœur des rafales",
+      "theme": "Après le Harfang de cendre",
+      "ring": 10.9,
+      "angle": 0.3,
+      "entry": ["h1"],
+      "nodes": [
+        {
+          "id": "h1",
+          "type": "notable",
+          "name": "Vent d'altitude",
           "at": [0, 0],
           "effects": [
-            {"attack_mod": "fourche", "value": 1}
+            {"stat": "move_speed", "op": "inc", "value": 0.06},
+            {"stat": "fire_rate", "op": "inc", "value": 0.08},
+            {"stat": "area_damage", "op": "inc", "value": 0.1}
           ]
-        }
-      ]
+        },
+        {
+          "id": "h2",
+          "type": "withered",
+          "requires_flag": "vent_coeur_purifie",
+          "name": "Rafales apaisées",
+          "at": [0.5, -0.45],
+          "links": ["h1"],
+          "requires_text": "Couvert de cendre tant que le Cœur des rafales n'est pas purifié.",
+          "effects": [{"stat": "max_hp", "op": "inc", "value": 0.15}, {"stat": "dash_cd", "op": "inc", "value": -0.1}]
+        },
+        {
+          "id": "h3",
+          "type": "withered",
+          "requires_flag": "vent_boss_vaincu",
+          "name": "Héritage du Harfang",
+          "at": [0.5, 0.45],
+          "links": ["h1"],
+          "requires_text": "Couvert de cendre tant que le Harfang de cendre n'est pas vaincu.",
+          "effects": [
+            {"stat": "projectile_damage", "op": "inc", "value": 0.2},
+            {"stat": "area_damage", "op": "inc", "value": 0.2},
+            {"stat": "melee_damage", "op": "inc", "value": 0.2},
+            {
+              "on": "kill",
+              "do": "reduce_cooldown",
+              "target": "ruee",
+              "value": 0.2,
+              "text": "Chaque ennemi vaincu réduit la recharge de la ruée de 0,2 s."
+            }
+          ]
+        },
+        {"id": "h4", "type": "graft", "name": "Greffon des rafales", "at": [1.0, 0], "links": ["h1", "h2", "h3"]}
+      ],
+      "complete": {"name": "Cœur complet", "effects": [{"stat": "damage", "op": "more", "value": 1.08}, {"stat": "move_speed", "op": "inc", "value": 0.05}]}
     }
   ]
 }
