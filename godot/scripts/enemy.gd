@@ -425,7 +425,9 @@ func affix_ratio() -> float:
 	return clampf(1.0 - aff_t / maxf(0.01, w), 0.0, 1.0)
 
 
+## « poison_resist » de la sorte (enemies.json) : part du poison ignorée (Lichen cuirassé du marais).
 func apply_poison(dps: float, duration: float) -> void:
+	dps *= 1.0 - float(data.get("poison_resist", 0.0))
 	poison_dps = maxf(poison_dps if poison_time > 0.0 else 0.0, dps)
 	poison_time = maxf(poison_time, duration)
 

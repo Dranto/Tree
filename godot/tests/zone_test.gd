@@ -154,8 +154,8 @@ func _track() -> void:
 		boss_fight_time = 0.0
 	if t >= _log_next:
 		_log_next += 60.0
-		print("ZONE %4d s  niveau %2d  objectif %-14s robot : %-32s vie %d/%d  morts %d" % [int(t), game.level, obj.current().get("id", "—"), bot.goal, int(main.player.hp), int(game.stats["max_hp"]), main.deaths])
-		if obj.current().get("id", "") == "coeur":
+		print("ZONE %4d s  niveau %2d  objectif %-14s robot : %-32s vie %d/%d  morts %d" % [int(t), game.level, obj.current(region).get("id", "—"), bot.goal, int(main.player.hp), int(game.stats["max_hp"]), main.deaths])
+		if _is_heart_step(obj.current(region)):
 			print("       Cœur : %s, %.1f s tenues, joueur à %d px du centre (zone %d), %d ennemis" % [main.heart.state, main.heart.progress, int(main.player.position.distance_to(main.heart.center)), int(main.heart.zone), main.enemies.size()])
 
 
@@ -222,6 +222,11 @@ func _bar_rect(bar) -> Rect2:
 	return Rect2()
 
 
+## Vrai pour l'étape « purifier le Cœur » de la région (sa cible est le Cœur).
+func _is_heart_step(o: Dictionary) -> bool:
+	return str(o.get("target", {}).get("type", "")) == "heart"
+
+
 ## État du monde, de l'objectif, du journal et de la carte cohérents entre eux.
 func _coherence(where: String) -> void:
 	obj.check()
@@ -229,8 +234,12 @@ func _coherence(where: String) -> void:
 	var mains: Array = obj.main_list()
 	var cur: Dictionary = obj.current()
 	var ci: int = mains.find(cur)
+	# Une étape franchie plus loin dans la suite ne compte que dans la même région que l'objectif
+	# en cours (ou pour un objectif commun) : celles d'une autre région se jouent à part.
+	var cur_reg := str(cur.get("region", ""))
 	for i in mains.size():
-		if ci >= 0 and i > ci and mains[i].get("milestone", false) and obj.is_done(mains[i]["id"]):
+		if ci >= 0 and i > ci and mains[i].get("milestone", false) and obj.is_done(mains[i]["id"]) \
+				and (cur_reg == "" or str(mains[i].get("region", "")) == cur_reg):
 			problems.append("objectif en cours « %s » alors que l'étape « %s » est franchie" % [cur["id"], mains[i]["id"]])
 	for o in obj.list():
 		if obj.condition_met(o) and not obj.is_done(o["id"]):
@@ -345,7 +354,7 @@ func _forced_events() -> void:
 		await physics_frame
 		check(heart.state == "fletri" and heart.progress == 0.0, "mort pendant le siège : le Cœur se rendort")
 		check(main.hud.death_screen.is_showing(), "mort pendant le siège : écran de mort")
-		check(obj.current().get("id", "") == "coeur", "mort pendant le siège : l'objectif reste le Cœur")
+		check(_is_heart_step(obj.current(region)), "mort pendant le siège : l'objectif reste le Cœur")
 		_coherence("mort pendant le siège")
 	elif heart.state == "siege" and heart.progress > 8.0 and done_events.has("mort_siege") and not done_events.has("reprise_siege"):
 		done_events["reprise_siege"] = true

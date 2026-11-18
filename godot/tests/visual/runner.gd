@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -114,6 +114,8 @@ func _ready() -> void:
 			await _scenario_regions()
 		"attaque":
 			await _scenario_attaque()
+		"marais":
+			await _scenario_marais()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -716,6 +718,181 @@ func _scenario_roncier() -> void:
 	await _death_shots()
 
 
+## Marais de Spore : la région morte, une vague de vie, ravivée puis purifiée ; ses Flétris et
+## leurs annonces ; son Cœur (flétri, assiégé, purifié), l'arène ouverte, puis l'Amanite-Mère dans
+## chaque phase et chaque attaque annoncée, sa mort et sa victoire. Poses figées, comme « boss ».
+func _scenario_marais() -> void:
+	main.autotest = false
+	main.spawn_timer = 1.0e9
+	var p = main.player
+	p.set_physics_process(false)
+	var spot: Vector2 = main.region_center("spore") * 0.62
+	await _place_player(spot)
+	await _frames(30)
+	await _shot("marais_mort")
+	main.revive(spot + Vector2(-140, 60), 520.0, Game.tree.branch_color(1))
+	await _frames(30)
+	await _shot("marais_vague")
+	await _frames(120)
+	await _shot("marais_ravive")
+
+	# Les Flétris du marais, figés : Traîne-vase et sa flaque, Scissipore qui gonfle, Sporules,
+	# Lichen cuirassé qui se dresse (élite), sur la terre morte au fond de la région.
+	var far: Vector2 = main.region_center("spore") + Vector2(-260, -420)
+	await _place_player(far)
+	main.set_physics_process(false)
+	var puddles = load("res://scripts/marsh_puddles.gd").of(main)
+	var tv = main.spawn_enemy_at(far + Vector2(-230, -60), Enemy.kind_index("traine_vase"))
+	puddles.add(tv, far + Vector2(-150, -40), 46.0, 6.0, 8.0)
+	puddles.add(tv, far + Vector2(-90, -10), 46.0, 6.0, 8.0)
+	for pd in puddles.puddles:
+		pd["age"] = 1.0
+	var sc = main.spawn_enemy_at(far + Vector2(150, -90), Enemy.kind_index("scissipore"))
+	sc.state = "windup"
+	sc.state_t = float(sc.data["windup"]) * 0.35
+	for i in 3:
+		main.spawn_enemy_at(far + Vector2(60 + 34 * i, 90 + 14 * (i % 2)), Enemy.kind_index("sporule"))
+	var li = main.spawn_enemy_at(far + Vector2(-120, 150), Enemy.kind_index("lichen"))
+	main.make_elite(li)
+	li.state = "windup"
+	li.state_t = float(li.data["windup"]) * 0.3
+	for e in main.enemies:
+		e.t = 0.5
+		e.set_physics_process(false)
+		e.face = (p.position - e.position).normalized()
+	await _frames(8)
+	for e in main.enemies:
+		e.set_process(false)
+	puddles.set_process(false)
+	puddles.set_physics_process(false)
+	await _frames(2)
+	await _shot("marais_ennemis", "jeu")
+	_clear_enemies()
+	puddles.puddles = []
+	puddles.queue_redraw()
+
+	# Le Cœur de moisissure et l'arène de l'Amanite-Mère (ceux de la région de Spore).
+	main.heart = main.hearts["spore"]
+	main.arena = main.arenas["spore"]
+	var heart = main.heart
+	var arena = main.arena
+	heart.frozen = true
+	arena.frozen = true
+	var near: Vector2 = heart.center + Vector2(-190, 150)
+	_frozen_enemy(heart.center + Vector2(90, 40), Enemy.kind_index("traine_vase"))
+	_frozen_enemy(heart.center + Vector2(-60, 95), Enemy.kind_index("scissipore"))
+	await _boss_shot("spore_coeur_fletri", near)
+	heart.state = "siege"
+	heart.progress = 17.0
+	heart.update_bar(true)
+	var wave := ["fletri", "scissipore", "fletri", "lichen", "scissipore", "fletri", "sporule"]
+	for i in wave.size():
+		_frozen_enemy(heart.center + Vector2.from_angle(-0.5 + i * 0.22) * (heart.zone + 60.0 + 37.0 * (i % 3)), Enemy.kind_index(wave[i]))
+	await _boss_shot("spore_coeur_siege", near)
+	_clear_enemies()
+	Game.flags[heart.flag] = true
+	heart._set_purified(false)
+	main.ground.paint(heart.center, heart.life_radius, 1.0)
+	main.flora.spawn_patch(heart.center, heart.life_radius * 0.8, 90, Art.ec("poison", "clair"))
+	await _boss_shot("spore_coeur_purifie", near)
+	var gate: Vector2 = (heart.center - arena.center).normalized()
+	arena.state = "ouverte"
+	arena.gap_open = 1.0
+	await _boss_shot("spore_arene_ouverte", arena.center + gate * (arena.max_radius + 60.0))
+
+	# Le combat : le joueur au sud-ouest de l'Amanite-Mère.
+	var at: Vector2 = arena.center + Vector2(-130, 150)
+	p.position = at
+	arena._start_fight()
+	arena.gap_open = 0.0
+	var boss = arena.boss
+	boss.frozen = true
+	boss.intro = 0.0
+	boss.t = 0.6
+	main.hud.banner_time = 0.0
+	main.fx.rings = []
+	seed(7)
+	# Phase 1 : nuages annoncés sous le joueur, puis crevés.
+	boss._begin("nuages")
+	boss.timer = 0.3
+	for c in boss.clouds:
+		c["fuse"] = 0.3
+	await _boss_shot("spore_boss_nuages", at)
+	for c in boss.clouds:
+		c["fuse"] = 0.0
+		c["life"] = 2.0
+	boss._end_attack()
+	# Phase 1 : salve annoncée (cône), avec les nuages qui restent.
+	boss._begin("salve")
+	boss.timer = 0.25
+	await _boss_shot("spore_boss_salve", at)
+	# La salve en vol.
+	boss._strike()
+	boss._strike_step(0.0)
+	for s in boss.spores:
+		s["pos"] += s["vel"] * 0.35
+	boss.clouds = []
+	boss._end_attack()
+	# L'onde annoncée.
+	boss._begin("onde")
+	boss.timer = 0.2
+	await _boss_shot("spore_boss_onde", at)
+	# Phase 2 : lamelles ouvertes, spirale annoncée puis en cours.
+	boss.spores = []
+	boss._end_attack()
+	boss.phase = 2
+	boss.hp = boss.max_hp * 0.55
+	boss._begin("spirale")
+	boss.timer = 0.3
+	await _boss_shot("spore_boss_spirale", at)
+	boss._strike()
+	for i in 12:
+		boss._strike_step(1.0 / 12.0)
+	for s in boss.spores:
+		s["pos"] += s["vel"] * 0.2
+	await _boss_shot("spore_boss_spirale_frappe", at)
+	boss.spores = []
+	boss._end_attack()
+	boss._begin("invocation")
+	boss.timer = 0.3
+	_frozen_enemy(arena.center + Vector2(-150, 120), Enemy.kind_index("scissipore"))
+	_frozen_enemy(arena.center + Vector2(40, 230), Enemy.kind_index("sporule"))
+	await _boss_shot("spore_boss_invocation", at)
+	# Phase 3 : le chapeau fendu, le mycélium annoncé, l'arène qui se resserre.
+	boss.buds = []
+	boss._end_attack()
+	boss.phase = 3
+	boss.hp = boss.max_hp * 0.22
+	arena.shrinking = true
+	arena.shrink_warn = 0.8
+	boss._begin("mycelium")
+	boss.timer = 0.35
+	await _boss_shot("spore_boss_mycelium", at)
+	# Mort, à mi-chemin, puis victoire.
+	_clear_enemies([boss])
+	boss.take_damage(boss.max_hp, false)
+	boss.dying = boss.death_time * 0.5
+	main.fx.rings = []
+	main.hud.banner_time = 0.0
+	boss.redraw()
+	await _boss_shot("spore_boss_mort", at)
+	boss.queue_free()
+	arena.life_wave = -1.0
+	main.ground.paint(arena.center, arena.max_radius * 1.25, 1.0)
+	main.flora.spawn_patch(arena.center, arena.max_radius, 70, Art.ec("poison", "clair"))
+	main.fx.rings = []
+	main.hud.banner_time = 0.0
+	await _boss_shot("spore_boss_vaincu", at)
+
+	# La région purifiée, loin du Cœur.
+	main.arena = main.arenas["ronce"]
+	main.heart = main.hearts["ronce"]
+	await _place_player(main.region_center("spore") * 0.62 + Vector2(0, 260))
+	main.set_physics_process(true)
+	await _frames(40)
+	await _shot("marais_purifie")
+
+
 ## Sanctuaire de la Lisière à moitié ravivé puis ravivé, et l'écran de mort : renaissance au
 ## sanctuaire, sève perdue au loin (flèche au bord de l'écran).
 func _death_shots() -> void:
@@ -875,8 +1052,8 @@ func _scenario_quetes() -> void:
 	main.ground.paint(ronce * 0.45, 330.0, 1.0)
 	main.ground.paint(ronce * 0.6 + Vector2(-320, 240), 200.0, 1.0)
 	Game.flags["sanctuaire_graine"] = true
-	Game.flags["sanctuaire_ronce_1"] = true
-	Game.flags["autel_ronce_a"] = true
+	Game.flags["sanctuaire_lisiere"] = true
+	Game.flags["autel_ronce_1"] = true
 	Game.flags[Objectives.ELITES] = 2
 	Game.level = 14
 	Game.kills = 312

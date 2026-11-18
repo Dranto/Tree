@@ -68,7 +68,9 @@ func _run() -> void:
 	check(main.flora.bushes.size() > 20, "le roncier a des buissons d'épines (%d)" % main.flora.bushes.size())
 	var inside_region := true
 	var clear_center := true
-	for b in main.flora.bushes:
+	# Les buissons du roncier (les autres régions ont leurs propres obstacles, comme les troncs du marais).
+	var ronce_bushes: Array = main.flora.bushes.filter(func(b): return b.get_script() == main.flora.get_script().DecorBush)
+	for b in ronce_bushes:
 		inside_region = inside_region and main.region_at(b.position) == "ronce"
 		clear_center = clear_center and b.position.distance_to(c) >= float(Regions.section("ronce", "decor").get("clear_center", 340.0))
 	check(inside_region, "tous les buissons sont dans la région")

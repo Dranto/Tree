@@ -51,7 +51,10 @@ func _run() -> void:
 	print("Fichiers")
 	var ronce_center := Regions.center("ronce")
 	Regions.set_extra_dirs(["res://tests/regions/"])
-	check(Regions.ids() == ["ronce", "essai"], "la région d'essai s'ajoute après Ronce, dans l'ordre des branches (%s)" % [Regions.ids()])
+	# Les vraies régions (Ronce, Spore…) d'abord, la région d'essai (branche Aube) après, dans l'ordre des branches.
+	var ids: Array = Regions.ids()
+	var ei := ids.find("essai")
+	check(ids[0] == "ronce" and ei == ids.size() - 1 and ei >= 1, "la région d'essai s'ajoute après Ronce, dans l'ordre des branches (%s)" % [ids])
 	check(Regions.validate().is_empty(), "ses fichiers sont valides (check_data) %s" % [Regions.validate()])
 	check(Regions.center("ronce") == ronce_center, "Ronce ne bouge pas")
 	var c := Regions.center("essai")
@@ -64,11 +67,11 @@ func _run() -> void:
 
 	print("Sol teinté")
 	var mat: ShaderMaterial = main.ground.mat
-	check(int(mat.get_shader_parameter("region_count")) == 2, "le shader reçoit deux régions")
+	check(int(mat.get_shader_parameter("region_count")) == ids.size(), "le shader reçoit toutes les régions, celle d'essai comprise")
 	var pal := Ground.region_palette("essai")
 	var dead: PackedVector3Array = mat.get_shader_parameter("region_dead_dark")
-	check(dead.size() == 2 and dead[1].is_equal_approx(Vector3(pal["dead_dark"].r, pal["dead_dark"].g, pal["dead_dark"].b)), "la terre morte de la région d'essai a sa couleur")
-	check(dead.size() == 2 and not dead[1].is_equal_approx(dead[0]), "et elle diffère de celle de Ronce")
+	check(dead.size() == ids.size() and dead[ei].is_equal_approx(Vector3(pal["dead_dark"].r, pal["dead_dark"].g, pal["dead_dark"].b)), "la terre morte de la région d'essai a sa couleur")
+	check(dead.size() == ids.size() and not dead[ei].is_equal_approx(dead[0]), "et elle diffère de celle de Ronce")
 
 	print("Sanctuaire")
 	var s = main.sanctuary("essai_halte")
@@ -121,6 +124,11 @@ func _run() -> void:
 	check(objectives.ending_texts("essai").get("title", "") == "La clairière respire", "avec ses textes")
 	check(not Regions.all_purified(game.flags), "l'aventure n'est pas finie : Ronce reste à purifier")
 	objectives.mark_ending_seen("essai")
+	# Les autres vraies régions (Spore…) sont déjà purifiées : Ronce est la dernière.
+	for id in ids:
+		if not id in ["ronce", "essai"]:
+			game.flags[Regions.boss_flag(id)] = true
+			objectives.mark_ending_seen(id)
 	game.flags["ronce_boss_vaincu"] = true
 	check(Regions.all_purified(game.flags), "les deux boss vaincus : toutes les régions sont purifiées")
 	check(objectives.ending_region() == "ronce" and objectives.ending_texts("ronce").get("sub", "") == Content._load("objectives").get("adventure_ending", {}).get("sub", "?"), "la dernière fin est celle de l'aventure")
