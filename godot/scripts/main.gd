@@ -122,6 +122,10 @@ const BENCH_ENEMIES := 120
 const BENCH_WARMUP := 3.0
 var bench_time := 30.0
 var benchmark := false
+## Scène du banc (« --bench-scene=coeur » ou « boss », vide : 120 Flétris). « coeur » : le siège
+## du Cœur avec ses vagues jusqu'à la purification ; « boss » : le combat de la Mère-Ronce, du
+## début à la victoire. Le héros a le build du robot du boss (niveau 12, points dans Ronce).
+var bench_scene := ""
 var bench_clock := 0.0
 var bench_last_usec := 0
 var bench_frames: PackedFloat32Array = PackedFloat32Array()
@@ -304,6 +308,8 @@ func _ready() -> void:
 	# En jeu et dans le banc, les carrés de sol salis sont refaits peu à peu (pas pendant une capture).
 	if get_tree().current_scene == self and (not autotest or benchmark):
 		ground.tile_budget = ground.TILE_BUDGET
+	if benchmark and bench_scene == "coeur":
+		_bench_coeur_begin()
 	if benchmark:
 		_benchmark_hide({"sol": ground, "decor": trees_layer, "fleurs": flora, "ennemis": enemies_layer,
 			"joueur": player, "acteurs": actors_layer, "effets": fx, "ambiance": ambience, "hud": hud_layer, "monde": self})
@@ -369,6 +375,7 @@ func _process(delta: float) -> void:
 ## Le joueur, les Flétris, les graines, les essences et les nuages avancent aussi dans
 ## leur _physics_process ; l'affichage est interpolé entre deux pas (project.godot).
 func _physics_process(delta: float) -> void:
+	_death_fx_step()
 	elapsed += delta
 	# La musique suit la vie du sol sous le joueur.
 	Music.set_mood(ground.life_at(player.position))
@@ -380,7 +387,7 @@ func _physics_process(delta: float) -> void:
 	enemies = enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
 	if benchmark:
 		player.invuln = maxf(player.invuln, 1.0)
-		while enemies.size() < BENCH_ENEMIES:
+		while bench_scene == "" and enemies.size() < BENCH_ENEMIES:
 			_spawn_enemy()
 	_rebuild_grid()
 	_separate()
@@ -821,13 +828,46 @@ func on_enemy_killed(e) -> void:
 		orbs_layer.call_deferred("add_child", o)
 	if is_elite:
 		_on_elite_killed(e)
-	# Chaque Flétri purifié rend un peu de vie au sol.
-	ground.paint(e.position, 46.0 + e.radius, 0.3)
+	# Chaque Flétri purifié rend un peu de vie au sol. Les tirages se font tout de suite (même
+	# suite de hasard), les effets peuvent attendre quelques pas lors d'une mort en série.
+	var pos: Vector2 = e.position
+	var r: float = e.radius
+	var col: Color = e.color
+	var flower := Vector2.INF
 	if rng.randf() < 0.6:
-		flora.add_flower(e.position + Vector2(rng.randf_range(-14, 14), rng.randf_range(-14, 14)))
-	fx.ring(e.position, e.radius, e.radius * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
-	fx.death(e.position, e.radius, e.color, ground.life_at(e.position) > 0.45)
+		flower = pos + Vector2(rng.randf_range(-14, 14), rng.randf_range(-14, 14))
+	# La vie rendue au sol reste immédiate : le sol regroupe les retouches d'une même image en un
+	# seul nouveau rendu de ses carrés (ground.gd), les étaler en ferait plusieurs.
+	ground.paint(pos, 46.0 + r, 0.3)
+	death_fx(func():
+		if flower != Vector2.INF:
+			flora.add_flower(flower)
+		fx.ring(pos, r, r * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
+		fx.death(pos, r, col, ground.life_at(pos) > 0.45))
 	Game.fire("kill", enemy_ctx(e, 0.0))
+
+
+## Effets d'une mort (fleur, anneau, éclats, restes) : tout de suite, sauf lors d'une
+## mort en série (purification du Cœur, grande attaque) où ils sont étalés sur les pas suivants,
+## DEATH_FX_PER_STEP au plus par pas de jeu. Sans cela, 40 morts d'un coup faisaient une image
+## de plus de 100 ms (docs/performances.md).
+const DEATH_FX_PER_STEP := 6
+var _death_fx_left := DEATH_FX_PER_STEP
+var _death_fx_queue: Array[Callable] = []
+
+func death_fx(c: Callable) -> void:
+	if _death_fx_left > 0 and _death_fx_queue.is_empty():
+		_death_fx_left -= 1
+		c.call()
+	else:
+		_death_fx_queue.append(c)
+
+
+func _death_fx_step() -> void:
+	_death_fx_left = DEATH_FX_PER_STEP
+	while _death_fx_left > 0 and not _death_fx_queue.is_empty():
+		_death_fx_left -= 1
+		_death_fx_queue.pop_front().call()
 
 
 ## Fait tomber une greffe au sol, à ramasser (contrat de la tâche B). id vide : une greffe tirée
@@ -1055,6 +1095,8 @@ func bot_input(p) -> Dictionary:
 		return zone_bot.input(self, p)
 	if autotest_boss:
 		return arena.bot_input(p)
+	if benchmark and bench_scene == "coeur":
+		return _bench_coeur_input(p)
 	var target: Vector2 = p.position + Vector2.RIGHT * 100.0
 	var best := INF
 	for e in enemies:
@@ -1080,7 +1122,11 @@ func _autotest_step(delta: float) -> void:
 		zone_bot.step(self, delta)
 		return
 	if autotest_boss:
-		arena.autotest_step(delta)
+		if benchmark:
+			if arena.state == "vaincue" and bench_clock > BENCH_WARMUP + 1.0:
+				_finish_benchmark()
+		else:
+			arena.autotest_step(delta)
 		return
 	autotest_time += delta
 	if build_bot != null and build_bot.run:
@@ -1168,7 +1214,13 @@ func _finish_benchmark() -> void:
 	var p99: float = sorted[mini(n - 1, int(n * 0.99))] if n > 0 else 0.0
 	var worst: float = sorted[n - 1] if n > 0 else 0.0
 	var k: float = maxf(1.0, bench_cpu["samples"])
-	print("BENCHMARK %d Flétris, %.0f s, %d images" % [BENCH_ENEMIES, bench_time, n])
+	match bench_scene:
+		"coeur":
+			print("BENCHMARK vague du Cœur, %.0f s, %d images (siège : %s)" % [bench_clock - BENCH_WARMUP, n, heart.state])
+		"boss":
+			print("BENCHMARK combat du boss, %.0f s, %d images (arène : %s)" % [bench_clock - BENCH_WARMUP, n, arena.state])
+		_:
+			print("BENCHMARK %d Flétris, %.0f s, %d images" % [BENCH_ENEMIES, bench_time, n])
 	print("BENCHMARK temps par image : moyen %.2f ms (%.1f images/s), 99e centile %.2f ms, pire %.2f ms" % [avg, 1000.0 / maxf(avg, 0.001), p99, worst])
 	print("BENCHMARK scripts par image : _process %.2f ms, _physics_process %.2f ms" % [bench_cpu["process"] / k, bench_cpu["physics"] / k])
 	var sn: float = maxf(1.0, bench_seg["n"])
@@ -1176,6 +1228,8 @@ func _finish_benchmark() -> void:
 	print("BENCHMARK rendu de la dernière image : %d appels de rendu, %d objets" % [Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)])
 	for line in Prof.report(n):
 		print(line)
+	var sil = Enemy.Silhouettes
+	print("BENCHMARK silhouettes : %d dessins en cache, %d calculées pour le cache (%d maillages gardés), %d calculées en action" % [sil.hits, sil.misses, sil._meshes.size(), sil.live])
 	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
 	get_tree().quit()
 
@@ -1193,6 +1247,12 @@ func _set_direct_to_screen(on: bool) -> void:
 ## Options du banc et découpage de chaque image (voir bench_seg).
 func _benchmark_setup() -> void:
 	Prof.on = "--profile" in OS.get_cmdline_user_args()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--bench-scene="):
+			bench_scene = a.substr(14)
+			# Durées par défaut : le siège dure 30 s, puis la purification ; le boss, 60 s de combat.
+			bench_time = 36.0 if bench_scene == "coeur" else 60.0
+			autotest_boss = bench_scene == "boss"
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--bench-time="):
 			bench_time = maxf(1.0, float(a.substr(13)))
@@ -1215,3 +1275,39 @@ func _benchmark_hide(layers: Dictionary) -> void:
 				layers[key].visible = false
 			else:
 				push_warning("--hide : calque inconnu « %s » (%s)" % [key, ", ".join(layers.keys())])
+
+
+## Banc « coeur » : le build du robot du boss, le héros posé au bord de la zone du Cœur.
+func _bench_coeur_begin() -> void:
+	while Game.level < 12:
+		Game.add_xp(Game.xp_to_next())
+	while Game.points > 0:
+		var options: Array = []
+		for n in Game.tree.nodes:
+			if n["branch"] == 0 and Game.can_allocate(n["id"]):
+				options.append(n)
+		if options.is_empty():
+			break
+		options.sort_custom(func(a, b):
+			if (a["type"] == "keystone") != (b["type"] == "keystone"):
+				return a["type"] == "keystone"
+			return a["ring"] < b["ring"] if a["ring"] != b["ring"] else a["id"] < b["id"])
+		Game.allocate(options[0]["id"])
+	player.hp = Game.stats["max_hp"]
+	player.position = heart.center + Vector2(0, heart.zone * 0.6)
+
+
+## Banc « coeur » : le robot reste dans la zone et vise le Flétri le plus proche.
+func _bench_coeur_input(p) -> Dictionary:
+	var target: Vector2 = p.position + Vector2.RIGHT * 100.0
+	var best := INF
+	for e in enemies:
+		if is_instance_valid(e) and not e.dead:
+			var d: float = e.position.distance_squared_to(p.position)
+			if d < best:
+				best = d
+				target = e.position
+	var spot: Vector2 = heart.center + Vector2.from_angle(elapsed * 0.5) * heart.zone * 0.6
+	var mv: Vector2 = spot - p.position
+	mv = mv.normalized() if mv.length() > 30.0 else Vector2.ZERO
+	return {"move": mv, "aim": target, "dash": false}

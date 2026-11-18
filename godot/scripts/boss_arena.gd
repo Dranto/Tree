@@ -143,7 +143,7 @@ func _physics_process(delta: float) -> void:
 				p.position = center + out * (max_radius + p.radius + 16.0)
 		"ouverte":
 			gap_open = minf(1.0, gap_open + delta / 1.5)
-			if d < max_radius - 70.0 and not main.benchmark:
+			if d < max_radius - 70.0 and (not main.benchmark or main.bench_scene == "boss"):
 				_start_fight()
 		"combat":
 			if not is_instance_valid(boss) or boss.is_queued_for_deletion():
