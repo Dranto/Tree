@@ -10,6 +10,8 @@
 ##   frappe (hit de 0 à 1, -1 sinon), toujours avec Art.telegraph (charte, § 6), dans le dessin de
 ##   l'ennemi ;
 ## - on_death(e) : à sa mort, avant ses restes (la poche de spores du Boursouflé) ;
+## - dodge(e) : vrai si l'ennemi esquive un coup direct (le Planeur de cendre en vol haut) ; il en
+##   montre lui-même le signe. Le poison et le saignement passent toujours ;
 ## - anchored : vrai pour un ennemi qui ne bouge pas (le Nid).
 ## Les réglages de la sorte sont dans e.data (enemies.json), mis à l'échelle par e.damage_scale.
 class_name EnemyBehavior
@@ -29,3 +31,7 @@ func draw_attack(_e, _k: float, _hit: float) -> void:
 
 func on_death(_e) -> void:
 	pass
+
+
+func dodge(_e) -> bool:
+	return false

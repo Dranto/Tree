@@ -433,6 +433,8 @@ func apply_poison(dps: float, duration: float) -> void:
 func take_damage(amount: float, crit: bool, dot := false) -> void:
 	if dead:
 		return
+	if not dot and _behavior.dodge(self):
+		return
 	if guard_time > 0.0:
 		amount *= 1.0 - guard_cut
 	var shown := amount

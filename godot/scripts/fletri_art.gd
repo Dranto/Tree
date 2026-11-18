@@ -19,8 +19,21 @@ extends RefCounted
 ## Traits lissés : non. Les silhouettes passent par un lot de triangles (draw_batch.gd), sans lissage.
 const AA := false
 
+## Sortes dessinées hors de ce fichier : une sorte de enemies.json qui porte « art » est dessinée par
+## scripts/enemy_art/<art>.gd (fonctions statiques body_color(kind_id) et draw(ci, kind_id, pos, r, face, t, o)).
+static var _ext := _load_ext()
+
+static func _load_ext() -> Dictionary:
+	var out := {}
+	var f := FileAccess.open("res://data/enemies.json", FileAccess.READ)
+	for k in JSON.parse_string(f.get_as_text()).get("kinds", []):
+		if k.has("art"):
+			out[str(k["id"])] = load("res://scripts/enemy_art/%s.gd" % k["art"])
+	return out
+
 ## Teinte du corps de chaque sorte : toutes partent du rôle « ennemi », un élément les nuance.
 static func body_color(kind_id: String) -> Color:
+	if _ext.has(kind_id): return _ext[kind_id].body_color(kind_id)
 	var e := Art.c("ennemi")
 	match kind_id:
 		"cendreux":
@@ -49,6 +62,9 @@ static func ash_color() -> Color:
 
 ## Dessine la sorte kind_id en pos, de rayon r, tournée vers face.
 static func draw(ci, kind_id: String, pos: Vector2, r: float, face: Vector2, t: float, o := {}) -> void:
+	if _ext.has(kind_id):
+		_ext[kind_id].draw(ci, kind_id, pos, r, face, t, o)
+		return
 	match kind_id:
 		"cendreux":
 			_cendreux(ci, pos, r, face, t, o)
