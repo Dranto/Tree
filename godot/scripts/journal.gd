@@ -4,6 +4,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const ControlsCard = preload("res://scripts/controls_card.gd")
+const Regions = preload("res://scripts/regions.gd")
 
 var _panel: PanelContainer
 var _box: VBoxContainer
@@ -87,10 +88,17 @@ func refresh() -> void:
 		_box.remove_child(c)
 		c.queue_free()
 	_label(_box, "Journal", 30, UiTheme.GOLD, true)
-	_subtitle = _label(_box, "Tranche de Ronce : %d / %d objectifs principaux accomplis" % [Objectives.main_done_count(), Objectives.main_total()], 14, Color(0.7, 0.78, 0.7))
 	var cur: Dictionary = Objectives.current()
+	# Une région à la fois (celle de l'objectif en cours), plus les objectifs communs : avec
+	# plusieurs régions, la liste entière déborderait de l'écran.
+	var reg := str(cur.get("region", ""))
+	var mains: Array = Objectives.list().filter(func(o): return o.get("main", false) and (reg == "" or str(o.get("region", "")) in ["", reg]))
+	var n_done := mains.filter(func(o): return Objectives.is_done(o["id"])).size()
+	var place := str(Regions.def(reg).get("name", reg)) if reg != "" else "L'aventure"
+	_subtitle = _label(_box, "%s : %d / %d objectifs principaux accomplis" % [place, n_done, mains.size()], 14, Color(0.7, 0.78, 0.7))
 	for pass_main in [true, false]:
-		var rows: Array = Objectives.list().filter(func(o): return bool(o.get("main", false)) == pass_main)
+		var rows: Array = Objectives.list().filter(func(o): return bool(o.get("main", false)) == pass_main \
+			and (reg == "" or str(o.get("region", "")) in ["", reg]))
 		if rows.is_empty():
 			continue
 		var head := _label(_box, "OBJECTIFS PRINCIPAUX" if pass_main else "FACULTATIFS", 12, Color(0.55, 0.65, 0.55))

@@ -25,6 +25,8 @@ const DEFAULT_TIME := 180.0
 const DEFAULT_LEVEL := 20
 ## Secondes comptées en plus pour chaque mort dans le score (ennemis vaincus par minute).
 const DEATH_PENALTY := 10.0
+## Distance à la graine au-delà de laquelle les robots « melee » et « tank » ne poursuivent plus.
+const LEASH := 1100.0
 
 var name := ""
 ## Branche du build (builds.json › branch) et région où il s'enfonce en partie complète.
@@ -184,6 +186,11 @@ func _choose(game, id: int) -> void:
 func steer(player, target: Vector2, best_d2: float, max_hp: float, melee_keep := 90.0) -> Dictionary:
 	if style == "distance" or best_d2 == INF:
 		return {}
+	# Laisse : le robot ne poursuit pas un Flétri au-delà de LEASH px de la graine (sinon il
+	# dérive jusqu'aux régions voisines, plus peuplées, et la mesure ne compare plus les builds).
+	if target.length() > LEASH:
+		var back: Vector2 = -player.position.normalized() if player.position.length() > LEASH * 0.8 else Vector2.ZERO
+		return {"move": back, "aim": target, "dash": false}
 	var d := sqrt(best_d2)
 	var low: bool = player.hp < max_hp * 0.35
 	var keep := melee_keep if style == "melee" else 35.0
