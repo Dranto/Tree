@@ -136,10 +136,20 @@ func is_purified() -> bool:
 
 func _process(delta: float) -> void:
 	t += delta
-	# Rien à animer quand le Cœur est loin de l'écran.
-	if not frozen and main.player.position.distance_squared_to(center) < 1600.0 * 1600.0:
+	# Rien à animer quand le Cœur est loin de l'écran (avec trois régions, deux Cœurs tombaient
+	# souvent à moins de 1600 px du joueur sans être visibles) : on regarde le cadre de la caméra.
+	if not frozen and main.player.position.distance_squared_to(center) < 1600.0 * 1600.0 and _near_view():
 		queue_redraw()
 		body.queue_redraw()
+
+
+## Le Cœur (zone comprise, plus une marge) touche le cadre visible.
+func _near_view() -> bool:
+	var vp := get_viewport()
+	if vp == null:
+		return true
+	var view := vp.get_canvas_transform().affine_inverse() * vp.get_visible_rect()
+	return view.grow(zone + 420.0).has_point(center)
 
 
 func _physics_process(delta: float) -> void:

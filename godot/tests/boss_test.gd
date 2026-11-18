@@ -2,6 +2,7 @@
 ## phases du boss, mort du joueur (le Cœur reste purifié), victoire (drapeau, points et greffe), puis
 ## sauvegarde aller-retour des drapeaux.
 ## Lancer : tools/godot.sh --headless --fixed-fps 60 -s res://tests/boss_test.gd
+## Une autre région : … -s res://tests/boss_test.gd -- --region=spore (son Cœur et son boss).
 ## Ne lit ni n'écrit la sauvegarde par défaut.
 extends SceneTree
 
@@ -63,14 +64,15 @@ func _run() -> void:
 	check(heart.state == "siege" and heart.progress > 1.0, "tenir la zone lance le siège")
 	check(heart.spawned.size() > 0, "une vague d'ennemis est arrivée")
 	check(heart.bar.visible, "la barre du Cœur est affichée")
-	_place(heart.center + Vector2(heart.zone + 200.0, 0))
+	# Loin du Cœur, du côté opposé à l'arène (dont le mur repousse le joueur).
+	_place(heart.center + (heart.center - arena.center).normalized() * (heart.zone + 200.0))
 	var before: float = heart.progress
 	await _steps(30)
 	check(heart.progress < before and heart.progress > 0.0, "hors de la zone, l'avancée retombe lentement")
 	_place(heart.center + Vector2(heart.zone * 0.6, 0))
 	heart.progress = heart.hold_time - 0.2
 	await _steps(30)
-	check(heart.state == "purifie" and game.flags.get("ronce_coeur_purifie", false) == true, "30 s tenues : Cœur purifié, drapeau posé")
+	check(heart.state == "purifie" and game.flags.get(heart.flag, false) == true, "30 s tenues : Cœur purifié, drapeau posé")
 	check(arena.state == "ouverte", "l'arène s'ouvre")
 	check(not heart.bar.visible, "la barre du Cœur disparaît")
 	await _steps(150)
@@ -107,7 +109,7 @@ func _run() -> void:
 	main.player_died()
 	await _steps(5)
 	check(arena.state == "ouverte" and not main.spawn_paused, "le combat s'arrête, l'arène reste ouverte")
-	check(game.flags.get("ronce_coeur_purifie", false) == true and heart.state == "purifie", "le Cœur reste purifié")
+	check(game.flags.get(heart.flag, false) == true and heart.state == "purifie", "le Cœur reste purifié")
 	check(main.player.position.distance_to(main.respawn_point()) < 10.0, "le joueur renaît au dernier sanctuaire ravivé")
 	check(not arena.bar.visible and arena.radius == arena.max_radius, "barre cachée, arène à sa taille")
 
@@ -118,7 +120,7 @@ func _run() -> void:
 	check(arena.state == "combat" and boss.hp == boss.max_hp and boss.phase == 1, "la Mère-Ronce revient avec toute sa vie")
 	var points: int = game.points
 	boss.take_damage(boss.max_hp + 1.0, false)
-	check(boss.dead and game.flags.get("ronce_boss_vaincu", false) == true, "boss vaincu : drapeau posé")
+	check(boss.dead and game.flags.get(arena.region + "_boss_vaincu", false) == true, "boss vaincu : drapeau posé")
 	check(game.points == points + 2, "2 points d'arbre gagnés")
 	check(arena.state == "vaincue" and not main.spawn_paused, "l'arène refleurit, les naissances reprennent")
 	await _steps(120)
@@ -128,10 +130,10 @@ func _run() -> void:
 	var data: Dictionary = JSON.parse_string(JSON.stringify(save.capture(main)))
 	game.reset()
 	# Le joueur encore en jeu réécrit « barre » à chaque changement de l'arbre : on ne regarde que les drapeaux de Ronce.
-	check(not game.flags.has("ronce_coeur_purifie") and not game.flags.has("ronce_boss_vaincu"), "nouvelle partie : drapeaux effacés")
+	check(not game.flags.has(heart.flag) and not game.flags.has(arena.region + "_boss_vaincu"), "nouvelle partie : drapeaux effacés")
 	save.apply(data, main)
 	await _steps(3)
-	check(game.flags.get("ronce_coeur_purifie", false) == true and game.flags.get("ronce_boss_vaincu", false) == true, "les deux drapeaux sont sauvegardés et rechargés")
+	check(game.flags.get(heart.flag, false) == true and game.flags.get(arena.region + "_boss_vaincu", false) == true, "les deux drapeaux sont sauvegardés et rechargés")
 	check(heart.state == "purifie" and arena.state == "vaincue", "le Cœur et l'arène reprennent leur état")
 
 	main.autosave_enabled = false

@@ -1,4 +1,4 @@
-## Panneau d'options : volume, plein écran, aide de départ, difficulté, déplacement, visée, commandes de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
+## Panneau d'options : volume, plein écran, aide de départ, secousse, rafales de vent, difficulté, déplacement, visée, commandes de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
 extends PanelContainer
 
 signal closed
@@ -14,6 +14,8 @@ var hints_box: CheckBox
 var numbers_box: CheckBox
 var shake_slider: HSlider
 var shake_label: Label
+var wind_slider: HSlider
+var wind_label: Label
 var reduce_box: CheckBox
 var difficulty_select: OptionButton
 var difficulty_hint: Label
@@ -99,6 +101,30 @@ func _ready() -> void:
 	shake_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	shake_row.add_child(shake_label)
 	_update_shake_label()
+
+	# Rafales de la région de Vent (wind.gd) : elles poussent le joueur et dévient les projectiles.
+	var wind_row := HBoxContainer.new()
+	wind_row.add_theme_constant_override("separation", 14)
+	col.add_child(wind_row)
+	var wind_name := Label.new()
+	wind_name.text = "Rafales"
+	wind_name.custom_minimum_size = Vector2(110, 0)
+	wind_row.add_child(wind_name)
+	wind_slider = HSlider.new()
+	wind_slider.min_value = 0.0
+	wind_slider.max_value = 1.0
+	wind_slider.step = 0.1
+	wind_slider.value = Settings.wind
+	wind_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wind_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	wind_slider.focus_mode = Control.FOCUS_ALL
+	wind_slider.value_changed.connect(_on_wind)
+	wind_row.add_child(wind_slider)
+	wind_label = Label.new()
+	wind_label.custom_minimum_size = Vector2(60, 0)
+	wind_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	wind_row.add_child(wind_label)
+	_update_wind_label()
 
 	reduce_box = CheckBox.new()
 	reduce_box.text = "Réduire les effets (secousse, micro-pause, particules)"
@@ -347,6 +373,16 @@ func _update_shake_label() -> void:
 	shake_label.text = "Aucune" if shake_slider.value <= 0.001 else "%d %%" % roundi(shake_slider.value * 100.0)
 
 
+func _on_wind(v: float) -> void:
+	Settings.set_wind(v)
+	Settings.save_settings()
+	_update_wind_label()
+
+
+func _update_wind_label() -> void:
+	wind_label.text = "Coupées" if wind_slider.value <= 0.001 else "%d %%" % roundi(wind_slider.value * 100.0)
+
+
 ## Hauteur du panneau : tout le contenu s'il tient, sinon 90 % de la fenêtre (le reste défile).
 func _fit() -> void:
 	if _scroll == null:
@@ -368,6 +404,7 @@ func open() -> void:
 	hints_box.button_pressed = Settings.show_hints
 	numbers_box.button_pressed = Settings.show_damage_numbers
 	shake_slider.value = Settings.shake
+	wind_slider.value = Settings.wind
 	reduce_box.button_pressed = Settings.reduce_effects
 	_update_difficulty()
 	_update_move_mode()

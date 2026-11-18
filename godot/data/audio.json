@@ -1,0 +1,35 @@
+{
+  "_doc": "Son et ambiance des régions (tâche F du jalon 7). Une entrée par région, rangée sous son identifiant ; la région peut aussi porter une section « audio » dans son fichier, qui prime. Format dans data/README.md, « Son et ambiance ». Une région sans entrée garde la musique et les particules de Ronce.",
+  "regions": {
+    "spore": {
+      "_doc": "Marais de spores : accords bas et suspendus, vent mouillé et lent ; en terre vivante, un arpège de bois. Les spores montent comme des bulles.",
+      "music": {
+        "seed": 23,
+        "roots": [-2, -7, -4, -9],
+        "dark": {"chord": [0, 3, 6, 10], "vol": 0.085, "detune": 1.007, "wind": 0.5, "wind_lp": 0.012, "wind_period": 4.0, "bell": 0.07},
+        "bright": {"chord": [0, 3, 7, 10], "octave": 1, "pattern": [0, 3, 7, 10, 14, 10, 7, 3], "pad": 0.08, "pluck": 0.11, "sparkle": 0.05, "sparkle_note": 14}
+      },
+      "ambience": {
+        "butterflies": 0,
+        "dead": {"shape": "glow", "color": "poison/sombre", "alpha": 0.5, "vel": [4.0, -14.0], "sway": [10.0, 3.0], "size": [1.6, 3.4]},
+        "alive": {"shape": "glow", "color": "poison/clair", "alpha": 0.9, "vel": [3.0, -22.0], "sway": [14.0, 4.0], "size": [1.4, 3.0]}
+      },
+      "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort"}
+    },
+    "vent": {
+      "_doc": "Hauts plateaux : quintes ouvertes et grand vent ; en terre vivante, un arpège vif et aérien. Des brins d'herbe et des rafales filent vers la droite.",
+      "music": {
+        "seed": 37,
+        "roots": [0, -5, -2, -7],
+        "dark": {"chord": [0, 7, 14, 19], "vol": 0.07, "detune": 1.003, "wind": 1.5, "wind_lp": 0.08, "wind_period": 3.0, "wind_fade": 0.35, "bell": 0.05},
+        "bright": {"chord": [0, 5, 7, 12], "octave": 1, "pattern": [0, 7, 12, 19, 12, 7, 12, 19, 24, 19, 12, 7, 12, 7, 5, 7], "pad": 0.06, "pluck": 0.085, "sparkle": 0.07, "sparkle_note": 24}
+      },
+      "ambience": {
+        "butterflies": 0,
+        "dead": {"shape": "streak", "color": "vent/sombre", "alpha": 0.45, "vel": [150.0, 10.0], "sway": [20.0, 6.0], "size": [1.0, 1.8], "length": 22.0},
+        "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.7, "vel": [170.0, 8.0], "sway": [24.0, 8.0], "size": [1.0, 1.8], "length": 26.0}
+      },
+      "boss": {"eveil": "vent_boss_eveil", "phase": "vent_boss_phase", "mort": "vent_boss_mort"}
+    }
+  }
+}

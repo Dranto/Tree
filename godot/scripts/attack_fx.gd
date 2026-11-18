@@ -20,7 +20,7 @@ const MAX_EFFECTS := 40
 ## Durée de chaque signature (secondes).
 const DUREE := {
 	"fouet": 0.22, "fourche": 0.22, "ricochet": 0.2, "eclat": 0.28, "renforcee": 0.32,
-	"volee": 0.36, "enracine": 0.4,
+	"volee": 0.36, "enracine": 0.4, "saut": 0.24, "eclosion_spore": 0.34,
 }
 ## Pousse d'une zone à sa naissance, et flétrissement avant sa fin (secondes).
 const POUSSE := 0.22
@@ -56,7 +56,7 @@ func play(id: String, d := {}) -> Dictionary:
 	e["id"] = id
 	e["t"] = 0.0
 	if not e.has("dur"):
-		e["dur"] = DUREE.get(id, 0.3)
+		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, 0.3))
 	if Settings.reduce_effects and id in ["fourche", "ricochet", "eclat", "enracine"]:
 		return e
 	while effects.size() >= MAX_EFFECTS:
@@ -65,19 +65,21 @@ func play(id: String, d := {}) -> Dictionary:
 	return e
 
 
-## Ajoute une zone au sol : "kind" (« piege » ou « trainee »), "pos", "r", "dur", "tick", "dmg"
-## (dégâts de chaque à-coup), "bleed" (saignement, part des dégâts par seconde), "root"
-## (immobilisation à l'entrée, secondes), "max" (zones de cette sorte en même temps).
+## Ajoute une zone au sol : "kind" (« piege », « trainee » ou « nuage »), "pos", "r", "dur", "tick",
+## "dmg" (dégâts de chaque à-coup), "bleed" (saignement, part des dégâts par seconde), "root"
+## (immobilisation à l'entrée, secondes), "poison" (poison posé à chaque à-coup, par seconde),
+## "branch" (branche du coup, « ronce » par défaut), "max" (zones du même groupe en même temps ;
+## "group", la sorte par défaut).
 func add_zone(z: Dictionary) -> void:
-	var kind := str(z["kind"])
+	var kind := str(z.get("group", z["kind"]))
 	var count := 0
 	for o in zones:
-		if o["kind"] == kind:
+		if o.get("group", o["kind"]) == kind:
 			count += 1
 	var cap := int(z.get("max", 10))
 	var i := 0
 	while count >= cap and i < zones.size():
-		if zones[i]["kind"] == kind:
+		if zones[i].get("group", zones[i]["kind"]) == kind:
 			zones.remove_at(i)
 			count -= 1
 		else:
@@ -115,8 +117,10 @@ func _physics_process(delta: float) -> void:
 				z["seen"][id] = true
 				e.apply_status("enracine", 1.0, float(z["root"]))
 			if ticking:
-				var dmg: float = float(z["dmg"]) * main.branch_factor(e, "ronce")
+				var dmg: float = float(z["dmg"]) * main.branch_factor(e, str(z.get("branch", "ronce")))
 				e.take_damage(dmg, false, true)
+				if float(z.get("poison", 0.0)) > 0.0 and not e.dead:
+					e.apply_poison(float(z["poison"]), 1.0)
 				if float(z["bleed"]) > 0.0 and not e.dead:
 					e.apply_status("saignement", dmg / maxf(float(z["tick"]), 0.05) * float(z["bleed"]), 2.0 * float(Game.stats.get("bleed_duration", 1.0)))
 
@@ -166,6 +170,8 @@ static func draw_zone(ci, z: Dictionary) -> void:
 	var fade := clampf((dur - t) / FANE, 0.0, 1.0)
 	if z["kind"] == "piege":
 		_piege(ci, z["pos"], z["r"], grow, fade, int(z["seed"]), float(z.get("bleed", 0.0)) > 0.0)
+	elif z["kind"] == "nuage":
+		_nuage(ci, z["pos"], z["r"], grow, fade, int(z["seed"]), t)
 	else:
 		_touffe(ci, z["pos"], z["r"], grow, fade, int(z["seed"]))
 
@@ -198,6 +204,25 @@ static func _piege(ci, p: Vector2, r: float, grow: float, fade: float, seed: int
 	ci.draw_circle(p, r * 0.16 * grow, Color(clair, 0.55 * fade))
 
 
+## Petit nuage de spores (spores lobées, bouffée) : une tache de sol rongé, cinq volutes qui
+## respirent et deux bulles qui montent. Plus discret que le Nuage de spores (compétence).
+static func _nuage(ci, p: Vector2, r: float, grow: float, fade: float, seed: int, t: float) -> void:
+	var col := Art.ec("poison")
+	var clair := Art.ec("poison", "clair")
+	var sombre := Art.ec("poison", "sombre")
+	var g := 0.55 + 0.45 * grow
+	ci.draw_circle(p, r * g, Color(sombre, 0.22 * fade))
+	for i in 5:
+		var a := (seed % 100) * 0.0628 + i * TAU / 5.0 + t * 0.4
+		var q := p + Vector2.from_angle(a) * r * 0.45 * g
+		ci.draw_circle(q, r * (0.36 + 0.05 * sin(t * 2.2 + i)) * g, Color(col, 0.16 * fade))
+	ci.draw_circle(p + Vector2(-r * 0.12, -r * 0.15), r * 0.3 * g, Color(clair, 0.1 * fade))
+	for i in 2:
+		var bk := fposmod(t * 0.7 + i * 0.5 + seed * 0.01, 1.0)
+		var q := p + Vector2((i * 2 - 1) * r * 0.3, r * 0.1 - bk * r * 0.6)
+		ci.draw_circle(q, (1.5 + 2.5 * bk) * g, Color(clair, 0.6 * fade * (1.0 - bk)))
+
+
 ## Touffe d'épines de la traînée : trois pointes d'os plantées dans le sol, et leur ombre.
 static func _touffe(ci, p: Vector2, r: float, grow: float, fade: float, seed: int) -> void:
 	var col := Art.ec("epine")
@@ -221,6 +246,9 @@ static func _spike(ci, base: Vector2, d: Vector2, length: float, col: Color) -> 
 ## Dessine une signature à son instant e["t"].
 static func draw_effect(ci: CanvasItem, e: Dictionary) -> void:
 	var k: float = clampf(e["t"] / maxf(e["dur"], 0.001), 0.0, 1.0)
+	if VentFx.draws(e["id"]):
+		VentFx.draw(ci, e, false)
+		return
 	match e["id"]:
 		"fouet":
 			_fouet(ci, e, k)
@@ -236,6 +264,10 @@ static func draw_effect(ci: CanvasItem, e: Dictionary) -> void:
 			_volee(ci, e, k)
 		"enracine":
 			_enracine(ci, e, k)
+		"saut":
+			_saut(ci, e, k)
+		"eclosion_spore":
+			_eclosion_spore(ci, e, k)
 
 
 ## Coup de fouet : la lanière balaie l'arc d'un bord à l'autre, hérissée d'épines ; derrière elle,
@@ -363,3 +395,37 @@ static func _enracine(ci: CanvasItem, e: Dictionary, k: float) -> void:
 		var pts := PackedVector2Array([base, base.lerp(mid, g), mid.lerp(tip, g)])
 		ci.draw_polyline(pts, Color(Art.ec("racine"), a), 3.5, true)
 		ci.draw_circle(pts[2], 2.0, Color(col, a))
+
+
+## Saut : un filament de mycélium relie l'ennemi touché au suivant, empoisonné, et une spore
+## claire file le long du fil.
+static func _saut(ci: CanvasItem, e: Dictionary, k: float) -> void:
+	var p: Vector2 = e["pos"]
+	var to: Vector2 = e.get("to", p)
+	var col := Art.ec("poison")
+	var clair := Art.ec("poison", "clair")
+	var a := 1.0 - k
+	var d := to - p
+	var n := d.orthogonal().normalized() * minf(14.0, d.length() * 0.12)
+	var pts := PackedVector2Array()
+	for i in 7:
+		var u := i / 6.0
+		pts.append(p + d * u + n * sin(u * PI) * (1.0 if i % 2 == 0 else 0.6))
+	ci.draw_polyline(pts, Color(col, 0.7 * a), 2.0, true)
+	ci.draw_circle(p.lerp(to, minf(1.0, k * 1.6)) + n * sin(minf(1.0, k * 1.6) * PI), 3.5, Color(clair, a))
+	ci.draw_circle(p, 3.0 + 6.0 * Anim.ease_out(k), Color(clair, 0.4 * a))
+
+
+## Spore lobée qui éclate au sol : une collerette de poussière s'ouvre, six spores partent en étoile.
+static func _eclosion_spore(ci: CanvasItem, e: Dictionary, k: float) -> void:
+	var p: Vector2 = e["pos"]
+	var r: float = e.get("r", 56.0)
+	var col := Art.ec("poison")
+	var clair := Art.ec("poison", "clair")
+	var g := Anim.ease_out(k)
+	var a := 1.0 - k
+	ci.draw_circle(p, r * (0.3 + 0.7 * g), Color(col, 0.22 * a))
+	ci.draw_arc(p, r * (0.3 + 0.7 * g), 0.0, TAU, 28, Color(clair, 0.85 * a), 2.5 * a + 0.5, true)
+	for i in 6:
+		var d := Vector2.from_angle(i * TAU / 6.0 + 0.3)
+		ci.draw_circle(p + d * r * (0.2 + 0.75 * g), 3.0 * a + 1.0, Color(clair, a))

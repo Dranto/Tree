@@ -90,8 +90,17 @@ func is_lit() -> bool:
 func _process(delta: float) -> void:
 	t += delta
 	flash = maxf(0.0, flash - delta / 1.2)
-	if main.player.position.distance_squared_to(position) < 1300.0 * 1300.0:
+	if main.player.position.distance_squared_to(position) < 1300.0 * 1300.0 and _near_view():
 		queue_redraw()
+
+
+## Le sanctuaire (plus une marge) touche le cadre visible : hors de l'écran, rien à animer.
+func _near_view() -> bool:
+	var vp := get_viewport()
+	if vp == null:
+		return true
+	var view := vp.get_canvas_transform().affine_inverse() * vp.get_visible_rect()
+	return view.grow(LIFE_RADIUS + 300.0).has_point(position)
 
 
 func _physics_process(delta: float) -> void:

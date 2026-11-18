@@ -4,6 +4,8 @@
 extends SceneTree
 
 const Synth = preload("res://scripts/synth.gd")
+const RegionAudio = preload("res://scripts/region_audio.gd")
+const SoundRefs = preload("res://scripts/sound_refs.gd")
 var failures := 0
 
 
@@ -46,6 +48,22 @@ func _run() -> void:
 		check(pr[0] > 0.3 and pr[0] <= 0.81, "musique %s : niveau correct (crête %.2f)" % [pair[0], pr[0]])
 		check(absf(a[0] - a[a.size() - 1]) < 0.05, "musique %s : le début raccorde la fin de la boucle" % pair[0])
 		check(absi(a.size() - int(Synth.CHORD_TIME * Synth.ROOTS.size() * Synth.RATE)) <= 1, "musique %s : 12 s" % pair[0])
+
+	print("Musique des régions")
+	var styles: Dictionary = RegionAudio.all_music_styles()
+	check(styles.has("spore") and styles.has("vent"), "Spore et Vent ont une musique propre (data/audio.json)")
+	for id in styles:
+		for pair in [["sombre", Synth.music_dark(styles[id])], ["lumineux", Synth.music_bright(styles[id])]]:
+			var a: PackedFloat32Array = pair[1]
+			var pr := _peak_rms(a)
+			check(pr[0] > 0.3 and pr[0] <= 0.81, "%s %s : niveau correct (crête %.2f)" % [id, pair[0], pr[0]])
+			check(absf(a[0] - a[a.size() - 1]) < 0.05, "%s %s : le début raccorde la fin de la boucle" % [id, pair[0]])
+			check(absi(a.size() - int(Synth.CHORD_TIME * Synth.ROOTS.size() * Synth.RATE)) <= 1, "%s %s : 12 s" % [id, pair[0]])
+			var f := FileAccess.open(RegionAudio.music_path(id, pair[0]), FileAccess.READ)
+			check(f != null and f.get_buffer(f.get_length()) == Synth.to_wav(a), "%s_%s.wav à jour (relancer tools/gen-sounds.sh sinon)" % [id, pair[0]])
+		check(Synth.music_dark(styles[id]) != Synth.music_dark(), "%s : une musique différente de celle de Ronce" % id)
+	check(Synth.music_dark({}) == Synth.music_dark(), "sans réglage : la musique de Ronce")
+	check(RegionAudio.validate().is_empty(), "réglages de son et d'ambiance valides : %s" % [RegionAudio.validate()])
 
 	print("Fichiers du dépôt")
 	for name in Synth.SOUNDS:
@@ -104,6 +122,48 @@ func _run() -> void:
 	var b: float = db_to_linear(music.bright.volume_db)
 	check(absf(d * d + b * b - 1.0) < 0.02, "mélange à puissance constante")
 	music.enabled = false
+
+	print("Musique : changement de région")
+	music.enabled = true
+	music.world_gain = 1.0
+	music.mix = 0.0
+	music.target = 0.0
+	var fake := {"dark": AudioStreamPlayer.new(), "bright": AudioStreamPlayer.new(), "gain": 0.0}
+	music.add_child(fake["dark"])
+	music.add_child(fake["bright"])
+	music.pairs["essai"] = fake
+	music.set_mood(0.0, "essai")
+	check(music.region == "essai", "la région du joueur est visée")
+	for i in 5:
+		music._process(1.0)
+	check(is_equal_approx(fake["gain"], 1.0) and music.world_gain == 0.0, "fondu vers la musique de la région")
+	check(fake["dark"].volume_db > -1.0 and music.dark.volume_db <= -60.0 and fake["bright"].volume_db <= -60.0, "région : couche sombre seule en terre morte, monde coupé")
+	music.set_mood(0.0, "")
+	for i in 5:
+		music._process(1.0)
+	check(music.world_gain == 1.0 and fake["dark"].volume_db <= -60.0 and music.dark.volume_db > -1.0, "retour à la musique du monde hors région")
+	music.set_mood(0.0, "inconnue")
+	check(music.region == "", "région sans piste : musique du monde")
+	music.set_mood(0.0, "")
+	music.pairs.erase("essai")
+	music.enabled = false
+
+	print("Sons : références des données")
+	check(SoundRefs.validate().is_empty(), "chaque son nommé dans les données existe : %s" % [SoundRefs.validate()])
+	var refs_ok := true
+	for id in styles:
+		for key in RegionAudio.BOSS_KEYS:
+			var snd := RegionAudio.boss_sound(id, key)
+			refs_ok = refs_ok and snd != "" and Synth.SOUNDS.has(snd)
+	check(refs_ok, "Spore et Vent : un son d'éveil, de phase et de mort pour le boss")
+	var all_loaded := true
+	sfx.enabled = true
+	sfx.streams.clear()
+	for name in Synth.SOUNDS:
+		var st = sfx.get_script().load_wav("res://assets/sounds/%s.wav" % name)
+		all_loaded = all_loaded and st != null and st.data.size() > 800
+	sfx.enabled = false
+	check(all_loaded, "tous les sons de synth.gd ont un fichier lisible")
 
 	print("Réglages")
 	settings.set_music_volume(0.5)

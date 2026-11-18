@@ -52,6 +52,82 @@
       "reward": {"text": "2 points d'arbre, une greffe et la fin de la tranche"}
     },
     {
+      "id": "spore_sanctuaire", "region": "spore", "main": true,
+      "title": "Raviver un sanctuaire du marais",
+      "text": "À l'est de la graine, le marais de Spore attend. Tiens-toi dans un de ses sanctuaires pour y renaître.",
+      "condition": {"type": "flag_count", "prefix": "sanctuaire_", "exclude": ["sanctuaire_graine"], "count": 1, "region_only": true},
+      "target": {"type": "group", "group": "sanctuaire", "done_prefix": "sanctuaire_"},
+      "needs_group": "sanctuaire"
+    },
+    {
+      "id": "spore_autel", "region": "spore", "main": true,
+      "title": "Trouver un autel du marais",
+      "text": "Des autels dorment sous la vase. Chacun offre un point d'arbre à qui les découvre.",
+      "condition": {"type": "flag_count", "prefix": "autel_", "count": 1, "region_only": true},
+      "target": {"type": "group", "group": "autel", "done_prefix": "autel_"},
+      "needs_group": "autel"
+    },
+    {
+      "id": "spore_noeud_cle", "region": "spore", "main": true,
+      "title": "Apprendre un nœud clé de Spore",
+      "text": "Suis la branche violette de l'Arbre jusqu'à un nœud clé : le poison changera ta façon de te battre.",
+      "condition": {"type": "keystone", "branch": "spore"},
+      "target": {"type": "none"}
+    },
+    {
+      "id": "spore_coeur", "region": "spore", "main": true, "milestone": true,
+      "title": "Purifier le Cœur de moisissure",
+      "text": "Au fond du marais, tiens la zone du Cœur pendant que les vagues déferlent. Gare aux flaques des Traîne-vase.",
+      "condition": {"type": "flag", "flag": "spore_coeur_purifie"},
+      "target": {"type": "heart"}
+    },
+    {
+      "id": "spore_boss", "region": "spore", "main": true, "milestone": true,
+      "title": "Vaincre l'Amanite-Mère",
+      "text": "L'arène s'est ouverte au-delà du Cœur. Sors des nuages de spores, et libère le marais.",
+      "condition": {"type": "flag", "flag": "spore_boss_vaincu"},
+      "target": {"type": "arena"},
+      "reward": {"text": "2 points d'arbre et une greffe"}
+    },
+    {
+      "id": "vent_sanctuaire", "region": "vent", "main": true,
+      "title": "Raviver un sanctuaire des plateaux",
+      "text": "Sur les hauts plateaux, tiens-toi quelques secondes dans un sanctuaire : tu y renaîtras si le vent te terrasse.",
+      "condition": {"type": "flag_count", "prefix": "sanctuaire_", "exclude": ["sanctuaire_graine"], "count": 1, "region_only": true},
+      "target": {"type": "group", "group": "sanctuaire", "done_prefix": "sanctuaire_"},
+      "needs_group": "sanctuaire"
+    },
+    {
+      "id": "vent_autel", "region": "vent", "main": true,
+      "title": "Trouver un autel des plateaux",
+      "text": "Des autels dorment entre les rochers des plateaux. Chacun offre un point d'arbre à qui les découvre.",
+      "condition": {"type": "flag_count", "prefix": "autel_", "count": 1, "region_only": true},
+      "target": {"type": "group", "group": "autel", "done_prefix": "autel_"},
+      "needs_group": "autel"
+    },
+    {
+      "id": "vent_noeud_cle", "region": "vent", "main": true,
+      "title": "Apprendre un nœud clé de Vent",
+      "text": "Suis la branche claire de l'Arbre jusqu'à un nœud clé : la vitesse et les rafales deviennent tes armes.",
+      "condition": {"type": "keystone", "branch": "vent"},
+      "target": {"type": "none"}
+    },
+    {
+      "id": "vent_coeur", "region": "vent", "main": true, "milestone": true,
+      "title": "Purifier le Cœur des rafales",
+      "text": "Au milieu des plateaux, tiens la zone du Cœur malgré le vent et les Piqueurs qui plongent.",
+      "condition": {"type": "flag", "flag": "vent_coeur_purifie"},
+      "target": {"type": "heart"}
+    },
+    {
+      "id": "vent_boss", "region": "vent", "main": true, "milestone": true,
+      "title": "Vaincre le Harfang de cendre",
+      "text": "Son aire s'est ouverte au-delà du Cœur. Méfie-toi de son ombre : quand elle se fige, il pique.",
+      "condition": {"type": "flag", "flag": "vent_boss_vaincu"},
+      "target": {"type": "arena"},
+      "reward": {"text": "2 points d'arbre et une greffe"}
+    },
+    {
       "id": "elites", "main": false,
       "title": "Vaincre trois élites",
       "text": "Certains Flétris portent un liseré : ils sont plus coriaces, mais laissent un butin rare.",
@@ -71,6 +147,38 @@
       "id": "secret", "region": "ronce", "main": false,
       "title": "Découvrir le secret du roncier",
       "text": "Quelque chose est enfoui là où personne ne regarde. Explore les recoins de la région.",
+      "condition": {"type": "flag_count", "prefix": "secret_", "count": 1, "region_only": true},
+      "reward": {"text": "1 point d'arbre et une greffe, donnés par le secret lui-même"}
+    },
+    {
+      "id": "spore_autels", "region": "spore", "main": false,
+      "title": "Réveiller tous les autels du marais",
+      "text": "Retrouve chacun des autels cachés dans la région de Spore.",
+      "condition": {"type": "flag_count", "prefix": "autel_", "count": 4, "region_only": true},
+      "target": {"type": "group", "group": "autel", "done_prefix": "autel_"},
+      "needs_group": "autel",
+      "reward": {"text": "1 point d'arbre", "points": 1}
+    },
+    {
+      "id": "spore_secret", "region": "spore", "main": false,
+      "title": "Découvrir le secret du marais",
+      "text": "Quelque chose dort sous la mousse, au bord du marais. Explore ses recoins.",
+      "condition": {"type": "flag_count", "prefix": "secret_", "count": 1, "region_only": true},
+      "reward": {"text": "1 point d'arbre et une greffe, donnés par le secret lui-même"}
+    },
+    {
+      "id": "vent_autels", "region": "vent", "main": false,
+      "title": "Réveiller tous les autels des plateaux",
+      "text": "Retrouve chacun des autels cachés dans la région de Vent.",
+      "condition": {"type": "flag_count", "prefix": "autel_", "count": 4, "region_only": true},
+      "target": {"type": "group", "group": "autel", "done_prefix": "autel_"},
+      "needs_group": "autel",
+      "reward": {"text": "1 point d'arbre", "points": 1}
+    },
+    {
+      "id": "vent_secret", "region": "vent", "main": false,
+      "title": "Découvrir le secret des plateaux",
+      "text": "Un souffle ancien dort au bord des plateaux, là où le vent tourne. Explore les recoins de la région.",
       "condition": {"type": "flag_count", "prefix": "secret_", "count": 1, "region_only": true},
       "reward": {"text": "1 point d'arbre et une greffe, donnés par le secret lui-même"}
     }

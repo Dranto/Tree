@@ -40,6 +40,9 @@ const AIM_MODE_NAMES := {"auto": "Automatique", "curseur": "Vers le curseur"}
 var aim_mode := "auto"
 ## Secousse d'écran, de 0 (aucune) à 1 (pleine).
 var shake := 0.6
+## Force des rafales de vent (région de Vent, wind.gd), de 0 (coupées) à 1 (pleine) : elles poussent
+## le joueur et dévient les projectiles. Accessibilité : on peut les couper.
+var wind := 1.0
 ## Difficulté : « facile », « normal » (par défaut) ou « difficile ». Multiplie la vie et les
 ## dégâts des ennemis (réglages dans res://data/difficulty.json, section « modes »).
 const DIFFICULTIES := ["facile", "normal", "difficile"]
@@ -82,6 +85,7 @@ func load_settings() -> void:
 	var aim := str(cfg.get_value("controls", "aim_mode", aim_mode))
 	aim_mode = aim if aim in AIM_MODES else "auto"
 	shake = clampf(float(cfg.get_value("gameplay", "shake", shake)), 0.0, 1.0)
+	wind = clampf(float(cfg.get_value("gameplay", "wind", wind)), 0.0, 1.0)
 	reduce_effects = bool(cfg.get_value("gameplay", "reduce_effects", reduce_effects))
 	var diff := str(cfg.get_value("gameplay", "difficulty", difficulty))
 	difficulty = diff if diff in DIFFICULTIES else "normal"
@@ -103,6 +107,7 @@ func save_settings() -> void:
 	cfg.set_value("bindings", "moba_main_2", moba_main_2_key)
 	cfg.set_value("controls", "aim_mode", aim_mode)
 	cfg.set_value("gameplay", "shake", shake)
+	cfg.set_value("gameplay", "wind", wind)
 	cfg.set_value("gameplay", "reduce_effects", reduce_effects)
 	cfg.set_value("gameplay", "difficulty", difficulty)
 	cfg.set_value("controls", "move_mode", move_mode)
@@ -305,6 +310,11 @@ func set_show_hints(on: bool) -> void:
 
 func set_shake(v: float) -> void:
 	shake = clampf(v, 0.0, 1.0)
+	changed.emit()
+
+
+func set_wind(v: float) -> void:
+	wind = clampf(v, 0.0, 1.0)
 	changed.emit()
 
 

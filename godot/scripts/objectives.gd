@@ -38,6 +38,9 @@ var _timer := 0.0
 ## (sauvegarde chargée, drapeaux déjà posés) sans annoncer chaque objectif.
 var _catch_up := true
 var _last_deaths := 0
+## Dernière région suivie (followed_region), pour prévenir le cadre quand elle change.
+var _followed := ""
+var _here := "?"
 
 
 func _ready() -> void:
@@ -73,6 +76,16 @@ func _on_elite_killed(_enemy = null) -> void:
 
 
 func _process(delta: float) -> void:
+	# Le joueur passe d'une région à l'autre : le cadre et le journal changent tout de suite
+	# (la région sous le joueur est lue à chaque image, la suite seulement quand elle change).
+	if main != null and is_instance_valid(main) and main.player != null:
+		var here := Regions.region_at(main.player.position)
+		if here != _here:
+			_here = here
+			var r := followed_region()
+			if r != _followed:
+				_followed = r
+				changed.emit()
 	_timer -= delta
 	if _timer > 0.0:
 		return
@@ -129,6 +142,26 @@ func current(region := "") -> Dictionary:
 	return {}
 
 
+## Région dont le joueur suit les objectifs : celle où il se tient, si elle a encore un objectif
+## principal ouvert ; sinon celle de l'objectif en cours de la suite. "" quand tout est fait.
+func followed_region() -> String:
+	if main != null and is_instance_valid(main) and main.player != null:
+		var here := Regions.region_at(main.player.position)
+		if here != "" and not current(here).is_empty() and str(current(here).get("region", "")) == here:
+			return here
+	var o := current()
+	if not o.is_empty() and str(o.get("region", "")) != "":
+		return str(o["region"])
+	return Regions.ids()[0] if not Regions.ids().is_empty() and not o.is_empty() else ""
+
+
+## Objectif affiché (cadre, flèche, carte, journal) : celui de la région suivie (followed_region).
+## Dans le roncier, celui de Ronce ; sur les plateaux, celui de Vent, même si Ronce n'est pas finie.
+func followed() -> Dictionary:
+	var r := followed_region()
+	return current(r) if r != "" else current()
+
+
 ## Objectifs principaux, dans l'ordre de la suite.
 func main_list() -> Array:
 	return list().filter(func(o): return o.get("main", false))
@@ -168,25 +201,25 @@ func for_region(region: String) -> Array:
 
 
 ## Rang (à partir de 1) de l'objectif principal en cours dans la suite, 0 quand tout est fait.
-func current_rank() -> int:
-	var o := current()
-	return 0 if o.is_empty() else main_list().find(o) + 1
+## « region » : rang dans la suite de cette région (ses objectifs et les communs).
+func current_rank(region := "") -> int:
+	var o := current(region)
+	return 0 if o.is_empty() else _mains_of(region).find(o) + 1
 
 
-func main_done_count() -> int:
-	var n := 0
-	for o in list():
-		if o.get("main", false) and is_done(o["id"]):
-			n += 1
-	return n
+## Objectifs principaux d'une région et communs ("" : tous).
+func _mains_of(region: String) -> Array:
+	if region == "":
+		return main_list()
+	return main_list().filter(func(o): return str(o.get("region", "")) in ["", region])
 
 
-func main_total() -> int:
-	var n := 0
-	for o in list():
-		if o.get("main", false):
-			n += 1
-	return n
+func main_done_count(region := "") -> int:
+	return _mains_of(region).filter(func(o): return is_done(o["id"])).size()
+
+
+func main_total(region := "") -> int:
+	return _mains_of(region).size()
 
 
 # --- Conditions ---

@@ -235,6 +235,10 @@ func _physics_process(delta: float) -> void:
 		c["t"] += delta
 	clouds = clouds.filter(func(e): return e["t"] < e["dur"])
 	for c in clouds:
+		# Un nuage qui suit le joueur (Brouillard vivant) reste centré sur lui.
+		var f = c.get("follow")
+		if f != null and is_instance_valid(f):
+			c["pos"] = f.position
 		for e in main.enemies_near(c["pos"], c["radius"]):
 			if not e.dead:
 				e.take_damage(c["dps"] * delta, false, true)

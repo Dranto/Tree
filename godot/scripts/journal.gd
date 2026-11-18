@@ -1,13 +1,23 @@
-## Journal (touche J) : les objectifs en cours et accomplis, avec leurs récompenses.
+## Journal (touche J) : les objectifs en cours et accomplis, avec leurs récompenses, rangés par région.
+## Les objectifs communs (« L'aventure ») puis une section par région, dans l'ordre du monde, lue dans
+## data/objectives.json (champ « region ») : une région ajoutée par ses fichiers a sa section d'elle-même.
+## La section de l'objectif en cours est ouverte ; les autres se replient sur une ligne (avancement),
+## et un clic sur leur titre les déplie.
 ## Nœuds Control avec le thème commun. Le jeu est en pause tant qu'il est ouvert (voir quest_ui.gd).
 extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const ControlsCard = preload("res://scripts/controls_card.gd")
+const Regions = preload("res://scripts/regions.gd")
+const RegionUi = preload("res://scripts/region_ui.gd")
 
 var _panel: PanelContainer
+var _scroll: ScrollContainer
 var _box: VBoxContainer
 var _subtitle: Label
+## Sections dépliées ou repliées à la main (identifiant de région, "" : l'aventure) ; sans choix, seule
+## celle de l'objectif en cours est dépliée.
+var _manual: Dictionary = {}
 
 
 ## Pastille d'un objectif : cercle vide (à faire), anneau doré (en cours), disque vert coché
@@ -43,6 +53,22 @@ class Dot extends Control:
 			draw_polyline(PackedVector2Array([c + Vector2(-4, 0), c + Vector2(-1, 3.5), c + Vector2(5, -3.5)]), ink, 2.0)
 
 
+## Petit triangle de section : pointe à droite (repliée) ou en bas (dépliée).
+class Chevron extends Control:
+	var open := false
+	var color := Color.WHITE
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(16, 22)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var c := size / 2.0
+		var pts := PackedVector2Array([c + Vector2(-5, -3), c + Vector2(5, -3), c + Vector2(0, 4)]) if open \
+			else PackedVector2Array([c + Vector2(-3, -5), c + Vector2(4, 0), c + Vector2(-3, 5)])
+		draw_colored_polygon(pts, color)
+
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -60,9 +86,14 @@ func _ready() -> void:
 	sb.content_margin_bottom = 12
 	_panel.add_theme_stylebox_override("panel", sb)
 	center.add_child(_panel)
+	# Le contenu défile si plusieurs régions sont dépliées et dépassent l'écran (voir _fit).
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_panel.add_child(_scroll)
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 6)
-	_panel.add_child(_box)
+	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(_box)
 	Objectives.changed.connect(func(): if visible: refresh())
 
 
@@ -87,20 +118,88 @@ func refresh() -> void:
 		_box.remove_child(c)
 		c.queue_free()
 	_label(_box, "Journal", 30, UiTheme.GOLD, true)
-	_subtitle = _label(_box, "Tranche de Ronce : %d / %d objectifs principaux accomplis" % [Objectives.main_done_count(), Objectives.main_total()], 14, Color(0.7, 0.78, 0.7))
-	var cur: Dictionary = Objectives.current()
-	for pass_main in [true, false]:
-		var rows: Array = Objectives.list().filter(func(o): return bool(o.get("main", false)) == pass_main)
+	var multi := Regions.ids().size() > 1
+	var purified := 0
+	for id in Regions.ids():
+		if bool(Game.flags.get(Regions.boss_flag(id), false)):
+			purified += 1
+	var sub := "%s : %d / %d objectifs principaux accomplis" % ["Aventure" if multi else "Tranche de Ronce", Objectives.main_done_count(), Objectives.main_total()]
+	if multi:
+		sub += "   ·   %d / %d régions purifiées" % [purified, Regions.ids().size()]
+	_subtitle = _label(_box, sub, 14, Color(0.7, 0.78, 0.7))
+	# La section dépliée par défaut est celle de la région que suit le joueur (Objectives.followed).
+	var cur: Dictionary = Objectives.followed()
+	var cur_region := str(cur.get("region", ""))
+	# Sections : l'aventure (objectifs sans région) puis chaque région qui a des objectifs.
+	var sections: Array = [""]
+	for id in Regions.ids():
+		sections.append(id)
+	for reg in sections:
+		var rows: Array = Objectives.for_region(reg)
 		if rows.is_empty():
 			continue
-		var head := _label(_box, "OBJECTIFS PRINCIPAUX" if pass_main else "FACULTATIFS", 12, Color(0.55, 0.65, 0.55))
-		head.add_theme_constant_override("line_spacing", 0)
-		for o in rows:
-			_add_row(o, not cur.is_empty() and cur["id"] == o["id"])
+		var is_open: bool = _manual.get(reg, reg == cur_region and not cur.is_empty())
+		_add_section(reg, rows, is_open, cur)
 	_label(_box, "COMMANDES", 12, Color(0.55, 0.65, 0.55))
 	_box.add_child(ControlsCard.new(13))
 	_label(_box, "J ou Échap : fermer   ·   M : carte", 12, Color(0.55, 0.6, 0.55))
+	_fit()
+
+
+## Le cadre prend la hauteur du contenu, sans dépasser l'écran (au-delà, le contenu défile).
+func _fit() -> void:
+	var need := _box.get_combined_minimum_size()
+	_scroll.custom_minimum_size = Vector2(need.x, minf(need.y, maxf(200.0, size.y - 90.0)))
 	_panel.reset_size()
+
+
+## Une section : son titre (cliquable) avec l'avancement, puis, si elle est dépliée, ses objectifs
+## principaux et facultatifs.
+func _add_section(reg: String, rows: Array, is_open: bool, cur: Dictionary) -> void:
+	var mains: Array = rows.filter(func(o): return o.get("main", false))
+	var done := 0
+	for o in mains:
+		if Objectives.is_done(o["id"]):
+			done += 1
+	var tint := RegionUi.tint(reg).lightened(0.2) if reg != "" else Color(0.6, 0.72, 0.6)
+	var title := "L'AVENTURE" if reg == "" else RegionUi.full_name(reg).to_upper()
+	var head := Button.new()
+	head.flat = true
+	head.focus_mode = Control.FOCUS_NONE
+	head.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	head.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var line := HBoxContainer.new()
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.add_theme_constant_override("separation", 6)
+	line.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var chev := Chevron.new()
+	chev.open = is_open
+	chev.color = tint
+	line.add_child(chev)
+	var t := _label(line, title, 13, tint, true)
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var state := RegionUi.state(reg) if reg != "" else ""
+	var tail := "%d / %d" % [done, mains.size()] + ("   ·   " + state if state != "" else "")
+	var r := _label(line, tail, 13, Color(0.6, 0.68, 0.6))
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	r.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	head.custom_minimum_size = Vector2(0, 28)
+	head.add_child(line)
+	head.pressed.connect(func():
+		_manual[reg] = not is_open
+		refresh())
+	_box.add_child(head)
+	if not is_open:
+		return
+	for pass_main in [true, false]:
+		var part: Array = rows.filter(func(o): return bool(o.get("main", false)) == pass_main)
+		if part.is_empty():
+			continue
+		var sub := _label(_box, "OBJECTIFS PRINCIPAUX" if pass_main else "FACULTATIFS", 11, Color(0.5, 0.6, 0.5))
+		sub.add_theme_constant_override("line_spacing", 0)
+		for o in part:
+			_add_row(o, not cur.is_empty() and cur["id"] == o["id"])
 
 
 func _add_row(o: Dictionary, is_current: bool) -> void:
@@ -153,6 +252,7 @@ func _add_row(o: Dictionary, is_current: bool) -> void:
 
 
 func open() -> void:
+	_manual.clear()
 	refresh()
 	visible = true
 

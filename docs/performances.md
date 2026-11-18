@@ -130,6 +130,31 @@ Mesures en paires alternées base / branche (même machine, 3 paires pour le ban
 | Lot fidèle : les traits plus fins qu'un pixel gardent leur largeur, comme Godot (ils étaient élargis à 1 px) | — | plus fidèle |
 | Effets de mort étalés (`main.death_fx`) : au plus 6 par pas de jeu, les autres aux pas suivants ; la vie rendue au sol reste immédiate (le sol regroupe les retouches d'une image) | pics des morts en série | identique hors mort en série |
 
+## Ce qui coûte dans la région de Vent (jalon 7, tâche E)
+
+Mesures en paires alternées base (c0b53e1) / branche, même machine (logiciel, llvmpipe) :
+
+| Banc | Base : moyenne | Branche : moyenne |
+| --- | --- | --- |
+| 120 Flétris (6 paires) | 24,4 · 26,5 · 23,0 · 23,3 · 25,9 · 25,3 ms | 30,9 · 28,2 · 27,0 · 27,1 · 26,7 · 28,7 ms |
+| Siège du Cœur de Ronce (2 paires) | 39,4 · 38,1 ms | 38,9 · 37,7 ms |
+| Combat de la Mère-Ronce (2 paires) | 25,2 · 24,4 ms | 27,7 · 24,7 ms |
+| Siège du Cœur des rafales (`--region=vent`) | — | 34,5 · 34,2 ms (99e centile 54–58 ms) |
+| Combat du Harfang (`--region=vent`) | — | 21,9 · 21,0 ms (99e centile 30–33 ms) |
+
+Les deux dernières paires du banc ont été mesurées après la correction du Planeur (ci-dessous).
+
+Le banc des 120 Flétris coûte environ 2 ms de plus, parce que la graine touche maintenant deux régions :
+
+| Objet | Coût mesuré | Remarque |
+| --- | --- | --- |
+| Flétris des plateaux (Piqueur, Souffleur, Planeur, Menhir) qui apparaissent près de la graine | ~2 ms sur le banc (banc avec seulement des Flétris ordinaires dans Vent : +1,5 ms au lieu de +4) | sortes en plus = ~700 maillages de silhouette en plus dans le cache. Le Planeur en vol haut était redessiné en direct à chaque image : `EnemyBehavior.calm` le ramène au rythme ordinaire (12 dessins/s) |
+| Cœur des rafales et sanctuaires de Vent redessinés quand le joueur est à moins de 1 600 / 1 300 px (règle de heart.gd et sanctuary.gd) | ~0,3 ms près de la graine | 0 hors de portée |
+| Traînées de vent (`wind.gd`) : 26 polylignes, un appel de rendu, seulement dans la région | ~0,07 ms par image | `Settings.reduce_effects` en garde un tiers |
+| Herbe couchée et rochers (`decor_plateau.gd`) : ~380 objets fixes dessinés une fois (lot fidèle), redessinés seulement pendant leur pousse | pas mesurable sur le banc (±2 ms de bruit) | obstacles dans la grille des buissons |
+| Tornades et plumes du Harfang : dessinées dans le `_draw` du boss | banc du Harfang 21–22 ms | sous la Mère-Ronce (24–25 ms) |
+| Arbre de vie (`tests/tree_bench.gd`) | immobile 14,9 → 16,3 ms, survol 18,9 → 19,8 ms, déplacement 27,7 → 26,7 ms | dans le bruit |
+
 ## Pistes suivantes
 
 - **Objectif de 20 ms** : atteint à ~2 ms près sur la machine des tests du jalon 7 (22,3 ms, dont

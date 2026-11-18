@@ -24,8 +24,8 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
 | `difficulty.json` | Difficulté (`scripts/difficulty.gd`) : menace des ennemis (`threat` : par niveau, selon la profondeur dans la région, par Cœur purifié, plafond), effet de la menace sur leurs statistiques (`scaling`), courbe d'expérience et durée visée par niveau (`xp`), apparitions (`spawn` : cadence, plafond d'ennemis et salves près de la graine et au fond de la région), modes Facile / Normal / Difficile (`modes`), élites (`elites` : chance près/loin, niveau minimal, nombre en vie, chance d'un second modificateur, multiplicateurs de vie, dégâts, taille et expérience, chance de greffe, sortes exclues, et `affixes` : nom affiché, couleur, poids et réglages de chaque modificateur). Vérifiée par `check_data.gd` ; le rythme se mesure avec `tools/balance.sh --run`. |
 | `objectives.json` | Les objectifs : principaux (dans l'ordre), facultatifs, chacun rattaché à sa région, et la fin de l'aventure. Voir « Objectifs ». |
-| `attack.json` | L'attaque de base du Porte-Graine (`scripts/attack.gd`) : forme de départ, formes (graine, échardes, fouet, ronces vives) et modificateurs cumulables. Voir « L'attaque de base ». |
-| `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest`/`kite`/`guard`/`bomber` et ses réglages, `region`, `resist` par branche, `no_affix` : modificateurs d'élite interdits), Flétris ordinaires (`ordinary` : poids, `min_level` niveau d'apparition, `max_alive` nombre maximal en vie) Le comportement `<nom>` est le fichier `scripts/enemy_behaviors/<nom>.gd` (classe `EnemyBehavior`). Les apparitions de chaque région sont dans son fichier (`regions/<id>.json`, `spawn`). Les élites sont réglées dans `difficulty.json`. Les trois premières sortes sont les Flétris d'origine. |
+| `attack.json` | L'attaque de base du Porte-Graine (`scripts/attack.gd`) : forme de départ, formes (graine, échardes, fouet, ronces vives, spores lobées, dards fongiques) et modificateurs cumulables. Voir « L'attaque de base ». |
+| `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest`/`kite`/`guard`/`bomber`/`puddler`/`splitter`/`lichen` et ses réglages, `region`, `resist` par branche, `poison_resist` : part du poison ignorée, `no_affix` : modificateurs d'élite interdits, `art` : silhouette dessinée par `scripts/enemy_art/<art>.gd` au lieu de `fletri_art.gd`), Flétris ordinaires (`ordinary` : poids, `min_level` niveau d'apparition, `max_alive` nombre maximal en vie) Le comportement `<nom>` est le fichier `scripts/enemy_behaviors/<nom>.gd` (classe `EnemyBehavior`). Les apparitions de chaque région sont dans son fichier (`regions/<id>.json`, `spawn`). Les élites sont réglées dans `difficulty.json`. Les trois premières sortes sont les Flétris d'origine. |
 
 ## Les effets
 
@@ -62,7 +62,7 @@ Le texte de l'infobulle est produit à partir de l'effet : il ne peut donc pas c
 
 L'identifiant renvoie à `skills.json`. Le comportement de la compétence reste écrit dans `scripts/player.gd` ; ses réglages sont dans les données.
 
-Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores), `bloom` (Floraison), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) `volee` (Volée d'épines : éventail d'épines perforantes qui font saigner) et `saignee` (Saignée : fait éclater les saignements des ennemis proches en dégâts immédiats, une part soigne). Champs communs de `skills.json` :
+Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores ; `follow` : le nuage naît sur le joueur et le suit), `bloom` (Floraison), pour Spore `vesse` (Vesse-de-loup : champignon-piège planté au point visé, `max` à la fois, armé après `arm` s, éclate quand un ennemi entre dans `trigger` px ou au bout de `life` s : coup de zone puis nuage `cloud_damage` pendant `cloud_duration` s ; `poison` : l'éclatement empoisonne), `essaim` (Essaim : une spore vivante touche l'ennemi le plus proche du point visé, l'empoisonne — `poison` × dégâts par seconde pendant `duration` s — puis saute `jumps` fois vers le plus proche à moins de `reach` px, un saut toutes les `hop` s ; `split` : il se divise en deux au premier ennemi) et `eclosion` (Éclosion : chaque ennemi empoisonné à moins de `radius` px subit `burst` × le poison qui lui restait, qui est consommé sauf la part `keep` ; ses spores empoisonnent les ennemis à moins de `splash` px), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) `volee` (Volée d'épines : éventail d'épines perforantes qui font saigner) et `saignee` (Saignée : fait éclater les saignements des ennemis proches en dégâts immédiats, une part soigne). ; pour Vent `tornade` (une tornade avance vers l'endroit visé, aspire et blesse par à-coups : `damage` par seconde, `duration`, `speed`, `radius`, `tick`, `pull` ; mutations `count`, `speed` 0, `orbit`), `ruee` (Ruée : le joueur fend l'air sur `length` pixels, intouchable, et frappe une fois chaque ennemi du passage ; `dash` vrai : compte comme une esquive ; `wake` : une tornade naît à l'arrivée) et `appel_air` (Appel d'air : aspire les ennemis du `radius` vers l'endroit visé pendant `pull_time`, puis éclate ; `root` : immobilise ensuite). Le vent ne déplace pas un ennemi ancré, un boss, ni une sorte marquée `"no_push": true` dans `enemies.json` (`scripts/vent.gd`). Champs communs de `skills.json` :
 
 | Champ | Rôle |
 | --- | --- |
@@ -96,6 +96,9 @@ Les compétences acquises se rangent dans la barre de compétences (6 emplacemen
 | `heal` | `value` | Soigne une fraction de la vie maximale |
 | `burst` | `radius`, `factor`, `at` (`player` par défaut, ou `enemy`), `color` | Onde d'épines autour du joueur ou de l'ennemi de l'évènement : `factor` × dégâts du joueur × dégâts de zone, rayon × taille des zones. Coup de Ronce |
 | `status_area` | `status`, `value`, `duration`, `radius`, `at`, `scale` (`damage`) | Pose un état sur tous les ennemis de la zone (mêmes règles que `apply_status`) |
+| `cloud` | `radius`, `duration`, `factor`, `at` | Nuage de spores au sol autour du joueur ou de l'ennemi (`at`: `enemy`) : `factor` × dégâts du joueur × dégâts de zone par seconde, et un peu de poison, pendant `duration` s (rayon × taille des zones). Coup de Spore |
+| `gust` | `radius`, `factor`, `push`, `at` | Rafale de Vent autour du joueur ou de l'ennemi : `factor` × dégâts du joueur × dégâts de zone, et recul de `push` pixels |
+| `tornado` | `factor`, `at` | Fait naître une tornade (réglages de `tornade`, dégâts et durée × `factor`) sur le joueur ou l'ennemi de l'évènement, même sans la compétence |
 | `attack_salvo` | `count` | Salve de l'attaque de base tout autour du joueur, en `count` directions, avec sa forme et ses modificateurs actuels (par exemple `{"on": "hurt", "do": "attack_salvo", "count": 8, "cooldown": 0.6, "text": "…"}`) |
 
 ### États des ennemis
@@ -199,13 +202,14 @@ L'attaque de base part toute seule à sa cadence. Elle a une **forme** et des **
 | `name`, `desc` | Nom et phrase de l'infobulle. |
 | `kind` | `projectile` (éventail de projectiles) ou `melee` (coup en arc autour du joueur). |
 | `tags` | Familles du coup : chacune multiplie les dégâts par sa statistique (`projectile_damage`, `melee_damage`, `area_damage`), comme pour les compétences. `trap_tags` : familles du piège d'une ronce vive. |
-| `branch` | `ronce` : coup de Ronce (résistance des ennemis du roncier, bonus « se battre chez soi »). |
+| `branch` | Branche du coup (`ronce`, `spore`) : résistance des ennemis de sa région, bonus « se battre chez soi ». |
 | `element` | Élément de la charte pour le dessin (`seve`, `epine`, `saignement`…). |
 | `priority` | Règle de priorité entre formes, voir plus bas. |
 | `damage`, `rate`, `range` | Facteur des dégâts de base, facteur de la vitesse d'attaque (`fire_rate`), portée en pixels. |
 | `speed`, `spread`, `pierce`, `size` | Projectiles : vitesse, écart entre projectiles de l'éventail (la statistique `projectiles` en donne le nombre), perforation ajoutée à `pierce`, facteur de `projectile_size`. |
 | `burst`, `burst_gap`, `jitter` | Rafale : nombre de tirs par attaque, écart entre eux (s), petit écart d'angle d'un tir à l'autre. |
 | `arc`, `knockback` | Corps à corps : ouverture de l'arc (radians), recul. |
+| `lob`, `burst_radius`, `cloud_radius`, `cloud_duration`, `cloud_damage`, `cloud_tick`, `cloud_max` | Spores lobées : la spore vole en cloche jusqu'à la cible (au plus la portée), sans rien toucher en vol ; à l'arrivée elle blesse tout dans `burst_radius` (× `area`, × `taille`) et laisse un petit nuage (`cloud_damage` : part des dégâts du coup par seconde). |
 | `trap_radius`, `trap_duration`, `trap_damage`, `trap_tick`, `trap_root`, `trap_max` | Ronce vive : le piège planté là où la graine tombe (rayon × `area`, durée, dégâts par seconde en part des dégâts de base, à-coups, immobilisation à l'entrée, nombre de pièges à la fois). |
 
 **Règle de priorité.** Une seule forme est active. La `priority` la plus haute l'emporte : celle de l'effet si elle est écrite (`{"attack_form": "fouet", "priority": 5}`, pour un nœud clé), sinon celle de la forme dans `attack.json` (la graine vaut 0, les autres 2). À égalité, le nœud le plus loin de la graine (anneau le plus grand) l'emporte : sur un même chemin, on l'a forcément pris après. À égalité encore, la dernière source dans l'ordre du moteur.
@@ -225,6 +229,12 @@ L'attaque de base part toute seule à sa cadence. Elle a une **forme** et des **
 | `repetition` | coups en plus | L'attaque repart après `delay` secondes (le fouet frappe deux fois). |
 | `volee` | N | Une attaque sur N part en couronne tout autour du joueur (`count` directions). |
 | `poison` | part des dégâts par seconde | Chaque coup empoisonne (`duration`). |
+| `saut` | sauts | Quand il ne perfore plus, le projectile saute vers l'ennemi empoisonné le plus proche (`reach`, dégâts × `factor`), avant tout ricochet. |
+| `bouffee` | part des dégâts par seconde | Un ennemi tué par l'attaque libère un petit nuage de spores (`radius`, `duration`, `max`). |
+| `elan` | +x % | Tant que le joueur bouge (ou vient de bouger), l'attaque fait x % de dégâts en plus (Vent). |
+| `repousse` | pixels | Chaque coup repousse l'ennemi touché, à l'opposé du joueur (Vent). |
+
+Formes de Vent : `lame` (Lames de vent : `"return": true`, la lame part jusqu'à sa portée puis revient au joueur en frappant de nouveau ; elle perfore tout) et `bourrasque` (cône au corps à corps qui repousse ; `fx` et `sfx` nomment sa signature et son son).
 
 L'infobulle d'un nœud montre l'aperçu avant → après de l'attaque (« Attaque : Graines → Fouet », « Attaque : + fourche… »), comme pour les statistiques. Pour essayer une attaque sans passer par l'arbre : `tools/godot.sh --xvfb -- --attack=fouet,repetition:1,saignement:0.3` (marche aussi avec `--autotest`). `tools/godot.sh --headless --fixed-fps 60 -s res://tests/attack_test.gd` teste le moteur.
 
@@ -270,10 +280,36 @@ Une région est décrite tout entière par `regions/<id>.json`. `scripts/regions
 | `boss` | Le boss : `script` (un fichier qui étend `BossBase`, voir `scripts/boss_base.gd`), `name`, `bar_color`, `phases` (noms affichés), `arena` (`radius`, `radius_min`, `offset` depuis le Cœur, `life_color`), `reward`, bannières. |
 | `ending` | Séquence « région purifiée » : `sub`, `title`, `body`. |
 | `ambience`, `music` | Humeur de l'ambiance sonore et de la musique. |
+| `wind` | Rafales de la région (Vent : `scripts/wind.gd`, posé par `decor_plateau.gd`) : `angle` (écart du vent dominant au milieu du secteur, en radians), `calm` (durée du calme, [min, max] s), `warn` (annonce, s), `gust` (rafale, s), `player_push` (px/s au plus fort), `projectile_push` (px/s²), `streaks` (traînées dessinées). Le joueur règle leur force dans les options (« Rafales », `Settings.wind`, de 0 à 1). |
 
 **Positions.** `dist` : distance à la graine en pixels. `side` : écart au milieu du secteur, de -1 (bord gauche) à 1 (bord droit), ou `angle` : écart en radians.
 
 **Couleurs.** Partout dans un fichier de région, une couleur s'écrit `"#rrggbb"`, avec un rôle de la charte (`"sol_mort"`), un élément et sa variante (`"cendre/sombre"`, `"vent"`), une couleur nommée (`"$rouille"`), ou une recette qui reprend les calculs de la charte : `{"mix": [a, b, t]}`, `{"dark": [a, part]}`, `{"light": [a, part]}`.
+
+## Son et ambiance
+
+`data/audio.json` (clé `regions`, une entrée par identifiant de région) règle ce qu'on entend et voit d'une région. La région peut aussi porter une section `audio` dans son propre fichier, qui prime. Une région sans réglage garde la musique et les particules de Ronce. `check_data.gd` vérifie tout (sons connus, boucle de musique, formes et couleurs).
+
+```json
+"spore": {
+  "music": {
+    "seed": 23, "roots": [-2, -7, -4, -9],
+    "dark":   {"chord": [0, 3, 6, 10], "wind": 0.5, "wind_lp": 0.012, "wind_period": 4.0},
+    "bright": {"chord": [0, 3, 7, 10], "pattern": [0, 3, 7, 10, 14, 10, 7, 3]}
+  },
+  "ambience": {
+    "butterflies": 0,
+    "dead":  {"shape": "glow", "color": "poison/sombre", "alpha": 0.5, "vel": [4, -14], "sway": [10, 3], "size": [1.6, 3.4]},
+    "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.7, "vel": [170, 8], "sway": [24, 8], "size": [1, 1.8], "length": 26}
+  },
+  "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort"}
+}
+```
+
+- **`music`** : `roots` (quatre fondamentales en demi-tons depuis le ré, une par accord de 3 s), `seed` (hasard du vent), puis `dark` (terre morte) et `bright` (terre vivante), dont chaque réglage est facultatif (valeurs de Ronce par défaut, `Synth.DEFAULT_DARK` et `DEFAULT_BRIGHT`). `dark` : `chord` (demi-tons), `vol`, `vol2`, `detune`, `wind` (niveau du vent), `wind_lp` (clarté du vent), `wind_period` (**doit diviser 12 s**, pour que la boucle ne claque pas), `wind_fade` (estompe du vent aux bouts, pour un vent fort), `bell`. `bright` : `chord`, `octave`, `pattern` (1 à 24 notes réparties sur 3 s), `pad`, `pluck`, `sparkle`, `sparkle_note`. `tools/gen-sounds.sh` écrit `assets/music/<id>_sombre.wav` et `<id>_lumineux.wav` ; commiter les `.wav` (`sound_test.gd` échoue s'ils sont périmés).
+- **`ambience`** : `dead` et `alive` (terre morte ou vivante là où naît la particule), chacun avec `shape` (`dot`, `glow` halo qui scintille, `streak` brin qui file), `color` (couleur de région : `"#rrggbb"`, `"élément/variante"`…), `alpha`, `vel` (vitesse en pixels par seconde), `sway` (ondulation), `size` (min, max) et `length` (pour `streak`). `butterflies` à 0 supprime les papillons dans la région. « Réduire les effets » coupe toutes les particules.
+- **Sons choisis par les données** : `"sound"` dans une compétence (`skills.json`, joué après son lancement) ou dans une forme d'attaque (`attack.json`, remplace `tir`), `"sound_hit"`, `"sound_crit"` et `"sound_death"` dans une sorte d'ennemi (`enemies.json`). Le nom doit exister dans `Synth.SOUNDS` (`check_data.gd` le vérifie).
+- **`boss`** : sons d'éveil (le combat commence), de phase (le boss change de phase) et de mort, joués par le socle `BossBase`. Un boss peut en jouer d'autres lui-même (`Sfx.play`).
 
 ## Points et greffes du monde
 
@@ -315,6 +351,8 @@ La séquence « région purifiée » se déclenche cinq secondes après la victo
 - **Une région** : voir « Régions » et « Ajouter une région » dans le README du projet.
 - **Une compétence** : son fichier `scripts/skills/<id>.gd` (classe `Skill` : `cast`, `tick` facultatif) et ses réglages dans `skills.json`.
 - **Un comportement d'ennemi** : `scripts/enemy_behaviors/<nom>.gd` (classe `EnemyBehavior` : `step`, `draw_attack`, `on_death`), nommé par `behavior` dans `enemies.json`.
+- **Le dessin d'une sorte hors de `fletri_art.gd`** : `"art": "<nom>"` dans sa sorte de `enemies.json`, et le fichier `scripts/enemy_art/<nom>.gd` (fonctions statiques `body_color(kind_id)` et `draw(ci, kind_id, pos, r, face, t, o)`). Les Flétris des plateaux sont dans `enemy_art/vent.gd`.
+- **Comportements des plateaux de Vent** : `diver` (le Piqueur tourne autour du joueur puis plonge en ligne droite : `orbit`, `windup`, `dive_speed`, `dive_dist`, `charge_damage`, `recover`), `blower` (le Souffleur garde ses distances et souffle en cône : `keep_min`, `keep_max`, `range`, `cone`, `windup`, `blow_damage`, `blow_push`, `blow_time`), `glider` (le Planeur prend de la hauteur quand on l'approche et esquive alors tout coup direct, `EnemyBehavior.dodge` : `reach`, `flee`, plumes `shots`, `spread`, `shot_speed`, `shot_damage`, `shot_life`). `"no_push": true` : la sorte ne recule ni ne se laisse aspirer (le Menhir).
 - **Une statistique** : l'ajouter dans `stats.json`, puis la lire dans le code avec `Game.stats["nom"]`.
 - **Une action ou un évènement** : écrire l'action dans `scripts/effect_actions.gd` et la déclarer dans `Content.ACTIONS` (`scripts/content.gd`) ; pour un évènement, l'ajouter à `Content.EVENTS` et appeler `Game.fire("nom", {...})` à l'endroit voulu.
 - **Un état pour les conditions** : le déclarer dans `conditions.json` et le tenir à jour avec `Game.set_state("nom", valeur)`.

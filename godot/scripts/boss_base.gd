@@ -28,6 +28,7 @@ extends Node2D
 
 const Difficulty = preload("res://scripts/difficulty.gd")
 const FletriArt = preload("res://scripts/fletri_art.gd")
+const RegionAudio = preload("res://scripts/region_audio.gd")
 
 # --- Nombres du socle (à régler dans _setup) ---
 var body_radius := 70.0
@@ -73,6 +74,8 @@ var behavior := "boss"
 var color := Color("3a2a2c")
 var damage_scale := 1.0
 var phase := 1
+## Dernière phase vue : un changement joue le son « phase » de la région.
+var _last_phase := 1
 var t := 0.0
 var intro := 1.4
 var transition := 0.0
@@ -119,6 +122,8 @@ func _ready() -> void:
 	overlay.boss = self
 	overlay.above = true
 	main.projectiles_layer.add_child(overlay)
+	_last_phase = phase
+	_region_sound("eveil")
 
 
 func _exit_tree() -> void:
@@ -162,6 +167,9 @@ func _physics_process(delta: float) -> void:
 	_tick_statuses(delta)
 	if dead:
 		return
+	if phase != _last_phase:
+		_last_phase = phase
+		_region_sound("phase")
 	_projectiles_step(delta)
 	minions = minions.filter(func(e): return is_instance_valid(e) and not e.dead and not e.is_queued_for_deletion())
 	var p = main.player
@@ -304,7 +312,15 @@ func _tick_statuses(delta: float) -> void:
 				root_immune = root_immunity
 
 
+## Joue un des sons du boss de sa région (data/audio.json › boss : « eveil », « phase », « mort »), s'il y en a.
+func _region_sound(key: String) -> void:
+	var snd := RegionAudio.boss_sound(region, key)
+	if snd != "":
+		Sfx.play(snd, anchor)
+
+
 func _die() -> void:
+	_region_sound("mort")
 	dead = true
 	dying = 0.0
 	hp = 0.0

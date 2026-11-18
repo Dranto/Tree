@@ -1,0 +1,98 @@
+{
+  "_doc": "Région de Vent (les hauts plateaux). Format décrit dans data/README.md, « Régions ». Positions : « dist » = distance à la graine en pixels ; « side » = écart au milieu du secteur, de -1 (bord gauche) à 1 (bord droit), ou « angle » = écart en radians. « wind » : les rafales propres à la région (scripts/wind.gd), posées par son décor (decor_plateau.gd).",
+  "id": "vent",
+  "branch": "vent",
+  "name": "Région de Vent",
+  "place": "les hauts plateaux",
+  "map_name": "Plateaux",
+  "color": "#a4bcd4",
+  "ground": {
+    "_doc": "Plateaux : roche d'ardoise couverte de cendre tant que le Cœur vit, steppe d'herbe blonde une fois ravivée, petites fleurs claires du vent.",
+    "colors": {
+      "ardoise": {"mix": ["sol_mort", "vent/sombre", 0.5]},
+      "steppe": {"mix": [{"mix": ["sol_vivant", "racine", 0.42]}, "or", 0.14]}
+    },
+    "dead_dark": {"dark": ["$ardoise", 0.16]},
+    "dead_light": {"light": ["$ardoise", 0.06]},
+    "purified_dark": {"dark": [{"mix": ["sol_mort", "vent", 0.22]}, 0.12]},
+    "purified_light": {"mix": ["sol_mort", "vent", 0.3]},
+    "alive_dark": {"dark": ["$steppe", 0.2]},
+    "alive_light": {"light": [{"mix": ["$steppe", "or", 0.26]}, 0.06]},
+    "dot": "vent/clair",
+    "dot_cell": 14.0,
+    "dot_rarity": 0.988,
+    "dot_salt": [37.0, 59.0],
+    "dot_size": 0.16,
+    "dot_strength": 0.7,
+    "alive_mix": 0.85,
+    "alive_mix_purified": 0.35
+  },
+  "decor": {"kind": "plateau", "seed": 21, "rocks": 64, "grass": 320, "clear_center": 340.0, "clear_seed": 560.0},
+  "wind": {
+    "_doc": "Rafales : direction du vent dominant (« angle », en radians, depuis l'axe de la région), calme entre deux rafales (secondes, de … à …), annonce (« warn », les traînées se lèvent), durée d'une rafale, poussée sur le joueur (px/s au plus fort) et accélération des projectiles (px/s²). Réglable et coupable dans les options (Settings.wind).",
+    "angle": 1.75,
+    "calm": [5.0, 9.0],
+    "warn": 1.2,
+    "gust": 2.6,
+    "player_push": 70.0,
+    "projectile_push": 110.0,
+    "streaks": 26
+  },
+  "landmarks": [
+    {"kind": "rocher", "dist": 1080.0, "angle": 0.36, "size": 1.15},
+    {"kind": "ruine", "dist": 1420.0, "angle": -0.4, "size": 1.0},
+    {"kind": "rocher", "dist": 2050.0, "angle": -0.3, "size": 0.9},
+    {"kind": "grand_arbre", "dist": 2280.0, "angle": 0.42, "size": 0.85}
+  ],
+  "spawn": {
+    "kinds": {"plongeur": 0.35, "souffleur": 0.3, "planeur": 0.2, "menhir": 0.15},
+    "share_near": 0.3,
+    "share_far": 0.85,
+    "far": 2400,
+    "purified_factor": 0.4
+  },
+  "sanctuaries": [
+    {"id": "vent_col", "name": "du Col", "dist": 820.0, "angle": 0.28},
+    {"id": "vent_cairn", "name": "du Cairn", "dist": 1260.0, "angle": -0.32},
+    {"id": "vent_belvedere", "name": "du Belvédère", "dist": 1720.0, "angle": 0.38},
+    {"id": "vent_cime", "name": "de la Cime", "dist": 2200.0, "angle": -0.3}
+  ],
+  "altars": [
+    {"id": "vent_1", "name": "Autel des plumes", "dist": 960, "side": 0.85, "points": 1, "graft": "greffe_plume_vive"},
+    {"id": "vent_2", "name": "Autel de la girouette", "dist": 1340, "side": -0.75, "points": 1, "graft": "greffe_girouette"},
+    {"id": "vent_3", "name": "Autel de l'alizé", "dist": 2020, "side": 0.72, "points": 1, "graft": "greffe_alize"},
+    {"id": "vent_4", "name": "Autel du cerf-volant", "dist": 2620, "side": -0.5, "points": 1, "graft": "greffe_cerf_volant"}
+  ],
+  "secrets": [
+    {"id": "vent", "name": "Le souffle ancien", "dist": 2400, "side": -0.95, "points": 1, "graft": "greffe_souffle_ancien"}
+  ],
+  "heart": {
+    "name": "Cœur des rafales",
+    "zone": 250.0,
+    "hold_time": 30.0,
+    "waves": {"every": 6.0, "base": 4, "growth": 2, "kinds": ["fletri", "plongeur"], "second_share": 0.4, "big": "menhir", "big_from": 2},
+    "idle": {"every": 3.5, "max": 6, "kind": "fletri"},
+    "reward": {"points": 1},
+    "life_radius": 840.0,
+    "life_color": "vent/clair",
+    "wake_banner": "Le Cœur des rafales s'éveille : tiens la zone malgré le vent !",
+    "purified_banner": "Le Cœur des rafales est purifié : l'aire du Harfang s'ouvre."
+  },
+  "boss": {
+    "script": "res://scripts/boss_vent.gd",
+    "name": "Le Harfang de cendre",
+    "bar_color": "vent",
+    "reward": {"points": 2, "graft": "greffe_oeil_tempete"},
+    "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : le Harfang prend son envol", "Phase 3 sur 3 : la tempête se lève"],
+    "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "vent/clair"},
+    "wake_banner": "Le Harfang de cendre déploie ses ailes.",
+    "defeated_banner": "Le Harfang de cendre est vaincu !"
+  },
+  "ending": {
+    "sub": "Région de Vent purifiée",
+    "title": "Les plateaux respirent",
+    "body": "Le Harfang de cendre est tombé. Sur les hauts plateaux, le vent ne charrie plus la cendre : il couche l'herbe blonde et porte au loin les graines de l'Arbre de vie."
+  },
+  "ambience": "plateau",
+  "music": "plateau"
+}

@@ -425,13 +425,17 @@ func affix_ratio() -> float:
 	return clampf(1.0 - aff_t / maxf(0.01, w), 0.0, 1.0)
 
 
+## « poison_resist » de la sorte (enemies.json) : part du poison ignorée (Lichen cuirassé du marais).
 func apply_poison(dps: float, duration: float) -> void:
+	dps *= 1.0 - float(data.get("poison_resist", 0.0))
 	poison_dps = maxf(poison_dps if poison_time > 0.0 else 0.0, dps)
 	poison_time = maxf(poison_time, duration)
 
 
 func take_damage(amount: float, crit: bool, dot := false) -> void:
 	if dead:
+		return
+	if not dot and _behavior.dodge(self):
 		return
 	if guard_time > 0.0:
 		amount *= 1.0 - guard_cut
@@ -563,7 +567,7 @@ func _ready() -> void:
 
 ## Redessine ce qui bouge, et seulement cela (appelé par _process).
 func _redraw_parts(delta: float) -> void:
-	var busy := state != "" or hit_flash > 0.0 or strike_t >= 0.0 or aff_state != ""
+	var busy := (state != "" and not _behavior.calm(self)) or hit_flash > 0.0 or strike_t >= 0.0 or aff_state != ""
 	if busy or behavior == "guard" or elite:
 		queue_redraw()
 	_body_clock -= delta

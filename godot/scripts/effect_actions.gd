@@ -26,6 +26,12 @@ static func run(action: String, p: Dictionary, ctx: Dictionary) -> bool:
 			return _status_area(p, ctx)
 		"attack_salvo":
 			return _attack_salvo(p, ctx)
+		"cloud":
+			return _cloud(p, ctx)
+		"gust":
+			return _gust(p, ctx)
+		"tornado":
+			return _tornado(p, ctx)
 	push_warning("Action d'effet inconnue : " + action)
 	return false
 
@@ -161,4 +167,64 @@ static func _attack_salvo(p: Dictionary, ctx: Dictionary) -> bool:
 	if main == null or not "player" in main or main.player == null or not "attack_rt" in main.player:
 		return false
 	load("res://scripts/attack.gd").salvo(main.player, int(p["count"]))
+	return true
+
+
+## Nuage de spores au sol autour du joueur ou de l'ennemi de l'évènement (« at ») : pendant
+## « duration » s, « factor » × dégâts du joueur × dégâts de zone par seconde aux ennemis dedans,
+## qu'il empoisonne aussi (rayon × taille des zones). C'est un coup de Spore.
+static func _cloud(p: Dictionary, ctx: Dictionary) -> bool:
+	var at = _center(p, ctx)
+	if at == null:
+		return false
+	var main = ctx["main"]
+	var s: Dictionary = ctx["stats"]
+	var tick := 0.5
+	var dps: float = s.get("damage", 0.0) * float(p["factor"]) * s.get("area_damage", 1.0)
+	load("res://scripts/attack.gd").cloud(main, at, float(p["radius"]) * s.get("area", 1.0), float(p["duration"]), tick,
+		dps * tick, int(p.get("max", 12)), "effet")
+	return true
+
+
+## Rafale (Vent) : blesse les ennemis autour du centre pour « factor » × les dégâts du joueur
+## (× dégâts de zone, rayon × taille des zones) et les repousse de « push » pixels. Coup de Vent.
+static func _gust(p: Dictionary, ctx: Dictionary) -> bool:
+	var at = _center(p, ctx)
+	if at == null:
+		return false
+	var main = ctx["main"]
+	var s: Dictionary = ctx["stats"]
+	var radius: float = p["radius"] * s.get("area", 1.0)
+	var push: float = float(p.get("push", 0.0))
+	if "skill_fx" in main and main.skill_fx != null:
+		main.skill_fx.play("appel_air", {"pos": at, "r": radius / 0.45, "pull": 0.0, "dur": 0.3})
+	var dmg: float = s.get("damage", 0.0) * p["factor"] * s.get("area_damage", 1.0)
+	var source = ctx.get("enemy")
+	for other in main.enemies_near(at, radius):
+		if other == source or other.dead:
+			continue
+		main.player_hit_enemy(other, dmg, false, "vent")
+		var d: Vector2 = other.position - at
+		if push > 0.0 and d.length() > 0.1:
+			load("res://scripts/vent.gd").push(other, d.normalized() * push)
+	return true
+
+
+## Tornade (Vent) : fait naître une tornade (réglages de skills.json › tornade, « factor » × ses
+## dégâts et sa durée) au centre, lancée dans la direction joueur → centre. La compétence n'a pas
+## besoin d'être acquise.
+static func _tornado(p: Dictionary, ctx: Dictionary) -> bool:
+	var at = _center(p, ctx)
+	var main = ctx["main"]
+	if at == null or main == null or not "player" in main or main.player == null:
+		return false
+	var pl = main.player
+	if not pl.has_method("skill_object"):
+		return false
+	var tor = pl.skill_object("tornade")
+	if tor == null:
+		return false
+	var dir: Vector2 = at - pl.position
+	dir = dir.normalized() if dir.length() > 1.0 else pl.aim
+	tor.spawn(pl, at, dir, pl.skill("tornade"), ctx["stats"], 0.0, float(p["factor"]))
 	return true

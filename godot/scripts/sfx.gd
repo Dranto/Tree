@@ -3,6 +3,8 @@
 ## Usage : Sfx.play("impact", position_du_monde). Sans position, le son est joué à plein volume.
 extends Node
 
+const Synth = preload("res://scripts/synth.gd")
+
 const BUS := "Effets"
 const POOL := 16
 const WINDOW_MSEC := 50
@@ -29,8 +31,8 @@ func _ready() -> void:
 	ensure_bus(BUS)
 	if not enabled:
 		return
-	for name in ["tir", "impact", "critique", "mort", "noeud", "niveau", "esquive", "degats", "nova", "nuage",
-			"floraison", "fouet", "racines", "volee", "saignee", "annonce", "coeur", "clic", "survol", "chute", "ramasse", "greffe", "seve"]:
+	# Tous les sons de synth.gd (Ronce, Spore, Vent…) : un son ajouté là est chargé sans autre changement.
+	for name in Synth.SOUNDS:
 		var s := load_wav("res://assets/sounds/%s.wav" % name)
 		if s != null:
 			streams[name] = s

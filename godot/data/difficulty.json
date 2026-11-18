@@ -64,7 +64,7 @@
     "chance": 0.012, "chance_far": 0.035, "min_level": 3, "max_alive": 2,
     "two_affixes": 0.3, "two_affixes_level": 10,
     "hp": 3.2, "damage": 1.25, "radius": 1.2, "xp": 6.0, "graft_chance": 0.35,
-    "excluded": ["nid", "rejeton"],
+    "excluded": ["nid", "rejeton", "sporule"],
     "affixes": {
       "rapide": {"name": "rapide", "color": "#7fd0f0", "weight": 1.0,
                  "speed": 1.45, "cooldown": 0.7},

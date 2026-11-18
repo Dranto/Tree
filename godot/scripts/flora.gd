@@ -43,6 +43,9 @@ var bushes: Array = []
 var bush_cells: Dictionary = {}
 ## Rectangle qui contient tous les buissons (avec une marge) : test rapide hors du roncier.
 var bush_bounds := Rect2()
+## Carrés de BUSH_CELL px qui ont un obstacle dans leur voisinage 3 × 3 : push_out sort en une seule
+## recherche loin des obstacles (avec plusieurs régions, bush_bounds couvre presque tout le monde).
+var bush_near: Dictionary = {}
 ## Fleurs d'une vague de vie qui n'ont pas encore éclos : {f, at} (at = temps d'éclosion).
 var pending: Array = []
 var clock := 0.0
@@ -528,6 +531,9 @@ func add_obstacle(t) -> void:
 	if not bush_cells.has(key):
 		bush_cells[key] = []
 	bush_cells[key].append(t)
+	for y in range(key.y - 1, key.y + 2):
+		for x in range(key.x - 1, key.x + 2):
+			bush_near[Vector2i(x, y)] = true
 	bush_bounds = Rect2(t.position, Vector2.ZERO) if bushes.size() == 1 else bush_bounds.expand(t.position)
 
 
@@ -555,6 +561,8 @@ func push_out(pos: Vector2, radius: float) -> Vector2:
 		return pos
 	var cx := floori(pos.x / BUSH_CELL)
 	var cy := floori(pos.y / BUSH_CELL)
+	if not bush_near.has(Vector2i(cx, cy)):
+		return pos
 	var out := pos
 	for y in range(cy - 1, cy + 2):
 		for x in range(cx - 1, cx + 2):

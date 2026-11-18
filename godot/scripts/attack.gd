@@ -19,6 +19,8 @@ class_name Attack
 extends RefCounted
 
 const Content = preload("res://scripts/content.gd")
+## Branche Vent : pousser et aspirer les ennemis (recul de la bourrasque, modificateur « repousse »).
+const VentScript = preload("res://scripts/vent.gd")
 ## Statistique de dégâts de chaque famille d'attaque (comme les compétences, player.gd).
 const TAG_STATS := {"corps_a_corps": "melee_damage", "projectile": "projectile_damage", "zone": "area_damage"}
 ## « Se battre chez soi » : bonus d'une forme de Ronce sur une terre ravivée de sa région (player.gd).
@@ -165,7 +167,12 @@ static func multiplier(player, tags: Array, branch: String) -> float:
 static func hit_damage(player, st: Dictionary) -> float:
 	var f := form_def(st)
 	var base: float = player.current_damage() if player != null and player.has_method("current_damage") else float(_stats().get("damage", 1.0))
-	return base * float(f.get("damage", 1.0)) * multiplier(player, f.get("tags", []), str(f.get("branch", "")))
+	var dmg: float = base * float(f.get("damage", 1.0)) * multiplier(player, f.get("tags", []), str(f.get("branch", "")))
+	# Élan (Vent) : bonus tant que le joueur se déplace (ou vient de bouger).
+	var elan := mod(st, "elan")
+	if elan > 0.0 and player != null and "still_time" in player and float(player.still_time) < 0.25:
+		dmg *= 1.0 + elan
+	return dmg
 
 
 # --- Tir ---
@@ -315,6 +322,10 @@ static func _shoot(player, st: Dictionary, shot: Dictionary) -> void:
 		size *= float(defs.get("renforcee", {}).get("size", 1.5))
 	var speed := float(f.get("speed", 640.0))
 	var life := reach(st) / maxf(speed, 1.0)
+	# Spores lobées : la spore vole en cloche jusqu'à la cible (au plus la portée) et n'éclate qu'à l'arrivée.
+	var lob: bool = f.get("lob", false)
+	if lob and not shot.get("ring", false):
+		life = clampf(_target_distance(player, shot.get("target")), 80.0, reach(st)) / maxf(speed, 1.0)
 	var pierce := int(s["pierce"]) + int(f.get("pierce", 0))
 	var branch := str(f.get("branch", ""))
 	var on_hit := _hit_mods(st)
@@ -326,7 +337,7 @@ static func _shoot(player, st: Dictionary, shot: Dictionary) -> void:
 		if empowered:
 			trap_dmg *= float(st["factor"])
 	if shot.get("burst", 0) == 0 and not shot.get("salvo", false):
-		_sfx("tir")
+		_sfx(str(f.get("sound", "tir")))
 	# Traînée d'épines : seul le tir de tête (centre de l'éventail, premier de la rafale) en sème,
 	# pour qu'elle reste lisible et dans son budget de dessin.
 	var quiet := on_hit.duplicate()
@@ -341,9 +352,15 @@ static func _shoot(player, st: Dictionary, shot: Dictionary) -> void:
 		p.branch = branch
 		p.empowered = empowered
 		p.attack = on_hit if i == lead else quiet
+		if f.get("return", false):
+			# Lame de vent : elle part jusqu'à la portée, puis revient au joueur (projectile.gd).
+			p.home = player
+			p.returning = true
 		if form == "ronce_vive":
 			p.plant = true
 			p.trap_dmg = trap_dmg
+		if lob:
+			p.lob = life
 	if shot.get("burst", 0) == 0:
 		var fx_pos: Vector2 = player.position + Vector2(shot["dir"]) * player.radius * 1.5
 		if player.has_method("_sig"):
@@ -352,6 +369,17 @@ static func _shoot(player, st: Dictionary, shot: Dictionary) -> void:
 			_afx(main, "renforcee", {"pos": player.position, "follow": player, "element": str(f.get("element", "seve"))})
 		if shot.get("ring", false):
 			_afx(main, "volee", {"pos": player.position, "r": 60.0, "element": str(f.get("element", "seve"))})
+
+
+## Distance du joueur à la cible d'un tir (ennemi, position, ou point visé).
+static func _target_distance(player, target) -> float:
+	if target is Vector2:
+		return player.position.distance_to(target)
+	if is_instance_valid(target) and target is Node2D:
+		return player.position.distance_to(target.position)
+	if "aim_point" in player:
+		return player.position.distance_to(player.aim_point)
+	return 400.0
 
 
 ## Modificateurs qu'un projectile emporte (copie, pour qu'un changement de l'arbre en vol ne le touche pas).
@@ -382,11 +410,11 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 		arc = TAU
 	arc = minf(arc, TAU)
 	if shot.get("burst", 0) == 0:
-		_sfx("fouet")
-	_afx(main, "fouet", {"pos": player.position, "dir": dir, "r": r, "arc": arc, "follow": player,
+		_sfx(str(f.get("sfx", "fouet")))
+	_afx(main, str(f.get("fx", "fouet")), {"pos": player.position, "dir": dir, "r": r, "arc": arc, "follow": player,
 		"empowered": empowered, "flip": int(shot.get("repeat", 0)) % 2 == 1})
 	if empowered:
-		_afx(main, "renforcee", {"pos": player.position, "follow": player, "element": "epine"})
+		_afx(main, "renforcee", {"pos": player.position, "follow": player, "element": str(f.get("element", "epine"))})
 	var on_hit := _hit_mods(st)
 	var kb := float(f.get("knockback", 0.0))
 	for e in main.enemies_near(player.position, r):
@@ -397,8 +425,8 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 		apply_on_hit(main, on_hit, e, dmg, e.position)
 		if e.dead:
 			continue
-		if kb > 0.0 and d.length() > 0.1 and not e.anchored:
-			e.position += d.normalized() * kb
+		if kb > 0.0 and d.length() > 0.1:
+			VentScript.push(e, d.normalized() * kb)
 		if main.has_method("on_melee_hit"):
 			main.on_melee_hit(e, dmg)
 
@@ -413,11 +441,17 @@ static func apply_on_hit(main, m: Dictionary, e, dmg: float, at: Vector2) -> voi
 	if e.dead:
 		if m.has("eclat"):
 			_shards(main, m, at, dmg * float(m["eclat"]))
+		if m.has("bouffee"):
+			_puff(main, at, dmg * float(m["bouffee"]))
 		return
 	if m.has("saignement"):
 		e.apply_status("saignement", dmg * float(m["saignement"]), float(defs["saignement"].get("duration", 4.0)) * float(s.get("bleed_duration", 1.0)))
 	if m.has("poison"):
 		e.apply_poison(dmg * float(m["poison"]), float(defs["poison"].get("duration", 3.0)))
+	if m.has("repousse") and "player" in main and main.player != null:
+		var away: Vector2 = e.position - main.player.position
+		if away.length() > 0.1:
+			VentScript.push(e, away.normalized() * float(m["repousse"]))
 	if m.has("enracine") and main.rng.randf() < float(m["enracine"]):
 		e.apply_status("enracine", 1.0, float(defs["enracine"].get("duration", 0.8)) * float(s.get("root_duration", 1.0)))
 		_afx(main, "enracine", {"pos": e.position, "r": float(e.radius)})
@@ -465,10 +499,12 @@ static func on_projectile_hit(p, e) -> void:
 			c.hit = p.hit.duplicate()
 
 
-## Le projectile p ne perfore plus : il ricoche s'il lui reste des rebonds (renvoie true, il continue),
-## sinon il s'arrête (une ronce vive se plante d'abord).
+## Le projectile p ne perfore plus : il saute vers un ennemi empoisonné ou ricoche s'il lui reste des
+## sauts ou des rebonds (renvoie true, il continue), sinon il s'arrête (une ronce vive se plante d'abord).
 static func on_projectile_end(p, last_hit) -> bool:
 	var m: Dictionary = p.attack
+	if int(round(float(m.get("saut", 0.0)))) > p.jumps and _jump(p, last_hit):
+		return true
 	if int(round(float(m.get("ricochet", 0.0)))) > p.bounces:
 		var def: Dictionary = mods().get("ricochet", {})
 		var best = null
@@ -493,6 +529,72 @@ static func on_projectile_end(p, last_hit) -> bool:
 	if p.plant:
 		plant(p.main, p.position, p.trap_dmg, m)
 	return false
+
+
+## Saut : le projectile repart vers l'ennemi empoisonné le plus proche qu'il n'a pas encore touché.
+## Renvoie false s'il n'y en a aucun à portée (le projectile peut alors ricocher ou s'arrêter).
+static func _jump(p, last_hit) -> bool:
+	var def: Dictionary = mods().get("saut", {})
+	var best = null
+	var best_d := INF
+	for o in p.main.enemies_near(p.position, float(def.get("reach", 260.0))):
+		if o.dead or o == last_hit or p.hit.has(o.get_instance_id()) or float(o.get("poison_time")) <= 0.0:
+			continue
+		var d: float = o.position.distance_squared_to(p.position)
+		if d < best_d:
+			best_d = d
+			best = o
+	if best == null:
+		return false
+	p.jumps += 1
+	var speed: float = p.vel.length()
+	_afx(p.main, "saut", {"pos": p.position, "to": best.position})
+	p.vel = (best.position - p.position).normalized() * speed
+	p.damage *= float(def.get("factor", 0.9))
+	p.life = maxf(p.life, sqrt(best_d) / maxf(speed, 1.0) + 0.1)
+	p.queue_redraw()
+	return true
+
+
+## Spores lobées : la spore p touche le sol. Elle blesse tout ce qui est dans son rayon d'éclatement
+## (avec les effets au coup de l'attaque) et laisse un petit nuage toxique.
+static func land(p) -> void:
+	var main = p.main
+	var f: Dictionary = forms().get(str(p.style), {})
+	var s := _stats()
+	var m: Dictionary = p.attack
+	var grow: float = float(s.get("area", 1.0)) * (1.0 + float(m.get("taille", 0.0))) * (1.5 if p.empowered else 1.0)
+	var r: float = float(f.get("burst_radius", 56.0)) * grow
+	_afx(main, "eclosion_spore", {"pos": p.position, "r": r})
+	for e in main.enemies_near(p.position, r):
+		if e.dead:
+			continue
+		main.player_hit_enemy(e, p.damage, true, p.branch)
+		apply_on_hit(main, m, e, p.damage, e.position)
+	var tick := float(f.get("cloud_tick", 0.5))
+	# Dégâts du nuage : part des dégâts du coup par seconde, à chaque à-coup.
+	cloud(main, p.position, float(f.get("cloud_radius", 60.0)) * grow, float(f.get("cloud_duration", 2.4)), tick,
+		p.damage * float(f.get("cloud_damage", 0.4)) * tick, int(f.get("cloud_max", 8)), "lobee")
+
+
+## Bouffée : un ennemi tué par l'attaque libère un petit nuage de spores (dmg : dégâts par seconde).
+static func _puff(main, at: Vector2, dps: float) -> void:
+	var def: Dictionary = mods().get("bouffee", {})
+	var tick := float(def.get("tick", 0.5))
+	var r := float(def.get("radius", 54.0)) * float(_stats().get("area", 1.0))
+	cloud(main, at, r, float(def.get("duration", 2.4)), tick, dps * tick, int(def.get("max", 10)), "bouffee")
+
+
+## Petit nuage toxique au sol (spores lobées, bouffée) : à chaque à-coup, « dmg » à chaque ennemi
+## dedans (coup de Spore) et un peu de poison, pour que la cible compte comme empoisonnée.
+## « group » : les nuages d'une même origine se comptent ensemble (« max » à la fois).
+static func cloud(main, pos: Vector2, r: float, dur: float, tick: float, dmg: float, cap: int, group := "nuage") -> void:
+	if main == null or not "attack_fx" in main or main.attack_fx == null:
+		return
+	main.attack_fx.add_zone({
+		"kind": "nuage", "group": group, "pos": pos, "r": r, "dur": dur, "tick": tick, "dmg": dmg,
+		"bleed": 0.0, "root": 0.0, "poison": dmg / maxf(tick, 0.05) * 0.3, "branch": "spore", "max": cap,
+	})
 
 
 ## Ronce vive : plante une ronce piégeuse à pos. dmg : dégâts de chaque à-coup ; elle immobilise

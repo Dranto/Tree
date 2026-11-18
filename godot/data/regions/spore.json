@@ -1,0 +1,90 @@
+{
+  "_doc": "Région de Spore (le marais). Format décrit dans data/README.md, « Régions ». Positions : « dist » = distance à la graine en pixels ; « side » = écart au milieu du secteur, de -1 (bord gauche) à 1 (bord droit), ou « angle » = écart en radians. Le secteur de Spore est à l'est de la graine : l'arène s'arrête avant le bord du monde (2900 px).",
+  "id": "spore",
+  "branch": "spore",
+  "name": "Région de Spore",
+  "place": "le marais",
+  "map_name": "Marais",
+  "color": "#9d6ae8",
+  "ground": {
+    "_doc": "Vase violacée et bleuie tant que le Cœur vit ; mousse sombre et turquoise une fois ravivée, piquée de petites spores claires.",
+    "colors": {
+      "vase": {"mix": ["sol_mort", "poison/sombre", 0.45]},
+      "tourbe": {"mix": ["sol_mort", "vent/sombre", 0.4]},
+      "mousse": {"mix": ["sol_vivant", "vent/sombre", 0.35]}
+    },
+    "dead_dark": {"dark": ["$vase", 0.22]},
+    "dead_light": {"mix": ["$tourbe", "$vase", 0.5]},
+    "purified_dark": {"dark": [{"mix": ["sol_mort", "vent/sombre", 0.45]}, 0.12]},
+    "purified_light": {"mix": ["sol_mort", "poison", 0.16]},
+    "alive_dark": {"dark": ["$mousse", 0.25]},
+    "alive_light": {"light": [{"mix": ["$mousse", "decor_vivant", 0.55]}, 0.06]},
+    "dot": "poison/clair",
+    "dot_cell": 14.0,
+    "dot_rarity": 0.982,
+    "dot_salt": [37.0, 113.0],
+    "dot_size": 0.16,
+    "dot_strength": 0.7,
+    "alive_mix": 0.85,
+    "alive_mix_purified": 0.35
+  },
+  "decor": {"kind": "marais", "seed": 21, "mushrooms": 70, "pools": 44, "logs": 26, "reeds": 46, "clear_center": 340.0, "clear_seed": 560.0,
+            "giants": [{"dist": 1250.0, "side": 0.62, "size": 1.25}, {"dist": 2150.0, "side": -0.66, "size": 1.4}]},
+  "landmarks": [
+    {"kind": "grand_arbre", "dist": 1080.0, "angle": 0.08, "size": 1.05},
+    {"kind": "ruine", "dist": 1900.0, "angle": 0.42, "size": 0.95},
+    {"kind": "rocher", "dist": 1450.0, "angle": -0.4, "size": 0.9}
+  ],
+  "spawn": {
+    "kinds": {"traine_vase": 0.36, "scissipore": 0.4, "lichen": 0.24},
+    "share_near": 0.25,
+    "share_far": 0.8,
+    "far": 2400,
+    "max_nests": 0,
+    "purified_factor": 0.4
+  },
+  "sanctuaries": [
+    {"id": "berge", "name": "de la Berge", "dist": 820.0, "angle": 0.3},
+    {"id": "roseliere", "name": "de la Roselière", "dist": 1250.0, "angle": -0.3},
+    {"id": "tourbiere", "name": "de la Tourbière", "dist": 1700.0, "angle": 0.38},
+    {"id": "brume", "name": "de la Brume", "dist": 2200.0, "angle": -0.3}
+  ],
+  "altars": [
+    {"id": "spore_1", "name": "Autel de la vesse", "dist": 980, "side": 0.85, "points": 1, "graft": "greffe_vesse"},
+    {"id": "spore_2", "name": "Autel du mycélium", "dist": 1350, "side": -0.72, "points": 1, "graft": "greffe_mycelium"},
+    {"id": "spore_3", "name": "Autel de l'amadou", "dist": 2050, "side": 0.74, "points": 1, "graft": "greffe_amadou"},
+    {"id": "spore_4", "name": "Autel du lichen", "dist": 2500, "side": -0.5, "points": 1, "graft": "greffe_lichen"}
+  ],
+  "secrets": [
+    {"id": "spore", "name": "La truffe enfouie", "dist": 2350, "side": -0.95, "points": 1, "graft": "greffe_truffe"}
+  ],
+  "heart": {
+    "name": "Cœur de moisissure",
+    "zone": 240.0,
+    "hold_time": 30.0,
+    "waves": {"every": 6.0, "base": 4, "growth": 2, "kinds": ["fletri", "scissipore"], "second_share": 0.4, "big": "lichen", "big_from": 2},
+    "idle": {"every": 3.5, "max": 6, "kind": "traine_vase"},
+    "reward": {"points": 1},
+    "life_radius": 820.0,
+    "life_color": "poison/clair",
+    "wake_banner": "Le Cœur de moisissure s'éveille : tiens la zone !",
+    "purified_banner": "Le Cœur est purifié : l'arène de l'Amanite-Mère s'ouvre."
+  },
+  "boss": {
+    "script": "res://scripts/boss_spore.gd",
+    "name": "L'Amanite-Mère",
+    "bar_color": "#8a5cd0",
+    "reward": {"points": 2, "graft": "greffe_sporange"},
+    "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : les lamelles s'ouvrent", "Phase 3 sur 3 : le mycélium se déchaîne"],
+    "arena": {"radius": 440.0, "radius_min": 300.0, "offset": 700.0, "life_color": "poison/clair"},
+    "wake_banner": "L'Amanite-Mère s'éveille.",
+    "defeated_banner": "L'Amanite-Mère est vaincue !"
+  },
+  "ending": {
+    "sub": "Région de Spore purifiée",
+    "title": "Le marais respire",
+    "body": "L'Amanite-Mère s'est éteinte. Sur la vase apaisée, la mousse reprend, et les spores ne portent plus que la vie.\n\nD'autres régions attendent encore ton passage."
+  },
+  "ambience": "marais",
+  "music": "marais"
+}
