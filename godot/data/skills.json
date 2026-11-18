@@ -42,5 +42,24 @@
     "branch": "ronce", "tags": ["zone"],
     "desc": "Nouvelle compétence : les saignements des ennemis proches éclatent d'un coup et te soignent.",
     "radius": 260, "damage": 0.3, "burst": 1.2, "heal": 0.15
+  },
+  "vesse": {
+    "name": "Vesse-de-loup", "short": "Vesse", "color": "#9b6fd0", "cooldown": 4,
+    "branch": "spore", "tags": ["zone"],
+    "desc": "Nouvelle compétence : un champignon-piège pousse à l'endroit visé et éclate en nuage de spores quand un ennemi s'approche.",
+    "range": 380, "max": 3, "arm": 0.5, "life": 9, "trigger": 70,
+    "radius": 95, "damage": 2.2, "cloud_duration": 3, "cloud_damage": 0.5, "poison": 0
+  },
+  "essaim": {
+    "name": "Essaim", "short": "Essaim", "color": "#c49be8", "cooldown": 3.5,
+    "branch": "spore", "tags": ["projectile"],
+    "desc": "Nouvelle compétence : une spore vivante empoisonne l'ennemi visé, puis saute d'ennemi en ennemi.",
+    "range": 560, "jumps": 6, "hop": 0.16, "reach": 230, "damage": 0.7, "poison": 0.6, "duration": 4, "split": false
+  },
+  "eclosion": {
+    "name": "Éclosion", "short": "Éclosion", "color": "#7d4fb0", "cooldown": 6,
+    "branch": "spore", "tags": ["zone"],
+    "desc": "Nouvelle compétence : le poison des ennemis proches éclot d'un coup ; leurs spores empoisonnent leurs voisins.",
+    "radius": 280, "damage": 0.4, "burst": 1.4, "splash": 90, "keep": 0
   }
 }

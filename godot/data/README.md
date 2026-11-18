@@ -24,7 +24,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
 | `difficulty.json` | Difficulté (`scripts/difficulty.gd`) : menace des ennemis (`threat` : par niveau, selon la profondeur dans la région, par Cœur purifié, plafond), effet de la menace sur leurs statistiques (`scaling`), courbe d'expérience et durée visée par niveau (`xp`), apparitions (`spawn` : cadence, plafond d'ennemis et salves près de la graine et au fond de la région), modes Facile / Normal / Difficile (`modes`), élites (`elites` : chance près/loin, niveau minimal, nombre en vie, chance d'un second modificateur, multiplicateurs de vie, dégâts, taille et expérience, chance de greffe, sortes exclues, et `affixes` : nom affiché, couleur, poids et réglages de chaque modificateur). Vérifiée par `check_data.gd` ; le rythme se mesure avec `tools/balance.sh --run`. |
 | `objectives.json` | Les objectifs : principaux (dans l'ordre), facultatifs, chacun rattaché à sa région, et la fin de l'aventure. Voir « Objectifs ». |
-| `attack.json` | L'attaque de base du Porte-Graine (`scripts/attack.gd`) : forme de départ, formes (graine, échardes, fouet, ronces vives) et modificateurs cumulables. Voir « L'attaque de base ». |
+| `attack.json` | L'attaque de base du Porte-Graine (`scripts/attack.gd`) : forme de départ, formes (graine, échardes, fouet, ronces vives, spores lobées, dards fongiques) et modificateurs cumulables. Voir « L'attaque de base ». |
 | `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest`/`kite`/`guard`/`bomber` et ses réglages, `region`, `resist` par branche, `no_affix` : modificateurs d'élite interdits), Flétris ordinaires (`ordinary` : poids, `min_level` niveau d'apparition, `max_alive` nombre maximal en vie) Le comportement `<nom>` est le fichier `scripts/enemy_behaviors/<nom>.gd` (classe `EnemyBehavior`). Les apparitions de chaque région sont dans son fichier (`regions/<id>.json`, `spawn`). Les élites sont réglées dans `difficulty.json`. Les trois premières sortes sont les Flétris d'origine. |
 
 ## Les effets
@@ -62,7 +62,7 @@ Le texte de l'infobulle est produit à partir de l'effet : il ne peut donc pas c
 
 L'identifiant renvoie à `skills.json`. Le comportement de la compétence reste écrit dans `scripts/player.gd` ; ses réglages sont dans les données.
 
-Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores), `bloom` (Floraison), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) `volee` (Volée d'épines : éventail d'épines perforantes qui font saigner) et `saignee` (Saignée : fait éclater les saignements des ennemis proches en dégâts immédiats, une part soigne). Champs communs de `skills.json` :
+Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores ; `follow` : le nuage naît sur le joueur et le suit), `bloom` (Floraison), pour Spore `vesse` (Vesse-de-loup : champignon-piège planté au point visé, `max` à la fois, armé après `arm` s, éclate quand un ennemi entre dans `trigger` px ou au bout de `life` s : coup de zone puis nuage `cloud_damage` pendant `cloud_duration` s ; `poison` : l'éclatement empoisonne), `essaim` (Essaim : une spore vivante touche l'ennemi le plus proche du point visé, l'empoisonne — `poison` × dégâts par seconde pendant `duration` s — puis saute `jumps` fois vers le plus proche à moins de `reach` px, un saut toutes les `hop` s ; `split` : il se divise en deux au premier ennemi) et `eclosion` (Éclosion : chaque ennemi empoisonné à moins de `radius` px subit `burst` × le poison qui lui restait, qui est consommé sauf la part `keep` ; ses spores empoisonnent les ennemis à moins de `splash` px), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) `volee` (Volée d'épines : éventail d'épines perforantes qui font saigner) et `saignee` (Saignée : fait éclater les saignements des ennemis proches en dégâts immédiats, une part soigne). Champs communs de `skills.json` :
 
 | Champ | Rôle |
 | --- | --- |
@@ -96,6 +96,7 @@ Les compétences acquises se rangent dans la barre de compétences (6 emplacemen
 | `heal` | `value` | Soigne une fraction de la vie maximale |
 | `burst` | `radius`, `factor`, `at` (`player` par défaut, ou `enemy`), `color` | Onde d'épines autour du joueur ou de l'ennemi de l'évènement : `factor` × dégâts du joueur × dégâts de zone, rayon × taille des zones. Coup de Ronce |
 | `status_area` | `status`, `value`, `duration`, `radius`, `at`, `scale` (`damage`) | Pose un état sur tous les ennemis de la zone (mêmes règles que `apply_status`) |
+| `cloud` | `radius`, `duration`, `factor`, `at` | Nuage de spores au sol autour du joueur ou de l'ennemi (`at`: `enemy`) : `factor` × dégâts du joueur × dégâts de zone par seconde, et un peu de poison, pendant `duration` s (rayon × taille des zones). Coup de Spore |
 | `attack_salvo` | `count` | Salve de l'attaque de base tout autour du joueur, en `count` directions, avec sa forme et ses modificateurs actuels (par exemple `{"on": "hurt", "do": "attack_salvo", "count": 8, "cooldown": 0.6, "text": "…"}`) |
 
 ### États des ennemis
@@ -199,13 +200,14 @@ L'attaque de base part toute seule à sa cadence. Elle a une **forme** et des **
 | `name`, `desc` | Nom et phrase de l'infobulle. |
 | `kind` | `projectile` (éventail de projectiles) ou `melee` (coup en arc autour du joueur). |
 | `tags` | Familles du coup : chacune multiplie les dégâts par sa statistique (`projectile_damage`, `melee_damage`, `area_damage`), comme pour les compétences. `trap_tags` : familles du piège d'une ronce vive. |
-| `branch` | `ronce` : coup de Ronce (résistance des ennemis du roncier, bonus « se battre chez soi »). |
+| `branch` | Branche du coup (`ronce`, `spore`) : résistance des ennemis de sa région, bonus « se battre chez soi ». |
 | `element` | Élément de la charte pour le dessin (`seve`, `epine`, `saignement`…). |
 | `priority` | Règle de priorité entre formes, voir plus bas. |
 | `damage`, `rate`, `range` | Facteur des dégâts de base, facteur de la vitesse d'attaque (`fire_rate`), portée en pixels. |
 | `speed`, `spread`, `pierce`, `size` | Projectiles : vitesse, écart entre projectiles de l'éventail (la statistique `projectiles` en donne le nombre), perforation ajoutée à `pierce`, facteur de `projectile_size`. |
 | `burst`, `burst_gap`, `jitter` | Rafale : nombre de tirs par attaque, écart entre eux (s), petit écart d'angle d'un tir à l'autre. |
 | `arc`, `knockback` | Corps à corps : ouverture de l'arc (radians), recul. |
+| `lob`, `burst_radius`, `cloud_radius`, `cloud_duration`, `cloud_damage`, `cloud_tick`, `cloud_max` | Spores lobées : la spore vole en cloche jusqu'à la cible (au plus la portée), sans rien toucher en vol ; à l'arrivée elle blesse tout dans `burst_radius` (× `area`, × `taille`) et laisse un petit nuage (`cloud_damage` : part des dégâts du coup par seconde). |
 | `trap_radius`, `trap_duration`, `trap_damage`, `trap_tick`, `trap_root`, `trap_max` | Ronce vive : le piège planté là où la graine tombe (rayon × `area`, durée, dégâts par seconde en part des dégâts de base, à-coups, immobilisation à l'entrée, nombre de pièges à la fois). |
 
 **Règle de priorité.** Une seule forme est active. La `priority` la plus haute l'emporte : celle de l'effet si elle est écrite (`{"attack_form": "fouet", "priority": 5}`, pour un nœud clé), sinon celle de la forme dans `attack.json` (la graine vaut 0, les autres 2). À égalité, le nœud le plus loin de la graine (anneau le plus grand) l'emporte : sur un même chemin, on l'a forcément pris après. À égalité encore, la dernière source dans l'ordre du moteur.
@@ -225,6 +227,8 @@ L'attaque de base part toute seule à sa cadence. Elle a une **forme** et des **
 | `repetition` | coups en plus | L'attaque repart après `delay` secondes (le fouet frappe deux fois). |
 | `volee` | N | Une attaque sur N part en couronne tout autour du joueur (`count` directions). |
 | `poison` | part des dégâts par seconde | Chaque coup empoisonne (`duration`). |
+| `saut` | sauts | Quand il ne perfore plus, le projectile saute vers l'ennemi empoisonné le plus proche (`reach`, dégâts × `factor`), avant tout ricochet. |
+| `bouffee` | part des dégâts par seconde | Un ennemi tué par l'attaque libère un petit nuage de spores (`radius`, `duration`, `max`). |
 
 L'infobulle d'un nœud montre l'aperçu avant → après de l'attaque (« Attaque : Graines → Fouet », « Attaque : + fourche… »), comme pour les statistiques. Pour essayer une attaque sans passer par l'arbre : `tools/godot.sh --xvfb -- --attack=fouet,repetition:1,saignement:0.3` (marche aussi avec `--autotest`). `tools/godot.sh --headless --fixed-fps 60 -s res://tests/attack_test.gd` teste le moteur.
 

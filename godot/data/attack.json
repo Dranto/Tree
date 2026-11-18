@@ -72,6 +72,45 @@
       "trap_tick": 0.5,
       "trap_root": 0.35,
       "trap_max": 10
+    },
+    "spore_lobee": {
+      "name": "Spores lobées",
+      "desc": "Des spores lancées en cloche qui éclatent à l'arrivée et laissent un petit nuage de spores.",
+      "kind": "projectile",
+      "tags": ["zone"],
+      "branch": "spore",
+      "element": "poison",
+      "priority": 2,
+      "damage": 0.95,
+      "rate": 0.8,
+      "range": 520,
+      "speed": 560,
+      "spread": 0.32,
+      "pierce": 0,
+      "size": 1.2,
+      "lob": true,
+      "burst_radius": 58,
+      "cloud_radius": 62,
+      "cloud_duration": 2.4,
+      "cloud_damage": 0.5,
+      "cloud_tick": 0.5,
+      "cloud_max": 8
+    },
+    "dard": {
+      "name": "Dards fongiques",
+      "desc": "Une volée rapide de fines aiguilles de moisissure qui perforent.",
+      "kind": "projectile",
+      "tags": ["projectile"],
+      "branch": "spore",
+      "element": "poison",
+      "priority": 2,
+      "damage": 0.55,
+      "rate": 1.7,
+      "range": 560,
+      "speed": 960,
+      "spread": 0.12,
+      "pierce": 1,
+      "size": 0.75
     }
   },
   "mods": {
@@ -79,7 +118,7 @@
       "name": "Fourche",
       "text": "Au premier coup, le projectile se divise : +{v} branche(s).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive"],
+      "forms": ["graine", "echarde", "ronce_vive", "dard"],
       "angle": 0.42,
       "factor": 0.6
     },
@@ -87,7 +126,7 @@
       "name": "Ricochet",
       "text": "Le projectile rebondit vers un autre ennemi : +{v} rebond(s).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive"],
+      "forms": ["graine", "echarde", "ronce_vive", "dard"],
       "reach": 240,
       "factor": 0.8
     },
@@ -116,7 +155,7 @@
       "name": "Traînée d'épines",
       "text": "Le projectile sème des épines au sol ({p} % des dégâts par seconde).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive"],
+      "forms": ["graine", "echarde", "ronce_vive", "dard"],
       "every": 56,
       "radius": 18,
       "duration": 1.6,
@@ -158,6 +197,23 @@
       "text": "Chaque coup empoisonne ({p} % des dégâts par seconde).",
       "stack": "sum",
       "duration": 3
+    },
+    "saut": {
+      "name": "Saut",
+      "text": "Le projectile saute d'ennemi empoisonné en ennemi empoisonné : +{v} saut(s).",
+      "stack": "sum",
+      "forms": ["graine", "echarde", "dard"],
+      "reach": 260,
+      "factor": 0.9
+    },
+    "bouffee": {
+      "name": "Bouffée",
+      "text": "Un ennemi tué par l'attaque libère un petit nuage de spores ({p} % des dégâts par seconde).",
+      "stack": "sum",
+      "radius": 54,
+      "duration": 2.4,
+      "tick": 0.5,
+      "max": 10
     }
   }
 }

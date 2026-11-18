@@ -27,6 +27,10 @@ var forked := false
 var bounces := 0
 var plant := false
 var trap_dmg := 0.0
+## Spores lobées : durée totale du vol en cloche (0 : tir tendu). La spore ne touche rien en vol et
+## éclate à l'arrivée (attack.gd › land). Sauts déjà faits (modificateur « saut »).
+var lob := 0.0
+var jumps := 0
 ## Traînée d'épines : distance parcourue depuis la dernière touffe semée.
 var _trail := 0.0
 ## Âge (s) : la graine « éclot » à sa sortie (dessin seulement).
@@ -38,9 +42,10 @@ func _ready() -> void:
 	queue_redraw()
 
 
-## La sortie ne dure que quelques images : on redessine seulement pendant ce temps.
+## La sortie ne dure que quelques images : on redessine seulement pendant ce temps (et tout le vol
+## d'une spore lobée, qui monte puis redescend).
 func _process(delta: float) -> void:
-	if age < SORTIE:
+	if age < SORTIE or lob > 0.0:
 		age += delta
 		queue_redraw()
 	else:
@@ -68,8 +73,12 @@ func _physics_process(delta: float) -> void:
 	if life <= 0.0:
 		if plant:
 			AttackScript.plant(main, position, trap_dmg, attack)
+		if lob > 0.0:
+			AttackScript.land(self)
 		queue_free()
 		return
+	if lob > 0.0:
+		return   # en vol, au-dessus des ennemis
 	for e in main.enemies_near(position, radius):
 		if e.dead or hit.has(e.get_instance_id()):
 			continue
@@ -91,11 +100,21 @@ func _physics_process(delta: float) -> void:
 func _draw() -> void:
 	# Sortie : la graine grossit en dépassant un peu sa taille (Anim.pop).
 	var g := Anim.pop(clampf(age / SORTIE, 0.0, 1.0)) if age < SORTIE else 1.0
+	if lob > 0.0:
+		# Vol en cloche : l'ombre reste au sol, la spore monte puis redescend (hauteur ∝ durée du vol).
+		var k := clampf(1.0 - life / lob, 0.0, 1.0)
+		var h := sin(PI * k) * minf(90.0, 70.0 * lob)
+		draw_colored_polygon(Art.ellipse(Vector2.ZERO, radius * (1.2 - 0.4 * sin(PI * k)), radius * 0.5, 12), Color(Art.c("ombre"), 0.45))
+		draw_set_transform(Vector2(0, -h))
+		draw_shot(self, style, vel.normalized(), radius * maxf(g, 0.2), empowered)
+		draw_set_transform(Vector2.ZERO)
+		return
 	draw_shot(self, "epine" if thorn else style, vel.normalized(), radius * maxf(g, 0.2), empowered)
 
 
 ## Dessine un projectile centré sur l'origine, dans la direction dir, de rayon r (galerie comprise).
-## style : « graine », « epine » (Volée d'épines), « echarde », « ronce_vive » ou « eclat ».
+## style : « graine », « epine » (Volée d'épines), « echarde », « ronce_vive », « eclat »,
+## « spore_lobee » ou « dard » (Spore).
 ## empowered : halo de l'attaque renforcée.
 static func draw_shot(ci: CanvasItem, style: String, dir: Vector2, r: float, empowered := false) -> void:
 	var n := dir.orthogonal()
@@ -104,6 +123,35 @@ static func draw_shot(ci: CanvasItem, style: String, dir: Vector2, r: float, emp
 		ci.draw_circle(Vector2.ZERO, r * 2.6, Color(Art.c("or"), 0.16))
 		ci.draw_arc(Vector2.ZERO, r * 2.1, 0.0, TAU, 16, Color(Art.c("or"), 0.7), maxf(1.5, r * 0.25), true)
 	match style:
+		"spore_lobee":
+			# Spore lobée : une boule de spores violette, cerclée de sombre, avec trois pores clairs
+			# et un halo de poussière. Elle tourne sur elle-même en vol (sens de la direction).
+			var col := Art.ec("poison")
+			var clair := Art.ec("poison", "clair")
+			ci.draw_circle(Vector2.ZERO, r * 1.9, Color(col, 0.16))
+			ci.draw_circle(Vector2.ZERO, r * 1.25, Art.c("contour"))
+			ci.draw_circle(Vector2.ZERO, r * 1.1, col)
+			ci.draw_circle(-n * r * 0.25 - dir * r * 0.15, r * 0.7, Art.ec("poison", "sombre"))
+			for i in 3:
+				var q := Vector2.from_angle(dir.angle() + i * TAU / 3.0) * r * 0.55
+				ci.draw_circle(q, r * 0.22, clair)
+			ci.draw_circle(n * r * 0.4 + dir * r * 0.3, r * 0.2, Color(1, 1, 1, 0.55))
+		"dard":
+			# Dard fongique : une aiguille fine et sombre, pointe claire, avec une goutte de poison à
+			# l'arrière et un sillage court.
+			var col := Art.ec("poison")
+			var clair := Art.ec("poison", "clair")
+			var tip := dir * r * 3.6
+			var back := -dir * r * 1.6
+			ci.draw_line(-dir * r * 5.5, back, Color(clair, 0.22), r * 0.7)
+			var body := PackedVector2Array([tip, n * r * 0.45, back, -n * r * 0.45])
+			var edge := body.duplicate()
+			edge.append(tip)
+			ci.draw_polyline(edge, Art.c("contour"), 1.5, true)
+			ci.draw_colored_polygon(body, Art.ec("poison", "sombre"))
+			ci.draw_colored_polygon(PackedVector2Array([tip, n * r * 0.45, dir * r * 0.4]), clair)
+			ci.draw_circle(back, r * 0.55, col)
+			ci.draw_circle(back - n * r * 0.15, r * 0.2, clair)
 		"epine", "eclat":
 			# Épine d'os : pointe claire vers l'avant, une moitié dans l'ombre, base teintée de sang.
 			var clair := Art.ec("epine", "clair")

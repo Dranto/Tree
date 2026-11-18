@@ -26,6 +26,7 @@ const ACTIONS := {
 	"burst": ["radius", "factor"],
 	"status_area": ["status", "value", "duration", "radius"],
 	"attack_salvo": ["count"],
+	"cloud": ["radius", "duration", "factor"],
 }
 ## Sources possibles d'une greffe (champ « sources » de grafts.json).
 const GRAFT_SOURCES := ["autel", "boss", "secret", "elite", "quete"]
