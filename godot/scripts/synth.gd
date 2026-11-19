@@ -61,6 +61,26 @@ const SOUNDS := {
 	"vent_boss_eveil": {"wave": NOISE, "f0": 500.0, "f1": 3400.0, "dur": 1.2, "att": 0.5, "lp": 4200.0, "vol": 0.34, "body": 60.0, "voice2": 7.0, "vib": [0.15, 4.0]},
 	"vent_boss_phase": {"wave": NOISE, "f0": 3600.0, "f1": 700.0, "dur": 0.8, "att": 0.03, "lp": 4600.0, "vol": 0.34, "body": 70.0, "vib": [0.1, 12.0]},
 	"vent_boss_mort": {"wave": SINE, "f0": 520.0, "f1": 90.0, "dur": 1.8, "att": 0.02, "lp": 2400.0, "vol": 0.38, "body": 50.0, "voice2": 7.0, "vib": [0.05, 7.0]},
+	# --- Sève (vie, eau, régénération) : sons provisoires du jalon 8, à réécouter et retoucher. ---
+	"seve_goutte": {"wave": SINE, "f0": 900.0, "f1": 520.0, "dur": 0.2, "att": 0.004, "lp": 3000.0, "vol": 0.26, "voice2": 12.0, "vib": [0.02, 9.0]},
+	"seve_pousse": {"wave": TRI, "f0": 260.0, "f1": 640.0, "dur": 0.45, "att": 0.05, "lp": 2600.0, "vol": 0.26, "arp": [0, 4, 7, 12], "vib": [0.03, 7.0]},
+	"seve_soin": {"wave": SINE, "f0": 440.0, "f1": 440.0, "dur": 0.8, "att": 0.06, "lp": 0.0, "vol": 0.26, "arp": [0, 7, 12, 16], "voice2": 12.0, "vib": [0.01, 5.0]},
+	"seve_source": {"wave": NOISE, "f0": 1400.0, "f1": 800.0, "dur": 0.6, "att": 0.15, "lp": 1800.0, "vol": 0.22, "vib": [0.2, 11.0], "voice2": 5.0},
+	"seve_eclosion": {"wave": SINE, "f0": 300.0, "f1": 900.0, "dur": 0.55, "att": 0.1, "lp": 3200.0, "vol": 0.28, "arp": [0, 4, 9, 14], "voice2": 12.0},
+	"seve_lien": {"wave": SAW, "f0": 150.0, "f1": 300.0, "dur": 0.35, "att": 0.04, "lp": 1100.0, "vol": 0.26, "body": 65.0, "vib": [0.05, 9.0]},
+	"seve_boss_eveil": {"wave": SINE, "f0": 90.0, "f1": 260.0, "dur": 1.2, "att": 0.45, "lp": 1200.0, "vol": 0.36, "body": 50.0, "voice2": 7.0, "vib": [0.04, 5.0]},
+	"seve_boss_phase": {"wave": TRI, "f0": 340.0, "f1": 110.0, "dur": 0.9, "att": 0.02, "lp": 1500.0, "vol": 0.34, "body": 55.0, "voice2": 4.0, "vib": [0.07, 8.0]},
+	"seve_boss_mort": {"wave": SINE, "f0": 330.0, "f1": 70.0, "dur": 1.9, "att": 0.03, "lp": 1100.0, "vol": 0.4, "body": 45.0, "voice2": 12.0, "vib": [0.03, 4.0]},
+	# --- Aube (lumière, éclat, cloches) : sons provisoires du jalon 8, à réécouter et retoucher. ---
+	"aube_rayon": {"wave": SAW, "f0": 1200.0, "f1": 2400.0, "dur": 0.16, "att": 0.004, "lp": 6000.0, "vol": 0.22, "voice2": 12.0, "click": true},
+	"aube_eclat": {"wave": SINE, "f0": 1568.0, "f1": 1568.0, "dur": 0.4, "att": 0.002, "lp": 0.0, "vol": 0.24, "arp": [0, 7, 12], "voice2": 19.0},
+	"aube_halo": {"wave": SINE, "f0": 392.0, "f1": 392.0, "dur": 0.9, "att": 0.12, "lp": 0.0, "vol": 0.26, "arp": [0, 4, 7, 12, 16], "voice2": 12.0, "vib": [0.01, 6.0]},
+	"aube_levant": {"wave": TRI, "f0": 220.0, "f1": 880.0, "dur": 0.8, "att": 0.3, "lp": 3600.0, "vol": 0.28, "voice2": 7.0, "vib": [0.02, 6.0]},
+	"aube_cloche": {"wave": SINE, "f0": 1046.0, "f1": 1046.0, "dur": 0.7, "att": 0.002, "lp": 0.0, "vol": 0.26, "voice2": 7.0, "arp": [0, 12], "vib": [0.005, 5.0]},
+	"aube_nova": {"wave": SAW, "f0": 500.0, "f1": 2000.0, "dur": 0.4, "att": 0.02, "lp": 5000.0, "vol": 0.3, "body": 90.0, "voice2": 12.0},
+	"aube_boss_eveil": {"wave": SAW, "f0": 110.0, "f1": 880.0, "dur": 1.3, "att": 0.6, "lp": 3000.0, "vol": 0.34, "body": 55.0, "voice2": 12.0, "vib": [0.03, 5.0]},
+	"aube_boss_phase": {"wave": SQUARE, "f0": 1320.0, "f1": 330.0, "dur": 0.8, "att": 0.01, "lp": 3500.0, "vol": 0.3, "duty": 0.3, "body": 60.0, "voice2": 7.0},
+	"aube_boss_mort": {"wave": SINE, "f0": 1100.0, "f1": 110.0, "dur": 2.0, "att": 0.01, "lp": 2800.0, "vol": 0.38, "body": 45.0, "voice2": 12.0, "arp": [0, 4, 7, 12], "vib": [0.04, 6.0]},
 }
 
 
