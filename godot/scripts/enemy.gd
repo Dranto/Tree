@@ -72,6 +72,11 @@ var bleed_stacks: Array = []
 var bleed_clock := 0.0
 ## Enraciné : immobile tant que root_time > 0 (il frappe toujours au contact).
 var root_time := 0.0
+## Ébloui (Aube) : tant que dazzle_time > 0, il avance moins vite (DAZZLE_SLOW) et les coups du joueur
+## ont dazzle_value de chance de critique en plus contre lui (main.dazzle_of).
+const DAZZLE_SLOW := 0.75
+var dazzle_time := 0.0
+var dazzle_value := 0.0
 var hit_flash := 0.0
 var dead := false
 var t := 0.0
@@ -268,11 +273,15 @@ func _physics_process(delta: float) -> void:
 		# Enraciné : immobile (le tir et la charge sont suspendus), il frappe toujours au contact.
 		root_time -= delta
 	else:
+		if dazzle_time > 0.0:
+			slow *= DAZZLE_SLOW
 		_behavior.step(self, delta, dir, dist, slow)
 		if elite:
 			_elite_step(delta, dist)
 	if guard_time > 0.0:
 		guard_time -= delta
+	if dazzle_time > 0.0:
+		dazzle_time -= delta
 	var hit := damage
 	if state == "charge":
 		hit = float(data.get("charge_damage", damage)) * damage_scale
@@ -308,7 +317,9 @@ func _bleed_step(delta: float) -> void:
 ## États posés par les compétences et les effets (contrat partagé avec l'arbre et le boss) :
 ##   « saignement » : value = dégâts par seconde pendant duration, cumulable BLEED_MAX_STACKS fois
 ##                    (au-delà, la piqûre la plus faible est remplacée si la nouvelle est plus forte) ;
-##   « enracine »   : immobilisé pendant duration (value ignorée).
+##   « enracine »   : immobilisé pendant duration (value ignorée) ;
+##   « ebloui »     : ébloui pendant duration (Aube), value = chance de critique en plus contre lui
+##                    (la plus forte des deux est gardée).
 func apply_status(status: String, value: float, duration: float) -> void:
 	if dead or duration <= 0.0:
 		return
@@ -330,6 +341,9 @@ func apply_status(status: String, value: float, duration: float) -> void:
 			root_time = maxf(root_time, duration)
 			if fresh and main.has_method("on_enemy_rooted"):
 				main.on_enemy_rooted(self)
+		"ebloui":
+			dazzle_value = maxf(dazzle_value if dazzle_time > 0.0 else 0.0, value)
+			dazzle_time = maxf(dazzle_time, duration)
 		_:
 			push_warning("État d'ennemi inconnu : " + status)
 
@@ -582,8 +596,8 @@ func _redraw_parts(delta: float) -> void:
 	var knock := -face * radius * 0.18 * clampf(hit_flash / 0.08, 0.0, 1.0)
 	_body.position = knock
 	_over.position = knock
-	if elite or guard_time > 0.0 or root_time > 0.0 or poison_time > 0.0 or not bleed_stacks.is_empty() or _over_dirty:
-		_over_dirty = root_time > 0.0 or poison_time > 0.0 or not bleed_stacks.is_empty() or guard_time > 0.0
+	if elite or guard_time > 0.0 or root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or _over_dirty:
+		_over_dirty = root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or guard_time > 0.0
 		_over.queue_redraw()
 
 
@@ -633,6 +647,8 @@ func _draw_over(ci: CanvasItem) -> void:
 		Art.status(ci, "racine", Vector2.ZERO, radius, t)
 	if poison_time > 0.0:
 		Art.status(ci, "poison", Vector2.ZERO, radius, t)
+	if dazzle_time > 0.0:
+		Art.status(ci, "lumiere", Vector2.ZERO, radius, t)
 	if not bleed_stacks.is_empty():
 		Art.status(ci, "saignement", Vector2.ZERO, radius, t * 1.25)
 		# Une goutte par piqûre, en arc au-dessus de la tête.

@@ -62,7 +62,7 @@ Le texte de l'infobulle est produit à partir de l'effet : il ne peut donc pas c
 
 L'identifiant renvoie à `skills.json`. Le comportement de la compétence reste écrit dans `scripts/player.gd` ; ses réglages sont dans les données.
 
-Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores ; `follow` : le nuage naît sur le joueur et le suit), `bloom` (Floraison), pour Spore `vesse` (Vesse-de-loup : champignon-piège planté au point visé, `max` à la fois, armé après `arm` s, éclate quand un ennemi entre dans `trigger` px ou au bout de `life` s : coup de zone puis nuage `cloud_damage` pendant `cloud_duration` s ; `poison` : l'éclatement empoisonne), `essaim` (Essaim : une spore vivante touche l'ennemi le plus proche du point visé, l'empoisonne — `poison` × dégâts par seconde pendant `duration` s — puis saute `jumps` fois vers le plus proche à moins de `reach` px, un saut toutes les `hop` s ; `split` : il se divise en deux au premier ennemi) et `eclosion` (Éclosion : chaque ennemi empoisonné à moins de `radius` px subit `burst` × le poison qui lui restait, qui est consommé sauf la part `keep` ; ses spores empoisonnent les ennemis à moins de `splash` px), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) `volee` (Volée d'épines : éventail d'épines perforantes qui font saigner) et `saignee` (Saignée : fait éclater les saignements des ennemis proches en dégâts immédiats, une part soigne). ; pour Vent `tornade` (une tornade avance vers l'endroit visé, aspire et blesse par à-coups : `damage` par seconde, `duration`, `speed`, `radius`, `tick`, `pull` ; mutations `count`, `speed` 0, `orbit`), `ruee` (Ruée : le joueur fend l'air sur `length` pixels, intouchable, et frappe une fois chaque ennemi du passage ; `dash` vrai : compte comme une esquive ; `wake` : une tornade naît à l'arrivée) et `appel_air` (Appel d'air : aspire les ennemis du `radius` vers l'endroit visé pendant `pull_time`, puis éclate ; `root` : immobilise ensuite). Le vent ne déplace pas un ennemi ancré, un boss, ni une sorte marquée `"no_push": true` dans `enemies.json` (`scripts/vent.gd`). Champs communs de `skills.json` :
+Compétences actuelles : `nova` (Couronne d'épines), `cloud` (Nuage de spores ; `follow` : le nuage naît sur le joueur et le suit), `bloom` (Floraison), pour Spore `vesse` (Vesse-de-loup : champignon-piège planté au point visé, `max` à la fois, armé après `arm` s, éclate quand un ennemi entre dans `trigger` px ou au bout de `life` s : coup de zone puis nuage `cloud_damage` pendant `cloud_duration` s ; `poison` : l'éclatement empoisonne), `essaim` (Essaim : une spore vivante touche l'ennemi le plus proche du point visé, l'empoisonne — `poison` × dégâts par seconde pendant `duration` s — puis saute `jumps` fois vers le plus proche à moins de `reach` px, un saut toutes les `hop` s ; `split` : il se divise en deux au premier ennemi) et `eclosion` (Éclosion : chaque ennemi empoisonné à moins de `radius` px subit `burst` × le poison qui lui restait, qui est consommé sauf la part `keep` ; ses spores empoisonnent les ennemis à moins de `splash` px), et pour Ronce `fouet` (arc au corps à corps qui fait saigner), `racines` (immobilisent les ennemis à l'endroit visé) `volee` (Volée d'épines : éventail d'épines perforantes qui font saigner) et `saignee` (Saignée : fait éclater les saignements des ennemis proches en dégâts immédiats, une part soigne). ; pour Vent `tornade` (une tornade avance vers l'endroit visé, aspire et blesse par à-coups : `damage` par seconde, `duration`, `speed`, `radius`, `tick`, `pull` ; mutations `count`, `speed` 0, `orbit`), `ruee` (Ruée : le joueur fend l'air sur `length` pixels, intouchable, et frappe une fois chaque ennemi du passage ; `dash` vrai : compte comme une esquive ; `wake` : une tornade naît à l'arrivée) et `appel_air` (Appel d'air : aspire les ennemis du `radius` vers l'endroit visé pendant `pull_time`, puis éclate ; `root` : immobilise ensuite), et pour Aube `aurore` (Aurore : onde de lumière autour du joueur qui blesse et éblouit les ennemis du `radius` — `dazzle` de chance de critique en plus contre eux pendant `dazzle_time` s ; `waves` 2 : une seconde onde à 60 % ; `heal` : soin par ennemi touché, 5 au plus), `prisme` (Prisme : cristal posé au point visé, à `range` px au plus, pendant `life` s ; toutes les `every` s il tire `beams` rayon(s) sur les ennemis les plus proches à moins de `reach` px ; `max` à la fois ; `dazzle` : chance d'éblouir ; `follow` : il suit le joueur) et `lance_aube` (Lance d'aube : après `windup` s, un rayon de `length` × `width` px vers le point visé ; `crit_dazzled` de chance de critique en plus contre un ennemi ébloui ; `dazzle` : éblouit ce qu'elle touche pendant ces secondes ; `repeat` : lances en plus à 70 %). Le vent ne déplace pas un ennemi ancré, un boss, ni une sorte marquée `"no_push": true` dans `enemies.json` (`scripts/vent.gd`). Champs communs de `skills.json` :
 
 | Champ | Rôle |
 | --- | --- |
@@ -99,11 +99,12 @@ Les compétences acquises se rangent dans la barre de compétences (6 emplacemen
 | `cloud` | `radius`, `duration`, `factor`, `at` | Nuage de spores au sol autour du joueur ou de l'ennemi (`at`: `enemy`) : `factor` × dégâts du joueur × dégâts de zone par seconde, et un peu de poison, pendant `duration` s (rayon × taille des zones). Coup de Spore |
 | `gust` | `radius`, `factor`, `push`, `at` | Rafale de Vent autour du joueur ou de l'ennemi : `factor` × dégâts du joueur × dégâts de zone, et recul de `push` pixels |
 | `tornado` | `factor`, `at` | Fait naître une tornade (réglages de `tornade`, dégâts et durée × `factor`) sur le joueur ou l'ennemi de l'évènement, même sans la compétence |
+| `ray` | `factor`, `reach` | Rayon d'Aube : part de l'ennemi de l'évènement vers l'ennemi le plus proche à moins de `reach` px (260 par défaut) : `factor` × dégâts du joueur × dégâts des projectiles. Coup d'Aube |
 | `attack_salvo` | `count` | Salve de l'attaque de base tout autour du joueur, en `count` directions, avec sa forme et ses modificateurs actuels (par exemple `{"on": "hurt", "do": "attack_salvo", "count": 8, "cooldown": 0.6, "text": "…"}`) |
 
 ### États des ennemis
 
-`enemy.apply_status(nom, valeur, durée)` : `saignement` (dégâts par seconde, cumulable 5 fois ; au-delà la piqûre la plus faible est remplacée) et `enracine` (immobile, frappe toujours au contact). La statistique `bleed` fait saigner à chaque coup du joueur (fraction des dégâts par seconde, 4 s × `bleed_duration`), comme `poison`.
+`enemy.apply_status(nom, valeur, durée)` : `saignement` (dégâts par seconde, cumulable 5 fois ; au-delà la piqûre la plus faible est remplacée), `enracine` (immobile, frappe toujours au contact) et `ebloui` (Aube : `valeur` = chance de critique en plus contre lui, et il avance 25 % moins vite ; un boss n'en prend que la moitié, 2 s au plus). `main.dazzle_of(e)` donne le bonus en cours. `status_area` et `apply_status` savent poser `ebloui`. La statistique `bleed` fait saigner à chaque coup du joueur (fraction des dégâts par seconde, 4 s × `bleed_duration`), comme `poison`.
 
 ### 4. Transformer une compétence (mutation)
 
@@ -131,7 +132,7 @@ Tout effet accepte une condition :
 {"stat": "damage", "op": "more", "value": 1.4, "if": {"state": "immobile", "min": 0.5}}
 ```
 
-L'effet ne s'applique que si l'état vaut au moins `min`. États actuels : `immobile` (secondes passées sans bouger), et pour les évènements qui visent un ennemi (`kill`, `crit`, `melee_hit`, `bleed_tick`, `root`) : `cible_empoisonnee`, `cible_saignante` (nombre de piqûres) et `cible_enracinee` (secondes restantes).
+L'effet ne s'applique que si l'état vaut au moins `min`. États actuels : `immobile` (secondes passées sans bouger), et pour les évènements qui visent un ennemi (`kill`, `crit`, `melee_hit`, `bleed_tick`, `root`) : `cible_empoisonnee`, `cible_saignante` (nombre de piqûres), `cible_enracinee` (secondes restantes) et `cible_eblouie` (1 si la cible est éblouie).
 
 ## Grappes écrites à la main
 
@@ -200,7 +201,8 @@ L'attaque de base part toute seule à sa cadence. Elle a une **forme** et des **
 | Champ | Rôle |
 | --- | --- |
 | `name`, `desc` | Nom et phrase de l'infobulle. |
-| `kind` | `projectile` (éventail de projectiles) ou `melee` (coup en arc autour du joueur). |
+| `kind` | `projectile` (éventail de projectiles), `melee` (coup en arc autour du joueur) ou `beam` (rayon instantané qui traverse tout jusqu'à la portée : `width` sa largeur, `spread` l'écart entre rayons, la statistique `projectiles` leur nombre). |
+| `crit` | Chance de critique ajoutée aux coups de la forme (le rayon d'aube vise juste). |
 | `tags` | Familles du coup : chacune multiplie les dégâts par sa statistique (`projectile_damage`, `melee_damage`, `area_damage`), comme pour les compétences. `trap_tags` : familles du piège d'une ronce vive. |
 | `branch` | Branche du coup (`ronce`, `spore`) : résistance des ennemis de sa région, bonus « se battre chez soi ». |
 | `element` | Élément de la charte pour le dessin (`seve`, `epine`, `saignement`…). |
@@ -233,6 +235,11 @@ L'attaque de base part toute seule à sa cadence. Elle a une **forme** et des **
 | `bouffee` | part des dégâts par seconde | Un ennemi tué par l'attaque libère un petit nuage de spores (`radius`, `duration`, `max`). |
 | `elan` | +x % | Tant que le joueur bouge (ou vient de bouger), l'attaque fait x % de dégâts en plus (Vent). |
 | `repousse` | pixels | Chaque coup repousse l'ennemi touché, à l'opposé du joueur (Vent). |
+| `eblouit` | chance | Chance d'éblouir l'ennemi touché (`duration` s, `crit` de chance de critique en plus contre lui), plafonnée à `cap` (Aube). |
+| `refraction` | rayons | Rayon d'aube seulement : au premier ennemi touché, le rayon se brise en rayons obliques (`angle`, longueur × `length`, dégâts × `factor`). |
+| `incandescence` | +x % | Les coups critiques de l'attaque font x % de dégâts en plus (Aube). |
+
+Forme d'Aube : `rayon` (Rayon d'aube, `kind` `beam` : `attack.gd › beam_line` frappe chaque ennemi traversé une fois, du plus proche au plus loin ; la lance d'aube, le prisme et l'action `ray` s'en servent aussi). Dessins dans `scripts/aube_fx.gd`, élément `lumiere` de la charte.
 
 Formes de Vent : `lame` (Lames de vent : `"return": true`, la lame part jusqu'à sa portée puis revient au joueur en frappant de nouveau ; elle perfore tout) et `bourrasque` (cône au corps à corps qui repousse ; `fx` et `sfx` nomment sa signature et son son).
 

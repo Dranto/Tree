@@ -212,7 +212,7 @@ func _scenario_charte() -> void:
 ## -- --heros-anim : enregistre aussi la page animée (20 images/s) dans out/heros_anim/.
 func _scenario_heros() -> void:
 	main.set_process(false)
-	for pg in ["heros", "competences_1", "competences_2", "competences_3"]:
+	for pg in ["heros", "competences_1", "competences_2", "competences_3", "competences_4"]:
 		var layer := _pixel_layer()
 		var sheet = HerosScript.new()
 		sheet.view = Vector2(DisplayServer.window_get_size())

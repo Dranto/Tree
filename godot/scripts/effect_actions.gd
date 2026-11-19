@@ -32,6 +32,8 @@ static func run(action: String, p: Dictionary, ctx: Dictionary) -> bool:
 			return _gust(p, ctx)
 		"tornado":
 			return _tornado(p, ctx)
+		"ray":
+			return _ray(p, ctx)
 	push_warning("Action d'effet inconnue : " + action)
 	return false
 
@@ -228,3 +230,30 @@ static func _tornado(p: Dictionary, ctx: Dictionary) -> bool:
 	dir = dir.normalized() if dir.length() > 1.0 else pl.aim
 	tor.spawn(pl, at, dir, pl.skill("tornade"), ctx["stats"], 0.0, float(p["factor"]))
 	return true
+
+
+## Rayon (Aube) : un rayon de lumière part de l'ennemi de l'évènement vers l'ennemi le plus proche à
+## moins de « reach » px (260 par défaut) : « factor » × dégâts du joueur × dégâts des projectiles.
+static func _ray(p: Dictionary, ctx: Dictionary) -> bool:
+	var e = ctx.get("enemy")
+	var main = ctx["main"]
+	if e == null or not is_instance_valid(e) or main == null:
+		return false
+	var reach := float(p.get("reach", 260.0))
+	var best = null
+	var best_d := INF
+	for o in main.enemies_near(e.position, reach):
+		if o == e or o.dead:
+			continue
+		var d: float = o.position.distance_squared_to(e.position)
+		if d < best_d:
+			best_d = d
+			best = o
+	if best == null:
+		return false
+	var s: Dictionary = ctx["stats"]
+	var dir: Vector2 = (best.position - e.position).normalized()
+	var dmg: float = s.get("damage", 0.0) * float(p["factor"]) * s.get("projectile_damage", 1.0)
+	load("res://scripts/attack.gd").beam_line(main, e.position, dir, sqrt(best_d) + 30.0, 10.0, dmg, {"form": "rayon_greffe"}, "aube", false, e)
+	return true
+
