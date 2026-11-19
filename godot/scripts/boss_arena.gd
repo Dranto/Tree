@@ -342,6 +342,12 @@ func autotest_begin() -> void:
 		options.sort_custom(func(a, b):
 			if (a["type"] == "keystone") != (b["type"] == "keystone"):
 				return a["type"] == "keystone"
+			# Puis les nœuds qui augmentent les dégâts ou la cadence : un robot qui se contente
+			# de la première grappe venue allongeait le combat de plusieurs minutes (région Vent).
+			var sa := _autotest_node_score(a)
+			var sb := _autotest_node_score(b)
+			if sa != sb:
+				return sa > sb
 			return a["ring"] < b["ring"] if a["ring"] != b["ring"] else a["id"] < b["id"])
 		Game.allocate(options[0]["id"])
 	Game.flags[heart.flag] = true
@@ -349,6 +355,19 @@ func autotest_begin() -> void:
 	main.player.position = center + (heart.center - center).normalized() * (max_radius - 110.0)
 	main.player.reset_physics_interpolation()
 	print("AUTOTEST boss : niveau %d, %d nœuds de la branche, dégâts %.1f, vie %d" % [Game.level, Game.allocated.size() - 1, Game.stats["damage"], int(Game.stats["max_hp"])])
+
+
+## Intérêt d'un nœud pour le build de test : nombre d'effets qui touchent aux dégâts, à la cadence
+## ou à l'attaque de base.
+static func _autotest_node_score(n: Dictionary) -> int:
+	var score := 0
+	for e in n.get("effects", []):
+		if e is Dictionary:
+			if e.has("attack_form") or e.has("attack_mod"):
+				score += 1
+			elif str(e.get("stat", "")) in ["damage", "projectile_damage", "fire_rate", "crit_chance", "crit_mult"]:
+				score += 1
+	return score
 
 
 ## Le robot tourne autour du boss et choisit, parmi quelques pas possibles, l'endroit
@@ -367,6 +386,13 @@ func bot_input(p) -> Dictionary:
 				target = e.position
 	var rel: Vector2 = p.position - center
 	var ring: float = boss.bot_ring(radius)
+	# Attaque de base au corps à corps (le fouet de Ronce, ~135 px) : le robot se rapproche pour
+	# toucher le boss, sauf quand celui-ci annonce une attaque que l'anneau lointain évite.
+	var reach: float = p.attack_range()
+	if boss.attack == "" or boss.stage == "annonce":
+		var melee_ring: float = boss.radius + maxf(reach * 0.4, 60.0)
+		if melee_ring < ring:
+			ring = maxf(melee_ring, boss.radius + 55.0)
 	var pref := center + Vector2.from_angle(rel.angle() + 0.45) * ring
 	var here: float = boss.danger_time(p.position)
 	var best_pos: Vector2 = p.position
@@ -379,7 +405,7 @@ func bot_input(p) -> Dictionary:
 		var dc := c.distance_to(center)
 		if dc > radius - 40.0 or dc < boss.radius + 50.0:
 			continue
-		var score: float = minf(boss.danger_time(c), 2.0) * 100.0 - c.distance_to(pref) * 0.2
+		var score: float = minf(boss.danger_time(c), 2.0) * 100.0 - c.distance_to(pref) * 0.5
 		for e in boss.minions:
 			if is_instance_valid(e) and not e.dead and e.position.distance_to(c) < 70.0:
 				score -= 60.0
