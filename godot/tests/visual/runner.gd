@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "vallee"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -29,6 +29,7 @@ const AttaqueScript = preload("res://tests/visual/galerie_attaque.gd")
 const RegionsScript = preload("res://tests/visual/galerie_regions.gd")
 const HeartsScript = preload("res://tests/visual/galerie_coeurs.gd")
 const PlateauxScript = preload("res://tests/visual/plateaux.gd")
+const ValleeScript = preload("res://tests/visual/vallee.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Orb = preload("res://scripts/orb.gd")
 const Content = preload("res://scripts/content.gd")
@@ -120,6 +121,8 @@ func _ready() -> void:
 			await _scenario_marais()
 		"plateaux":
 			await PlateauxScript.new().run(self)
+		"vallee":
+			await ValleeScript.new().run(self)
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 

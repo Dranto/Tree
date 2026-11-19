@@ -1,5 +1,5 @@
-## Test du monde à cinq régions (et plus) : avec les régions factices de Sève et d'Aube
-## (tests/regions/seve.json, aube.json) et la région d'essai (branche Racine), les six secteurs sont
+## Test du monde à cinq régions (et plus) : avec la vraie région de Sève, la région factice d'Aube
+## (tests/regions/aube.json) et la région d'essai (branche Racine), les six secteurs sont
 ## occupés. On vérifie que chaque région tient dans le monde (lieux, Cœur, arène), que les arènes ne se
 ## chevauchent pas, que la vraie région d'une branche l'emporte sur sa région factice, que check_data
 ## refuse une région qui déborde, que les dessins de chaque région (Cœur, arène) sont les siens, et que
@@ -46,10 +46,10 @@ func _run() -> void:
 	var game = root.get_node("Game")
 
 	print("Six secteurs")
-	check(Regions.ids() == ["ronce", "spore", "vent"], "sans les régions des tests : Ronce, Spore et Vent (%s)" % [Regions.ids()])
+	check(Regions.ids() == ["ronce", "spore", "seve", "vent"], "sans les régions des tests : Ronce, Spore, Sève et Vent (%s)" % [Regions.ids()])
 	Regions.set_extra_dirs(["res://tests/regions/"])
 	var ids: Array = Regions.ids()
-	check(ids == ["ronce", "spore", "seve", "vent", "aube", "essai"], "avec les régions factices, une par branche, dans l'ordre du cercle (%s)" % [ids])
+	check(ids == ["ronce", "spore", "seve", "vent", "aube", "essai"], "avec les régions factices (Aube, essai), une par branche, dans l'ordre du cercle (%s)" % [ids])
 	check(Regions.validate().is_empty(), "check_data accepte les six régions %s" % [Regions.validate()])
 	var angles := {}
 	for id in ids:
@@ -125,7 +125,8 @@ func _run() -> void:
 	check(Regions.art("ronce").resource_path == Regions.BASE_ART, "Ronce : les dessins par défaut (la rose, le mur de ronces)")
 	check(Regions.art("spore").resource_path.ends_with("region_art/spore.gd"), "Spore : ses propres dessins")
 	check(Regions.art("vent").resource_path.ends_with("region_art/vent.gd"), "Vent : ses propres dessins")
-	check(Regions.art("seve").resource_path == Regions.BASE_ART, "une région sans « art » : les dessins par défaut")
+	check(Regions.art("seve").resource_path.ends_with("region_art/seve.gd"), "Sève : ses propres dessins")
+	check(Regions.art("essai").resource_path == Regions.BASE_ART, "une région sans « art » : les dessins par défaut")
 	for f in ["draw_heart", "draw_heart_purified", "draw_arena_floor", "draw_arena_wall"]:
 		var own := []
 		for id in ["spore", "vent"]:
