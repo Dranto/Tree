@@ -107,9 +107,12 @@ processeur sur le fil principal), et le remplissage ~3,5 ns par pixel : un calqu
 | Carrés du sol recopiés sans mélange ni lumière (`shaders/ground_tile.gdshader`, `blend_disabled, unshaded`) ; le shader du sol calcule l'appartenance aux régions une seule fois par pixel pour N régions (jalon 7) | ~1 ms (sol : 6,5 → 5,4 ms, mesuré par paires avec `--hide=sol`) | identique |
 | Carrés du sol salis refaits au plus deux par image, les plus proches du centre d'abord (`ground.tile_budget`, en jeu et dans le banc, pas en capture) | pics : 99e centile ~46 → ~42 ms ; moyenne avec la ligne précédente : ~26,3 → ~24,8 ms (4 paires) | identique en capture ; en jeu, un carré lointain peut garder l'ancien sol quelques images |
 
-Le rendu direct à l'écran rend l'image illisible par `get_viewport().get_texture()`. Il n'est donc
-actif que dans la scène de jeu lancée normalement et dans le banc, jamais pendant une capture
-(robot `--autotest`, tests visuels, scripts de test lancés par `-s`).
+Le rendu direct à l'écran rend l'image illisible par `get_viewport().get_texture()`. Il n'est
+actif que dans le banc, ou en jeu avec l'option `--rendu-direct`, jamais pendant une capture
+(robot `--autotest`, tests visuels, scripts de test lancés par `-s`). Il n'est plus actif par défaut
+en jeu depuis le 18/11 : chez un joueur sous Windows avec Godot 4.7, la fenêtre restait figée sur
+l'écran titre (le jeu tournait, le son aussi, mais l'image n'était plus mise à jour). Sur une vraie
+carte graphique, le gain est négligeable.
 
 ## Ce qui a été fait au jalon 7 (tâche P)
 

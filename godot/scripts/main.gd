@@ -304,7 +304,7 @@ func _ready() -> void:
 	Game.tree_changed.connect(request_autosave)
 	if autotest_boss:
 		arena.autotest_begin()
-	_set_direct_to_screen(get_tree().current_scene == self and (not autotest or benchmark))
+	_set_direct_to_screen(get_tree().current_scene == self and (benchmark or "--rendu-direct" in OS.get_cmdline_user_args()))
 	# En jeu et dans le banc, les carrés de sol salis sont refaits peu à peu (pas pendant une capture).
 	if get_tree().current_scene == self and (not autotest or benchmark):
 		ground.tile_budget = ground.TILE_BUDGET
@@ -1245,9 +1245,10 @@ func _finish_benchmark() -> void:
 
 ## Rendu direct à l'écran : le jeu est dessiné droit dans la fenêtre, sans passer par la texture
 ## du viewport puis une recopie plein écran. Mêmes pixels (tests/direct_screen_test.gd), mais
-## l'image n'est plus lisible par get_texture() : seulement en jeu (scène principale) et dans le
-## banc, jamais pendant une capture (robot, tests visuels, scripts de test). Gain mesuré :
-## 5 à 15 ms par image en rendu logiciel selon la résolution (docs/performances.md).
+## l'image n'est plus lisible par get_texture(). Gain mesuré : 5 à 15 ms par image en rendu
+## logiciel selon la résolution (docs/performances.md). Actif seulement dans le banc, ou en jeu avec
+## l'option --rendu-direct : sur certaines machines (Windows, jeu intégré à l'éditeur de Godot 4.4+),
+## la fenêtre ne montrait plus rien de neuf et restait figée sur l'écran titre.
 func _set_direct_to_screen(on: bool) -> void:
 	RenderingServer.viewport_set_render_direct_to_screen(get_viewport().get_viewport_rid(), on)
 
