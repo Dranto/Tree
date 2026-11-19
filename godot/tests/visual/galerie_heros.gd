@@ -344,7 +344,7 @@ func _fletri(p: Vector2) -> void:
 
 ## Projectiles réels (projectile.gd) dans les cases de la graine et de la volée.
 func _add_projectiles() -> void:
-	if part == 3:
+	if part >= 3:
 		return
 	if part == 1:
 		_projectile(_cell_rect(0, 1), Vector2(130, 0), false, 0.0)

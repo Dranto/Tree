@@ -319,7 +319,7 @@
       {"stat": "projectile_damage", "op": "inc", "value": 0.1}
     ]
   },
-  "greffe_rosee": {"name": "Rosée", "desc": "Chaque ennemi que ton attaque abat te rafraîchit.", "sources": ["autel"], "shape": "feuille", "color": "#8af5c0", "effects": [{"attack_mod": "rosee", "value": 0.012}]},
+  "greffe_perle_rosee": {"name": "Perle de rosée", "desc": "Chaque ennemi que ton attaque abat te rafraîchit.", "sources": ["autel"], "shape": "feuille", "color": "#8af5c0", "effects": [{"attack_mod": "rosee", "value": 0.012}]},
   "greffe_bourgeon": {"name": "Bourgeon", "desc": "Un bourgeon qui ne cesse de repousser.", "sources": ["autel"], "shape": "fleur", "color": "#b8f0a0", "effects": [{"stat": "regen", "op": "add", "value": 1.5}, {"stat": "max_hp", "op": "inc", "value": 0.06}]},
   "greffe_sureau": {"name": "Sureau", "desc": "Le bois de sureau se referme sur la blessure.", "sources": ["autel"], "shape": "racine", "color": "#5fae7e", "effects": [{"on": "hurt", "do": "heal", "value": 0.04, "cooldown": 3, "text": "Quand un coup te touche, tu récupères 4 % de ta vie maximale (au plus toutes les 3 s)."}]},
   "greffe_mousse": {"name": "Mousse", "desc": "Une mousse épaisse qui amortit les coups.", "sources": ["autel"], "shape": "feuille", "color": "#6fbf6a", "effects": [{"stat": "armor", "op": "add", "value": 0.06}, {"stat": "regen", "op": "inc", "value": 0.2}]},

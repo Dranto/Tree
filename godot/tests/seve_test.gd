@@ -110,7 +110,7 @@ func _run() -> void:
 	quit(1 if failures > 0 else 0)
 
 
-const SEVE_GRAFTS := ["greffe_rosee", "greffe_bourgeon", "greffe_sureau", "greffe_mousse", "greffe_source_vive", "greffe_coeur_de_saule", "greffe_seve_amere", "greffe_coque"]
+const SEVE_GRAFTS := ["greffe_perle_rosee", "greffe_bourgeon", "greffe_sureau", "greffe_mousse", "greffe_source_vive", "greffe_coeur_de_saule", "greffe_seve_amere", "greffe_coque"]
 
 
 func _test_data() -> void:
@@ -129,7 +129,7 @@ func _test_data() -> void:
 	for g in SEVE_GRAFTS:
 		check(grafts.has(g), "greffe « %s »" % g)
 	# Greffes citées par la région de Sève (thread « Créer la région Sève ») : une de chaque source.
-	for pair in [["greffe_rosee", "autel"], ["greffe_bourgeon", "autel"], ["greffe_sureau", "autel"], ["greffe_mousse", "autel"],
+	for pair in [["greffe_perle_rosee", "autel"], ["greffe_bourgeon", "autel"], ["greffe_sureau", "autel"], ["greffe_mousse", "autel"],
 			["greffe_source_vive", "secret"], ["greffe_coeur_de_saule", "boss"]]:
 		check(grafts.get(pair[0], {}).get("sources", []).has(pair[1]), "greffe « %s » : source %s" % pair)
 

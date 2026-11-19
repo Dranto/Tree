@@ -37,7 +37,7 @@
     {
       "count": 10,
       "name": "Résonance de la Sève I",
-      "effects": [{"stat": "max_hp", "op": "inc", "value": 0.08}, {"stat": "regen", "op": "add", "value": 0.5}]
+      "effects": [{"stat": "max_hp", "op": "inc", "value": 0.08}, {"stat": "regen", "op": "add", "value": 0.5}, {"stat": "damage", "op": "inc", "value": 0.1}]
     },
     {
       "count": 25,
@@ -74,7 +74,7 @@
           "name": "Sève lourde",
           "at": [0.55, -0.35],
           "links": ["p1"],
-          "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.2}, {"stat": "max_hp", "op": "inc", "value": 0.06}]
+          "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.25}, {"stat": "max_hp", "op": "inc", "value": 0.06}]
         },
         {
           "id": "p3",
@@ -82,7 +82,7 @@
           "name": "Goutte vive",
           "at": [0.55, 0.35],
           "links": ["p1"],
-          "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.06}, {"stat": "regen", "op": "add", "value": 0.5}]
+          "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.1}, {"stat": "regen", "op": "add", "value": 0.5}]
         },
         {
           "id": "p4",
@@ -135,7 +135,7 @@
           "name": "Soif",
           "at": [0.5, -0.4],
           "links": ["n1"],
-          "effects": [{"stat": "area_damage", "op": "inc", "value": 0.2}, {"stat": "lifesteal", "op": "add", "value": 0.01}]
+          "effects": [{"stat": "area_damage", "op": "inc", "value": 0.3}, {"stat": "lifesteal", "op": "add", "value": 0.01}]
         },
         {
           "id": "n3",
