@@ -1,7 +1,7 @@
 ## Scène principale : assemble le monde, le joueur, les Flétris et l'interface.
 extends Node2D
 
-const WORLD_HALF := 2900.0
+const WORLD_HALF := Regions.WORLD_HALF
 ## Correspondance entre l'arbre de vie et le monde : un nœud ravive la région
 ## située dans la même direction que lui, à une distance proportionnelle à son anneau.
 const TREE_TO_WORLD := 2.1

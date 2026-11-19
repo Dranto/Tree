@@ -1,8 +1,10 @@
-## Arène du boss d'une région (une par région, posée par main.gd) : un cercle de ronces au-delà du
-## Cœur de flétrissure. Réglée par la section « boss » de data/regions/<région>.json (script du boss,
-## nom, barre, phases, taille de l'arène, textes) ; sans elle, l'arène de la Mère-Ronce.
+## Arène du boss d'une région (une par région, posée par main.gd) : un cercle muré au-delà du Cœur de
+## flétrissure (Regions.arena_center). Réglée par la section « boss » de data/regions/<région>.json
+## (script du boss, nom, barre, phases, taille de l'arène, textes) ; sans elle, l'arène de la
+## Mère-Ronce. Son sol et son mur sont dessinés par les dessins de la région (Regions.art : ronces du
+## roncier par défaut, champignons de Spore, pierres levées de Vent…).
 ##
-## - "fermee"  : tant que le Cœur n'est pas purifié, un mur de ronces mortes en interdit l'entrée ;
+## - "fermee"  : tant que le Cœur n'est pas purifié, son mur (de ronces mortes dans le roncier) en interdit l'entrée ;
 ## - "ouverte" : le Cœur est purifié, le mur s'écarte ; y entrer réveille le boss ;
 ## - "combat"  : le mur se referme derrière le joueur ; il peut se resserrer (start_shrink) ;
 ## - "vaincue" : Game.flags["<région>_boss_vaincu"] est posé, l'arène refleurit.
@@ -90,9 +92,12 @@ func configure(id: String) -> void:
 
 func _ready() -> void:
 	configure(region)
-	var dir: Vector2 = heart.center.normalized() if heart.center.length() > 1.0 else Vector2.UP
-	var limit: float = main.world_half - max_radius - 60.0
-	center = (heart.center + dir * offset).clamp(Vector2(-limit, -limit), Vector2(limit, limit))
+	if Regions.exists(region):
+		center = Regions.arena_center(region)
+	else:
+		var dir: Vector2 = heart.center.normalized() if heart.center.length() > 1.0 else Vector2.UP
+		var limit: float = main.world_half - max_radius - Regions.WORLD_MARGIN
+		center = (heart.center + dir * offset).clamp(Vector2(-limit, -limit), Vector2(limit, limit))
 	var shape := RandomNumberGenerator.new()
 	shape.seed = 97
 	for i in 72:
@@ -119,8 +124,19 @@ func entrance() -> Vector2:
 
 func _process(delta: float) -> void:
 	t += delta
-	if not frozen and main.player.position.distance_squared_to(center) < 1900.0 * 1900.0:
+	# Redessinée seulement quand elle touche le cadre de la caméra : les murs des régions (champignons,
+	# pierres levées) coûtent plus cher que l'ancien mur de ronces.
+	if not frozen and main.player.position.distance_squared_to(center) < 1900.0 * 1900.0 and _near_view():
 		queue_redraw()
+
+
+## L'arène (mur compris, plus une marge) touche le cadre visible.
+func _near_view() -> bool:
+	var vp := get_viewport()
+	if vp == null:
+		return true
+	var view := vp.get_canvas_transform().affine_inverse() * vp.get_visible_rect()
+	return view.grow(max_radius + 120.0).has_point(center)
 
 
 func _physics_process(delta: float) -> void:
@@ -171,7 +187,7 @@ func _start_fight() -> void:
 	shrinking = false
 	shrink_warn = 0.0
 	main.spawn_paused = true
-	# Les ronces se referment : les Flétris restés dehors ne prennent pas part au combat.
+	# Le mur se referme : les Flétris restés dehors ne prennent pas part au combat.
 	for e in main.enemies:
 		if is_instance_valid(e) and not e.dead and e.position.distance_to(center) > max_radius:
 			e.dead = true
@@ -186,7 +202,7 @@ func _start_fight() -> void:
 	main.big_enemies.append(boss)
 	main.hud.banner(wake_banner, "combat")
 	main.fx.ring(center, 30.0, max_radius, 0.8, Color(1.0, 0.45, 0.3, 0.8), 6.0)
-	# Entrée dans l'arène : les ronces se referment, l'écran rougit sur les bords et tremble.
+	# Entrée dans l'arène : le mur se referme, l'écran rougit sur les bords et tremble.
 	main.screen_fx.glow(Art.c("danger"), 0.45, main.screen_fx.FADE_ARENA * 1.6)
 	main.fx.shake(0.45)
 	main.fx.hitstop(0.05)
@@ -261,13 +277,9 @@ func _life_wave_step(delta: float) -> void:
 
 
 func _draw() -> void:
-	var alive := state == "vaincue"
-	var fight := state == "combat"
-	# Sol de l'arène.
-	if alive:
-		draw_circle(center, max_radius * 0.5, Color(0.55, 0.95, 0.5, 0.08 + 0.03 * sin(t * 2.0)))
-	else:
-		draw_circle(center, radius, Color(0.08, 0.02, 0.03, 0.3 if fight else 0.2))
+	# Sol et mur de l'arène : les dessins de la région (Regions.art, region_art.gd par défaut).
+	var art: GDScript = Regions.art(region) if Regions.exists(region) else load(Regions.BASE_ART)
+	art.draw_arena_floor(self, self)
 	# Annonce du resserrement : le futur bord clignote au sol.
 	if shrinking:
 		var blink := 0.5 + 0.5 * sin(t * 12.0)
@@ -275,53 +287,12 @@ func _draw() -> void:
 		for i in 24:
 			var dir := Vector2.from_angle(TAU * i / 24.0)
 			draw_line(center + dir * (radius - 24.0), center + dir * lerpf(radius - 24.0, min_radius + 8.0, 0.3 + 0.2 * blink), Color(1.0, 0.35, 0.2, 0.35), 3.0)
-	# Mur de ronces : une brèche s'ouvre du côté du Cœur quand l'arène est ouverte.
-	var n := _wall.size()
-	var gate: float = (heart.center - center).angle()
-	var stem := Color("2c2226")
-	var thorn := Color("8a7f78")
-	if fight:
-		stem = Color("3d1f24")
-		thorn = Color("e0a090")
-	elif alive:
-		stem = Color("2f6b2a")
-		thorn = Color("468f38")
-	var pts := PackedVector2Array()
-	var pts2 := PackedVector2Array()
-	for i in n + 1:
-		var w: Array = _wall[i % n]
-		var a := TAU * i / n
-		var off := absf(wrapf(a - gate, -PI, PI))
-		if off < 0.42 * gap_open:
-			_wall_strip(pts, pts2, stem)
-			pts = PackedVector2Array()
-			pts2 = PackedVector2Array()
-			continue
-		var dir := Vector2.from_angle(a)
-		var r: float = radius * (1.0 + w[0])
-		pts.append(center + dir * r)
-		pts2.append(center + dir * (r + 16.0 + 8.0 * w[2]))
-		var len: float = 16.0 * w[1]
-		var lean := Vector2.from_angle(a + 0.5 * w[2])
-		draw_line(center + dir * r, center + dir * r - lean * len, thorn, 3.0)
-		draw_line(center + dir * (r + 14.0), center + dir * (r + 14.0) + lean * len, thorn, 3.0)
-		if alive and i % 3 == 0:
-			var rose := center + dir * (r + 8.0)
-			for j in 5:
-				draw_circle(rose + Vector2.from_angle(TAU * j / 5.0 + i) * 5.0, 4.5, Color("e0675e").lerp(Color("f48fb1"), 0.5 + 0.5 * w[2]))
-			draw_circle(rose, 3.0, Color("fff3c4"))
-	_wall_strip(pts, pts2, stem)
+	art.draw_arena_wall(self, self)
 	# Le boss endormi, puis ce qui pousse à sa place : dessinés par son script (BossBase).
 	if state == "ouverte" or state == "fermee":
 		boss_script.draw_sleeper(self)
-	elif alive:
+	elif state == "vaincue":
 		boss_script.draw_victory(self)
-
-
-func _wall_strip(pts: PackedVector2Array, pts2: PackedVector2Array, stem: Color) -> void:
-	if pts.size() >= 2:
-		draw_polyline(pts, stem, 13.0)
-		draw_polyline(pts2, stem.darkened(0.25), 9.0)
 
 
 # --- Robot du mode « -- --autotest=boss » ---
