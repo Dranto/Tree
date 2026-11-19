@@ -68,7 +68,7 @@
      "reach": 170, "keep_min": 280, "keep_max": 420, "flee": 1.5, "range": 560,
      "cooldown": 2.8, "windup": 0.65, "shots": 2, "spread": 0.18, "shot_speed": 300, "shot_damage": 7, "shot_life": 2.4},
     {"id": "menhir", "name": "Menhir flétri", "behavior": "chase", "region": "vent", "art": "vent",
-     "hp": 170, "speed": 46, "damage": 20, "radius": 24, "xp": 14, "color": "#4a4f58",
+     "hp": 170, "speed": 46, "damage": 15, "radius": 24, "xp": 14, "color": "#4a4f58",
      "resist": {"vent": 0.25}, "no_push": true}
   ],
   "ordinary": {

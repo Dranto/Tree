@@ -131,7 +131,7 @@
     },
     "bourrasque": {
       "name": "Bourrasque",
-      "desc": "Un souffle en cône devant toi, qui blesse et repousse.",
+      "desc": "Un souffle en cône devant toi, qui blesse, repousse et emporte les plumes des Planeurs.",
       "kind": "melee",
       "tags": ["corps_a_corps"],
       "branch": "vent",
@@ -142,6 +142,7 @@
       "range": 185,
       "arc": 1.3,
       "knockback": 55,
+      "deflect": true,
       "fx": "bourrasque",
       "sfx": "bourrasque"
     }

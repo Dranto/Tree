@@ -21,6 +21,8 @@ extends RefCounted
 const Content = preload("res://scripts/content.gd")
 ## Branche Vent : pousser et aspirer les ennemis (recul de la bourrasque, modificateur « repousse »).
 const VentScript = preload("res://scripts/vent.gd")
+## Plumes des Planeurs de cendre : une attaque « deflect » (la Bourrasque) les emporte.
+const Feather = preload("res://scripts/vent_feather.gd")
 ## Statistique de dégâts de chaque famille d'attaque (comme les compétences, player.gd).
 const TAG_STATS := {"corps_a_corps": "melee_damage", "projectile": "projectile_damage", "zone": "area_damage"}
 ## « Se battre chez soi » : bonus d'une forme de Ronce sur une terre ravivée de sa région (player.gd).
@@ -417,6 +419,8 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 		_afx(main, "renforcee", {"pos": player.position, "follow": player, "element": str(f.get("element", "epine"))})
 	var on_hit := _hit_mods(st)
 	var kb := float(f.get("knockback", 0.0))
+	if f.get("deflect", false):
+		_deflect(main, player.position, dir, r, arc)
 	for e in main.enemies_near(player.position, r):
 		var d: Vector2 = e.position - player.position
 		if arc < TAU and d.length() > 1.0 and absf(dir.angle_to(d)) > arc / 2.0 + e.radius / maxf(d.length(), 1.0):
@@ -429,6 +433,18 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 			VentScript.push(e, d.normalized() * kb)
 		if main.has_method("on_melee_hit"):
 			main.on_melee_hit(e, dmg)
+
+
+## Le souffle emporte les plumes de cendre prises dans son cône (le vent contre le vent).
+static func _deflect(main, from: Vector2, dir: Vector2, r: float, arc: float) -> void:
+	for sh in main.projectiles_layer.get_children():
+		if sh.get_script() != Feather or sh.is_queued_for_deletion():
+			continue
+		var d: Vector2 = sh.position - from
+		if d.length() > r or (arc < TAU and d.length() > 1.0 and absf(dir.angle_to(d)) > arc / 2.0):
+			continue
+		main.fx.ring(sh.position, 3.0, 18.0, 0.25, Art.ec("vent"), 2.0)
+		sh.queue_free()
 
 
 # --- Effets au coup ---

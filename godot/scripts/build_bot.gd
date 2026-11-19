@@ -16,6 +16,7 @@ const Regions = preload("res://scripts/regions.gd")
 const Content = preload("res://scripts/content.gd")
 const Difficulty = preload("res://scripts/difficulty.gd")
 const Thorn = preload("res://scripts/enemy_thorn.gd")
+const Feather = preload("res://scripts/vent_feather.gd")
 
 const TreePlanner = preload("res://scripts/tree_planner.gd")
 const BUILDS_PATH := "res://data/builds.json"
@@ -27,6 +28,10 @@ const DEFAULT_LEVEL := 20
 const DEATH_PENALTY := 10.0
 ## Distance à la graine au-delà de laquelle les robots « melee » et « tank » ne poursuivent plus.
 const LEASH := 1100.0
+## En partie complète : distance au point d'ancrage au-delà de laquelle ils ne poursuivent plus.
+const RUN_LEASH := 520.0
+## Distance au mur de l'arène ouverte en deçà de laquelle le robot s'en écarte.
+const ARENA_MARGIN := 260.0
 
 var name := ""
 ## Branche du build (builds.json › branch) et région où il s'enfonce en partie complète.
@@ -183,13 +188,17 @@ func _choose(game, id: int) -> void:
 
 
 ## Déplacement du robot selon le style du build. Renvoie {} pour garder le jeu « à distance » par défaut.
-func steer(player, target: Vector2, best_d2: float, max_hp: float, melee_keep := 90.0) -> Dictionary:
+## « center » et « leash » : la laisse (la graine et LEASH par défaut ; en partie complète, le point
+## d'ancrage du robot, qui avance dans la région).
+func steer(player, target: Vector2, best_d2: float, max_hp: float, melee_keep := 90.0,
+		center := Vector2.ZERO, leash := LEASH) -> Dictionary:
 	if style == "distance" or best_d2 == INF:
 		return {}
-	# Laisse : le robot ne poursuit pas un Flétri au-delà de LEASH px de la graine (sinon il
+	# Laisse : le robot ne poursuit pas un Flétri au-delà de « leash » px de son centre (sinon il
 	# dérive jusqu'aux régions voisines, plus peuplées, et la mesure ne compare plus les builds).
-	if target.length() > LEASH:
-		var back: Vector2 = -player.position.normalized() if player.position.length() > LEASH * 0.8 else Vector2.ZERO
+	if target.distance_to(center) > leash:
+		var off: Vector2 = player.position - center
+		var back: Vector2 = -off.normalized() if off.length() > leash * 0.8 else Vector2.ZERO
 		return {"move": back, "aim": target, "dash": false}
 	var d := sqrt(best_d2)
 	var low: bool = player.hp < max_hp * 0.35
@@ -199,6 +208,11 @@ func steer(player, target: Vector2, best_d2: float, max_hp: float, melee_keep :=
 		mv = (player.position - target).normalized()
 	elif d > keep:
 		mv = (target - player.position).normalized()
+	elif run and style == "melee" and d < keep * 0.5:
+		# Partie complète : le corps à corps frappe à distance d'arme, il ne reste pas au contact
+		# (sinon un Flétri qu'on ne repousse pas, comme le Menhir, le frappe sans arrêt). Le mode
+		# « builds » garde l'ancien jeu, sur lequel ses chiffres de référence ont été réglés.
+		mv = (player.position - target).normalized()
 	return {"move": mv, "aim": target, "dash": low and d < 60.0}
 
 
@@ -248,6 +262,17 @@ func run_input(main, p, target: Vector2, best_d2: float) -> Dictionary:
 	var hp_ratio: float = p.hp / max_hp
 	# Attaques annoncées : il s'écarte d'une épine qui arrive et du couloir d'une charge.
 	var dodge := _dodge(main, p)
+	# L'arène du boss : la partie complète ne mesure pas le combat de boss, le robot n'y entre pas
+	# (une poursuite au corps à corps l'y menait une fois le Cœur purifié, et il y mourait en boucle).
+	var arena = main.arenas.get(region) if "arenas" in main else null
+	# Déjà enfermé dans un combat (il y est entré avant que l'arène ne s'ouvre au robot) : il se
+	# bat comme le robot du boss ; fuir le pousserait contre le mur, qui blesse à chaque pas.
+	var fight = main.active_arena() if main.has_method("active_arena") else null
+	if fight != null:
+		return fight.bot_input(p)
+	if arena != null and arena.state == "ouverte" \
+			and p.position.distance_to(arena.center) < arena.radius + ARENA_MARGIN:
+		return {"move": (p.position - arena.center).normalized(), "aim": target, "dash": false}
 	if dodge != Vector2.ZERO:
 		var mv_d := dodge.normalized()
 		if to_anchor.length() > 300.0:
@@ -277,7 +302,8 @@ func run_input(main, p, target: Vector2, best_d2: float) -> Dictionary:
 	if style == "tank" and (Game.stats["thorns"] < 25.0 or hp_ratio < 0.5):
 		play = "distance"
 	if play != "distance" and not (crowd >= 5 and hp_ratio < 0.7):
-		var styled := steer(p, target, best_d2, max_hp, 125.0)
+		# Laisse autour du point d'ancrage (celle de la graine le retiendrait loin de sa région).
+		var styled := steer(p, target, best_d2, max_hp, 125.0, anchor, RUN_LEASH)
 		if not styled.is_empty():
 			return styled
 	var orbit: Vector2 = anchor + Vector2.from_angle(main.elapsed * 0.35) * 200.0
@@ -291,7 +317,8 @@ func run_input(main, p, target: Vector2, best_d2: float) -> Dictionary:
 func _dodge(main, p) -> Vector2:
 	var out := Vector2.ZERO
 	for th in main.projectiles_layer.get_children():
-		if th.get_script() != Thorn:
+		# Épines des Cracheurs et plumes des Planeurs de cendre (région de Vent).
+		if th.get_script() != Thorn and th.get_script() != Feather:
 			continue
 		var rel: Vector2 = p.position - th.position
 		var v: Vector2 = th.vel
@@ -352,7 +379,7 @@ func run_step(main, delta: float) -> bool:
 	_prev_hp = p.hp
 	# Temps pour tuer un Flétri ordinaire : du premier coup reçu à sa mort.
 	for e in main.enemies:
-		if is_instance_valid(e) and not e.dead and e.kind == 0 and e.hp < e.max_hp:
+		if is_instance_valid(e) and not e.dead and "kind" in e and e.kind == 0 and e.hp < e.max_hp:
 			var id: int = e.get_instance_id()
 			if not _hit.has(id):
 				_hit[id] = [_t, weakref(e)]
@@ -381,7 +408,7 @@ func _sample(main) -> void:
 	var total := 0.0
 	var n := 0
 	for e in main.enemies:
-		if is_instance_valid(e) and not e.dead:
+		if is_instance_valid(e) and not e.dead and "power" in e:
 			total += e.power
 			n += 1
 	# Médiane : un ennemi touché une fois puis laissé derrière (fuite) ne fausse pas la mesure.
