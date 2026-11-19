@@ -300,9 +300,20 @@ func _draw() -> void:
 ## Prépare le combat : un build de test (niveau 12, points placés dans la branche de la région), le
 ## Cœur déjà purifié et le joueur posé dans l'arène.
 func autotest_begin() -> void:
-	while Game.level < 12:
+	autotest_build(12, Regions.branch_of(region))
+	Game.flags[heart.flag] = true
+	main.player.hp = Game.stats["max_hp"]
+	main.player.position = center + (heart.center - center).normalized() * (max_radius - 110.0)
+	main.player.reset_physics_interpolation()
+	print("AUTOTEST boss : niveau %d, %d nœuds de la branche, dégâts %.1f, vie %d" % [Game.level, Game.allocated.size() - 1, Game.stats["damage"], int(Game.stats["max_hp"])])
+
+
+## Build de test des robots de boss : monte au niveau « level » et place tous les points dans la
+## branche « branch » (nœuds clés d'abord, puis ceux qui augmentent les dégâts ou la cadence).
+static func autotest_build(level: int, branch: String) -> void:
+	while Game.level < level:
 		Game.add_xp(Game.xp_to_next())
-	var bi := maxi(0, Content.tree().get("branches", []).find(Regions.branch_of(region)))
+	var bi := maxi(0, Content.tree().get("branches", []).find(branch))
 	while Game.points > 0:
 		var options: Array = []
 		for n in Game.tree.nodes:
@@ -321,11 +332,6 @@ func autotest_begin() -> void:
 				return sa > sb
 			return a["ring"] < b["ring"] if a["ring"] != b["ring"] else a["id"] < b["id"])
 		Game.allocate(options[0]["id"])
-	Game.flags[heart.flag] = true
-	main.player.hp = Game.stats["max_hp"]
-	main.player.position = center + (heart.center - center).normalized() * (max_radius - 110.0)
-	main.player.reset_physics_interpolation()
-	print("AUTOTEST boss : niveau %d, %d nœuds de la branche, dégâts %.1f, vie %d" % [Game.level, Game.allocated.size() - 1, Game.stats["damage"], int(Game.stats["max_hp"])])
 
 
 ## Intérêt d'un nœud pour le build de test : nombre d'effets qui touchent aux dégâts, à la cadence

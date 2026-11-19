@@ -2,7 +2,7 @@
 ##
 ## Format : un fichier JSON lisible dans user://saves/, versionné.
 ## {
-##   "format": "seve-save", "version": 3, "saved_at": <unix>,
+##   "format": "seve-save", "version": 5, "saved_at": <unix>,
 ##   "game":  {"level", "xp", "points", "kills", "flags"},
 ##   "tree":  {"allocated": [uid, …],            # identifiants stables, pas des index
 ##             "choices": {uid: choix},          # maîtrises et mutations (depuis la version 2)
@@ -26,7 +26,7 @@
 extends Node
 
 const FORMAT := "seve-save"
-const VERSION := 4
+const VERSION := 5
 const DEFAULT_PATH := "user://saves/partie.json"
 
 ## Dernière erreur de chargement, lisible (vide si tout va bien).
@@ -56,6 +56,8 @@ func peek(path := DEFAULT_PATH) -> Dictionary:
 		"nodes": (t.get("allocated", []) as Array).size(),
 		"play_time": float(w.get("elapsed", 0.0)),
 		"saved_at": int(data.get("saved_at", 0)),
+		# L'aventure est finie (la Flétrissure vaincue sous la graine) : l'écran titre le dit.
+		"ended": bool(g.get("flags", {}).get("finale_vaincue", false)) if g.get("flags") is Dictionary else false,
 	}
 
 
@@ -104,13 +106,16 @@ func save_now(main, path := DEFAULT_PATH) -> bool:
 
 ## Position et vie du joueur à sauvegarder. Pendant le combat de boss, le joueur est noté devant
 ## l'arène, avec toute sa vie : reprendre la partie ne le pose pas contre la Mère-Ronce, et le
-## combat recommence quand il y entre (elle se rendort, comme après une mort).
+## combat recommence quand il y entre (elle se rendort, comme après une mort). Sous la graine
+## (finale), il est noté au pied de la graine, à côté de la brèche.
 func _player_entry(main) -> Dictionary:
 	var pos: Vector2 = main.player.position
 	var hp: float = main.player.hp
 	if main.get("arena") != null and main.active_arena() != null:
 		pos = main.active_arena().entrance()
 		hp = Game.stats["max_hp"]
+	elif main.get("finale") != null and main.finale.holds(pos):
+		pos = main.finale.entrance()
 	return {"x": pos.x, "y": pos.y, "hp": hp}
 
 
@@ -234,6 +239,19 @@ func _migrate(data: Dictionary) -> Dictionary:
 				f[reg + "_fin_vue"] = f[old]
 				f.erase(old)
 		data["version"] = 4
+	# Version 5 (jalon 9, la finale sous la graine) : « fin_aventure_vue » veut dire maintenant
+	# « épilogue vu, après la finale ». Une partie qui avait vu l'ancienne fin (le texte de fin
+	# après le dernier boss de région) ne l'a pas vue : la finale s'ouvre au chargement, puisque
+	# toutes ses régions sont purifiées. Les drapeaux de la finale sont faux par défaut.
+	if int(data["version"]) == 4:
+		if not data.get("game") is Dictionary:
+			data["game"] = {}
+		if not data["game"].get("flags") is Dictionary:
+			data["game"]["flags"] = {}
+		var f: Dictionary = data["game"]["flags"]
+		if not f.get("finale_vaincue", false):
+			f.erase("fin_aventure_vue")
+		data["version"] = 5
 	return data
 
 

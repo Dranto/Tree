@@ -254,7 +254,7 @@ func draw_map(v: Control) -> void:
 	if goal != null:
 		var gc := to_map(goal, s)
 		# Le trajet du joueur à l'objectif, en pointillés : il passe d'une région à l'autre.
-		var from := to_map(main.player.position, s)
+		var from := to_map(main.map_position(main.player.position), s)
 		var dash := 9.0
 		var span := from.distance_to(gc)
 		var dir := (gc - from).normalized()
@@ -269,7 +269,7 @@ func draw_map(v: Control) -> void:
 		v.draw_arc(gc, 13.0 + 4.0 * pulse, 0.0, TAU, 28, Color(UiTheme.GOLD, 0.9 - 0.4 * pulse), 2.0)
 
 	# Le joueur, tourné vers sa visée.
-	draw_glyph(v, "player", to_map(main.player.position, s), Color.WHITE, true, 1.0, main.player.aim.angle())
+	draw_glyph(v, "player", to_map(main.map_position(main.player.position), s), Color.WHITE, true, 1.0, main.player.aim.angle())
 	v.draw_rect(Rect2(Vector2.ZERO, s), Color(0.6, 0.8, 0.6, 0.5), false, 2.0)
 	UiAudit.scan_controls("carte", self)
 

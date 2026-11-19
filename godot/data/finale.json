@@ -1,0 +1,35 @@
+{
+  "_doc": "Finale de l'aventure (format dans data/README.md, « Finale »). Quand le boss de chaque région est vaincu, la Flétrissure se retire sous la graine : la séquence de la dernière région le dit (« adventure_ending » de objectives.json), le drapeau finale_ouverte est posé et une brèche s'ouvre au pied de la graine. On y descend dans l'arène (scripts/finale_arena.gd), où attend le boss final (scripts/boss_finale.gd). Sa victoire pose finale_vaincue, puis l'épilogue (scripts/epilogue.gd) montre le monde qui reverdit, les statistiques de toute l'aventure et le générique (« credits »), et pose fin_aventure_vue. Musique : voir data/audio.json › regions › finale et generique.",
+  "boss": {
+    "script": "res://scripts/boss_finale.gd",
+    "name": "La Flétrissure",
+    "bar_color": "cendre",
+    "phases": [
+      "Phase 1 sur 3 : épines et spores",
+      "Phase 2 sur 3 : sève et vent",
+      "Phase 3 sur 3 : lumière et racines"
+    ],
+    "arena": {"radius": 520.0, "radius_min": 370.0, "life_color": "seve/clair"},
+    "wake_banner": "La Flétrissure s'éveille : elle a pris quelque chose à chaque gardien.",
+    "defeated_banner": "La Flétrissure est vaincue !",
+    "reward": {"points": 3}
+  },
+  "opened_banner": "La Flétrissure s'est retirée sous la graine. Une brèche s'ouvre à son pied.",
+  "descent_banner": "Tu descends sous la graine, dans le creux de ses racines.",
+  "ascent_banner": "Tu remontes au pied de la graine.",
+  "epilogue": {
+    "sub": "Fin de l'aventure",
+    "title": "Le monde reverdit",
+    "body": "Sous la graine, la Flétrissure s'est éteinte, et avec elle la cendre qu'elle soufflait sur le monde. Des racines aux confins, l'Arbre de vie étend ses branches sur une terre qui respire de nouveau. Le Porte-Graine peut se reposer : chaque région chante sa propre chanson."
+  },
+  "credits": [
+    {"title": "Sève"},
+    {"head": "Une aventure de", "lines": ["Dranto"]},
+    {"head": "Conception, choix et direction", "lines": ["Dranto"]},
+    {"head": "Code, dessins et sons", "lines": ["écrits avec Claude (Anthropic)", "tout est dessiné et composé par le code"]},
+    {"head": "Régions", "auto": "regions"},
+    {"head": "Gardiens", "auto": "bosses"},
+    {"head": "Moteur", "lines": ["Godot Engine"]},
+    {"title": "Merci d'avoir joué"}
+  ]
+}

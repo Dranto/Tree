@@ -1,6 +1,13 @@
 {
   "_doc": "Son et ambiance des régions (tâche F du jalon 7). Une entrée par région, rangée sous son identifiant ; la région peut aussi porter une section « audio » dans son fichier, qui prime. Format dans data/README.md, « Son et ambiance ». Une région sans entrée garde la musique et les particules de Ronce.",
   "regions": {
+    "finale": {
+      "_doc": "Finale sous la graine (data/finale.json). Crochet de la tâche H : une section « music » ici donne la musique du combat final (pistes finale_sombre.wav et finale_lumineux.wav, écrites par tools/gen-sounds.sh) ; sans elle, la musique du monde. La couche lumineuse monte après la victoire.",
+      "boss": {"eveil": "spore_boss_eveil", "phase": "aube_boss_phase", "mort": "seve_boss_mort"}
+    },
+    "generique": {
+      "_doc": "Épilogue et générique (epilogue.gd). Crochet de la tâche H : une section « music » ici donne la musique du générique (generique_sombre.wav et generique_lumineux.wav, seule la couche lumineuse est jouée) ; sans elle, la couche lumineuse du monde."
+    },
     "spore": {
       "_doc": "Marais de spores : accords bas et suspendus, vent mouillé et lent ; en terre vivante, un arpège de bois. Les spores montent comme des bulles.",
       "music": {
