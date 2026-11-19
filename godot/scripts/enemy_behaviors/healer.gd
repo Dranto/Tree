@@ -2,6 +2,8 @@
 ## et soigne les Flétris autour d'elle : elle se gonfle de sève (« windup », un cercle vert au sol,
 ## pas rouge : ce n'est pas un coup), puis rend à chacun « heal » de sa vie dans « aura ». Elle frappe
 ## au contact. La tuer d'abord, ou tirer les autres hors de son cercle.
+## Une Souche ne soigne ni elle-même ni une autre Souche : plusieurs Souches réunies se soignaient
+## sans fin et devenaient intuables en début de partie, jusque dans les régions voisines.
 extends EnemyBehavior
 
 
@@ -24,21 +26,26 @@ func step(e, delta: float, dir: Vector2, dist: float, slow: float) -> void:
 		e.position += dir * e.speed * slow * delta
 
 
-## Flétris blessés dans son cercle (elle compris).
+## Vrai si la Souche peut soigner cet ennemi : ni boss, ni Souche (elle comprise).
+static func mendable(o) -> bool:
+	return not o.dead and "max_hp" in o and o.get("behavior") != "boss" and o.get("behavior") != "healer"
+
+
+## Flétris blessés dans son cercle.
 func wounded_near(e) -> int:
 	var n := 0
 	for o in e.main.enemies_near(e.position, float(e.data["aura"]), false):
-		if not o.dead and "max_hp" in o and o.hp < o.max_hp * 0.95 and o.get("behavior") != "boss":
+		if mendable(o) and o.hp < o.max_hp * 0.95:
 			n += 1
 	return n
 
 
-## Rend « heal » de leur vie aux Flétris du cercle (elle comprise).
+## Rend « heal » de leur vie aux Flétris du cercle.
 func mend(e) -> void:
 	var part := float(e.data.get("heal", 0.3))
 	var n := 0
 	for o in e.main.enemies_near(e.position, float(e.data["aura"]), false):
-		if o.dead or not ("max_hp" in o) or o.get("behavior") == "boss":
+		if not mendable(o):
 			continue
 		o.hp = minf(o.max_hp, o.hp + o.max_hp * part)
 		n += 1
