@@ -106,7 +106,7 @@
     "name": "Aurore", "short": "Aurore", "color": "#ffe14d", "cooldown": 6,
     "branch": "aube", "tags": ["zone"],
     "desc": "Nouvelle compétence : une onde de lumière part de toi, blesse et éblouit les ennemis autour (ils subissent plus de coups critiques).",
-    "damage": 1.8, "radius": 210, "dazzle": 0.3, "dazzle_time": 3.0, "waves": 1, "heal": 0
+    "damage": 1.6, "radius": 210, "dazzle": 0.3, "dazzle_time": 3.0, "waves": 1, "heal": 0
   },
   "prisme": {
     "name": "Prisme", "short": "Prisme", "color": "#fff1a8", "cooldown": 8,
