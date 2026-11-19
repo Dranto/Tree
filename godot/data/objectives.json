@@ -128,6 +128,44 @@
       "reward": {"text": "2 points d'arbre et une greffe"}
     },
     {
+      "id": "aube_sanctuaire", "region": "aube", "main": true,
+      "title": "Raviver un sanctuaire des falaises",
+      "text": "Sur les falaises de verre, tiens-toi quelques secondes dans un sanctuaire : tu y renaîtras si la lumière te brûle.",
+      "condition": {"type": "flag_count", "prefix": "sanctuaire_", "exclude": ["sanctuaire_graine"], "count": 1, "region_only": true},
+      "target": {"type": "group", "group": "sanctuaire", "done_prefix": "sanctuaire_"},
+      "needs_group": "sanctuaire"
+    },
+    {
+      "id": "aube_autel", "region": "aube", "main": true,
+      "title": "Trouver un autel des falaises",
+      "text": "Des autels dorment entre les cristaux des falaises. Chacun offre un point d'arbre à qui les découvre.",
+      "condition": {"type": "flag_count", "prefix": "autel_", "count": 1, "region_only": true},
+      "target": {"type": "group", "group": "autel", "done_prefix": "autel_"},
+      "needs_group": "autel"
+    },
+    {
+      "id": "aube_noeud_cle", "region": "aube", "main": true,
+      "title": "Apprendre un nœud clé d'Aube",
+      "text": "Suis la branche dorée de l'Arbre jusqu'à un nœud clé : les coups critiques et la lumière deviennent tes armes.",
+      "condition": {"type": "keystone", "branch": "aube"},
+      "target": {"type": "none"}
+    },
+    {
+      "id": "aube_coeur", "region": "aube", "main": true, "milestone": true,
+      "title": "Purifier le Cœur de l'aurore",
+      "text": "Au milieu des falaises, tiens la zone du Cœur malgré les Lucioles qui affluent. Détourne les yeux des miroirs.",
+      "condition": {"type": "flag", "flag": "aube_coeur_purifie"},
+      "target": {"type": "heart"}
+    },
+    {
+      "id": "aube_boss", "region": "aube", "main": true, "milestone": true,
+      "title": "Vaincre la Phalène de verre",
+      "text": "Son cercle s'est ouvert au-delà du Cœur. Quand ses ailes blanchissent, sors du cône de lumière.",
+      "condition": {"type": "flag", "flag": "aube_boss_vaincu"},
+      "target": {"type": "arena"},
+      "reward": {"text": "2 points d'arbre et une greffe"}
+    },
+    {
       "id": "elites", "main": false,
       "title": "Vaincre trois élites",
       "text": "Certains Flétris portent un liseré : ils sont plus coriaces, mais laissent un butin rare.",
@@ -179,6 +217,22 @@
       "id": "vent_secret", "region": "vent", "main": false,
       "title": "Découvrir le secret des plateaux",
       "text": "Un souffle ancien dort au bord des plateaux, là où le vent tourne. Explore les recoins de la région.",
+      "condition": {"type": "flag_count", "prefix": "secret_", "count": 1, "region_only": true},
+      "reward": {"text": "1 point d'arbre et une greffe, donnés par le secret lui-même"}
+    },
+    {
+      "id": "aube_autels", "region": "aube", "main": false,
+      "title": "Réveiller tous les autels des falaises",
+      "text": "Retrouve chacun des autels cachés dans la région d'Aube.",
+      "condition": {"type": "flag_count", "prefix": "autel_", "count": 4, "region_only": true},
+      "target": {"type": "group", "group": "autel", "done_prefix": "autel_"},
+      "needs_group": "autel",
+      "reward": {"text": "1 point d'arbre", "points": 1}
+    },
+    {
+      "id": "aube_secret", "region": "aube", "main": false,
+      "title": "Découvrir le secret des falaises",
+      "text": "Une lumière plus ancienne que l'aube dort au bord des falaises, derrière le verre. Explore les recoins de la région.",
       "condition": {"type": "flag_count", "prefix": "secret_", "count": 1, "region_only": true},
       "reward": {"text": "1 point d'arbre et une greffe, donnés par le secret lui-même"}
     }

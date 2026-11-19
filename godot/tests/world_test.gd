@@ -1,5 +1,5 @@
-## Test du monde à cinq régions (et plus) : avec les régions factices de Sève et d'Aube
-## (tests/regions/seve.json, aube.json) et la région d'essai (branche Racine), les six secteurs sont
+## Test du monde à cinq régions (et plus) : avec les régions du jeu, les régions factices des
+## branches qui n'en ont pas encore (tests/regions/seve.json…) et la région d'essai (branche Racine), les six secteurs sont
 ## occupés. On vérifie que chaque région tient dans le monde (lieux, Cœur, arène), que les arènes ne se
 ## chevauchent pas, que la vraie région d'une branche l'emporte sur sa région factice, que check_data
 ## refuse une région qui déborde, que les dessins de chaque région (Cœur, arène) sont les siens, et que
@@ -46,7 +46,8 @@ func _run() -> void:
 	var game = root.get_node("Game")
 
 	print("Six secteurs")
-	check(Regions.ids() == ["ronce", "spore", "vent"], "sans les régions des tests : Ronce, Spore et Vent (%s)" % [Regions.ids()])
+	var own_ids: Array = Regions.ids()
+	check(["ronce", "spore", "vent", "aube"].all(func(id): return id in own_ids) and not "essai" in own_ids, "sans les régions des tests : celles du jeu seulement (%s)" % [own_ids])
 	Regions.set_extra_dirs(["res://tests/regions/"])
 	var ids: Array = Regions.ids()
 	check(ids == ["ronce", "spore", "seve", "vent", "aube", "essai"], "avec les régions factices, une par branche, dans l'ordre du cercle (%s)" % [ids])
@@ -88,21 +89,27 @@ func _run() -> void:
 	print("Vérification d'une région qui déborde")
 	var aube: Dictionary = Regions.def("aube")
 	var arena: Dictionary = aube["boss"]["arena"]
+	var offset0: float = arena["offset"]
 	arena["offset"] = 1000.0
 	var errs := Regions.validate()
 	check(errs.size() == 1 and "sort du monde" in errs[0] and "1190" in errs[0], "Aube : une arène trop loin est refusée, avec la limite du secteur (%s)" % [errs])
-	arena["offset"] = 700.0
+	arena["offset"] = offset0
 	var secret: Dictionary = aube["secrets"][0]
+	var secret0 := secret.duplicate()
 	secret["dist"] = 2950.0
 	secret["side"] = 0.0
 	errs = Regions.validate()
 	check(errs.size() == 1 and "hors du monde" in errs[0], "Aube : un secret au-delà du bord est refusé (%s)" % [errs])
-	secret["dist"] = 2350.0
-	secret["side"] = -0.95
+	secret["dist"] = secret0["dist"]
+	secret["side"] = secret0["side"]
+	var art0 = aube.get("art")
 	aube["art"] = "inconnu"
 	errs = Regions.validate()
 	check(errs.size() == 1 and "dessins inconnus" in errs[0], "un « art » sans script est refusé (%s)" % [errs])
-	aube.erase("art")
+	if art0 == null:
+		aube.erase("art")
+	else:
+		aube["art"] = art0
 	check(Regions.validate().is_empty(), "tout redevient valide")
 
 	print("La vraie région l'emporte sur la factice")
@@ -125,6 +132,9 @@ func _run() -> void:
 	check(Regions.art("ronce").resource_path == Regions.BASE_ART, "Ronce : les dessins par défaut (la rose, le mur de ronces)")
 	check(Regions.art("spore").resource_path.ends_with("region_art/spore.gd"), "Spore : ses propres dessins")
 	check(Regions.art("vent").resource_path.ends_with("region_art/vent.gd"), "Vent : ses propres dessins")
+	check(Regions.art("aube").resource_path.ends_with("region_art/aube.gd"), "Aube : ses propres dessins (les falaises de verre)")
+	for f in ["draw_heart", "draw_heart_purified", "draw_arena_floor", "draw_arena_wall"]:
+		check(Regions.art("aube").get_script_method_list().any(func(m): return m["name"] == f), "Aube redessine %s" % f)
 	check(Regions.art("seve").resource_path == Regions.BASE_ART, "une région sans « art » : les dessins par défaut")
 	for f in ["draw_heart", "draw_heart_purified", "draw_arena_floor", "draw_arena_wall"]:
 		var own := []

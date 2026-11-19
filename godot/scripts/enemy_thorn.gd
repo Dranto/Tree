@@ -8,7 +8,7 @@ var vel := Vector2.ZERO
 var damage := 8.0
 var life := 2.4
 var radius := 5.0
-## Apparence : "" (épine) ou "cendre" (boule de braise).
+## Apparence : "" (épine), "cendre" (boule de braise) ou "verre" (éclat d'un Colosse de quartz).
 var look := ""
 
 
@@ -44,6 +44,15 @@ func _draw() -> void:
 		Art.volume_circle(self, Vector2.ZERO, 6.0, Art.ec("cendre"), 1.0)
 		draw_arc(Vector2.ZERO, 6.0, 0.0, TAU, 16, Art.ec("cendre", "sombre"), Art.TRAIT_FIN, true)
 		draw_circle(Vector2(1.5, -1.0), 2.2, Art.ec("cendre", "clair"))
+		return
+	if look == "verre":
+		# Éclat de verre : un losange clair à facettes, traînée de danger, reflet d'or.
+		draw_line(Vector2(-22, 0), Vector2(-6, 0), Color(Art.c("danger"), 0.35), 5.0, true)
+		var pts := PackedVector2Array([Vector2(10, 0), Vector2(0, -4.5), Vector2(-9, 0), Vector2(0, 4.5)])
+		draw_colored_polygon(PackedVector2Array([pts[0], pts[1], pts[2]]), Color("e8f6fa"))
+		draw_colored_polygon(PackedVector2Array([pts[0], pts[2], pts[3]]), Color("8cb4c2"))
+		Art.outline(self, pts, Color("3e5866"), 1.2)
+		draw_circle(Vector2(3, -1), 1.6, Color("f2d06b"))
 		return
 	# Épine d'os (élément épine), avec une traînée rouge de danger pour qu'on la voie venir.
 	draw_line(Vector2(-24, 0), Vector2(-6, 0), Color(Art.c("danger"), 0.35), 5.0, true)
