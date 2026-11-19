@@ -158,6 +158,28 @@ Le banc des 120 Flétris coûte environ 2 ms de plus, parce que la graine touche
 | Tornades et plumes du Harfang : dessinées dans le `_draw` du boss | banc du Harfang 21–22 ms | sous la Mère-Ronce (24–25 ms) |
 | Arbre de vie (`tests/tree_bench.gd`) | immobile 14,9 → 16,3 ms, survol 18,9 → 19,8 ms, déplacement 27,7 → 26,7 ms | dans le bruit |
 
+## Cinq régions (jalon 8, tâche P)
+
+`REGIONS=cinq tools/bench.sh` (aussi `-- --benchmark --regions=res://tests/regions/`) ajoute les régions
+factices de `tests/regions/` (Sève, Aube, Racine) à celles de `data/regions/` : une vraie région
+l'emporte sur sa factice, donc le banc suit la vraie Sève et la vraie Aube dès leur fusion. La CI
+lance ce banc (budget 34 ms) et le banc des pics du Cœur dans ce monde.
+
+Constat (machine des tests, paires alternées, 20 à 40 s) :
+- Le monde lui-même ne coûte rien : le sol (shader à N régions) et les Cœurs ne changent pas.
+- Ce qui coûte, ce sont les sortes d'ennemis des nouvelles régions : les factices tirent des
+  Chargeurs et des Cracheurs, qui passent plus de temps en pose d'action (annonce, charge), tracée
+  en direct (~10 silhouettes par image, ~60 µs pièce) et lancent des projectiles. Le banc des
+  120 Flétris passe de ~32 à ~33–44 ms selon la vitesse de la machine du jour (±10 ms d'un jour à
+  l'autre : ne comparer qu'en paires).
+- Le cache des silhouettes atteignait son plafond (8 000 maillages) en une quarantaine de secondes à
+  cinq régions et se vidait d'un coup (pire image 112 ms). Il garde maintenant deux générations de
+  6 000 : la récente, et l'ancienne dont les maillages encore utilisés sont repris (pire image 61 ms
+  sur la même paire, moyenne inchangée dans le bruit).
+- Pistes non faites : poses d'action en cache (peu de réemploi : regard × étape × sorte) ; interface
+  en texture (les emplacements coûtent ~3 à 5 ms de rendu d'après `--hide`, mais ils reçoivent la
+  souris et les infobulles).
+
 ## Pistes suivantes
 
 - **Objectif de 20 ms** : atteint à ~2 ms près sur la machine des tests du jalon 7 (22,3 ms, dont

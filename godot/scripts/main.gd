@@ -1238,7 +1238,7 @@ func _finish_benchmark() -> void:
 	for line in Prof.report(n):
 		print(line)
 	var sil = Enemy.Silhouettes
-	print("BENCHMARK silhouettes : %d dessins en cache, %d calculées pour le cache (%d maillages gardés), %d calculées en action" % [sil.hits, sil.misses, sil._meshes.size(), sil.live])
+	print("BENCHMARK silhouettes : %d dessins en cache, %d calculées pour le cache (%d maillages gardés), %d calculées en action" % [sil.hits, sil.misses, sil._meshes.size() + sil._old.size(), sil.live])
 	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
 	get_tree().quit()
 

@@ -12,6 +12,7 @@ on:
 env:
   COEUR_BUDGET_MS: 45
   COEUR_P99_MS: 90
+  CINQ_BUDGET_MS: 34
 
 jobs:
   bench:
@@ -45,6 +46,21 @@ jobs:
           set -o pipefail
           SCENE=coeur RUNS=2 BUDGET_MS=${{ env.COEUR_BUDGET_MS }} P99_MS=${{ env.COEUR_P99_MS }} tools/bench.sh | tee bench_coeur.txt
 
+      # Monde à cinq régions (régions factices de tests/regions/ tant que Sève et Aube sont des ébauches).
+      - name: Banc à cinq régions (120 Flétris, meilleure de 2 mesures)
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          REGIONS=cinq RUNS=2 BUDGET_MS=${{ env.CINQ_BUDGET_MS }} tools/bench.sh | tee bench_cinq.txt
+
+      - name: Banc des pics à cinq régions, siège du Cœur (meilleure de 2 mesures)
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          REGIONS=cinq SCENE=coeur RUNS=2 BUDGET_MS=${{ env.COEUR_BUDGET_MS }} P99_MS=${{ env.COEUR_P99_MS }} tools/bench.sh | tee bench_cinq_coeur.txt
+
       - name: Résumé du job
         if: always()
         run: |
@@ -56,5 +72,10 @@ jobs:
             echo "### Banc des pics (siège du Cœur)"
             echo '```'
             cat bench_coeur.txt 2>/dev/null
+            echo '```'
+            echo "### Banc à cinq régions"
+            echo '```'
+            cat bench_cinq.txt 2>/dev/null
+            cat bench_cinq_coeur.txt 2>/dev/null
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
