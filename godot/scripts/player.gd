@@ -3,6 +3,8 @@ extends Node2D
 
 const DASH_SPEED := 950.0
 const DASH_TIME := 0.16
+## Ébloui (éclair d'un Miroitier ou de la Phalène de verre, région d'Aube) : il marche moins vite.
+const DAZZLE_SLOW := 0.65
 ## Barre de compétences : MAX_SLOTS emplacements, dont Game.stats["skill_slots"] débloqués.
 ## Les deux premiers sont les compétences principales (clics gauche et droit, Settings.MOUSE_SLOTS),
 ## les suivants les secondaires (A E R F). Commandes : Settings.slot_action(i).
@@ -44,6 +46,8 @@ var dash_dir := Vector2.RIGHT
 var invuln := 0.0
 var still_time := 0.0
 var hurt_flash := 0.0
+## Secondes d'éblouissement restantes (apply_dazzle). Côté ennemis, l'état « ebloui » est autre chose.
+var dazzle := 0.0
 ## Direction et point visés par les compétences (le curseur ; pour le robot, sa cible).
 var aim := Vector2.RIGHT
 var aim_point := Vector2.ZERO
@@ -363,6 +367,7 @@ func _physics_process(delta: float) -> void:
 	dash_cd -= delta
 	invuln -= delta
 	hurt_flash -= delta
+	dazzle = maxf(0.0, dazzle - delta)
 	for k in cds:
 		cds[k] = maxf(0.0, cds[k] - delta)
 
@@ -402,7 +407,7 @@ func _physics_process(delta: float) -> void:
 		dash_time -= delta
 		position += dash_dir * DASH_SPEED * delta
 	else:
-		position += mv * s["move_speed"] * delta
+		position += mv * s["move_speed"] * (DAZZLE_SLOW if dazzle > 0.0 else 1.0) * delta
 	var h: float = main.world_half
 	position = position.clamp(Vector2(-h, -h), Vector2(h, h))
 	_expected = 0.0 if dash_time > 0.0 else mv.length() * s["move_speed"] * delta
@@ -546,6 +551,13 @@ func auto_target():
 	return best
 
 
+## Ébloui « dur » secondes : il marche moins vite (DAZZLE_SLOW) et l'écran blanchit, puis revient.
+func apply_dazzle(dur: float) -> void:
+	dazzle = maxf(dazzle, dur)
+	if main != null and main.get("screen_fx") != null:
+		main.screen_fx.fade(Color(1.0, 0.97, 0.86), 0.3 if Settings.reduce_effects else 0.6, 0.0, dur)
+
+
 func heal(v: float) -> void:
 	hp = minf(Game.stats["max_hp"], hp + v)
 
@@ -555,6 +567,13 @@ func take_hit(amount: float, source) -> void:
 		return
 	var s: Dictionary = Game.stats
 	var taken: float = amount * (1.0 - s["armor"])
+	# Cocon de sève : le bouclier boit le coup d'abord (scripts/skills/cocon.gd).
+	var cocoon = _skill_objects.get("cocon")
+	if cocoon != null and cocoon.shield > 0.0:
+		taken = cocoon.absorb(taken, source)
+		if taken <= 0.0:
+			invuln = 0.2
+			return
 	hp -= taken
 	hurt_flash = 0.15
 	hurt_anim = HURT_ANIM
@@ -636,6 +655,13 @@ func _draw() -> void:
 			var q := -dash_dir * (i + 1) * 13.0
 			draw_circle(q, radius * (0.85 - i * 0.18), Color(Art.ec("seve"), 0.22 - i * 0.06))
 	HeroArt.draw(self, Vector2.ZERO, radius, facing().angle(), pose())
+	if dazzle > 0.0:
+		# Ébloui : des rais de lumière tournent autour de sa tête.
+		var head := Vector2(0, -radius * 1.6)
+		for i in 4:
+			var a := t * 3.0 + i * TAU / 4.0
+			var d := Vector2.from_angle(a)
+			draw_line(head + d * radius * 0.35, head + d * radius * 0.8, Color(1.0, 0.95, 0.7, minf(1.0, dazzle * 2.0)), Art.TRAIT_FIN, true)
 	# Barre de vie : fine, sous les pieds, cachée quand la vie est pleine.
 	var ratio: float = clampf(hp / Game.stats["max_hp"], 0.0, 1.0)
 	if ratio < 0.999 and reborn >= 1.0:

@@ -137,8 +137,8 @@ func _run() -> void:
 	# s'il tombe dans une autre région : Spore, Vent…), loin de leurs bords.
 	var away := -c
 	for k in 36:
-		var p := c.rotated(PI + k * TAU / 36.0)
-		if main.region_at(p) == "" and main.region_at(p.rotated(0.6)) == "" and main.region_at(p.rotated(-0.6)) == "":
+		var p := c.rotated(PI + k * TAU / 36.0) * 1.3
+		if main.region_at(p) == "" and main.region_at(p.rotated(0.3)) == "" and main.region_at(p.rotated(-0.3)) == "":
 			away = p
 			break
 	main.player.position = away

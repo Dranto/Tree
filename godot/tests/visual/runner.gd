@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -29,10 +29,13 @@ const AttaqueScript = preload("res://tests/visual/galerie_attaque.gd")
 const RegionsScript = preload("res://tests/visual/galerie_regions.gd")
 const HeartsScript = preload("res://tests/visual/galerie_coeurs.gd")
 const PlateauxScript = preload("res://tests/visual/plateaux.gd")
+const FalaisesScript = preload("res://tests/visual/falaises.gd")
+const ValleeScript = preload("res://tests/visual/vallee.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Orb = preload("res://scripts/orb.gd")
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
+const RegionUi = preload("res://scripts/region_ui.gd")
 const TitleScene = preload("res://scenes/title.tscn")
 ## Défauts d'interface déjà connus (un par ligne : « résolution|écran|type|libellés »).
 ## Un défaut absent de cette liste fait échouer le banc ; un défaut listé qui a disparu est signalé.
@@ -78,6 +81,9 @@ func _ready() -> void:
 	Settings.bindings = Settings.BINDING_DEFAULTS.duplicate()
 	Settings.moba_main_2_key = Settings.MOBA_MAIN_2_DEFAULT
 	Settings.apply_bindings()
+	if scenario == "carte5":
+		# Monde à cinq régions et plus : les régions factices des tests complètent celles des données.
+		Regions.set_extra_dirs(["res://tests/regions/"])
 	main = MainScene.instantiate()
 	# Le robot du mode autotest joue à la place de la souris, sans ses captures ni sa fin de partie.
 	# Activé avant l'ajout à la scène : la partie ne lit ni n'écrit aucune sauvegarde.
@@ -120,6 +126,12 @@ func _ready() -> void:
 			await _scenario_marais()
 		"plateaux":
 			await PlateauxScript.new().run(self)
+		"carte5":
+			await _scenario_carte5()
+		"falaises":
+			await FalaisesScript.new().run(self)
+		"vallee":
+			await ValleeScript.new().run(self)
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -212,7 +224,7 @@ func _scenario_charte() -> void:
 ## -- --heros-anim : enregistre aussi la page animée (20 images/s) dans out/heros_anim/.
 func _scenario_heros() -> void:
 	main.set_process(false)
-	for pg in ["heros", "competences_1", "competences_2", "competences_3"]:
+	for pg in ["heros", "competences_1", "competences_2", "competences_3", "competences_4", "competences_5"]:
 		var layer := _pixel_layer()
 		var sheet = HerosScript.new()
 		sheet.view = Vector2(DisplayServer.window_get_size())
@@ -306,6 +318,49 @@ func _scenario_regions() -> void:
 	await _shot("galerie_coeurs")
 	hearts_layer.queue_free()
 	await _frames(1)
+
+
+## Carte et journal d'un monde à cinq régions et plus (celles des données et les régions factices de
+## tests/regions/) : la légende, les secteurs et les sections du journal doivent tenir à l'écran.
+## Les régions sans objectifs dans les données reçoivent ici des objectifs factices de même forme.
+func _scenario_carte5() -> void:
+	var q = main.quest_ui
+	main.autotest = false
+	main.spawn_timer = 1.0e9
+	main.player.set_physics_process(false)
+	main.hud.hint_time = 0.0
+	var objs: Array = Content._load("objectives")["objectives"]
+	for id in Regions.ids():
+		if not Objectives.for_region(id).is_empty():
+			continue
+		for e in [["sanctuaire", "Raviver un sanctuaire", true], ["coeur", "Purifier le Cœur", true], ["boss", "Vaincre le boss", true], ["autels", "Réveiller tous les autels", false]]:
+			objs.append({"id": "%s_%s" % [id, e[0]], "region": id, "main": e[2], "title": "%s (%s)" % [e[1], RegionUi.short_name(id)], "text": "Objectif factice du banc visuel.", "condition": {"type": "flag", "flag": "%s_%s_fait" % [id, e[0]]}, "target": {"type": "none"}})
+	Game.flags["sanctuaire_graine"] = true
+	Game.flags["sanctuaire_lisiere"] = true
+	Game.flags["autel_ronce_1"] = true
+	Game.flags["ronce_coeur_purifie"] = true
+	Game.flags["ronce_boss_vaincu"] = true
+	Game.flags["spore_coeur_purifie"] = true
+	for id in Regions.ids():
+		for spot in Regions.def(id).get("sanctuaries", []).slice(0, 2):
+			Game.flags["sanctuaire_" + str(spot.get("id", ""))] = true
+		for spot in Regions.def(id).get("altars", []).slice(0, 1):
+			Game.flags["autel_" + str(spot.get("id", ""))] = true
+	main.player.position = Regions.place("seve", {"dist": 900.0, "side": 0.0})
+	await _frames(10)
+	Objectives.check()
+	Objectives.main = main
+	var tag := _res_tag()
+	q.toggle("journal")
+	await _frames(3)
+	UiAudit.begin("journal")
+	UiAudit.scan_controls("journal", q.journal)
+	await _shot("journal5_" + tag, "journal")
+	q.toggle("carte")
+	await _frames(3)
+	await _shot("carte5_" + tag, "carte")
+	q.close()
+	await _frames(2)
 
 
 ## Attaque de base : chaque forme et chaque modificateur (planche tests/visual/galerie_attaque.gd).

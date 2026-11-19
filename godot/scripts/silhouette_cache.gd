@@ -23,10 +23,13 @@ const WALK_STEPS := 8
 const TIME_STEPS := 6
 ## Période des animations lentes : celle de la respiration (Anim.DUREE["respiration"]).
 const TIME_LOOP := 2.4
-## Au-delà, le cache est vidé (quelques Mo ; jamais atteint en jeu, une région a 3 ou 4 sortes).
-const MAX_MESHES := 8000
+## Taille d'une génération. Quand la récente est pleine, elle devient l'ancienne et l'ancienne est
+## jetée : les silhouettes encore utilisées sont reprises au passage, sans le pic d'un cache vidé
+## d'un coup (cinq régions, ~20 sortes : le plafond est atteint en quelques minutes de jeu).
+const MAX_MESHES := 6000
 
 static var _meshes := {}
+static var _old := {}
 static var _codes := {}
 static var _batch = _lean_batch()
 ## Compteurs (banc de performance).
@@ -44,7 +47,7 @@ static func _lean_batch():
 
 ## Vrai si cette pose peut venir du cache (pas d'action en cours, pas de rendu spécial).
 static func cacheable(o: Dictionary) -> bool:
-	return not (o.has("flash") or o.has("strike") or o.has("ash") or o.has("mono")) \
+	return not (o.has("flash") or o.has("strike") or o.has("ash") or o.has("mono") or o.has("live")) \
 		and o.get("state", "") == "" and float(o.get("k", 0.0)) <= 0.0
 
 
@@ -61,12 +64,14 @@ static func draw(ci: CanvasItem, kind_id: String, r: float, shadow_r: float, fac
 	var tint: Color = o.get("tint", Color(0, 0, 0, 0))
 	var key := kind_id + "|%d|%d|%d|%d|%d|%s" % [roundi(r * 8.0), roundi(shadow_r * 8.0), fb, wb, tb, tint.to_html()]
 	var mesh: ArrayMesh = _meshes.get(key)
-	if mesh == null:
+	if mesh == null and _old.has(key):
+		mesh = _old[key]
+		_put(key, mesh)
+		hits += 1
+	elif mesh == null:
 		misses += 1
 		mesh = _build(kind_id, r, shadow_r, fb, wb, tb, tint)
-		if _meshes.size() >= MAX_MESHES:
-			_meshes.clear()
-		_meshes[key] = mesh
+		_put(key, mesh)
 	else:
 		hits += 1
 	if mesh == null:
@@ -80,6 +85,13 @@ static func draw(ci: CanvasItem, kind_id: String, r: float, shadow_r: float, fac
 	var base := fb * TAU / FACES
 	var xf := Transform2D(ang, Vector2.ZERO) * Transform2D(0.0, sq, 0.0, Vector2.ZERO) * Transform2D(-base, Vector2.ZERO)
 	ci.draw_mesh(mesh, null, xf)
+
+
+static func _put(key: String, mesh: ArrayMesh) -> void:
+	if _meshes.size() >= MAX_MESHES:
+		_old = _meshes
+		_meshes = {}
+	_meshes[key] = mesh
 
 
 static func _build(kind_id: String, r: float, shadow_r: float, fb: int, wb: int, tb: int, tint: Color) -> ArrayMesh:
@@ -106,6 +118,7 @@ static func _build(kind_id: String, r: float, shadow_r: float, fb: int, wb: int,
 
 static func clear() -> void:
 	_meshes.clear()
+	_old.clear()
 	hits = 0
 	misses = 0
 	live = 0

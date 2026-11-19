@@ -110,7 +110,7 @@ func _physics_process(delta: float) -> void:
 			continue
 		hit[e.get_instance_id()] = true
 		_burst(position)
-		main.player_hit_enemy(e, damage, true, "ronce" if thorn else branch)
+		AttackScript.hit(main, e, damage, "ronce" if thorn else branch, attack)
 		if bleed > 0.0 and not e.dead:
 			e.apply_status("saignement", damage * bleed, bleed_duration)
 		if mods_on:
@@ -141,7 +141,7 @@ func _draw() -> void:
 
 ## Dessine un projectile centré sur l'origine, dans la direction dir, de rayon r (galerie comprise).
 ## style : « graine », « epine » (Volée d'épines), « echarde », « ronce_vive », « eclat »,
-## « spore_lobee » ou « dard » (Spore).
+## « spore_lobee » ou « dard » (Spore), « lame » (Vent), « perle » (Sève).
 ## empowered : halo de l'attaque renforcée.
 static func draw_shot(ci: CanvasItem, style: String, dir: Vector2, r: float, empowered := false) -> void:
 	var n := dir.orthogonal()
@@ -181,6 +181,8 @@ static func draw_shot(ci: CanvasItem, style: String, dir: Vector2, r: float, emp
 			ci.draw_circle(back - n * r * 0.15, r * 0.2, clair)
 		"lame":
 			VentFx.draw_lame(ci, dir, r)
+		"perle":
+			SeveFx.draw_perle(ci, dir, r)
 		"epine", "eclat":
 			# Épine d'os : pointe claire vers l'avant, une moitié dans l'ombre, base teintée de sang.
 			var clair := Art.ec("epine", "clair")

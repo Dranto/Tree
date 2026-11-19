@@ -145,6 +145,44 @@
       "deflect": true,
       "fx": "bourrasque",
       "sfx": "bourrasque"
+    },
+    "perle": {
+      "name": "Perles de sève",
+      "desc": "De lourdes perles de sève qui éclaboussent à l'impact ; chaque perle qui touche te rend un peu de vie.",
+      "kind": "projectile",
+      "tags": ["projectile"],
+      "branch": "seve",
+      "element": "seve",
+      "priority": 2,
+      "damage": 1.6,
+      "rate": 1.0,
+      "range": 600,
+      "speed": 560,
+      "spread": 0.2,
+      "pierce": 0,
+      "size": 1.35,
+      "splash": 0.7,
+      "splash_radius": 64,
+      "leech": 0.04,
+      "sound": "seve_goutte"
+    },
+    "rayon": {
+      "name": "Rayon d'aube",
+      "desc": "Un rayon de lumière qui part d'un coup jusqu'à sa portée et traverse tout ce qu'il touche ; il vise juste (+5 % de chance de critique).",
+      "kind": "beam",
+      "tags": ["projectile"],
+      "branch": "aube",
+      "element": "lumiere",
+      "priority": 2,
+      "damage": 1.0,
+      "rate": 1.0,
+      "range": 640,
+      "width": 26,
+      "spread": 0.22,
+      "crit": 0.05,
+      "size": 1.0,
+      "fx": "rayon",
+      "sound": "aube_rayon"
     }
   },
   "mods": {
@@ -152,7 +190,7 @@
       "name": "Fourche",
       "text": "Au premier coup, le projectile se divise : +{v} branche(s).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive", "dard", "lame"],
+      "forms": ["graine", "echarde", "ronce_vive", "dard", "lame", "perle"],
       "angle": 0.42,
       "factor": 0.6
     },
@@ -160,7 +198,7 @@
       "name": "Ricochet",
       "text": "Le projectile rebondit vers un autre ennemi : +{v} rebond(s).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive", "dard"],
+      "forms": ["graine", "echarde", "ronce_vive", "dard", "perle"],
       "reach": 240,
       "factor": 0.8
     },
@@ -189,7 +227,7 @@
       "name": "Traînée d'épines",
       "text": "Le projectile sème des épines au sol ({p} % des dégâts par seconde).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive", "dard"],
+      "forms": ["graine", "echarde", "ronce_vive", "dard", "perle"],
       "every": 56,
       "radius": 18,
       "duration": 1.6,
@@ -257,6 +295,39 @@
     "repousse": {
       "name": "Repousse",
       "text": "Chaque coup repousse l'ennemi de {v} pixels.",
+      "stack": "sum"
+    },
+    "sangsue": {
+      "name": "Sangsue",
+      "text": "Chaque coup de l'attaque te rend {p} % des dégâts infligés.",
+      "stack": "sum"
+    },
+    "rosee": {
+      "name": "Rosée",
+      "text": "Un ennemi tué par l'attaque te rend {p} % de ta vie maximale (au plus quatre fois par seconde).",
+      "stack": "sum",
+      "per_second": 4
+    },
+    "eblouit": {
+      "name": "Éblouissement",
+      "text": "{p} % de chances d'éblouir l'ennemi touché (2,5 s) : les coups critiques le trouvent plus souvent.",
+      "stack": "sum",
+      "cap": 1.0,
+      "duration": 2.5,
+      "crit": 0.2
+    },
+    "refraction": {
+      "name": "Réfraction",
+      "text": "Au premier ennemi touché, le rayon se brise en {v} rayon(s) obliques (60 % des dégâts).",
+      "stack": "sum",
+      "forms": ["rayon"],
+      "angle": 0.55,
+      "factor": 0.6,
+      "length": 0.5
+    },
+    "incandescence": {
+      "name": "Incandescence",
+      "text": "Les coups critiques de l'attaque font {p} % de dégâts en plus.",
       "stack": "sum"
     }
   }

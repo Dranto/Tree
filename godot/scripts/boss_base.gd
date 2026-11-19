@@ -257,7 +257,8 @@ func apply_poison(dps: float, duration: float) -> void:
 
 
 ## États posés par les compétences. « saignement » : dégâts par seconde, cumulable max_bleed_stacks
-## fois. « enracine » : il est déjà enraciné, mais prépare ses attaques plus lentement tant que
+## fois. « ebloui » : chance de critique en plus contre lui (moitié de value, 2 s au plus).
+## « enracine » : il est déjà enraciné, mais prépare ses attaques plus lentement tant que
 ## l'état dure, puis y résiste root_immunity secondes.
 func apply_status(status: String, value: float, duration: float) -> void:
 	if dead:
@@ -274,6 +275,12 @@ func apply_status(status: String, value: float, duration: float) -> void:
 				return
 			statuses[status] = {"value": value, "time": minf(duration, 3.0), "stacks": 1}
 			main.fx.text(position + Vector2(0, -radius * 2.0), "Entravée", Color("9af07a"), 18, 0.8)
+		"ebloui":
+			# Ébloui (Aube) : moitié moins de critiques en plus qu'un Flétri, 2 s au plus (main.dazzle_of).
+			var s: Dictionary = statuses.get(status, {"value": 0.0, "time": 0.0, "stacks": 1})
+			s["value"] = maxf(float(s["value"]), value * 0.5)
+			s["time"] = maxf(float(s["time"]), minf(duration, 2.0))
+			statuses[status] = s
 		_:
 			statuses[status] = {"value": value, "time": duration, "stacks": 1}
 

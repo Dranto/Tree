@@ -74,6 +74,10 @@ var grid = SpatialGrid.new()
 var enemies: Array = []
 ## Dégâts du coup de racines en cours (contexte de l'évènement « root »), 0 hors de ce coup.
 var root_hit_base := 0.0
+## Coup en cours d'une forme ou d'une compétence d'Aube (attack.gd › beam, skills/lance_aube.gd) :
+## chance de critique ajoutée, et part de dégâts en plus quand il est critique (« incandescence »).
+var hit_crit_bonus := 0.0
+var hit_crit_extra := 0.0
 ## Ennemis trop gros pour la grille spatiale (boss) : testés à part dans enemies_near.
 var big_enemies: Array = []
 ## Cœur de flétrissure et arène de la Mère-Ronce (région de Ronce).
@@ -752,11 +756,12 @@ func spawn_projectile(pos: Vector2, vel: Vector2, damage: float, pierce: int, si
 func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void:
 	var s: Dictionary = Game.stats
 	var dmg := base * branch_factor(e, branch)
-	var crit: bool = rng.randf() < s["crit"]
+	# Un ennemi ébloui (Aube) est plus souvent frappé en critique.
+	var crit: bool = rng.randf() < s["crit"] + hit_crit_bonus + dazzle_of(e)
 	if crit:
-		dmg *= s["crit_mult"]
-	# Les étincelles du coup prennent la couleur de son élément (charte) : racines ou épines de Ronce.
-	fx.hit_element = "racine" if root_hit_base > 0.0 else ("epine" if branch == "ronce" else "")
+		dmg *= s["crit_mult"] * (1.0 + hit_crit_extra)
+	# Les étincelles du coup prennent la couleur de son élément (charte) : racines, épines de Ronce, lumière d'Aube.
+	fx.hit_element = "racine" if root_hit_base > 0.0 else ("epine" if branch == "ronce" else ("lumiere" if branch == "aube" else ""))
 	e.take_damage(dmg, crit)
 	fx.hit_element = ""
 	Sfx.play(enemy_sound(e, "sound_crit" if crit else "sound_hit", "critique" if crit else "impact"), e.position)
@@ -768,6 +773,15 @@ func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void
 		player.heal(dmg * s["lifesteal"])
 	if crit and can_explode:
 		Game.fire("crit", enemy_ctx(e, base))
+
+
+## Chance de critique en plus contre un ennemi ébloui (état « ebloui » d'Aube), 0 sinon.
+func dazzle_of(e) -> float:
+	if "dazzle_time" in e:
+		return e.dazzle_value if e.dazzle_time > 0.0 else 0.0
+	if "statuses" in e:
+		return float(e.statuses.get("ebloui", {}).get("value", 0.0))
+	return 0.0
 
 
 ## Contexte d'un évènement qui vise un ennemi, avec les états des conditions « cible_… ».
@@ -786,6 +800,7 @@ func enemy_ctx(e, base: float) -> Dictionary:
 		"cible_empoisonnee": e.poison_time,
 		"cible_saignante": bleeding,
 		"cible_enracinee": rooted,
+		"cible_eblouie": 1.0 if dazzle_of(e) > 0.0 else 0.0,
 	}
 
 
@@ -1238,7 +1253,7 @@ func _finish_benchmark() -> void:
 	for line in Prof.report(n):
 		print(line)
 	var sil = Enemy.Silhouettes
-	print("BENCHMARK silhouettes : %d dessins en cache, %d calculées pour le cache (%d maillages gardés), %d calculées en action" % [sil.hits, sil.misses, sil._meshes.size(), sil.live])
+	print("BENCHMARK silhouettes : %d dessins en cache, %d calculées pour le cache (%d maillages gardés), %d calculées en action" % [sil.hits, sil.misses, sil._meshes.size() + sil._old.size(), sil.live])
 	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
 	get_tree().quit()
 

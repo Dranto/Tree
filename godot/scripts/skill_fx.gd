@@ -45,7 +45,7 @@ func play(id: String, data := {}) -> Dictionary:
 	e["id"] = id
 	e["t"] = 0.0
 	if not e.has("dur"):
-		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, 0.4))
+		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, SeveFx.DUREE.get(id, 0.4))))
 	if Settings.reduce_effects and id in ["graine_depart", "graine_impact"]:
 		return e
 	while effects.size() >= MAX_EFFECTS:
@@ -89,6 +89,12 @@ static func draw_effect(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 	var k: float = clampf(e["t"] / maxf(e["dur"], 0.001), 0.0, 1.0)
 	if VentFx.draws(e["id"]):
 		VentFx.draw(ci, e, on_ground)
+		return
+	if AubeFx.draws(e["id"]):
+		AubeFx.draw(ci, e, on_ground)
+		return
+	if SeveFx.draws(e["id"]):
+		SeveFx.draw(ci, e, on_ground)
 		return
 	match e["id"]:
 		"graine_depart":
@@ -519,6 +525,8 @@ static func _bloom(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 			var q := p + d * r * g * (0.6 + 0.3 * fposmod(i * 0.618, 1.0))
 			var h := 5.0 * g
 			var gc := Color(Art.c("decor_vivant").lightened(0.35), a)
+			if h < 0.5:
+				continue   # onde pas encore partie : une feuille de taille nulle ne se triangule pas
 			ci.draw_line(q, q + Vector2(0, -h * 1.4), gc, 1.5, true)
 			for sgn: int in [-1, 1]:
 				ci.draw_colored_polygon(HeroArt.leaf_pts(q + Vector2(sgn * h * 0.6, -h), h * 0.6, -PI / 2.0 + sgn * 0.9), gc)

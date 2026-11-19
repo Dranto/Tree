@@ -3,3 +3,6 @@
 export/
 autotest/
 tests/visual/out/
+
+# Identifiants de scripts générés par Godot 4.7 : non suivis.
+*.uid

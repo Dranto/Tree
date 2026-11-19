@@ -2,5 +2,6 @@
   "immobile": {"label": "immobile depuis {min} s"},
   "cible_empoisonnee": {"label": "si la cible est empoisonnée"},
   "cible_saignante": {"label": "si la cible saigne ({min} piqûres ou plus)"},
-  "cible_enracinee": {"label": "si la cible est enracinée"}
+  "cible_enracinee": {"label": "si la cible est enracinée"},
+  "cible_eblouie": {"label": "si la cible est éblouie"}
 }

@@ -4,6 +4,8 @@
 ## cumulables (fourche, ricochet, saignement…). L'arbre les change par deux effets de nœud :
 ##   {"attack_form": "fouet"}                     remplace la forme (une seule active)
 ##   {"attack_mod": "fourche", "value": 1}        ajoute un modificateur (cumulable)
+## Trois sortes de formes (« kind ») : projectile, melee (arc autour du joueur) et beam (rayon d'Aube,
+## instantané, qui traverse tout).
 ## Le moteur d'effets (effects.gd) les collecte ; resolve() en tire l'état de l'attaque, recalculé
 ## depuis les nœuds appris (rien n'est sauvegardé en plus).
 ##
@@ -27,7 +29,7 @@ const Feather = preload("res://scripts/vent_feather.gd")
 const TAG_STATS := {"corps_a_corps": "melee_damage", "projectile": "projectile_damage", "zone": "area_damage"}
 ## « Se battre chez soi » : bonus d'une forme de Ronce sur une terre ravivée de sa région (player.gd).
 const HOME_BONUS := 0.15
-const KINDS := ["projectile", "melee"]
+const KINDS := ["projectile", "melee", "beam"]
 const STACKS := ["sum", "min", "max"]
 
 
@@ -103,6 +105,8 @@ static func resolve(forms_list: Array, mods_list: Array) -> Dictionary:
 		factor = float(defs["renforcee"].get("factor", 2.0))
 	if out.has("enracine"):
 		out["enracine"] = minf(float(out["enracine"]), float(defs["enracine"].get("cap", 1.0)))
+	if out.has("eblouit"):
+		out["eblouit"] = minf(float(out["eblouit"]), float(defs["eblouit"].get("cap", 1.0)))
 	return {"form": best, "mods": out, "factor": factor}
 
 
@@ -278,10 +282,13 @@ static func _dir_to(player, target) -> Vector2:
 ## Un tir : selon la forme, un éventail de projectiles ou un coup en arc.
 static func _emit(player, st: Dictionary, shot: Dictionary) -> void:
 	var f := form_def(st)
-	if str(f.get("kind", "projectile")) == "melee":
-		_strike(player, st, shot)
-	else:
-		_shoot(player, st, shot)
+	match str(f.get("kind", "projectile")):
+		"melee":
+			_strike(player, st, shot)
+		"beam":
+			_beam(player, st, shot)
+		_:
+			_shoot(player, st, shot)
 
 
 static func _directions(st: Dictionary, shot: Dictionary, count: int, spread: float) -> Array:
@@ -425,7 +432,7 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 		var d: Vector2 = e.position - player.position
 		if arc < TAU and d.length() > 1.0 and absf(dir.angle_to(d)) > arc / 2.0 + e.radius / maxf(d.length(), 1.0):
 			continue
-		main.player_hit_enemy(e, dmg, true, str(f.get("branch", "")))
+		hit(main, e, dmg, str(f.get("branch", "")), on_hit)
 		apply_on_hit(main, on_hit, e, dmg, e.position)
 		if e.dead:
 			continue
@@ -447,6 +454,96 @@ static func _deflect(main, from: Vector2, dir: Vector2, r: float, arc: float) ->
 		sh.queue_free()
 
 
+# --- Rayon d'aube ---
+
+## Rayon d'aube (forme « beam ») : un ou plusieurs rayons partent d'un coup jusqu'à la portée et
+## frappent tout ce qu'ils traversent (une fois chacun), dans l'ordre du plus proche au plus loin.
+static func _beam(player, st: Dictionary, shot: Dictionary) -> void:
+	var main = player.main
+	var s := _stats()
+	var f := form_def(st)
+	var empowered: bool = shot.get("empowered", false)
+	var defs := mods()
+	var count := int(s.get("projectiles", 1))
+	if empowered:
+		count += int(defs.get("renforcee", {}).get("extra", 2))
+	var dmg := hit_damage(player, st)
+	var width: float = float(f.get("width", 14.0)) * float(s.get("projectile_size", 1.0)) * float(f.get("size", 1.0)) * (1.0 + mod(st, "taille"))
+	if empowered:
+		dmg *= float(st["factor"])
+		width *= float(defs.get("renforcee", {}).get("size", 1.5))
+	if shot.get("burst", 0) == 0 and not shot.get("salvo", false):
+		# « aube_rayon » : son de la branche (synth.gd, PR du son d'Aube) ; muet tant qu'il n'existe pas.
+		_sfx(str(f.get("sound", "aube_rayon")))
+	var on_hit := _hit_mods(st)
+	var branch := str(f.get("branch", ""))
+	for dir in _directions(st, shot, count, float(f.get("spread", 0.2))):
+		beam_line(main, player.position + dir * 18.0, dir, reach(st), width, dmg, on_hit, branch, empowered)
+	if empowered:
+		_afx(main, "renforcee", {"pos": player.position, "follow": player, "element": str(f.get("element", "lumiere"))})
+	if shot.get("ring", false):
+		_afx(main, "volee", {"pos": player.position, "r": 60.0, "element": str(f.get("element", "lumiere"))})
+
+
+## Un rayon de « from » vers « dir », long de « length », large de « width » : frappe chaque ennemi
+## qu'il traverse (effets au coup compris) et se brise à son premier ennemi (« refraction »).
+## « skip » : ennemi à ne pas frapper (celui où un rayon brisé prend naissance). Renvoie les touchés.
+static func beam_line(main, from: Vector2, dir: Vector2, length: float, width: float, dmg: float, m: Dictionary,
+		branch := "aube", empowered := false, skip = null) -> Array:
+	_afx(main, str(forms().get(str(m.get("form", "rayon")), {}).get("fx", "rayon")),
+		{"pos": from, "dir": dir, "len": length, "w": width, "empowered": empowered})
+	var out: Array = []
+	for e in beam_targets(main, from, dir, length, width, skip):
+		if e.dead:
+			continue
+		hit(main, e, dmg, branch, m)
+		apply_on_hit(main, m, e, dmg, e.position)
+		out.append(e)
+	if m.has("refraction") and not out.is_empty():
+		var def: Dictionary = mods().get("refraction", {})
+		var first = out[0]
+		var at: Vector2 = from + dir * clampf((first.position - from).dot(dir), 0.0, length)
+		var rest := m.duplicate()
+		rest.erase("refraction")
+		var n := int(round(float(m["refraction"])))
+		var ang := float(def.get("angle", 0.55))
+		for i in n:
+			var side := -1.0 if i % 2 == 0 else 1.0
+			var k := float(i / 2 + 1)
+			beam_line(main, at, dir.rotated(side * ang * k), length * float(def.get("length", 0.5)), width * 0.7,
+				dmg * float(def.get("factor", 0.6)), rest, branch, false, first)
+	return out
+
+
+## Ennemis traversés par un rayon (segment de largeur « width »), du plus proche au plus loin.
+static func beam_targets(main, from: Vector2, dir: Vector2, length: float, width: float, skip = null) -> Array:
+	var half := length / 2.0
+	var hits: Array = []
+	for e in main.enemies_near(from + dir * half, half + width):
+		if e.dead or e == skip:
+			continue
+		var rel: Vector2 = e.position - from
+		var along := rel.dot(dir)
+		if along < -e.radius or along > length + e.radius or absf(rel.cross(dir)) > width / 2.0 + e.radius:
+			continue
+		hits.append([along, e])
+	hits.sort_custom(func(a, b): return a[0] < b[0])
+	return hits.map(func(h): return h[1])
+
+
+## Un coup de l'attaque de base : la forme peut viser plus juste (« crit » de attack.json) et
+## l'incandescence ajoute des dégâts aux critiques (main.hit_crit_bonus / hit_crit_extra).
+static func hit(main, e, dmg: float, branch: String, m: Dictionary) -> void:
+	var tuned: bool = "hit_crit_bonus" in main
+	if tuned:
+		main.hit_crit_bonus = float(forms().get(str(m.get("form", "")), {}).get("crit", 0.0))
+		main.hit_crit_extra = float(m.get("incandescence", 0.0))
+	main.player_hit_enemy(e, dmg, true, branch)
+	if tuned:
+		main.hit_crit_bonus = 0.0
+		main.hit_crit_extra = 0.0
+
+
 # --- Effets au coup ---
 
 ## Modificateurs appliqués à chaque ennemi touché par l'attaque (projectile ou fouet) :
@@ -454,11 +551,16 @@ static func _deflect(main, from: Vector2, dir: Vector2, r: float, arc: float) ->
 static func apply_on_hit(main, m: Dictionary, e, dmg: float, at: Vector2) -> void:
 	var defs := mods()
 	var s := _stats()
+	# Sangsue (Sève) : chaque coup rend une part de ses dégâts, même celui qui tue.
+	if m.has("sangsue"):
+		_heal(main, dmg * float(m["sangsue"]))
 	if e.dead:
 		if m.has("eclat"):
 			_shards(main, m, at, dmg * float(m["eclat"]))
 		if m.has("bouffee"):
 			_puff(main, at, dmg * float(m["bouffee"]))
+		if m.has("rosee"):
+			_dew(main, at, float(m["rosee"]))
 		return
 	if m.has("saignement"):
 		e.apply_status("saignement", dmg * float(m["saignement"]), float(defs["saignement"].get("duration", 4.0)) * float(s.get("bleed_duration", 1.0)))
@@ -471,6 +573,45 @@ static func apply_on_hit(main, m: Dictionary, e, dmg: float, at: Vector2) -> voi
 	if m.has("enracine") and main.rng.randf() < float(m["enracine"]):
 		e.apply_status("enracine", 1.0, float(defs["enracine"].get("duration", 0.8)) * float(s.get("root_duration", 1.0)))
 		_afx(main, "enracine", {"pos": e.position, "r": float(e.radius)})
+	if m.has("eblouit") and main.rng.randf() < float(m["eblouit"]):
+		e.apply_status("ebloui", float(defs["eblouit"].get("crit", 0.2)), float(defs["eblouit"].get("duration", 2.5)))
+
+
+## Soigne le joueur de « amount » points de vie (Sève : sangsue, perles, rosée).
+static func _heal(main, amount: float) -> void:
+	if amount > 0.0 and "player" in main and main.player != null:
+		main.player.heal(amount)
+
+
+## Rosée (Sève) : l'ennemi tué rend « part » de la vie maximale, au plus « per_second » fois par
+## seconde (l'horloge est celle du joueur, pour rester rejouable).
+static func _dew(main, at: Vector2, part: float) -> void:
+	if not ("player" in main) or main.player == null:
+		return
+	var pl = main.player
+	var rt := _rt(pl)
+	var every := 1.0 / maxf(float(mods().get("rosee", {}).get("per_second", 4)), 0.1)
+	var now: float = float(pl.t) if "t" in pl else 0.0
+	if now - float(rt.get("dew_at", -INF)) < every:
+		return
+	rt["dew_at"] = now
+	_heal(main, float(_stats().get("max_hp", 100.0)) * part)
+	_afx(main, "rosee", {"from": at, "pos": pl.position, "follow": pl})
+
+
+## Perles de sève : la perle éclabousse les ennemis autour de l'impact (« splash » × ses dégâts,
+## dans « splash_radius » × taille des zones) et rend au joueur « leech » × ses dégâts.
+static func _splash(p, e, f: Dictionary) -> void:
+	var main = p.main
+	_heal(main, p.damage * float(f.get("leech", 0.0)))
+	var part := float(f.get("splash", 0.0))
+	if part <= 0.0:
+		return
+	var r := float(f.get("splash_radius", 50.0)) * float(_stats().get("area", 1.0)) * maxf(1.0, p.radius / 6.0 / 1.35)
+	_afx(main, "perle_eclat", {"pos": e.position, "r": r})
+	for o in main.enemies_near(e.position, r):
+		if o != e and not o.dead:
+			main.player_hit_enemy(o, p.damage * part, false, "seve")
 
 
 ## Éclat à la mort : des épines partent en étoile de l'ennemi tué. Elles ne refont pas d'éclat.
@@ -493,6 +634,9 @@ static func _shards(main, m: Dictionary, at: Vector2, dmg: float) -> void:
 static func on_projectile_hit(p, e) -> void:
 	var m: Dictionary = p.attack
 	apply_on_hit(p.main, m, e, p.damage, e.position)
+	var f: Dictionary = forms().get(str(m.get("form", "")), {})
+	if f.has("splash") or f.has("leech"):
+		_splash(p, e, f)
 	if m.has("fourche") and not p.forked:
 		p.forked = true
 		var def: Dictionary = mods().get("fourche", {})
@@ -585,7 +729,7 @@ static func land(p) -> void:
 	for e in main.enemies_near(p.position, r):
 		if e.dead:
 			continue
-		main.player_hit_enemy(e, p.damage, true, p.branch)
+		hit(main, e, p.damage, p.branch, m)
 		apply_on_hit(main, m, e, p.damage, e.position)
 	var tick := float(f.get("cloud_tick", 0.5))
 	# Dégâts du nuage : part des dégâts du coup par seconde, à chaque à-coup.
@@ -758,6 +902,8 @@ static func validate() -> PackedStringArray:
 			errors.append(w + " : une forme à projectiles demande « speed »")
 		if str(f.get("kind", "")) == "melee" and not (f.get("arc") is float or f.get("arc") is int):
 			errors.append(w + " : une forme au corps à corps demande « arc »")
+		if str(f.get("kind", "")) == "beam" and not (f.get("width") is float or f.get("width") is int):
+			errors.append(w + " : un rayon demande « width »")
 		for tag in f.get("tags", []) + f.get("trap_tags", []):
 			if not TAG_STATS.has(tag):
 				errors.append("%s : famille inconnue « %s » (attendu : %s)" % [w, tag, ", ".join(TAG_STATS.keys())])

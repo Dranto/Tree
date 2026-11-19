@@ -81,5 +81,45 @@
     "branch": "vent", "tags": ["zone"],
     "desc": "Nouvelle compétence : un tourbillon aspire les ennemis vers l'endroit visé, puis éclate sur eux.",
     "damage": 3.2, "range": 420, "radius": 230, "pull_time": 0.6, "root": 0
+  },
+  "liane": {
+    "name": "Liane buveuse", "short": "Liane", "color": "#5fc48a", "cooldown": 5,
+    "branch": "seve", "tags": ["zone"],
+    "desc": "Nouvelle compétence : des lianes s'accrochent aux ennemis autour de l'endroit visé, boivent leur vie et te la rendent.",
+    "range": 460, "radius": 200, "count": 3, "duration": 3.5, "tick": 0.25, "damage": 2.6,
+    "drain": 0.5, "leash": 560, "jump": false, "root": 0
+  },
+  "fontaine": {
+    "name": "Fontaine de sève", "short": "Fontaine", "color": "#8af5c0", "cooldown": 12,
+    "branch": "seve", "tags": ["zone"],
+    "desc": "Nouvelle compétence : une source de sève jaillit à tes pieds ; tant que tu t'y tiens, tu régénères vite, et elle ronge les ennemis qui y entrent.",
+    "radius": 140, "duration": 6, "regen": 0.05, "tick": 0.5, "damage": 1.4,
+    "follow": false, "geyser": 0
+  },
+  "cocon": {
+    "name": "Cocon de sève", "short": "Cocon", "color": "#b8f0a0", "cooldown": 14,
+    "branch": "seve", "tags": ["zone"],
+    "desc": "Nouvelle compétence : un cocon de sève t'enveloppe et absorbe les coups ; à la fin, ce qui reste te soigne et le cocon éclate.",
+    "shield": 0.3, "duration": 4, "convert": 1.0, "radius": 140, "damage": 1.5, "knockback": 60, "reflect": 0
+  },
+  "aurore": {
+    "name": "Aurore", "short": "Aurore", "color": "#ffe14d", "cooldown": 6,
+    "branch": "aube", "tags": ["zone"],
+    "desc": "Nouvelle compétence : une onde de lumière part de toi, blesse et éblouit les ennemis autour (ils subissent plus de coups critiques).",
+    "damage": 1.6, "radius": 210, "dazzle": 0.3, "dazzle_time": 3.0, "waves": 1, "heal": 0
+  },
+  "prisme": {
+    "name": "Prisme", "short": "Prisme", "color": "#fff1a8", "cooldown": 8,
+    "branch": "aube", "tags": ["projectile"],
+    "desc": "Nouvelle compétence : tu poses un cristal à l'endroit visé ; il tire des rayons sur les ennemis proches pendant quelques secondes.",
+    "damage": 0.9, "range": 380, "life": 6, "every": 0.45, "reach": 340, "width": 12,
+    "beams": 1, "max": 2, "dazzle": 0, "follow": false
+  },
+  "lance_aube": {
+    "name": "Lance d'aube", "short": "Lance", "color": "#ffd23a", "cooldown": 5,
+    "branch": "aube", "tags": ["projectile"],
+    "desc": "Nouvelle compétence : après un court instant, un grand rayon part vers l'endroit visé et traverse tout ; il touche toujours en critique un ennemi ébloui.",
+    "damage": 4.0, "length": 900, "width": 44, "windup": 0.3, "crit_dazzled": 1.0,
+    "dazzle": 0, "repeat": 0
   }
 }

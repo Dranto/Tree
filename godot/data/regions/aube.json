@@ -1,0 +1,87 @@
+{
+  "_doc": "Région d'Aube (les falaises de verre). Format décrit dans data/README.md, « Régions ». Positions : « dist » = distance à la graine en pixels ; « side » = écart au milieu du secteur, de -1 (bord gauche) à 1 (bord droit), ou « angle » = écart en radians. Secteur ouest, peu profond : l'arène tient en « offset » + « radius » ≤ 1190 px (voir Regions.reach).",
+  "id": "aube",
+  "branch": "aube",
+  "name": "Région d'Aube",
+  "place": "les falaises de verre",
+  "map_name": "Falaises",
+  "color": "#f2d06b",
+  "art": "aube",
+  "ground": {
+    "_doc": "Falaises : calcaire pâle et verre fumé, brûlés d'une lumière crue tant que le Cœur vit ; une prairie dorée de l'aube une fois ravivée, semée d'éclats de verre qui brillent.",
+    "colors": {
+      "calcaire": {"mix": ["sol_mort", "#a49c86", 0.42]},
+      "pre": {"mix": [{"mix": ["sol_vivant", "#f2d06b", 0.22]}, "or", 0.1]}
+    },
+    "dead_dark": {"dark": ["$calcaire", 0.2]},
+    "dead_light": {"light": ["$calcaire", 0.08]},
+    "purified_dark": {"dark": [{"mix": ["sol_mort", "#f2d06b", 0.2]}, 0.14]},
+    "purified_light": {"mix": ["sol_mort", "#f2d06b", 0.3]},
+    "alive_dark": {"dark": ["$pre", 0.2]},
+    "alive_light": {"light": [{"mix": ["$pre", "#fff4cf", 0.24]}, 0.06]},
+    "dot": "#f0fbff",
+    "dot_cell": 13.0,
+    "dot_rarity": 0.986,
+    "dot_salt": [41.0, 67.0],
+    "dot_size": 0.14,
+    "dot_strength": 0.75,
+    "alive_mix": 0.85,
+    "alive_mix_purified": 0.35
+  },
+  "decor": {"kind": "falaise", "seed": 33, "crystals": 70, "cliffs": 18, "shards": 260, "clear_center": 340.0, "clear_seed": 560.0},
+  "landmarks": [
+    {"kind": "ruine", "dist": 1100.0, "angle": 0.38, "size": 1.0},
+    {"kind": "rocher", "dist": 1480.0, "angle": -0.42, "size": 1.1},
+    {"kind": "grand_arbre", "dist": 2150.0, "angle": 0.4, "size": 0.9}
+  ],
+  "spawn": {
+    "kinds": {"luciole": 0.34, "miroitier": 0.24, "prismeur": 0.24, "quartz": 0.18},
+    "share_near": 0.28,
+    "share_far": 0.82,
+    "far": 2400,
+    "max_nests": 0,
+    "purified_factor": 0.4
+  },
+  "sanctuaries": [
+    {"id": "aube_seuil", "name": "du Seuil", "dist": 820.0, "angle": 0.3},
+    {"id": "aube_verre", "name": "du Verre", "dist": 1250.0, "angle": -0.3},
+    {"id": "aube_prisme", "name": "du Prisme", "dist": 1700.0, "angle": 0.38},
+    {"id": "aube_zenith", "name": "du Zénith", "dist": 2200.0, "angle": -0.3}
+  ],
+  "altars": [
+    {"id": "aube_1", "name": "Autel de l'éclat", "dist": 980, "side": 0.85, "points": 1, "graft": "greffe_eclat_verre"},
+    {"id": "aube_2", "name": "Autel du prisme", "dist": 1350, "side": -0.72, "points": 1, "graft": "greffe_prisme"},
+    {"id": "aube_3", "name": "Autel de la rosée", "dist": 2050, "side": 0.74, "points": 1, "graft": "greffe_rosee"},
+    {"id": "aube_4", "name": "Autel de la lueur", "dist": 2500, "side": -0.5, "points": 1, "graft": "greffe_lueur"}
+  ],
+  "secrets": [
+    {"id": "aube", "name": "La lumière première", "dist": 2350, "side": -0.95, "points": 1, "graft": "greffe_lumiere_premiere"}
+  ],
+  "heart": {
+    "name": "Cœur de l'aurore",
+    "zone": 240.0,
+    "hold_time": 30.0,
+    "waves": {"every": 6.0, "base": 4, "growth": 2, "kinds": ["fletri", "luciole"], "second_share": 0.45, "big": "quartz", "big_from": 2},
+    "idle": {"every": 3.5, "max": 6, "kind": "luciole"},
+    "reward": {"points": 1},
+    "life_radius": 820.0,
+    "life_color": "#fff4cf",
+    "wake_banner": "Le Cœur de l'aurore s'éveille : tiens la zone malgré la lumière crue !",
+    "purified_banner": "Le Cœur de l'aurore est purifié : le cercle de la Phalène s'ouvre."
+  },
+  "boss": {
+    "script": "res://scripts/boss_aube.gd",
+    "name": "La Phalène de verre",
+    "bar_color": "#f2d06b",
+    "reward": {"points": 2, "graft": "greffe_aile_de_verre"},
+    "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : la Phalène brise la lumière", "Phase 3 sur 3 : la lumière tombe du ciel"],
+    "arena": {"radius": 460.0, "radius_min": 320.0, "offset": 720.0, "life_color": "#fff4cf"},
+    "wake_banner": "La Phalène de verre ouvre ses ailes.",
+    "defeated_banner": "La Phalène de verre est vaincue !"
+  },
+  "ending": {
+    "sub": "Région d'Aube purifiée",
+    "title": "Le jour se lève sur les falaises",
+    "body": "La Phalène de verre s'est brisée. Sur les falaises, la lumière n'aveugle plus : elle dore l'herbe neuve et fait chanter le verre, et l'Arbre de vie boit sa première aube."
+  }
+}

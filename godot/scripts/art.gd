@@ -108,8 +108,13 @@ const ELEMENTS := {
 		"couleur": Color("a4bcd4"), "clair": Color("e8f2fa"), "sombre": Color("2e4458"),
 		"motif": "rafales",
 	},
+	"lumiere": {
+		"nom": "Lumière", "sens": "éblouit, révèle, frappe juste : rayons et coups critiques",
+		"couleur": Color("fffb3d"), "clair": Color("fffde6"), "sombre": Color("6e6410"),
+		"motif": "rayons",
+	},
 }
-const ELEMENT_IDS := ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent"]
+const ELEMENT_IDS := ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent", "lumiere"]
 
 ## Couleur d'un élément : variante "couleur" (par défaut), "clair" ou "sombre".
 static func ec(element: String, variante := "couleur") -> Color:
@@ -125,6 +130,8 @@ const ELEMENT_DE_COMPETENCE := {
 	"saignee": "saignement", "cloud": "poison", "bloom": "seve",
 	"vesse": "poison", "essaim": "poison", "eclosion": "poison",
 	"tornade": "vent", "ruee": "vent", "appel_air": "vent",
+	"aurore": "lumiere", "prisme": "lumiere", "lance_aube": "lumiere",
+	"liane": "seve", "fontaine": "seve", "cocon": "seve",
 }
 
 # --- Traits, ombres, lumière ---
@@ -271,6 +278,15 @@ static func status(ci: CanvasItem, element: String, pos: Vector2, r: float, t :=
 			for i in 3:
 				var a := t * 2.4 + i * TAU / 3.0
 				ci.draw_arc(pos, r * (1.2 + 0.12 * i), a, a + 1.1, 12, Color(e["clair"], 0.85 - 0.2 * i), TRAIT_FIN, true)
+		"lumiere":
+			# Ébloui : une étoile de rayons au-dessus de la tête, qui scintille.
+			var b := 0.5 + 0.5 * sin(t * 6.0)
+			var c := pos + Vector2(0, -r * 1.25)
+			for i in 4:
+				var d := Vector2.from_angle(i * TAU / 4.0 + t * 0.8)
+				ci.draw_line(c - d * r * 0.42 * (0.7 + 0.3 * b), c + d * r * 0.42 * (0.7 + 0.3 * b), Color(e["clair"], 0.9), TRAIT_FIN, true)
+			ci.draw_circle(c, r * 0.14, e["couleur"])
+			ci.draw_arc(pos, r * 1.15, 0.0, TAU, 24, Color(e["couleur"], 0.25 + 0.3 * b), TRAIT_FIN, true)
 
 
 static func _motif_unit(ci: CanvasItem, element: String, p: Vector2, s: float, t: float) -> void:
@@ -295,6 +311,12 @@ static func _motif_unit(ci: CanvasItem, element: String, p: Vector2, s: float, t
 		"rafales":
 			_gust(ci, p + Vector2(-s * 0.2, -s * 0.35), s * 1.3, e["clair"], TRAIT_FIN)
 			_gust(ci, p + Vector2(s * 0.2, s * 0.4), s * 0.9, e["couleur"], TRAIT_FIN)
+		"rayons":
+			# Petit soleil : un disque clair et six rayons courts.
+			for i in 6:
+				var d := Vector2.from_angle(i * TAU / 6.0)
+				ci.draw_line(p + d * s * 0.55, p + d * s * 1.05, e["couleur"], TRAIT_FIN, true)
+			ci.draw_circle(p, s * 0.38, e["clair"])
 
 
 ## Une pointe d'épine : base large, pointe dans la direction d.
@@ -420,12 +442,12 @@ static func delta_e(a: Color, b: Color) -> float:
 # La même partout : barre de compétences, arbre, infobulles, journal, ramassage.
 # Silhouettes pleines, lisibles à 20 px ; un détail clair au plus.
 const ICONES := {
-	"elements": ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent"],
-	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom", "vesse", "essaim", "eclosion", "tornade", "ruee", "appel_air"],
+	"elements": ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent", "lumiere"],
+	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom", "vesse", "essaim", "eclosion", "tornade", "ruee", "appel_air", "aurore", "prisme", "lance_aube", "liane", "fontaine", "cocon"],
 	"statistiques": ["degats", "attaque", "projectile", "critique", "vie", "regen", "armure", "vitesse", "esquive", "zone", "collecte", "competence"],
 	"monde": ["sanctuaire", "autel", "coeur", "arene", "secret", "seve_perdue", "essence", "greffe"],
 	# Formes de l'attaque de base (data/attack.json) et nœud qui la modifie : Art.icon("attaque_<forme>").
-	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_spore_lobee", "attaque_dard", "attaque_lame", "attaque_bourrasque", "attaque_mod"],
+	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_spore_lobee", "attaque_dard", "attaque_lame", "attaque_bourrasque", "attaque_rayon", "attaque_perle", "attaque_mod"],
 }
 ## Nom affiché de chaque icône (planche, infobulles).
 const NOM_ICONE := {
@@ -442,12 +464,17 @@ const NOM_ICONE := {
 	"attaque_dard": "Attaque : dards fongiques", "attaque_mod": "Attaque modifiée",
 	"tornade": "Tornade", "ruee": "Ruée", "appel_air": "Appel d'air",
 	"attaque_lame": "Attaque : lames de vent", "attaque_bourrasque": "Attaque : bourrasque",
+	"aurore": "Aurore", "prisme": "Prisme", "lance_aube": "Lance d'aube", "attaque_rayon": "Attaque : rayon d'aube",
+	"liane": "Liane buveuse", "fontaine": "Fontaine de sève", "cocon": "Cocon de sève",
+	"attaque_perle": "Attaque : perles de sève",
 }
 ## Élément de chaque forme de l'attaque de base (le même que dans data/attack.json).
 const ELEMENT_D_ATTAQUE := {
 	"attaque_graine": "seve", "attaque_echarde": "epine", "attaque_fouet": "epine", "attaque_ronce_vive": "saignement",
 	"attaque_spore_lobee": "poison", "attaque_dard": "poison",
 	"attaque_lame": "vent", "attaque_bourrasque": "vent",
+	"attaque_rayon": "lumiere",
+	"attaque_perle": "seve",
 }
 ## Couleur par défaut d'une icône qui n'est pas un élément.
 const COULEUR_ICONE := {
@@ -542,6 +569,18 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 			_gust(ci, P.call(-0.15, -0.45), s * 1.3, col, lw * 1.3)
 			_gust(ci, P.call(0.05, 0.1), s * 1.6, col, lw * 1.5)
 			_gust(ci, P.call(-0.25, 0.65), s * 1.0, clair if col != sombre else col, lw * 1.1)
+		"lumiere":
+			# Soleil levant : un demi-disque posé sur l'horizon, et ses rayons.
+			var pts := PackedVector2Array()
+			for i in 13:
+				pts.append(P.call(0, 0.35) + Vector2.from_angle(PI + PI * i / 12.0) * s * 0.55)
+			ci.draw_colored_polygon(pts, col)
+			for i in 5:
+				var d := Vector2.from_angle(PI + PI * (i + 0.5) / 5.0)
+				ci.draw_line(P.call(0, 0.35) + d * s * 0.72, P.call(0, 0.35) + d * s * 1.0, col, lw, true)
+			ci.draw_line(P.call(-0.95, 0.42), P.call(0.95, 0.42), sombre if col != sombre else col, lw, true)
+			if col != sombre:
+				ci.draw_circle(P.call(-0.12, 0.12), s * 0.14, clair)
 		# Compétences et arme. Chacune garde une forme propre à 20 px ; les détails clairs ne
 		# servent qu'en grand (barre, infobulles). relief : vrai pendant la passe de la tranche.
 		"graine":
@@ -875,8 +914,8 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 			ci.draw_line(P.call(-0.45, 0.45), P.call(-0.85, 0.85), sombre.lightened(0.2), lw * 1.2, true)
 			ci.draw_line(P.call(-0.5, 0.5), P.call(0.55, -0.55), sombre, lw * 0.7, true)
 		_:
-			# Icônes de la branche Vent (vent_fx.gd).
-			if not VentFx.icon(ci, id, p, s, col, clair, sombre, lw):
+			# Icônes des branches Vent (vent_fx.gd), Aube (aube_fx.gd) et Sève (seve_fx.gd).
+			if not VentFx.icon(ci, id, p, s, col, clair, sombre, lw) and not AubeFx.icon(ci, id, p, s, col, clair, sombre, lw) and not SeveFx.icon(ci, id, p, s, col, clair, sombre, lw):
 				ci.draw_circle(p, s * 0.35, col)
 
 

@@ -27,6 +27,7 @@ const ACTIONS := {
 	"status_area": ["status", "value", "duration", "radius"],
 	"gust": ["radius", "factor"],
 	"tornado": ["factor"],
+	"ray": ["factor"],
 	"attack_salvo": ["count"],
 	"cloud": ["radius", "duration", "factor"],
 }

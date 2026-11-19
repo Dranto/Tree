@@ -7,6 +7,8 @@
 #   RUNS=3 tools/bench.sh           # garde la meilleure de 3 mesures (machines bruyantes)
 #   SCENE=coeur tools/bench.sh      # banc des pics : siège du Cœur (aussi : boss)
 #   P99_MS=33 tools/bench.sh        # budget du 99e centile (pics), vide : pas vérifié
+#   REGIONS=cinq tools/bench.sh     # monde à cinq régions : ajoute les régions factices de tests/regions/
+#                                   # (Sève, Aube, Racine) à celles de data/regions/ ; une vraie région l'emporte
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # Budget du temps moyen par image (ms) sur la machine de référence, et marge tolérée.
@@ -15,8 +17,10 @@ TOLERANCE="${TOLERANCE:-0.15}"
 RUNS="${RUNS:-1}"
 SCENE="${SCENE:-}"
 P99_MS="${P99_MS:-}"
+REGIONS="${REGIONS:-}"
 SCENE_ARG=()
 [ -n "$SCENE" ] && SCENE_ARG=(--bench-scene="$SCENE")
+[ -n "$REGIONS" ] && SCENE_ARG+=(--regions=res://tests/regions/)
 OUT="$ROOT/godot/autotest/bench"
 mkdir -p "$OUT"
 export LIBGL_ALWAYS_SOFTWARE=1
@@ -24,15 +28,15 @@ export LIBGL_ALWAYS_SOFTWARE=1
 best=""
 best_p99=""
 for i in $(seq 1 "$RUNS"); do
-  "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy -- --benchmark "${SCENE_ARG[@]}" 2>&1 | grep -E "BENCHMARK|SCRIPT ERROR" > "$OUT/banc${SCENE:+_$SCENE}_$i.txt"
-  cat "$OUT/banc${SCENE:+_$SCENE}_$i.txt"
-  if grep -q "SCRIPT ERROR" "$OUT/banc${SCENE:+_$SCENE}_$i.txt"; then
+  "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy -- --benchmark "${SCENE_ARG[@]}" 2>&1 | grep -E "BENCHMARK|SCRIPT ERROR" > "$OUT/banc${SCENE:+_$SCENE}${REGIONS:+_cinq}_$i.txt"
+  cat "$OUT/banc${SCENE:+_$SCENE}${REGIONS:+_cinq}_$i.txt"
+  if grep -q "SCRIPT ERROR" "$OUT/banc${SCENE:+_$SCENE}${REGIONS:+_cinq}_$i.txt"; then
     echo "Erreur de script pendant le banc"
     exit 1
   fi
-  avg=$(sed -nE 's/.*moyen ([0-9.]+) ms.*/\1/p' "$OUT/banc${SCENE:+_$SCENE}_$i.txt")
+  avg=$(sed -nE 's/.*moyen ([0-9.]+) ms.*/\1/p' "$OUT/banc${SCENE:+_$SCENE}${REGIONS:+_cinq}_$i.txt")
   [ -z "$avg" ] && { echo "Banc sans résultat"; exit 1; }
-  p99=$(sed -nE 's/.*99e centile ([0-9.]+) ms.*/\1/p' "$OUT/banc${SCENE:+_$SCENE}_$i.txt")
+  p99=$(sed -nE 's/.*99e centile ([0-9.]+) ms.*/\1/p' "$OUT/banc${SCENE:+_$SCENE}${REGIONS:+_cinq}_$i.txt")
   if [ -z "$best" ] || awk -v a="$avg" -v b="$best" 'BEGIN{exit !(a < b)}'; then best="$avg"; fi
   if [ -z "$best_p99" ] || awk -v a="$p99" -v b="$best_p99" 'BEGIN{exit !(a < b)}'; then best_p99="$p99"; fi
 done

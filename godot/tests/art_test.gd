@@ -40,7 +40,7 @@ func _initialize() -> void:
 	check(ui.INK == Art.c("texte") and ui.LEAF == Art.c("accent") and ui.GOLD == Art.c("or") and ui.PANEL_BG == Art.c("panneau"), "ui_theme.gd lit ses couleurs dans Art")
 
 	print("Éléments")
-	check(Art.ELEMENT_IDS.size() == 7, "sept éléments")
+	check(Art.ELEMENT_IDS.size() == 8, "huit éléments")
 	var motifs := {}
 	for id in Art.ELEMENT_IDS:
 		var e: Dictionary = Art.ELEMENTS[id]
