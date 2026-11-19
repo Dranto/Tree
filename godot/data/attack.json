@@ -163,7 +163,8 @@
       "size": 1.35,
       "splash": 0.7,
       "splash_radius": 64,
-      "leech": 0.04
+      "leech": 0.04,
+      "sound": "seve_goutte"
     },
     "rayon": {
       "name": "Rayon d'aube",
@@ -180,7 +181,8 @@
       "spread": 0.22,
       "crit": 0.05,
       "size": 1.0,
-      "fx": "rayon"
+      "fx": "rayon",
+      "sound": "aube_rayon"
     }
   },
   "mods": {

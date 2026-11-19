@@ -50,13 +50,13 @@
     {"id": "seve_val", "name": "du Val", "dist": 2200.0, "angle": -0.3}
   ],
   "altars": [
-    {"id": "seve_1", "name": "Autel de la rosée", "dist": 980, "side": 0.85, "points": 1},
-    {"id": "seve_2", "name": "Autel du bourgeon", "dist": 1350, "side": -0.72, "points": 1},
-    {"id": "seve_3", "name": "Autel du sureau", "dist": 2050, "side": 0.74, "points": 1},
-    {"id": "seve_4", "name": "Autel de la mousse", "dist": 2650, "side": -0.45, "points": 1}
+    {"id": "seve_1", "name": "Autel de la rosée", "dist": 980, "side": 0.85, "points": 1, "graft": "greffe_perle_rosee"},
+    {"id": "seve_2", "name": "Autel du bourgeon", "dist": 1350, "side": -0.72, "points": 1, "graft": "greffe_bourgeon"},
+    {"id": "seve_3", "name": "Autel du sureau", "dist": 2050, "side": 0.74, "points": 1, "graft": "greffe_sureau"},
+    {"id": "seve_4", "name": "Autel de la mousse", "dist": 2650, "side": -0.45, "points": 1, "graft": "greffe_mousse"}
   ],
   "secrets": [
-    {"id": "seve", "name": "La source vive", "dist": 2550, "side": 0.92, "points": 1}
+    {"id": "seve", "name": "La source vive", "dist": 2550, "side": 0.92, "points": 1, "graft": "greffe_source_vive"}
   ],
   "heart": {
     "name": "Cœur des sources",
@@ -74,7 +74,7 @@
     "script": "res://scripts/boss_seve.gd",
     "name": "Le Saule exsangue",
     "bar_color": "seve",
-    "reward": {"points": 2},
+    "reward": {"points": 2, "graft": "greffe_coeur_de_saule"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : le Saule boit la vallée", "Phase 3 sur 3 : l'étang se vide"],
     "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "seve/clair"},
     "wake_banner": "Le Saule exsangue tend ses racines vers toi.",

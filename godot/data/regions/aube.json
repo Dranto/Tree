@@ -49,13 +49,13 @@
     {"id": "aube_zenith", "name": "du Zénith", "dist": 2200.0, "angle": -0.3}
   ],
   "altars": [
-    {"id": "aube_1", "name": "Autel de l'éclat", "dist": 980, "side": 0.85, "points": 1, "graft": ""},
-    {"id": "aube_2", "name": "Autel du prisme", "dist": 1350, "side": -0.72, "points": 1, "graft": ""},
-    {"id": "aube_3", "name": "Autel de la rosée", "dist": 2050, "side": 0.74, "points": 1, "graft": ""},
-    {"id": "aube_4", "name": "Autel de la lueur", "dist": 2500, "side": -0.5, "points": 1, "graft": ""}
+    {"id": "aube_1", "name": "Autel de l'éclat", "dist": 980, "side": 0.85, "points": 1, "graft": "greffe_eclat_verre"},
+    {"id": "aube_2", "name": "Autel du prisme", "dist": 1350, "side": -0.72, "points": 1, "graft": "greffe_prisme"},
+    {"id": "aube_3", "name": "Autel de la rosée", "dist": 2050, "side": 0.74, "points": 1, "graft": "greffe_rosee"},
+    {"id": "aube_4", "name": "Autel de la lueur", "dist": 2500, "side": -0.5, "points": 1, "graft": "greffe_lueur"}
   ],
   "secrets": [
-    {"id": "aube", "name": "La lumière première", "dist": 2350, "side": -0.95, "points": 1, "graft": ""}
+    {"id": "aube", "name": "La lumière première", "dist": 2350, "side": -0.95, "points": 1, "graft": "greffe_lumiere_premiere"}
   ],
   "heart": {
     "name": "Cœur de l'aurore",
@@ -73,7 +73,7 @@
     "script": "res://scripts/boss_aube.gd",
     "name": "La Phalène de verre",
     "bar_color": "#f2d06b",
-    "reward": {"points": 2, "graft": ""},
+    "reward": {"points": 2, "graft": "greffe_aile_de_verre"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : la Phalène brise la lumière", "Phase 3 sur 3 : la lumière tombe du ciel"],
     "arena": {"radius": 460.0, "radius_min": 320.0, "offset": 720.0, "life_color": "#fff4cf"},
     "wake_banner": "La Phalène de verre ouvre ses ailes.",
