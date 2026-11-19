@@ -30,6 +30,8 @@ const DEATH_PENALTY := 10.0
 const LEASH := 1100.0
 ## En partie complète : distance au point d'ancrage au-delà de laquelle ils ne poursuivent plus.
 const RUN_LEASH := 520.0
+## Distance au mur de l'arène ouverte en deçà de laquelle le robot s'en écarte.
+const ARENA_MARGIN := 260.0
 
 var name := ""
 ## Branche du build (builds.json › branch) et région où il s'enfonce en partie complète.
@@ -263,7 +265,13 @@ func run_input(main, p, target: Vector2, best_d2: float) -> Dictionary:
 	# L'arène du boss : la partie complète ne mesure pas le combat de boss, le robot n'y entre pas
 	# (une poursuite au corps à corps l'y menait une fois le Cœur purifié, et il y mourait en boucle).
 	var arena = main.arenas.get(region) if "arenas" in main else null
-	if arena != null and arena.state == "ouverte" and p.position.distance_to(arena.center) < arena.radius + 140.0:
+	# Déjà enfermé dans un combat (il y est entré avant que l'arène ne s'ouvre au robot) : il se
+	# bat comme le robot du boss ; fuir le pousserait contre le mur, qui blesse à chaque pas.
+	var fight = main.active_arena() if main.has_method("active_arena") else null
+	if fight != null:
+		return fight.bot_input(p)
+	if arena != null and arena.state == "ouverte" \
+			and p.position.distance_to(arena.center) < arena.radius + ARENA_MARGIN:
 		return {"move": (p.position - arena.center).normalized(), "aim": target, "dash": false}
 	if dodge != Vector2.ZERO:
 		var mv_d := dodge.normalized()
@@ -371,7 +379,7 @@ func run_step(main, delta: float) -> bool:
 	_prev_hp = p.hp
 	# Temps pour tuer un Flétri ordinaire : du premier coup reçu à sa mort.
 	for e in main.enemies:
-		if is_instance_valid(e) and not e.dead and e.kind == 0 and e.hp < e.max_hp:
+		if is_instance_valid(e) and not e.dead and "kind" in e and e.kind == 0 and e.hp < e.max_hp:
 			var id: int = e.get_instance_id()
 			if not _hit.has(id):
 				_hit[id] = [_t, weakref(e)]
@@ -400,7 +408,7 @@ func _sample(main) -> void:
 	var total := 0.0
 	var n := 0
 	for e in main.enemies:
-		if is_instance_valid(e) and not e.dead:
+		if is_instance_valid(e) and not e.dead and "power" in e:
 			total += e.power
 			n += 1
 	# Médiane : un ennemi touché une fois puis laissé derrière (fuite) ne fausse pas la mesure.
