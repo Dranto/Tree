@@ -525,6 +525,8 @@ static func _bloom(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 			var q := p + d * r * g * (0.6 + 0.3 * fposmod(i * 0.618, 1.0))
 			var h := 5.0 * g
 			var gc := Color(Art.c("decor_vivant").lightened(0.35), a)
+			if h < 0.5:
+				continue   # onde pas encore partie : une feuille de taille nulle ne se triangule pas
 			ci.draw_line(q, q + Vector2(0, -h * 1.4), gc, 1.5, true)
 			for sgn: int in [-1, 1]:
 				ci.draw_colored_polygon(HeroArt.leaf_pts(q + Vector2(sgn * h * 0.6, -h), h * 0.6, -PI / 2.0 + sgn * 0.9), gc)
