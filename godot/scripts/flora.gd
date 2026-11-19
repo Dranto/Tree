@@ -471,7 +471,7 @@ func _ready() -> void:
 		trees_parent = self
 	rng.seed = 7
 	for i in TREE_COUNT:
-		var p := Vector2(rng.randf_range(-2900, 2900), rng.randf_range(-2900, 2900))
+		var p := Vector2(rng.randf_range(-Regions.WORLD_HALF, Regions.WORLD_HALF), rng.randf_range(-Regions.WORLD_HALF, Regions.WORLD_HALF))
 		if p.length() < 180.0:
 			continue
 		# Dans une région, l'arbre laisse la place à son décor (ronce du roncier…) : même tirage,

@@ -6,6 +6,7 @@
   "place": "le marais",
   "map_name": "Marais",
   "color": "#9d6ae8",
+  "art": "spore",
   "ground": {
     "_doc": "Vase violacée et bleuie tant que le Cœur vit ; mousse sombre et turquoise une fois ravivée, piquée de petites spores claires.",
     "colors": {

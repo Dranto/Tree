@@ -21,6 +21,17 @@ const CENTER_DIST := 1650.0
 const EDGE := 110.0
 ## Au plus une région par branche : six.
 const MAX_REGIONS := 6
+## Le monde est un carré de ± WORLD_HALF px autour de la graine (main.world_half). Les six secteurs
+## n'y ont pas la même profondeur : ceux de Spore (est) et d'Aube (ouest) ne touchent aucun coin et
+## s'arrêtent à WORLD_HALF dans leur axe ; les quatre autres vont jusqu'à WORLD_HALF / sin 60°
+## (3349 px). Voir reach() et la vérification des lieux dans validate().
+const WORLD_HALF := 2900.0
+## Marge entre un lieu (ou le mur d'une arène) et le bord du monde.
+const WORLD_MARGIN := 60.0
+## Dossier des dessins propres à une région (champ « art » du fichier de la région) : son Cœur de
+## flétrissure et le mur de l'arène de son boss. Sans « art », ceux du roncier (region_art.gd).
+const ART_DIR := "res://scripts/region_art/"
+const BASE_ART := "res://scripts/region_art.gd"
 
 ## Dossiers de régions en plus de data/regions/ (la région factice des tests, voir
 ## tests/region_engine_test.gd), à poser avec set_extra_dirs. Aussi par la ligne de commande :
@@ -29,6 +40,7 @@ static var extra_dirs: Array = []
 static var _defs: Dictionary = {}
 static var _ids: Array = []
 static var _loaded := false
+static var _arts: Dictionary = {}
 
 
 ## Identifiants des régions qui existent, dans l'ordre des branches de l'arbre.
@@ -65,6 +77,7 @@ static func reload() -> void:
 	_loaded = false
 	_defs = {}
 	_ids = []
+	_arts = {}
 	Content._cache.erase("#rewards")
 	_load_all()
 
@@ -79,6 +92,11 @@ static func _load_all() -> void:
 			dirs.append(arg.substr(10))
 	var found := {}
 	for dir in dirs:
+		# Une région des tests (dossiers en plus) n'occupe qu'un secteur resté libre : la vraie région
+		# d'une branche l'emporte sur sa région factice (tests/regions/seve.json, aube.json).
+		var taken := {}
+		for id in found:
+			taken[str(found[id].get("branch", id))] = true
 		for file in DirAccess.get_files_at(dir):
 			# Dans un jeu exporté, les fichiers importés portent un suffixe (.remap, .import).
 			if not file.ends_with(".json"):
@@ -89,6 +107,8 @@ static func _load_all() -> void:
 				push_error("Région illisible : " + path)
 				continue
 			var id := str(data.get("id", file.get_basename()))
+			if dir != DIR and (taken.has(str(data.get("branch", id))) or found.has(id)):
+				continue
 			data["id"] = id
 			data["_path"] = path
 			found[id] = data
@@ -144,6 +164,39 @@ static func region_at(pos: Vector2) -> String:
 
 static func center(id: String) -> Vector2:
 	return Vector2.from_angle(angle_of(id)) * CENTER_DIST
+
+
+## Distance entre la graine et le bord du monde carré, dans la direction « angle ».
+static func reach(angle: float) -> float:
+	var d := Vector2.from_angle(angle)
+	return WORLD_HALF / maxf(absf(d.x), absf(d.y))
+
+
+## Vrai si le disque (pos, radius) tient dans le monde, à WORLD_MARGIN du bord.
+static func fits_world(pos: Vector2, radius := 0.0) -> bool:
+	var limit := WORLD_HALF - WORLD_MARGIN - radius
+	return absf(pos.x) <= limit and absf(pos.y) <= limit
+
+
+## Centre de l'arène du boss : au-delà du Cœur, à « offset » px dans l'axe de la région (boss ›
+## arena), ramené dans le monde si le mur en sortirait. Même calcul pour boss_arena.gd et check_data.
+static func arena_center(id: String) -> Vector2:
+	var ar: Dictionary = section(id, "boss").get("arena", {})
+	var radius := float(ar.get("radius", 470.0))
+	var heart := center(id)
+	var dir: Vector2 = heart.normalized() if heart.length() > 1.0 else Vector2.UP
+	var limit := WORLD_HALF - radius - WORLD_MARGIN
+	return (heart + dir * float(ar.get("offset", 800.0))).clamp(Vector2(-limit, -limit), Vector2(limit, limit))
+
+
+## Dessins propres à la région (son Cœur, le mur de son arène) : scripts/region_art/<art>.gd, qui
+## étend region_art.gd et n'en remplace que ce qui change ; sans « art », region_art.gd (le roncier).
+static func art(id: String) -> GDScript:
+	if not _arts.has(id):
+		var name := str(def(id).get("art", ""))
+		var path := ART_DIR + name + ".gd" if name != "" else BASE_ART
+		_arts[id] = load(path if ResourceLoader.exists(path) else BASE_ART)
+	return _arts[id]
 
 
 ## Appartenance progressive (0 dehors, 1 bien à l'intérieur) : sert au fondu du décor.
@@ -333,6 +386,9 @@ static func validate() -> PackedStringArray:
 					errors.append("%s, %s « %s » : « dist » manquant" % [w, kind, spot.get("id", spot.get("kind", "?"))])
 				if absf(float(spot.get("side", 0.0))) > 1.0 or absf(float(spot.get("angle", 0.0))) > half_width():
 					errors.append("%s, %s « %s » : hors du secteur" % [w, kind, spot.get("id", spot.get("kind", "?"))])
+				elif not fits_world(place(id, spot)):
+					errors.append("%s, %s « %s » : hors du monde (à %.0f px de la graine, le bord est à %.0f px dans cette direction)" % [
+						w, kind, spot.get("id", spot.get("kind", "?")), float(spot.get("dist", 0.0)), reach(place(id, spot).angle())])
 		# Cœur : sortes d'ennemis connues.
 		var h := section(id, "heart")
 		var hw: Dictionary = h.get("waves", {})
@@ -345,6 +401,13 @@ static func validate() -> PackedStringArray:
 				errors.append("%s, heart : sorte d'ennemi inconnue « %s »" % [w, k])
 		if h.has("life_color") and not color_ok(h["life_color"]):
 			errors.append("%s, heart : « life_color » mal écrite" % w)
+		# Dessins de la région (Cœur, mur de l'arène) : un script de scripts/region_art/.
+		if d.has("art") and not ResourceLoader.exists(ART_DIR + str(d["art"]) + ".gd"):
+			errors.append("%s : dessins inconnus « %s » (scripts/region_art/%s.gd)" % [w, d["art"], d["art"]])
+		# Le Cœur, sa zone et l'arène du boss tiennent dans le secteur et dans le monde.
+		var zone := float(h.get("zone", 240.0))
+		if inside_distance(center(id), id) < zone or not fits_world(center(id), zone):
+			errors.append("%s, heart : la zone du Cœur (%.0f px) déborde du secteur ou du monde" % [w, zone])
 		# Boss : un script qui étend BossBase.
 		var b := section(id, "boss")
 		var path := str(b.get("script", ""))
@@ -361,6 +424,18 @@ static func validate() -> PackedStringArray:
 			errors.append("%s, boss › arena : « life_color » mal écrite" % w)
 		if float(ar.get("radius_min", 0.0)) > float(ar.get("radius", 470.0)):
 			errors.append("%s, boss › arena : « radius_min » plus grand que « radius »" % w)
+		# L'arène tient dans le monde sans glisser hors de son axe (sinon arena_center la ramène de
+		# biais, vers une région voisine) et son mur reste dans le secteur.
+		var ac := arena_center(id)
+		var ar_r := float(ar.get("radius", 470.0))
+		var wanted := center(id) + center(id).normalized() * float(ar.get("offset", 800.0))
+		if ac.distance_to(wanted) > 1.0:
+			errors.append("%s, boss › arena : l'arène sort du monde (« offset » + « radius » au plus %.0f px dans ce secteur)" % [
+				w, reach(angle_of(id)) - WORLD_MARGIN - CENTER_DIST])
+		elif inside_distance(ac, id) < ar_r:
+			errors.append("%s, boss › arena : le mur de l'arène déborde du secteur" % w)
+		elif ac.distance_to(center(id)) < ar_r + zone:
+			errors.append("%s, boss › arena : l'arène empiète sur la zone du Cœur" % w)
 		for f in ["sub", "title", "body"]:
 			if str(section(id, "ending").get(f, "")) == "":
 				errors.append("%s, ending : « %s » manquant" % [w, f])

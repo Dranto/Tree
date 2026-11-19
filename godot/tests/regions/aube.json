@@ -1,0 +1,158 @@
+{
+  "_doc": "Région factice de la branche Aube pour les tests du monde à cinq régions (tests/world_test.gd). Chargée seulement avec « -- --regions=res://tests/regions/ » ou Regions.set_extra_dirs, et seulement tant que data/regions/ n'a pas de vraie région pour cette branche (la vraie l'emporte). Ses lieux occupent le secteur comme le ferait une vraie région (sanctuaires, autels, secret, Cœur et arène au plus loin que le monde le permet).",
+  "id": "aube",
+  "branch": "aube",
+  "name": "Région de Aube (factice)",
+  "place": "les falaises factices",
+  "map_name": "Falaises",
+  "color": "#f2d06b",
+  "ground": {
+    "dead_dark": "#3e3a2e",
+    "dead_light": "#5e5640",
+    "purified_dark": "#46423a",
+    "purified_light": "#6a6250",
+    "alive_dark": "#5e6a3a",
+    "alive_light": "#a8b46a",
+    "dot": "epine/clair",
+    "dot_rarity": 0.985,
+    "dot_strength": 0.6
+  },
+  "landmarks": [
+    {
+      "kind": "ruine",
+      "dist": 1080.0,
+      "angle": 0.1,
+      "size": 1.0
+    },
+    {
+      "kind": "rocher",
+      "dist": 1900.0,
+      "angle": 0.42,
+      "size": 0.9
+    }
+  ],
+  "spawn": {
+    "kinds": {
+      "chargeur": 0.5,
+      "cracheur": 0.5
+    },
+    "share_near": 0.25,
+    "share_far": 0.8,
+    "far": 2400,
+    "max_nests": 0,
+    "purified_factor": 0.4
+  },
+  "sanctuaries": [
+    {
+      "id": "aube_seuil",
+      "name": "du Seuil",
+      "dist": 820.0,
+      "angle": 0.3
+    },
+    {
+      "id": "aube_verre",
+      "name": "du Verre",
+      "dist": 1250.0,
+      "angle": -0.3
+    },
+    {
+      "id": "aube_prisme",
+      "name": "du Prisme",
+      "dist": 1700.0,
+      "angle": 0.38
+    },
+    {
+      "id": "aube_zenith",
+      "name": "du Zénith",
+      "dist": 2200.0,
+      "angle": -0.3
+    }
+  ],
+  "altars": [
+    {
+      "id": "aube_1",
+      "name": "Autel factice 1",
+      "dist": 980,
+      "side": 0.85,
+      "points": 1
+    },
+    {
+      "id": "aube_2",
+      "name": "Autel factice 2",
+      "dist": 1350,
+      "side": -0.72,
+      "points": 1
+    },
+    {
+      "id": "aube_3",
+      "name": "Autel factice 3",
+      "dist": 2050,
+      "side": 0.74,
+      "points": 1
+    },
+    {
+      "id": "aube_4",
+      "name": "Autel factice 4",
+      "dist": 2500,
+      "side": -0.5,
+      "points": 1
+    }
+  ],
+  "secrets": [
+    {
+      "id": "aube",
+      "name": "Le secret factice d'Aube",
+      "dist": 2350,
+      "side": -0.95,
+      "points": 1
+    }
+  ],
+  "heart": {
+    "name": "Cœur factice de Aube",
+    "zone": 240.0,
+    "hold_time": 5.0,
+    "waves": {
+      "every": 4.0,
+      "base": 2,
+      "growth": 1,
+      "kinds": [
+        "fletri",
+        "cendreux"
+      ]
+    },
+    "idle": {
+      "every": 5.0,
+      "max": 2,
+      "kind": "fletri"
+    },
+    "life_color": "#f2d06b",
+    "reward": {
+      "points": 1
+    },
+    "wake_banner": "Le Cœur factice de Aube s'éveille.",
+    "purified_banner": "Le Cœur factice de Aube est purifié."
+  },
+  "boss": {
+    "script": "res://tests/regions/boss_essai.gd",
+    "name": "Le boss factice de Aube",
+    "bar_color": "epine",
+    "phases": [
+      "Phase 1 sur 2",
+      "Phase 2 sur 2"
+    ],
+    "arena": {
+      "radius": 440.0,
+      "radius_min": 300.0,
+      "offset": 700.0,
+      "life_color": "#f2d06b"
+    },
+    "reward": {
+      "points": 2
+    }
+  },
+  "ending": {
+    "sub": "Fin de la région factice de Aube",
+    "title": "Aube respire",
+    "body": "Région factice des tests."
+  }
+}

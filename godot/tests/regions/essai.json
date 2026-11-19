@@ -1,7 +1,7 @@
 {
-  "_doc": "Région factice des tests (tests/region_engine_test.gd) : elle prouve qu'une région s'ajoute avec des fichiers seulement, sans toucher au moteur. Jamais chargée par le jeu : seulement avec « -- --regions=res://tests/regions/ » ou Regions.extra_dirs.",
+  "_doc": "Région factice des tests (tests/region_engine_test.gd), sur la branche Racine (le secteur nord-ouest, libre jusqu'au jalon 9) : elle prouve qu'une région s'ajoute avec des fichiers seulement, sans toucher au moteur. Jamais chargée par le jeu : seulement avec « -- --regions=res://tests/regions/ » ou Regions.extra_dirs.",
   "id": "essai",
-  "branch": "aube",
+  "branch": "racine",
   "name": "Région d'essai",
   "place": "la clairière d'essai",
   "map_name": "Essai",

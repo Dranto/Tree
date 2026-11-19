@@ -27,6 +27,7 @@ const HerosScript = preload("res://tests/visual/galerie_heros.gd")
 const MondeScript = preload("res://tests/visual/monde.gd")
 const AttaqueScript = preload("res://tests/visual/galerie_attaque.gd")
 const RegionsScript = preload("res://tests/visual/galerie_regions.gd")
+const HeartsScript = preload("res://tests/visual/galerie_coeurs.gd")
 const PlateauxScript = preload("res://tests/visual/plateaux.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Orb = preload("res://scripts/orb.gd")
@@ -292,6 +293,19 @@ func _scenario_regions() -> void:
 		main.hud.banner_time = 0.0
 		await _frames(40)
 		await _shot("decor_" + id, "jeu")
+	# Les Cœurs et les arènes de chaque région (dessins de la région, scripts/region_art/), en dernier
+	# pour ne pas décaler les captures du décor.
+	main.set_process(false)
+	var hearts_layer := CanvasLayer.new()
+	hearts_layer.layer = 100
+	var hearts_sheet = HeartsScript.new()
+	hearts_sheet.view = get_viewport().get_visible_rect().size
+	hearts_layer.add_child(hearts_sheet)
+	add_child(hearts_layer)
+	await _frames(3)
+	await _shot("galerie_coeurs")
+	hearts_layer.queue_free()
+	await _frames(1)
 
 
 ## Attaque de base : chaque forme et chaque modificateur (planche tests/visual/galerie_attaque.gd).

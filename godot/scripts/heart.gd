@@ -322,95 +322,25 @@ func _draw() -> void:
 		draw_circle(center + Vector2.from_angle(-PI / 2.0 + TAU * k) * (zone - 10.0), 5.0, Art.ec("seve", "clair"))
 
 
-## Le Cœur : un bulbe anguleux de Flétri (forme cassée, contour clair), couronné d'épines et fendu
-## de braises ; des braises en montent et se voient de loin. Il vire au vert à mesure qu'il cède.
-## Purifié : une grande rose en volume.
+## Le Cœur lui-même, dessiné par les dessins de sa région (Regions.art : scripts/region_art/<art>.gd,
+## region_art.gd par défaut) : flétri, il bat (plus vite pendant le siège) et vire au vert à mesure
+## qu'il cède ; purifié, il devient la plante de sa région (la rose du roncier par défaut).
 func draw_body(c: CanvasItem) -> void:
-	var k := clampf(progress / hold_time, 0.0, 1.0)
-	var siege := state == "siege"
-	var beat := 1.0 + 0.05 * sin(t * (7.0 if siege else TAU / Anim.DUREE["respiration"]))
+	var art: GDScript = Regions.art(region) if Regions.exists(region) else load(Regions.BASE_ART)
 	# Dessiné un peu plus grand que son obstacle : on le repère de loin.
-	var r := BODY_RADIUS * 1.25 * beat
+	var r := BODY_RADIUS * 1.25 * pulse()
 	var lift := Vector2(0, -r * 0.6)
 	if state == "purifie":
-		_draw_rose(c, lift, BODY_RADIUS * 1.3)
-		return
-	Art.shadow(c, Vector2(0, 2), r * 1.2)
-	# Racines noueuses au pied.
-	var root := Art.c("ennemi").darkened(0.55)
-	for i in 6:
-		var a := PI * (0.08 + 0.84 * i / 5.0)
-		var tip := Vector2(cos(a) * r * 1.55, sin(a) * r * 0.42)
-		c.draw_colored_polygon(PackedVector2Array([Vector2(-6, -2), tip, Vector2(6, -2)]), root)
-	# Couronne d'épines, en volume (un côté clair, un côté sombre).
-	var husk := Art.c("ennemi").lerp(Art.c("decor_vivant").darkened(0.2), k)
-	for i in 12:
-		var a := TAU * i / 12.0 - PI / 2.0 + 0.05 * sin(t * 1.5 + i)
-		var d := Vector2.from_angle(a)
-		var n := d.orthogonal()
-		var base := lift + d * r * 0.8
-		var tip := base + d * r * (0.8 if i % 2 == 0 else 0.55) * (1.0 if d.y < 0.3 else 0.7)
-		c.draw_colored_polygon(PackedVector2Array([base + n * r * 0.2, tip, base]), husk.lightened(0.1))
-		c.draw_colored_polygon(PackedVector2Array([base, tip, base - n * r * 0.2]), husk.darkened(0.35))
-	# Bulbe anguleux : polygone cassé, volume, contour clair des Flétris.
-	var pts := PackedVector2Array()
-	var n_pts := 9
-	for i in n_pts:
-		var a := TAU * i / n_pts - PI / 2.0
-		var rr := r * (1.0 if i % 2 == 0 else 0.82) * (1.0 + 0.04 * sin(t * 2.0 + i))
-		pts.append(lift + Vector2.from_angle(a) * rr)
-	Art.volume(c, pts, husk, 0.5)
-	Art.outline(c, pts, Art.c("ennemi_contour").lerp(Art.ec("seve", "clair"), k), Art.TRAIT_FORT)
-	# Fissures de braise : elles virent au vert à mesure que le Cœur cède.
-	var crack := Art.ec("cendre").lerp(Art.ec("seve"), k)
-	crack.a = 0.7 + 0.3 * sin(t * (9.0 if siege else 3.0))
-	for i in 5:
-		var a := -PI / 2.0 + (i - 2) * 0.62 + PI
-		var p0 := lift + Vector2.from_angle(a) * r * 0.2
-		var p1 := lift + Vector2.from_angle(a + 0.3) * r * 0.55
-		var p2 := lift + Vector2.from_angle(a - 0.1) * r * 0.8
-		c.draw_polyline(PackedVector2Array([p0, p1, p2]), crack, Art.TRAIT, true)
-	# Œil de braise au centre.
-	c.draw_circle(lift, r * 0.34, Color(crack.r, crack.g, crack.b, 0.3))
-	var eye := PackedVector2Array([lift + Vector2(-r * 0.24, 0), lift + Vector2(0, -r * 0.13), lift + Vector2(r * 0.24, 0), lift + Vector2(0, r * 0.13)])
-	c.draw_colored_polygon(eye, Art.ec("cendre", "clair").lerp(Art.ec("seve", "clair"), k))
-	c.draw_circle(lift, r * 0.07, Art.c("contour"))
-	# Braises qui montent : on repère le Cœur de loin.
-	var ember_col := Art.ec("cendre", "clair").lerp(Art.ec("seve", "clair"), k)
-	for i in 10:
-		var u := fposmod(t * (0.35 if not siege else 0.6) + i / 10.0, 1.0)
-		var p := lift + Vector2(sin(i * 2.7 + t * 1.1) * r * (0.5 + 0.6 * u), -r * 0.8 - 160.0 * u)
-		var sz := 3.2 * (1.0 - u * 0.6)
-		c.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -sz * 1.4), p + Vector2(sz, 0), p + Vector2(0, sz * 1.1), p + Vector2(-sz, 0)]), Color(ember_col, sin(PI * u) * 0.9))
+		art.draw_heart_purified(c, self, lift, BODY_RADIUS * 1.3)
+	else:
+		art.draw_heart(c, self, lift, r)
 
 
-## Le Cœur purifié : une rose ouverte, feuilles dessous, pétales en deux rangs, cœur d'or.
-func _draw_rose(c: CanvasItem, lift: Vector2, r: float) -> void:
-	var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
-	Art.shadow(c, Vector2(0, 2), r * 1.3)
-	Art.glow(c, lift, r * (2.0 + 0.1 * b), "seve")
-	var leaf := Art.c("decor_vivant")
-	for i in 5:
-		var a := TAU * i / 5.0 + 0.3
-		var lf := _petal(lift, a, r * 1.45, r * 0.42)
-		Art.volume(c, lf, leaf.darkened(0.1 * (i % 2)), 0.5)
-		Art.outline(c, lf, Art.c("contour"), Art.TRAIT_FIN)
-	var petal := Art.ec("saignement", "clair").lerp(Art.c("interactif"), 0.35)
-	for row in 2:
-		var n := 6 - row
-		for i in n:
-			var a := TAU * i / n + row * 0.5 + t * 0.06 * (1 - 2 * row)
-			var pp := _petal(lift, a, r * (1.0 - row * 0.32), r * (0.5 - row * 0.1))
-			Art.volume(c, pp, petal.lightened(0.1 * row), 0.7)
-			Art.outline(c, pp, Color(Art.c("contour"), 0.7), Art.TRAIT_FIN)
-	Art.volume_circle(c, lift, r * 0.28, Art.c("or"), 0.8)
-	for i in 5:
-		var u := fposmod(t * 0.3 + i / 5.0, 1.0)
-		var p := lift + Vector2(sin(i * 2.3 + t) * r * 0.6, -r * 0.4 - 90.0 * u)
-		c.draw_circle(p, 2.0, Color(Art.ec("seve", "clair"), sin(PI * u)))
+## Battement du Cœur (autour de 1) : plus rapide pendant le siège.
+func pulse() -> float:
+	return 1.0 + 0.05 * sin(t * (7.0 if state == "siege" else TAU / Anim.DUREE["respiration"]))
 
 
-func _petal(origin: Vector2, angle: float, length: float, width: float) -> PackedVector2Array:
-	var dir := Vector2.from_angle(angle)
-	var side := dir.orthogonal() * width
-	return PackedVector2Array([origin, origin + dir * length * 0.55 + side, origin + dir * length, origin + dir * length * 0.55 - side])
+## Avancée de la purification (0 à 1).
+func ratio() -> float:
+	return clampf(progress / hold_time, 0.0, 1.0)
