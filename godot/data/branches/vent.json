@@ -167,8 +167,8 @@
           "links": ["r1"],
           "effects": [
             {"stat": "melee_damage", "op": "inc", "value": 0.25},
-            {"stat": "armor", "op": "add", "value": 0.06},
-            {"stat": "max_hp", "op": "inc", "value": 0.15}
+            {"stat": "armor", "op": "add", "value": 0.1},
+            {"stat": "max_hp", "op": "inc", "value": 0.3}
           ]
         },
         {
