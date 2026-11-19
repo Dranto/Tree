@@ -161,7 +161,7 @@ func _run() -> void:
 	sfx.streams.clear()
 	for name in Synth.SOUNDS:
 		var st = sfx.get_script().load_wav("res://assets/sounds/%s.wav" % name)
-		all_loaded = all_loaded and st != null and st.data.size() > 800
+		all_loaded = all_loaded and st != null and st.get_length() > 0.015
 	sfx.enabled = false
 	check(all_loaded, "tous les sons de synth.gd ont un fichier lisible")
 

@@ -324,7 +324,14 @@ func _invalidate(area: Rect2) -> void:
 			if tile_budget > 0:
 				t["dirty"] = true
 			else:
-				t["vp"].render_target_update_mode = SubViewport.UPDATE_ONCE
+				_render_once(t["vp"])
+
+
+## Relance le rendu d'un carré. Depuis Godot 4.7, remettre UPDATE_ONCE sur une image qui l'a déjà
+## ne relance rien : on repasse d'abord par UPDATE_DISABLED.
+func _render_once(vp: SubViewport) -> void:
+	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 ## Refait au plus tile_budget carrés salis, les plus proches de « center » d'abord.
@@ -340,7 +347,7 @@ func _refresh_dirty(center: Vector2) -> void:
 	dirty_tiles.sort_custom(func(a, b): return (a["rect"] as Rect2).get_center().distance_squared_to(center) < (b["rect"] as Rect2).get_center().distance_squared_to(center))
 	for i in mini(tile_budget, dirty_tiles.size()):
 		dirty_tiles[i]["dirty"] = false
-		dirty_tiles[i]["vp"].render_target_update_mode = SubViewport.UPDATE_ONCE
+		_render_once(dirty_tiles[i]["vp"])
 
 
 ## Les vagues de vie avancent à pas fixe : la vie du sol compte pour le jeu (soin, Flétris ralentis).
