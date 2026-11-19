@@ -96,6 +96,9 @@ func _run() -> void:
 			if str(all[k].get("branch", "")) == load("res://scripts/regions.gd").branch_of(region):
 				build = k
 				break
+	# ZONE_BUILD=<build> tools/zone.sh : un autre build de builds.json.
+	if OS.get_environment("ZONE_BUILD") != "":
+		build = OS.get_environment("ZONE_BUILD")
 	bot = load("res://scripts/zone_bot.gd").new(build, region)
 	await _new_main()
 	obj.completed.connect(_on_completed)
