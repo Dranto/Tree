@@ -1,0 +1,158 @@
+{
+  "_doc": "Région factice de la branche Sève pour les tests du monde à cinq régions (tests/world_test.gd). Chargée seulement avec « -- --regions=res://tests/regions/ » ou Regions.set_extra_dirs, et seulement tant que data/regions/ n'a pas de vraie région pour cette branche (la vraie l'emporte). Ses lieux occupent le secteur comme le ferait une vraie région (sanctuaires, autels, secret, Cœur et arène au plus loin que le monde le permet).",
+  "id": "seve",
+  "branch": "seve",
+  "name": "Région de Sève (factice)",
+  "place": "la vallée factice",
+  "map_name": "Vallée",
+  "color": "#8af5c0",
+  "ground": {
+    "dead_dark": "#2c3a34",
+    "dead_light": "#46584e",
+    "purified_dark": "#30443c",
+    "purified_light": "#4e6a5c",
+    "alive_dark": "#2f6a4a",
+    "alive_light": "#5fae7e",
+    "dot": "seve/clair",
+    "dot_rarity": 0.985,
+    "dot_strength": 0.6
+  },
+  "landmarks": [
+    {
+      "kind": "grand_arbre",
+      "dist": 1080.0,
+      "angle": 0.1,
+      "size": 1.0
+    },
+    {
+      "kind": "rocher",
+      "dist": 2400.0,
+      "angle": 0.4,
+      "size": 0.9
+    }
+  ],
+  "spawn": {
+    "kinds": {
+      "chargeur": 0.5,
+      "cracheur": 0.5
+    },
+    "share_near": 0.25,
+    "share_far": 0.8,
+    "far": 2400,
+    "max_nests": 0,
+    "purified_factor": 0.4
+  },
+  "sanctuaries": [
+    {
+      "id": "seve_source",
+      "name": "de la Source",
+      "dist": 820.0,
+      "angle": 0.3
+    },
+    {
+      "id": "seve_saule",
+      "name": "du Saule",
+      "dist": 1250.0,
+      "angle": -0.3
+    },
+    {
+      "id": "seve_gue",
+      "name": "du Gué",
+      "dist": 1700.0,
+      "angle": 0.38
+    },
+    {
+      "id": "seve_val",
+      "name": "du Val",
+      "dist": 2200.0,
+      "angle": -0.3
+    }
+  ],
+  "altars": [
+    {
+      "id": "seve_1",
+      "name": "Autel factice 1",
+      "dist": 980,
+      "side": 0.85,
+      "points": 1
+    },
+    {
+      "id": "seve_2",
+      "name": "Autel factice 2",
+      "dist": 1350,
+      "side": -0.72,
+      "points": 1
+    },
+    {
+      "id": "seve_3",
+      "name": "Autel factice 3",
+      "dist": 2050,
+      "side": 0.74,
+      "points": 1
+    },
+    {
+      "id": "seve_4",
+      "name": "Autel factice 4",
+      "dist": 2900,
+      "side": -0.4,
+      "points": 1
+    }
+  ],
+  "secrets": [
+    {
+      "id": "seve",
+      "name": "Le secret factice de Sève",
+      "dist": 2700,
+      "side": 0.9,
+      "points": 1
+    }
+  ],
+  "heart": {
+    "name": "Cœur factice de Sève",
+    "zone": 240.0,
+    "hold_time": 5.0,
+    "waves": {
+      "every": 4.0,
+      "base": 2,
+      "growth": 1,
+      "kinds": [
+        "fletri",
+        "cendreux"
+      ]
+    },
+    "idle": {
+      "every": 5.0,
+      "max": 2,
+      "kind": "fletri"
+    },
+    "life_color": "seve/clair",
+    "reward": {
+      "points": 1
+    },
+    "wake_banner": "Le Cœur factice de Sève s'éveille.",
+    "purified_banner": "Le Cœur factice de Sève est purifié."
+  },
+  "boss": {
+    "script": "res://tests/regions/boss_essai.gd",
+    "name": "Le boss factice de Sève",
+    "bar_color": "seve",
+    "phases": [
+      "Phase 1 sur 2",
+      "Phase 2 sur 2"
+    ],
+    "arena": {
+      "radius": 470.0,
+      "radius_min": 310.0,
+      "offset": 800.0,
+      "life_color": "seve/clair"
+    },
+    "reward": {
+      "points": 2
+    }
+  },
+  "ending": {
+    "sub": "Fin de la région factice de Sève",
+    "title": "Sève respire",
+    "body": "Région factice des tests."
+  }
+}

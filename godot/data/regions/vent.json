@@ -6,6 +6,7 @@
   "place": "les hauts plateaux",
   "map_name": "Plateaux",
   "color": "#a4bcd4",
+  "art": "vent",
   "ground": {
     "_doc": "Plateaux : roche d'ardoise couverte de cendre tant que le Cœur vit, steppe d'herbe blonde une fois ravivée, petites fleurs claires du vent.",
     "colors": {
