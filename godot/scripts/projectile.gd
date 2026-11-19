@@ -110,7 +110,7 @@ func _physics_process(delta: float) -> void:
 			continue
 		hit[e.get_instance_id()] = true
 		_burst(position)
-		main.player_hit_enemy(e, damage, true, "ronce" if thorn else branch)
+		AttackScript.hit(main, e, damage, "ronce" if thorn else branch, attack)
 		if bleed > 0.0 and not e.dead:
 			e.apply_status("saignement", damage * bleed, bleed_duration)
 		if mods_on:

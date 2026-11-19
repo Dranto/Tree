@@ -118,7 +118,7 @@ func _run() -> void:
 	check(not game.give_graft("greffe_soeurs") and not game.give_graft("inconnue"), "doublon ou greffe inconnue refusés")
 	check(game.free_grafts() == ["greffe_soeurs"], "la greffe attend un emplacement")
 	var elite: Array = []
-	for i in 20:
+	for i in 60:
 		var g: String = game.roll_graft("elite")
 		if g == "":
 			break

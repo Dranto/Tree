@@ -145,6 +145,23 @@
       "deflect": true,
       "fx": "bourrasque",
       "sfx": "bourrasque"
+    },
+    "rayon": {
+      "name": "Rayon d'aube",
+      "desc": "Un rayon de lumière qui part d'un coup jusqu'à sa portée et traverse tout ce qu'il touche ; il vise juste (+5 % de chance de critique).",
+      "kind": "beam",
+      "tags": ["projectile"],
+      "branch": "aube",
+      "element": "lumiere",
+      "priority": 2,
+      "damage": 1.0,
+      "rate": 1.0,
+      "range": 640,
+      "width": 26,
+      "spread": 0.22,
+      "crit": 0.05,
+      "size": 1.0,
+      "fx": "rayon"
     }
   },
   "mods": {
@@ -257,6 +274,28 @@
     "repousse": {
       "name": "Repousse",
       "text": "Chaque coup repousse l'ennemi de {v} pixels.",
+      "stack": "sum"
+    },
+    "eblouit": {
+      "name": "Éblouissement",
+      "text": "{p} % de chances d'éblouir l'ennemi touché (2,5 s) : les coups critiques le trouvent plus souvent.",
+      "stack": "sum",
+      "cap": 1.0,
+      "duration": 2.5,
+      "crit": 0.2
+    },
+    "refraction": {
+      "name": "Réfraction",
+      "text": "Au premier ennemi touché, le rayon se brise en {v} rayon(s) obliques (60 % des dégâts).",
+      "stack": "sum",
+      "forms": ["rayon"],
+      "angle": 0.55,
+      "factor": 0.6,
+      "length": 0.5
+    },
+    "incandescence": {
+      "name": "Incandescence",
+      "text": "Les coups critiques de l'attaque font {p} % de dégâts en plus.",
       "stack": "sum"
     }
   }

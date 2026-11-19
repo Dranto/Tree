@@ -2,32 +2,1590 @@
   "id": "aube",
   "name": "Aube",
   "color": "#f2d06b",
-  "blurb": "Coups critiques",
+  "blurb": "Rayons de lumière et coups critiques",
   "small": [
-    {"stat": "crit", "op": "add", "value": 0.012},
-    {"stat": "crit_mult", "op": "add", "value": 0.07}
+    {
+      "stat": "crit",
+      "op": "add",
+      "value": 0.012
+    },
+    {
+      "stat": "crit_mult",
+      "op": "add",
+      "value": 0.07
+    }
   ],
   "notable": {
-    "effects": [{"stat": "damage", "op": "inc", "value": 0.08}],
+    "effects": [
+      {
+        "stat": "damage",
+        "op": "inc",
+        "value": 0.08
+      }
+    ],
     "names": [
-      ["Rayon", "Éclat", "Aurore", "Lueur", "Zénith", "Prisme"],
-      ["doré", "aveuglant", "pâle", "ardent", "premier", "nacré"]
+      [
+        "Rayon",
+        "Éclat",
+        "Aurore",
+        "Lueur",
+        "Zénith",
+        "Prisme"
+      ],
+      [
+        "doré",
+        "aveuglant",
+        "pâle",
+        "ardent",
+        "premier",
+        "nacré"
+      ]
     ]
   },
   "keystones": [
-    {"key": "eclat", "name": "Éclat d'aube", "effects": [
-      {
-        "on": "crit", "do": "explode", "radius": 80, "factor": 0.6, "color": "#f2d06b",
-        "text": "Les coups critiques explosent et touchent les ennemis proches."
+    {
+      "key": "eclat",
+      "name": "Éclat d'aube",
+      "desc": "Tes coups critiques éclatent sur les ennemis proches.",
+      "effects": [
+        {
+          "on": "crit",
+          "do": "explode",
+          "radius": 80,
+          "factor": 0.6,
+          "color": "#f2d06b",
+          "text": "Les coups critiques explosent et touchent les ennemis proches."
+        }
+      ]
+    },
+    {
+      "key": "zenith",
+      "name": "Zénith",
+      "desc": "Ta chance de critique double.",
+      "effects": [
+        {
+          "stat": "crit",
+          "op": "more",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "key": "lumiere_lente",
+      "name": "Lumière lente",
+      "desc": "Des coups énormes et plus lourds, mais plus rares.",
+      "effects": [
+        {
+          "stat": "projectile_size",
+          "op": "more",
+          "value": 2.1667
+        },
+        {
+          "stat": "damage",
+          "op": "more",
+          "value": 1.6
+        },
+        {
+          "stat": "fire_rate",
+          "op": "more",
+          "value": 0.8
+        }
+      ]
+    }
+  ],
+  "resonance": [
+    {
+      "count": 10,
+      "name": "Résonance de l'Aube I",
+      "effects": [
+        {
+          "stat": "crit",
+          "op": "add",
+          "value": 0.03
+        },
+        {
+          "stat": "crit_mult",
+          "op": "add",
+          "value": 0.1
+        }
+      ]
+    },
+    {
+      "count": 25,
+      "name": "Résonance de l'Aube II",
+      "effects": [
+        {
+          "stat": "projectile_damage",
+          "op": "inc",
+          "value": 0.08
+        },
+        {
+          "stat": "crit_mult",
+          "op": "add",
+          "value": 0.1
+        },
+        {
+          "stat": "skill_slots",
+          "op": "add",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "count": 50,
+      "name": "Résonance de l'Aube III",
+      "effects": [
+        {
+          "stat": "damage",
+          "op": "more",
+          "value": 1.12
+        },
+        {
+          "stat": "skill_slots",
+          "op": "add",
+          "value": 1
+        },
+        {
+          "on": "crit",
+          "do": "heal",
+          "value": 0.01,
+          "cooldown": 1,
+          "text": "Un coup critique te rend 1 % de ta vie maximale (au plus une fois par seconde)."
+        }
+      ]
+    }
+  ],
+  "clusters": [
+    {
+      "id": "eclats",
+      "name": "Graines dorées",
+      "theme": "Attaque qui éblouit",
+      "ring": 2.5,
+      "angle": 0.65,
+      "entry": [
+        "a1"
+      ],
+      "nodes": [
+        {
+          "id": "a1",
+          "type": "attack",
+          "name": "Graines dorées",
+          "at": [
+            0,
+            0
+          ],
+          "effects": [
+            {
+              "attack_mod": "eblouit",
+              "value": 0.15
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rayon",
+      "name": "Rayon d'aube",
+      "theme": "Un rayon qui traverse tout",
+      "ring": 3.0,
+      "angle": 0.95,
+      "entry": [
+        "l1"
+      ],
+      "nodes": [
+        {
+          "id": "l1",
+          "type": "attack",
+          "name": "Rayon d'aube",
+          "at": [
+            0,
+            0
+          ],
+          "effects": [
+            {
+              "attack_form": "rayon"
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "type": "notable",
+          "name": "Lumière crue",
+          "at": [
+            0.55,
+            -0.35
+          ],
+          "links": [
+            "l1"
+          ],
+          "effects": [
+            {
+              "stat": "projectile_damage",
+              "op": "inc",
+              "value": 0.2
+            },
+            {
+              "stat": "crit",
+              "op": "add",
+              "value": 0.02
+            }
+          ]
+        },
+        {
+          "id": "l3",
+          "type": "notable",
+          "name": "Œil juste",
+          "at": [
+            0.55,
+            0.35
+          ],
+          "links": [
+            "l1"
+          ],
+          "effects": [
+            {
+              "stat": "crit",
+              "op": "add",
+              "value": 0.04
+            },
+            {
+              "stat": "crit_mult",
+              "op": "add",
+              "value": 0.2
+            }
+          ]
+        },
+        {
+          "id": "l4",
+          "type": "mastery",
+          "name": "Maîtrise du rayon",
+          "at": [
+            1.05,
+            0
+          ],
+          "links": [
+            "l2",
+            "l3"
+          ],
+          "choices": [
+            {
+              "id": "rayon_vif",
+              "name": "Rayon vif",
+              "effects": [
+                {
+                  "stat": "fire_rate",
+                  "op": "inc",
+                  "value": 0.1
+                }
+              ]
+            },
+            {
+              "id": "rayon_large",
+              "name": "Rayon large",
+              "effects": [
+                {
+                  "attack_mod": "taille",
+                  "value": 0.3
+                }
+              ]
+            },
+            {
+              "id": "rayon_percant",
+              "name": "Rayon perçant",
+              "effects": [
+                {
+                  "stat": "projectile_damage",
+                  "op": "inc",
+                  "value": 0.2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "l5",
+          "type": "attack",
+          "name": "Réfraction",
+          "at": [
+            1.5,
+            -0.3
+          ],
+          "links": [
+            "l4"
+          ],
+          "effects": [
+            {
+              "attack_mod": "refraction",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "id": "l6",
+          "type": "graft",
+          "name": "Greffon du rayon",
+          "at": [
+            1.5,
+            0.35
+          ],
+          "links": [
+            "l4"
+          ]
+        },
+        {
+          "id": "l7",
+          "type": "attack",
+          "name": "Rayon incandescent",
+          "at": [
+            2.0,
+            -0.05
+          ],
+          "links": [
+            "l5"
+          ],
+          "effects": [
+            {
+              "attack_mod": "incandescence",
+              "value": 0.4
+            },
+            {
+              "attack_mod": "eblouit",
+              "value": 0.1
+            }
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Rayon complet",
+        "effects": [
+          {
+            "stat": "projectile_damage",
+            "op": "more",
+            "value": 1.15
+          }
+        ]
       }
-    ]},
-    {"key": "zenith", "name": "Zénith", "effects": [
-      {"stat": "crit", "op": "more", "value": 2}
-    ]},
-    {"key": "lumiere_lente", "name": "Lumière lente", "effects": [
-      {"stat": "projectile_size", "op": "more", "value": 2.1667},
-      {"stat": "damage", "op": "more", "value": 1.6},
-      {"stat": "fire_rate", "op": "more", "value": 0.8}
-    ]}
+    },
+    {
+      "id": "levant",
+      "name": "Soleil levant",
+      "theme": "Aurore qui éblouit",
+      "ring": 5.0,
+      "angle": 0.18,
+      "entry": [
+        "r6"
+      ],
+      "nodes": [
+        {
+          "id": "r6",
+          "type": "attack",
+          "name": "Aube aveuglante",
+          "at": [
+            -0.5,
+            0
+          ],
+          "effects": [
+            {
+              "attack_mod": "eblouit",
+              "value": 0.2
+            }
+          ]
+        },
+        {
+          "id": "r1",
+          "type": "skill",
+          "key": "aurore",
+          "name": "Aurore",
+          "at": [
+            0,
+            0
+          ],
+          "links": [
+            "r6"
+          ],
+          "effects": [
+            {
+              "skill": "aurore"
+            }
+          ]
+        },
+        {
+          "id": "r2",
+          "type": "notable",
+          "name": "Premier jour",
+          "at": [
+            0.5,
+            -0.4
+          ],
+          "links": [
+            "r1"
+          ],
+          "effects": [
+            {
+              "stat": "area_damage",
+              "op": "inc",
+              "value": 0.2
+            },
+            {
+              "stat": "area",
+              "op": "inc",
+              "value": 0.08
+            }
+          ]
+        },
+        {
+          "id": "r3",
+          "type": "notable",
+          "name": "Chaleur douce",
+          "at": [
+            0.5,
+            0.4
+          ],
+          "links": [
+            "r1"
+          ],
+          "effects": [
+            {
+              "stat": "max_hp",
+              "op": "inc",
+              "value": 0.2
+            },
+            {
+              "stat": "armor",
+              "op": "add",
+              "value": 0.08
+            }
+          ]
+        },
+        {
+          "id": "r4",
+          "type": "mastery",
+          "name": "Maîtrise du levant",
+          "at": [
+            1.0,
+            0
+          ],
+          "links": [
+            "r2",
+            "r3"
+          ],
+          "choices": [
+            {
+              "id": "aurore_large",
+              "name": "Aurore large",
+              "effects": [
+                {
+                  "stat": "area",
+                  "op": "inc",
+                  "value": 0.15
+                }
+              ]
+            },
+            {
+              "id": "aurore_vive",
+              "name": "Aurore vive",
+              "effects": [
+                {
+                  "skill_mod": "aurore",
+                  "param": "cooldown",
+                  "op": "more",
+                  "value": 0.8,
+                  "text": "−20 % recharge de l'aurore"
+                }
+              ]
+            },
+            {
+              "id": "aurore_ardente",
+              "name": "Aurore ardente",
+              "effects": [
+                {
+                  "stat": "area_damage",
+                  "op": "inc",
+                  "value": 0.25
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "r5",
+          "type": "mutation",
+          "mutates": "aurore",
+          "name": "Aurore transformée",
+          "at": [
+            1.45,
+            -0.35
+          ],
+          "links": [
+            "r4"
+          ],
+          "choices": [
+            {
+              "id": "double_aurore",
+              "name": "Double aurore",
+              "effects": [
+                {
+                  "skill_mod": "aurore",
+                  "param": "waves",
+                  "op": "set",
+                  "value": 2,
+                  "text": "Une seconde onde suit la première (60 % des dégâts)."
+                }
+              ]
+            },
+            {
+              "id": "aube_reparatrice",
+              "name": "Aube réparatrice",
+              "effects": [
+                {
+                  "skill_mod": "aurore",
+                  "param": "heal",
+                  "op": "set",
+                  "value": 0.012,
+                  "text": "Chaque ennemi touché te rend 1,2 % de ta vie maximale (5 ennemis au plus)."
+                }
+              ]
+            },
+            {
+              "id": "aurore_aveuglante",
+              "name": "Aurore aveuglante",
+              "effects": [
+                {
+                  "skill_mod": "aurore",
+                  "param": "dazzle",
+                  "op": "set",
+                  "value": 0.5,
+                  "text": "Les ennemis éblouis par l'aurore subissent +50 % de chance de critique."
+                },
+                {
+                  "skill_mod": "aurore",
+                  "param": "dazzle_time",
+                  "op": "more",
+                  "value": 1.5,
+                  "text": "+50 % durée de l'éblouissement de l'aurore"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "r7",
+          "type": "attack",
+          "name": "Coup de midi",
+          "at": [
+            1.0,
+            0.8
+          ],
+          "links": [
+            "r3"
+          ],
+          "effects": [
+            {
+              "attack_mod": "renforcee",
+              "value": 4,
+              "factor": 2.2
+            }
+          ]
+        },
+        {
+          "id": "r8",
+          "type": "attack",
+          "name": "Rayons jumeaux",
+          "at": [
+            1.95,
+            0.0
+          ],
+          "links": [
+            "r5"
+          ],
+          "effects": [
+            {
+              "attack_mod": "repetition",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Levant complet",
+        "effects": [
+          {
+            "stat": "area_damage",
+            "op": "more",
+            "value": 1.1
+          },
+          {
+            "stat": "crit",
+            "op": "add",
+            "value": 0.03
+          }
+        ]
+      }
+    },
+    {
+      "id": "prisme",
+      "name": "Verre de l'aube",
+      "theme": "Prismes qui tirent seuls",
+      "ring": 5.6,
+      "angle": 0.2,
+      "entry": [
+        "t1"
+      ],
+      "nodes": [
+        {
+          "id": "t1",
+          "type": "skill",
+          "key": "prisme",
+          "name": "Prisme",
+          "at": [
+            0,
+            0
+          ],
+          "effects": [
+            {
+              "skill": "prisme"
+            }
+          ]
+        },
+        {
+          "id": "t2",
+          "type": "notable",
+          "name": "Facettes",
+          "at": [
+            0.5,
+            -0.4
+          ],
+          "links": [
+            "t1"
+          ],
+          "effects": [
+            {
+              "stat": "projectile_damage",
+              "op": "inc",
+              "value": 0.2
+            },
+            {
+              "stat": "crit",
+              "op": "add",
+              "value": 0.02
+            }
+          ]
+        },
+        {
+          "id": "t3",
+          "type": "notable",
+          "name": "Verre clair",
+          "at": [
+            0.5,
+            0.4
+          ],
+          "links": [
+            "t1"
+          ],
+          "effects": [
+            {
+              "stat": "crit_mult",
+              "op": "add",
+              "value": 0.25
+            },
+            {
+              "stat": "max_hp",
+              "op": "inc",
+              "value": 0.08
+            }
+          ]
+        },
+        {
+          "id": "t4",
+          "type": "mastery",
+          "name": "Maîtrise du verre",
+          "at": [
+            1.0,
+            0
+          ],
+          "links": [
+            "t2",
+            "t3"
+          ],
+          "choices": [
+            {
+              "id": "prisme_durable",
+              "name": "Prisme durable",
+              "effects": [
+                {
+                  "skill_mod": "prisme",
+                  "param": "life",
+                  "op": "more",
+                  "value": 1.3,
+                  "text": "+30 % durée du prisme"
+                }
+              ]
+            },
+            {
+              "id": "prisme_vif",
+              "name": "Prisme vif",
+              "effects": [
+                {
+                  "skill_mod": "prisme",
+                  "param": "every",
+                  "op": "more",
+                  "value": 0.8,
+                  "text": "Le prisme tire 25 % plus souvent."
+                }
+              ]
+            },
+            {
+              "id": "prisme_tranchant",
+              "name": "Prisme tranchant",
+              "effects": [
+                {
+                  "stat": "projectile_damage",
+                  "op": "inc",
+                  "value": 0.2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "t5",
+          "type": "mutation",
+          "mutates": "prisme",
+          "name": "Prisme transformé",
+          "at": [
+            1.45,
+            -0.35
+          ],
+          "links": [
+            "t4"
+          ],
+          "choices": [
+            {
+              "id": "prisme_double",
+              "name": "Prisme double",
+              "effects": [
+                {
+                  "skill_mod": "prisme",
+                  "param": "beams",
+                  "op": "add",
+                  "value": 1,
+                  "text": "+1 rayon à chaque tir du prisme"
+                },
+                {
+                  "skill_mod": "prisme",
+                  "param": "damage",
+                  "op": "more",
+                  "value": 0.8,
+                  "text": "−20 % dégâts de chaque rayon du prisme"
+                }
+              ]
+            },
+            {
+              "id": "prisme_ardent",
+              "name": "Prisme ardent",
+              "effects": [
+                {
+                  "skill_mod": "prisme",
+                  "param": "dazzle",
+                  "op": "set",
+                  "value": 0.5,
+                  "text": "Les rayons du prisme ont 50 % de chances d'éblouir."
+                }
+              ]
+            },
+            {
+              "id": "prisme_porte",
+              "name": "Prisme porté",
+              "effects": [
+                {
+                  "skill_mod": "prisme",
+                  "param": "follow",
+                  "op": "set",
+                  "value": true,
+                  "text": "Le prisme flotte au-dessus de toi et te suit."
+                },
+                {
+                  "skill_mod": "prisme",
+                  "param": "life",
+                  "op": "more",
+                  "value": 1.2,
+                  "text": "+20 % durée du prisme"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "t6",
+          "type": "attack",
+          "name": "Rayons diffractés",
+          "at": [
+            1.0,
+            0.8
+          ],
+          "links": [
+            "t3"
+          ],
+          "effects": [
+            {
+              "attack_mod": "refraction",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": "t7",
+          "type": "graft",
+          "name": "Greffon du verre",
+          "at": [
+            1.95,
+            0.05
+          ],
+          "links": [
+            "t5"
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Verre complet",
+        "effects": [
+          {
+            "stat": "projectile_damage",
+            "op": "more",
+            "value": 1.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "oeil",
+      "name": "Œil d'or",
+      "theme": "Critiques en chaîne",
+      "ring": 7.2,
+      "angle": 0.82,
+      "entry": [
+        "v1"
+      ],
+      "nodes": [
+        {
+          "id": "v1",
+          "type": "notable",
+          "name": "Regard d'or",
+          "at": [
+            0,
+            0
+          ],
+          "effects": [
+            {
+              "stat": "crit",
+              "op": "add",
+              "value": 0.04
+            },
+            {
+              "stat": "fire_rate",
+              "op": "inc",
+              "value": 0.05
+            }
+          ]
+        },
+        {
+          "id": "v2",
+          "type": "notable",
+          "name": "Flamboiement",
+          "at": [
+            0.5,
+            -0.4
+          ],
+          "links": [
+            "v1"
+          ],
+          "effects": [
+            {
+              "on": "crit",
+              "do": "status_area",
+              "status": "ebloui",
+              "value": 0.2,
+              "duration": 2,
+              "radius": 110,
+              "at": "enemy",
+              "cooldown": 0.5,
+              "text": "Un coup critique éblouit les ennemis autour de sa cible (2 s, au plus toutes les 0,5 s)."
+            }
+          ]
+        },
+        {
+          "id": "v3",
+          "type": "notable",
+          "name": "Éclat juste",
+          "at": [
+            0.5,
+            0.4
+          ],
+          "links": [
+            "v1"
+          ],
+          "effects": [
+            {
+              "stat": "crit_mult",
+              "op": "add",
+              "value": 0.3
+            }
+          ]
+        },
+        {
+          "id": "v4",
+          "type": "mastery",
+          "name": "Maîtrise de l'œil",
+          "at": [
+            1.0,
+            0
+          ],
+          "links": [
+            "v2",
+            "v3"
+          ],
+          "choices": [
+            {
+              "id": "oeil_sur",
+              "name": "Œil sûr",
+              "effects": [
+                {
+                  "stat": "crit",
+                  "op": "add",
+                  "value": 0.05
+                }
+              ]
+            },
+            {
+              "id": "oeil_ardent",
+              "name": "Œil ardent",
+              "effects": [
+                {
+                  "stat": "crit_mult",
+                  "op": "add",
+                  "value": 0.3
+                }
+              ]
+            },
+            {
+              "id": "oeil_vif",
+              "name": "Œil vif",
+              "effects": [
+                {
+                  "stat": "fire_rate",
+                  "op": "inc",
+                  "value": 0.1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "v5",
+          "type": "keystone",
+          "key": "midi",
+          "name": "Plein midi",
+          "at": [
+            1.5,
+            0
+          ],
+          "links": [
+            "v4"
+          ],
+          "desc": "Tes coups trouvent la faille, mais tu frappes moins souvent.",
+          "effects": [
+            {
+              "stat": "crit",
+              "op": "add",
+              "value": 0.15
+            },
+            {
+              "stat": "crit_mult",
+              "op": "add",
+              "value": 0.25
+            },
+            {
+              "stat": "fire_rate",
+              "op": "more",
+              "value": 0.85
+            }
+          ]
+        },
+        {
+          "id": "v6",
+          "type": "attack",
+          "name": "Coup d'éclat",
+          "at": [
+            1.0,
+            -0.8
+          ],
+          "links": [
+            "v2"
+          ],
+          "effects": [
+            {
+              "attack_mod": "incandescence",
+              "value": 0.3
+            }
+          ]
+        },
+        {
+          "id": "v7",
+          "type": "graft",
+          "name": "Greffon de l'œil",
+          "at": [
+            1.5,
+            0.6
+          ],
+          "links": [
+            "v3"
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Œil complet",
+        "effects": [
+          {
+            "stat": "crit",
+            "op": "add",
+            "value": 0.04
+          },
+          {
+            "stat": "crit_mult",
+            "op": "add",
+            "value": 0.2
+          }
+        ]
+      }
+    },
+    {
+      "id": "lance",
+      "name": "Lance du jour",
+      "theme": "Un grand rayon visé",
+      "ring": 8.6,
+      "angle": 0.78,
+      "entry": [
+        "p1"
+      ],
+      "nodes": [
+        {
+          "id": "p1",
+          "type": "skill",
+          "key": "lance_aube",
+          "name": "Lance d'aube",
+          "at": [
+            0,
+            0
+          ],
+          "effects": [
+            {
+              "skill": "lance_aube"
+            }
+          ]
+        },
+        {
+          "id": "p2",
+          "type": "notable",
+          "name": "Longue vue",
+          "at": [
+            0.5,
+            -0.4
+          ],
+          "links": [
+            "p1"
+          ],
+          "effects": [
+            {
+              "stat": "projectile_damage",
+              "op": "inc",
+              "value": 0.2
+            },
+            {
+              "stat": "crit",
+              "op": "add",
+              "value": 0.02
+            }
+          ]
+        },
+        {
+          "id": "p3",
+          "type": "notable",
+          "name": "Midi brûlant",
+          "at": [
+            0.5,
+            0.4
+          ],
+          "links": [
+            "p1"
+          ],
+          "effects": [
+            {
+              "stat": "crit_mult",
+              "op": "add",
+              "value": 0.3
+            }
+          ]
+        },
+        {
+          "id": "p4",
+          "type": "mastery",
+          "name": "Maîtrise de la lance",
+          "at": [
+            1.0,
+            0
+          ],
+          "links": [
+            "p2",
+            "p3"
+          ],
+          "choices": [
+            {
+              "id": "lance_vive",
+              "name": "Lance vive",
+              "effects": [
+                {
+                  "skill_mod": "lance_aube",
+                  "param": "cooldown",
+                  "op": "more",
+                  "value": 0.8,
+                  "text": "−20 % recharge de la lance d'aube"
+                }
+              ]
+            },
+            {
+              "id": "lance_large",
+              "name": "Lance large",
+              "effects": [
+                {
+                  "skill_mod": "lance_aube",
+                  "param": "width",
+                  "op": "more",
+                  "value": 1.3,
+                  "text": "+30 % largeur de la lance d'aube"
+                }
+              ]
+            },
+            {
+              "id": "lance_lourde",
+              "name": "Lance lourde",
+              "effects": [
+                {
+                  "stat": "projectile_damage",
+                  "op": "inc",
+                  "value": 0.25
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "p5",
+          "type": "mutation",
+          "mutates": "lance_aube",
+          "name": "Lance transformée",
+          "at": [
+            1.45,
+            -0.35
+          ],
+          "links": [
+            "p4"
+          ],
+          "choices": [
+            {
+              "id": "lance_aveuglante",
+              "name": "Lance aveuglante",
+              "effects": [
+                {
+                  "skill_mod": "lance_aube",
+                  "param": "dazzle",
+                  "op": "set",
+                  "value": 2.5,
+                  "text": "La lance éblouit tout ce qu'elle touche (2,5 s)."
+                }
+              ]
+            },
+            {
+              "id": "double_lance",
+              "name": "Double lance",
+              "effects": [
+                {
+                  "skill_mod": "lance_aube",
+                  "param": "repeat",
+                  "op": "set",
+                  "value": 1,
+                  "text": "Une seconde lance part juste après (70 % des dégâts)."
+                }
+              ]
+            },
+            {
+              "id": "lance_zenith",
+              "name": "Lance du zénith",
+              "effects": [
+                {
+                  "skill_mod": "lance_aube",
+                  "param": "length",
+                  "op": "more",
+                  "value": 1.3,
+                  "text": "+30 % longueur de la lance d'aube"
+                },
+                {
+                  "skill_mod": "lance_aube",
+                  "param": "damage",
+                  "op": "more",
+                  "value": 1.3,
+                  "text": "+30 % dégâts de la lance d'aube"
+                },
+                {
+                  "skill_mod": "lance_aube",
+                  "param": "cooldown",
+                  "op": "add",
+                  "value": 1.5,
+                  "text": "+1,5 s de recharge de la lance d'aube"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "p6",
+          "type": "keystone",
+          "key": "soleil_fixe",
+          "name": "Soleil fixe",
+          "at": [
+            1.5,
+            0.35
+          ],
+          "links": [
+            "p4"
+          ],
+          "desc": "Immobile, tu ne manques rien ; mais tu te déplaces moins vite.",
+          "effects": [
+            {
+              "stat": "crit",
+              "op": "add",
+              "value": 0.2,
+              "if": {
+                "state": "immobile",
+                "min": 0.5
+              }
+            },
+            {
+              "stat": "move_speed",
+              "op": "more",
+              "value": 0.9
+            }
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Lance complète",
+        "effects": [
+          {
+            "stat": "projectile_damage",
+            "op": "more",
+            "value": 1.08
+          },
+          {
+            "stat": "crit",
+            "op": "add",
+            "value": 0.02
+          }
+        ]
+      }
+    },
+    {
+      "id": "clarte",
+      "name": "Clarté",
+      "theme": "La lumière qui porte",
+      "ring": 9.8,
+      "angle": 0.2,
+      "entry": [
+        "z1"
+      ],
+      "nodes": [
+        {
+          "id": "z1",
+          "type": "notable",
+          "name": "Clarté",
+          "at": [
+            0,
+            0
+          ],
+          "effects": [
+            {
+              "stat": "damage",
+              "op": "inc",
+              "value": 0.12
+            },
+            {
+              "stat": "crit",
+              "op": "add",
+              "value": 0.02
+            }
+          ]
+        },
+        {
+          "id": "z2",
+          "type": "notable",
+          "name": "Lumière vive",
+          "at": [
+            0.5,
+            -0.4
+          ],
+          "links": [
+            "z1"
+          ],
+          "effects": [
+            {
+              "on": "kill",
+              "do": "reduce_cooldown",
+              "target": "aurore",
+              "value": 0.3,
+              "text": "Chaque ennemi vaincu réduit la recharge de l'aurore de 0,3 s."
+            },
+            {
+              "stat": "area_damage",
+              "op": "inc",
+              "value": 0.1
+            }
+          ]
+        },
+        {
+          "id": "z3",
+          "type": "notable",
+          "name": "Ciel d'or",
+          "at": [
+            0.5,
+            0.4
+          ],
+          "links": [
+            "z1"
+          ],
+          "effects": [
+            {
+              "stat": "projectile_damage",
+              "op": "inc",
+              "value": 0.15
+            },
+            {
+              "stat": "area_damage",
+              "op": "inc",
+              "value": 0.15
+            }
+          ]
+        },
+        {
+          "id": "z4",
+          "type": "mastery",
+          "name": "Maîtrise de la clarté",
+          "at": [
+            1.0,
+            0
+          ],
+          "links": [
+            "z2",
+            "z3"
+          ],
+          "choices": [
+            {
+              "id": "clarte_forte",
+              "name": "Clarté forte",
+              "effects": [
+                {
+                  "stat": "damage",
+                  "op": "inc",
+                  "value": 0.1
+                }
+              ]
+            },
+            {
+              "id": "clarte_juste",
+              "name": "Clarté juste",
+              "effects": [
+                {
+                  "stat": "crit",
+                  "op": "add",
+                  "value": 0.05
+                }
+              ]
+            },
+            {
+              "id": "clarte_douce",
+              "name": "Clarté douce",
+              "effects": [
+                {
+                  "stat": "max_hp",
+                  "op": "inc",
+                  "value": 0.12
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "z5",
+          "type": "attack",
+          "name": "Long rayon",
+          "at": [
+            1.5,
+            0
+          ],
+          "links": [
+            "z4"
+          ],
+          "effects": [
+            {
+              "attack_mod": "portee",
+              "value": 0.3
+            },
+            {
+              "attack_mod": "taille",
+              "value": 0.15
+            }
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Clarté complète",
+        "effects": [
+          {
+            "stat": "damage",
+            "op": "more",
+            "value": 1.06
+          }
+        ]
+      }
+    },
+    {
+      "id": "coeur",
+      "name": "Cœur de l'aurore",
+      "theme": "Après la Phalène de verre",
+      "ring": 10.8,
+      "angle": 0.36,
+      "entry": [
+        "h1"
+      ],
+      "nodes": [
+        {
+          "id": "h1",
+          "type": "notable",
+          "name": "Lueur première",
+          "at": [
+            0,
+            0
+          ],
+          "effects": [
+            {
+              "stat": "crit",
+              "op": "add",
+              "value": 0.03
+            },
+            {
+              "stat": "crit_mult",
+              "op": "add",
+              "value": 0.15
+            },
+            {
+              "stat": "damage",
+              "op": "inc",
+              "value": 0.08
+            }
+          ]
+        },
+        {
+          "id": "h2",
+          "type": "withered",
+          "name": "Aurore apaisée",
+          "at": [
+            0.5,
+            -0.45
+          ],
+          "links": [
+            "h1"
+          ],
+          "requires_flag": "aube_coeur_purifie",
+          "requires_text": "Couvert de cendre tant que le Cœur de l'aurore n'est pas purifié.",
+          "effects": [
+            {
+              "stat": "max_hp",
+              "op": "inc",
+              "value": 0.15
+            },
+            {
+              "stat": "crit_mult",
+              "op": "add",
+              "value": 0.2
+            }
+          ]
+        },
+        {
+          "id": "h3",
+          "type": "withered",
+          "name": "Héritage de la Phalène",
+          "at": [
+            0.5,
+            0.45
+          ],
+          "links": [
+            "h1"
+          ],
+          "requires_flag": "aube_boss_vaincu",
+          "requires_text": "Couvert de cendre tant que la Phalène de verre n'est pas vaincue.",
+          "effects": [
+            {
+              "stat": "projectile_damage",
+              "op": "inc",
+              "value": 0.2
+            },
+            {
+              "stat": "area_damage",
+              "op": "inc",
+              "value": 0.2
+            },
+            {
+              "stat": "melee_damage",
+              "op": "inc",
+              "value": 0.2
+            },
+            {
+              "on": "kill",
+              "do": "reduce_cooldown",
+              "target": "lance_aube",
+              "value": 0.2,
+              "text": "Chaque ennemi vaincu réduit la recharge de la lance d'aube de 0,2 s."
+            }
+          ]
+        },
+        {
+          "id": "h4",
+          "type": "graft",
+          "name": "Greffon de l'aurore",
+          "at": [
+            1.0,
+            0
+          ],
+          "links": [
+            "h1",
+            "h2",
+            "h3"
+          ]
+        }
+      ],
+      "complete": {
+        "name": "Cœur complet",
+        "effects": [
+          {
+            "stat": "damage",
+            "op": "more",
+            "value": 1.08
+          },
+          {
+            "stat": "crit_mult",
+            "op": "add",
+            "value": 0.1
+          }
+        ]
+      }
+    }
   ]
 }

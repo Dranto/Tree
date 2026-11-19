@@ -45,7 +45,7 @@ func play(id: String, data := {}) -> Dictionary:
 	e["id"] = id
 	e["t"] = 0.0
 	if not e.has("dur"):
-		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, 0.4))
+		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, 0.4)))
 	if Settings.reduce_effects and id in ["graine_depart", "graine_impact"]:
 		return e
 	while effects.size() >= MAX_EFFECTS:
@@ -89,6 +89,9 @@ static func draw_effect(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 	var k: float = clampf(e["t"] / maxf(e["dur"], 0.001), 0.0, 1.0)
 	if VentFx.draws(e["id"]):
 		VentFx.draw(ci, e, on_ground)
+		return
+	if AubeFx.draws(e["id"]):
+		AubeFx.draw(ci, e, on_ground)
 		return
 	match e["id"]:
 		"graine_depart":

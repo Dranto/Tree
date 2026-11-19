@@ -225,5 +225,8 @@
     ],
     "choices": {"c:vent:cyclone:t4": "cyclone_violent", "c:vent:cyclone:t5": "tornades_jumelles", "c:vent:appel:p4": "appel_brutal", "c:vent:appel:p5": "oeil_calme"},
     "style": "distance"
-  }
+  },
+  "rayon": {"name": "Rayon", "branch": "aube", "opening": ["c:aube:rayon:l1", "c:aube:rayon:l2"], "targets": ["c:aube:rayon:l1", "c:aube:rayon:l2", "c:aube:rayon:l3", "c:aube:rayon:l4", "c:aube:rayon:l5", "c:aube:eclats:a1", "c:aube:rayon:l7", "c:aube:oeil:v1", "c:aube:oeil:v3", "c:aube:oeil:v2", "c:aube:oeil:v4", "c:aube:oeil:v6", "key:zenith", "key:midi"], "choices": {"c:aube:rayon:l4": "rayon_percant", "c:aube:oeil:v4": "oeil_ardent"}, "style": "distance"},
+  "aurore": {"name": "Aurore", "branch": "aube", "opening": ["c:aube:levant:r6", "c:aube:levant:r1"], "targets": ["c:aube:levant:r6", "c:aube:levant:r1", "c:aube:levant:r2", "c:aube:levant:r3", "c:aube:levant:r4", "c:aube:levant:r5", "c:aube:levant:r7", "c:aube:levant:r8", "c:aube:oeil:v1", "c:aube:oeil:v2", "c:aube:oeil:v3", "c:aube:oeil:v4", "key:eclat", "key:midi"], "choices": {"c:aube:levant:r4": "aurore_ardente", "c:aube:levant:r5": "double_aurore", "c:aube:oeil:v4": "oeil_sur"}, "style": "melee"},
+  "lance": {"name": "Prisme et lance", "branch": "aube", "opening": ["c:aube:prisme:t1"], "targets": ["c:aube:prisme:t1", "c:aube:prisme:t2", "c:aube:prisme:t3", "c:aube:prisme:t4", "c:aube:prisme:t5", "c:aube:prisme:t6", "c:aube:lance:p1", "c:aube:lance:p2", "c:aube:lance:p3", "c:aube:lance:p4", "c:aube:lance:p5", "key:zenith"], "choices": {"c:aube:prisme:t4": "prisme_tranchant", "c:aube:prisme:t5": "prisme_double", "c:aube:lance:p4": "lance_lourde", "c:aube:lance:p5": "lance_aveuglante"}, "style": "distance"}
 }

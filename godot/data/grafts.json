@@ -318,5 +318,92 @@
       {"attack_mod": "repousse", "value": 20},
       {"stat": "projectile_damage", "op": "inc", "value": 0.1}
     ]
+  },
+  "greffe_eclat_verre": {
+    "name": "Éclat de verre",
+    "desc": "Ton rayon se brise sur le premier ennemi et vise plus juste.",
+    "sources": ["autel"], "shape": "epine", "color": "#ffe14d",
+    "effects": [
+      {"attack_mod": "refraction", "value": 1},
+      {"stat": "crit", "op": "add", "value": 0.03}
+    ]
+  },
+  "greffe_prisme": {
+    "name": "Prisme taillé",
+    "desc": "Le prisme tire un rayon de plus et dure un peu plus longtemps.",
+    "sources": ["autel"], "shape": "fleur", "color": "#fff1a8",
+    "effects": [
+      {"skill_mod": "prisme", "param": "beams", "op": "add", "value": 1, "text": "Prisme : +1 rayon à chaque tir."},
+      {"skill_mod": "prisme", "param": "life", "op": "more", "value": 1.15, "text": "Prisme : durée ×1,15."}
+    ]
+  },
+  "greffe_rosee": {
+    "name": "Rosée",
+    "desc": "Chaque coup critique te soigne un peu.",
+    "sources": ["autel"], "shape": "feuille", "color": "#f6e7b0",
+    "effects": [
+      {"on": "crit", "do": "heal", "value": 0.006, "cooldown": 0.5, "text": "Un coup critique te rend 0,6 % de ta vie maximale (au plus toutes les 0,5 s)."},
+      {"stat": "max_hp", "op": "inc", "value": 0.08}
+    ]
+  },
+  "greffe_lueur": {
+    "name": "Lueur",
+    "desc": "Ton attaque éblouit parfois l'ennemi touché.",
+    "sources": ["autel"], "shape": "feuille", "color": "#f2d06b",
+    "effects": [
+      {"attack_mod": "eblouit", "value": 0.15},
+      {"stat": "crit", "op": "add", "value": 0.02}
+    ]
+  },
+  "greffe_aile_de_verre": {
+    "name": "Aile de verre",
+    "desc": "Chaque coup critique renvoie un rayon vers un autre ennemi.",
+    "sources": ["boss"], "shape": "coeur", "color": "#ffe14d",
+    "effects": [
+      {"on": "crit", "do": "ray", "factor": 0.8, "reach": 320, "cooldown": 0.3, "text": "Un coup critique renvoie un rayon de lumière de sa cible vers l'ennemi le plus proche (80 % des dégâts, au plus toutes les 0,3 s)."},
+      {"stat": "crit_mult", "op": "add", "value": 0.2}
+    ]
+  },
+  "greffe_lumiere_premiere": {
+    "name": "Lumière première",
+    "desc": "La première lumière du monde : tes coups trouvent la faille.",
+    "sources": ["secret"], "shape": "fleur", "color": "#fffbe2",
+    "effects": [
+      {"stat": "crit", "op": "add", "value": 0.05},
+      {"stat": "crit_mult", "op": "add", "value": 0.25},
+      {"stat": "damage", "op": "inc", "value": 0.05}
+    ]
+  },
+  "greffe_halo": {
+    "name": "Halo",
+    "desc": "L'aurore s'ouvre plus loin.",
+    "sources": ["elite"], "shape": "fleur", "color": "#ffe14d",
+    "effects": [
+      {"skill_mod": "aurore", "param": "radius", "op": "more", "value": 1.25, "text": "Aurore : rayon ×1,25."}
+    ]
+  },
+  "greffe_soleil_bas": {
+    "name": "Soleil bas",
+    "desc": "Les coups critiques de ton attaque brûlent plus fort.",
+    "sources": ["elite"], "shape": "epine", "color": "#ffd23a",
+    "effects": [
+      {"attack_mod": "incandescence", "value": 0.3}
+    ]
+  },
+  "greffe_vitrail": {
+    "name": "Vitrail",
+    "desc": "Un ennemi vaincu renvoie un rayon vers son voisin.",
+    "sources": ["elite"], "shape": "fleur", "color": "#f2d06b",
+    "effects": [
+      {"on": "kill", "do": "ray", "factor": 0.6, "reach": 260, "cooldown": 0.5, "text": "Un ennemi vaincu renvoie un rayon de lumière vers l'ennemi le plus proche (60 % des dégâts, au plus toutes les 0,5 s)."}
+    ]
+  },
+  "greffe_aube_lente": {
+    "name": "Aube lente",
+    "desc": "La lance d'aube revient plus vite.",
+    "sources": ["elite"], "shape": "epine", "color": "#fff1a8",
+    "effects": [
+      {"skill_mod": "lance_aube", "param": "cooldown", "op": "more", "value": 0.8, "text": "Lance d'aube : recharge ×0,8."}
+    ]
   }
 }
