@@ -31,7 +31,7 @@ func run(runner) -> void:
 	Game.flags.erase("aube_coeur_purifie")
 
 	# Les quatre Flétris des falaises, chacun pendant son attaque ; le joueur est ébloui.
-	var at: Vector2 = main.region_center("aube") * 0.8 + Vector2(0, 500)
+	var at: Vector2 = main.region_center("aube") * 0.72 + Vector2(0, -60)
 	await _place(at)
 	p.dazzle = 1.5
 	_frozen("luciole", at + Vector2(-120, -90), {})

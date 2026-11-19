@@ -481,7 +481,8 @@ func _paint_body(c: CanvasItem, r: float, open: float, glow: float, dk: float) -
 					c.draw_polyline(PackedVector2Array([a2.lerp(b2, 0.3), eye.lerp(a2, 0.5), eye]), Color(light, 0.8 * (1.0 - dk)), 2.0, true)
 	# Lueur de l'éclair : les ailes blanchissent.
 	if glow > 0.05:
-		Art.glow(c, Vector2(0, -0.2 * r), r * (1.4 + 1.2 * glow), "seve")
+		for i in 3:
+			c.draw_circle(Vector2(0, -0.2 * r), r * (1.0 + 0.6 * i) * (0.6 + 0.6 * glow), Color(A.pal("lumiere"), 0.16 * glow))
 		c.draw_circle(Vector2(0, -0.2 * r), r * 0.9 * glow, Color(A.pal("lumiere_clair"), 0.35 * glow))
 	# Abdomen velu, annelé.
 	var abdo := Art.ellipse(Vector2(0, 0.55 * r), r * 0.3, r * 0.68, 18)
