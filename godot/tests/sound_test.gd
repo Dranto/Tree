@@ -51,7 +51,15 @@ func _run() -> void:
 
 	print("Musique des régions")
 	var styles: Dictionary = RegionAudio.all_music_styles()
-	check(styles.has("spore") and styles.has("vent"), "Spore et Vent ont une musique propre (data/audio.json)")
+	check(styles.has("spore") and styles.has("vent") and styles.has("seve") and styles.has("aube"), "Spore, Vent, Sève et Aube ont une musique propre (data/audio.json)")
+	var seen_music: Array = []
+	for id in styles:
+		var dark := Synth.music_dark(styles[id])
+		check(not dark in seen_music, "%s : une couche sombre qui n'est celle d'aucune autre région" % id)
+		seen_music.append(dark)
+	for id in ["spore", "vent", "seve", "aube"]:
+		for key in RegionAudio.BOSS_KEYS:
+			check(RegionAudio.boss_sound(id, key) != "", "%s : un son de boss « %s »" % [id, key])
 	for id in styles:
 		for pair in [["sombre", Synth.music_dark(styles[id])], ["lumineux", Synth.music_bright(styles[id])]]:
 			var a: PackedFloat32Array = pair[1]
