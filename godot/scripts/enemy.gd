@@ -72,9 +72,11 @@ var bleed_stacks: Array = []
 var bleed_clock := 0.0
 ## Enraciné : immobile tant que root_time > 0 (il frappe toujours au contact).
 var root_time := 0.0
-## Ébloui (Aube) : tant que dazzle_time > 0, il avance moins vite (DAZZLE_SLOW) et les coups du joueur
+## Ébloui (Aube) : tant que dazzle_time > 0, il avance moins vite (DAZZLE_SLOW), frappe moins fort au
+## contact (DAZZLE_WEAK) et les coups du joueur
 ## ont dazzle_value de chance de critique en plus contre lui (main.dazzle_of).
 const DAZZLE_SLOW := 0.75
+const DAZZLE_WEAK := 0.75
 var dazzle_time := 0.0
 var dazzle_value := 0.0
 var hit_flash := 0.0
@@ -285,6 +287,8 @@ func _physics_process(delta: float) -> void:
 	var hit := damage
 	if state == "charge":
 		hit = float(data.get("charge_damage", damage)) * damage_scale
+	if dazzle_time > 0.0:
+		hit *= DAZZLE_WEAK
 	if dist < radius + p.radius:
 		p.take_hit(hit, self)
 	if poison_time > 0.0:

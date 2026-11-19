@@ -107,6 +107,11 @@
           "stat": "crit_mult",
           "op": "add",
           "value": 0.1
+        },
+        {
+          "stat": "max_hp",
+          "op": "inc",
+          "value": 0.1
         }
       ]
     },
@@ -128,6 +133,11 @@
           "stat": "skill_slots",
           "op": "add",
           "value": 1
+        },
+        {
+          "stat": "armor",
+          "op": "add",
+          "value": 0.05
         }
       ]
     },
@@ -668,6 +678,11 @@
               "stat": "crit",
               "op": "add",
               "value": 0.02
+            },
+            {
+              "stat": "armor",
+              "op": "add",
+              "value": 0.08
             }
           ]
         },
@@ -691,7 +706,7 @@
             {
               "stat": "max_hp",
               "op": "inc",
-              "value": 0.08
+              "value": 0.15
             }
           ]
         },
@@ -1123,6 +1138,11 @@
               "stat": "crit_mult",
               "op": "add",
               "value": 0.3
+            },
+            {
+              "stat": "max_hp",
+              "op": "inc",
+              "value": 0.2
             }
           ]
         },

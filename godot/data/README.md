@@ -104,7 +104,7 @@ Les compétences acquises se rangent dans la barre de compétences (6 emplacemen
 
 ### États des ennemis
 
-`enemy.apply_status(nom, valeur, durée)` : `saignement` (dégâts par seconde, cumulable 5 fois ; au-delà la piqûre la plus faible est remplacée), `enracine` (immobile, frappe toujours au contact) et `ebloui` (Aube : `valeur` = chance de critique en plus contre lui, et il avance 25 % moins vite ; un boss n'en prend que la moitié, 2 s au plus). `main.dazzle_of(e)` donne le bonus en cours. `status_area` et `apply_status` savent poser `ebloui`. La statistique `bleed` fait saigner à chaque coup du joueur (fraction des dégâts par seconde, 4 s × `bleed_duration`), comme `poison`.
+`enemy.apply_status(nom, valeur, durée)` : `saignement` (dégâts par seconde, cumulable 5 fois ; au-delà la piqûre la plus faible est remplacée), `enracine` (immobile, frappe toujours au contact) et `ebloui` (Aube : `valeur` = chance de critique en plus contre lui, il avance 25 % moins vite et frappe 25 % moins fort au contact ; un boss n'en prend que la moitié, 2 s au plus). `main.dazzle_of(e)` donne le bonus en cours. `status_area` et `apply_status` savent poser `ebloui`. La statistique `bleed` fait saigner à chaque coup du joueur (fraction des dégâts par seconde, 4 s × `bleed_duration`), comme `poison`.
 
 ### 4. Transformer une compétence (mutation)
 
