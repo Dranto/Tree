@@ -56,7 +56,7 @@ func play(id: String, d := {}) -> Dictionary:
 	e["id"] = id
 	e["t"] = 0.0
 	if not e.has("dur"):
-		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, 0.3)))
+		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, SeveFx.DUREE.get(id, 0.3))))
 	if Settings.reduce_effects and id in ["fourche", "ricochet", "eclat", "enracine"]:
 		return e
 	while effects.size() >= MAX_EFFECTS:
@@ -251,6 +251,9 @@ static func draw_effect(ci: CanvasItem, e: Dictionary) -> void:
 		return
 	if AubeFx.draws(e["id"]):
 		AubeFx.draw(ci, e, false)
+		return
+	if SeveFx.draws(e["id"]):
+		SeveFx.draw(ci, e, false)
 		return
 	match e["id"]:
 		"fouet":

@@ -16,11 +16,14 @@ const SKILLS := ["graine", "nova", "fouet", "racines", "volee", "saignee", "clou
 const VENT := ["tornade", "ruee", "appel_air"]
 ## Compétences de la branche Aube (quatrième page).
 const AUBE := ["aurore", "prisme", "lance_aube"]
+## Compétences de la branche Sève (cinquième page).
+const SEVE := ["liane", "fontaine", "cocon"]
 const PHASES := ["début", "coup", "fin"]
 
 var view := Vector2(2560, 1440)
 var page := "heros"
-## Page des compétences : les quatre premières (1), les quatre suivantes (2), celles de Vent (3), d'Aube (4).
+## Page des compétences : les quatre premières (1), les quatre suivantes (2), celles de Vent (3), d'Aube (4),
+## de Sève (5).
 var part := 1
 var t := 0.0
 var font: Font
@@ -38,6 +41,8 @@ func _skills() -> Array:
 		return VENT
 	if part == 4:
 		return AUBE
+	if part == 5:
+		return SEVE
 	return SKILLS.slice((part - 1) * 4, part * 4)
 
 
@@ -173,6 +178,7 @@ const PHASE_K := {
 	"cloud": [0.03, 0.4, 0.95], "bloom": [0.12, 0.42, 0.8],
 	"tornade": [0.04, 0.4, 0.95], "ruee": [0.1, 0.35, 0.8], "appel_air": [0.3, 0.68, 0.88],
 	"aurore": [0.06, 0.35, 0.8], "prisme": [0.02, 0.3, 0.96], "lance_aube": [0.6, 0.12, 0.7],
+	"liane": [0.04, 0.4, 0.95], "fontaine": [0.04, 0.4, 0.95], "cocon": [0.04, 0.5, 0.9],
 }
 ## Échelle de chaque ligne : la zone de la compétence tient dans sa case.
 const CELL_SCALE := {
@@ -180,6 +186,7 @@ const CELL_SCALE := {
 	"volee": 1.6, "saignee": 0.68, "cloud": 1.25, "bloom": 0.95,
 	"tornade": 0.9, "ruee": 1.2, "appel_air": 0.55,
 	"aurore": 0.62, "prisme": 1.3, "lance_aube": 0.75,
+	"liane": 1.0, "fontaine": 0.95, "cocon": 1.6,
 }
 
 
@@ -213,6 +220,8 @@ func _page_competences() -> void:
 		_vent_attaques()
 	if part == 4:
 		_aube_attaques()
+	if part == 5:
+		_seve_attaques()
 
 
 ## Une case : le héros (à gauche) et la signature de la compétence à l'instant k de sa durée.
@@ -247,7 +256,7 @@ func _skill_cell(id: String, r: Rect2, k: float, phase: int) -> void:
 ## La signature d'une compétence, dans le repère du héros (héros en 0, visée vers la droite).
 func _effect(id: String, target: Vector2, k: float, width: float) -> Dictionary:
 	var e := {"id": id, "t": 0.0, "pos": Vector2.ZERO, "dir": Vector2.RIGHT}
-	e["dur"] = SkillFx.DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, 0.4)))
+	e["dur"] = SkillFx.DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, SeveFx.DUREE.get(id, 0.4))))
 	match id:
 		"graine":
 			e["id"] = "graine_depart" if k > 0.35 else "graine_impact"
@@ -305,6 +314,14 @@ func _effect(id: String, target: Vector2, k: float, width: float) -> Dictionary:
 				e["pos"] = Vector2(20, 0)
 				e["len"] = width * 0.55
 				e["w"] = 44.0
+		"liane":
+			e["to"] = target + Vector2(-20, 10)
+			e["seed"] = 2
+		"fontaine":
+			e["r"] = 140.0
+		"cocon":
+			e["r"] = 30.0
+			e["part"] = [1.0, 0.6, 0.25][int(k * 2.2)]
 	return e
 
 
@@ -332,6 +349,12 @@ func _targets(id: String, target: Vector2) -> Array:
 			return [target + Vector2(80, -10)]
 		"lance_aube":
 			return [Vector2(170, 0), Vector2(330, 8)]
+		"liane":
+			return [target + Vector2(-20, 10)]
+		"fontaine":
+			return [Vector2(90, -30)]
+		"cocon":
+			return [Vector2(60, -20)]
 	return []
 
 
@@ -570,6 +593,42 @@ func _aube_attaques() -> void:
 		draw_set_transform_matrix(Transform2D.IDENTITY)
 		HeroArt.base = xf
 		HeroArt.draw(self, Vector2.ZERO, 14.0, 0.0, {"t": 0.3, "cast": 0.0, "cast_col": Art.ec("lumiere"), "shoot": 0.5})
+		HeroArt.base = Transform2D.IDENTITY
+		draw_set_transform_matrix(Transform2D.IDENTITY)
+		_text(r.position + Vector2(12, 30), labels[j], 22, Art.c("texte"))
+
+
+# --- Attaque de base de Sève (page 5) ---
+
+## Dernière ligne de la page de Sève : la forme « perle » (lourdes gouttes qui éclaboussent),
+## l'éclaboussure à l'impact et la rosée qui revient au héros, dessinées par projectile.gd et SeveFx.
+func _seve_attaques() -> void:
+	var r0 := _cell_rect(3, 0)
+	Art.icon_badge(self, "attaque_perle", Rect2(30, r0.position.y + r0.size.y / 2.0 - 70, 96, 96))
+	_text(Vector2(30, r0.position.y + r0.size.y / 2.0 + 54), "Attaque de Sève", 22, Art.c("texte"), true)
+	var labels := ["Perles de sève : en vol", "Éclaboussure à l'impact", "Rosée : la vie revient"]
+	for j in 3:
+		var r := _cell_rect(3, j)
+		_ground(r, 50 + j)
+		var hero := r.position + Vector2(r.size.x * 0.3, r.size.y * 0.55)
+		var xf := Transform2D(0.0, Vector2(1.2, 1.2), 0.0, hero)
+		draw_set_transform_matrix(xf)
+		match j:
+			0:
+				_fletri(Vector2(200, 0))
+				for at: Vector2 in [Vector2(80, -12), Vector2(135, 10)]:
+					draw_set_transform_matrix(xf * Transform2D(0.0, at))
+					ProjectileScript.draw_shot(self, "perle", Vector2.RIGHT, 8.1)
+					draw_set_transform_matrix(xf)
+			1:
+				_fletri(Vector2(150, 0))
+				_fletri(Vector2(185, 38))
+				AttackFx.draw_effect(self, {"id": "perle_eclat", "pos": Vector2(150, 0), "r": 56.0, "t": 0.1, "dur": 0.3})
+			2:
+				AttackFx.draw_effect(self, {"id": "rosee", "from": Vector2(170, 0), "pos": Vector2.ZERO, "t": 0.2, "dur": 0.45})
+		draw_set_transform_matrix(Transform2D.IDENTITY)
+		HeroArt.base = xf
+		HeroArt.draw(self, Vector2.ZERO, 14.0, 0.0, {"t": 0.3, "shoot": 0.5 if j == 0 else 0.0})
 		HeroArt.base = Transform2D.IDENTITY
 		draw_set_transform_matrix(Transform2D.IDENTITY)
 		_text(r.position + Vector2(12, 30), labels[j], 22, Art.c("texte"))

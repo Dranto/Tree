@@ -82,6 +82,26 @@
     "desc": "Nouvelle compétence : un tourbillon aspire les ennemis vers l'endroit visé, puis éclate sur eux.",
     "damage": 3.2, "range": 420, "radius": 230, "pull_time": 0.6, "root": 0
   },
+  "liane": {
+    "name": "Liane buveuse", "short": "Liane", "color": "#5fc48a", "cooldown": 5,
+    "branch": "seve", "tags": ["zone"],
+    "desc": "Nouvelle compétence : des lianes s'accrochent aux ennemis autour de l'endroit visé, boivent leur vie et te la rendent.",
+    "range": 460, "radius": 200, "count": 3, "duration": 3.5, "tick": 0.25, "damage": 2.6,
+    "drain": 0.5, "leash": 560, "jump": false, "root": 0
+  },
+  "fontaine": {
+    "name": "Fontaine de sève", "short": "Fontaine", "color": "#8af5c0", "cooldown": 12,
+    "branch": "seve", "tags": ["zone"],
+    "desc": "Nouvelle compétence : une source de sève jaillit à tes pieds ; tant que tu t'y tiens, tu régénères vite, et elle ronge les ennemis qui y entrent.",
+    "radius": 140, "duration": 6, "regen": 0.05, "tick": 0.5, "damage": 1.4,
+    "follow": false, "geyser": 0
+  },
+  "cocon": {
+    "name": "Cocon de sève", "short": "Cocon", "color": "#b8f0a0", "cooldown": 14,
+    "branch": "seve", "tags": ["zone"],
+    "desc": "Nouvelle compétence : un cocon de sève t'enveloppe et absorbe les coups ; à la fin, ce qui reste te soigne et le cocon éclate.",
+    "shield": 0.3, "duration": 4, "convert": 1.0, "radius": 140, "damage": 1.5, "knockback": 60, "reflect": 0
+  },
   "aurore": {
     "name": "Aurore", "short": "Aurore", "color": "#ffe14d", "cooldown": 6,
     "branch": "aube", "tags": ["zone"],

@@ -131,6 +131,7 @@ const ELEMENT_DE_COMPETENCE := {
 	"vesse": "poison", "essaim": "poison", "eclosion": "poison",
 	"tornade": "vent", "ruee": "vent", "appel_air": "vent",
 	"aurore": "lumiere", "prisme": "lumiere", "lance_aube": "lumiere",
+	"liane": "seve", "fontaine": "seve", "cocon": "seve",
 }
 
 # --- Traits, ombres, lumière ---
@@ -442,11 +443,11 @@ static func delta_e(a: Color, b: Color) -> float:
 # Silhouettes pleines, lisibles à 20 px ; un détail clair au plus.
 const ICONES := {
 	"elements": ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent", "lumiere"],
-	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom", "vesse", "essaim", "eclosion", "tornade", "ruee", "appel_air", "aurore", "prisme", "lance_aube"],
+	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom", "vesse", "essaim", "eclosion", "tornade", "ruee", "appel_air", "aurore", "prisme", "lance_aube", "liane", "fontaine", "cocon"],
 	"statistiques": ["degats", "attaque", "projectile", "critique", "vie", "regen", "armure", "vitesse", "esquive", "zone", "collecte", "competence"],
 	"monde": ["sanctuaire", "autel", "coeur", "arene", "secret", "seve_perdue", "essence", "greffe"],
 	# Formes de l'attaque de base (data/attack.json) et nœud qui la modifie : Art.icon("attaque_<forme>").
-	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_spore_lobee", "attaque_dard", "attaque_lame", "attaque_bourrasque", "attaque_rayon", "attaque_mod"],
+	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_spore_lobee", "attaque_dard", "attaque_lame", "attaque_bourrasque", "attaque_rayon", "attaque_perle", "attaque_mod"],
 }
 ## Nom affiché de chaque icône (planche, infobulles).
 const NOM_ICONE := {
@@ -464,6 +465,8 @@ const NOM_ICONE := {
 	"tornade": "Tornade", "ruee": "Ruée", "appel_air": "Appel d'air",
 	"attaque_lame": "Attaque : lames de vent", "attaque_bourrasque": "Attaque : bourrasque",
 	"aurore": "Aurore", "prisme": "Prisme", "lance_aube": "Lance d'aube", "attaque_rayon": "Attaque : rayon d'aube",
+	"liane": "Liane buveuse", "fontaine": "Fontaine de sève", "cocon": "Cocon de sève",
+	"attaque_perle": "Attaque : perles de sève",
 }
 ## Élément de chaque forme de l'attaque de base (le même que dans data/attack.json).
 const ELEMENT_D_ATTAQUE := {
@@ -471,6 +474,7 @@ const ELEMENT_D_ATTAQUE := {
 	"attaque_spore_lobee": "poison", "attaque_dard": "poison",
 	"attaque_lame": "vent", "attaque_bourrasque": "vent",
 	"attaque_rayon": "lumiere",
+	"attaque_perle": "seve",
 }
 ## Couleur par défaut d'une icône qui n'est pas un élément.
 const COULEUR_ICONE := {
@@ -910,8 +914,8 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 			ci.draw_line(P.call(-0.45, 0.45), P.call(-0.85, 0.85), sombre.lightened(0.2), lw * 1.2, true)
 			ci.draw_line(P.call(-0.5, 0.5), P.call(0.55, -0.55), sombre, lw * 0.7, true)
 		_:
-			# Icônes des branches Vent (vent_fx.gd) et Aube (aube_fx.gd).
-			if not VentFx.icon(ci, id, p, s, col, clair, sombre, lw) and not AubeFx.icon(ci, id, p, s, col, clair, sombre, lw):
+			# Icônes des branches Vent (vent_fx.gd), Aube (aube_fx.gd) et Sève (seve_fx.gd).
+			if not VentFx.icon(ci, id, p, s, col, clair, sombre, lw) and not AubeFx.icon(ci, id, p, s, col, clair, sombre, lw) and not SeveFx.icon(ci, id, p, s, col, clair, sombre, lw):
 				ci.draw_circle(p, s * 0.35, col)
 
 

@@ -319,6 +319,14 @@
       {"stat": "projectile_damage", "op": "inc", "value": 0.1}
     ]
   },
+  "greffe_perle_rosee": {"name": "Perle de rosée", "desc": "Chaque ennemi que ton attaque abat te rafraîchit.", "sources": ["autel"], "shape": "feuille", "color": "#8af5c0", "effects": [{"attack_mod": "rosee", "value": 0.012}]},
+  "greffe_bourgeon": {"name": "Bourgeon", "desc": "Un bourgeon qui ne cesse de repousser.", "sources": ["autel"], "shape": "fleur", "color": "#b8f0a0", "effects": [{"stat": "regen", "op": "add", "value": 1.5}, {"stat": "max_hp", "op": "inc", "value": 0.06}]},
+  "greffe_sureau": {"name": "Sureau", "desc": "Le bois de sureau se referme sur la blessure.", "sources": ["autel"], "shape": "racine", "color": "#5fae7e", "effects": [{"on": "hurt", "do": "heal", "value": 0.04, "cooldown": 3, "text": "Quand un coup te touche, tu récupères 4 % de ta vie maximale (au plus toutes les 3 s)."}]},
+  "greffe_mousse": {"name": "Mousse", "desc": "Une mousse épaisse qui amortit les coups.", "sources": ["autel"], "shape": "feuille", "color": "#6fbf6a", "effects": [{"stat": "armor", "op": "add", "value": 0.06}, {"stat": "regen", "op": "inc", "value": 0.2}]},
+  "greffe_source_vive": {"name": "Source vive", "desc": "Une source cachée, plus pure que toutes les autres.", "sources": ["secret"], "shape": "fleur", "color": "#eafff4", "effects": [{"stat": "lifesteal", "op": "add", "value": 0.02}, {"stat": "max_hp", "op": "inc", "value": 0.1}]},
+  "greffe_coeur_de_saule": {"name": "Cœur de saule", "desc": "Le cœur du Saule exsangue bat de nouveau, pour toi.", "sources": ["boss"], "shape": "coeur", "color": "#7fd36b", "effects": [{"on": "kill", "do": "heal", "value": 0.02, "cooldown": 0.5, "text": "Chaque ennemi vaincu te rend 2 % de ta vie maximale (au plus deux fois par seconde)."}, {"stat": "damage", "op": "inc", "value": 0.1}]},
+  "greffe_seve_amere": {"name": "Sève amère", "desc": "Une liane de plus, qui boit sans fin.", "sources": ["elite"], "shape": "racine", "color": "#4f9a6a", "effects": [{"skill_mod": "liane", "param": "count", "op": "add", "value": 1, "text": "Liane buveuse : +1 liane."}]},
+  "greffe_coque": {"name": "Coque", "desc": "Le cocon s'épaissit d'une écorce dure.", "sources": ["elite"], "shape": "feuille", "color": "#a6d98a", "effects": [{"skill_mod": "cocon", "param": "shield", "op": "more", "value": 1.3, "text": "Cocon de sève : bouclier ×1,3."}]},
   "greffe_eclat_verre": {
     "name": "Éclat de verre",
     "desc": "Ton rayon se brise sur le premier ennemi et vise plus juste.",

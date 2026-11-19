@@ -551,11 +551,16 @@ static func hit(main, e, dmg: float, branch: String, m: Dictionary) -> void:
 static func apply_on_hit(main, m: Dictionary, e, dmg: float, at: Vector2) -> void:
 	var defs := mods()
 	var s := _stats()
+	# Sangsue (Sève) : chaque coup rend une part de ses dégâts, même celui qui tue.
+	if m.has("sangsue"):
+		_heal(main, dmg * float(m["sangsue"]))
 	if e.dead:
 		if m.has("eclat"):
 			_shards(main, m, at, dmg * float(m["eclat"]))
 		if m.has("bouffee"):
 			_puff(main, at, dmg * float(m["bouffee"]))
+		if m.has("rosee"):
+			_dew(main, at, float(m["rosee"]))
 		return
 	if m.has("saignement"):
 		e.apply_status("saignement", dmg * float(m["saignement"]), float(defs["saignement"].get("duration", 4.0)) * float(s.get("bleed_duration", 1.0)))
@@ -570,6 +575,43 @@ static func apply_on_hit(main, m: Dictionary, e, dmg: float, at: Vector2) -> voi
 		_afx(main, "enracine", {"pos": e.position, "r": float(e.radius)})
 	if m.has("eblouit") and main.rng.randf() < float(m["eblouit"]):
 		e.apply_status("ebloui", float(defs["eblouit"].get("crit", 0.2)), float(defs["eblouit"].get("duration", 2.5)))
+
+
+## Soigne le joueur de « amount » points de vie (Sève : sangsue, perles, rosée).
+static func _heal(main, amount: float) -> void:
+	if amount > 0.0 and "player" in main and main.player != null:
+		main.player.heal(amount)
+
+
+## Rosée (Sève) : l'ennemi tué rend « part » de la vie maximale, au plus « per_second » fois par
+## seconde (l'horloge est celle du joueur, pour rester rejouable).
+static func _dew(main, at: Vector2, part: float) -> void:
+	if not ("player" in main) or main.player == null:
+		return
+	var pl = main.player
+	var rt := _rt(pl)
+	var every := 1.0 / maxf(float(mods().get("rosee", {}).get("per_second", 4)), 0.1)
+	var now: float = float(pl.t) if "t" in pl else 0.0
+	if now - float(rt.get("dew_at", -INF)) < every:
+		return
+	rt["dew_at"] = now
+	_heal(main, float(_stats().get("max_hp", 100.0)) * part)
+	_afx(main, "rosee", {"from": at, "pos": pl.position, "follow": pl})
+
+
+## Perles de sève : la perle éclabousse les ennemis autour de l'impact (« splash » × ses dégâts,
+## dans « splash_radius » × taille des zones) et rend au joueur « leech » × ses dégâts.
+static func _splash(p, e, f: Dictionary) -> void:
+	var main = p.main
+	_heal(main, p.damage * float(f.get("leech", 0.0)))
+	var part := float(f.get("splash", 0.0))
+	if part <= 0.0:
+		return
+	var r := float(f.get("splash_radius", 50.0)) * float(_stats().get("area", 1.0)) * maxf(1.0, p.radius / 6.0 / 1.35)
+	_afx(main, "perle_eclat", {"pos": e.position, "r": r})
+	for o in main.enemies_near(e.position, r):
+		if o != e and not o.dead:
+			main.player_hit_enemy(o, p.damage * part, false, "seve")
 
 
 ## Éclat à la mort : des épines partent en étoile de l'ennemi tué. Elles ne refont pas d'éclat.
@@ -592,6 +634,9 @@ static func _shards(main, m: Dictionary, at: Vector2, dmg: float) -> void:
 static func on_projectile_hit(p, e) -> void:
 	var m: Dictionary = p.attack
 	apply_on_hit(p.main, m, e, p.damage, e.position)
+	var f: Dictionary = forms().get(str(m.get("form", "")), {})
+	if f.has("splash") or f.has("leech"):
+		_splash(p, e, f)
 	if m.has("fourche") and not p.forked:
 		p.forked = true
 		var def: Dictionary = mods().get("fourche", {})
