@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Lance Godot 4.3 (binaire officiel) sur le projet godot/.
+# Lance Godot 4.7 (binaire officiel) sur le projet godot/.
 # Le binaire est téléchargé une fois depuis github.com/godotengine/godot-builds puis mis en cache.
 # Exemples :
 #   tools/godot.sh --headless --import   # importe le projet (attend la fin de l'analyse des scripts) et signale les erreurs
 #   tools/godot.sh --headless --quit-after 300  # lance le jeu ~5 s sans fenêtre
 #   tools/godot.sh --xvfb -- --autotest         # partie automatique avec captures dans godot/autotest/
 set -euo pipefail
-VERSION="4.3-stable"
+VERSION="${GODOT_VERSION:-4.7-stable}"
 CACHE="${GODOT_CACHE:-$HOME/.cache/godot/$VERSION}"
 BIN="$CACHE/Godot_v${VERSION}_linux.x86_64"
 if [ ! -x "$BIN" ]; then

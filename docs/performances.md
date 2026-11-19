@@ -171,3 +171,15 @@ Le banc des 120 Flétris coûte environ 2 ms de plus, parce que la graine touche
 - **Héros** (~2,5 ms) et **interface** (~2,3 ms) : leurs traits lissés ne passent pas par le lot ;
   les mettre en texture une fois (médaillons, icônes) avec un mélange prémultiplié.
 - **Nouvelles régions (tâches C et E)** : mesurer leur décor avec `--bench-scene` avant fusion.
+
+## Godot 4.7 (19/11)
+
+Le projet, les outils et la CI tournent en Godot 4.7 (`tools/godot.sh`, `GODOT_VERSION=4.3-stable` pour comparer).
+- Les 26 tests passent ; le découpage « exact » de `draw_batch.gd` donne toujours les mêmes pixels qu'en 4.3.
+- **SubViewport en `UPDATE_ONCE`** : en 4.7, l'image est faite avec l'état des nœuds de l'image précédente si le rendu
+  est demandé dans la même image que leur changement. `tree_ui.gd` (image de la couche fixe et du fond) et `ground.gd`
+  (carrés du sol) repassent par `UPDATE_DISABLED` et demandent le rendu à l'image suivante ; la géométrie de l'image de
+  l'arbre change à ce moment-là. Sans cela, l'arbre affichait des nœuds décalés et un fond absent.
+- Même machine, banc de jeu : 4.7 donne ~31 ms contre ~33 ms en 4.3 (la machine de la CI reste la référence du budget).
+- Les références visuelles ont été refaites en 4.7 : les écarts (0,2 à 5 % de pixels) viennent du texte et des bords
+  des panneaux, décalés d'un pixel.

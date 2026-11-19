@@ -200,6 +200,8 @@ var _view: Control
 var _cache_ok := false
 var _cache_zoom := 1.0
 var _cache_cam := Vector2.ZERO
+var _once_queue: Array = []   # SubViewport dont le rendu est demandé à l'image suivante
+var _cache_next := {}          # géométrie de la couche fixe à adopter avec ce rendu
 var _cache_logical := Vector2.ZERO
 var _cache_px := 1.0
 ## Temps depuis le dernier changement de vue venu de la souris (molette, glisser).
@@ -1234,6 +1236,7 @@ func _pixel_scale() -> float:
 ## déplacement à la souris, l'image en cours est agrandie ou déplacée, et refaite seulement quand
 ## le mouvement s'arrête, quand elle s'écarte trop du zoom, ou quand l'écran sort de l'image.
 func _update_cache() -> void:
+	_flush_once()
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
 	if _backdrop_wait > 0:
@@ -1257,6 +1260,27 @@ func _update_cache() -> void:
 		_interactive = false
 
 
+## Demande un nouveau rendu d'une image (SubViewport). Depuis Godot 4.7, l'image est faite avec l'état
+## des nœuds de l'image précédente si le rendu est demandé dans la même image que leur changement
+## (transformation, redessin) : on le demande à l'image suivante (_flush_once), et la géométrie
+## d'affichage de la couche fixe (_cache_cam, _cache_zoom) change à ce moment-là, avec l'image.
+func _render_once(vp: SubViewport) -> void:
+	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	if not _once_queue.has(vp):
+		_once_queue.append(vp)
+
+
+func _flush_once() -> void:
+	for vp in _once_queue:
+		vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_once_queue.clear()
+	if not _cache_next.is_empty():
+		_cache_zoom = _cache_next["zoom"]
+		_cache_cam = _cache_next["cam"]
+		_cache_next = {}
+		_view.queue_redraw()
+
+
 func _render_cache(rz := -1.0) -> void:
 	if rz <= 0.0:
 		rz = zoom
@@ -1266,8 +1290,7 @@ func _render_cache(rz := -1.0) -> void:
 	if _cache_vp.size != px:
 		_cache_vp.size = px
 	_cache_px = ps
-	_cache_zoom = rz
-	_cache_cam = cam
+	_cache_next = {"zoom": rz, "cam": cam}
 	if _backdrop_version != _states_version:
 		_render_backdrop()
 	# La couche fixe n'est réenregistrée que si ses états, son niveau de détail ou (de plus de 30 %)
@@ -1279,7 +1302,7 @@ func _render_cache(rz := -1.0) -> void:
 		_static.queue_redraw()
 	_static.scale = Vector2.ONE * rz * ps
 	_static.position = (_cache_logical / 2.0 - cam * rz) * ps
-	_cache_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_render_once(_cache_vp)
 	_cache_time = t
 	_cache_ok = true
 	_interactive = false
@@ -1299,7 +1322,7 @@ func _render_backdrop() -> void:
 	_backdrop.scale = Vector2(k, k)
 	_backdrop.position = Vector2.ONE * BACKDROP_PX / 2.0
 	_backdrop.queue_redraw()
-	_backdrop_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_render_once(_backdrop_vp)
 	_backdrop_wait = 2
 
 

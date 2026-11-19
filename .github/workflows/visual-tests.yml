@@ -26,7 +26,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/godot
-          key: godot-4.3-stable
+          key: godot-4.7-stable
 
       - name: Comparer les captures
         run: tools/visual-tests.sh

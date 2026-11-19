@@ -5,7 +5,7 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 
 ## Lancer le prototype Godot
 
-1. Installer [Godot 4.3 ou plus récent](https://godotengine.org/download) (version standard, pas .NET).
+1. Installer [Godot 4.7](https://godotengine.org/download) (version standard, pas .NET ; c'est la version testée en CI).
 2. Dans Godot : **Importer**, choisir `godot/project.godot`, puis **F5** pour lancer.
 
 ### Commandes
@@ -72,7 +72,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 
 ### Tester sans écran (Linux, sessions Claude)
 
-`tools/godot.sh` télécharge Godot 4.3 une fois puis le lance sur le projet :
+`tools/godot.sh` télécharge Godot 4.7 une fois (autre version : `GODOT_VERSION=4.3-stable tools/godot.sh …`) puis le lance sur le projet :
 
 - `tools/godot.sh --headless --import` : importe le projet et affiche les erreurs de script.
 - `tools/godot.sh --headless -s res://scripts/check_data.gd` : vérifie les fichiers de données de l'arbre.

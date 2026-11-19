@@ -167,8 +167,11 @@ func _run() -> void:
 	blower.cd = 0.0
 	check(await _until(func(): return blower.state == "windup", 120), "le Souffleur annonce son souffle (cône au sol)")
 	before = p.position
-	check(await _until(func(): return blower.state == "recover", 120), "puis il souffle")
-	await _steps(15)
+	# Aucun dégât étranger (vent, tornade) ne doit rendre le joueur invulnérable à l'instant du souffle.
+	check(await _until(func():
+		p.invuln = 0.0
+		return blower.state == "recover", 120), "puis il souffle")
+	await _steps(10)
 	check((p.position - before).dot(Vector2.LEFT) > 60.0, "le joueur pris dans le souffle est repoussé (%d px)" % int((p.position - before).dot(Vector2.LEFT)))
 	p.set_physics_process(true)
 	blower.queue_free()
