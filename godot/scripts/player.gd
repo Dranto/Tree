@@ -555,6 +555,13 @@ func take_hit(amount: float, source) -> void:
 		return
 	var s: Dictionary = Game.stats
 	var taken: float = amount * (1.0 - s["armor"])
+	# Cocon de sève : le bouclier boit le coup d'abord (scripts/skills/cocon.gd).
+	var cocoon = _skill_objects.get("cocon")
+	if cocoon != null and cocoon.shield > 0.0:
+		taken = cocoon.absorb(taken, source)
+		if taken <= 0.0:
+			invuln = 0.2
+			return
 	hp -= taken
 	hurt_flash = 0.15
 	hurt_anim = HURT_ANIM

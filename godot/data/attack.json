@@ -145,6 +145,25 @@
       "deflect": true,
       "fx": "bourrasque",
       "sfx": "bourrasque"
+    },
+    "perle": {
+      "name": "Perles de sève",
+      "desc": "De lourdes perles de sève qui éclaboussent à l'impact ; chaque perle qui touche te rend un peu de vie.",
+      "kind": "projectile",
+      "tags": ["projectile"],
+      "branch": "seve",
+      "element": "seve",
+      "priority": 2,
+      "damage": 1.15,
+      "rate": 0.8,
+      "range": 560,
+      "speed": 520,
+      "spread": 0.2,
+      "pierce": 0,
+      "size": 1.35,
+      "splash": 0.45,
+      "splash_radius": 56,
+      "leech": 0.04
     }
   },
   "mods": {
@@ -152,7 +171,7 @@
       "name": "Fourche",
       "text": "Au premier coup, le projectile se divise : +{v} branche(s).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive", "dard", "lame"],
+      "forms": ["graine", "echarde", "ronce_vive", "dard", "lame", "perle"],
       "angle": 0.42,
       "factor": 0.6
     },
@@ -160,7 +179,7 @@
       "name": "Ricochet",
       "text": "Le projectile rebondit vers un autre ennemi : +{v} rebond(s).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive", "dard"],
+      "forms": ["graine", "echarde", "ronce_vive", "dard", "perle"],
       "reach": 240,
       "factor": 0.8
     },
@@ -189,7 +208,7 @@
       "name": "Traînée d'épines",
       "text": "Le projectile sème des épines au sol ({p} % des dégâts par seconde).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive", "dard"],
+      "forms": ["graine", "echarde", "ronce_vive", "dard", "perle"],
       "every": 56,
       "radius": 18,
       "duration": 1.6,
@@ -258,6 +277,17 @@
       "name": "Repousse",
       "text": "Chaque coup repousse l'ennemi de {v} pixels.",
       "stack": "sum"
+    },
+    "sangsue": {
+      "name": "Sangsue",
+      "text": "Chaque coup de l'attaque te rend {p} % des dégâts infligés.",
+      "stack": "sum"
+    },
+    "rosee": {
+      "name": "Rosée",
+      "text": "Un ennemi tué par l'attaque te rend {p} % de ta vie maximale (au plus quatre fois par seconde).",
+      "stack": "sum",
+      "per_second": 4
     }
   }
 }
