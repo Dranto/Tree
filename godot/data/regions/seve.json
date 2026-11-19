@@ -67,7 +67,7 @@
     "reward": {"points": 1},
     "life_radius": 840.0,
     "life_color": "seve/clair",
-    "wake_banner": "Le Cœur des sources s'éveille : tiens la zone, et ne laisse pas les sangsues boire ta vie !",
+    "wake_banner": "Le Cœur des sources s'éveille : tiens la zone !",
     "purified_banner": "Le Cœur des sources est purifié : l'étang du Saule s'ouvre."
   },
   "boss": {

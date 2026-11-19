@@ -224,7 +224,7 @@ func _run() -> void:
 	check(await _until(func(): return not boss.seeds.is_empty(), 200), "la salve de graines part")
 	await _until(func(): return boss.attack == "", 300)
 	# Phase 2 : siphon et invocation.
-	boss.take_damage(boss.max_hp * 0.6, false)
+	boss.hp = boss.max_hp * 0.55
 	check(await _until(func(): return boss.phase == 2), "sous 66 % de vie : phase 2")
 	await _until(func(): return boss.transition <= 0.0)
 	boss.gap = 1.0e9
@@ -245,7 +245,7 @@ func _run() -> void:
 	_clear()
 	boss.minions = []
 	# Phase 3 : l'étang se resserre.
-	boss.take_damage(boss.max_hp * 0.4, false)
+	boss.hp = boss.max_hp * 0.25
 	check(await _until(func(): return boss.phase == 3), "sous 33 % de vie : phase 3")
 	await _steps(120)
 	check(arena.radius < arena.max_radius, "l'étang se vide : l'arène se resserre")

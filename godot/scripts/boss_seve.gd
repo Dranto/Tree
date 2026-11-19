@@ -24,14 +24,14 @@ const PHASE_LIMITS := [0.66, 0.33]
 ## Par phase : pause entre deux attaques, ordre des attaques et ampleur.
 const PHASES := {
 	1: {"gap": 1.3, "order": ["racines", "graines", "rideau", "racines", "graines"], "roots": 3, "volleys": 2, "seeds": 7},
-	2: {"gap": 1.1, "order": ["graines", "invocation", "racines", "siphon", "rideau"], "roots": 4, "volleys": 2, "seeds": 9, "minions": 3},
-	3: {"gap": 0.9, "order": ["racines", "rideau", "siphon", "graines", "invocation", "racines"], "roots": 5, "volleys": 3, "seeds": 9, "minions": 3},
+	2: {"gap": 1.1, "order": ["graines", "invocation", "racines", "siphon", "rideau"], "roots": 4, "volleys": 2, "seeds": 9, "minions": 2},
+	3: {"gap": 0.9, "order": ["racines", "rideau", "siphon", "graines", "invocation", "racines"], "roots": 5, "volleys": 3, "seeds": 9, "minions": 2},
 }
 const ROOTS := {"annonce": 1.0, "radius": 64.0, "spread": 180.0, "damage": 18.0, "flash": 0.35}
 const CURTAIN := {"annonce": 0.95, "radius": 330.0, "opening": 1.5, "damage": 22.0, "flash": 0.3}
 const SEEDS := {"annonce": 0.85, "between": 0.42, "damage": 12.0, "speed": 290.0, "radius": 10.0, "spread": 0.18}
-const SIPHON := {"annonce": 1.1, "radius": 250.0, "duration": 2.0, "tick": 0.5, "dps": 14.0}
-const SUMMON := {"annonce": 1.0, "max_alive": 6, "kind": "sangsue_vase"}
+const SIPHON := {"annonce": 1.1, "radius": 220.0, "duration": 2.0, "tick": 0.5, "dps": 14.0}
+const SUMMON := {"annonce": 1.0, "max_alive": 4, "kind": "sangsue_vase"}
 ## Part des dégâts portés qu'il reprend en vie.
 const DRAIN := 2.0
 const PHASE_PAUSE := 1.4
@@ -63,8 +63,9 @@ func _setup() -> void:
 	body_radius = 74.0
 	intro_time = 1.4
 	death_time = 1.9
-	base_hp = 620.0
-	hp_per_level = 205.0
+	# Moins de vie que l'Amanite-Mère : il en reprend à chaque coup porté.
+	base_hp = 460.0
+	hp_per_level = 150.0
 	damage_per_level = 0.03
 	contact_damage = 16.0
 	phase_limits = PHASE_LIMITS
