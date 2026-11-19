@@ -7,6 +7,7 @@
 #   tools/zone.sh               # graines 1 à 5, région de Ronce
 #   SEEDS="3" tools/zone.sh
 #   tools/zone.sh --region=spore   # une autre région (data/regions/<id>.json), jouée de la même façon
+#   ZONE_BUILD=aurore tools/zone.sh --region=aube   # un autre build de builds.json
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SEEDS=${SEEDS:-"1 2 3 4 5"}
