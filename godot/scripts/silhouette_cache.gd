@@ -47,7 +47,7 @@ static func _lean_batch():
 
 ## Vrai si cette pose peut venir du cache (pas d'action en cours, pas de rendu spécial).
 static func cacheable(o: Dictionary) -> bool:
-	return not (o.has("flash") or o.has("strike") or o.has("ash") or o.has("mono")) \
+	return not (o.has("flash") or o.has("strike") or o.has("ash") or o.has("mono") or o.has("live")) \
 		and o.get("state", "") == "" and float(o.get("k", 0.0)) <= 0.0
 
 

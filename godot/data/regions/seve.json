@@ -1,0 +1,88 @@
+{
+  "_doc": "Région de Sève (la vallée des sources). Format décrit dans data/README.md, « Régions ». Positions : « dist » = distance à la graine en pixels ; « side » = écart au milieu du secteur, de -1 (bord gauche) à 1 (bord droit), ou « angle » = écart en radians. Le secteur de Sève est en coin du monde : l'arène peut aller jusqu'à 1640 px de la graine (offset + rayon).",
+  "id": "seve",
+  "branch": "seve",
+  "name": "Région de Sève",
+  "place": "la vallée des sources",
+  "map_name": "Vallée",
+  "color": "#8af5c0",
+  "art": "seve",
+  "ground": {
+    "_doc": "Vallée : limon gris-vert et vase croupie tant que le Cœur vit ; prairie grasse et humide une fois ravivée, piquée de gouttes de rosée claires.",
+    "colors": {
+      "limon": {"mix": ["sol_mort", "seve/sombre", 0.28]},
+      "croupi": {"mix": ["sol_mort", "racine/sombre", 0.35]},
+      "prairie": {"mix": ["sol_vivant", "seve/sombre", 0.3]}
+    },
+    "dead_dark": {"dark": ["$croupi", 0.2]},
+    "dead_light": {"mix": ["$limon", "$croupi", 0.45]},
+    "purified_dark": {"dark": [{"mix": ["sol_mort", "seve/sombre", 0.38]}, 0.12]},
+    "purified_light": {"mix": ["sol_mort", "seve", 0.14]},
+    "alive_dark": {"dark": ["$prairie", 0.2]},
+    "alive_light": {"light": [{"mix": ["$prairie", "decor_vivant", 0.5]}, 0.08]},
+    "dot": "seve/clair",
+    "dot_cell": 14.0,
+    "dot_rarity": 0.985,
+    "dot_salt": [53.0, 71.0],
+    "dot_size": 0.15,
+    "dot_strength": 0.65,
+    "alive_mix": 0.85,
+    "alive_mix_purified": 0.35
+  },
+  "decor": {"kind": "vallee", "seed": 33, "rocks": 40, "springs": 46, "ferns": 240, "clear_center": 340.0, "clear_seed": 560.0},
+  "landmarks": [
+    {"kind": "grand_arbre", "dist": 1080.0, "angle": 0.12, "size": 1.1},
+    {"kind": "ruine", "dist": 1500.0, "angle": -0.42, "size": 0.95},
+    {"kind": "rocher", "dist": 2100.0, "angle": 0.4, "size": 0.9},
+    {"kind": "grand_arbre", "dist": 2350.0, "angle": -0.36, "size": 0.9}
+  ],
+  "spawn": {
+    "kinds": {"sangsue_vase": 0.34, "crapaud": 0.28, "libellule": 0.24, "souche": 0.14},
+    "share_near": 0.3,
+    "share_far": 0.85,
+    "far": 2400,
+    "purified_factor": 0.4
+  },
+  "sanctuaries": [
+    {"id": "seve_source", "name": "de la Source", "dist": 820.0, "angle": 0.3},
+    {"id": "seve_saule", "name": "du Saule", "dist": 1250.0, "angle": -0.3},
+    {"id": "seve_gue", "name": "du Gué", "dist": 1700.0, "angle": 0.38},
+    {"id": "seve_val", "name": "du Val", "dist": 2200.0, "angle": -0.3}
+  ],
+  "altars": [
+    {"id": "seve_1", "name": "Autel de la rosée", "dist": 980, "side": 0.85, "points": 1},
+    {"id": "seve_2", "name": "Autel du bourgeon", "dist": 1350, "side": -0.72, "points": 1},
+    {"id": "seve_3", "name": "Autel du sureau", "dist": 2050, "side": 0.74, "points": 1},
+    {"id": "seve_4", "name": "Autel de la mousse", "dist": 2650, "side": -0.45, "points": 1}
+  ],
+  "secrets": [
+    {"id": "seve", "name": "La source vive", "dist": 2550, "side": 0.92, "points": 1}
+  ],
+  "heart": {
+    "name": "Cœur des sources",
+    "zone": 250.0,
+    "hold_time": 30.0,
+    "waves": {"every": 6.0, "base": 4, "growth": 2, "kinds": ["fletri", "sangsue_vase"], "second_share": 0.4, "big": "souche", "big_from": 2},
+    "idle": {"every": 3.5, "max": 6, "kind": "fletri"},
+    "reward": {"points": 1},
+    "life_radius": 840.0,
+    "life_color": "seve/clair",
+    "wake_banner": "Le Cœur des sources s'éveille : tiens la zone !",
+    "purified_banner": "Le Cœur des sources est purifié : l'étang du Saule s'ouvre."
+  },
+  "boss": {
+    "script": "res://scripts/boss_seve.gd",
+    "name": "Le Saule exsangue",
+    "bar_color": "seve",
+    "reward": {"points": 2},
+    "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : le Saule boit la vallée", "Phase 3 sur 3 : l'étang se vide"],
+    "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "seve/clair"},
+    "wake_banner": "Le Saule exsangue tend ses racines vers toi.",
+    "defeated_banner": "Le Saule exsangue est vaincu !"
+  },
+  "ending": {
+    "sub": "Région de Sève purifiée",
+    "title": "Les sources chantent",
+    "body": "Le Saule exsangue est tombé. Dans la vallée, les sources rendent ce qu'il avait bu : l'eau court de nouveau sous les saules, et la sève remonte jusqu'aux racines de l'Arbre de vie."
+  }
+}

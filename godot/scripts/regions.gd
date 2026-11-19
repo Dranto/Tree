@@ -93,7 +93,7 @@ static func _load_all() -> void:
 	var found := {}
 	for dir in dirs:
 		# Une région des tests (dossiers en plus) n'occupe qu'un secteur resté libre : la vraie région
-		# d'une branche l'emporte sur sa région factice (tests/regions/seve.json, aube.json).
+		# d'une branche l'emporte sur sa région factice (tests/regions/aube.json ; celle de Sève est partie dans data/regions/).
 		var taken := {}
 		for id in found:
 			taken[str(found[id].get("branch", id))] = true

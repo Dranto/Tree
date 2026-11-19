@@ -542,6 +542,7 @@ func pose() -> Dictionary:
 		o["tint"] = Color(Art.ec("poison"), 0.3)
 	elif not bleed_stacks.is_empty():
 		o["tint"] = Color(Art.ec("saignement", "clair"), 0.22)
+	_behavior.pose(self, o)
 	return o
 
 

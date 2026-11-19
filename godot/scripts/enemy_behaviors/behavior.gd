@@ -14,6 +14,9 @@
 ##   montre lui-même le signe. Le poison et le saignement passent toujours ;
 ## - calm(e) : vrai si l'état en cours dure longtemps sans action (le vol haut du Planeur) : la
 ##   silhouette est alors redessinée au rythme ordinaire, pas à chaque image ;
+## - pose(e, o) : ajoute à la pose de dessin (dictionnaire o de enemy.pose) ce que le comportement
+##   seul connaît (la hauteur du bond du Crapaud…) ; mettre o["live"] = true si la silhouette doit
+##   alors être dessinée image par image (hors du cache des silhouettes) ;
 ## - anchored : vrai pour un ennemi qui ne bouge pas (le Nid).
 ## Les réglages de la sorte sont dans e.data (enemies.json), mis à l'échelle par e.damage_scale.
 class_name EnemyBehavior
@@ -41,3 +44,7 @@ func dodge(_e) -> bool:
 
 func calm(_e) -> bool:
 	return false
+
+
+func pose(_e, _o: Dictionary) -> void:
+	pass
