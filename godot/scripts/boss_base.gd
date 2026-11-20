@@ -271,7 +271,8 @@ func apply_status(status: String, value: float, duration: float) -> void:
 			s["stacks"] = mini(max_bleed_stacks, int(s["stacks"]) + 1)
 			statuses[status] = s
 		"enracine":
-			if root_immune > 0.0 or statuses.has(status):
+			# Un boss qui déclare « var no_root := true » (l'Ancien pétrifié) ne se laisse pas entraver.
+			if root_immune > 0.0 or statuses.has(status) or get("no_root") == true:
 				return
 			statuses[status] = {"value": value, "time": minf(duration, 3.0), "stacks": 1}
 			main.fx.text(position + Vector2(0, -radius * 2.0), "Entravée", Color("9af07a"), 18, 0.8)
