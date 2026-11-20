@@ -1,0 +1,53 @@
+{
+  "id": "vent-aube",
+  "between": ["vent", "aube"],
+  "name": "Frontière Vent–Aube",
+  "theme": "Vent solaire : la lumière frappe plus juste à qui ne s'arrête pas.",
+  "clusters": [
+    {
+      "id": "zephyr",
+      "name": "Zéphyr doré",
+      "theme": "Critiques en mouvement",
+      "ring": 5.4,
+      "angle": -0.04,
+      "entry": ["z1", "z2"],
+      "nodes": [
+        {"id": "z1", "type": "small", "name": "Poussière d'or", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.025}, {"stat": "crit", "op": "add", "value": 0.008}], "at": [0, -0.5]},
+        {"id": "z2", "type": "small", "name": "Rayon porté", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.015}, {"stat": "crit_mult", "op": "add", "value": 0.05}], "at": [0, 0.5]},
+        {"id": "z3", "type": "small", "name": "Plume claire", "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.03}, {"stat": "dash_cd", "op": "inc", "value": -0.02}], "at": [0.5, -0.5], "links": ["z1"]},
+        {"id": "z4", "type": "small", "name": "Poussière d'or", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.025}, {"stat": "crit", "op": "add", "value": 0.008}], "at": [0.5, 0.5], "links": ["z2"]},
+        {"id": "z5", "type": "notable", "name": "Éclat du vent", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.04}, {"stat": "crit", "op": "add", "value": 0.04, "if": {"state": "en_mouvement", "min": 0.5}}], "at": [1.0, 0], "links": ["z3", "z4"]},
+        {"id": "z6", "type": "small", "name": "Rayon porté", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.015}, {"stat": "crit_mult", "op": "add", "value": 0.05}], "at": [1.5, -0.5], "links": ["z5"]},
+        {"id": "z7", "type": "small", "name": "Plume claire", "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.03}, {"stat": "dash_cd", "op": "inc", "value": -0.02}], "at": [1.5, 0.5], "links": ["z5"]},
+        {"id": "z8", "type": "small", "name": "Poussière d'or", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.025}, {"stat": "crit", "op": "add", "value": 0.008}], "at": [2.0, -0.5], "links": ["z6"]},
+        {"id": "z9", "type": "small", "name": "Rayon porté", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.015}, {"stat": "crit_mult", "op": "add", "value": 0.05}], "at": [2.0, 0.5], "links": ["z7"]},
+        {"id": "z10", "type": "mastery", "name": "Maîtrise du vent solaire", "choices": [{"id": "rafale_vive", "name": "Rafale vive", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.08}]}, {"id": "oeil_du_vent", "name": "Œil du vent", "effects": [{"stat": "crit_mult", "op": "add", "value": 0.15}]}, {"id": "pas_de_lumiere", "name": "Pas de lumière", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.05}]}], "at": [2.5, 0], "links": ["z8", "z9"]},
+        {"id": "z11", "type": "small", "name": "Plume claire", "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.03}, {"stat": "dash_cd", "op": "inc", "value": -0.02}], "at": [3.0, -0.45], "links": ["z10"]},
+        {"id": "z12", "type": "small", "name": "Poussière d'or", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.025}, {"stat": "crit", "op": "add", "value": 0.008}], "at": [3.0, 0.45], "links": ["z10"]}
+      ]
+    },
+    {
+      "id": "halo",
+      "name": "Halo de bourrasque",
+      "theme": "Éblouir en esquivant",
+      "ring": 10.7,
+      "angle": 0,
+      "entry": ["h1", "h2"],
+      "nodes": [
+        {"id": "h1", "type": "small", "name": "Poussière d'or", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.03}, {"stat": "crit", "op": "add", "value": 0.01}], "at": [0, -0.5]},
+        {"id": "h2", "type": "small", "name": "Rayon porté", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.015}, {"stat": "crit_mult", "op": "add", "value": 0.06}], "at": [0, 0.5]},
+        {"id": "h3", "type": "small", "name": "Plume claire", "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.04}, {"stat": "dash_cd", "op": "inc", "value": -0.02}], "at": [0.15, -1.05], "links": ["h1"]},
+        {"id": "h4", "type": "small", "name": "Poussière d'or", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.03}, {"stat": "crit", "op": "add", "value": 0.01}], "at": [0.15, 1.05], "links": ["h2"]},
+        {"id": "h5", "type": "notable", "name": "Rafale éblouissante", "effects": [{"stat": "dash_cd", "op": "inc", "value": -0.05}, {"on": "dash", "do": "status_area", "status": "ebloui", "value": 0.15, "duration": 2, "radius": 140, "cooldown": 1, "color": "#f2d06b", "text": "Chaque esquive éblouit les ennemis proches pendant 2 s (+15 % de chance de critique contre eux, au plus une fois par seconde)."}], "at": [0.6, -0.7], "links": ["h1", "h3"]},
+        {"id": "h6", "type": "notable", "name": "Coup de soleil", "effects": [{"stat": "crit_mult", "op": "add", "value": 0.1}, {"on": "crit", "if": {"state": "cible_eblouie"}, "do": "gust", "radius": 80, "factor": 0.3, "push": 60, "at": "enemy", "cooldown": 0.4, "text": "Un coup critique sur un ennemi ébloui souffle une rafale autour de lui (au plus toutes les 0,4 s)."}], "at": [0.6, 0.7], "links": ["h2", "h4"]},
+        {"id": "h7", "type": "small", "name": "Rayon porté", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.015}, {"stat": "crit_mult", "op": "add", "value": 0.06}], "at": [0.5, 0], "links": ["h1", "h2"]},
+        {"id": "h8", "type": "small", "name": "Plume claire", "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.04}, {"stat": "dash_cd", "op": "inc", "value": -0.02}], "at": [0.95, -0.3], "links": ["h7"]},
+        {"id": "h9", "type": "small", "name": "Poussière d'or", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.03}, {"stat": "crit", "op": "add", "value": 0.01}], "at": [0.95, 0.3], "links": ["h7"]},
+        {"id": "h10", "type": "small", "name": "Rayon porté", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.015}, {"stat": "crit_mult", "op": "add", "value": 0.06}], "at": [1.15, -1.2], "links": ["h5"]},
+        {"id": "h11", "type": "small", "name": "Plume claire", "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.04}, {"stat": "dash_cd", "op": "inc", "value": -0.02}], "at": [1.15, 1.2], "links": ["h6"]},
+        {"id": "h12", "type": "small", "name": "Poussière d'or", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.03}, {"stat": "crit", "op": "add", "value": 0.01}], "at": [1.55, -0.85], "links": ["h10"]},
+        {"id": "h13", "type": "keystone", "name": "Vent d'or", "key": "vent_d_or", "desc": "La lumière ne vise juste qu'en plein vol.", "effects": [{"stat": "crit", "op": "more", "value": 1.3, "if": {"state": "en_mouvement", "min": 0.5}}, {"stat": "crit", "op": "more", "value": 0.6, "if": {"state": "immobile", "min": 0.5}}], "at": [1.6, 0], "links": ["h8", "h9"]}
+      ]
+    }
+  ]
+}

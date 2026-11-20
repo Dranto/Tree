@@ -784,7 +784,7 @@ func open_choice(id: int) -> void:
 	title.text = n["name"]
 	title.add_theme_font_override("font", UiTheme.font(true))
 	title.add_theme_font_size_override("font_size", 24)
-	title.add_theme_color_override("font_color", Game.tree.branch_color(n["branch"]))
+	title.add_theme_color_override("font_color", Game.tree.node_color(n))
 	box.add_child(title)
 	var sub := Label.new()
 	if n["type"] == "mutation":
@@ -949,7 +949,7 @@ func _draw_world(c: CanvasItem) -> void:
 			var i: int = entry[0]
 			var pts: PackedVector2Array = _curves[i]
 			if keep.has_point(pts[0]) or keep.has_point(pts[CURVE_SEGS]):
-				var col: Color = tree.branch_color(_edge_branch(tree.edges[i]))
+				var col: Color = _edge_color(tree.edges[i])
 				var w := TreeArt.limb_width(_skel["weight"][i]) if _skel["tree"][i] == 1 else 4.0
 				TreeArt.link_leaves(c, pts, col, clampf(w * 0.7, 5.0, 9.0), i)
 
@@ -962,15 +962,25 @@ func _draw_world(c: CanvasItem) -> void:
 		var st: String = _states[n["id"]]
 		var p: Vector2 = n["pos"]
 		var r := _radius(n, z)
-		var col: Color = tree.branch_color(n["branch"])
+		var col: Color = tree.node_color(n)
 		var kind: String = n["type"]
 		if kind == "small":
 			TreeArt.pearl(c, p, r, st, col, w, detail)
+			_draw_seam(c, n, p, r, st, w)
 			continue
 		if kind == "root":
 			TreeArt.seed_node(c, p, r, col, w, detail)
 			continue
 		draw_node(c, n, p, r, st, w, level)
+		_draw_seam(c, n, p, r * (1.12 if kind == "keystone" else 1.0), st, w)
+
+
+## Nœud de frontière hybride : anneau aux deux couleurs, chacune du côté de sa branche.
+func _draw_seam(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w: float) -> void:
+	if n["border"] < 0:
+		return
+	var tree = Game.tree
+	TreeArt.border_seam(c, p, r, SkillTree.border_dir(n), tree.branch_color(n["branch"]), tree.branch_color(n["border"]), "locked" if _ashen(n) else st, w)
 
 
 ## Lots de triangles des liens (écorce, puis branches apprises), gardés tant que les états des
@@ -996,7 +1006,7 @@ func _link_batches(level: int, z: float) -> Array:
 		var e: Vector2i = edges[i]
 		var oa: bool = _states[e.x] == "owned"
 		var ob: bool = _states[e.y] == "owned"
-		var col: Color = tree.branch_color(_edge_branch(e))
+		var col: Color = _edge_color(e)
 		var line := _curve_line(i, step)
 		var w0: float
 		var w1: float
@@ -1031,7 +1041,7 @@ func _link_batches(level: int, z: float) -> Array:
 	for entry in _sap:
 		var i: int = entry[0]
 		var e: Vector2i = edges[i]
-		var col: Color = tree.branch_color(_edge_branch(e))
+		var col: Color = _edge_color(e)
 		var line := _curve_line(i, step)
 		var w := TreeArt.limb_width(weight[i]) if is_tree[i] == 1 else 4.0
 		var w0 := maxf(w, 4.0 * px)
@@ -1053,7 +1063,7 @@ func _link_batches(level: int, z: float) -> Array:
 ## puis ce qui le distingue (icône, rameau, points de choix, greffe, cendre). Sert à la couche fixe
 ## et au médaillon de l'infobulle.
 func draw_node(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w: float, level: int) -> void:
-	var col: Color = Game.tree.branch_color(n["branch"])
+	var col: Color = Game.tree.node_color(n)
 	var kind: String = n["type"]
 	var detail := level == LOD_CLOSE
 	var ashen := _ashen(n)
@@ -1096,10 +1106,10 @@ func draw_node(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w
 				c.draw_circle(p, r * 0.36, col.lerp(Color.WHITE, 0.6) if st == "owned" else Color(col, 0.45))
 
 
-## Branche d'un lien : celle de son nœud extérieur (l'origine n'a pas de branche).
-func _edge_branch(e: Vector2i) -> int:
-	var b: int = Game.tree.nodes[e.y]["branch"]
-	return b if b >= 0 else Game.tree.nodes[e.x]["branch"]
+## Couleur d'un lien : celle de son nœud extérieur (mêlée pour un nœud de frontière hybride).
+func _edge_color(e: Vector2i) -> Color:
+	var n: Dictionary = Game.tree.nodes[e.y]
+	return Game.tree.node_color(n if n["branch"] >= 0 else Game.tree.nodes[e.x])
 
 
 ## Contour d'un nœud selon son type (vide = cercle, pour un notable) : losange pour un nœud clé,
@@ -1201,7 +1211,7 @@ func _draw_anim(c: CanvasItem) -> void:
 			if not _shown(n, level) or not view.has_point(n["pos"]):
 				continue
 			var r := _radius(n, zoom) * (1.3 if n["type"] == "mutation" else 1.0)
-			TreeArt.invite(c, n["pos"], r, tree.branch_color(n["branch"]), t, w, id * 0.7)
+			TreeArt.invite(c, n["pos"], r, tree.node_color(n), t, w, id * 0.7)
 	# Un choix reste à faire sur ces nœuds appris : anneau doré qui pulse.
 	if not _pending.is_empty():
 		var beat := 0.5 + 0.5 * sin(t * 5.0)
@@ -1214,7 +1224,7 @@ func _draw_anim(c: CanvasItem) -> void:
 			c.draw_arc(n["pos"], rr + maxf(5.0, 5.0 * w), a + PI, a + PI * 1.6, 12, Color(UiTheme.GOLD, 0.5), maxf(2.0, 1.4 * w))
 	if hover >= 0:
 		var n: Dictionary = tree.nodes[hover]
-		TreeArt.hover_mark(c, n["pos"], _radius(n, zoom), tree.branch_color(n["branch"]), t, _hover_since, w)
+		TreeArt.hover_mark(c, n["pos"], _radius(n, zoom), tree.node_color(n), t, _hover_since, w)
 	# Plan, chemin vers le nœud survolé et résultats de la recherche.
 	panels.draw_overlay(c)
 
@@ -1444,7 +1454,7 @@ func _draw_life(c: CanvasItem) -> void:
 	for id in _owned_ids:
 		var n: Dictionary = tree.nodes[id]
 		if view.has_point(n["pos"]):
-			TreeArt.owned_halo(c, n["pos"], _radius(n, zoom), tree.branch_color(n["branch"]), t, id * 1.3)
+			TreeArt.owned_halo(c, n["pos"], _radius(n, zoom), tree.node_color(n), t, id * 1.3)
 	if level != LOD_OVERVIEW:
 		for id in _ashen_ids:
 			var n: Dictionary = tree.nodes[id]
@@ -1478,7 +1488,7 @@ func _draw_sap(c: CanvasItem) -> void:
 		var head := _curve_at(i, u, reversed)
 		if not view.has_point(head):
 			continue
-		var col: Color = tree.branch_color(_edge_branch(tree.edges[i])).lerp(Color.WHITE, 0.55)
+		var col: Color = _edge_color(tree.edges[i]).lerp(Color.WHITE, 0.55)
 		var fade := sin(u * PI)
 		var tail := _curve_at(i, maxf(u - 0.18, 0.0), reversed)
 		var mid := _curve_at(i, maxf(u - 0.09, 0.0), reversed)
@@ -1496,7 +1506,7 @@ func _draw_blooms(c: CanvasItem) -> void:
 	for id in _blooms:
 		var n: Dictionary = tree.nodes[id]
 		var k: float = _blooms[id]
-		var col: Color = tree.branch_color(n["branch"])
+		var col: Color = tree.node_color(n)
 		if k < 0.0:
 			if k > -SAP_FLOW and _bloom_from.has(id):
 				var from: int = _bloom_from[id]
@@ -1659,9 +1669,11 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 	var tree = Game.tree
 	var raw: Array = []
 	var bname: String = SkillTree.BRANCHES[n["branch"]]["name"] if n["branch"] >= 0 else ""
-	raw.append([n["name"], 18, tree.branch_color(n["branch"])])
+	raw.append([n["name"], 18, tree.node_color(n)])
 	var sub: String = KIND_LABEL[n["type"]]
-	if bname != "":
+	if n["border"] >= 0:
+		sub += " · frontière %s et %s · anneau %d" % [bname, SkillTree.BRANCHES[n["border"]]["name"], n["ring"]]
+	elif bname != "":
 		sub += " · " + bname + " · anneau %d" % n["ring"]
 	var dim := Color(0.65, 0.72, 0.68)
 	var ink := Color(0.92, 0.95, 0.92)
@@ -1708,11 +1720,14 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 		raw.append(["Grappe « %s » : %d / %d nœuds" % [cl["name"], prog[0], prog[1]], 13, dim])
 		if not cl["effects"].is_empty():
 			raw.append(["Grappe complète : " + SkillTree.describe_effects(cl["effects"]), 13, UiTheme.GOLD if prog[0] == prog[1] else dim])
-	# Résonance de la branche : le prochain palier.
-	if n["branch"] >= 0:
-		var tiers = SkillTree.BRANCHES[n["branch"]].get("resonance", [])
+	# Résonance de la branche (des deux branches pour un nœud de frontière) : le prochain palier.
+	for bi in [n["branch"], n["border"]]:
+		if bi < 0:
+			continue
+		bname = SkillTree.BRANCHES[bi]["name"]
+		var tiers = SkillTree.BRANCHES[bi].get("resonance", [])
 		if tiers is Array and not tiers.is_empty():
-			var count: int = Game.branch_count(n["branch"])
+			var count: int = Game.branch_count(bi)
 			var next := {}
 			for tier in tiers:
 				if count < int(tier.get("count", 0)):
@@ -1802,7 +1817,7 @@ func tooltip_rect(lines: Array) -> Rect2:
 func _draw_tooltip(c: CanvasItem, n: Dictionary, st: String) -> void:
 	var lines := tooltip_lines(n, st)
 	var rect := tooltip_rect(lines)
-	var col: Color = Game.tree.branch_color(n["branch"])
+	var col: Color = Game.tree.node_color(n)
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color(0.045, 0.06, 0.05, 0.97)
 	box.border_color = Color(col, 0.45)

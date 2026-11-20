@@ -45,6 +45,8 @@ var dash_time := 0.0
 var dash_dir := Vector2.RIGHT
 var invuln := 0.0
 var still_time := 0.0
+## Secondes passées à bouger sans s'arrêter (état « en_mouvement » des conditions).
+var move_time := 0.0
 var hurt_flash := 0.0
 ## Secondes d'éblouissement restantes (apply_dazzle). Côté ennemis, l'état « ebloui » est autre chose.
 var dazzle := 0.0
@@ -417,7 +419,12 @@ func _physics_process(delta: float) -> void:
 	_expected = 0.0 if dash_time > 0.0 else mv.length() * s["move_speed"] * delta
 
 	still_time = still_time + delta if mv.length() < 0.1 else 0.0
+	move_time = 0.0 if still_time > 0.0 else move_time + delta
 	Game.set_state("immobile", still_time)
+	# États lus par les conditions des frontières hybrides (Sève et Vent).
+	Game.set_state("en_mouvement", move_time)
+	var cocoon = _skill_objects.get("cocon")
+	Game.set_state("sous_cocon", 1.0 if cocoon != null and is_instance_valid(cocoon) and cocoon.shield > 0.0 else 0.0)
 	s = Game.stats
 
 	# La terre vivante soigne : régénération triplée sur l'herbe.

@@ -1129,7 +1129,7 @@ func _on_node_allocated(node: Dictionary) -> void:
 		radius = 280.0
 	elif node["type"] == "keystone":
 		radius = 380.0
-	revive(world_pos, radius, Game.tree.branch_color(node["branch"]))
+	revive(world_pos, radius, Game.tree.node_color(node))
 
 
 ## Vague de vie : l'herbe avance depuis le point ravivé (ground.WAVE_TIME secondes),
@@ -1345,7 +1345,7 @@ func _bench_coeur_begin() -> void:
 	while Game.points > 0:
 		var options: Array = []
 		for n in Game.tree.nodes:
-			if n["branch"] == 0 and Game.can_allocate(n["id"]):
+			if n["branch"] == 0 and n["border"] < 0 and Game.can_allocate(n["id"]):
 				options.append(n)
 		if options.is_empty():
 			break

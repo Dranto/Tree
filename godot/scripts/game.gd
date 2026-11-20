@@ -427,12 +427,13 @@ func cluster_progress(cluster: String, owned = null) -> Array:
 	return [have, ids.size()]
 
 
-## Nombre de nœuds appris dans une branche (la graine ne compte pas).
+## Nombre de nœuds appris dans une branche (la graine ne compte pas). Un nœud de frontière hybride
+## compte pour ses deux branches.
 func branch_count(bi: int, owned = null) -> int:
 	var set: Dictionary = allocated if owned == null else owned
 	var count := 0
 	for id in set:
-		if tree.nodes[id]["branch"] == bi:
+		if SkillTree.in_branch(tree.nodes[id], bi):
 			count += 1
 	return count
 
@@ -450,6 +451,9 @@ func effect_sources(owned: Dictionary, graft_override = null) -> Array:
 		out.append(n)
 		if n["branch"] >= 0:
 			per_branch[n["branch"]] = int(per_branch.get(n["branch"], 0)) + 1
+		# Frontière hybride : le nœud compte aussi pour l'autre branche.
+		if int(n.get("border", -1)) >= 0:
+			per_branch[n["border"]] = int(per_branch.get(n["border"], 0)) + 1
 		var i := choice_index(id)
 		if i >= 0:
 			out.append({"id": "%d:choix" % id, "ring": n["ring"], "effects": n["choices"][i].get("effects", [])})

@@ -484,6 +484,18 @@ static func pearl(c: CanvasItem, p: Vector2, r: float, st: String, col: Color, w
 			c.draw_arc(p, r, 0.0, TAU, 16, Color(col, 0.2), maxf(2.0, 1.2 * w))
 
 
+## Couture d'un nœud de frontière hybride : un anneau en deux moitiés autour du nœud, chacune à la
+## couleur de la branche qui est de son côté (dir : vecteur unitaire de « own » vers « other »).
+static func border_seam(c: CanvasItem, p: Vector2, r: float, dir: Vector2, own: Color, other: Color, st: String, w: float) -> void:
+	var alpha := 1.0 if st == "owned" else (0.85 if st == "available" else 0.4)
+	var rr := r + maxf(3.0, 3.0 * w)
+	var width := maxf(2.0, 1.6 * w)
+	var a := dir.angle()
+	var gap := 0.32
+	c.draw_arc(p, rr, a + PI * 0.5 + gap, a + PI * 1.5 - gap, 12, Color(own.lerp(Color.WHITE, 0.15), alpha), width)
+	c.draw_arc(p, rr, a - PI * 0.5 + gap, a + PI * 0.5 - gap, 12, Color(other.lerp(Color.WHITE, 0.15), alpha), width)
+
+
 ## Icône d'un nœud dans son médaillon : à la couleur de la branche, sombre sur un nœud appris.
 static func node_icon(c: CanvasItem, id: String, p: Vector2, s: float, st: String, col: Color) -> void:
 	if id == "":
