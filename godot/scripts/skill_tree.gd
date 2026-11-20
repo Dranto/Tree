@@ -405,6 +405,13 @@ func _spread_clusters(spread: Array, generated: int, ghosts: Array = []) -> void
 			k -= 0.05
 	# Écartement deux à deux : chaque nœud trop proche d'un autre nœud de grappe s'en éloigne un peu.
 	var all: Array = movable + fixed.keys()
+	# Rayons lus une fois ; deux nœuds plus éloignés que « reach » sur un axe ne se gênent jamais.
+	var rad := {}
+	var reach := 0.0
+	for id in all:
+		rad[id] = SPREAD_RADIUS.get(nodes[id]["type"], 18.0)
+		reach = maxf(reach, rad[id])
+	reach = reach + reach + SPREAD_GAP
 	for it in 24:
 		var moved := false
 		for id in movable:
@@ -414,8 +421,10 @@ func _spread_clusters(spread: Array, generated: int, ghosts: Array = []) -> void
 				if other == id:
 					continue
 				var q: Vector2 = nodes[other]["pos"]
+				if absf(p.x - q.x) >= reach or absf(p.y - q.y) >= reach:
+					continue
 				var d := p.distance_to(q)
-				var want := _spread_want(id, other)
+				var want: float = rad[id] + rad[other] + SPREAD_GAP
 				if d < want and d > 0.001:
 					push += (p - q) / d * (want - d) * (0.5 if fixed.has(other) == false else 1.0)
 			if push == Vector2.ZERO:
@@ -581,15 +590,25 @@ func _reconnect(edge_set: Dictionary, pts: Array) -> void:
 		if bu < 0:
 			bu = fu
 			bv = fv
+		# Lien déjà là (nœud qu'on ne relie qu'à travers un nœud flétri d'une autre grappe) : rien ne
+		# changerait aux tentatives suivantes, inutile de les refaire.
+		if edge_set.has(Vector2i(mini(bu, bv), maxi(bu, bv))):
+			return
 		_link(bu, bv, edge_set)
 
 
 ## Vrai si le segment a-b passe trop près d'un nœud de grappe qui n'est pas une de ses extrémités.
 static func _crosses(a: Vector2, b: Vector2, pts: Array) -> bool:
+	# Rejet rapide : un point hors du rectangle du segment élargi de la marge n'en est pas assez près.
+	var m := CLEAR_EDGE * RING_GAP
+	var lo := Vector2(minf(a.x, b.x) - m, minf(a.y, b.y) - m)
+	var hi := Vector2(maxf(a.x, b.x) + m, maxf(a.y, b.y) + m)
 	for q in pts:
+		if q.x < lo.x or q.y < lo.y or q.x > hi.x or q.y > hi.y:
+			continue
 		if q.is_equal_approx(a) or q.is_equal_approx(b):
 			continue
-		if _seg_dist(q, a, b) < CLEAR_EDGE * RING_GAP:
+		if _seg_dist(q, a, b) < m:
 			return true
 	return false
 

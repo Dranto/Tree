@@ -481,6 +481,9 @@ func _ending() -> void:
 func _final() -> void:
 	print("Bilan")
 	for o in obj.main_list():
+		# La finale (objectif commun, après toutes les régions) se joue dans tests/aventure_test.gd.
+		if str(o.get("target", {}).get("type", "")) == "finale":
+			continue
 		if str(o.get("region", "")) in ["", region]:
 			check(obj.is_done(o["id"]), "objectif principal « %s » accompli" % o["title"])
 	check(game.flags.get(region + "_fin_vue", false) and not obj.ending_due(), "fin vue une seule fois")
