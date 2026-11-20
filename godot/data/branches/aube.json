@@ -7,7 +7,7 @@
     {
       "stat": "crit",
       "op": "add",
-      "value": 0.012
+      "value": 0.015
     },
     {
       "stat": "crit_mult",
@@ -20,7 +20,7 @@
       {
         "stat": "damage",
         "op": "inc",
-        "value": 0.08
+        "value": 0.1
       }
     ],
     "names": [
@@ -110,6 +110,11 @@
         },
         {
           "stat": "max_hp",
+          "op": "inc",
+          "value": 0.1
+        },
+        {
+          "stat": "damage",
           "op": "inc",
           "value": 0.1
         }
@@ -458,12 +463,12 @@
             {
               "stat": "max_hp",
               "op": "inc",
-              "value": 0.2
+              "value": 0.3
             },
             {
               "stat": "armor",
               "op": "add",
-              "value": 0.08
+              "value": 0.1
             }
           ]
         },

@@ -693,17 +693,25 @@ func _region_kind(reg: String, pos: Vector2) -> String:
 		share *= float(sp.get("purified_factor", 1.0))
 	if rng.randf() >= share:
 		return ""
-	var kinds: Dictionary = sp.get("kinds", {})
+	# Les colosses d'une région (« min_dist ») vivent loin de la graine : près d'elle, on tire parmi
+	# les autres sortes. Sans ce garde, un héros de niveau 3 qui part vers une région voisine de
+	# celles de Sève et d'Aube tombait sur des Souches, des Quartz et des Menhirs à 150-170 PV.
+	var min_dist: Dictionary = sp.get("min_dist", {})
+	var kinds := {}
 	var total := 0.0
-	for k in kinds:
-		total += float(kinds[k])
+	for k in sp.get("kinds", {}):
+		if pos.length() >= float(min_dist.get(k, 0.0)):
+			kinds[k] = float(sp["kinds"][k])
+			total += kinds[k]
 	var pick := rng.randf() * total
 	var id := ""
 	for k in kinds:
 		id = k
-		pick -= float(kinds[k])
+		pick -= kinds[k]
 		if pick <= 0.0:
 			break
+	if id == "":
+		return ""
 	if Enemy.KINDS[Enemy.kind_index(id)].get("behavior", "") == "nest":
 		var nests := enemies.filter(func(e): return e.behavior == "nest").size()
 		if pos.length() < float(sp.get("nest_min_dist", 0.0)) or nests >= int(sp.get("max_nests", 3)):

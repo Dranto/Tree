@@ -7,7 +7,7 @@
     {
       "stat": "poison",
       "op": "add",
-      "value": 0.05
+      "value": 0.04
     },
     {
       "stat": "area",

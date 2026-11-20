@@ -41,6 +41,7 @@
     "share_near": 0.3,
     "share_far": 0.85,
     "far": 2400,
+    "min_dist": {"souche": 1300},
     "purified_factor": 0.4
   },
   "sanctuaries": [

@@ -87,7 +87,7 @@
     {"id": "souche", "name": "Souche gorgée", "behavior": "healer", "region": "seve", "art": "seve",
      "hp": 150, "speed": 44, "damage": 14, "radius": 23, "xp": 13, "color": "#4a4438",
      "resist": {"seve": 0.25}, "no_affix": ["ecorce"],
-     "aura": 210, "cooldown": 4.5, "windup": 1.1, "heal": 0.3, "keep_back": 110},
+     "aura": 210, "cooldown": 4.5, "windup": 1.1, "heal": 0.2, "keep_back": 110},
     {"id": "luciole", "name": "Luciole flétrie", "behavior": "flutter", "region": "aube", "art": "aube",
      "hp": 10, "speed": 165, "damage": 5, "radius": 8, "xp": 1, "color": "#7a6e58",
      "resist": {"aube": 0.25}, "weave": 0.9},
