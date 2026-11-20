@@ -336,13 +336,21 @@ func _draw_breach() -> void:
 			draw_arc(c, DESCENT_RADIUS + 10.0, -PI / 2.0, -PI / 2.0 + TAU * clampf(hold / DESCENT_HOLD, 0.0, 1.0), 40, col, Art.TRAIT, true)
 
 
+const DrawBatch = preload("res://scripts/draw_batch.gd")
+var _floor_batch = DrawBatch.new()
+
+
 func _draw_cave() -> void:
 	var c := center
 	var r := max_radius
 	var life := bloom
 	# Terre autour du creux : tout ce que l'écran peut voir, sourd et sombre.
 	var earth := Art.c("decor").darkened(0.35)
-	draw_rect(Rect2(c - Vector2(2800, 2800), Vector2(5600, 5600)), earth)
+	# Une couronne de 4 000 px de rayon (qui contient le carré de 5 600 px de côté) jusqu'au bord du
+	# sol du creux, que le sol recouvre de toute façon : mêmes pixels, sans remplir deux fois le centre.
+	_floor_batch.exact = true
+	_floor_batch.ring(c, 4000.0, r, earth)
+	_floor_batch.flush(self)
 	var rng_d := RandomNumberGenerator.new()
 	rng_d.seed = 5
 	# Racines enfouies dans la terre, qui rayonnent du creux.
@@ -359,9 +367,16 @@ func _draw_cave() -> void:
 	# Sol du creux : cendre tassée, plus claire au centre ; verdit avec la floraison.
 	var floor_dead := Art.c("sol_mort").darkened(0.25)
 	var floor_alive := Art.c("sol_vivant")
+	# Dix teintes concentriques, tracées en couronnes (lot « exact » : mêmes pixels que des disques
+	# empilés, mais sans redessiner dix fois le centre : le coût en rendu logiciel suit les pixels).
+	_floor_batch.exact = true
 	for i in 10:
-		var k := 1.0 - i / 10.0
-		draw_circle(c, r * k, floor_dead.lerp(floor_alive, life).lightened(0.016 * i))
+		var col := floor_dead.lerp(floor_alive, life).lightened(0.016 * i)
+		if i < 9:
+			_floor_batch.ring(c, r * (1.0 - i / 10.0), r * (1.0 - (i + 1) / 10.0), col)
+		else:
+			_floor_batch.draw_circle(c, r * 0.1, col)
+	_floor_batch.flush(self)
 	# Veines de sève qui convergent vers le centre : éteintes, puis allumées.
 	var vein_off := Art.ec("seve", "sombre").darkened(0.5)
 	for i in 12:
