@@ -42,8 +42,11 @@ func tick(delta: float) -> void:
 	var stepped: float = minf(float(k["speed"]) * delta, left)
 	left -= stepped
 	p.position += dir * stepped
-	var h: float = p.main.world_half
-	p.position = p.position.clamp(Vector2(-h, -h), Vector2(h, h))
+	if p.main.has_method("clamp_to_world"):
+		p.position = p.main.clamp_to_world(p.position)
+	else:
+		var h: float = p.main.world_half
+		p.position = p.position.clamp(Vector2(-h, -h), Vector2(h, h))
 	var w: float = float(k["width"])
 	var kb: float = float(k["knockback"])
 	for e in p.main.enemies_near(p.position, w):

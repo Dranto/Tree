@@ -1,9 +1,9 @@
 {
-  "_doc": "Objectifs de l'aventure (format dans data/README.md, « Objectifs »). « region » : objectif propre à une région (cibles et comptes limités à ses lieux avec « region_only ») ; sans lui, objectif commun. Vaincre le boss d'une région lance la séquence « région purifiée » (textes « ending » du fichier de la région) ; quand toutes les régions sont purifiées, c'est la fin de l'aventure (« adventure_ending », montrée à la place s'il y a plus d'une région).",
+  "_doc": "Objectifs de l'aventure (format dans data/README.md, « Objectifs »). « region » : objectif propre à une région (cibles et comptes limités à ses lieux avec « region_only ») ; sans lui, objectif commun. Vaincre le boss d'une région lance la séquence « région purifiée » (textes « ending » du fichier de la région) ; quand toutes les régions sont purifiées, la dernière séquence montre « adventure_ending » à la place : la Flétrissure se retire sous la graine, où attend la finale (data/finale.json). L'épilogue et le générique viennent après la finale.",
   "adventure_ending": {
-    "sub": "Fin de l'aventure",
-    "title": "Le monde reverdit",
-    "body": "Les Cœurs de flétrissure sont purifiés et leurs gardiens apaisés. De la graine aux confins, l'Arbre de vie étend ses branches sur une terre qui respire de nouveau."
+    "sub": "Toutes les régions sont purifiées",
+    "title": "La Flétrissure se retire",
+    "body": "Les gardiens sont tombés, mais la cendre ne s'est pas dissipée : elle reflue de toutes les régions vers sa source. Sous la graine, au creux des racines de l'Arbre de vie, la Flétrissure s'est retirée pour un dernier combat."
   },
   "objectives": [
     {
@@ -202,6 +202,15 @@
       "condition": {"type": "flag", "flag": "aube_boss_vaincu"},
       "target": {"type": "arena"},
       "reward": {"text": "2 points d'arbre et une greffe"}
+    },
+    {
+      "id": "finale", "main": true, "milestone": true,
+      "title": "Vaincre la Flétrissure sous la graine",
+      "text": "Toutes les régions sont purifiées : la Flétrissure s'est retirée sous la graine. Tiens-toi dans la brèche à son pied pour descendre l'affronter.",
+      "condition": {"type": "flag", "flag": "finale_vaincue"},
+      "target": {"type": "finale"},
+      "needs_flag": "finale_ouverte",
+      "reward": {"text": "3 points d'arbre et la fin de l'aventure"}
     },
     {
       "id": "elites", "main": false,

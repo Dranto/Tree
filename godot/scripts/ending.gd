@@ -35,6 +35,8 @@ var _right: PanelContainer
 var _continue: Button
 var _focused := false
 var _motes: Array = []
+## Toutes les branches de l'arbre en fleurs (l'épilogue, epilogue.gd), pas seulement la première.
+var all_lush := false
 
 
 func _ready() -> void:
@@ -256,7 +258,7 @@ func _draw_tree(base: Vector2, trunk_len: float, g: float, u: float, fade: float
 		# Les six branches en éventail, dans l'ordre de l'arbre ; la plus proche de la verticale pousse en haut.
 		var frac := (bi + 0.5) / branch_count - 0.5
 		var ang := -PI / 2.0 + frac * 2.1
-		var lush := bi == 0
+		var lush := bi == 0 or all_lush
 		var col: Color = Game.tree.branch_color(bi)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 100 + bi

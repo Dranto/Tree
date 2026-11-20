@@ -7,20 +7,26 @@ const Tracker = preload("res://scripts/objective_tracker.gd")
 const Journal = preload("res://scripts/journal.gd")
 const WorldMap = preload("res://scripts/world_map.gd")
 const Ending = preload("res://scripts/ending.gd")
+const Epilogue = preload("res://scripts/epilogue.gd")
 
 ## Délai entre la mort de la Mère-Ronce et le début de la séquence de fin (la vague de vie passe).
 const ENDING_DELAY := 5.0
+## Délai entre la mort de la Flétrissure et l'épilogue (le creux refleurit).
+const EPILOGUE_DELAY := 4.0
 
 var main
 var tracker
 var journal
 var world_map
 var ending
+## Épilogue et générique de l'aventure, après la finale (epilogue.gd).
+var epilogue
 ## "" (rien d'ouvert), "journal" ou "carte".
 var current := ""
 var ending_enabled := true
 var _tracker_layer: CanvasLayer
 var _ending_wait := 0.0
+var _epilogue_wait := 0.0
 
 
 func _ready() -> void:
@@ -51,6 +57,9 @@ func _ready() -> void:
 	ending = Ending.new()
 	end_layer.add_child(ending)
 	ending.closed.connect(_on_ending_closed)
+	epilogue = Epilogue.new()
+	end_layer.add_child(epilogue)
+	epilogue.closed.connect(_on_ending_closed)
 	Objectives.attach(main)
 	# Pas de fin de partie pendant les bancs d'essai et les combats de test.
 	ending_enabled = main.build_bot == null and not main.autotest_boss and not main.benchmark
@@ -80,7 +89,7 @@ func key_name(action: String) -> String:
 
 
 func _input(event: InputEvent) -> void:
-	if ending.active and ending.visible:
+	if (ending.active and ending.visible) or (epilogue.active and epilogue.visible):
 		return
 	if event.is_action_pressed("toggle_journal"):
 		toggle("journal")
@@ -95,7 +104,7 @@ func _input(event: InputEvent) -> void:
 
 ## Une fenêtre modale (Arbre, pause, fin) est déjà ouverte : le journal et la carte attendent.
 func _blocked() -> bool:
-	return main.tree_ui.visible or main.pause_menu.visible or ending.active or (get_tree().paused and current == "")
+	return main.tree_ui.visible or main.pause_menu.visible or ending.active or epilogue.active or (get_tree().paused and current == "")
 
 
 func toggle(which: String) -> void:
@@ -133,7 +142,7 @@ func _veil() -> void:
 ## Le suivi s'efface par-dessus l'Arbre de vie (il couvre tout l'écran), pendant la fin et pendant
 ## le combat de boss (seules les informations du combat restent).
 func tracker_shown() -> bool:
-	return not main.tree_ui.visible and not ending.active and not main.in_boss_fight()
+	return not main.tree_ui.visible and not ending.active and not epilogue.active and not main.in_boss_fight()
 
 
 func _on_ending_closed() -> void:
@@ -144,8 +153,17 @@ func _on_ending_closed() -> void:
 func _process(delta: float) -> void:
 	_tracker_layer.visible = tracker_shown()
 	# Fin de la tranche : une fois le boss vaincu, après un court délai, une seule fois.
-	if not ending_enabled or ending.active:
+	if not ending_enabled or ending.active or epilogue.active:
 		return
+	# Épilogue : la Flétrissure vaincue, après un court délai, une seule fois.
+	if Objectives.epilogue_due() and not Objectives.ending_due():
+		if not get_tree().paused:
+			_epilogue_wait += delta
+			if _epilogue_wait >= EPILOGUE_DELAY:
+				_epilogue_wait = 0.0
+				start_epilogue()
+		return
+	_epilogue_wait = 0.0
 	if Objectives.ending_due():
 		if get_tree().paused:
 			return
@@ -167,3 +185,17 @@ func start_ending() -> void:
 	# Les annonces en attente reprendront après « Continuer à jouer » : rien par-dessus la fin.
 	main.hud.get_parent().visible = false
 	ending.begin(main)
+
+
+## Lance l'épilogue tout de suite (appelée après le délai, ou par les tests et les robots) : le
+## joueur remonte au pied de la graine, et le monde entier reverdit derrière l'épilogue.
+func start_epilogue() -> void:
+	if current != "":
+		close()
+	if main.pause_menu.visible:
+		main.pause_menu.close()
+	_tracker_layer.visible = false
+	main.hud.get_parent().visible = false
+	if main.get("finale") != null:
+		main.finale.bring_up()
+	epilogue.begin(main)
