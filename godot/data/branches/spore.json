@@ -107,7 +107,7 @@
         {
           "stat": "area_damage",
           "op": "inc",
-          "value": 0.08
+          "value": 0.05
         }
       ]
     },
