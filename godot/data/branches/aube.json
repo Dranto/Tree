@@ -12,7 +12,7 @@
     {
       "stat": "crit_mult",
       "op": "add",
-      "value": 0.07
+      "value": 0.09
     }
   ],
   "notable": {
