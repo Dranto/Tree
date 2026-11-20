@@ -47,6 +47,13 @@ var invuln := 0.0
 var still_time := 0.0
 ## Secondes passées à bouger sans s'arrêter (état « en_mouvement » des conditions).
 var move_time := 0.0
+## Ancrage (Racine) : secondes d'enracinement restantes, et part de la vitesse gardée pendant ce
+## temps (0 : le héros ne marche plus). L'esquive arrache les racines (scripts/skills/ancrage.gd).
+var rooted := 0.0
+var rooted_walk := 0.0
+## Aubier (Racine) : bouclier d'écorce laissé par les coups de l'attaque (attack.gd › _bark), bu
+## après l'armure, le cocon et le bouclier d'écorce.
+var bark := 0.0
 var hurt_flash := 0.0
 ## Secondes d'éblouissement restantes (apply_dazzle). Côté ennemis, l'état « ebloui » est autre chose.
 var dazzle := 0.0
@@ -394,6 +401,14 @@ func _physics_process(delta: float) -> void:
 	if to_aim.length() > 1.0:
 		aim = to_aim.normalized()
 
+	# Enraciné : le héros ne marche plus (ou à « rooted_walk » de sa vitesse) ; l'esquive arrache les racines.
+	if rooted > 0.0:
+		rooted -= delta
+		if want_dash and dash_cd <= 0.0:
+			uproot()
+		else:
+			mv *= rooted_walk
+
 	if want_dash and dash_cd <= 0.0:
 		# Au clavier, l'esquive suit la direction de marche ; à la souris, elle part vers le curseur.
 		var keyboard: bool = main.autotest or Settings.move_mode == "clavier" or Input.get_vector("move_left", "move_right", "move_up", "move_down").length() > 0.1
@@ -425,6 +440,10 @@ func _physics_process(delta: float) -> void:
 	Game.set_state("en_mouvement", move_time)
 	var cocoon = _skill_objects.get("cocon")
 	Game.set_state("sous_cocon", 1.0 if cocoon != null and is_instance_valid(cocoon) and cocoon.shield > 0.0 else 0.0)
+	# États de Racine : enraciné (Ancrage), sous un bouclier d'écorce.
+	Game.set_state("enracine", 1.0 if rooted > 0.0 else 0.0)
+	var bark_skill = _skill_objects.get("ecorce")
+	Game.set_state("sous_ecorce", 1.0 if bark_skill != null and bark_skill.shield > 0.0 else 0.0)
 	s = Game.stats
 
 	# La terre vivante soigne : régénération triplée sur l'herbe.
@@ -585,6 +604,11 @@ func take_hit(amount: float, source) -> void:
 		if taken <= 0.0:
 			invuln = 0.2
 			return
+	# Bouclier d'écorce, puis Aubier (Racine) : l'écorce boit ce qui reste du coup.
+	taken = _bark_absorb(taken, source)
+	if taken <= 0.0:
+		invuln = 0.2
+		return
 	hp -= taken
 	hurt_flash = 0.15
 	hurt_anim = HURT_ANIM
@@ -605,9 +629,40 @@ func take_hit(amount: float, source) -> void:
 			main.player_died()
 
 
+## Écorce (Racine) : le bouclier d'écorce (scripts/skills/ecorce.gd) boit le coup, puis la
+## réserve « bark » de l'Aubier. Renvoie ce qui passe.
+func _bark_absorb(taken: float, source) -> float:
+	var shell = _skill_objects.get("ecorce")
+	if shell != null and shell.shield > 0.0:
+		taken = shell.absorb(taken, source)
+	if bark > 0.0 and taken > 0.0:
+		var took := minf(bark, taken)
+		bark -= took
+		taken -= took
+	return taken
+
+
+## Ancrage (Racine) : le héros prend racine « dur » secondes ; « walk » : part de sa vitesse gardée.
+func take_root(dur: float, walk := 0.0) -> void:
+	rooted = maxf(rooted, dur)
+	rooted_walk = clampf(walk, 0.0, 1.0)
+
+
+## Arrache les racines de l'Ancrage (esquive, mort).
+func uproot() -> void:
+	if rooted <= 0.0:
+		return
+	rooted = 0.0
+	var anchor = _skill_objects.get("ancrage")
+	if anchor != null:
+		anchor.release()
+
+
 func respawn(at := Vector2.ZERO) -> void:
 	# Il se fane là où il est tombé, puis renaît en pousse au sanctuaire.
 	_sig("chute", {"pos": position, "facing": aim.angle()})
+	uproot()
+	bark = 0.0
 	position = at
 	_last_pos = at
 	_step_start = at

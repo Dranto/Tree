@@ -45,7 +45,7 @@ func play(id: String, data := {}) -> Dictionary:
 	e["id"] = id
 	e["t"] = 0.0
 	if not e.has("dur"):
-		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, SeveFx.DUREE.get(id, 0.4))))
+		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, SeveFx.DUREE.get(id, RacineFx.DUREE.get(id, 0.4)))))
 	if Settings.reduce_effects and id in ["graine_depart", "graine_impact"]:
 		return e
 	while effects.size() >= MAX_EFFECTS:
@@ -95,6 +95,9 @@ static func draw_effect(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 		return
 	if SeveFx.draws(e["id"]):
 		SeveFx.draw(ci, e, on_ground)
+		return
+	if RacineFx.draws(e["id"]):
+		RacineFx.draw(ci, e, on_ground)
 		return
 	match e["id"]:
 		"graine_depart":
