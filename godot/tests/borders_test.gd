@@ -42,8 +42,9 @@ func _run() -> void:
 	print("Données")
 	var borders: Array = SkillTree.BORDERS
 	var names: Array = borders.map(func(b): return b["id"])
-	check(names.has("ronce-spore") and names.has("spore-seve") and names.has("seve-vent") and names.has("vent-aube"),
-		"les quatre frontières sans Racine sont chargées (%s)" % ", ".join(names))
+	check(names.has("ronce-spore") and names.has("spore-seve") and names.has("seve-vent") and names.has("vent-aube")
+		and names.has("aube-racine") and names.has("racine-ronce"),
+		"les six frontières sont chargées (%s)" % ", ".join(names))
 	var sizes_ok := true
 	for bd in borders:
 		check((bd["a"] + 1) % ids.size() == bd["b"], "%s : la seconde branche suit la première autour de la graine" % bd["id"])

@@ -430,12 +430,31 @@ func _spread_clusters(spread: Array, generated: int, ghosts: Array = []) -> void
 		rad[id] = SPREAD_RADIUS.get(nodes[id]["type"], 18.0)
 		reach = maxf(reach, rad[id])
 	reach = reach + reach + SPREAD_GAP
+	# Nœuds rangés dans une grille de cases de « reach » (tenue à jour quand un nœud bouge) : seuls
+	# ceux des cases voisines sont regardés, dans l'ordre de « all » pour que la somme soit la même.
+	var order := {}
+	var grid := {}
+	var cell_of := {}
+	for i in all.size():
+		order[all[i]] = i
+		var c := Vector2i(floori(nodes[all[i]]["pos"].x / reach), floori(nodes[all[i]]["pos"].y / reach))
+		cell_of[all[i]] = c
+		if not grid.has(c):
+			grid[c] = []
+		grid[c].append(all[i])
+	var by_order := func(a, b): return order[a] < order[b]
 	for it in 24:
 		var moved := false
 		for id in movable:
 			var p: Vector2 = nodes[id]["pos"]
 			var push := Vector2.ZERO
-			for other in all:
+			var pc: Vector2i = cell_of[id]
+			var around: Array = []
+			for dx in range(-1, 2):
+				for dy in range(-1, 2):
+					around.append_array(grid.get(Vector2i(pc.x + dx, pc.y + dy), []))
+			around.sort_custom(by_order)
+			for other in around:
 				if other == id:
 					continue
 				var q: Vector2 = nodes[other]["pos"]
@@ -451,6 +470,13 @@ func _spread_clusters(spread: Array, generated: int, ghosts: Array = []) -> void
 			if _spread_free(np, near, {} if nodes[id]["border"] >= 0 else ghost_grid):
 				nodes[id]["pos"] = np
 				moved = true
+				var nc := Vector2i(floori(np.x / reach), floori(np.y / reach))
+				if nc != pc:
+					grid[pc].erase(id)
+					if not grid.has(nc):
+						grid[nc] = []
+					grid[nc].append(id)
+					cell_of[id] = nc
 		if not moved:
 			break
 
@@ -627,21 +653,47 @@ func _reconnect(edge_set: Dictionary, pts: Array, inner_only := false) -> void:
 		var fallback := INF
 		var fu := -1
 		var fv := -1
+		# Le lien le plus court entre un nœud coupé et un nœud atteint : les nœuds atteints sont rangés
+		# dans une grille (cases d'un anneau) et chaque nœud coupé les cherche case par case en
+		# s'éloignant, jusqu'à ce qu'aucune case ne puisse battre le meilleur lien (même résultat que
+		# de tout comparer, en bien moins de calculs).
+		var grid := {}
+		var lo := Vector2i(1 << 30, 1 << 30)
+		var hi := Vector2i(-(1 << 30), -(1 << 30))
+		for u in seen:
+			var c := _cell(nodes[u]["pos"])
+			if not grid.has(c):
+				grid[c] = []
+			grid[c].append(u)
+			lo = lo.min(c)
+			hi = hi.max(c)
 		for n in nodes:
 			if seen.has(n["id"]) or (inner_only and _outer(n["id"])):
 				continue
 			var p: Vector2 = n["pos"]
-			for u in seen:
-				var q: Vector2 = nodes[u]["pos"]
-				var d := p.distance_squared_to(q)
-				if d < fallback:
-					fallback = d
-					fu = u
-					fv = n["id"]
-				if d < best and not _crosses(p, q, pts):
-					best = d
-					bu = u
-					bv = n["id"]
+			var pc := _cell(p)
+			var kmax := maxi(maxi(pc.x - lo.x, hi.x - pc.x), maxi(pc.y - lo.y, hi.y - pc.y))
+			for k in kmax + 1:
+				var lb := (k - 1) * RING_GAP
+				if k >= 2 and lb * lb >= best:
+					break
+				for dx in range(-k, k + 1):
+					var step := 1 if absi(dx) == k else 2 * k
+					for dy in range(-k, k + 1, maxi(step, 1)):
+						var key := Vector2i(pc.x + dx, pc.y + dy)
+						if not grid.has(key):
+							continue
+						for u in grid[key]:
+							var q: Vector2 = nodes[u]["pos"]
+							var d := p.distance_squared_to(q)
+							if d < fallback:
+								fallback = d
+								fu = u
+								fv = n["id"]
+							if d < best and not _crosses(p, q, pts):
+								best = d
+								bu = u
+								bv = n["id"]
 		if bu < 0:
 			bu = fu
 			bv = fv
@@ -650,6 +702,11 @@ func _reconnect(edge_set: Dictionary, pts: Array, inner_only := false) -> void:
 		if edge_set.has(Vector2i(mini(bu, bv), maxi(bu, bv))):
 			return
 		_link(bu, bv, edge_set)
+
+
+## Case (d'un anneau de côté) de la grille de _reconnect.
+static func _cell(p: Vector2) -> Vector2i:
+	return Vector2i(floori(p.x / RING_GAP), floori(p.y / RING_GAP))
 
 
 ## Vrai si le segment a-b passe trop près d'un nœud de grappe qui n'est pas une de ses extrémités.
