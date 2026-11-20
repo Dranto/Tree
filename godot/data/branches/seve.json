@@ -3,7 +3,7 @@
   "name": "Sève",
   "color": "#7fd36b",
   "blurb": "Vie, régénération, vol de vie : survivre",
-  "small": [{"stat": "max_hp", "op": "add", "value": 10}, {"stat": "regen", "op": "add", "value": 0.35}],
+  "small": [{"stat": "max_hp", "op": "add", "value": 10}, {"stat": "regen", "op": "add", "value": 0.35}, {"stat": "damage", "op": "inc", "value": 0.03}],
   "notable": {
     "effects": [{"stat": "lifesteal", "op": "add", "value": 0.01}],
     "names": [["Source", "Bourgeon", "Pousse", "Sève", "Rosée", "Floraison"], ["tendre", "vive", "pure", "claire", "fraîche", "vernale"]]

@@ -39,6 +39,7 @@
     "share_near": 0.28,
     "share_far": 0.82,
     "far": 2400,
+    "min_dist": {"quartz": 1300},
     "max_nests": 0,
     "purified_factor": 0.4
   },
