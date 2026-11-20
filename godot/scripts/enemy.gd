@@ -342,7 +342,7 @@ func apply_status(status: String, value: float, duration: float) -> void:
 					bleed_stacks[weakest] = [value, duration]
 		"enracine":
 			# Une sorte marquée "no_root": true dans enemies.json (colosse de la forêt pétrifiée) ne se laisse pas retenir.
-			if data is Dictionary and data.get("no_root", false):
+			if data.get("no_root", false) or get("no_root") == true:
 				return
 			var fresh := root_time <= 0.0
 			root_time = maxf(root_time, duration)

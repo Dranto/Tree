@@ -207,7 +207,7 @@ static func _ancrage(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 		for i in 9:
 			var ang := i * TAU / 9.0 + seed * 0.37
 			var len := r * (0.75 + 0.25 * sin(seed + i * 2.1))
-			racine(ci, p, p + Vector2.from_angle(ang) * len, 7.0, grow * fade, seed + i, fade)
+			racine(ci, p, p + Vector2.from_angle(ang) * len, 11.0, grow * fade, seed + i, fade)
 		return
 	# Racines autour des pieds : trois arcs qui montent sur le héros.
 	for i in 3:
@@ -260,10 +260,10 @@ static func _pieu(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 		return
 	if h <= 0.02:
 		return
-	var big := r * 1.35
-	pieu(ci, p + Vector2(-r * 0.32, r * 0.08), big * 0.55 * h, r * 0.11, -0.35 + sin(seed) * 0.08)
-	pieu(ci, p + Vector2(r * 0.34, r * 0.1), big * 0.6 * h, r * 0.12, 0.3 + cos(seed) * 0.08)
-	pieu(ci, p + Vector2(0, r * 0.15), big * h, r * 0.17, sin(seed * 1.7) * 0.1)
+	var big := r * 2.0
+	pieu(ci, p + Vector2(-r * 0.4, r * 0.08), big * 0.55 * h, r * 0.15, -0.35 + sin(seed) * 0.08)
+	pieu(ci, p + Vector2(r * 0.42, r * 0.1), big * 0.62 * h, r * 0.16, 0.3 + cos(seed) * 0.08)
+	pieu(ci, p + Vector2(0, r * 0.18), big * h, r * 0.22, sin(seed * 1.7) * 0.1)
 
 
 ## Coup de massue : un secteur brun balayé, la massue (manche et tête noueuse) au bout de l'arc,
@@ -296,10 +296,10 @@ static func _massue(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) ->
 	var n := d.orthogonal()
 	if e.get("empowered", false):
 		ci.draw_line(hand, tip, Color(Art.c("or"), 0.8 * fade), 12.0, true)
-	ci.draw_line(hand, tip, Color(Art.c("contour"), 0.9 * fade), 7.0, true)
-	ci.draw_line(hand, tip, Color(BOIS, fade), 4.5, true)
+	ci.draw_line(hand, tip, Color(Art.c("contour"), 0.9 * fade), 9.0, true)
+	ci.draw_line(hand, tip, Color(BOIS, fade), 6.0, true)
 	# Tête noueuse : un gros nœud ovale et deux bosses.
-	var hr := 13.0 + (5.0 if e.get("empowered", false) else 0.0)
+	var hr := 18.0 + (6.0 if e.get("empowered", false) else 0.0)
 	ci.draw_colored_polygon(Art.ellipse(tip, hr + 2.0, hr * 0.8 + 2.0, 14), Color(Art.c("contour"), 0.9 * fade))
 	ci.draw_colored_polygon(Art.ellipse(tip, hr, hr * 0.8, 14), Color(BOIS.lightened(0.08), fade))
 	ci.draw_circle(tip + n * hr * 0.55 + d * 2.0, hr * 0.35, Color(Art.ec("racine", "sombre"), fade))

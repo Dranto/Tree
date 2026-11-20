@@ -192,7 +192,7 @@
       "branch": "racine",
       "element": "racine",
       "priority": 2,
-      "damage": 2.6,
+      "damage": 0.95,
       "rate": 0.72,
       "range": 150,
       "arc": 1.7,

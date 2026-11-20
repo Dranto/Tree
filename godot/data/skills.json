@@ -129,17 +129,17 @@
     "shield": 0.3, "duration": 5, "riposte": 0.8, "radius": 150, "damage": 2.0, "knockback": 50, "regrow": 0
   },
   "ancrage": {
-    "name": "Ancrage", "short": "Ancrage", "color": "#857a44", "cooldown": 9,
+    "name": "Ancrage", "short": "Ancrage", "color": "#857a44", "cooldown": 7,
     "branch": "racine", "tags": ["zone"],
     "desc": "Nouvelle compétence : tu prends racine quelques secondes ; tes racines immobilisent et blessent les ennemis autour de toi. Enraciné, tu ne marches plus (l'esquive arrache les racines) mais tu encaisses mieux.",
-    "radius": 190, "duration": 3.0, "tick": 0.5, "damage": 2.4, "root_duration": 1.0,
+    "radius": 190, "duration": 3.0, "tick": 0.5, "damage": 3.2, "root_duration": 1.0,
     "walk": 0, "heal": 0, "uproot": 0
   },
   "pieux": {
     "name": "Pieux", "short": "Pieux", "color": "#9a7446", "cooldown": 4,
     "branch": "racine", "tags": ["zone"],
     "desc": "Nouvelle compétence : une ligne de pieux de bois jaillit du sol vers l'endroit visé ; chaque pieu blesse et cloue un instant les ennemis qu'il soulève.",
-    "range": 520, "count": 6, "gap": 0.05, "radius": 46, "damage": 2.6, "root_duration": 0.6,
+    "range": 520, "count": 6, "gap": 0.05, "radius": 46, "damage": 3.4, "root_duration": 0.6,
     "ring": false, "stay": 0
   }
 }

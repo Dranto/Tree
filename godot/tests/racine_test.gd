@@ -101,6 +101,7 @@ func _run() -> void:
 	await _test_massue()
 	await _test_mods()
 	_test_tree()
+	_test_save()
 
 	game.test_skills = {}
 	game.reset()
@@ -340,3 +341,18 @@ func _test_tree() -> void:
 			for uid in builds[b]["targets"]:
 				check(t.by_uid.has(uid), "build %s : cible %s présente" % [b, uid])
 	check(racine >= 3, "au moins trois builds de Racine (%d)" % racine)
+
+
+## Une sauvegarde v5 (avant les grappes de Racine) qui avait appris des nœuds génériques de Racine
+## disparus (écartés par les grappes) se charge, et ses points sont rendus.
+func _test_save() -> void:
+	print("Sauvegarde")
+	var save_game = root.get_node("SaveGame")
+	# Chemin du jalon 9 : graine → racine:1:0 → racine:2:1 → racine:3:1, puis racine:3:3 et racine:5:1
+	# (nœuds génériques de Racine qui n'existent plus).
+	var data := {"format": "seve-save", "version": 5, "game": {"level": 6, "xp": 0, "points": 1, "kills": 0, "flags": {}},
+		"tree": {"allocated": ["racine:1:0", "racine:2:1", "racine:3:1", "racine:3:3", "racine:5:1"], "choices": {}, "grafts": {}, "inventory": []}}
+	save_game.apply(data, null)
+	check(not game.tree.by_uid.has("racine:3:3") and not game.tree.by_uid.has("racine:5:1"), "les nœuds génériques écartés ont disparu")
+	check(game.allocated.size() - 1 == 3, "les nœuds encore là restent appris (%d)" % (game.allocated.size() - 1))
+	check(game.points == 3, "les points des nœuds disparus sont rendus (%d)" % game.points)
