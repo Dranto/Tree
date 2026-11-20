@@ -12,18 +12,18 @@
       "angle": 0.0,
       "entry": ["c1", "c2"],
       "nodes": [
-        {"id": "c1", "type": "small", "name": "Éclat d'écorce", "effects": [{"stat": "armor", "op": "add", "value": 0.012}, {"stat": "crit", "op": "add", "value": 0.008}], "at": [0, -0.45]},
-        {"id": "c2", "type": "small", "name": "Rayon tenace", "effects": [{"stat": "max_hp", "op": "add", "value": 8}, {"stat": "crit_mult", "op": "add", "value": 0.05}], "at": [0, 0.45]},
-        {"id": "c3", "type": "small", "name": "Sève dorée", "effects": [{"stat": "damage", "op": "inc", "value": 0.03}, {"stat": "armor", "op": "add", "value": 0.008}], "at": [0.5, -0.45], "links": ["c1"]},
-        {"id": "c4", "type": "small", "name": "Éclat d'écorce", "effects": [{"stat": "armor", "op": "add", "value": 0.012}, {"stat": "crit", "op": "add", "value": 0.008}], "at": [0.5, 0.45], "links": ["c2"]},
-        {"id": "c5", "type": "notable", "name": "Cadran solaire", "effects": [{"stat": "crit", "op": "add", "value": 0.03}, {"stat": "crit", "op": "add", "value": 0.05, "if": {"state": "immobile", "min": 0.5}}], "at": [1.0, 0], "links": ["c3", "c4"]},
-        {"id": "c6", "type": "small", "name": "Rayon tenace", "effects": [{"stat": "max_hp", "op": "add", "value": 8}, {"stat": "crit_mult", "op": "add", "value": 0.05}], "at": [1.5, -0.45], "links": ["c5"]},
-        {"id": "c7", "type": "small", "name": "Sève dorée", "effects": [{"stat": "damage", "op": "inc", "value": 0.03}, {"stat": "armor", "op": "add", "value": 0.008}], "at": [1.5, 0.45], "links": ["c5"]},
-        {"id": "c8", "type": "small", "name": "Éclat d'écorce", "effects": [{"stat": "armor", "op": "add", "value": 0.012}, {"stat": "crit", "op": "add", "value": 0.008}], "at": [2.0, -0.45], "links": ["c6"]},
-        {"id": "c9", "type": "small", "name": "Rayon tenace", "effects": [{"stat": "max_hp", "op": "add", "value": 8}, {"stat": "crit_mult", "op": "add", "value": 0.05}], "at": [2.0, 0.45], "links": ["c7"]},
-        {"id": "c10", "type": "mastery", "name": "Maîtrise du cadran", "choices": [{"id": "ombre_portee", "name": "Ombre portée", "effects": [{"stat": "armor", "op": "add", "value": 0.05}]}, {"id": "midi_juste", "name": "Midi juste", "effects": [{"stat": "crit_mult", "op": "add", "value": 0.15}]}, {"id": "lumiere_enracinee", "name": "Lumière enracinée", "effects": [{"stat": "crit", "op": "add", "value": 0.06, "if": {"state": "enracine", "min": 0.5}}]}], "at": [2.5, 0], "links": ["c8", "c9"]},
-        {"id": "c11", "type": "small", "name": "Sève dorée", "effects": [{"stat": "damage", "op": "inc", "value": 0.03}, {"stat": "armor", "op": "add", "value": 0.008}], "at": [3.0, -0.45], "links": ["c10"]},
-        {"id": "c12", "type": "small", "name": "Éclat d'écorce", "effects": [{"stat": "armor", "op": "add", "value": 0.012}, {"stat": "crit", "op": "add", "value": 0.008}], "at": [3.0, 0.45], "links": ["c10"]}
+        {"id": "c1", "type": "small", "name": "Éclat d'écorce", "effects": [{"stat": "armor", "op": "add", "value": 0.012}, {"stat": "crit", "op": "add", "value": 0.01}], "at": [0, -0.45]},
+        {"id": "c2", "type": "small", "name": "Rayon tenace", "effects": [{"stat": "max_hp", "op": "add", "value": 8}, {"stat": "crit_mult", "op": "add", "value": 0.06}], "at": [0, 0.45]},
+        {"id": "c3", "type": "small", "name": "Sève dorée", "effects": [{"stat": "damage", "op": "inc", "value": 0.04}, {"stat": "armor", "op": "add", "value": 0.008}], "at": [0.5, -0.45], "links": ["c1"]},
+        {"id": "c4", "type": "small", "name": "Éclat d'écorce", "effects": [{"stat": "armor", "op": "add", "value": 0.012}, {"stat": "crit", "op": "add", "value": 0.01}], "at": [0.5, 0.45], "links": ["c2"]},
+        {"id": "c5", "type": "notable", "name": "Cadran solaire", "effects": [{"stat": "crit", "op": "add", "value": 0.04}, {"stat": "crit_mult", "op": "add", "value": 0.1}, {"stat": "crit", "op": "add", "value": 0.06, "if": {"state": "immobile", "min": 0.5}}], "at": [1.0, 0], "links": ["c3", "c4"]},
+        {"id": "c6", "type": "small", "name": "Rayon tenace", "effects": [{"stat": "max_hp", "op": "add", "value": 8}, {"stat": "crit_mult", "op": "add", "value": 0.06}], "at": [1.5, -0.45], "links": ["c5"]},
+        {"id": "c7", "type": "small", "name": "Sève dorée", "effects": [{"stat": "damage", "op": "inc", "value": 0.04}, {"stat": "armor", "op": "add", "value": 0.008}], "at": [1.5, 0.45], "links": ["c5"]},
+        {"id": "c8", "type": "small", "name": "Éclat d'écorce", "effects": [{"stat": "armor", "op": "add", "value": 0.012}, {"stat": "crit", "op": "add", "value": 0.01}], "at": [2.0, -0.45], "links": ["c6"]},
+        {"id": "c9", "type": "small", "name": "Rayon tenace", "effects": [{"stat": "max_hp", "op": "add", "value": 8}, {"stat": "crit_mult", "op": "add", "value": 0.06}], "at": [2.0, 0.45], "links": ["c7"]},
+        {"id": "c10", "type": "mastery", "name": "Maîtrise du cadran", "choices": [{"id": "ombre_portee", "name": "Ombre portée", "effects": [{"stat": "armor", "op": "add", "value": 0.05}]}, {"id": "midi_juste", "name": "Midi juste", "effects": [{"stat": "crit_mult", "op": "add", "value": 0.2}]}, {"id": "lumiere_enracinee", "name": "Lumière enracinée", "effects": [{"stat": "crit", "op": "add", "value": 0.06, "if": {"state": "enracine", "min": 0.5}}]}], "at": [2.5, 0], "links": ["c8", "c9"]},
+        {"id": "c11", "type": "small", "name": "Sève dorée", "effects": [{"stat": "damage", "op": "inc", "value": 0.04}, {"stat": "armor", "op": "add", "value": 0.008}], "at": [3.0, -0.45], "links": ["c10"]},
+        {"id": "c12", "type": "small", "name": "Éclat d'écorce", "effects": [{"stat": "armor", "op": "add", "value": 0.012}, {"stat": "crit", "op": "add", "value": 0.01}], "at": [3.0, 0.45], "links": ["c10"]}
       ]
     },
     {
