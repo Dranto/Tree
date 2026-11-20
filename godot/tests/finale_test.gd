@@ -1,5 +1,5 @@
-## Test de la finale de l'aventure, avec six régions (les cinq des données et la région factice
-## « essai » au sixième secteur, tests/regions/) : la finale reste fermée tant qu'une région n'est pas
+## Test de la finale de l'aventure, avec six régions (cinq du jeu et la région factice « essai »,
+## tests/regions/, posée à la place de Racine, plus courte à jouer) : la finale reste fermée tant qu'une région n'est pas
 ## purifiée ; la dernière séquence de région annonce la retraite sous la graine ; brèche, descente
 ## et remontée ; combat (phases, mort du joueur, victoire) ; épilogue et générique ; sauvegarde
 ## (position sous la graine, drapeaux, migration d'une sauvegarde du format 4).
@@ -53,9 +53,9 @@ func _run() -> void:
 	game = root.get_node("Game")
 	objectives = root.get_node("Objectives")
 	var save = root.get_node("SaveGame")
-	Regions.set_extra_dirs(["res://tests/regions/"])
+	Regions.set_extra_dirs(["res://tests/regions/"], ["racine"])
 	print("Régions : ", Regions.ids())
-	check(Regions.ids().size() == 6 and "essai" in Regions.ids(), "six régions : les cinq des données et la région factice au sixième secteur")
+	check(Regions.ids().size() == 6 and "essai" in Regions.ids(), "six régions : cinq du jeu (Racine écartée le temps du test) et la région factice à sa place")
 	main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	main.autosave_enabled = false

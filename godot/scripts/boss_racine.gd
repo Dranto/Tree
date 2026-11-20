@@ -339,9 +339,20 @@ func _draw() -> void:
 	var sag := Anim.ease_out(die)
 	var hh := r * (1.5 - 0.45 * sag)
 	var top := Vector2(0, -hh)
-	var trunk := PackedVector2Array([Vector2(-r * 0.62, r * 0.12), Vector2(-r * 0.48, -r * 0.35), Vector2(-r * 0.46, -hh * 0.75), top + Vector2(-r * 0.5, 0), top + Vector2(r * 0.5, 0), Vector2(r * 0.48, -hh * 0.72), Vector2(r * 0.5, -r * 0.3), Vector2(r * 0.64, r * 0.12)])
+	# Silhouette noueuse : un pied très évasé (contreforts), une taille plus fine, des bosses.
+	var trunk := PackedVector2Array([
+		Vector2(-r * 0.95, r * 0.14), Vector2(-r * 0.62, -r * 0.05), Vector2(-r * 0.46, -r * 0.4),
+		Vector2(-r * 0.52, -hh * 0.55), Vector2(-r * 0.42, -hh * 0.78), top + Vector2(-r * 0.58, r * 0.05),
+		top + Vector2(-r * 0.2, -r * 0.08), top + Vector2(r * 0.22, -r * 0.06), top + Vector2(r * 0.6, r * 0.06),
+		Vector2(r * 0.44, -hh * 0.76), Vector2(r * 0.5, -hh * 0.5), Vector2(r * 0.45, -r * 0.38),
+		Vector2(r * 0.6, -r * 0.04), Vector2(r * 0.98, r * 0.14), Vector2(r * 0.3, r * 0.2), Vector2(-r * 0.3, r * 0.2)])
 	Art.volume(self, trunk, rock, 0.65)
 	Art.outline(self, trunk, Color(Art.c("ennemi_contour"), 1.0 - die * 0.8), Art.TRAIT_FORT)
+	# Fil du bois devenu pierre : des stries qui montent en se tordant.
+	var grain := rock.darkened(0.28)
+	for i in 5:
+		var x := (i - 2) * r * 0.17
+		draw_polyline(PackedVector2Array([Vector2(x * 1.5, r * 0.1), Vector2(x, -r * 0.45), Vector2(x * 1.1 + r * 0.04, -hh * 0.7), Vector2(x * 1.2, -hh + r * 0.1)]), grain, 1.6, true)
 	# Plaques d'écorce de pierre ; en phase 3 (et à la mort) certaines tombent, la braise dessous.
 	var flake_fall := (0.35 if phase >= 3 else 0.0) + die
 	for i in 6:
@@ -390,24 +401,42 @@ func _draw() -> void:
 			# Le pieu tenu au bout du bras, qui pâlit en rouge à mesure que l'annonce avance.
 			var stake_tip := hand + Vector2(0, -r * 0.45)
 			_branch(hand + Vector2(0, r * 0.1), stake_tip, r * 0.08, r * 0.01, rock.lightened(0.1).lerp(Art.ec("saignement", "clair"), 0.5 * up))
-	# Cime : des branches de pierre en couronne, cassées net ; quelques feuilles mortes. Elle tremble
-	# pendant l'éboulis et la chute ; fendue de braise dès la phase 2.
+	# Cime : trois maîtresses branches de pierre qui portent des masses de feuillage pétrifié (des
+	# blocs gris, fendus) ; des branches cassées dépassent. Elle tremble pendant l'éboulis et la chute ;
+	# fendue de braise dès la phase 2, dégarnie en phase 3.
 	var shake := (3.0 * sin(t * 40.0) * k) if attack in ["eboulis", "chute"] else 0.0
-	var crown := top + Vector2(shake, -r * 0.05)
-	var cr := rock.lightened(0.04)
-	for i in 7:
-		var a := -PI / 2.0 + (i - 3) * 0.36
-		var base := crown + Vector2((i - 3) * r * 0.12, 0)
-		var tip := base + Vector2.from_angle(a) * r * (0.8 + 0.25 * ((i * 3) % 4) / 3.0) * b
-		_branch(base, tip, r * 0.1, r * 0.035, cr.darkened(0.06 * (i % 3)))
-		if i % 2 == 0:
-			var mid := base.lerp(tip, 0.6)
-			_branch(mid, mid + Vector2.from_angle(a + 0.7 * (1 if i < 3 else -1)) * r * 0.3, r * 0.05, r * 0.02, cr.darkened(0.1))
-		if not dead:
-			var leaf := Art.c("decor").lerp(Art.ec("racine", "sombre"), 0.5)
-			draw_colored_polygon(Art.ellipse(tip + Vector2(0, r * 0.05), r * 0.07, r * 0.04, 8), Color(leaf, 0.9))
-		if phase >= 2 and not dead and i % 3 == 1:
-			draw_line(base, base.lerp(tip, 0.75), Color(ember, 0.55 + 0.3 * sin(t * 4.0 + i)), 2.0, true)
+	var crown := top + Vector2(shake, -r * 0.02)
+	var cr := rock.lightened(0.05)
+	for i in 3:
+		var a := -PI / 2.0 + (i - 1) * 0.75
+		_branch(crown + Vector2((i - 1) * r * 0.25, r * 0.05), crown + Vector2.from_angle(a) * r * 0.75 + Vector2(0, r * 0.1), r * 0.2, r * 0.1, rock.darkened(0.05))
+	for i in 5:
+		var a := -PI / 2.0 + (i - 2) * 0.5
+		var base := crown + Vector2.from_angle(a) * r * 0.6
+		var tip := base + Vector2.from_angle(a + 0.25 * (1 if i % 2 else -1)) * r * (0.55 + 0.15 * (i % 2)) * b
+		_branch(base, tip, r * 0.07, r * 0.025, cr.darkened(0.12))
+	var thin := 0.82 if phase >= 3 else 1.0
+	var lobes := [[0.0, -0.95, 0.5], [-0.62, -0.7, 0.42], [0.62, -0.7, 0.42], [-0.95, -0.3, 0.32], [0.95, -0.3, 0.32], [-0.32, -0.42, 0.4], [0.32, -0.42, 0.4]]
+	var mass := _color(_stone().lerp(Art.ec("racine", "sombre"), 0.25).lightened(0.06))
+	for l in lobes:
+		var q: Vector2 = crown + Vector2(l[0] * r * b, l[1] * r) * thin
+		draw_circle(q, r * l[2] * thin + 2.5, Color(Art.c("ennemi_contour"), 0.7 * (1.0 - die)))
+	for li in lobes.size():
+		var l: Array = lobes[li]
+		var q: Vector2 = crown + Vector2(l[0] * r * b, l[1] * r) * thin
+		if dead:
+			q += Vector2((li - 3) * r * 0.1, r * 1.4 * die * die)
+		Art.volume_circle(self, q, r * l[2] * thin, Color(mass.darkened(0.05 * (li % 3)), 1.0 - die * 0.7), 0.55)
+		# Fentes de la pierre ; de braise dès la phase 2.
+		var fl: Color = Color(ember, 0.55 + 0.3 * sin(t * 4.0 + li)) if phase >= 2 and not dead and li % 2 == 0 else mass.darkened(0.35)
+		var cs: float = r * l[2] * thin
+		var sd := 1.0 if li % 2 == 0 else -1.0
+		draw_polyline(PackedVector2Array([q + Vector2(-0.55 * sd, -0.25) * cs, q + Vector2(-0.15 * sd, 0.05) * cs, q + Vector2(0.12 * sd, -0.12) * cs, q + Vector2(0.5 * sd, 0.18) * cs]), fl, 1.8, true)
+	if not dead:
+		var leaf := Art.c("decor").lerp(Art.ec("racine", "sombre"), 0.5)
+		for i in 6:
+			var q := crown + Vector2((i - 2.5) * r * 0.32, -r * (0.25 + 0.12 * (i % 3))) * thin
+			draw_colored_polygon(Art.ellipse(q, r * 0.06, r * 0.035, 8), Color(leaf, 0.9))
 	# Pierres qui se détachent de la cime pendant l'annonce de l'éboulis.
 	if attack == "eboulis" and stage == "annonce":
 		for i in 5:

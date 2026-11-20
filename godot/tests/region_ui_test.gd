@@ -45,7 +45,7 @@ func _run() -> void:
 	var game = root.get_node("Game")
 	var obj = root.get_node("Objectives")
 	RegionUi = load("res://scripts/region_ui.gd")
-	Regions.set_extra_dirs(["res://tests/regions/"])
+	Regions.set_extra_dirs(["res://tests/regions/"], ["racine"])
 	game.reset()
 	main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
