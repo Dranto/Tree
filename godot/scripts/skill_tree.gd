@@ -1,5 +1,7 @@
 ## Génération procédurale (déterministe) de l'Arbre de vie.
-## Six branches partent de la graine centrale sur 12 anneaux : environ 600 nœuds.
+## Six branches partent de la graine centrale sur 14 anneaux : environ 900 nœuds avec les grappes.
+## Les anneaux 13 et 14 (anneaux extérieurs, jalon 9) prolongent l'arbre sans changer les 12 premiers :
+## ils sont tirés après eux dans la même suite aléatoire.
 ## La position d'un nœud dans l'arbre correspond à une région du monde :
 ## l'apprendre ravive cette région.
 ## Le générateur ne décide que de la forme de l'arbre. Ce que font les nœuds (statistiques,
@@ -15,7 +17,13 @@
 ## l'autre branche dans « border » ; il compte pour la résonance des deux branches.
 extends RefCounted
 
-const RINGS := 12
+const RINGS := 14
+## Anneaux des nœuds clés générés (tous les 4 anneaux) : 3 par branche, aux anneaux 4, 8 et 12.
+const KEYSTONES := 3
+## Premier anneau extérieur : ses nœuds ne se rattachent pas à un nœud clé (un nœud clé reste un
+## bout de chemin qu'on choisit, pas un passage obligé vers l'extérieur), et l'anneau le plus
+## extérieur porte des notables réguliers.
+const OUTER_RING := 13
 const RING_GAP := 110.0
 const SEED := 20261109
 
@@ -117,7 +125,8 @@ func build() -> void:
 	var name_idx := {}
 
 	for r in range(1, RINGS + 1):
-		var count := int(ceil(1.2 * r))
+		# Les anneaux extérieurs gardent le nombre de nœuds de l'anneau 12 : un peu plus espacés.
+		var count := int(ceil(1.2 * mini(r, OUTER_RING - 1)))
 		for bi in BRANCHES.size():
 			var b: Dictionary = BRANCHES[bi]
 			var bid: String = b["id"]
@@ -134,14 +143,14 @@ func build() -> void:
 				var nm := ""
 				var desc := ""
 				var effects: Array = []
-				if i == mid and r % 4 == 0:
+				if i == mid and r % 4 == 0 and r <= KEYSTONES * 4:
 					kind = "keystone"
 					var ks: Dictionary = b["keystones"][int(r / 4.0) - 1]
 					key = ks["key"]
 					nm = ks["name"]
 					desc = ks.get("desc", "")
 					effects = ks.get("effects", [])
-				elif r % 3 == 0 and i != 0 and i != count - 1 and (i + r) % 4 == 0:
+				elif (r % 3 == 0 or r == RINGS) and i != 0 and i != count - 1 and (i + r) % 4 == 0:
 					kind = "notable"
 				elif r >= 2 and rng.randf() < 0.05:
 					kind = "notable"
@@ -167,6 +176,8 @@ func build() -> void:
 				var p: Vector2 = nodes[id]["pos"]
 				var sorted: Array = []
 				for q in prev:
+					if r >= OUTER_RING and nodes[q]["type"] == "keystone":
+						continue
 					sorted.append([p.distance_squared_to(nodes[q]["pos"]), q])
 				sorted.sort_custom(func(x, y): return x[0] < y[0])
 				_link(id, sorted[0][1], edge_set)
@@ -311,6 +322,7 @@ func _insert_clusters() -> void:
 		# change pas les liens que l'arbre aurait sans elle (les chemins d'une branche restent les mêmes).
 		if s["border"] >= 0 and not stitched:
 			stitched = true
+			_reconnect(edge_set, pts, true)
 			_reconnect(edge_set, pts)
 		var c: Dictionary = s["c"]
 		var bi: int = s["bi"]
@@ -349,7 +361,9 @@ func _insert_clusters() -> void:
 			"effects": _list(complete.get("effects")) if complete is Dictionary else [],
 		}
 
-	# 4. Tout ce qui n'est plus relié à la graine est recousu au plus proche.
+	# 4. Tout ce qui n'est plus relié à la graine est recousu au plus proche : d'abord sans les anneaux
+	# extérieurs (les chemins des 12 premiers anneaux restent ceux d'un arbre sans eux), puis ceux-ci.
+	_reconnect(edge_set, pts, true)
 	_reconnect(edge_set, pts)
 	# 5. Les grappes trop serrées sont desserrées (positions seulement).
 	_spread_clusters(spread, generated, ghosts)
@@ -366,12 +380,16 @@ func _insert_clusters() -> void:
 ## d'ancrage d'une grappe ne bouge pas.
 func _spread_clusters(spread: Array, generated: int, ghosts: Array = []) -> void:
 	# Seuls les nœuds générés proches d'une grappe peuvent la gêner.
-	var near: Array = []
+	# Rangés dans une grille (cases de CLEAR_NODE) : seules les cases voisines sont regardées.
+	var near := {}
 	for g in generated:
 		for sp in spread:
 			if nodes[g]["pos"].distance_to(sp[1]) < 3.5 * RING_GAP:
-				near.append(g)
+				_grid_add(near, nodes[g]["pos"])
 				break
+	var ghost_grid := {}
+	for q in ghosts:
+		_grid_add(ghost_grid, q)
 	var fixed := {}
 	var movable: Array = []
 	for sp in spread:
@@ -395,7 +413,7 @@ func _spread_clusters(spread: Array, generated: int, ghosts: Array = []) -> void
 			var ok := true
 			for id in ids:
 				var np: Vector2 = anchor + (base[id] - anchor) * k
-				if not _spread_free(np, near, [] if nodes[id]["border"] >= 0 else ghosts):
+				if not _spread_free(np, near, {} if nodes[id]["border"] >= 0 else ghost_grid):
 					ok = false
 					break
 			if ok:
@@ -430,7 +448,7 @@ func _spread_clusters(spread: Array, generated: int, ghosts: Array = []) -> void
 			if push == Vector2.ZERO:
 				continue
 			var np := p + push * 0.5
-			if _spread_free(np, near, [] if nodes[id]["border"] >= 0 else ghosts):
+			if _spread_free(np, near, {} if nodes[id]["border"] >= 0 else ghost_grid):
 				nodes[id]["pos"] = np
 				moved = true
 		if not moved:
@@ -452,14 +470,34 @@ func _spread_want(a: int, b: int) -> float:
 	return SPREAD_RADIUS.get(nodes[a]["type"], 18.0) + SPREAD_RADIUS.get(nodes[b]["type"], 18.0) + SPREAD_GAP
 
 
-func _spread_free(p: Vector2, near: Array, ghosts: Array = []) -> bool:
-	for g in near:
-		if p.distance_to(nodes[g]["pos"]) < CLEAR_NODE * RING_GAP:
-			return false
-	for q in ghosts:
-		if p.distance_to(q) < CLEAR_NODE * RING_GAP:
-			return false
-	return true
+## Vrai si p est à CLEAR_NODE au moins de tous les points des deux grilles (voir _grid_add).
+func _spread_free(p: Vector2, near: Dictionary, ghosts: Dictionary = {}) -> bool:
+	return not _grid_hit(near, p) and not _grid_hit(ghosts, p)
+
+
+## Grille de points en cases de CLEAR_NODE : un point à moins de CLEAR_NODE de p est forcément
+## dans la case de p ou une case voisine.
+static func _grid_add(grid: Dictionary, q: Vector2) -> void:
+	var c := Vector2i(floori(q.x / (CLEAR_NODE * RING_GAP)), floori(q.y / (CLEAR_NODE * RING_GAP)))
+	if not grid.has(c):
+		grid[c] = []
+	grid[c].append(q)
+
+
+static func _grid_hit(grid: Dictionary, p: Vector2) -> bool:
+	if grid.is_empty():
+		return false
+	var m := CLEAR_NODE * RING_GAP
+	var c := Vector2i(floori(p.x / m), floori(p.y / m))
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			var k := Vector2i(c.x + dx, c.y + dy)
+			if not grid.has(k):
+				continue
+			for q in grid[k]:
+				if p.distance_to(q) < m:
+					return true
+	return false
 
 
 ## Vrai si un nœud généré en p gêne une grappe : trop près d'un de ses nœuds ou de ses liens.
@@ -527,6 +565,9 @@ func _link_entry(id: int, generated: int, edge_set: Dictionary) -> void:
 	var inner_d := INF
 	var sorted: Array = []
 	for i in generated:
+		# Les anneaux extérieurs se rattachent d'eux-mêmes aux grappes (voir _reconnect).
+		if _outer(i):
+			continue
 		var q: Vector2 = nodes[i]["pos"]
 		var d := p.distance_to(q)
 		sorted.append([d, i])
@@ -548,15 +589,29 @@ func _link_entry(id: int, generated: int, edge_set: Dictionary) -> void:
 			break
 
 
+## Vrai pour un nœud généré des anneaux extérieurs (OUTER_RING et au-delà).
+func _outer(id: int) -> bool:
+	return nodes[id]["ring"] >= OUTER_RING and nodes[id]["cluster"] == "" and id != 0
+
+
 ## Relie à l'arbre chaque groupe de nœuds coupé de la graine, par le lien le plus court possible
-## qui ne passe pas sur un nœud de grappe.
-func _reconnect(edge_set: Dictionary, pts: Array) -> void:
+## qui ne passe pas sur un nœud de grappe. inner_only : les anneaux extérieurs sont ignorés (ni
+## traversés, ni recousus).
+func _reconnect(edge_set: Dictionary, pts: Array, inner_only := false) -> void:
+	var total := nodes.size()
+	if inner_only:
+		total = 0
+		for n in nodes:
+			if not _outer(n["id"]):
+				total += 1
 	for attempt in nodes.size():
 		var seen := {0: true}
 		var stack: Array = [0]
 		while stack.size() > 0:
 			var u: int = stack.pop_back()
 			for m in nodes[u]["neighbors"]:
+				if inner_only and _outer(m):
+					continue
 				# Un nœud flétri reste fermé longtemps : on ne le traverse que vers sa propre grappe,
 				# pour qu'aucun autre nœud ne dépende de lui.
 				if nodes[u]["type"] == "withered" and nodes[m]["cluster"] != nodes[u]["cluster"]:
@@ -564,7 +619,7 @@ func _reconnect(edge_set: Dictionary, pts: Array) -> void:
 				if not seen.has(m):
 					seen[m] = true
 					stack.append(m)
-		if seen.size() == nodes.size():
+		if seen.size() == total:
 			return
 		var best := INF
 		var bu := -1
@@ -573,7 +628,7 @@ func _reconnect(edge_set: Dictionary, pts: Array) -> void:
 		var fu := -1
 		var fv := -1
 		for n in nodes:
-			if seen.has(n["id"]):
+			if seen.has(n["id"]) or (inner_only and _outer(n["id"])):
 				continue
 			var p: Vector2 = n["pos"]
 			for u in seen:
