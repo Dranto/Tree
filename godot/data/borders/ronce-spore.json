@@ -1,0 +1,53 @@
+{
+  "id": "ronce-spore",
+  "between": ["ronce", "spore"],
+  "name": "Frontière Ronce–Spore",
+  "theme": "Épines empoisonnées : le sang et le venin se nourrissent l'un l'autre.",
+  "clusters": [
+    {
+      "id": "dard",
+      "name": "Ronce vénéneuse",
+      "theme": "Épines et poison mêlés",
+      "ring": 3.0,
+      "angle": 0.0,
+      "entry": ["d1", "d2"],
+      "nodes": [
+        {"id": "d1", "type": "small", "name": "Épine moisie", "effects": [{"stat": "thorns", "op": "add", "value": 3}, {"stat": "poison", "op": "add", "value": 0.03}], "at": [0, -0.5]},
+        {"id": "d2", "type": "small", "name": "Dard sanglant", "effects": [{"stat": "damage", "op": "inc", "value": 0.03}, {"stat": "poison", "op": "add", "value": 0.03}], "at": [0, 0.5]},
+        {"id": "d3", "type": "small", "name": "Sang de spore", "effects": [{"stat": "bleed", "op": "add", "value": 0.01}, {"stat": "area", "op": "inc", "value": 0.03}], "at": [0.5, -0.5], "links": ["d1"]},
+        {"id": "d4", "type": "small", "name": "Épine moisie", "effects": [{"stat": "thorns", "op": "add", "value": 3}, {"stat": "poison", "op": "add", "value": 0.03}], "at": [0.5, 0.5], "links": ["d2"]},
+        {"id": "d5", "type": "notable", "name": "Plaie infectée", "effects": [{"stat": "poison", "op": "add", "value": 0.06}, {"on": "melee_hit", "if": {"state": "cible_empoisonnee"}, "do": "apply_status", "status": "saignement", "value": 0.15, "scale": "base", "duration": 3, "text": "Un coup au corps à corps sur un ennemi empoisonné le fait aussi saigner (15 % des dégâts du coup par seconde, 3 s)."}], "at": [1.0, 0], "links": ["d3", "d4"]},
+        {"id": "d6", "type": "small", "name": "Dard sanglant", "effects": [{"stat": "damage", "op": "inc", "value": 0.03}, {"stat": "poison", "op": "add", "value": 0.03}], "at": [1.5, -0.5], "links": ["d5"]},
+        {"id": "d7", "type": "small", "name": "Sang de spore", "effects": [{"stat": "bleed", "op": "add", "value": 0.01}, {"stat": "area", "op": "inc", "value": 0.03}], "at": [1.5, 0.5], "links": ["d5"]},
+        {"id": "d8", "type": "small", "name": "Épine moisie", "effects": [{"stat": "thorns", "op": "add", "value": 3}, {"stat": "poison", "op": "add", "value": 0.03}], "at": [2.0, -0.5], "links": ["d6"]},
+        {"id": "d9", "type": "small", "name": "Dard sanglant", "effects": [{"stat": "damage", "op": "inc", "value": 0.03}, {"stat": "poison", "op": "add", "value": 0.03}], "at": [2.0, 0.5], "links": ["d7"]},
+        {"id": "d10", "type": "mastery", "name": "Maîtrise des épines vénéneuses", "choices": [{"id": "epines_enduites", "name": "Épines enduites", "effects": [{"stat": "thorns", "op": "inc", "value": 0.15}, {"stat": "poison", "op": "add", "value": 0.03}]}, {"id": "sang_noir", "name": "Sang noir", "effects": [{"stat": "bleed_duration", "op": "inc", "value": 0.2}, {"stat": "poison", "op": "inc", "value": 0.1}]}, {"id": "ronces_fongiques", "name": "Ronces fongiques", "effects": [{"stat": "area", "op": "inc", "value": 0.1}, {"stat": "melee_damage", "op": "inc", "value": 0.08}]}], "at": [2.5, 0], "links": ["d8", "d9"]},
+        {"id": "d11", "type": "small", "name": "Sang de spore", "effects": [{"stat": "bleed", "op": "add", "value": 0.01}, {"stat": "area", "op": "inc", "value": 0.03}], "at": [3.0, -0.45], "links": ["d10"]},
+        {"id": "d12", "type": "small", "name": "Épine moisie", "effects": [{"stat": "thorns", "op": "add", "value": 3}, {"stat": "poison", "op": "add", "value": 0.03}], "at": [3.0, 0.45], "links": ["d10"]}
+      ]
+    },
+    {
+      "id": "fiel",
+      "name": "Fiel de ronce",
+      "theme": "Le sang qui pourrit",
+      "ring": 10.7,
+      "angle": 0,
+      "entry": ["f1", "f2"],
+      "nodes": [
+        {"id": "f1", "type": "small", "name": "Épine moisie", "effects": [{"stat": "thorns", "op": "add", "value": 4}, {"stat": "poison", "op": "add", "value": 0.04}], "at": [0, -0.5]},
+        {"id": "f2", "type": "small", "name": "Dard sanglant", "effects": [{"stat": "damage", "op": "inc", "value": 0.04}, {"stat": "poison", "op": "add", "value": 0.03}], "at": [0, 0.5]},
+        {"id": "f3", "type": "small", "name": "Sang de spore", "effects": [{"stat": "bleed", "op": "add", "value": 0.012}, {"stat": "area_damage", "op": "inc", "value": 0.04}], "at": [0.15, -1.05], "links": ["f1"]},
+        {"id": "f4", "type": "small", "name": "Épine moisie", "effects": [{"stat": "thorns", "op": "add", "value": 4}, {"stat": "poison", "op": "add", "value": 0.04}], "at": [0.15, 1.05], "links": ["f2"]},
+        {"id": "f5", "type": "notable", "name": "Épine qui pourrit", "effects": [{"stat": "thorns", "op": "add", "value": 10}, {"on": "kill", "if": [{"state": "cible_saignante", "min": 1}, {"state": "cible_empoisonnee"}], "do": "burst", "radius": 110, "factor": 0.6, "at": "enemy", "color": "#a0507a", "text": "Un ennemi qui saigne et qui est empoisonné éclate en épines à sa mort (60 % de tes dégâts autour de lui)."}], "at": [0.6, -0.7], "links": ["f1", "f3"]},
+        {"id": "f6", "type": "notable", "name": "Spores sanglantes", "effects": [{"stat": "poison", "op": "add", "value": 0.06}, {"on": "bleed_tick", "if": {"state": "cible_empoisonnee"}, "do": "cloud", "radius": 55, "duration": 1.5, "factor": 0.15, "at": "enemy", "cooldown": 0.6, "text": "Le saignement d'un ennemi empoisonné crache un petit nuage de spores (au plus toutes les 0,6 s)."}], "at": [0.6, 0.7], "links": ["f2", "f4"]},
+        {"id": "f7", "type": "small", "name": "Dard sanglant", "effects": [{"stat": "damage", "op": "inc", "value": 0.04}, {"stat": "poison", "op": "add", "value": 0.03}], "at": [0.5, 0], "links": ["f1", "f2"]},
+        {"id": "f8", "type": "small", "name": "Sang de spore", "effects": [{"stat": "bleed", "op": "add", "value": 0.012}, {"stat": "area_damage", "op": "inc", "value": 0.04}], "at": [0.95, -0.3], "links": ["f7"]},
+        {"id": "f9", "type": "small", "name": "Épine moisie", "effects": [{"stat": "thorns", "op": "add", "value": 4}, {"stat": "poison", "op": "add", "value": 0.04}], "at": [0.95, 0.3], "links": ["f7"]},
+        {"id": "f10", "type": "small", "name": "Dard sanglant", "effects": [{"stat": "damage", "op": "inc", "value": 0.04}, {"stat": "poison", "op": "add", "value": 0.03}], "at": [1.15, -1.2], "links": ["f5"]},
+        {"id": "f11", "type": "small", "name": "Sang de spore", "effects": [{"stat": "bleed", "op": "add", "value": 0.012}, {"stat": "area_damage", "op": "inc", "value": 0.04}], "at": [1.15, 1.2], "links": ["f6"]},
+        {"id": "f12", "type": "small", "name": "Épine moisie", "effects": [{"stat": "thorns", "op": "add", "value": 4}, {"stat": "poison", "op": "add", "value": 0.04}], "at": [1.55, -0.85], "links": ["f10"]},
+        {"id": "f13", "type": "keystone", "name": "Ronce-Amanite", "key": "ronce_amanite", "desc": "Le venin et le sang avant la force du coup.", "effects": [{"stat": "poison", "op": "more", "value": 1.3}, {"stat": "bleed", "op": "more", "value": 1.3}, {"stat": "damage", "op": "more", "value": 0.88}], "at": [1.6, 0], "links": ["f8", "f9"]}
+      ]
+    }
+  ]
+}

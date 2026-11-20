@@ -24,7 +24,15 @@ SCENE_ARG=()
 OUT="$ROOT/godot/autotest/bench"
 mkdir -p "$OUT"
 export LIBGL_ALWAYS_SOFTWARE=1
-"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1 || true
+# L'import plante parfois sur la machine de la CI (segmentation, fréquent depuis le 20/11) : le
+# jeu se lance alors sans ses ressources importées (polices nulles, erreurs de script). On réessaie.
+for attempt in 1 2 3; do
+  if "$ROOT/tools/godot.sh" --headless --import > "$OUT/import.log" 2>&1; then
+    break
+  fi
+  echo "Import du projet : échec (essai $attempt), fin du journal :"
+  tail -n 15 "$OUT/import.log"
+done
 best=""
 best_p99=""
 for i in $(seq 1 "$RUNS"); do

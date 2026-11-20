@@ -1,0 +1,53 @@
+{
+  "id": "seve-vent",
+  "between": ["seve", "vent"],
+  "name": "Frontière Sève–Vent",
+  "theme": "Souffle de sève : la vie qui court ne s'arrête pas.",
+  "clusters": [
+    {
+      "id": "seve_vive",
+      "name": "Sève vive",
+      "theme": "Guérir en courant",
+      "ring": 5.6,
+      "angle": 0,
+      "entry": ["s1", "s2"],
+      "nodes": [
+        {"id": "s1", "type": "small", "name": "Sève légère", "effects": [{"stat": "regen", "op": "add", "value": 0.2}, {"stat": "move_speed", "op": "inc", "value": 0.015}], "at": [0, -0.5]},
+        {"id": "s2", "type": "small", "name": "Bourgeon au vent", "effects": [{"stat": "max_hp", "op": "add", "value": 6}, {"stat": "fire_rate", "op": "inc", "value": 0.025}], "at": [0, 0.5]},
+        {"id": "s3", "type": "small", "name": "Souffle vert", "effects": [{"stat": "dash_cd", "op": "inc", "value": -0.02}, {"stat": "lifesteal", "op": "add", "value": 0.003}], "at": [0.5, -0.5], "links": ["s1"]},
+        {"id": "s4", "type": "small", "name": "Sève légère", "effects": [{"stat": "regen", "op": "add", "value": 0.2}, {"stat": "move_speed", "op": "inc", "value": 0.015}], "at": [0.5, 0.5], "links": ["s2"]},
+        {"id": "s5", "type": "notable", "name": "Sang qui court", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.04}, {"stat": "regen", "op": "more", "value": 1.5, "if": {"state": "en_mouvement", "min": 1}}], "at": [1.0, 0], "links": ["s3", "s4"]},
+        {"id": "s6", "type": "small", "name": "Bourgeon au vent", "effects": [{"stat": "max_hp", "op": "add", "value": 6}, {"stat": "fire_rate", "op": "inc", "value": 0.025}], "at": [1.5, -0.5], "links": ["s5"]},
+        {"id": "s7", "type": "small", "name": "Souffle vert", "effects": [{"stat": "dash_cd", "op": "inc", "value": -0.02}, {"stat": "lifesteal", "op": "add", "value": 0.003}], "at": [1.5, 0.5], "links": ["s5"]},
+        {"id": "s8", "type": "small", "name": "Sève légère", "effects": [{"stat": "regen", "op": "add", "value": 0.2}, {"stat": "move_speed", "op": "inc", "value": 0.015}], "at": [2.0, -0.5], "links": ["s6"]},
+        {"id": "s9", "type": "small", "name": "Bourgeon au vent", "effects": [{"stat": "max_hp", "op": "add", "value": 6}, {"stat": "fire_rate", "op": "inc", "value": 0.025}], "at": [2.0, 0.5], "links": ["s7"]},
+        {"id": "s10", "type": "mastery", "name": "Maîtrise du souffle", "choices": [{"id": "souffle_long", "name": "Souffle long", "effects": [{"stat": "dash_cd", "op": "inc", "value": -0.06}]}, {"id": "seve_legere", "name": "Sève légère", "effects": [{"stat": "move_speed", "op": "inc", "value": 0.05}]}, {"id": "seve_qui_porte", "name": "Sève qui porte", "effects": [{"stat": "max_hp", "op": "inc", "value": 0.08}]}], "at": [2.5, 0], "links": ["s8", "s9"]},
+        {"id": "s11", "type": "small", "name": "Souffle vert", "effects": [{"stat": "dash_cd", "op": "inc", "value": -0.02}, {"stat": "lifesteal", "op": "add", "value": 0.003}], "at": [3.0, -0.45], "links": ["s10"]},
+        {"id": "s12", "type": "small", "name": "Sève légère", "effects": [{"stat": "regen", "op": "add", "value": 0.2}, {"stat": "move_speed", "op": "inc", "value": 0.015}], "at": [3.0, 0.45], "links": ["s10"]}
+      ]
+    },
+    {
+      "id": "bourrasque",
+      "name": "Bourgeons de bourrasque",
+      "theme": "Le cocon qui souffle",
+      "ring": 10.7,
+      "angle": 0,
+      "entry": ["b1", "b2"],
+      "nodes": [
+        {"id": "b1", "type": "small", "name": "Sève légère", "effects": [{"stat": "regen", "op": "add", "value": 0.25}, {"stat": "move_speed", "op": "inc", "value": 0.015}], "at": [0, -0.5]},
+        {"id": "b2", "type": "small", "name": "Bourgeon au vent", "effects": [{"stat": "max_hp", "op": "add", "value": 8}, {"stat": "fire_rate", "op": "inc", "value": 0.03}], "at": [0, 0.5]},
+        {"id": "b3", "type": "small", "name": "Souffle vert", "effects": [{"stat": "dash_cd", "op": "inc", "value": -0.02}, {"stat": "lifesteal", "op": "add", "value": 0.004}], "at": [0.15, -1.05], "links": ["b1"]},
+        {"id": "b4", "type": "small", "name": "Sève légère", "effects": [{"stat": "regen", "op": "add", "value": 0.25}, {"stat": "move_speed", "op": "inc", "value": 0.015}], "at": [0.15, 1.05], "links": ["b2"]},
+        {"id": "b5", "type": "notable", "name": "Cocon de bourrasque", "effects": [{"stat": "max_hp", "op": "add", "value": 15}, {"on": "hurt", "if": {"state": "sous_cocon"}, "do": "gust", "radius": 110, "factor": 0.4, "push": 90, "cooldown": 0.8, "text": "Touché sous un cocon de sève, tu repousses tes agresseurs d'une rafale (au plus toutes les 0,8 s)."}], "at": [0.6, -0.7], "links": ["b1", "b3"]},
+        {"id": "b6", "type": "notable", "name": "Ruée buveuse", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.05}, {"on": "dash", "do": "heal", "value": 0.02, "cooldown": 1.5, "text": "Chaque esquive te rend 2 % de ta vie maximale (au plus toutes les 1,5 s)."}], "at": [0.6, 0.7], "links": ["b2", "b4"]},
+        {"id": "b7", "type": "small", "name": "Bourgeon au vent", "effects": [{"stat": "max_hp", "op": "add", "value": 8}, {"stat": "fire_rate", "op": "inc", "value": 0.03}], "at": [0.5, 0], "links": ["b1", "b2"]},
+        {"id": "b8", "type": "small", "name": "Souffle vert", "effects": [{"stat": "dash_cd", "op": "inc", "value": -0.02}, {"stat": "lifesteal", "op": "add", "value": 0.004}], "at": [0.95, -0.3], "links": ["b7"]},
+        {"id": "b9", "type": "small", "name": "Sève légère", "effects": [{"stat": "regen", "op": "add", "value": 0.25}, {"stat": "move_speed", "op": "inc", "value": 0.015}], "at": [0.95, 0.3], "links": ["b7"]},
+        {"id": "b10", "type": "small", "name": "Bourgeon au vent", "effects": [{"stat": "max_hp", "op": "add", "value": 8}, {"stat": "fire_rate", "op": "inc", "value": 0.03}], "at": [1.15, -1.2], "links": ["b5"]},
+        {"id": "b11", "type": "small", "name": "Souffle vert", "effects": [{"stat": "dash_cd", "op": "inc", "value": -0.02}, {"stat": "lifesteal", "op": "add", "value": 0.004}], "at": [1.15, 1.2], "links": ["b6"]},
+        {"id": "b12", "type": "small", "name": "Sève légère", "effects": [{"stat": "regen", "op": "add", "value": 0.25}, {"stat": "move_speed", "op": "inc", "value": 0.015}], "at": [1.55, -0.85], "links": ["b10"]},
+        {"id": "b13", "type": "keystone", "name": "Sève de vent", "key": "seve_de_vent", "desc": "La sève ne coule que si tu bouges.", "effects": [{"stat": "damage", "op": "more", "value": 1.15, "if": {"state": "en_mouvement", "min": 0.5}}, {"stat": "regen", "op": "more", "value": 0.5, "if": {"state": "immobile", "min": 0.5}}], "at": [1.6, 0], "links": ["b8", "b9"]}
+      ]
+    }
+  ]
+}

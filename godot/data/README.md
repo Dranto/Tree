@@ -17,6 +17,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `tree.json` | Ordre des branches autour de la graine, progression des valeurs par anneau (`ring_scale`), force des nœuds notables (`notable_factor`), nœud de la graine. |
 | `stats.json` | Les statistiques du personnage : libellé, valeur de base, bornes, arrondi. |
 | `branches/<id>.json` | Une branche : nom, couleur, effets des petits nœuds, bonus et noms des nœuds notables, nœuds clés, résonance, grappes écrites à la main. |
+| `borders/<a>-<b>.json` | Une frontière hybride entre deux branches voisines : grappes à cheval sur la limite des deux secteurs. Voir « Frontières hybrides ». |
 | `grafts.json` | Les greffes : objets à poser dans un emplacement de greffe de l'arbre (nom, effets, d'où elles viennent, dessin). |
 | `regions/<id>.json` | Une région du monde, tout entière : sol, décor, apparitions, sanctuaires, autels, secret, Cœur, boss, fin. Voir « Régions ». |
 | `skills.json` | Réglages des compétences actives (recharge, rayon, dégâts, texte). |
@@ -132,7 +133,7 @@ Tout effet accepte une condition :
 {"stat": "damage", "op": "more", "value": 1.4, "if": {"state": "immobile", "min": 0.5}}
 ```
 
-L'effet ne s'applique que si l'état vaut au moins `min`. États actuels : `immobile` (secondes passées sans bouger), et pour les évènements qui visent un ennemi (`kill`, `crit`, `melee_hit`, `bleed_tick`, `root`) : `cible_empoisonnee`, `cible_saignante` (nombre de piqûres), `cible_enracinee` (secondes restantes) et `cible_eblouie` (1 si la cible est éblouie).
+L'effet ne s'applique que si l'état vaut au moins `min`. `if` peut aussi être une liste de conditions qui doivent toutes être vraies (par exemple « la cible saigne et elle est empoisonnée » : `"if": [{"state": "cible_saignante", "min": 1}, {"state": "cible_empoisonnee"}]`) ; l'infobulle les relie par « et ». États actuels : `immobile` (secondes passées sans bouger), `en_mouvement` (secondes passées à bouger sans s'arrêter), `sous_cocon` (1 tant que le Cocon de sève tient), et pour les évènements qui visent un ennemi (`kill`, `crit`, `melee_hit`, `bleed_tick`, `root`) : `cible_empoisonnee`, `cible_saignante` (nombre de piqûres), `cible_enracinee` (secondes restantes) et `cible_eblouie` (1 si la cible est éblouie).
 
 ## Grappes écrites à la main
 
@@ -182,6 +183,45 @@ Un choix s'écrit `{"id": "...", "name": "...", "effects": [...]}`. `id` est fac
 `excludes` (sur n'importe quel nœud de grappe) liste des nœuds incompatibles : un identifiant local de la même grappe, la `key` d'un nœud clé ou un identifiant stable complet. L'exclusion vaut dans les deux sens : apprendre l'un verrouille l'autre.
 
 Une grappe ne doit recouvrir ni la graine, ni un nœud clé généré (anneaux 4, 8 et 12, au milieu du secteur), ni une autre grappe : `check_data.gd` le signale.
+
+## Frontières hybrides
+
+Entre deux branches voisines, une frontière mêle les deux : ses grappes sont à cheval sur la limite des deux secteurs, ses nœuds ont les couleurs des deux branches et lisent les états des deux (par exemple des épines qui empoisonnent entre Ronce et Spore). Une frontière par fichier, `data/borders/<a>-<b>.json`, où `<a>` et `<b>` sont deux branches **voisines** dans l'ordre de `tree.json` (`ronce-spore`, `spore-seve`, `seve-vent`, `vent-aube`, puis `aube-racine` et `racine-ronce`).
+
+```json
+{
+  "id": "ronce-spore",
+  "between": ["ronce", "spore"],
+  "name": "Frontière Ronce–Spore",
+  "theme": "Épines empoisonnées",
+  "clusters": [
+    {"id": "dard", "name": "Ronce vénéneuse", "ring": 1.8, "angle": 0, "entry": ["d1", "d2"],
+     "nodes": [
+       {"id": "d1", "type": "small", "name": "Épine moisie", "at": [0, -0.5], "effects": [...]},
+       {"id": "d2", "type": "small", "name": "Dard sanglant", "at": [0, 0.5], "effects": [...]},
+       {"id": "d5", "type": "notable", "name": "Plaie infectée", "at": [1.0, 0], "links": ["d1", "d2"], "effects": [...]}
+     ]}
+  ]
+}
+```
+
+| Champ | Rôle |
+| --- | --- |
+| `id` | `<a>-<b>`, comme le nom du fichier, les deux branches dans l'ordre de `tree.json` (la seconde suit la première dans le sens des aiguilles d'une montre). |
+| `between` | Les deux branches. Elles doivent être voisines : `check_data.gd` refuse une frontière entre deux secteurs qui ne se touchent pas, et deux fichiers pour la même paire. |
+| `name`, `theme` | Nom affiché et thème (commentaire). |
+| `clusters` | Les grappes, au format des « Grappes écrites à la main », à une différence près : `angle` est l'écart du point d'ancrage à la limite, en fraction de secteur (0 : sur la limite, négatif du côté de `<a>`, entre -0,5 et 0,5). `y` négatif va vers `<a>`, `y` positif vers `<b>`. |
+
+Chaque nœud appartient à la branche du secteur où il tombe (un nœud posé exactement sur la limite va à `<a>` ; `"side": "<branche>"` l'impose) et porte l'autre branche dans `border`. Règles :
+
+- **Résonance : un nœud de frontière compte pour les deux branches** (choix du jalon 9 : une frontière fait avancer les deux résonances, ce qui rend un build hybride viable sans pénaliser celui qui reste dans une branche). Le résumé du personnage le compte aussi dans les deux branches.
+- **Identifiant de sauvegarde** : `c:<frontière>:<grappe>:<nœud>` (par exemple `c:ronce-spore:dard:d5`), ou `key:<key>` pour un nœud clé.
+- **Placement** : les nœuds générés qui gênent sont écartés comme pour une grappe de branche. Une grappe de branche voisine ne s'en trouve pas déformée : un nœud écarté par une frontière seulement continue de borner son écartement.
+- **Accessibilité** : `check_data.gd` vérifie que chaque grappe de frontière a des nœuds des deux côtés de la limite et qu'elle est reliée aux deux branches (au moins une entrée de chaque côté, comme `"entry": ["d1", "d2"]`).
+- **Dessin** : un nœud de frontière prend la couleur de sa branche mêlée d'un peu de l'autre (`SkillTree.BORDER_MIX`) et un anneau en deux moitiés, chacune à la couleur de la branche qui est de son côté (`TreeArt.border_seam`). L'infobulle indique « frontière X et Y » et le prochain palier de résonance des deux branches.
+- **Robots** : les builds automatiques d'une seule branche (arène de boss, banc, robot de zone) ignorent les nœuds de frontière ; un build de `builds.json` peut les viser par leur identifiant.
+
+Frontières actuelles (25 nœuds chacune : une couture de 12 nœuds avec un notable et une maîtrise, une couronne de 13 nœuds près du bord avec deux notables et un nœud clé) : Ronce–Spore (épines empoisonnées), Spore–Sève (humus : le poison qui soigne), Sève–Vent (la sève qui court : `en_mouvement`, `sous_cocon`), Vent–Aube (vent solaire : critiques en mouvement, esquive qui éblouit).
 
 ## L'attaque de base
 
@@ -259,7 +299,7 @@ L'infobulle d'un nœud montre l'aperçu avant → après de l'attaque (« Attaqu
 ]
 ```
 
-Chaque palier donne ses effets dès que `count` nœuds de la branche sont appris (nœuds de grappe compris, la graine ne compte pas). Les paliers se cumulent. L'infobulle de chaque nœud de la branche rappelle le prochain palier.
+Chaque palier donne ses effets dès que `count` nœuds de la branche sont appris (nœuds de grappe compris, nœuds des frontières hybrides de la branche compris, la graine ne compte pas). Les paliers se cumulent. L'infobulle de chaque nœud de la branche rappelle le prochain palier.
 
 ## Greffes
 
@@ -386,6 +426,7 @@ La séquence « région purifiée » se déclenche cinq secondes après la victo
 
 - **Un nœud clé ou modifier une branche** : éditer `branches/<id>.json`. Les nœuds clés sont placés dans l'ordre aux anneaux 4, 8 et 12.
 - **Une grappe, une maîtrise, une mutation, un nœud flétri** : ajouter une entrée à `clusters` dans la branche (voir « Grappes écrites à la main »).
+- **Une frontière hybride** : un fichier `borders/<a>-<b>.json` entre deux branches voisines (voir « Frontières hybrides »).
 - **Une région** : voir « Régions » et « Ajouter une région » dans le README du projet.
 - **Une compétence** : son fichier `scripts/skills/<id>.gd` (classe `Skill` : `cast`, `tick` facultatif) et ses réglages dans `skills.json`.
 - **Un comportement d'ennemi** : `scripts/enemy_behaviors/<nom>.gd` (classe `EnemyBehavior` : `step`, `draw_attack`, `on_death`), nommé par `behavior` dans `enemies.json`.

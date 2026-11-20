@@ -5,6 +5,7 @@
 extends RefCounted
 
 const DIR := "res://data/"
+const BORDERS_DIR := "res://data/borders"
 const OPS := ["add", "inc", "more", "flat"]
 ## Opérations d'un effet « skill_mod » (mutation d'un réglage de compétence).
 const SKILL_OPS := ["add", "inc", "more", "set"]
@@ -109,6 +110,58 @@ static func branches() -> Array:
 	return _cache["#branches"]
 
 
+## Frontières hybrides, lues dans res://data/borders/ (un fichier par paire de branches voisines,
+## dans l'ordre alphabétique des fichiers) : grappes à cheval sur deux secteurs (voir data/README.md,
+## « Frontières hybrides »). Chaque entrée est normalisée : « a » et « b » sont les index des deux
+## branches dans l'ordre de tree.json, « b » juste après « a » dans le sens des aiguilles d'une montre.
+## Une frontière dont les branches ne sont pas voisines est écartée (et signalée par validate).
+static func borders() -> Array:
+	if not _cache.has("#borders"):
+		var list: Array = []
+		var ids: Array = tree().get("branches", [])
+		var files: Array = []
+		if DirAccess.dir_exists_absolute(BORDERS_DIR):
+			for file in DirAccess.get_files_at(BORDERS_DIR):
+				if file.ends_with(".json"):
+					files.append(file)
+		files.sort()
+		for file in files:
+			var path: String = BORDERS_DIR.path_join(file)
+			var data = JSON.parse_string(FileAccess.get_file_as_string(path))
+			if not data is Dictionary:
+				push_error("Frontière illisible : " + path)
+				continue
+			var pair := border_pair(data.get("between"), ids)
+			if pair.is_empty():
+				continue
+			var b: Dictionary = data.duplicate()
+			b["a"] = pair[0]
+			b["b"] = pair[1]
+			b["_file"] = file
+			if str(b.get("id", "")) == "":
+				b["id"] = file.get_basename()
+			list.append(b)
+		_cache["#borders"] = list
+	return _cache["#borders"]
+
+
+## Index [a, b] des deux branches d'une frontière (b suit a dans le sens des aiguilles d'une montre),
+## ou [] si « between » ne nomme pas deux branches voisines.
+static func border_pair(between, ids: Array) -> Array:
+	if not (between is Array and between.size() == 2):
+		return []
+	var i := ids.find(str(between[0]))
+	var j := ids.find(str(between[1]))
+	var n := ids.size()
+	if i < 0 or j < 0 or i == j or n < 3:
+		return []
+	if (i + 1) % n == j:
+		return [i, j]
+	if (j + 1) % n == i:
+		return [j, i]
+	return []
+
+
 static func _load(name: String) -> Dictionary:
 	if _cache.has(name):
 		return _cache[name]
@@ -195,7 +248,55 @@ static func validate(keystones_per_branch := -1) -> PackedStringArray:
 			_check_effects(ks.get("effects", []), kw, errors)
 		_check_resonance(b.get("resonance", []), where, errors)
 		_check_clusters(b.get("clusters", []), where, seen_keys, errors)
+	_check_borders(ids, seen_keys, errors)
 	return errors
+
+
+## Frontières hybrides (data/borders/<a>-<b>.json) : deux branches voisines seulement, une seule
+## frontière par paire, identifiant et nom de fichier « <a>-<b> » dans l'ordre de tree.json, grappes
+## au format des grappes de branche, point d'ancrage à moins d'un demi-secteur de la frontière.
+static func _check_borders(ids: Array, seen_keys: Dictionary, errors: PackedStringArray) -> void:
+	if not DirAccess.dir_exists_absolute(BORDERS_DIR):
+		return
+	var pairs := {}
+	for file in DirAccess.get_files_at(BORDERS_DIR):
+		if file.ends_with(".json"):
+			check_border(JSON.parse_string(FileAccess.get_file_as_string(BORDERS_DIR.path_join(file))), file, ids, seen_keys, pairs, errors)
+
+
+## Une frontière (contenu du fichier « file ») ; « pairs » retient les paires déjà décrites.
+static func check_border(data, file: String, ids: Array, seen_keys: Dictionary, pairs: Dictionary, errors: PackedStringArray) -> void:
+	var where := "borders/" + file
+	if not data is Dictionary:
+		errors.append(where + " est illisible")
+		return
+	var pair := border_pair(data.get("between"), ids)
+	if pair.is_empty():
+		errors.append(where + " : « between » doit nommer deux branches voisines de tree.json (une frontière sépare deux secteurs voisins)")
+		return
+	var expect := "%s-%s" % [ids[pair[0]], ids[pair[1]]]
+	if str(data.get("id", "")) != expect or file.get_basename() != expect:
+		errors.append("%s : l'identifiant et le nom du fichier doivent valoir « %s » (branches dans l'ordre de tree.json)" % [where, expect])
+	if pairs.has(expect):
+		errors.append("%s : la frontière « %s » est déjà décrite dans %s" % [where, expect, pairs[expect]])
+	pairs[expect] = where
+	if str(data.get("name", "")) == "":
+		errors.append(where + " : « name » est obligatoire")
+	var list = data.get("clusters")
+	if not (list is Array) or list.is_empty():
+		errors.append(where + " : « clusters » doit contenir au moins une grappe")
+		return
+	_check_clusters(list, where, seen_keys, errors)
+	var sides := [str(ids[pair[0]]), str(ids[pair[1]])]
+	for c in list:
+		if not c is Dictionary:
+			continue
+		var cw := "%s, grappe « %s »" % [where, c.get("id", "")]
+		if (c.get("angle") is float or c.get("angle") is int) and absf(float(c["angle"])) > 0.5:
+			errors.append(cw + " : « angle » (écart à la frontière, en fraction de secteur) doit rester entre -0,5 et 0,5")
+		for cn in c.get("nodes", []):
+			if cn is Dictionary and cn.has("side") and not str(cn["side"]) in sides:
+				errors.append("%s, nœud « %s » : « side » doit valoir %s" % [cw, cn.get("id", ""), " ou ".join(sides)])
 
 
 ## Résonance de branche : paliers croissants, chacun avec des effets.
@@ -453,9 +554,12 @@ static func _check_effects(list, where: String, errors: PackedStringArray) -> vo
 		else:
 			errors.append("%s : effet sans « stat », « skill », « skill_mod », « attack_form », « attack_mod » ni « on »" % where)
 		if e.has("if"):
-			var cond = e["if"]
-			if not (cond is Dictionary and conditions().has(cond.get("state", ""))):
-				errors.append("%s : condition inconnue dans « if » (voir conditions.json)" % where)
+			var conds: Array = e["if"] if e["if"] is Array else [e["if"]]
+			if conds.is_empty():
+				errors.append("%s : « if » ne peut pas être une liste vide" % where)
+			for cond in conds:
+				if not (cond is Dictionary and conditions().has(cond.get("state", ""))):
+					errors.append("%s : condition inconnue dans « if » (voir conditions.json)" % where)
 	for name in stats():
 		var def: Dictionary = stats()[name]
 		if def.get("max") is String and not stats().has(def["max"]):

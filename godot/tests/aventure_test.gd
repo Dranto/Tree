@@ -332,7 +332,11 @@ func _force_region() -> void:
 
 func _region_done() -> bool:
 	var r := _region()
-	if not obj.current(r).is_empty() or not game.flags.get(Regions.ending_flag(r), false):
+	var cur: Dictionary = obj.current(r)
+	# L'objectif commun de la finale (cible « finale ») n'appartient à aucune région : il suit la dernière.
+	if not cur.is_empty() and str(cur.get("target", {}).get("type", "")) != "finale":
+		return false
+	if not game.flags.get(Regions.ending_flag(r), false):
 		return false
 	for g in main.orbs_layer.get_children():
 		if _is_graft(g):
@@ -511,6 +515,9 @@ func _reload(why: String) -> void:
 				if not _same(before["flags"][f], after["flags"].get(f)):
 					diff.append("%s: %s -> %s" % [f, before["flags"][f], after["flags"].get(f)])
 			for f in after["flags"]:
+				# finale_ouverte se déduit des régions purifiées : l'arène la pose dès sa première image.
+				if f == "finale_ouverte" and Regions.all_purified(after["flags"]):
+					continue
 				if not before["flags"].has(f):
 					diff.append("%s ajouté" % f)
 		elif k == "ground" and _same_ground(before[k], after[k]):

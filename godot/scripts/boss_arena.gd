@@ -317,7 +317,7 @@ static func autotest_build(level: int, branch: String) -> void:
 	while Game.points > 0:
 		var options: Array = []
 		for n in Game.tree.nodes:
-			if n["branch"] == bi and Game.can_allocate(n["id"]):
+			if n["branch"] == bi and n["border"] < 0 and Game.can_allocate(n["id"]):
 				options.append(n)
 		if options.is_empty():
 			break

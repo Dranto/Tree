@@ -373,6 +373,8 @@ func _index() -> void:
 		var parts: Array = [n["name"], KIND_WORDS.get(n["type"], "")]
 		if n["branch"] >= 0:
 			parts.append(SkillTree.BRANCHES[n["branch"]]["name"])
+		if int(n.get("border", -1)) >= 0:
+			parts.append("frontière " + SkillTree.BRANCHES[n["border"]]["name"])
 		parts.append_array(SkillTree.describe(n))
 		for e in n["effects"]:
 			if e.has("stat"):
@@ -412,9 +414,14 @@ func summary(extra: Array = []) -> Dictionary:
 	for n in game.tree.nodes:
 		if n["branch"] < 0:
 			continue
-		branches[n["branch"]]["total"] += 1
+		# Un nœud de frontière hybride compte pour ses deux branches.
+		for bi in [n["branch"], int(n.get("border", -1))]:
+			if bi < 0:
+				continue
+			branches[bi]["total"] += 1
+			if set.has(n["id"]):
+				branches[bi]["count"] += 1
 		if set.has(n["id"]):
-			branches[n["branch"]]["count"] += 1
 			if n["type"] == "keystone":
 				keystones.append({"name": n["name"], "branch": n["branch"]})
 	return {
