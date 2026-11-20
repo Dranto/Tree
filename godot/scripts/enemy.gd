@@ -215,6 +215,11 @@ func setup(k, p: float) -> void:
 	strafe = 1.0 if randf() < 0.5 else -1.0
 
 
+## Caché (la Mandragore sous terre) : le tir automatique du joueur ne le prend pas pour cible.
+func hidden() -> bool:
+	return _behavior.hidden(self)
+
+
 ## Sorte qui peut devenir une élite (ni le Nid, ni ses Rejetons, ni une élite déjà faite).
 func can_be_elite() -> bool:
 	return not elite and not kind_id in ELITES.get("excluded", [])

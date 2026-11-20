@@ -141,6 +141,7 @@ func _run() -> void:
 	main.player_hit_enemy(mand, 10.0, false)
 	check(mand.hp == hp_m, "sous terre, les coups directs ne l'atteignent pas")
 	check(mand.pose().get("under", 0.0) > 0.0, "on ne voit qu'un sillon (pose « under »)")
+	check(mand.hidden() and p.auto_target() != mand, "le tir automatique ne vise pas une Mandragore sous terre")
 	check(await _until(func(): return mand.state == "windup", 180), "elle s'arrête sous le joueur et marque son cercle")
 	check(mand.position.distance_to(p.position) < 30.0, "le cercle est sous le joueur (%d px, joueur à %s, ennemi à %s, visé %s)" % [int(mand.position.distance_to(p.position)), p.position, mand.position, spot])
 	var hp2: float = p.hp
@@ -282,7 +283,7 @@ func _run() -> void:
 	await _until(func(): return boss.attack == "", 200)
 	boss._begin("invocation")
 	await _until(func(): return boss.attack == "", 200)
-	check(not boss.minions.is_empty() and boss.minions.all(func(m): return not is_instance_valid(m) or m.kind_id == "mandragore"), "en phase 3, des Mandragores")
+	check(not boss.minions.is_empty() and boss.minions.all(func(m): return not is_instance_valid(m) or m.kind_id == "scarabee"), "en phase 3, des Scarabées")
 
 	print("Victoire")
 	_clear()

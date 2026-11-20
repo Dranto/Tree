@@ -76,6 +76,11 @@ func harmless(e) -> bool:
 	return under(e)
 
 
+## Sous terre, le tir automatique ne la vise pas (il tirerait dans le vide).
+func hidden(e) -> bool:
+	return under(e)
+
+
 static func under(e) -> bool:
 	return e.state == "sous" or e.state == "windup"
 

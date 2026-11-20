@@ -549,7 +549,7 @@ func auto_target():
 	var best_d := INF
 	var keep := INF
 	for e in main.enemies_near(global_position, attack_range()):
-		if e.dead:
+		if e.dead or (e.has_method("hidden") and e.hidden()):
 			continue
 		var d: float = e.position.distance_squared_to(from)
 		if e == target:

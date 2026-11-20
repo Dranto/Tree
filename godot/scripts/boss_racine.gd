@@ -12,7 +12,7 @@
 ##                ce coup perce l'armure (« pierce ») : l'écorce ne suffit pas, il faut s'écarter ;
 ##   - chute    (dès la phase 2) : un pan de sa cime se détache et tombe, un grand cercle sous le
 ##                joueur, plus lent à venir ;
-##   - invocation (dès la phase 2) : des Termites (phase 2) puis des Mandragores (phase 3) sortent
+##   - invocation (dès la phase 2) : des Termites (phase 2) puis des Scarabées (phase 3) sortent
 ##                de la roche (pas en rouge : ce n'est pas un coup) ;
 ##   - phase 3 : la forêt se referme (l'arène se resserre, boss_arena.gd) ; plus de racines à la fois.
 ## L'enracinement ne le tient pas (no_root). Sa mort : l'écorce de pierre se fend et tombe par
@@ -24,13 +24,13 @@ extends BossBase
 
 const PHASE_LIMITS := [0.66, 0.33]
 ## Vie : base + par niveau du joueur (réglée au robot : --autotest=boss au niveau 20).
-const BASE_HP := 560.0
-const HP_PER_LEVEL := 185.0
+const BASE_HP := 440.0
+const HP_PER_LEVEL := 145.0
 ## Par phase : pause entre deux attaques, ordre des attaques et ampleur.
 const PHASES := {
 	1: {"gap": 1.3, "order": ["racines", "eboulis", "pieu", "racines", "eboulis", "pieu"], "lines": 3, "stones": 4},
 	2: {"gap": 1.1, "order": ["eboulis", "invocation", "racines", "chute", "pieu", "racines"], "lines": 4, "stones": 5, "minions": 3, "minion": "termite"},
-	3: {"gap": 0.95, "order": ["racines", "pieu", "chute", "eboulis", "invocation", "racines", "pieu"], "lines": 5, "stones": 6, "minions": 2, "minion": "mandragore"},
+	3: {"gap": 0.95, "order": ["racines", "pieu", "chute", "eboulis", "invocation", "racines", "pieu"], "lines": 5, "stones": 6, "minions": 2, "minion": "scarabee"},
 }
 const ROOTS := {"annonce": 1.0, "width": 54.0, "length": 560.0, "spread": 0.42, "damage": 20.0}
 const STONES := {"annonce": 1.1, "radius": 58.0, "spread": 190.0, "damage": 17.0}
