@@ -577,7 +577,13 @@ func take_hit(amount: float, source) -> void:
 	if invuln > 0.0 or hp <= 0.0:
 		return
 	var s: Dictionary = Game.stats
-	var taken: float = amount * (1.0 - s["armor"])
+	var armor: float = s["armor"]
+	# Perce-armure (Scarabée perce-écorce, Ancien pétrifié) : une part de l'armure est ignorée.
+	if source is Object and is_instance_valid(source):
+		var pierce = source.get("armor_pierce")
+		if pierce != null:
+			armor *= 1.0 - clampf(float(pierce), 0.0, 1.0)
+	var taken: float = amount * (1.0 - armor)
 	# Cocon de sève : le bouclier boit le coup d'abord (scripts/skills/cocon.gd).
 	var cocoon = _skill_objects.get("cocon")
 	if cocoon != null and cocoon.shield > 0.0:
