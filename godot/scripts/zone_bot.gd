@@ -28,8 +28,14 @@ const FLEE_BELOW := 0.35
 const BACK_ABOVE := 0.8
 
 var builder
-## Région jouée.
+## Région jouée (celle dont le Cœur et l'arène sont visés : voir set_region).
 var region := "ronce"
+## Robot d'aventure (tests/aventure_test.gd) : tant que la finale existe (main.finale) et que le
+## robot a fini les régions, il va l'affronter (« finale » vaut vrai).
+var finale := false
+## Niveau au-delà duquel le robot ne reçoit plus d'expérience en plus des ennemis vaincus (robot
+## d'aventure : il avance au niveau d'un joueur qui enchaîne les régions, pas plus vite).
+var level_cap := 100000
 ## Ce que fait le robot en ce moment (journal du test).
 var goal := ""
 var recovering := false
@@ -46,11 +52,40 @@ var hold := false
 func _init(build := "fouet", reg := "") -> void:
 	region = reg if reg != "" else ("ronce" if Regions.exists("ronce") else Regions.ids()[0])
 	var all := BuildBot.load_all()
+	set_build(build)
+
+
+## Change de build (les nœuds déjà appris restent) : sa branche sert de repli quand ses cibles
+## sont épuisées.
+func set_build(build: String) -> void:
+	var all := BuildBot.load_all()
 	builder = BuildBot.new()
 	builder.name = build
-	builder.targets = all.get(build, {}).get("targets", [])
+	builder.targets = all.get(build, {}).get("targets", []).duplicate()
 	builder.choices = all.get(build, {}).get("choices", {})
+	builder.branch = str(all.get(build, {}).get("branch", Regions.branch_of(region)))
 	builder.start_level = 1
+
+
+## Passe à une autre région (robot d'aventure) avec le build donné.
+func set_region(reg: String, build: String) -> void:
+	region = reg
+	finale = false
+	goal = ""
+	recovering = false
+	_detour = 0.0
+	_still = 0.0
+	_last_pos = Vector2.INF
+	set_build(build)
+
+
+## Cœur et arène de la région jouée.
+func heart_of(main):
+	return main.hearts.get(region, main.heart) if "hearts" in main else main.heart
+
+
+func arena_of(main):
+	return main.arenas.get(region, main.arena) if "arenas" in main else main.arena
 
 
 ## Nœud clé de la branche de la région le plus proche des nœuds appris (uid), "" s'il y en a déjà
@@ -76,20 +111,22 @@ func step(main, delta: float) -> void:
 	if hold:
 		return
 	_t += delta
-	if main.arena.in_combat() or main.heart.state == "siege":
+	if main.in_boss_fight() or main.siege_heart() != null:
 		pass  # pas d'expérience offerte pendant un combat : il se joue au niveau atteint
-	else:
+	elif Game.level < level_cap:
 		Game.add_xp(Game.xp_to_next() * delta / LEVEL_SECONDS)
 	if Game.points > 0:
 		var key := _nearest_keystone()
-		if key != "" and not builder.targets.has(key):
+		if key != "":
+			# L'objectif « nœud clé » passe avant le build, même si le build le prévoit plus loin.
+			builder.targets.erase(key)
 			builder.targets.push_front(key)
 		builder.spend(Game)
 
 
 ## Où aller pour l'objectif en cours (ou null : rester à se battre là où il est).
 func _goal_pos(main, p):
-	if main.lost_sap != null and is_instance_valid(main.lost_sap) and not main.arena.in_combat():
+	if main.lost_sap != null and is_instance_valid(main.lost_sap) and not main.in_boss_fight():
 		goal = "sève perdue"
 		return main.lost_sap.position
 	# Greffe au sol (autel, boss, élite) : la ramasser.
@@ -97,6 +134,8 @@ func _goal_pos(main, p):
 		if g is GraftPickup and not g.is_queued_for_deletion() and g.position.distance_to(p.position) < 900.0:
 			goal = "greffe " + g.graft_id
 			return g.position
+	if finale:
+		return _finale_pos(main)
 	var o: Dictionary = Objectives.current(region)
 	var id: String = o.get("id", "")
 	# Ce qu'il faut faire se lit dans la cible de l'objectif : rien (apprendre), un lieu, le Cœur
@@ -113,16 +152,26 @@ func _goal_pos(main, p):
 				goal = "monter de niveau avant le Cœur"
 				return null
 			goal = "siège du Cœur"
-			var c: Vector2 = main.heart.center
+			var c: Vector2 = heart_of(main).center
 			return c - c.normalized() * 130.0
 		"arena":
-			if Game.level < BOSS_LEVEL and not main.arena.in_combat():
-				goal = "monter de niveau avant la Mère-Ronce"
+			if Game.level < BOSS_LEVEL and not main.in_boss_fight():
+				goal = "monter de niveau avant le boss"
 				return null
-			goal = "Mère-Ronce"
-			return main.arena.center
+			goal = "boss"
+			return arena_of(main).center
 	goal = "fini"
-	return main.arena.center
+	return arena_of(main).center
+
+
+## La finale (main.finale, sous la graine) : le robot marche sur la graine, qui descend dans l'arène.
+func _finale_pos(main):
+	var f = main.get("finale")
+	if f == null or f.state in ["fermee", "vaincue"]:
+		goal = "finale fermée" if f != null and f.state == "fermee" else "finale finie"
+		return null
+	goal = "finale"
+	return null
 
 
 ## Commandes du robot : {"move", "aim", "dash"}.
@@ -137,9 +186,15 @@ func input(main, p) -> Dictionary:
 			if d < best:
 				best = d
 				target = e.position
-	if main.arena.in_combat():
-		goal = "Mère-Ronce"
-		return main.arena.bot_input(p)
+	var fight = main.active_arena()
+	if fight != null:
+		goal = "boss"
+		return fight.bot_input(p)
+	# Finale (sous la graine) : son robot mène à la graine puis au boss, ouverte ou en combat.
+	var fin = main.get("finale") if finale else null
+	if fin != null and fin.state in ["ouverte", "combat"]:
+		goal = "finale"
+		return fin.bot_input(p)
 	var where = _goal_pos(main, p)
 	var hp_ratio: float = p.hp / Game.stats["max_hp"]
 	if hp_ratio < FLEE_BELOW:
@@ -154,8 +209,8 @@ func input(main, p) -> Dictionary:
 	away = away.normalized() if away.length() > 0.0 else Vector2.ZERO
 	# Siège du Cœur : rester dans la zone prime sur tout le reste (sortir fait reculer le siège).
 	if goal == "siège du Cœur" and where != null:
-		var from_c: float = p.position.distance_to(main.heart.center)
-		if from_c > main.heart.zone - 50.0:
+		var from_c: float = p.position.distance_to(heart_of(main).center)
+		if from_c > heart_of(main).zone - 50.0:
 			var back: Vector2 = ((where as Vector2) - p.position).normalized()
 			return {"move": _unstick(p, back).normalized(), "aim": target, "dash": best < 45.0 * 45.0}
 	var dodge: Vector2 = builder._dodge(main, p)
@@ -163,7 +218,7 @@ func input(main, p) -> Dictionary:
 		return {"move": dodge.normalized(), "aim": target, "dash": dodge.length() > 1.5}
 	var mv := Vector2.ZERO
 	# En siège, il tient la zone tant qu'il le peut : il ne décroche qu'au tout dernier moment.
-	var sieging: bool = goal == "siège du Cœur" and main.heart.state == "siege"
+	var sieging: bool = goal == "siège du Cœur" and heart_of(main).state == "siege"
 	if recovering and not (sieging and hp_ratio > 0.2):
 		# Repli vers son point de renaissance (un sanctuaire ravivé rend toute la vie en y entrant).
 		var safe: Vector2 = main.respawn_point()
