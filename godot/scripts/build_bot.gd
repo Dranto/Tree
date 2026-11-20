@@ -424,5 +424,11 @@ func _sample(main) -> void:
 	print("RUN %s min=%.0f niveau=%d xp=%.0f/%.0f menace=%.2f ttk=%.2f degats=%.0f vie_max=%.0f morts=%d tues=%d ennemis=%d profondeur=%.2f coeur=%d" % [
 		name, _t / 60.0, Game.level, Game.xp, Game.xp_to_next(), total / maxf(1, n), ttk, _minute_dmg,
 		Game.stats["max_hp"], main.deaths, kills, n, depth, 1 if Game.flags.get(Regions.heart_flag(region), false) else 0])
+	if OS.get_environment("RUN_DEBUG") != "":
+		var alive := {}
+		for e in main.enemies:
+			if is_instance_valid(e) and not e.dead and "kind_id" in e:
+				alive[e.kind_id] = alive.get(e.kind_id, 0) + 1
+		print("RUNKINDS min=%.0f lieu=%s %s" % [_t / 60.0, main.region_at(main.player.position), alive])
 	_ttk.clear()
 	_minute_dmg = 0.0

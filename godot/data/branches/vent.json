@@ -99,7 +99,7 @@
           "name": "Fil du vent",
           "at": [0.55, -0.35],
           "links": ["l1"],
-          "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.2}, {"stat": "fire_rate", "op": "inc", "value": 0.06}]
+          "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.15}, {"stat": "fire_rate", "op": "inc", "value": 0.06}]
         },
         {
           "id": "l3",

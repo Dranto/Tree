@@ -70,10 +70,10 @@
     "count": 1, "orbit": false, "orbit_radius": 130, "orbit_speed": 2.6
   },
   "ruee": {
-    "name": "Ruée", "short": "Ruée", "color": "#c8dcef", "cooldown": 3.5,
+    "name": "Ruée", "short": "Ruée", "color": "#c8dcef", "cooldown": 3.0,
     "branch": "vent", "tags": ["corps_a_corps"],
     "desc": "Nouvelle compétence : tu fends l'air vers l'endroit visé, intouchable, et frappes tout sur ton passage.",
-    "damage": 2.2, "length": 280, "speed": 1400, "width": 48, "knockback": 46,
+    "damage": 2.8, "length": 280, "speed": 1400, "width": 48, "knockback": 46,
     "dash": false, "wake": 0
   },
   "appel_air": {
@@ -86,14 +86,14 @@
     "name": "Liane buveuse", "short": "Liane", "color": "#5fc48a", "cooldown": 5,
     "branch": "seve", "tags": ["zone"],
     "desc": "Nouvelle compétence : des lianes s'accrochent aux ennemis autour de l'endroit visé, boivent leur vie et te la rendent.",
-    "range": 460, "radius": 200, "count": 3, "duration": 3.5, "tick": 0.25, "damage": 2.6,
+    "range": 460, "radius": 200, "count": 3, "duration": 3.5, "tick": 0.25, "damage": 3.9,
     "drain": 0.5, "leash": 560, "jump": false, "root": 0
   },
   "fontaine": {
     "name": "Fontaine de sève", "short": "Fontaine", "color": "#8af5c0", "cooldown": 12,
     "branch": "seve", "tags": ["zone"],
     "desc": "Nouvelle compétence : une source de sève jaillit à tes pieds ; tant que tu t'y tiens, tu régénères vite, et elle ronge les ennemis qui y entrent.",
-    "radius": 140, "duration": 6, "regen": 0.05, "tick": 0.5, "damage": 1.4,
+    "radius": 140, "duration": 6, "regen": 0.05, "tick": 0.5, "damage": 2.1,
     "follow": false, "geyser": 0
   },
   "cocon": {

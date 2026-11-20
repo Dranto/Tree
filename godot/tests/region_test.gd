@@ -131,6 +131,17 @@ func _run() -> void:
 			purified += 1
 	check(purified < far * 0.6, "moins nombreux une fois le Cœur purifié (%d)" % purified)
 	game.flags.erase("ronce_coeur_purifie")
+	# Colosses régionaux (« min_dist ») : jamais près de la graine, bien présents au fond.
+	if main.region_spawn.has("vent"):
+		var vent_dir: Vector2 = main.region_center("vent").normalized()
+		var menhir_near := 0
+		var menhir_far := 0
+		for i in 400:
+			if main._region_kind("vent", vent_dir * 700.0) == "menhir":
+				menhir_near += 1
+			if main._region_kind("vent", vent_dir * 2200.0) == "menhir":
+				menhir_far += 1
+		check(menhir_near == 0 and menhir_far > 0, "pas de Menhir près de la graine (%d près, %d loin)" % [menhir_near, menhir_far])
 	var outside := 0
 	main.spawn_timer = 0.0
 	# Un point hors de toute région (à l'opposé de Ronce, ou en tournant autour de la graine
@@ -142,17 +153,23 @@ func _run() -> void:
 			away = p
 			break
 	main.player.position = away
-	await _steps(2)
-	main.spawn_timer = 1.0e9
 	# Les apparitions tombent à 760-980 px du joueur, parfois dans une région voisine : on ne
-	# compte que les Flétris nés hors de toute région.
+	# compte que les Flétris nés hors de toute région (plusieurs salves, pour ne pas dépendre
+	# d'un seul tirage).
 	var born_outside := 0
-	for e in main.enemies:
-		if main.region_at(e.position) != "":
-			continue
-		born_outside += 1
-		if e.region != "":
-			outside += 1
+	for burst in 8:
+		main.spawn_timer = 0.0
+		await _steps(2)
+		main.spawn_timer = 1.0e9
+		for e in main.enemies:
+			if main.region_at(e.position) != "" or e.has_meta("compte"):
+				continue
+			e.set_meta("compte", true)
+			born_outside += 1
+			if e.region != "":
+				outside += 1
+		if born_outside >= 3:
+			break
 	check(outside == 0 and born_outside > 0, "hors de la région, seuls des Flétris ordinaires naissent (%d nés hors des régions)" % born_outside)
 	for e in main.enemies:
 		e.queue_free()

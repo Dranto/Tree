@@ -27,7 +27,14 @@ touch "$OUT/.gdignore"   # Godot n'importe pas les captures comme ressources
 # Rendu logiciel (llvmpipe) partout, pour que la machine de dev et la CI donnent les mêmes pixels.
 export LIBGL_ALWAYS_SOFTWARE=1
 # Importe le projet (ressources, cache de scripts) avant de lancer les scénarios.
-"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1
+# Le journal d'import est gardé dans out/import.log : un import qui plante (vu en CI : segfault,
+# polices non importées, toutes les captures avec du texte en écart) est signalé et refait une fois.
+if ! "$ROOT/tools/godot.sh" --headless --import >"$OUT/import.log" 2>&1; then
+  echo "Import du projet en échec (code $?), fin du journal :"
+  tail -40 "$OUT/import.log"
+  echo "Nouvel essai d'import."
+  "$ROOT/tools/godot.sh" --headless --import >"$OUT/import2.log" 2>&1 || { echo "Import encore en échec :"; tail -40 "$OUT/import2.log"; }
+fi
 
 START=$SECONDS
 status=0
