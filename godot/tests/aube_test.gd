@@ -295,7 +295,9 @@ func _test_tree() -> void:
 	print("Arbre")
 	var t = game.tree
 	var owned := {0: true}
-	var want := {"c:aube:eclats:a1": 4, "c:aube:rayon:l1": 4, "c:aube:levant:r6": 6, "c:aube:prisme:t1": 7, "c:aube:oeil:v1": 9, "c:aube:lance:p1": 12}
+	# Œil d'or : 11 depuis les grappes de Racine (jalon 9 D) ; le chemin à 9 passait par le tronc générique de
+	# Racine (racine:5:1), que couvre maintenant la grappe du bouclier d'écorce.
+	var want := {"c:aube:eclats:a1": 4, "c:aube:rayon:l1": 4, "c:aube:levant:r6": 6, "c:aube:prisme:t1": 7, "c:aube:oeil:v1": 11, "c:aube:lance:p1": 12}
 	for uid in want:
 		check(t.by_uid.has(uid), "nœud %s présent" % uid)
 		if t.by_uid.has(uid):
