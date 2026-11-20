@@ -344,6 +344,8 @@ func _scenario_carte5() -> void:
 	Game.flags["ronce_coeur_purifie"] = true
 	Game.flags["ronce_boss_vaincu"] = true
 	Game.flags["spore_coeur_purifie"] = true
+	# La brèche sous la graine est ouverte : la légende, l'anneau de la carte et la section « sous la graine ».
+	Game.flags["finale_ouverte"] = true
 	for id in Regions.ids():
 		for spot in Regions.def(id).get("sanctuaries", []).slice(0, 2):
 			Game.flags["sanctuaire_" + str(spot.get("id", ""))] = true
