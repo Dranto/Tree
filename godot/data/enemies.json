@@ -100,7 +100,7 @@
      "hp": 28, "speed": 95, "damage": 6, "radius": 13, "xp": 5, "color": "#625a6e",
      "resist": {"aube": 0.25},
      "keep_min": 300, "keep_max": 440, "flee": 1.4, "range": 560, "cooldown": 3.6, "windup": 1.1,
-     "beam_width": 22, "beam_damage": 14, "beam_time": 0.3},
+     "beam_width": 22, "beam_damage": 11, "beam_time": 0.3},
     {"id": "quartz", "name": "Colosse de quartz", "behavior": "shatter", "region": "aube", "art": "aube",
      "hp": 160, "speed": 46, "damage": 15, "radius": 24, "xp": 14, "color": "#5e5a62",
      "resist": {"aube": 0.4}, "no_push": true,
