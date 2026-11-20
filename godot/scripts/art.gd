@@ -319,16 +319,35 @@ static func _motif_unit(ci: CanvasItem, element: String, p: Vector2, s: float, t
 			ci.draw_circle(p, s * 0.38, e["clair"])
 
 
+## En dessous de cette taille (px), un dessin d'effet qui s'éteint peut devenir un polygone dégénéré.
+const SMALL_POLY := 1.0
+
+
 ## Une pointe d'épine : base large, pointe dans la direction d.
 static func _thorn(ci: CanvasItem, base: Vector2, d: Vector2, len: float, col: Color) -> void:
 	var n := Vector2(-d.y, d.x)
-	ci.draw_colored_polygon(PackedVector2Array([base + n * len * 0.28, base + d * len, base - n * len * 0.28]), col)
+	var pts := PackedVector2Array([base + n * len * 0.28, base + d * len, base - n * len * 0.28])
+	if len < SMALL_POLY and Geometry2D.triangulate_polygon(pts).is_empty():
+		return
+	ci.draw_colored_polygon(pts, col)
 
 
 ## Une goutte : rond en bas, pointe en haut.
 static func _drop(ci: CanvasItem, p: Vector2, s: float, col: Color) -> void:
 	ci.draw_circle(p, s, col)
-	ci.draw_colored_polygon(PackedVector2Array([p + Vector2(-s * 0.92, -s * 0.3), p + Vector2(0, -s * 2.1), p + Vector2(s * 0.92, -s * 0.3)]), col)
+	var pts := PackedVector2Array([p + Vector2(-s * 0.92, -s * 0.3), p + Vector2(0, -s * 2.1), p + Vector2(s * 0.92, -s * 0.3)])
+	if s < SMALL_POLY and Geometry2D.triangulate_polygon(pts).is_empty():
+		return
+	ci.draw_colored_polygon(pts, col)
+
+
+## Remplit un polygone sauf s'il est dégénéré (effet qui finit de s'effacer : points confondus ou
+## qui se croisent). Godot ne dessinerait rien et écrirait « Invalid polygon data, triangulation
+## failed » dans le journal : le rendu est le même, sans le message.
+static func fill_safe(ci: CanvasItem, pts: PackedVector2Array, col: Color) -> void:
+	if Geometry2D.triangulate_polygon(pts).is_empty():
+		return
+	ci.draw_colored_polygon(pts, col)
 
 
 ## Une rafale : un trait qui file et s'enroule au bout (vers la droite).

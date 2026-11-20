@@ -374,8 +374,9 @@ static func _racines(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		var w := rng.randf_range(7.0, 10.0) * minf(g, 1.0)
 		var side := (tip - base).normalized().orthogonal()
 		var poly := PackedVector2Array([base + side * w, mid + side * w * 0.6, tip, mid - side * w * 0.6, base - side * w])
-		ci.draw_colored_polygon(poly, col)
-		ci.draw_colored_polygon(PackedVector2Array([base + side * w * 0.2, mid + side * w * 0.5, tip, mid + side * w * 0.05]), col.lightened(0.18))
+		# Quand la racine s'efface (g petit), le décalage fixe de « mid » fait se croiser le polygone.
+		Art.fill_safe(ci, poly, col)
+		Art.fill_safe(ci, PackedVector2Array([base + side * w * 0.2, mid + side * w * 0.5, tip, mid + side * w * 0.05]), col.lightened(0.18))
 		Art.outline(ci, poly, Art.c("contour"), Art.TRAIT_FIN)
 		# Nœuds et mousse au bout.
 		ci.draw_circle(mid, w * 0.38, sombre)

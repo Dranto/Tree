@@ -7,6 +7,9 @@
 extends SceneTree
 
 
+## Régions dont le boss resserre l'arène en phase 3 (arena.start_shrink).
+const SHRINKING_REGIONS := ["ronce", "spore", "seve"]
+
 var failures := 0
 var main
 
@@ -101,7 +104,13 @@ func _run() -> void:
 	check(await _until(func(): return boss.phase == 2), "sous 66 % de vie : phase 2")
 	boss.take_damage(boss.max_hp * 0.3, false)
 	check(await _until(func(): return boss.phase == 3), "sous 33 % de vie : phase 3")
-	check(await _until(func(): return arena.radius < arena.max_radius), "en phase 3 l'arène rétrécit")
+	# Seuls les boss dont la phase 3 appelle arena.start_shrink resserrent l'arène : Ronce, Spore et
+	# Sève. Le Harfang (tempête) et la Phalène (pluie de lumière) gardent leur arène entière.
+	if arena.region in SHRINKING_REGIONS:
+		check(await _until(func(): return arena.radius < arena.max_radius), "en phase 3 l'arène rétrécit")
+	else:
+		await _steps(120)
+		check(arena.radius == arena.max_radius, "en phase 3 l'arène garde sa taille (pas de resserrement dans cette région)")
 	_place(arena.center + Vector2(0, 250))
 	await _steps(2)
 
@@ -123,7 +132,8 @@ func _run() -> void:
 	check(boss.dead and game.flags.get(arena.region + "_boss_vaincu", false) == true, "boss vaincu : drapeau posé")
 	check(game.points == points + 2, "2 points d'arbre gagnés")
 	check(arena.state == "vaincue" and not main.spawn_paused, "l'arène refleurit, les naissances reprennent")
-	await _steps(120)
+	# La durée de la mort varie selon le boss (1,6 s pour la Mère-Ronce, 2 s pour le Harfang…).
+	await _until(func(): return not is_instance_valid(boss), 300)
 	check(not is_instance_valid(boss) and not (boss in main.enemies), "la Mère-Ronce a disparu")
 
 	print("Sauvegarde")
