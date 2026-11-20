@@ -161,7 +161,7 @@ func _next(game) -> int:
 	var best_ring := 999
 	var bi := maxi(0, Content.tree().get("branches", []).find(branch))
 	for n in tree.nodes:
-		if n["branch"] == bi and n["ring"] < best_ring and game.can_allocate(n["id"]):
+		if n["branch"] == bi and n["border"] < 0 and n["ring"] < best_ring and game.can_allocate(n["id"]):
 			best = n["id"]
 			best_ring = n["ring"]
 	if best < 0:

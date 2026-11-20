@@ -10,7 +10,8 @@
 ##   {"attack_form": "fouet"}                              change la forme de l'attaque de base
 ##   {"attack_mod": "fourche", "value": 1}                 ajoute un modificateur à l'attaque de base
 ##                                                          (voir attack.gd et data/attack.json)
-## Un effet peut porter une condition : "if": {"state": "immobile", "min": 0.5}.
+## Un effet peut porter une condition : "if": {"state": "immobile", "min": 0.5}, ou une liste de
+## conditions qui doivent toutes être vraies : "if": [{"state": "cible_saignante"}, {"state": "cible_empoisonnee"}].
 ##
 ## Valeur d'une statistique :
 ##   (base + somme des add) × (1 + somme des inc) × produit des more + somme des flat
@@ -167,9 +168,20 @@ func _condition_signature() -> String:
 func _passes(e: Dictionary, ctx: Dictionary) -> bool:
 	if not e.has("if"):
 		return true
-	var cond: Dictionary = e["if"]
-	var v: float = float(ctx.get(cond["state"], states.get(cond["state"], 0.0)))
-	return v > 0.0 and v >= float(cond.get("min", 0.0))
+	# Une liste de conditions : toutes doivent être vraies (frontières hybrides : « la cible saigne et
+	# elle est empoisonnée »).
+	for cond in conditions_of(e):
+		var v: float = float(ctx.get(cond["state"], states.get(cond["state"], 0.0)))
+		if not (v > 0.0 and v >= float(cond.get("min", 0.0))):
+			return false
+	return true
+
+
+## Conditions d'un effet, toujours sous forme de liste (« if » peut être un objet ou une liste).
+static func conditions_of(e: Dictionary) -> Array:
+	if not e.has("if"):
+		return []
+	return e["if"] if e["if"] is Array else [e["if"]]
 
 
 ## Signale un évènement du jeu. « ctx » transporte ce dont les actions ont besoin (main, enemy…)
@@ -246,9 +258,11 @@ static func describe(e: Dictionary) -> String:
 		else:
 			line = "%s%s %s" % [sign, number(absf(v), 1), label]
 	if e.has("if"):
-		var cond: Dictionary = e["if"]
-		var text: String = Content.conditions().get(cond["state"], {}).get("label", cond["state"])
-		line += " (%s)" % text.replace("{min}", number(float(cond.get("min", 0.0)), 1))
+		var parts := PackedStringArray()
+		for cond in conditions_of(e):
+			var text: String = Content.conditions().get(cond["state"], {}).get("label", cond["state"])
+			parts.append(text.replace("{min}", number(float(cond.get("min", 0.0)), 1)))
+		line += " (%s)" % " et ".join(parts)
 	return line
 
 

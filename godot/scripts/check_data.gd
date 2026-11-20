@@ -86,30 +86,67 @@ func _check_tree() -> void:
 func _check_clusters(tree) -> void:
 	var gap: float = SkillTree.RING_GAP
 	var placed: Array = []
+	# Grappes des branches, puis grappes des frontières hybrides (data/borders/).
+	var all: Array = []
 	for bi in SkillTree.BRANCHES.size():
 		var b: Dictionary = SkillTree.BRANCHES[bi]
 		for c in b.get("clusters", []):
-			var where := "branches/%s.json, grappe « %s »" % [b["id"], c["id"]]
-			var key := "%s:%s" % [b["id"], c["id"]]
-			if not tree.clusters.has(key) or tree.clusters[key]["nodes"].size() != c["nodes"].size():
-				errors.append(where + " : tous ses nœuds n'ont pas trouvé place dans l'arbre")
+			all.append(["branches/%s.json" % b["id"], b["id"], c, -1, -1])
+	for bd in SkillTree.BORDERS:
+		for c in bd.get("clusters", []):
+			all.append(["borders/%s" % bd["_file"], bd["id"], c, bd["a"], bd["b"]])
+	for item in all:
+		var c: Dictionary = item[2]
+		var where := "%s, grappe « %s »" % [item[0], c["id"]]
+		var key := "%s:%s" % [item[1], c["id"]]
+		if not tree.clusters.has(key) or tree.clusters[key]["nodes"].size() != c["nodes"].size():
+			errors.append(where + " : tous ses nœuds n'ont pas trouvé place dans l'arbre")
+			continue
+		for id in tree.clusters[key]["nodes"]:
+			var n: Dictionary = tree.nodes[id]
+			var p: Vector2 = n["pos"]
+			if p.length() > (SkillTree.RINGS + 0.5) * gap or p.length() < 0.6 * gap:
+				errors.append("%s : le nœud « %s » sort de l'arbre ou touche la graine" % [where, n["local"]])
+			for o in tree.nodes:
+				if o["cluster"] == "" and o["type"] == "keystone" and p.distance_to(o["pos"]) < SkillTree.CLEAR_NODE * gap:
+					errors.append("%s : le nœud « %s » recouvre le nœud clé « %s » (déplacer la grappe)" % [where, n["local"], o["name"]])
+			for q in placed:
+				if p.distance_to(q[0]) < 0.45 * gap:
+					errors.append("%s : le nœud « %s » est trop près de « %s » (moins de 0,45 anneau)" % [where, n["local"], q[1]])
+			placed.append([p, "%s:%s" % [key, n["local"]]])
+			if n["excludes"].size() != tree.exclusions.get(id, []).size() and n["excludes"].size() > tree.exclusions.get(id, []).size():
+				errors.append("%s : une entrée de « excludes » du nœud « %s » ne désigne aucun nœud" % [where, n["local"]])
+			if n["neighbors"].is_empty():
+				errors.append("%s : le nœud « %s » est isolé" % [where, n["local"]])
+		if item[3] >= 0:
+			_check_border_access(tree, key, where, item[3], item[4])
+
+
+## Une grappe de frontière doit être accessible depuis ses deux branches : au moins un de ses nœuds
+## touche un nœud de chacune (hors de la grappe), et ses nœuds sont de part et d'autre de la limite.
+func _check_border_access(tree, key: String, where: String, a: int, b: int) -> void:
+	var touches := {}
+	var sides := {}
+	var ids: Array = tree.clusters[key]["nodes"]
+	for id in ids:
+		var n: Dictionary = tree.nodes[id]
+		sides[n["branch"]] = true
+		if not SkillTree.in_branch(n, a) or not SkillTree.in_branch(n, b):
+			errors.append("%s : le nœud « %s » n'appartient pas aux deux branches de la frontière" % [where, n["local"]])
+		for m in n["neighbors"]:
+			var o: Dictionary = tree.nodes[m]
+			if o["cluster"] == key:
 				continue
-			for id in tree.clusters[key]["nodes"]:
-				var n: Dictionary = tree.nodes[id]
-				var p: Vector2 = n["pos"]
-				if p.length() > (SkillTree.RINGS + 0.5) * gap or p.length() < 0.6 * gap:
-					errors.append("%s : le nœud « %s » sort de l'arbre ou touche la graine" % [where, n["local"]])
-				for o in tree.nodes:
-					if o["cluster"] == "" and o["type"] == "keystone" and p.distance_to(o["pos"]) < SkillTree.CLEAR_NODE * gap:
-						errors.append("%s : le nœud « %s » recouvre le nœud clé « %s » (déplacer la grappe)" % [where, n["local"], o["name"]])
-				for q in placed:
-					if p.distance_to(q[0]) < 0.45 * gap:
-						errors.append("%s : le nœud « %s » est trop près de « %s » (moins de 0,45 anneau)" % [where, n["local"], q[1]])
-				placed.append([p, "%s:%s" % [key, n["local"]]])
-				if n["excludes"].size() != tree.exclusions.get(id, []).size() and n["excludes"].size() > tree.exclusions.get(id, []).size():
-					errors.append("%s : une entrée de « excludes » du nœud « %s » ne désigne aucun nœud" % [where, n["local"]])
-				if n["neighbors"].is_empty():
-					errors.append("%s : le nœud « %s » est isolé" % [where, n["local"]])
+			if o["id"] == 0:
+				touches[a] = true
+				touches[b] = true
+			elif o["border"] < 0:
+				touches[o["branch"]] = true
+	for bi in [a, b]:
+		if not touches.has(bi):
+			errors.append("%s : aucun lien vers la branche %s (une frontière doit s'atteindre des deux côtés)" % [where, SkillTree.BRANCHES[bi]["name"]])
+		if not sides.has(bi):
+			errors.append("%s : aucun nœud du côté de %s (la grappe doit être à cheval sur la limite)" % [where, SkillTree.BRANCHES[bi]["name"]])
 
 
 func _check_engine() -> void:

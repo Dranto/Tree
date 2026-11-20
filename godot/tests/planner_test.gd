@@ -99,7 +99,9 @@ func _run() -> void:
 	check(added == path.size() and planner.plan_cost() == path.size(), "tracer un plan sans point (%d nœuds)" % added)
 	check(game.allocated.size() == 1 and game.points == 0, "le plan ne dépense rien")
 	check(planner.plan_missing() == path.size() and not planner.plan_commit(), "validation refusée tant que les points manquent")
-	var far2 := _node_at_ring(5, tree.nodes[far]["branch"] + 1)
+	# Le second objectif est dans la branche opposée : son chemin ne partage rien avec le premier
+	# (la frontière Ronce–Spore relie les deux premières branches dès l'anneau 2).
+	var far2 := _node_at_ring(5, tree.nodes[far]["branch"] + 3)
 	planner.plan_add(far2)
 	check(planner.plan_has(far2) and _is_chain(planner.plan), "un second objectif s'ajoute au plan existant")
 	var total: int = planner.plan_cost()
@@ -137,7 +139,12 @@ func _run() -> void:
 	var by_branch := 0
 	for b in summary["branches"]:
 		by_branch += b["count"]
-	check(summary["nodes"] == game.allocated.size() - 1 and by_branch == summary["nodes"], "nombre de nœuds, total et par branche")
+	# Un nœud de frontière hybride compte dans ses deux branches.
+	var twice := 0
+	for id in game.allocated:
+		if tree.nodes[id]["border"] >= 0:
+			twice += 1
+	check(summary["nodes"] == game.allocated.size() - 1 and by_branch == summary["nodes"] + twice, "nombre de nœuds, total et par branche (%d de frontière, comptés deux fois)" % twice)
 	check(summary["stats"].size() == game.stats.size(), "une ligne par statistique")
 	var ks := _first_keystone()
 	game.points = 99
@@ -152,7 +159,8 @@ func _run() -> void:
 
 func _node_at_ring(ring: int, branch := 0) -> int:
 	for n in game.tree.nodes:
-		if n["ring"] == ring and n["branch"] == branch:
+		# Hors des frontières hybrides : le test suit une branche seule.
+		if n["ring"] == ring and n["branch"] == branch and n["border"] < 0:
 			return n["id"]
 	return -1
 

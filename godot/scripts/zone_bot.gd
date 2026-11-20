@@ -60,7 +60,7 @@ func _nearest_keystone() -> String:
 	var best := ""
 	var best_len := 1 << 30
 	for n in Game.tree.nodes:
-		if n["branch"] != ronce or n["type"] != "keystone":
+		if n["branch"] != ronce or n["type"] != "keystone" or n["border"] >= 0:
 			continue
 		if Game.allocated.has(n["id"]):
 			return ""

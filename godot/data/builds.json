@@ -27,6 +27,30 @@
     "choices": {"c:ronce:epines:e4": "epines_longues", "c:ronce:epines:e5": "volee_large", "c:ronce:souche:o4": "bois_dur", "c:ronce:venin:p4": "epines_toxiques"},
     "style": "tank"
   },
+  "venin_sang": {
+    "name": "Venin et sang",
+    "branch": "ronce",
+    "_doc": "Build hybride (frontière Ronce–Spore) : fouet empoisonné, le poison fait saigner (Plaie infectée), puis Saignée.",
+    "opening": ["c:ronce:fouet:f9", "c:spore:graines:a1"],
+    "targets": [
+      "c:ronce:fouet:f9",
+      "c:spore:graines:a1",
+      "c:ronce-spore:dard:d5",
+      "c:ronce:fouet:f1",
+      "c:ronce:fouet:f2",
+      "c:ronce-spore:dard:d10",
+      "c:ronce:fouet:f11",
+      "c:ronce:fouet:f7",
+      "c:ronce-spore:dard:d11",
+      "c:ronce-spore:dard:d12",
+      "key:nova",
+      "c:ronce:venin:p1",
+      "c:ronce:venin:p2",
+      "c:ronce:venin:p4"
+    ],
+    "choices": {"c:ronce-spore:dard:d10": "sang_noir", "c:ronce:venin:p4": "venin_et_sang"},
+    "style": "melee"
+  },
   "fouet": {
     "name": "Fouet",
     "branch": "ronce",
