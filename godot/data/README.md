@@ -325,6 +325,7 @@ Une région est décrite tout entière par `regions/<id>.json`. `scripts/regions
 - **Sons choisis par les données** : `"sound"` dans une compétence (`skills.json`, joué après son lancement) ou dans une forme d'attaque (`attack.json`, remplace `tir`), `"sound_hit"`, `"sound_crit"` et `"sound_death"` dans une sorte d'ennemi (`enemies.json`). Le nom doit exister dans `Synth.SOUNDS` (`check_data.gd` le vérifie).
 - **Sons prêts pour Sève et Aube** (jalon 8, provisoires) : Sève `seve_goutte`, `seve_pousse`, `seve_soin`, `seve_source`, `seve_eclosion`, `seve_lien` ; Aube `aube_rayon`, `aube_eclat`, `aube_halo`, `aube_levant`, `aube_cloche`, `aube_nova` ; chaque région a aussi `<id>_boss_eveil`, `_phase` et `_mort`. Les compétences des branches s'y branchent par `"sound"` ; musique et ambiance de `seve` et `aube` sont dans `data/audio.json`.
 - **`boss`** : sons d'éveil (le combat commence), de phase (le boss change de phase) et de mort, joués par le socle `BossBase`. Un boss peut en jouer d'autres lui-même (`Sfx.play`).
+- **Finale et générique** (crochets pour la musique de la fin) : deux entrées qui ne sont pas des régions. `finale` : sous la graine, le jeu demande la musique de `finale` (`Music.set_mood(vie, "finale")`, couche lumineuse après la victoire) et ses sons `boss` ; `generique` : pendant l'épilogue et le générique, `Music.set_mood(1.0, "generique")`. Il suffit d'y écrire une section `music` et de lancer `tools/gen-sounds.sh` (pistes `finale_sombre.wav`, `finale_lumineux.wav`, `generique_*.wav`) ; sans pistes, la musique du monde.
 
 ## Points et greffes du monde
 
@@ -353,11 +354,33 @@ Les points passent par `Game.grant_points(n, source, clé)` : une même clé ne 
 | `counter` (`flag`, `count`) | `Game.flags[flag]` vaut au moins `count` |
 | `keystone` (`branch`) | un nœud clé de la branche est appris |
 
-`target.type` : `none`, `seed`, `heart` et `arena` (ceux de la région de l'objectif), ou `group` (le plus proche des nœuds du groupe `group`, dans la région de l'objectif, dont le drapeau `<done_prefix><id>` n'est pas levé). `needs_group` masque l'objectif tant que le groupe est vide (le monde n'a pas encore de sanctuaire ou d'autel).
+`target.type` : `none`, `seed`, `heart` et `arena` (ceux de la région de l'objectif), `finale` (la brèche au pied de la graine, puis la Flétrissure une fois descendu), ou `group` (le plus proche des nœuds du groupe `group`, dans la région de l'objectif, dont le drapeau `<done_prefix><id>` n'est pas levé). `needs_group` masque l'objectif tant que le groupe est vide (le monde n'a pas encore de sanctuaire ou d'autel) ; `needs_flag` le masque tant que ce drapeau n'est pas posé (l'objectif `finale` attend `finale_ouverte`).
 
 **Ce que les autres systèmes doivent poser** : `sanctuaire_<id>` à la ravivation d'un sanctuaire (le sanctuaire de la graine s'appelle `sanctuaire_graine` et ne compte pas), `autel_<id>` à la découverte d'un autel, `secret_<id>` pour un secret, `<région>_coeur_purifie` et `<région>_boss_vaincu` (déjà posés). Les sanctuaires et les autels se rangent dans les groupes `sanctuaire` et `autel` (nœuds Node2D avec une propriété `id`) pour que la carte et la flèche les trouvent. Un élite vaincu émet `main.elite_killed(enemy)` : `Objectives` le compte dans `elites_tuees`. Les points des objectifs facultatifs passent par `Game.grant_points(n, "quete")` quand il existe.
 
-La séquence « région purifiée » se déclenche cinq secondes après la victoire sur le boss d'une région (`<région>_boss_vaincu`) avec les textes de `ending` de son fichier ; elle pose `<région>_fin_vue` et ne revient plus. Quand le boss de chaque région est vaincu, la dernière séquence montre `adventure_ending` (s'il y a plus d'une région) et pose `fin_aventure_vue`. L'objectif en cours d'une région se lit avec `Objectives.current(région)`. `tools/godot.sh --headless -s res://scripts/check_data.gd` contrôle le fichier.
+La séquence « région purifiée » se déclenche cinq secondes après la victoire sur le boss d'une région (`<région>_boss_vaincu`) avec les textes de `ending` de son fichier ; elle pose `<région>_fin_vue` et ne revient plus. Quand le boss de chaque région est vaincu, la dernière séquence montre `adventure_ending` : la Flétrissure se retire sous la graine, et la finale s'ouvre (voir « Finale »). L'objectif en cours d'une région se lit avec `Objectives.current(région)`. `tools/godot.sh --headless -s res://scripts/check_data.gd` contrôle le fichier.
+
+## Finale
+
+`finale.json` décrit le combat final et la fin de l'aventure. Il se joue avec n'importe quel nombre de régions : la finale s'ouvre quand `Regions.all_purified` est vrai.
+
+```json
+"boss": {"script": "res://scripts/boss_finale.gd", "name": "La Flétrissure", "bar_color": "cendre",
+         "phases": ["…", "…", "…"], "arena": {"radius": 520, "radius_min": 370, "life_color": "seve/clair"},
+         "wake_banner": "…", "defeated_banner": "…", "reward": {"points": 3}},
+"opened_banner": "…", "descent_banner": "…", "ascent_banner": "…",
+"epilogue": {"sub": "…", "title": "…", "body": "…"},
+"credits": [{"title": "Sève"}, {"head": "Une aventure de", "lines": ["…"]}, {"head": "Régions", "auto": "regions"}, {"head": "Gardiens", "auto": "bosses"}]
+```
+
+- **Ouverture** (`finale_arena.gd`, `main.finale`) : toutes les régions purifiées, le drapeau `finale_ouverte` est posé et `opened_banner` annoncé ; une brèche s'ouvre au pied de la graine (`descent_point()`, 150 px au sud du sanctuaire de la Graine). S'y tenir une seconde fait descendre le joueur **sous la graine** : l'arène est un creux hors du carré du monde (`CAVE`), où rien ne naît et qu'aucun Flétri du monde ne suit. Le puits de lumière où l'on arrive fait remonter (hors combat) ; s'avancer vers le centre réveille le boss.
+- **Combat** : comme une arène de région (`finale_arena.gd` étend `boss_arena.gd`) : barre, phases (`phases`, trois), mur de racines qui se resserre en phase 3 jusqu'à `radius_min`. Mourir ramène au dernier sanctuaire, la sève attend près de la brèche (`entrance()`), le boss se rendort ; `stat_finale_essais` compte les combats perdus. Une partie sauvegardée sous la graine reprend au pied de la graine.
+- **Victoire** : `finale_vaincue`, `reward › points` (une seule fois, clé `finale_boss`), `stat_finale_fin` (temps de jeu) ; le creux refleurit, puis l'épilogue (`epilogue.gd`, `quest_ui.epilogue`) : le monde entier reverdit, les textes d'`epilogue`, les statistiques de toute l'aventure, le générique (`credits` : `title` en grand, ou `head` et ses `lines` ; `auto` : `regions` ou `bosses` remplit la liste avec les régions du monde et leurs gardiens, plus la Flétrissure), puis « Continuer à jouer » / « Retour au titre ». Il pose `fin_aventure_vue` et ne revient plus.
+- **Boss** (`boss_finale.gd`, sur `BossBase`) : un trait de chaque région, deux nouveaux par phase : épines (Ronce) et spores (Spore), puis sève (siphon qui la soigne) et vent (rafale qui repousse), puis lumière (rayons) et racines (ligne qui jaillit jusqu'au joueur) ; des rejetons dès la phase 2. Robot : `tools/godot.sh --headless --fixed-fps 60 -- --autotest=boss --region=finale` (build de test au niveau 20, points dans la première branche).
+- **Musique** (crochets de la tâche H) : `data/audio.json › regions › finale` (sons `boss`, et `music` pour le combat) et `› generique` (`music` du générique). Sans `music`, la musique du monde.
+- **Sauvegarde** : format 5. Une sauvegarde plus ancienne qui avait vu l'ancienne fin (`fin_aventure_vue` sans `finale_vaincue`) perd ce drapeau : la finale s'ouvre au chargement.
+
+`check_data.gd` contrôle le fichier (script BossBase, trois phases, couleurs, textes, générique).
 
 ## Ajouter du contenu
 

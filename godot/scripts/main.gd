@@ -24,6 +24,7 @@ const SpatialGrid = preload("res://scripts/spatial_grid.gd")
 const BLEED_BASE_DURATION := 4.0
 const Heart = preload("res://scripts/heart.gd")
 const BossArena = preload("res://scripts/boss_arena.gd")
+const FinaleArena = preload("res://scripts/finale_arena.gd")
 const Regions = preload("res://scripts/regions.gd")
 const Content = preload("res://scripts/content.gd")
 ## Menace des ennemis, apparitions et choix de difficulté : res://data/difficulty.json.
@@ -86,6 +87,8 @@ var arena
 ## Cœur et arène de chaque région (identifiant -> nœud), dans l'ordre des régions.
 var hearts: Dictionary = {}
 var arenas: Dictionary = {}
+## Arène de la finale, sous la graine (finale_arena.gd) : ouverte quand toutes les régions sont purifiées.
+var finale
 ## Sanctuaires (sanctuary.gd), points de renaissance ; et sève perdue au sol (lost_sap.gd, ou null).
 var sanctuaries: Array = []
 var lost_sap = null
@@ -269,6 +272,14 @@ func _ready() -> void:
 		if heart == null or id == focus_region():
 			heart = h
 			arena = a
+	# La finale, sous la graine (hors du carré du monde, voir finale_arena.gd). Le robot des boss la
+	# joue avec « -- --autotest=boss --region=finale ».
+	finale = FinaleArena.new()
+	finale.main = self
+	add_child(finale)
+	move_child(finale, actors_layer.get_index())
+	if focus_region() == "finale":
+		arena = finale
 	_place_sanctuaries()
 	var rewards_layer := Node2D.new()
 	add_child(rewards_layer)
@@ -381,8 +392,13 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	_death_fx_step()
 	elapsed += delta
-	# La musique suit la vie du sol sous le joueur.
-	Music.set_mood(ground.life_at(player.position), Regions.region_at(player.position))
+	# La musique suit la vie du sol sous le joueur ; sous la graine, celle de la finale
+	# (data/audio.json › regions › finale, la musique du monde tant qu'elle n'est pas écrite).
+	var under := underground()
+	if under:
+		Music.set_mood(finale.music_life(), "finale")
+	else:
+		Music.set_mood(ground.life_at(player.position), Regions.region_at(player.position))
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
 		save_game()
@@ -403,7 +419,8 @@ func _physics_process(delta: float) -> void:
 	# Elles suivent le niveau et la zone, jamais le temps passé (data/difficulty.json).
 	var depth := _region_depth(player.position)
 	spawn_timer -= delta * Difficulty.spawn_speedup(depth)
-	if spawn_paused:
+	# Rien ne naît pendant un combat de boss, ni sous la graine.
+	if spawn_paused or under:
 		spawn_timer = maxf(spawn_timer, 0.5)
 	var cap := Difficulty.spawn_cap(Game.level, depth)
 	if spawn_timer <= 0.0:
@@ -527,12 +544,31 @@ static func focus_region() -> String:
 	return Regions.ids()[0] if not Regions.ids().is_empty() else ""
 
 
-## Arène où un combat de boss a lieu, ou null.
+## Arène où un combat de boss a lieu (celle d'une région ou la finale), ou null.
 func active_arena():
 	for a in arenas.values():
 		if a.in_combat():
 			return a
+	if finale != null and finale.in_combat():
+		return finale
 	return null
+
+
+## Vrai quand le joueur est sous la graine (arène de la finale, hors du carré du monde).
+func underground() -> bool:
+	return finale != null and player != null and finale.holds(player.position)
+
+
+## Borne une position au monde carré (± world_half) ; sous la graine, l'arène de la finale la tient.
+func clamp_to_world(pos: Vector2) -> Vector2:
+	if finale != null and finale.holds(pos):
+		return pos
+	return pos.clamp(Vector2(-world_half, -world_half), Vector2(world_half, world_half))
+
+
+## Position à montrer sur la carte du monde : sous la graine, la brèche à son pied.
+func map_position(pos: Vector2) -> Vector2:
+	return finale.descent_point() if finale != null and finale.holds(pos) else pos
 
 
 ## Vrai pendant un combat de boss, dans n'importe quelle région.

@@ -252,7 +252,8 @@ func mouse_world() -> Vector2:
 ## Pose la destination du mode « moba » (bornée au monde). click : nouveau clic (le repère pulse).
 func set_destination(p: Vector2, click := false) -> void:
 	var h: float = main.world_half if main != null else 1.0e9
-	dest = p.clamp(Vector2(-h, -h), Vector2(h, h))
+	# Sous la graine (arène de la finale, hors du carré du monde), la destination reste dans l'arène.
+	dest = main.clamp_to_world(p) if main != null and main.has_method("clamp_to_world") else p.clamp(Vector2(-h, -h), Vector2(h, h))
 	has_dest = true
 	_stuck = 0.0
 	if click:
@@ -408,8 +409,11 @@ func _physics_process(delta: float) -> void:
 		position += dash_dir * DASH_SPEED * delta
 	else:
 		position += mv * s["move_speed"] * (DAZZLE_SLOW if dazzle > 0.0 else 1.0) * delta
-	var h: float = main.world_half
-	position = position.clamp(Vector2(-h, -h), Vector2(h, h))
+	if main.has_method("clamp_to_world"):
+		position = main.clamp_to_world(position)
+	else:
+		var h: float = main.world_half
+		position = position.clamp(Vector2(-h, -h), Vector2(h, h))
 	_expected = 0.0 if dash_time > 0.0 else mv.length() * s["move_speed"] * delta
 
 	still_time = still_time + delta if mv.length() < 0.1 else 0.0

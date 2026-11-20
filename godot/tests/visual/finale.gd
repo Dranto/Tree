@@ -1,0 +1,146 @@
+## Scénario « finale » du banc visuel (runner.gd) : la brèche ouverte au pied de la graine, le creux
+## sous la graine et la Flétrissure endormie, chacune de ses attaques dans ses trois phases, sa mort
+## et le creux refleuri, puis l'épilogue (textes et statistiques), le générique et sa fin.
+## Tout est figé à un instant précis.
+extends RefCounted
+
+const Regions = preload("res://scripts/regions.gd")
+
+var r
+var main
+
+
+func run(runner) -> void:
+	r = runner
+	main = r.main
+	main.autotest = false
+	main.spawn_timer = 1.0e9
+	var p = main.player
+	p.set_physics_process(false)
+	var finale = main.finale
+	# Toutes les régions purifiées : la Flétrissure s'est retirée sous la graine.
+	for id in Regions.ids():
+		Game.flags[Regions.heart_flag(id)] = true
+		Game.flags[Regions.boss_flag(id)] = true
+		Game.flags[Regions.ending_flag(id)] = true
+	Game.level = 24
+	Game.kills = 4210
+	Game.flags[Objectives.STAT_DEATHS] = 9
+	Game.flags[Objectives.ELITES] = 31
+	main.elapsed = 5.0 * 3600.0 + 23.0 * 60.0
+	await r._frames(4)
+	finale.frozen = true
+	finale._open()
+	finale.hold = 0.55
+	await _shot_at("finale_breche", finale.descent_point() + Vector2(10, 4), finale.descent_point() + Vector2(0, -200))
+
+	# Sous la graine : le creux, la Flétrissure endormie, le puits de lumière où l'on arrive.
+	finale.descend()
+	main.screen_fx.fade(Color(0, 0, 0), 0.0, 0.0, 0.01)
+	await _shot_at("finale_arene", finale.landing() + Vector2(0, -20), finale.center)
+
+	# Le combat. Le joueur se tient au sud-est d'elle.
+	var pos: Vector2 = finale.center + Vector2(150, 160)
+	p.position = pos
+	finale._start_fight()
+	var boss = finale.boss
+	boss.frozen = true
+	boss.intro = 0.0
+	boss.t = 0.7
+	main.fx.rings = []
+	# Phase 1 : éventail d'épines annoncé, et des nuages de spores déjà posés.
+	boss.clouds = [{"pos": finale.center + Vector2(-210, 120), "time": 2.0}, {"pos": finale.center + Vector2(-120, 250), "time": 2.0}]
+	boss._begin("epines")
+	boss.timer = 0.25
+	await _shot_at("finale_epines", pos, finale.center)
+	# Phase 1 : les épines en vol, des spores annoncées autour du joueur.
+	boss._strike()
+	boss._strike_step(0.0)
+	for th in boss.thorns:
+		th["pos"] += th["vel"] * 0.4
+	boss._end_attack()
+	boss._begin("spores")
+	boss.spore_marks = [pos + Vector2(10, 0), pos + Vector2(-150, 70), pos + Vector2(60, -160)]
+	boss.timer = 0.35
+	await _shot_at("finale_spores", pos, finale.center)
+
+	# Phase 2 : le siphon (elle boit), puis la rafale annoncée.
+	boss.thorns = []
+	boss.clouds = []
+	boss._end_attack()
+	boss.spore_marks = []
+	boss.phase = 2
+	boss.hp = boss.max_hp * 0.55
+	boss._begin("siphon")
+	boss._strike()
+	boss.timer = 1.1
+	await _shot_at("finale_siphon", pos + Vector2(60, 60), finale.center)
+	boss._end_attack()
+	boss._begin("rafale")
+	boss.timer = 0.3
+	await _shot_at("finale_rafale", pos, finale.center)
+	boss._end_attack()
+
+	# Phase 3 : rayons de lumière annoncés, le mur qui va se resserrer ; puis la ligne de racines.
+	boss.phase = 3
+	boss.hp = boss.max_hp * 0.25
+	finale.shrinking = true
+	finale.shrink_warn = 0.8
+	boss._begin("lumiere")
+	boss.timer = 0.3
+	await _shot_at("finale_lumiere", pos, finale.center)
+	boss._end_attack()
+	boss.rays = []
+	boss._begin("racines")
+	boss._strike()
+	for i in boss.roots.size():
+		boss.roots[i]["fuse"] = -1.0 if i < 2 else 0.15 * (i - 1)
+		boss.roots[i]["burst"] = 0.12 if i < 2 else -1.0
+	await _shot_at("finale_racines", pos, finale.center)
+
+	# Sa mort, à mi-chemin : les bras retombent en cendre, la sève jaillit des fentes.
+	boss._clear_attacks()
+	finale.shrinking = false
+	boss.take_damage(boss.max_hp * 2.0, false)
+	boss.dying = boss.death_time * 0.5
+	main.fx.rings = []
+	boss.redraw()
+	await _shot_at("finale_mort", pos, finale.center, false)
+	boss.queue_free()
+	finale.life_wave = -1.0
+	finale.bloom = 1.0
+	main.fx.rings = []
+	await _shot_at("finale_vaincue", pos, finale.center)
+
+	# L'épilogue : les textes et les statistiques de toute l'aventure, le générique, sa fin.
+	var q = main.quest_ui
+	q.start_epilogue()
+	q.epilogue.set_time(11.0)
+	await r._frames(2)
+	await r._shot("epilogue_texte", "fin")
+	q.epilogue.set_time(q.epilogue.E_CREDITS + 9.0)
+	await r._frames(2)
+	await r._shot("epilogue_generique", "fin")
+	q.epilogue.set_time(q.epilogue.end_time + 2.0)
+	await r._frames(2)
+	await r._shot("epilogue_fin", "fin")
+
+
+## Place le joueur (tourné vers « look »), redessine les poses figées, puis capture l'écran de jeu.
+func _shot_at(shot_name: String, pos: Vector2, look: Vector2, quiet := true) -> void:
+	var p = main.player
+	var finale = main.finale
+	p.position = pos
+	p.aim = (look - pos).normalized()
+	p.reset_physics_interpolation()
+	main.camera.reset_smoothing()
+	finale.t = 1.0
+	if is_instance_valid(finale.boss) and finale.state == "combat":
+		finale.update_bar()
+		finale.boss.redraw()
+	finale.queue_redraw()
+	if quiet:
+		main.hud.banner_queue = []
+		main.hud.banner_time = 0.0
+	await r._frames(6)
+	await r._shot(shot_name, "jeu")

@@ -92,6 +92,9 @@ func _ready() -> void:
 	var sum := Flow.save_summary()
 	if not continue_button.disabled and sum.has("level"):
 		continue_button.text = "Continuer  (niveau %d)" % int(sum["level"])
+		if sum.get("ended", false):
+			# L'aventure est finie (finale gagnée) : la partie continue, librement.
+			continue_button.text = "Continuer  (niveau %d · fin)" % int(sum["level"])
 	_focus_first()
 	menutest = "--menutest" in OS.get_cmdline_user_args()
 	if menutest:

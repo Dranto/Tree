@@ -5,7 +5,9 @@ extends RefCounted
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 const CONDITION_TYPES := ["nodes", "flag", "flag_count", "keystone", "counter"]
-const TARGET_TYPES := ["none", "group", "heart", "arena", "seed"]
+const TARGET_TYPES := ["none", "group", "heart", "arena", "seed", "finale"]
+## Listes du générique remplies par le jeu (data/finale.json › credits › auto).
+const CREDIT_AUTO := ["regions", "bosses"]
 
 static func validate() -> Array:
 	var errors: Array = []
@@ -45,6 +47,8 @@ static func validate() -> Array:
 			errors.append("objectif %s : cible inconnue « %s »" % [id, tt])
 		elif tt == "group" and str(o["target"].get("group", "")) == "":
 			errors.append("objectif %s : « group » manque" % id)
+		if o.has("needs_flag") and str(o["needs_flag"]) == "":
+			errors.append("objectif %s : « needs_flag » vide" % id)
 	if mains == 0:
 		errors.append("objectives.json : aucun objectif principal")
 	var adv = data.get("adventure_ending", {})
@@ -53,4 +57,55 @@ static func validate() -> Array:
 	for reg in Regions.ids():
 		if str(Regions.section(reg, "ending").get("title", "")) == "":
 			errors.append("data/regions/%s.json : « ending » (sub, title, body) manque" % reg)
+	return errors
+
+
+## Contrôle de la finale (data/finale.json) : boss (script BossBase, trois phases, couleurs, arène),
+## textes de l'épilogue et du générique.
+static func validate_finale() -> Array:
+	var errors: Array = []
+	var w := "data/finale.json"
+	var data: Dictionary = Content._load("finale")
+	if data.is_empty():
+		return [w + " : fichier absent ou illisible"]
+	var b = data.get("boss", {})
+	if not b is Dictionary:
+		return [w + " : « boss » doit être un objet"]
+	var path := str(b.get("script", ""))
+	if not ResourceLoader.exists(path):
+		errors.append("%s, boss : script introuvable « %s »" % [w, path])
+	elif not "extends BossBase" in FileAccess.get_file_as_string(path):
+		errors.append("%s, boss : « %s » doit étendre BossBase (scripts/boss_base.gd)" % [w, path])
+	if str(b.get("name", "")) == "":
+		errors.append("%s, boss : « name » manque" % w)
+	if b.has("bar_color") and not Regions.color_ok(b["bar_color"]):
+		errors.append("%s, boss : « bar_color » mal écrite" % w)
+	var phases = b.get("phases", [])
+	if not phases is Array or phases.size() != 3:
+		errors.append("%s, boss : « phases » doit nommer les trois phases" % w)
+	var ar = b.get("arena", {})
+	if ar is Dictionary:
+		if ar.has("life_color") and not Regions.color_ok(ar["life_color"]):
+			errors.append("%s, boss › arena : « life_color » mal écrite" % w)
+		if float(ar.get("radius_min", 0.0)) > float(ar.get("radius", 520.0)):
+			errors.append("%s, boss › arena : « radius_min » plus grand que « radius »" % w)
+	for k in ["opened_banner", "descent_banner"]:
+		if str(data.get(k, "")) == "":
+			errors.append("%s : « %s » manque" % [w, k])
+	var ep = data.get("epilogue", {})
+	for f in ["sub", "title", "body"]:
+		if not ep is Dictionary or str(ep.get(f, "")) == "":
+			errors.append("%s, epilogue : « %s » manque" % [w, f])
+	var credits = data.get("credits", [])
+	if not credits is Array or credits.is_empty():
+		errors.append("%s : « credits » doit être une liste non vide" % w)
+	else:
+		for i in credits.size():
+			var c = credits[i]
+			if not c is Dictionary or (str(c.get("title", "")) == "" and str(c.get("head", "")) == ""):
+				errors.append("%s, credits[%d] : « title » ou « head » manque" % [w, i])
+			elif c.has("auto") and not str(c["auto"]) in CREDIT_AUTO:
+				errors.append("%s, credits[%d] : liste automatique inconnue « %s » (%s)" % [w, i, c["auto"], ", ".join(CREDIT_AUTO)])
+			elif c.has("lines") and not c["lines"] is Array:
+				errors.append("%s, credits[%d] : « lines » doit être une liste" % [w, i])
 	return errors

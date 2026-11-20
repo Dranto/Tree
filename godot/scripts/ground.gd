@@ -437,6 +437,9 @@ func _paint_ring(world_pos: Vector2, radius: float, strength: float, r_in: float
 
 func life_at(world_pos: Vector2) -> float:
 	var c := _to_map(world_pos)
+	# Hors de la carte (l'arène de la finale, sous la graine) : pas de terre vivante.
+	if c.x < -1.0 or c.y < -1.0 or c.x > RES or c.y > RES:
+		return 0.0
 	var x := clampi(int(c.x), 0, RES - 1)
 	var y := clampi(int(c.y), 0, RES - 1)
 	return data[y * RES + x] / 255.0

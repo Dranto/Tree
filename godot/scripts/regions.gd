@@ -155,7 +155,11 @@ static func inside_distance(pos: Vector2, id: String) -> float:
 	return minf(minf(pos.dot(n[0]), pos.dot(n[1])), pos.length() - INNER)
 
 
+## Région d'une position ("" dans l'oasis et hors du carré du monde, comme l'arène de la finale
+## sous la graine, voir finale_arena.gd).
 static func region_at(pos: Vector2) -> String:
+	if absf(pos.x) > WORLD_HALF or absf(pos.y) > WORLD_HALF:
+		return ""
 	for id in ids():
 		if inside_distance(pos, id) > 0.0:
 			return id

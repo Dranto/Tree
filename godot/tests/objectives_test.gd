@@ -54,7 +54,7 @@ func _run() -> void:
 	print("Départ")
 	# Les objectifs de Ronce et les objectifs communs (les autres régions ont les leurs).
 	var ronce_list: Array = obj.list().filter(func(o): return str(o.get("region", "")) in ["", "ronce"])
-	check(ronce_list.size() == 9 and ronce_list.filter(func(o): return o.get("main", false)).size() == 6, "9 objectifs dont 6 principaux")
+	check(ronce_list.size() == 10 and ronce_list.filter(func(o): return o.get("main", false)).size() == 7, "10 objectifs dont 7 principaux (la finale comprise)")
 	check(obj.current().get("id", "") == "premier_noeud", "le premier objectif est le premier nœud")
 	check(obj.main_done_count() == 0, "aucun objectif accompli")
 	check(main.quest_ui != null and obj.main == main, "l'interface des objectifs est branchée")

@@ -28,9 +28,13 @@ const FLAG_PREFIX := "obj_"
 ## Drapeaux de statistiques de partie gardés pour l'écran de fin.
 const STAT_DEATHS := "stat_morts"
 const ELITES := "elites_tuees"
-## Fin de l'aventure déjà montrée (toutes les régions purifiées). La séquence « région purifiée »
-## de chaque région a son drapeau : Regions.ending_flag(id) (« <région>_fin_vue »).
+## Épilogue de l'aventure déjà montré (après la finale, voir epilogue.gd). La séquence « région
+## purifiée » de chaque région a son drapeau : Regions.ending_flag(id) (« <région>_fin_vue »).
 const ENDING_SEEN := "fin_aventure_vue"
+## Finale (data/finale.json, finale_arena.gd) : ouverte quand toutes les régions sont purifiées,
+## vaincue quand la Flétrissure tombe.
+const FINALE_OPEN := "finale_ouverte"
+const FINALE_WON := "finale_vaincue"
 
 var main = null
 var _timer := 0.0
@@ -119,6 +123,10 @@ func is_done(id: String) -> bool:
 ## Un objectif dont le monde n'a pas (encore) le support, comme un sanctuaire, ne s'affiche pas
 ## comme objectif en cours. Un objectif déjà accompli reste visible.
 func available(o: Dictionary) -> bool:
+	# « needs_flag » : l'objectif n'existe pas tant que ce drapeau n'est pas posé (la finale).
+	var nf := str(o.get("needs_flag", ""))
+	if nf != "" and not is_done(o["id"]) and not bool(Game.flags.get(nf, false)):
+		return false
 	var g: String = o.get("needs_group", "")
 	if g == "" or is_done(o["id"]) or main == null or not is_instance_valid(main):
 		return true
@@ -333,6 +341,12 @@ func target_pos(o: Dictionary):
 	match t.get("type", "none"):
 		"seed":
 			return Vector2.ZERO
+		"finale":
+			# La brèche au pied de la graine ; une fois descendu, le boss au centre de l'arène.
+			var f = main.get("finale")
+			if f == null:
+				return Vector2.ZERO
+			return f.center if f.holds(main.player.position) else f.descent_point()
 		"heart":
 			var h = main.hearts.get(str(o.get("region", "")), main.heart) if "hearts" in main else main.heart
 			return h.center if h != null else null
@@ -382,16 +396,20 @@ func ending_region() -> String:
 
 
 ## Textes de la séquence de fin pour cette région : ceux de la région (« ending » de son fichier),
-## ou ceux de la fin de l'aventure (« adventure_ending » de objectives.json) quand toutes les
-## régions sont purifiées et qu'il y en a plus d'une. {sub, title, body}.
+## ou, quand toutes les régions sont purifiées, l'annonce de la finale (« adventure_ending » de
+## objectives.json : la Flétrissure se retire sous la graine). {sub, title, body}.
 func ending_texts(region: String) -> Dictionary:
-	if Regions.all_purified(Game.flags) and Regions.ids().size() > 1:
+	if Regions.all_purified(Game.flags):
 		return Content._load("objectives").get("adventure_ending", {})
 	return Regions.section(region, "ending")
 
 
-## Note la séquence de fin de cette région comme vue (et la fin de l'aventure, si c'est elle).
+## Note la séquence de fin de cette région comme vue. La fin de l'aventure (ENDING_SEEN) n'est
+## posée que par l'épilogue, après la finale.
 func mark_ending_seen(region: String) -> void:
 	Game.flags[Regions.ending_flag(region)] = true
-	if Regions.all_purified(Game.flags):
-		Game.flags[ENDING_SEEN] = true
+
+
+## L'épilogue est dû : la Flétrissure est vaincue et l'épilogue pas encore montré.
+func epilogue_due() -> bool:
+	return bool(Game.flags.get(FINALE_WON, false)) and not bool(Game.flags.get(ENDING_SEEN, false))

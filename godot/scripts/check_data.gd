@@ -43,6 +43,7 @@ func _init() -> void:
 	errors.append_array(load("res://scripts/difficulty.gd").validate())
 	# Objectifs de la tranche (data/objectives.json).
 	errors.append_array(load("res://scripts/objective_check.gd").validate())
+	errors.append_array(load("res://scripts/objective_check.gd").validate_finale())
 	if errors.is_empty():
 		_check_tree()
 		_check_engine()
