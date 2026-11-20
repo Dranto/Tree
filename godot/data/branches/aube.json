@@ -111,7 +111,7 @@
         {
           "stat": "max_hp",
           "op": "inc",
-          "value": 0.1
+          "value": 0.2
         },
         {
           "stat": "damage",
@@ -142,7 +142,7 @@
         {
           "stat": "armor",
           "op": "add",
-          "value": 0.05
+          "value": 0.08
         }
       ]
     },
