@@ -1,5 +1,6 @@
 ## Scénario « finale » du banc visuel (runner.gd) : la brèche ouverte au pied de la graine, le creux
-## sous la graine et la Flétrissure endormie, chacune de ses attaques dans ses trois phases, sa mort
+## sous la graine et la Flétrissure endormie, chacune de ses attaques dans ses trois phases, le
+## colosse entier en phase 3, sa mort
 ## et le creux refleuri, puis l'épilogue (textes et statistiques), le générique et sa fin.
 ## Tout est figé à un instant précis.
 extends RefCounted
@@ -97,6 +98,9 @@ func run(runner) -> void:
 		boss.roots[i]["fuse"] = -1.0 if i < 2 else 0.15 * (i - 1)
 		boss.roots[i]["burst"] = 0.12 if i < 2 else -1.0
 	await _shot_at("finale_racines", pos, finale.center)
+	# Le colosse en entier, en phase 3, entre deux coups : ses six bras éveillés.
+	boss._clear_attacks()
+	await _shot_at("finale_colosse", finale.center + Vector2(250, 30), finale.center)
 
 	# Sa mort, à mi-chemin : les bras retombent en cendre, la sève jaillit des fentes.
 	boss._clear_attacks()

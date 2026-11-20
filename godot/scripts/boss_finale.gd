@@ -23,6 +23,8 @@
 extends BossBase
 
 const PHASE_LIMITS := [0.66, 0.33]
+## Rayon du corps (contact, coups reçus) ; le dessin s'étend bien au-delà (bras, couronne, racines).
+const BODY_RADIUS := 100.0
 ## Vie : BASE_HP + HP_PER_LEVEL par niveau du joueur (multipliée par la difficulté).
 const BASE_HP := 2400.0
 const HP_PER_LEVEL := 850.0
@@ -86,7 +88,7 @@ var flash_kind := ""
 
 
 func _setup() -> void:
-	body_radius = 82.0
+	body_radius = BODY_RADIUS
 	intro_time = 1.8
 	death_time = 2.4
 	base_hp = BASE_HP
@@ -457,10 +459,16 @@ func bot_ring(arena_radius: float) -> float:
 # --- Dessin ---
 #
 # Charte : les Flétris sont sombres et saturés, contour clair, braise dans les fentes. La
-# Flétrissure est un cœur de cendre fendu (couleur ennemi assombrie), noué de racines, où couvent des
-# braises ; ses six bras sont des racines effilées. Un bras endormi reste gris de cendre ; éveillé,
-# il prend la couleur de son élément et porte son motif au bout (épines, chapeau de champignon,
-# goutte, plume, cristal, griffe de racines) ; il s'allume pendant l'annonce de son attaque.
+# Flétrissure est un colosse : ses racines s'étalent sur le sol du creux dans une flaque de brume de
+# cendre (draw_floor, sous les annonces) ; derrière elle, une couronne de bois mort ; devant, six
+# longs bras de racine noués et épineux, un manteau de plaques d'écorce, et le cœur, une graine
+# noire côtelée, liée de racines, fendue de braises, avec un grand œil de braise au milieu. Un bras
+# endormi reste gris de cendre ; éveillé, il prend la couleur de son élément (veine qui pulse) et
+# porte son motif au bout (couronne d'épines, grappe de champignons, bulbe de sève, éventail de
+# plumes, grappe de cristaux, griffe de racines) ; il s'allume pendant l'annonce de son attaque.
+# Chaque phase ajoute des fentes et des braises (au sol, sur la couronne, dans la cendre qui monte).
+# Endormie (draw_sleeper), c'est le même dessin replié, l'œil clos ; l'intro la déplie.
+
 
 ## Avancée de l'annonce en cours (0 → 1), 0 hors annonce.
 func _announce_k() -> float:
@@ -469,137 +477,375 @@ func _announce_k() -> float:
 	return clampf(1.0 - timer / stage_time, 0.0, 1.0)
 
 
-## Angle d'un bras (vu de dessus, les six en étoile, un peu de balancement).
-func _arm_angle(i: int) -> float:
-	return -PI / 2.0 + TAU * (i + 0.5) / ARMS.size() + 0.06 * sin(t * 1.3 + i * 1.7)
+## Éveil pendant l'entrée en scène (0 : endormie comme dans le creux, 1 : dressée).
+func _wake_k() -> float:
+	if intro_time <= 0.0:
+		return 1.0
+	return Anim.ease_out(clampf(1.0 - intro / intro_time, 0.0, 1.0))
 
 
 func _draw() -> void:
-	var r := radius
-	var k := _announce_k()
-	var die := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
-	var ash := FletriArt.ash_color()
-	Art.shadow(self, Vector2(0, r * 0.2), r * 1.3)
-	# Les six bras, derrière le cœur.
+	var lit := -1
 	for i in ARMS.size():
-		var arm: Dictionary = ARMS[i]
-		var awake: bool = phase >= int(arm["phase"])
-		var lit: float = k if attack == arm["trait"] or (attack == "rejetons" and i == 5) else 0.0
-		_draw_arm(self, Vector2(0, -r * 0.35), _arm_angle(i), r, str(arm["element"]), awake, lit, die)
-	# Le cœur de cendre : une graine noire et fendue, qui bat.
-	var beat := Anim.breathe(t * (1.6 if phase >= 3 else 1.0), 0.04)
-	var heart := Art.ellipse(Vector2(0, -r * 0.35), r * 0.78 * beat, r * 0.92 * beat, 28)
-	var body := _color(Art.c("ennemi").darkened(0.45).lerp(Art.ec("cendre", "sombre"), 0.35))
-	Art.volume(self, heart, body, 0.5)
-	Art.outline(self, heart, Color(Art.c("ennemi_contour"), 1.0 - die * 0.8), Art.TRAIT_FORT)
-	# Racines qui l'enserrent.
-	var knot := _color(Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.3))
+		if attack == ARMS[i]["trait"] or (attack == "rejetons" and i == 5):
+			lit = i
+	var die := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
+	draw_colossus(self, Vector2.ZERO, radius, t, phase, _announce_k(), lit, die, _wake_k(), _color)
+
+
+## Le sol autour d'elle, sous les annonces (draw_marks) : une flaque de brume de cendre et les
+## grosses racines qui l'ancrent au creux ; des braises y couvent dès la phase 2.
+static func draw_floor(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, die := 0.0) -> void:
+	var fade := 1.0 - die
+	var mist := FletriArt.ash_color().lerp(Art.c("ennemi"), 0.25).darkened(0.55)
 	for j in 3:
-		var y := -r * (0.75 - 0.4 * j)
-		var w := r * (0.55 + 0.12 * (1 - absi(j - 1)))
-		draw_polyline(PackedVector2Array([Vector2(-w, y + 6), Vector2(-w * 0.3, y - 4), Vector2(w * 0.3, y + 4), Vector2(w, y - 6)]), knot, 6.0, true)
-	# Fentes de braise : plus nombreuses à chaque phase ; à la mort, la sève jaillit des fentes.
-	var crack_col := Art.ec("seve", "clair") if dead else Art.ec("cendre")
-	var glow := (0.55 + 0.35 * sin(t * (5.0 if phase >= 3 else 3.0))) if not dead else 1.0 - die * 0.5
-	var cracks := [[Vector2(-0.1, -0.95), Vector2(0.05, -0.6), Vector2(-0.08, -0.3)], [Vector2(0.3, -0.5), Vector2(0.12, -0.2), Vector2(0.25, 0.1)], [Vector2(-0.35, -0.2), Vector2(-0.15, 0.05), Vector2(-0.3, 0.3)]]
-	for j in mini(cracks.size(), phase + (1 if dead else 0)):
+		ci.draw_circle(c + Vector2(0, -r * 0.2), r * (1.5 + 0.55 * j + 0.05 * sin(t * 0.8 + j)), Color(mist, 0.16 * fade))
+	var bark := Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.25).darkened(0.25)
+	var ember := Art.ec("cendre")
+	for i in 11:
+		var a := TAU * i / 11.0 + 0.23 * sin(i * 7.3)
+		var length := r * (2.3 + 0.7 * fposmod(i * 0.618, 1.0))
+		var path := _wiggle(c + Vector2.from_angle(a) * r * 0.55, a, length, r * 0.16, i * 1.9)
+		_limb(ci, path, r * 0.15, r * 0.025, Color(bark, 0.95 * fade), Color(Art.c("ennemi_contour"), 0.18 * fade))
+		# Une radicelle de côté.
+		var fork := path[3]
+		var sub := _wiggle(fork, a + (0.7 if i % 2 == 0 else -0.7), length * 0.35, r * 0.08, i * 3.1)
+		_limb(ci, sub, r * 0.06, r * 0.015, Color(bark, 0.9 * fade))
+		if phase >= 2 and die <= 0.0:
+			var f := fposmod(t * 0.35 + i * 0.29, 1.0)
+			var q := path[1].lerp(path[path.size() - 2], f)
+			ci.draw_circle(q, r * 0.05, Color(ember, 0.55 * sin(PI * f)))
+
+
+## La Flétrissure entière, en coordonnées locales autour de « c » (son pied) : la couronne de bois
+## mort derrière, les six bras, le manteau d'écorce, le cœur noué de racines et fendu de braises,
+## l'œil, et la cendre qui monte. Statique : sert aussi au boss endormi (draw_sleeper).
+##   lit : bras allumé par l'annonce (-1 : aucun), k : avancée de l'annonce ;
+##   die : avancée de la mort (0 → 1) ; wake : 0 endormie, 1 dressée ;
+##   tint : couleur d'une partie du corps (éclair du coup, poison, cendre ; BossBase._color).
+static func draw_colossus(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, k: float, lit: int, die: float, wake: float, tint: Callable) -> void:
+	var h := c + Vector2(0, -r * 0.45)
+	var beat := Anim.breathe(t * (1.7 if phase >= 3 else 1.0), 0.035 * wake)
+	var ash := FletriArt.ash_color()
+	Art.shadow(ci, c + Vector2(0, r * 0.15), r * 1.7)
+	_draw_crown(ci, h, r, t, phase, die, wake, tint)
+	for i in ARMS.size():
+		var awake: bool = phase >= int(ARMS[i]["phase"])
+		_draw_arm(ci, h, _arm_angle_at(i, t, wake), r, str(ARMS[i]["element"]), awake, k if i == lit else 0.0, die, wake, t + i * 1.3, tint)
+	# Le manteau : des plaques d'écorce, en couronne autour du cœur ; elles s'écartent à la mort.
+	var plate_col: Color = tint.call(Art.c("ennemi").darkened(0.55).lerp(Art.ec("racine", "sombre"), 0.4))
+	for i in 10:
+		var a := TAU * i / 10.0 + PI / 10.0 + 0.04 * sin(t * 0.9 + i)
+		var d := Vector2.from_angle(a)
+		var o := d.orthogonal()
+		var base := h + d * r * (0.32 + 0.45 * die)
+		var plen := r * (1.18 + 0.08 * sin(i * 2.7)) * beat
+		var plate := PackedVector2Array([base + o * r * 0.2, base + d * plen * 0.55 + o * r * 0.27, h + d * plen + d * r * 0.45 * die, base + d * plen * 0.55 - o * r * 0.27, base - o * r * 0.2])
+		var alpha := 1.0 - die * 0.85
+		Art.volume(ci, plate, Color(plate_col, alpha), 0.45)
+		Art.outline(ci, plate, Color(Art.c("ennemi_contour"), 0.45 * alpha), Art.TRAIT_FIN)
+		ci.draw_line(base + d * r * 0.1, base + d * plen * 0.8, Color(plate_col.lightened(0.18), 0.7 * alpha), 2.0, true)
+	# Le cœur : une graine noire, côtelée, qui bat.
+	var rx := r * 0.86 * beat
+	var ry := r * 1.0 * beat
+	var heart := Art.ellipse(h, rx, ry, 32)
+	var body: Color = tint.call(Art.c("ennemi").darkened(0.45).lerp(Art.ec("cendre", "sombre"), 0.35))
+	Art.volume(ci, heart, body, 0.55)
+	var rib: Color = body.darkened(0.35)
+	for j in 5:
+		var u := (j + 1) / 6.0 * 2.0 - 1.0
+		var pts := PackedVector2Array()
+		for q in 9:
+			var v := q / 8.0 * 2.0 - 1.0
+			pts.append(h + Vector2(u * rx * sqrt(maxf(1.0 - v * v, 0.0)) * 0.92, v * ry * 0.9))
+		ci.draw_polyline(pts, Color(rib, 0.8), 2.5, true)
+	# Les fentes de braise : deux, puis une de plus à chaque phase ; à la mort, la sève en jaillit.
+	var crack_col := Art.ec("seve", "clair") if die > 0.0 else Art.ec("cendre")
+	var glow := (0.6 + 0.35 * sin(t * (5.0 if phase >= 3 else 3.0))) * wake if die <= 0.0 else 1.0 - die * 0.5
+	var cracks := [
+		[Vector2(-0.12, -0.95), Vector2(0.04, -0.7), Vector2(-0.06, -0.45)],
+		[Vector2(0.42, -0.55), Vector2(0.22, -0.3), Vector2(0.36, -0.02), Vector2(0.2, 0.2)],
+		[Vector2(-0.45, -0.35), Vector2(-0.22, -0.1), Vector2(-0.38, 0.2)],
+		[Vector2(0.05, 0.4), Vector2(-0.1, 0.62), Vector2(0.06, 0.85)],
+		[Vector2(-0.6, 0.15), Vector2(-0.4, 0.45), Vector2(-0.5, 0.7)],
+		[Vector2(0.62, 0.3), Vector2(0.45, 0.55), Vector2(0.55, 0.75)],
+	]
+	var shown := mini(cracks.size(), 1 + phase + (1 if die > 0.0 else 0))
+	for j in shown:
 		var pts := PackedVector2Array()
 		for q in cracks[j]:
-			pts.append(Vector2(q.x * r, q.y * r))
-		draw_polyline(pts, Color(crack_col, glow), 3.5 + 3.0 * die, true)
-	# Yeux : deux braises au creux du cœur, qui s'ouvrent pendant l'annonce.
-	for sgn in [-1, 1]:
-		var e := Vector2(sgn * r * 0.24, -r * 0.55)
-		draw_circle(e, r * (0.07 + 0.04 * k), Color(Art.c("ennemi_oeil"), (0.4 + 0.6 * k) * (1.0 - die)))
-		draw_line(e + Vector2(-r * 0.1, -sgn * r * 0.03), e + Vector2(r * 0.1, sgn * r * 0.03), Color(Art.c("ennemi_oeil"), 1.0 - die), 3.0, true)
-	# Mort : des gouttes de sève montent des fentes et pâlissent ; le cœur grisaille (BossBase._color).
-	if dead:
-		for i in 14:
-			var a := TAU * i / 14.0 + 0.2
+			pts.append(h + Vector2(q.x * rx, q.y * ry))
+		ci.draw_polyline(pts, Color(crack_col, 0.22 * glow), 10.0 + 6.0 * die, true)
+		ci.draw_polyline(pts, Color(crack_col.lightened(0.2), glow), 3.0 + 3.0 * die, true)
+	# Les racines qui l'enserrent : deux liens épais, en travers, par-dessus les fentes.
+	var knot: Color = tint.call(Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.3))
+	for j in 2:
+		var y0 := ry * (-0.25 + 0.6 * j)
+		var pts := PackedVector2Array()
+		for q in 11:
+			var u := q / 10.0 * 2.0 - 1.0
+			var x := u * rx * sqrt(maxf(1.0 - pow(y0 / ry, 2.0), 0.05)) * 1.04
+			pts.append(h + Vector2(x, y0 + ry * 0.12 * u * (1 if j == 0 else -1) + 4.0 * sin(u * 5.0 + j)))
+		ci.draw_polyline(pts, knot.darkened(0.3), 11.0, true)
+		ci.draw_polyline(pts, knot, 7.0, true)
+		for q in [2, 5, 8]:
+			ci.draw_circle(pts[q], 6.5, knot.lightened(0.08))
+	Art.outline(ci, heart, Color(Art.c("ennemi_contour"), 1.0 - die * 0.8), Art.TRAIT_FORT)
+	_draw_eye(ci, h + Vector2(0, -ry * 0.3), r, t, phase, k, die, wake)
+	# La cendre qui monte autour d'elle ; des braises parmi, de plus en plus, à chaque phase.
+	if die < 1.0:
+		for i in 18:
+			var f := fposmod(t * (0.18 + 0.04 * (i % 4)) + i * 0.137, 1.0)
+			var x := sin(i * 12.9898) * r * 1.5 + sin(t + i) * r * 0.08
+			var q := c + Vector2(x, r * 0.2 - f * r * 2.6)
+			var hot := i % 4 < phase - 1 and die <= 0.0
+			var col := ash.lightened(0.15) if not hot else Art.ec("cendre", "clair")
+			ci.draw_circle(q, r * (0.022 + 0.018 * (i % 3)), Color(col, 0.55 * sin(PI * f) * (1.0 - die) * (0.4 + 0.6 * wake)))
+	# Mort : des gouttes de sève montent des fentes et pâlissent.
+	if die > 0.0:
+		for i in 16:
+			var a := TAU * i / 16.0 + 0.2
 			var u := clampf(die * 1.4 - (i % 3) * 0.12, 0.0, 1.0)
 			if u <= 0.0 or u >= 1.0:
 				continue
-			var q := Vector2(0, -r * 0.35) + Vector2.from_angle(a) * r * (0.3 + 0.9 * u) - Vector2(0, r * 0.7 * u)
-			draw_circle(q, r * (0.04 + 0.07 * u), Color(Art.ec("seve", "clair"), 0.75 * (1.0 - u)))
-		draw_circle(Vector2(0, -r * 0.35), r * 0.5 * die, Color(ash, 0.25 * die))
+			var q := h + Vector2.from_angle(a) * r * (0.3 + 1.0 * u) - Vector2(0, r * 0.8 * u)
+			ci.draw_circle(q, r * (0.04 + 0.07 * u), Color(Art.ec("seve", "clair"), 0.75 * (1.0 - u)))
+		ci.draw_circle(h, r * 0.55 * die, Color(ash, 0.25 * die))
 
 
-## Un bras : une racine effilée, puis le motif de son élément au bout. Endormi, gris de cendre.
-## lit : allumage pendant l'annonce (0 → 1). Statique : sert aussi au boss endormi (draw_sleeper).
-static func _draw_arm(ci: CanvasItem, base: Vector2, ang: float, r: float, element: String, awake: bool, lit: float, die := 0.0) -> void:
+## L'œil : une fente de braise verticale au milieu du cœur, deux petits yeux de part et d'autre.
+## Fermé (un trait) quand elle dort ; il s'ouvre grand pendant l'annonce.
+static func _draw_eye(ci: CanvasItem, e: Vector2, r: float, t: float, phase: int, k: float, die: float, wake: float) -> void:
+	var eye_col := Art.c("ennemi_oeil")
+	var open := wake * (1.0 - die) * (0.55 + 0.1 * phase + 0.35 * k)
+	var w := r * 0.36
+	if open <= 0.05:
+		ci.draw_line(e + Vector2(-w * 0.8, 0), e + Vector2(w * 0.8, 0), Color(Art.ec("cendre"), 0.5 + 0.3 * sin(t * 2.0)), 3.0, true)
+		return
+	ci.draw_circle(e, w * (1.1 + 0.4 * k), Color(eye_col, 0.16 * open))
+	var hgt := r * 0.24 * open
+	var lid := PackedVector2Array()
+	for q in 13:
+		var a := TAU * q / 12.0
+		lid.append(e + Vector2(cos(a) * w, sin(a) * hgt * (1.0 - 0.35 * absf(cos(a)))))
+	ci.draw_colored_polygon(lid, Color("1a0d0d"))
+	ci.draw_circle(e, minf(hgt, w) * 0.85, eye_col)
+	ci.draw_circle(e, minf(hgt, w) * 0.5, eye_col.lightened(0.35))
+	# Pupille : une fente noire, qui s'amincit pendant l'annonce.
+	var pw := r * (0.05 - 0.025 * k)
+	ci.draw_colored_polygon(PackedVector2Array([e + Vector2(0, -hgt * 0.95), e + Vector2(pw, 0), e + Vector2(0, hgt * 0.95), e + Vector2(-pw, 0)]), Color("0b0606"))
+	Art.outline(ci, lid, Color(Art.c("ennemi_contour"), 0.8), Art.TRAIT_FIN)
+	for sgn in [-1, 1]:
+		var s := e + Vector2(sgn * r * 0.5, -r * 0.2)
+		ci.draw_circle(s, r * 0.075, Color(eye_col, 0.25 * open))
+		ci.draw_circle(s, r * (0.035 + 0.015 * k), Color(eye_col.lightened(0.2), open))
+
+
+## La couronne de bois mort au-dessus du cœur : cinq branches fourchues, braises au bout dès la phase 2.
+static func _draw_crown(ci: CanvasItem, h: Vector2, r: float, t: float, phase: int, die: float, wake: float, tint: Callable) -> void:
+	var wood: Color = tint.call(Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.2).darkened(0.35))
+	var rise := 0.65 + 0.35 * wake
+	for i in 5:
+		var u := (i - 2) / 2.0
+		var a := -PI / 2.0 + u * 0.75 + 0.03 * sin(t * 0.7 + i)
+		var from := h + Vector2(u * r * 0.45, -r * 0.7)
+		var length := r * (1.35 - 0.3 * absf(u)) * rise * (1.0 - 0.4 * die)
+		var path := _wiggle(from, a, length, r * 0.12, i * 2.3)
+		_limb(ci, path, r * 0.11, r * 0.02, Color(wood, 1.0 - die * 0.6), Color(Art.c("ennemi_contour"), 0.4 * (1.0 - die)), 0.5)
+		for sgn in [-1, 1]:
+			var at := path[2 if sgn < 0 else 3]
+			var tw := _wiggle(at, a + sgn * 0.7, length * 0.42, r * 0.05, i + sgn)
+			_limb(ci, tw, r * 0.05, r * 0.012, Color(wood, 1.0 - die * 0.6))
+			if phase >= 2 and die <= 0.0:
+				ci.draw_circle(tw[tw.size() - 1], r * 0.045, Color(Art.ec("cendre", "clair"), 0.5 + 0.4 * sin(t * 4.0 + i + sgn)))
+		if phase >= 3 and die <= 0.0:
+			Art.glow(ci, path[path.size() - 1], r * 0.18, "cendre")
+
+
+## Angle d'un bras (vu de dessus, les six en étoile, un peu de balancement ; repliés en dormant).
+static func _arm_angle_at(i: int, t: float, wake: float) -> float:
+	return -PI / 2.0 + TAU * (i + 0.5) / ARMS.size() + (0.06 * sin(t * 1.3 + i * 1.7)) * wake
+
+
+## Un bras : une longue racine courbe, nouée, épineuse, veinée de son élément, et le motif de
+## l'élément au bout. Endormi, gris de cendre et replié ; lit : allumage pendant l'annonce (0 → 1).
+static func _draw_arm(ci: CanvasItem, h: Vector2, ang: float, r: float, element: String, awake: bool, lit: float, die: float, wake: float, t: float, tint: Callable) -> void:
 	var dir := Vector2.from_angle(ang)
 	var side := dir.orthogonal()
-	var reach := r * (2.0 if awake else 1.6) * (1.0 - 0.35 * die)
-	var root_col := Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.35)
+	var stretch := lerpf(1.7, 2.6 if awake else 2.0, wake) * (1.0 - 0.4 * die)
+	var bend := r * (0.55 - 0.3 * wake + 0.12 * sin(t * 0.9)) * (1.0 + die)
+	var from := h + dir * r * 0.6
+	var tip := h + dir * r * stretch + side * bend * 0.35
+	var ctrl := h + dir * r * stretch * 0.6 + side * bend
+	var path := PackedVector2Array()
+	for q in 13:
+		var u := q / 12.0
+		path.append(from.lerp(ctrl, u).lerp(ctrl.lerp(tip, u), u))
+	var bark: Color = tint.call(Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.35))
 	var col := Art.ec(element) if awake else FletriArt.ash_color().lerp(Art.c("brume"), 0.4)
 	if die > 0.0:
 		col = col.lerp(FletriArt.ash_color(), die)
-		root_col = root_col.lerp(FletriArt.ash_color(), die)
-	var from := base + dir * r * 0.55
-	var mid := base + dir * reach * 0.62 + side * r * 0.12
-	var tip := base + dir * reach
-	var w := r * 0.22
-	var limb := PackedVector2Array([from - side * w, mid - side * w * 0.6, tip, mid + side * w * 0.6, from + side * w])
-	ci.draw_colored_polygon(limb, root_col)
-	Art.outline(ci, limb, Color(Art.c("ennemi_contour"), 0.55 * (1.0 - die)), Art.TRAIT_FIN)
-	# Veine de l'élément le long du bras.
+	_limb(ci, path, r * 0.27, r * 0.06, bark, Color(Art.c("ennemi_contour"), 0.5 * (1.0 - die)), 1.0)
+	# Nœuds d'écorce, et des épines le long du bras.
+	for f in [0.28, 0.52, 0.74]:
+		var i := int(f * 12.0)
+		var d := (path[i + 1] - path[i - 1]).normalized()
+		var o := d.orthogonal()
+		var w := lerpf(r * 0.27, r * 0.06, f) * 1.12
+		ci.draw_line(path[i] - o * w, path[i] + o * w, bark.darkened(0.35), 4.0, true)
+	for q in [2, 4, 6, 8, 10]:
+		var d := (path[q + 1] - path[q - 1]).normalized()
+		var o := d.orthogonal() * (1.0 if q % 4 == 2 else -1.0)
+		var w := lerpf(r * 0.27, r * 0.06, q / 12.0)
+		var b := path[q] + o * w * 0.85
+		ci.draw_colored_polygon(PackedVector2Array([b - d * r * 0.05, b + (o + d * 0.7).normalized() * r * 0.14, b + d * r * 0.05]), bark.darkened(0.2))
+	# La veine de l'élément, et sa sève qui monte vers le bout.
 	if awake:
-		ci.draw_polyline(PackedVector2Array([from, mid, tip]), Color(col, 0.55 + 0.45 * lit), 2.0 + 2.0 * lit, true)
+		var vein := path.slice(1, 12)
+		ci.draw_polyline(vein, Color(col, 0.2 + 0.2 * lit), 7.0 + 5.0 * lit, true)
+		ci.draw_polyline(vein, Color(col.lightened(0.15), 0.6 + 0.4 * lit), 2.0 + 2.0 * lit, true)
+		var f := fposmod(t * 0.7, 1.0)
+		var q := path[1 + int(f * 10.0)].lerp(path[2 + int(f * 10.0)], fposmod(f * 10.0, 1.0))
+		ci.draw_circle(q, r * 0.05, Color(Art.ec(element, "clair"), 0.8 * sin(PI * f)))
 	if lit > 0.0:
-		ci.draw_circle(tip, r * (0.25 + 0.2 * lit), Color(Art.ec(element, "clair"), 0.25 * lit))
-	var s := r * 0.32 * (1.0 + 0.25 * lit)
+		ci.draw_circle(tip, r * (0.4 + 0.3 * lit), Color(Art.ec(element, "clair"), 0.22 * lit))
+	_draw_motif(ci, tip, dir, r * 0.42 * (1.0 + 0.25 * lit), element, col, awake, lit, t)
+
+
+## Le motif d'un élément au bout d'un bras, tourné vers l'extérieur (dir).
+static func _draw_motif(ci: CanvasItem, tip: Vector2, dir: Vector2, s: float, element: String, col: Color, awake: bool, lit: float, t: float) -> void:
+	var side := dir.orthogonal()
+	var ang := dir.angle()
 	var dark := col.darkened(0.45)
+	var light := Art.ec(element, "clair") if awake else col.lightened(0.15)
 	match element:
 		"epine":
-			for j in 3:
-				var d := Vector2.from_angle(ang + (j - 1) * 0.55)
-				ci.draw_colored_polygon(PackedVector2Array([tip + d.orthogonal() * s * 0.25, tip + d * s * 1.4, tip - d.orthogonal() * s * 0.25]), col)
-		"poison":
-			# Chapeau de champignon, tourné vers l'extérieur, piqué de points clairs.
-			var cap := PackedVector2Array()
-			for j in 11:
-				var a := ang - PI / 2.0 + PI * j / 10.0
-				cap.append(tip + Vector2.from_angle(a) * s * 1.1)
-			Art.volume(ci, cap, col, 0.6 if awake else 0.0)
-			if awake:
-				for j in 3:
-					ci.draw_circle(tip + dir * s * 0.55 + side * s * (j - 1) * 0.45, s * 0.14, Art.ec(element, "clair"))
-		"seve":
-			# Goutte de sève, pointe vers le cœur.
-			ci.draw_colored_polygon(PackedVector2Array([tip - dir * s * 0.9, tip + side * s * 0.6, tip + dir * s * 0.7, tip - side * s * 0.6]), dark)
-			ci.draw_circle(tip + dir * s * 0.25, s * 0.62, col)
-			if awake:
-				ci.draw_circle(tip + dir * s * 0.1 - side * s * 0.2, s * 0.2, Art.ec(element, "clair"))
-		"vent":
-			# Plume : un rachis et des barbes qui s'écartent.
-			var end := tip + dir * s * 1.4
-			ci.draw_line(tip - dir * s * 0.4, end, dark, 2.5, true)
+			# Une couronne de cinq épines, la plus longue au milieu.
+			ci.draw_circle(tip, s * 0.32, dark)
 			for j in 5:
-				var q := tip.lerp(end, j / 5.0)
-				ci.draw_line(q, q + (side + dir * 0.6).normalized() * s * 0.6, col, 3.0, true)
-				ci.draw_line(q, q + (-side + dir * 0.6).normalized() * s * 0.6, col, 3.0, true)
-		"lumiere":
-			# Cristal : un losange clair, ses rayons pendant l'annonce.
-			var gem := PackedVector2Array([tip - dir * s * 0.5, tip + side * s * 0.55, tip + dir * s * 1.3, tip - side * s * 0.55])
-			Art.volume(ci, gem, col, 1.0 if awake else 0.0)
-			Art.outline(ci, gem, dark, Art.TRAIT_FIN)
-			if lit > 0.0:
-				for j in 4:
-					var d := Vector2.from_angle(ang + (j - 1.5) * 0.5)
-					ci.draw_line(tip + d * s, tip + d * s * (1.6 + lit), Color(Art.ec(element, "clair"), lit), 2.0, true)
-		"racine":
-			# Griffe de racines : trois crochets.
+				var d := Vector2.from_angle(ang + (j - 2) * 0.42)
+				var l := s * (1.6 - 0.25 * absi(j - 2))
+				var thorn := PackedVector2Array([tip + d.orthogonal() * s * 0.2, tip + d * l, tip - d.orthogonal() * s * 0.2])
+				ci.draw_colored_polygon(thorn, col)
+				ci.draw_line(tip, tip + d * l * 0.8, Color(light, 0.6), 1.5, true)
+		"poison":
+			# Une grappe de trois champignons, chapeaux piqués de points clairs.
 			for j in 3:
-				var a := ang + (j - 1) * 0.6
+				var off := side * s * (j - 1) * 0.75 + dir * s * (0.5 - 0.35 * absi(j - 1))
+				var size := s * (0.95 - 0.3 * absi(j - 1))
+				var base := tip + off
+				ci.draw_line(tip, base, dark, 4.0, true)
+				var cap := PackedVector2Array()
+				for q in 11:
+					cap.append(base + Vector2.from_angle(ang - PI / 2.0 + PI * q / 10.0) * size)
+				Art.volume(ci, cap, col, 0.6 if awake else 0.0)
+				Art.outline(ci, cap, dark, Art.TRAIT_FIN)
+				if awake:
+					for q in 3:
+						ci.draw_circle(base + dir * size * 0.5 + side * size * (q - 1) * 0.42, size * 0.12, light)
+			if awake:
+				for q in 4:
+					var f := fposmod(t * 0.5 + q * 0.25, 1.0)
+					ci.draw_circle(tip + dir * s * (1.2 + f) + side * s * sin(q * 2.0) * 0.6, s * 0.1, Color(light, 0.6 * (1.0 - f)))
+		"seve":
+			# Un bulbe de sève, lourd, qui goutte.
+			ci.draw_colored_polygon(PackedVector2Array([tip - dir * s * 0.9, tip + side * s * 0.6, tip + dir * s * 0.8, tip - side * s * 0.6]), dark)
+			Art.volume_circle(ci, tip + dir * s * 0.35, s * 0.8, col, 0.8 if awake else 0.0)
+			if awake:
+				ci.draw_circle(tip + dir * s * 0.15 - side * s * 0.3, s * 0.22, light)
+				var f := fposmod(t * 0.8, 1.0)
+				ci.draw_circle(tip + dir * s * (1.2 + 0.8 * f), s * 0.16 * (1.0 - 0.4 * f), Color(col, 1.0 - f))
+		"vent":
+			# Un éventail de trois plumes.
+			for j in 3:
+				var d := Vector2.from_angle(ang + (j - 1) * 0.45)
+				var end := tip + d * s * (1.7 - 0.25 * absi(j - 1))
+				var o := d.orthogonal()
+				ci.draw_line(tip - d * s * 0.2, end, dark, 2.5, true)
+				for q in 5:
+					var p := tip.lerp(end, 0.2 + q * 0.17)
+					var l := s * 0.45 * (1.0 - q * 0.12)
+					ci.draw_line(p, p + (o + d * 0.7).normalized() * l, col, 2.5, true)
+					ci.draw_line(p, p + (-o + d * 0.7).normalized() * l, col, 2.5, true)
+		"lumiere":
+			# Une grappe de cristaux, des rayons pendant l'annonce.
+			for j in 3:
+				var d := Vector2.from_angle(ang + (j - 1) * 0.5)
+				var o := d.orthogonal()
+				var l := s * (1.5 - 0.35 * absi(j - 1))
+				var gem := PackedVector2Array([tip - d * s * 0.2, tip + d * l * 0.45 + o * s * 0.32, tip + d * l, tip + d * l * 0.45 - o * s * 0.32])
+				Art.volume(ci, gem, col, 1.0 if awake else 0.0)
+				Art.outline(ci, gem, dark, Art.TRAIT_FIN)
+				if awake:
+					ci.draw_line(tip + d * l * 0.2, tip + d * l * 0.8, Color(light, 0.7), 1.5, true)
+			if lit > 0.0:
+				for j in 6:
+					var d := Vector2.from_angle(ang + (j - 2.5) * 0.4)
+					ci.draw_line(tip + d * s * 1.4, tip + d * s * (2.0 + lit), Color(light, lit), 2.0, true)
+		"racine":
+			# Une griffe de quatre crochets.
+			ci.draw_circle(tip, s * 0.3, dark)
+			for j in 4:
+				var a := ang + (j - 1.5) * 0.45
 				var d := Vector2.from_angle(a)
-				var q1 := tip + d * s * 0.9
-				ci.draw_polyline(PackedVector2Array([tip, q1, q1 + d.orthogonal() * s * 0.4 * (1 if j != 0 else -1)]), col, 4.0, true)
+				var q1 := tip + d * s * 1.1
+				var hook := q1 + d.orthogonal() * s * 0.45 * (1.0 if j >= 2 else -1.0) - d * s * 0.15
+				ci.draw_polyline(PackedVector2Array([tip, q1, hook]), dark, 7.0, true)
+				ci.draw_polyline(PackedVector2Array([tip, q1, hook]), col, 4.0, true)
+
+
+## Un chemin ondulé de « length » dans la direction « a », depuis « from » (sept points).
+static func _wiggle(from: Vector2, a: float, length: float, amp: float, salt: float) -> PackedVector2Array:
+	var d := Vector2.from_angle(a)
+	var o := d.orthogonal()
+	var out := PackedVector2Array()
+	for q in 7:
+		var u := q / 6.0
+		out.append(from + d * length * u + o * amp * sin(u * 5.0 + salt) * u)
+	return out
+
+
+## Un membre effilé le long d'un chemin (racine, bras, branche), dessiné quad par quad : pas de
+## triangulation, donc rien ne casse quand il se tord. edge : contour (transparent : aucun) ;
+## light : reflet clair du côté de la lumière (en haut à gauche, comme Art.volume).
+static func _limb(ci: CanvasItem, path: PackedVector2Array, w0: float, w1: float, col: Color, edge := Color(0, 0, 0, 0), light := 0.0) -> void:
+	var n := path.size()
+	var poly := _taper(path, w0, w1)
+	var dark := Color(col.darkened(0.38), col.a)
+	for i in n - 1:
+		var quad := PackedVector2Array([poly[i], poly[i + 1], poly[2 * n - 2 - i], poly[2 * n - 1 - i]])
+		ci.draw_primitive(quad, PackedColorArray([col, col, dark, dark]), PackedVector2Array())
+	if light > 0.0:
+		var shine := PackedVector2Array()
+		for i in n - 1:
+			shine.append(poly[i].lerp(path[i], 0.45))
+		ci.draw_polyline(shine, Color(col.lightened(0.3), 0.45 * light * col.a), maxf(w0 * 0.35, 1.5), true)
+	if edge.a > 0.0:
+		ci.draw_polyline(poly.slice(0, n), edge, Art.TRAIT_FIN, true)
+		ci.draw_polyline(poly.slice(n), edge, Art.TRAIT_FIN, true)
+
+
+## Polygone effilé le long d'un chemin : demi-largeur w0 à la base, w1 au bout.
+static func _taper(path: PackedVector2Array, w0: float, w1: float) -> PackedVector2Array:
+	var n := path.size()
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	for i in n:
+		var d := path[mini(i + 1, n - 1)] - path[maxi(i - 1, 0)]
+		var o := d.normalized().orthogonal()
+		var w := lerpf(w0, maxf(w1, 0.5), float(i) / float(n - 1))
+		left.append(path[i] + o * w)
+		right.append(path[i] - o * w)
+	right.reverse()
+	left.append_array(right)
+	return left
 
 
 ## Annonces au sol, en coordonnées monde (grammaire de Art.telegraph). Les rejetons, qui ne
 ## blessent pas, ne sont pas en rouge ; les nuages de spores posés gardent leur couleur.
 func draw_marks(c: CanvasItem) -> void:
 	var k := _announce_k()
+	draw_floor(c, anchor, radius, t, phase, clampf(dying / death_time, 0.0, 1.0) if dead else 0.0)
 	# Nuages de spores posés : violets, bulles qui montent, bord rouge (toujours dangereux).
 	for cl in clouds:
 		var pos: Vector2 = cl["pos"]
@@ -678,19 +924,15 @@ func draw_overlay(c: CanvasItem) -> void:
 		Art.outline(c, tri, Art.c("contour"), Art.TRAIT_FIN)
 
 
-## La Flétrissure endormie : le cœur de cendre, ses six bras repliés et gris.
+## La Flétrissure endormie : la même, repliée, l'œil clos ; ses racines déjà dans le sol.
 static func draw_sleeper(a: Node2D) -> void:
 	var c: Vector2 = a.center
-	var r := 60.0
-	Art.shadow(a, c + Vector2(0, r * 0.2), r * 1.3)
-	for i in ARMS.size():
-		_draw_arm(a, c + Vector2(0, -r * 0.3), -PI / 2.0 + TAU * (i + 0.5) / ARMS.size(), r, str(ARMS[i]["element"]), false, 0.0)
-	var heart := Art.ellipse(c + Vector2(0, -r * 0.3), r * 0.75, r * 0.9, 24)
-	Art.volume(a, heart, Art.c("ennemi").darkened(0.5), 0.3)
-	Art.outline(a, heart, Color(Art.c("ennemi_contour"), 0.6), Art.TRAIT)
+	var r := BODY_RADIUS
+	draw_floor(a, c, r, a.t, 1)
+	draw_colossus(a, c, r, a.t, 0, 0.0, -1, 0.0, 0.0, func(col): return col)
 	if a.state == "ouverte":
 		var pulse := 0.45 + 0.35 * sin(a.t * 2.0)
-		a.draw_circle(c + Vector2(0, -r * 0.4), r * 0.22, Color(Art.ec("cendre"), pulse * 0.6))
+		Art.glow(a, c + Vector2(0, -r * 0.6), r * 0.35 * pulse, "cendre")
 
 
 ## Après la victoire : une pousse de l'Arbre de vie, ses six feuilles aux couleurs des régions.
