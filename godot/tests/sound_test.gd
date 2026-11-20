@@ -57,7 +57,7 @@ func _run() -> void:
 		var dark := Synth.music_dark(styles[id])
 		check(not dark in seen_music, "%s : une couche sombre qui n'est celle d'aucune autre région" % id)
 		seen_music.append(dark)
-	for id in ["spore", "vent", "seve", "aube"]:
+	for id in ["spore", "vent", "seve", "aube", "racine", "finale"]:
 		for key in RegionAudio.BOSS_KEYS:
 			check(RegionAudio.boss_sound(id, key) != "", "%s : un son de boss « %s »" % [id, key])
 	for id in styles:
@@ -160,6 +160,8 @@ func _run() -> void:
 	check(SoundRefs.validate().is_empty(), "chaque son nommé dans les données existe : %s" % [SoundRefs.validate()])
 	var refs_ok := true
 	for id in styles:
+		if id == "generique":
+			continue  # le générique n'a pas de boss
 		for key in RegionAudio.BOSS_KEYS:
 			var snd := RegionAudio.boss_sound(id, key)
 			refs_ok = refs_ok and snd != "" and Synth.SOUNDS.has(snd)

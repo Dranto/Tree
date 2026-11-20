@@ -71,6 +71,20 @@ const SOUNDS := {
 	"seve_boss_eveil": {"wave": SINE, "f0": 90.0, "f1": 260.0, "dur": 1.2, "att": 0.45, "lp": 1200.0, "vol": 0.36, "body": 50.0, "voice2": 7.0, "vib": [0.04, 5.0]},
 	"seve_boss_phase": {"wave": TRI, "f0": 340.0, "f1": 110.0, "dur": 0.9, "att": 0.02, "lp": 1500.0, "vol": 0.34, "body": 55.0, "voice2": 4.0, "vib": [0.07, 8.0]},
 	"seve_boss_mort": {"wave": SINE, "f0": 330.0, "f1": 70.0, "dur": 1.9, "att": 0.03, "lp": 1100.0, "vol": 0.4, "body": 45.0, "voice2": 12.0, "vib": [0.03, 4.0]},
+	# --- Racine (bois, pierre, racines) : sons provisoires du jalon 9, à réécouter et retoucher. ---
+	# Bois qui craque, coups sourds : bruit filtré bas, carrés étroits.
+	"racine_ecorce": {"wave": SQUARE, "f0": 260.0, "f1": 140.0, "dur": 0.35, "att": 0.004, "lp": 1500.0, "vol": 0.3, "duty": 0.2, "body": 70.0, "vib": [0.08, 18.0]},
+	"racine_ancrage": {"wave": SAW, "f0": 75.0, "f1": 120.0, "dur": 0.55, "att": 0.1, "lp": 600.0, "vol": 0.36, "body": 50.0, "vib": [0.05, 10.0]},
+	"racine_pieux": {"wave": NOISE, "f0": 2400.0, "f1": 500.0, "dur": 0.18, "att": 0.002, "lp": 3600.0, "vol": 0.3, "click": true, "body": 110.0},
+	"racine_massue": {"wave": SINE, "f0": 160.0, "f1": 50.0, "dur": 0.36, "att": 0.003, "lp": 900.0, "vol": 0.44, "body": 60.0, "voice2": -5.0},
+	"racine_boss_eveil": {"wave": SAW, "f0": 60.0, "f1": 140.0, "dur": 1.3, "att": 0.5, "lp": 700.0, "vol": 0.38, "body": 45.0, "voice2": -5.0, "vib": [0.07, 7.0]},
+	"racine_boss_phase": {"wave": SQUARE, "f0": 200.0, "f1": 70.0, "dur": 0.9, "att": 0.01, "lp": 1000.0, "vol": 0.36, "duty": 0.25, "body": 55.0, "voice2": 3.0, "vib": [0.08, 12.0]},
+	"racine_boss_mort": {"wave": NOISE, "f0": 900.0, "f1": 60.0, "dur": 2.0, "att": 0.03, "lp": 1200.0, "vol": 0.4, "body": 45.0, "voice2": -7.0, "vib": [0.1, 5.0]},
+	# --- Finale (la Flétrissure, sous la graine) : sons du boss final, provisoires. ---
+	# Plus graves et plus lourds que ceux des régions : le creux résonne.
+	"finale_boss_eveil": {"wave": SAW, "f0": 55.0, "f1": 160.0, "dur": 1.6, "att": 0.6, "lp": 800.0, "vol": 0.4, "body": 40.0, "voice2": -7.0, "vib": [0.05, 5.0]},
+	"finale_boss_phase": {"wave": SAW, "f0": 300.0, "f1": 60.0, "dur": 1.1, "att": 0.02, "lp": 1000.0, "vol": 0.4, "body": 45.0, "voice2": 6.0, "vib": [0.1, 8.0]},
+	"finale_boss_mort": {"wave": SINE, "f0": 440.0, "f1": 55.0, "dur": 2.6, "att": 0.03, "lp": 1400.0, "vol": 0.42, "body": 40.0, "voice2": 12.0, "arp": [0, -5, -12], "vib": [0.04, 4.0]},
 	# --- Aube (lumière, éclat, cloches) : sons provisoires du jalon 8, à réécouter et retoucher. ---
 	"aube_rayon": {"wave": SAW, "f0": 1200.0, "f1": 2400.0, "dur": 0.16, "att": 0.004, "lp": 6000.0, "vol": 0.22, "voice2": 12.0, "click": true},
 	"aube_eclat": {"wave": SINE, "f0": 1568.0, "f1": 1568.0, "dur": 0.4, "att": 0.002, "lp": 0.0, "vol": 0.24, "arp": [0, 7, 12], "voice2": 19.0},
