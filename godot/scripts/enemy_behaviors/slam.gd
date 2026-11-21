@@ -37,6 +37,7 @@ func slam(e) -> void:
 	var r := float(data["slam_radius"])
 	if p.position.distance_to(e.position) < r + p.radius * 0.5:
 		p.take_hit(float(data["slam_damage"]) * e.damage_scale, e)
+	RacineFx.sound("racine_tertre_frappe", "impact", e.position)
 	if e.main.get("fx") != null:
 		e.main.fx.ring(e.position, e.radius, r, 0.35, Color(Art.ec("racine", "clair"), 0.8), 4.0)
 		e.main.fx.shake(2.5)

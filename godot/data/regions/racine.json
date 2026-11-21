@@ -52,13 +52,13 @@
     {"id": "racine_futaie", "name": "de la Futaie", "dist": 2200.0, "angle": 0.3}
   ],
   "altars": [
-    {"id": "racine_1", "name": "Autel des cernes", "dist": 980, "side": -0.85, "points": 1},
-    {"id": "racine_2", "name": "Autel du gland", "dist": 1350, "side": 0.72, "points": 1},
-    {"id": "racine_3", "name": "Autel de l'ambre", "dist": 2050, "side": -0.74, "points": 1},
-    {"id": "racine_4", "name": "Autel du silex", "dist": 2600, "side": 0.48, "points": 1}
+    {"id": "racine_1", "name": "Autel des cernes", "dist": 980, "side": -0.85, "points": 1, "graft": "greffe_cerne"},
+    {"id": "racine_2", "name": "Autel du gland", "dist": 1350, "side": 0.72, "points": 1, "graft": "greffe_gland"},
+    {"id": "racine_3", "name": "Autel de l'ambre", "dist": 2050, "side": -0.74, "points": 1, "graft": "greffe_ambre"},
+    {"id": "racine_4", "name": "Autel du silex", "dist": 2600, "side": 0.48, "points": 1, "graft": "greffe_silex"}
   ],
   "secrets": [
-    {"id": "racine", "name": "La racine profonde", "dist": 2450, "side": -0.94, "points": 1}
+    {"id": "racine", "name": "La racine profonde", "dist": 2450, "side": -0.94, "points": 1, "graft": "greffe_racine_profonde"}
   ],
   "heart": {
     "name": "Cœur des cernes",
@@ -76,7 +76,7 @@
     "script": "res://scripts/boss_racine.gd",
     "name": "L'Ancien pétrifié",
     "bar_color": "#b0915e",
-    "reward": {"points": 2},
+    "reward": {"points": 2, "graft": "greffe_coeur_de_chene"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : la cime se fend", "Phase 3 sur 3 : la forêt se referme"],
     "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "racine/clair"},
     "wake_banner": "L'Ancien pétrifié s'arrache à la roche.",

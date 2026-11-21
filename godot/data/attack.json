@@ -198,7 +198,7 @@
       "arc": 1.7,
       "knockback": 30,
       "fx": "massue",
-      "sfx": "impact"
+      "sfx": "racine_massue"
     }
   },
   "mods": {

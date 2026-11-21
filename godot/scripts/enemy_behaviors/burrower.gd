@@ -57,6 +57,7 @@ func burst(e) -> void:
 	var r := float(data["burst_radius"])
 	if p.position.distance_to(e.position) < r + p.radius * 0.5:
 		p.take_hit(float(data["burst_damage"]) * e.damage_scale, e)
+	RacineFx.sound("racine_mandragore_jaillit", "impact", e.position)
 	if e.main.get("fx") != null:
 		e.main.fx.ring(e.position, e.radius, r, 0.3, Color(Art.ec("racine", "clair"), 0.8), 3.0)
 
