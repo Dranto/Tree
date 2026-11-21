@@ -58,3 +58,40 @@ static func state(id: String, flags: Dictionary = Game.flags) -> String:
 	if p["coeur"]:
 		return "Cœur purifié"
 	return ""
+
+
+## « Sous la graine » : le lieu de la finale (brèche au pied de la graine, creux où attend la Flétrissure).
+## Ce n'est pas une région : la carte et le journal lui font une place à part.
+const UNDER_SEED_ID := "@graine"
+const UNDER_SEED_NAME := "Sous la graine"
+const UNDER_SEED_TINT := Color("d9a24c")
+
+
+## Où en est la finale : « scellée » (une région reste à purifier), « brèche ouverte » ou « Flétrissure vaincue ».
+static func finale_state(flags: Dictionary = Game.flags) -> String:
+	if bool(flags.get("finale_vaincue", false)):
+		return "Flétrissure vaincue"
+	if bool(flags.get("finale_ouverte", false)):
+		return "brèche ouverte"
+	return "scellée"
+
+
+## Une ligne d'avancement de la finale pour la légende de la carte : les régions purifiées sur le total
+## tant que la brèche est scellée.
+static func finale_summary(flags: Dictionary = Game.flags) -> String:
+	var st := finale_state(flags)
+	if st != "scellée":
+		return st
+	var done := 0
+	for id in Regions.ids():
+		if bool(flags.get(Regions.boss_flag(id), false)):
+			done += 1
+	return "scellée  ·  %d / %d régions purifiées" % [done, Regions.ids().size()]
+
+
+## Section du journal d'un objectif : « @graine » pour ceux qui se jouent sous la graine (cible « finale »),
+## sinon sa région ("" : l'aventure).
+static func journal_section(o: Dictionary) -> String:
+	if str(o.get("target", {}).get("type", "")) == "finale":
+		return UNDER_SEED_ID
+	return str(o.get("region", ""))

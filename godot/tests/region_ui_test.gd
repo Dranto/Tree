@@ -65,6 +65,13 @@ func _run() -> void:
 	check(RegionUi.state("essai", {"essai_boss_vaincu": true}) == "région purifiée", "boss vaincu : région purifiée")
 	check(RegionUi.summary("ronce", {}) == "0 / 4 sanctuaires · 0 / 4 autels", "ligne d'avancement de Ronce : %s" % RegionUi.summary("ronce", {}))
 
+	print("Sous la graine (finale)")
+	check(RegionUi.finale_state({}) == "scellée" and RegionUi.finale_state({"finale_ouverte": true}) == "brèche ouverte", "état de la finale : scellée, puis brèche ouverte")
+	check(RegionUi.finale_state({"finale_ouverte": true, "finale_vaincue": true}) == "Flétrissure vaincue", "état de la finale : vaincue")
+	check(RegionUi.finale_summary({}).begins_with("scellée  ·  0 / "), "légende : régions purifiées tant que la brèche est scellée : %s" % RegionUi.finale_summary({}))
+	check(RegionUi.journal_section(obj.get_def("finale")) == RegionUi.UNDER_SEED_ID, "l'objectif de la finale va dans la section « sous la graine »")
+	check(RegionUi.journal_section(obj.get_def("premier_noeud")) == "" and RegionUi.journal_section(obj.get_def("boss")) == "ronce", "les autres objectifs gardent leur section")
+
 	print("Son et ambiance de la région")
 	check(RegionAudio.of("essai").has("music"), "la section « audio » du fichier de la région prime")
 	check("essai" in RegionAudio.music_regions() and not "ronce" in RegionAudio.music_regions(), "les régions qui ont leur musique (pas Ronce, qui garde la musique de base) : %s" % [RegionAudio.music_regions()])
@@ -105,6 +112,7 @@ func _run() -> void:
 	var texts := _texts(q.world_map._legend, [])
 	check("Région d'essai" in texts and "Région de Ronce" in texts, "la légende nomme chaque région")
 	check("1 / 1 sanctuaires" in texts, "la légende donne l'avancement de la région d'essai : %s" % [texts])
+	check(RegionUi.UNDER_SEED_NAME in texts and "scellée" in " ".join(texts.filter(func(t): return t.begins_with("scellée"))), "la légende montre la brèche sous la graine : %s" % [texts.slice(-8)])
 	check(not "Arène de la Mère-Ronce" in texts, "plus de nom de boss écrit en dur")
 	q.close()
 
@@ -113,6 +121,7 @@ func _run() -> void:
 	await _frames(2)
 	var jt := _texts(q.journal._box, [])
 	check("L'AVENTURE" in jt and "RÉGION DE RONCE" in jt, "sections : l'aventure et Ronce")
+	check(RegionUi.UNDER_SEED_NAME.to_upper() in jt, "section « sous la graine » pour la finale")
 	check(not "RÉGION D'ESSAI" in jt, "pas de section pour une région sans objectifs")
 	check(jt.any(func(t): return t.begins_with("Aventure :") and "régions purifiées" in t), "sous-titre de l'aventure : %s" % [jt.slice(0, 3)])
 	q.close()

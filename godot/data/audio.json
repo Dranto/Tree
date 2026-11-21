@@ -2,11 +2,43 @@
   "_doc": "Son et ambiance des régions (tâche F du jalon 7). Une entrée par région, rangée sous son identifiant ; la région peut aussi porter une section « audio » dans son fichier, qui prime. Format dans data/README.md, « Son et ambiance ». Une région sans entrée garde la musique et les particules de Ronce.",
   "regions": {
     "finale": {
-      "_doc": "Finale sous la graine (data/finale.json). Crochet de la tâche H : une section « music » ici donne la musique du combat final (pistes finale_sombre.wav et finale_lumineux.wav, écrites par tools/gen-sounds.sh) ; sans elle, la musique du monde. La couche lumineuse monte après la victoire.",
-      "boss": {"eveil": "spore_boss_eveil", "phase": "aube_boss_phase", "mort": "seve_boss_mort"}
+      "_doc": "Finale sous la graine : musique grave et tendue (accords diminués qui descendent, vent lourd, cloche sourde) ; après la victoire, la couche lumineuse monte, large et chaude (accords majeurs ouverts, arpège qui s'élève). Le creux est sans particules de papillons.",
+      "music": {
+        "seed": 67,
+        "roots": [-5, -6, -10, -12],
+        "dark": {"chord": [0, 3, 6, 10], "vol": 0.1, "vol2": 0.06, "detune": 1.009, "wind": 0.7, "wind_lp": 0.015, "wind_period": 3.0, "wind_fade": 0.35, "bell": 0.13},
+        "bright": {"chord": [0, 7, 12, 16], "octave": 1, "pattern": [0, 7, 12, 16, 19, 16, 12, 7, 0, 7, 12, 19], "pad": 0.09, "pluck": 0.1, "sparkle": 0.07, "sparkle_note": 24}
+      },
+      "ambience": {
+        "butterflies": 0,
+        "dead": {"shape": "glow", "color": "#5a3a4a", "alpha": 0.45, "vel": [2.0, -10.0], "sway": [8.0, 3.0], "size": [1.4, 3.2]},
+        "alive": {"shape": "glow", "color": "#ffe6a8", "alpha": 0.85, "vel": [3.0, -18.0], "sway": [12.0, 4.0], "size": [1.4, 3.4]}
+      },
+      "boss": {"eveil": "finale_boss_eveil", "phase": "finale_boss_phase", "mort": "finale_boss_mort"}
     },
     "generique": {
-      "_doc": "Épilogue et générique (epilogue.gd). Crochet de la tâche H : une section « music » ici donne la musique du générique (generique_sombre.wav et generique_lumineux.wav, seule la couche lumineuse est jouée) ; sans elle, la couche lumineuse du monde."
+      "_doc": "Épilogue et générique (epilogue.gd) : seule la couche lumineuse est jouée, un thème qui reprend les accords des régions (do, la, fa, sol) en arpège lent, ample et clair. La couche sombre n'est écrite que pour que la paire existe.",
+      "music": {
+        "seed": 71,
+        "roots": [3, 0, -4, -2],
+        "dark": {"chord": [0, 7, 12, 16], "vol": 0.06, "detune": 1.004, "wind": 0.2, "wind_lp": 0.03, "wind_period": 6.0, "bell": 0.08},
+        "bright": {"chord": [0, 4, 7, 14], "octave": 1, "pattern": [0, 7, 14, 12, 16, 12, 7, 4, 0, 7, 12, 19], "pad": 0.1, "pluck": 0.11, "sparkle": 0.07, "sparkle_note": 19}
+      }
+    },
+    "racine": {
+      "_doc": "Forêt pétrifiée (Racine) : bois creux et pierre, accords bas et ouverts (quintes, secondes), vent sourd ; en terre vivante, un arpège de bois chaud qui revient en écho. Des cendres de bois et des poussières de mousse flottent.",
+      "music": {
+        "seed": 83,
+        "roots": [-4, -9, -2, -7],
+        "dark": {"chord": [0, 7, 12, 14], "vol": 0.085, "detune": 1.006, "wind": 0.45, "wind_lp": 0.014, "wind_period": 6.0, "wind_fade": 0.3, "bell": 0.09},
+        "bright": {"chord": [0, 7, 10, 14], "octave": 1, "pattern": [0, 7, 14, 10, 12, 7, 5, 10], "pad": 0.07, "pluck": 0.12, "sparkle": 0.05, "sparkle_note": 17}
+      },
+      "ambience": {
+        "butterflies": 0,
+        "dead": {"shape": "dot", "color": "#6a5a48", "alpha": 0.5, "vel": [3.0, 6.0], "sway": [8.0, 2.0], "size": [1.0, 2.4]},
+        "alive": {"shape": "glow", "color": "#d8c890", "alpha": 0.8, "vel": [3.0, -12.0], "sway": [9.0, 3.0], "size": [1.2, 2.8]}
+      },
+      "boss": {"eveil": "racine_boss_eveil", "phase": "racine_boss_phase", "mort": "racine_boss_mort"}
     },
     "spore": {
       "_doc": "Marais de spores : accords bas et suspendus, vent mouillé et lent ; en terre vivante, un arpège de bois. Les spores montent comme des bulles.",
