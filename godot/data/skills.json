@@ -132,7 +132,7 @@
     "name": "Ancrage", "short": "Ancrage", "color": "#857a44", "cooldown": 7,
     "branch": "racine", "tags": ["zone"],
     "desc": "Nouvelle compétence : tu prends racine quelques secondes ; tes racines immobilisent et blessent les ennemis autour de toi. Enraciné, tu ne marches plus (l'esquive arrache les racines) mais tu encaisses mieux.",
-    "radius": 190, "duration": 3.0, "tick": 0.5, "damage": 3.2, "root_duration": 1.0,
+    "radius": 190, "duration": 3.0, "tick": 0.5, "damage": 2.8, "root_duration": 1.0,
     "walk": 0, "heal": 0, "uproot": 0
   },
   "pieux": {
