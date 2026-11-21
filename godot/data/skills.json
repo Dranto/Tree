@@ -73,7 +73,7 @@
     "name": "Ruée", "short": "Ruée", "color": "#c8dcef", "cooldown": 3.0,
     "branch": "vent", "tags": ["corps_a_corps"],
     "desc": "Nouvelle compétence : tu fends l'air vers l'endroit visé, intouchable, et frappes tout sur ton passage.",
-    "damage": 2.5, "length": 280, "speed": 1400, "width": 48, "knockback": 46,
+    "damage": 2.8, "length": 280, "speed": 1400, "width": 48, "knockback": 46,
     "dash": false, "wake": 0
   },
   "appel_air": {
