@@ -180,6 +180,7 @@ const CACHE_PAD := 0.1
 const CACHE_SETTLE := 0.12
 const CACHE_RATIO := Vector2(0.75, 1.45)
 const CACHE_GAP := 0.2
+const CACHE_JUMP := Vector2(0.55, 1.8)
 const CACHE_AHEAD := 0.7
 var _cache_time := -INF
 var _cache_vp: SubViewport
@@ -1260,7 +1261,10 @@ func _update_cache() -> void:
 	var k := zoom / _cache_zoom
 	var covered := _cache_rect().encloses(Rect2(Vector2.ZERO, size))
 	# Pendant le mouvement, au plus une image refaite tous les CACHE_GAP s.
-	var rushed := (not covered or k < CACHE_RATIO.x or k > CACHE_RATIO.y) and t - _cache_time >= CACHE_GAP
+	# Un saut de zoom (bouton « Vue d'ensemble », recherche) ne doit pas laisser une image périmée
+	# (un rectangle aux bords durs dans le vide) : on la refait tout de suite.
+	var jump := k < CACHE_JUMP.x or k > CACHE_JUMP.y
+	var rushed := (not covered or k < CACHE_RATIO.x or k > CACHE_RATIO.y) and (jump or t - _cache_time >= CACHE_GAP)
 	if rushed:
 		# En dézoomant, l'image est faite un peu plus loin que la vue : elle couvre l'écran plus longtemps.
 		_render_cache(zoom * (CACHE_AHEAD if k < 1.0 else 1.0))
