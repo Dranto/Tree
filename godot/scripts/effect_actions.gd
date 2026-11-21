@@ -121,7 +121,8 @@ static func _center(p: Dictionary, ctx: Dictionary):
 
 
 ## Onde d'épines : blesse les ennemis autour du centre pour « factor » × les dégâts du joueur
-## (× dégâts de zone, rayon × taille des zones). C'est un coup de Ronce.
+## (× dégâts de zone, rayon × taille des zones). C'est un coup de Ronce, sauf « branch » (Racine :
+## les échardes de la Riposte).
 static func _burst(p: Dictionary, ctx: Dictionary) -> bool:
 	var at = _center(p, ctx)
 	if at == null:
@@ -134,7 +135,7 @@ static func _burst(p: Dictionary, ctx: Dictionary) -> bool:
 	var source = ctx.get("enemy")
 	for other in main.enemies_near(at, radius):
 		if other != source and not other.dead:
-			main.player_hit_enemy(other, dmg, false, "ronce")
+			main.player_hit_enemy(other, dmg, false, str(p.get("branch", "ronce")))
 	return true
 
 

@@ -2,6 +2,8 @@
   "immobile": {"label": "immobile depuis {min} s"},
   "en_mouvement": {"label": "en mouvement depuis {min} s"},
   "sous_cocon": {"label": "sous un cocon de sève"},
+  "enracine": {"label": "enraciné (Ancrage)"},
+  "sous_ecorce": {"label": "sous un bouclier d'écorce"},
   "cible_empoisonnee": {"label": "si la cible est empoisonnée"},
   "cible_saignante": {"label": "si la cible saigne ({min} piqûres ou plus)"},
   "cible_enracinee": {"label": "si la cible est enracinée"},

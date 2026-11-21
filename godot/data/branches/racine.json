@@ -2,31 +2,575 @@
   "id": "racine",
   "name": "Racine",
   "color": "#c49a6c",
-  "blurb": "Armure et robustesse",
+  "blurb": "Armure, robustesse, enracinement : tenir bon",
   "small": [
-    {"stat": "armor", "op": "add", "value": 0.015},
-    {"stat": "max_hp", "op": "add", "value": 10}
+    {"stat": "armor", "op": "add", "value": 0.012},
+    {"stat": "max_hp", "op": "add", "value": 10},
+    {"stat": "damage", "op": "inc", "value": 0.03}
   ],
   "notable": {
-    "effects": [{"stat": "max_hp", "op": "add", "value": 20}],
+    "effects": [{"stat": "max_hp", "op": "inc", "value": 0.05}, {"stat": "armor", "op": "add", "value": 0.015}],
     "names": [
       ["Souche", "Pivot", "Rhizome", "Écorce", "Cerne", "Tronc"],
       ["ancien", "tenace", "profond", "patient", "massif", "scellé"]
     ]
   },
   "keystones": [
-    {"key": "enracine", "name": "Enraciné", "effects": [
-      {"stat": "damage", "op": "more", "value": 1.4, "if": {"state": "immobile", "min": 0.5}},
-      {"stat": "armor", "op": "add", "value": 0.2, "if": {"state": "immobile", "min": 0.5}},
-      {"stat": "armor_cap", "op": "add", "value": 0.1, "if": {"state": "immobile", "min": 0.5}, "hidden": true}
+    {"key": "enracine", "name": "Enraciné", "desc": "Immobile, tu frappes plus fort et tu encaisses mieux.", "effects": [
+      {"stat": "damage", "op": "more", "value": 1.3, "if": {"state": "immobile", "min": 0.5}},
+      {"stat": "armor", "op": "add", "value": 0.15, "if": {"state": "immobile", "min": 0.5}},
+      {"stat": "armor_cap", "op": "add", "value": 0.05, "if": {"state": "immobile", "min": 0.5}, "hidden": true}
     ]},
-    {"key": "coeur_pierre", "name": "Cœur de pierre", "effects": [
-      {"stat": "max_hp", "op": "more", "value": 1.5},
+    {"key": "coeur_pierre", "name": "Cœur de pierre", "desc": "Un corps de pierre : beaucoup plus de vie, mais tu te déplaces moins vite.", "effects": [
+      {"stat": "max_hp", "op": "more", "value": 1.4},
+      {"stat": "damage", "op": "inc", "value": 0.1},
       {"stat": "move_speed", "op": "more", "value": 0.9}
     ]},
-    {"key": "bastion", "name": "Bastion", "effects": [
-      {"stat": "armor", "op": "add", "value": 0.15},
-      {"stat": "armor_cap", "op": "add", "value": 0.1}
+    {"key": "bastion", "name": "Bastion", "desc": "Ton armure dépasse ses limites et blesse qui la frappe.", "effects": [
+      {"stat": "armor", "op": "add", "value": 0.12},
+      {"stat": "armor_cap", "op": "add", "value": 0.08},
+      {"stat": "thorns", "op": "add", "value": 20}
     ]}
+  ],
+  "resonance": [
+    {
+      "count": 10,
+      "name": "Résonance de la Racine I",
+      "effects": [{"stat": "armor", "op": "add", "value": 0.05}, {"stat": "max_hp", "op": "inc", "value": 0.15}, {"stat": "damage", "op": "inc", "value": 0.1}]
+    },
+    {
+      "count": 25,
+      "name": "Résonance de la Racine II",
+      "effects": [
+        {"stat": "thorns", "op": "add", "value": 15},
+        {"stat": "damage", "op": "inc", "value": 0.08},
+        {"stat": "skill_slots", "op": "add", "value": 1}
+      ]
+    },
+    {
+      "count": 50,
+      "name": "Résonance de la Racine III",
+      "effects": [
+        {"stat": "damage", "op": "more", "value": 1.12},
+        {"stat": "skill_slots", "op": "add", "value": 1},
+        {"stat": "armor_cap", "op": "add", "value": 0.05},
+        {"stat": "max_hp", "op": "more", "value": 1.1}
+      ]
+    }
+  ],
+  "clusters": [
+    {
+      "id": "massue",
+      "name": "Massue de bois",
+      "theme": "Frapper lourd, de près",
+      "ring": 3.0,
+      "angle": 0.85,
+      "entry": ["m1"],
+      "nodes": [
+        {"id": "m1", "type": "attack", "name": "Massue de bois", "at": [0, 0], "effects": [{"attack_form": "massue"}]},
+        {
+          "id": "m2",
+          "type": "notable",
+          "name": "Bois dur",
+          "at": [0.55, -0.35],
+          "links": ["m1"],
+          "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.15}, {"stat": "armor", "op": "add", "value": 0.03}]
+        },
+        {
+          "id": "m3",
+          "type": "notable",
+          "name": "Bras noueux",
+          "at": [0.55, 0.35],
+          "links": ["m1"],
+          "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.1}, {"stat": "max_hp", "op": "inc", "value": 0.08}]
+        },
+        {
+          "id": "m4",
+          "type": "mastery",
+          "name": "Maîtrise de la massue",
+          "at": [1.05, 0],
+          "links": ["m2", "m3"],
+          "choices": [
+            {"id": "massue_lourde", "name": "Massue lourde", "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.12}]},
+            {"id": "massue_large", "name": "Massue large", "effects": [{"attack_mod": "taille", "value": 0.2}]},
+            {"id": "massue_vive", "name": "Massue vive", "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.1}]}
+          ]
+        },
+        {
+          "id": "m5",
+          "type": "attack",
+          "name": "Secousse",
+          "at": [1.5, -0.3],
+          "links": ["m4"],
+          "effects": [{"attack_mod": "secousse", "value": 0.2}]
+        },
+        {"id": "m6", "type": "graft", "name": "Greffon de la massue", "at": [1.5, 0.35], "links": ["m4"]},
+        {
+          "id": "m7",
+          "type": "attack",
+          "name": "Aubier",
+          "at": [2.0, -0.05],
+          "links": ["m5"],
+          "effects": [{"attack_mod": "aubier", "value": 0.15}, {"stat": "melee_damage", "op": "inc", "value": 0.1}]
+        }
+      ],
+      "complete": {"name": "Massue complète", "effects": [{"stat": "melee_damage", "op": "more", "value": 1.05}]}
+    },
+    {
+      "id": "ecorce",
+      "name": "Bouclier d'écorce",
+      "theme": "Une carapace qui riposte",
+      "ring": 5.0,
+      "angle": 0.2,
+      "entry": ["e1"],
+      "nodes": [
+        {"id": "e1", "type": "skill", "key": "ecorce", "name": "Bouclier d'écorce", "at": [0, 0], "effects": [{"skill": "ecorce"}]},
+        {
+          "id": "e2",
+          "type": "notable",
+          "name": "Échardes",
+          "at": [0.5, -0.4],
+          "links": ["e1"],
+          "effects": [{"stat": "area_damage", "op": "inc", "value": 0.25}, {"stat": "thorns", "op": "add", "value": 6}]
+        },
+        {
+          "id": "e3",
+          "type": "notable",
+          "name": "Liber épais",
+          "at": [0.5, 0.4],
+          "links": ["e1"],
+          "effects": [{"stat": "max_hp", "op": "inc", "value": 0.12}, {"stat": "armor", "op": "add", "value": 0.04}]
+        },
+        {
+          "id": "e4",
+          "type": "mastery",
+          "name": "Maîtrise de l'écorce",
+          "at": [1.0, 0],
+          "links": ["e2", "e3"],
+          "choices": [
+            {
+              "id": "ecorce_epaisse",
+              "name": "Écorce épaisse",
+              "effects": [{"skill_mod": "ecorce", "param": "shield", "op": "more", "value": 1.3, "text": "+30 % bouclier d'écorce"}]
+            },
+            {
+              "id": "ecorce_vive",
+              "name": "Écorce vive",
+              "effects": [{"skill_mod": "ecorce", "param": "cooldown", "op": "more", "value": 0.8, "text": "−20 % recharge du bouclier d'écorce"}]
+            },
+            {"id": "ecorce_coupante", "name": "Écorce coupante", "effects": [{"stat": "area_damage", "op": "inc", "value": 0.25}]}
+          ]
+        },
+        {
+          "id": "e5",
+          "type": "mutation",
+          "mutates": "ecorce",
+          "name": "Écorce transformée",
+          "at": [1.45, -0.35],
+          "links": ["e4"],
+          "choices": [
+            {
+              "id": "ecorce_herissee",
+              "name": "Écorce hérissée",
+              "effects": [
+                {"skill_mod": "ecorce", "param": "riposte", "op": "more", "value": 2.0, "text": "×2 dégâts des échardes renvoyées"},
+                {"skill_mod": "ecorce", "param": "shield", "op": "more", "value": 0.8, "text": "−20 % bouclier d'écorce"}
+              ]
+            },
+            {
+              "id": "ecorce_eclatee",
+              "name": "Écorce éclatée",
+              "effects": [
+                {"skill_mod": "ecorce", "param": "damage", "op": "more", "value": 2.0, "text": "×2 dégâts de l'éclatement"},
+                {"skill_mod": "ecorce", "param": "radius", "op": "more", "value": 1.3, "text": "+30 % rayon de l'éclatement"},
+                {"skill_mod": "ecorce", "param": "duration", "op": "more", "value": 0.6, "text": "−40 % durée du bouclier d'écorce"}
+              ]
+            },
+            {
+              "id": "ecorce_cernes",
+              "name": "Cernes",
+              "effects": [
+                {"skill_mod": "ecorce", "param": "regrow", "op": "set", "value": 0.04, "text": "Le bouclier repousse : +4 % de ta vie maximale par seconde tant qu'il dure."},
+                {"skill_mod": "ecorce", "param": "damage", "op": "more", "value": 0.7, "text": "−30 % dégâts de l'éclatement"}
+              ]
+            }
+          ]
+        },
+        {"id": "e6", "type": "attack", "name": "Coups d'écorce", "at": [1.0, 0.8], "links": ["e3"], "effects": [{"attack_mod": "aubier", "value": 0.1}]},
+        {"id": "e7", "type": "graft", "name": "Greffon de l'écorce", "at": [1.95, 0.05], "links": ["e5"]}
+      ],
+      "complete": {
+        "name": "Écorce complète",
+        "effects": [{"stat": "area_damage", "op": "more", "value": 1.1}, {"stat": "armor", "op": "add", "value": 0.03}]
+      }
+    },
+    {
+      "id": "ancrage",
+      "name": "Ancrage",
+      "theme": "Prendre racine et tout retenir",
+      "ring": 5.6,
+      "angle": 0.8,
+      "entry": ["a1"],
+      "nodes": [
+        {
+          "id": "a1",
+          "type": "skill",
+          "key": "ancrage",
+          "name": "Ancrage",
+          "at": [0, 0],
+          "effects": [
+            {"skill": "ancrage"},
+            {"stat": "armor", "op": "add", "value": 0.15, "if": {"state": "enracine"}}
+          ]
+        },
+        {
+          "id": "a2",
+          "type": "notable",
+          "name": "Racines tenaces",
+          "at": [0.5, -0.4],
+          "links": ["a1"],
+          "effects": [{"stat": "root_duration", "op": "inc", "value": 0.2}, {"stat": "area", "op": "inc", "value": 0.08}]
+        },
+        {
+          "id": "a3",
+          "type": "notable",
+          "name": "Pied ferme",
+          "at": [0.5, 0.4],
+          "links": ["a1"],
+          "effects": [{"stat": "area_damage", "op": "inc", "value": 0.2}, {"stat": "max_hp", "op": "inc", "value": 0.08}]
+        },
+        {
+          "id": "a4",
+          "type": "mastery",
+          "name": "Maîtrise de l'ancrage",
+          "at": [1.0, 0],
+          "links": ["a2", "a3"],
+          "choices": [
+            {"id": "ancrage_large", "name": "Ancrage large", "effects": [{"stat": "area", "op": "inc", "value": 0.15}]},
+            {
+              "id": "ancrage_long",
+              "name": "Ancrage durable",
+              "effects": [{"skill_mod": "ancrage", "param": "duration", "op": "more", "value": 1.35, "text": "+35 % durée de l'ancrage"}]
+            },
+            {"id": "ancrage_avide", "name": "Racines avides", "effects": [{"stat": "area_damage", "op": "inc", "value": 0.25}]}
+          ]
+        },
+        {
+          "id": "a5",
+          "type": "mutation",
+          "mutates": "ancrage",
+          "name": "Ancrage transformé",
+          "at": [1.45, -0.35],
+          "links": ["a4"],
+          "choices": [
+            {
+              "id": "ancrage_mobile",
+              "name": "Racines traçantes",
+              "effects": [
+                {"skill_mod": "ancrage", "param": "walk", "op": "set", "value": 0.55, "text": "Tu peux marcher pendant l'ancrage (55 % de ta vitesse) ; les racines te suivent."},
+                {"skill_mod": "ancrage", "param": "radius", "op": "more", "value": 0.8, "text": "−20 % rayon de l'ancrage"}
+              ]
+            },
+            {
+              "id": "ancrage_nourricier",
+              "name": "Racines nourricières",
+              "effects": [
+                {"skill_mod": "ancrage", "param": "heal", "op": "set", "value": 0.004, "text": "Chaque à-coup te rend 0,4 % de ta vie maximale par ennemi tenu (10 au plus)."}
+              ]
+            },
+            {
+              "id": "ancrage_seisme",
+              "name": "Arrachement",
+              "effects": [
+                {"skill_mod": "ancrage", "param": "uproot", "op": "set", "value": 3.0, "text": "À la fin, les racines s'arrachent : ×3 dégâts sur toute la zone."},
+                {"skill_mod": "ancrage", "param": "duration", "op": "more", "value": 0.8, "text": "−20 % durée de l'ancrage"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "a6",
+          "type": "keystone",
+          "key": "arbre_forteresse",
+          "name": "Arbre-forteresse",
+          "at": [1.5, 0.35],
+          "links": ["a4"],
+          "desc": "Enraciné, tu frappes bien plus fort ; mais tu marches moins vite.",
+          "excludes": ["ecorce_de_fer"],
+          "effects": [
+            {"stat": "damage", "op": "more", "value": 1.3, "if": {"state": "enracine"}},
+            {"stat": "thorns", "op": "add", "value": 25, "if": {"state": "enracine"}},
+            {"stat": "move_speed", "op": "more", "value": 0.92}
+          ]
+        }
+      ],
+      "complete": {"name": "Ancrage complet", "effects": [{"stat": "area_damage", "op": "more", "value": 1.1}, {"stat": "root_duration", "op": "inc", "value": 0.1}]}
+    },
+    {
+      "id": "aubier",
+      "name": "Cœur de bois",
+      "theme": "Encaisser et durer",
+      "ring": 7.2,
+      "angle": 0.32,
+      "entry": ["c1"],
+      "nodes": [
+        {
+          "id": "c1",
+          "type": "notable",
+          "name": "Bois de cœur",
+          "at": [0, 0],
+          "effects": [{"stat": "armor", "op": "add", "value": 0.06}, {"stat": "max_hp", "op": "inc", "value": 0.1}]
+        },
+        {
+          "id": "c2",
+          "type": "notable",
+          "name": "Cernes serrés",
+          "at": [0.5, 0.4],
+          "links": ["c1"],
+          "effects": [{"stat": "max_hp", "op": "add", "value": 40}, {"stat": "damage", "op": "inc", "value": 0.08}]
+        },
+        {
+          "id": "c3",
+          "type": "notable",
+          "name": "Résine",
+          "at": [0.5, -0.4],
+          "links": ["c1"],
+          "effects": [
+            {
+              "on": "hurt",
+              "do": "heal",
+              "value": 0.03,
+              "cooldown": 2,
+              "text": "Quand un coup te touche, la résine referme la plaie : 3 % de ta vie maximale (au plus toutes les 2 s)."
+            }
+          ]
+        },
+        {
+          "id": "c4",
+          "type": "mastery",
+          "name": "Maîtrise du bois",
+          "at": [1.0, 0],
+          "links": ["c2", "c3"],
+          "choices": [
+            {"id": "bois_dur", "name": "Bois dur", "effects": [{"stat": "armor", "op": "add", "value": 0.05}]},
+            {"id": "bois_epais", "name": "Bois épais", "effects": [{"stat": "max_hp", "op": "inc", "value": 0.12}]},
+            {"id": "bois_vivant", "name": "Bois vivant", "effects": [{"stat": "regen", "op": "add", "value": 1.2}]}
+          ]
+        },
+        {
+          "id": "c5",
+          "type": "keystone",
+          "key": "ecorce_de_fer",
+          "name": "Écorce de fer",
+          "at": [1.5, 0],
+          "links": ["c4"],
+          "desc": "Ton armure monte plus haut qu'aucune autre, mais tes coups sont plus lents.",
+          "excludes": ["arbre_forteresse"],
+          "effects": [
+            {"stat": "armor", "op": "add", "value": 0.12},
+            {"stat": "armor_cap", "op": "add", "value": 0.07},
+            {"stat": "fire_rate", "op": "more", "value": 0.9}
+          ]
+        },
+        {"id": "c6", "type": "graft", "name": "Greffon du bois", "at": [1.0, -0.8], "links": ["c3"]}
+      ],
+      "complete": {"name": "Cœur de bois complet", "effects": [{"stat": "max_hp", "op": "more", "value": 1.1}, {"stat": "armor", "op": "add", "value": 0.03}]}
+    },
+    {
+      "id": "pieux",
+      "name": "Pieux",
+      "theme": "Le sol se hérisse",
+      "ring": 8.6,
+      "angle": 0.6,
+      "entry": ["p1"],
+      "nodes": [
+        {"id": "p1", "type": "skill", "key": "pieux", "name": "Pieux", "at": [0, 0], "effects": [{"skill": "pieux"}]},
+        {
+          "id": "p2",
+          "type": "notable",
+          "name": "Bois pointu",
+          "at": [0.5, -0.4],
+          "links": ["p1"],
+          "effects": [{"stat": "area_damage", "op": "inc", "value": 0.25}, {"stat": "damage", "op": "inc", "value": 0.05}]
+        },
+        {
+          "id": "p3",
+          "type": "notable",
+          "name": "Sol traître",
+          "at": [0.5, 0.4],
+          "links": ["p1"],
+          "effects": [{"stat": "root_duration", "op": "inc", "value": 0.2}, {"stat": "armor", "op": "add", "value": 0.04}]
+        },
+        {
+          "id": "p4",
+          "type": "mastery",
+          "name": "Maîtrise des pieux",
+          "at": [1.0, 0],
+          "links": ["p2", "p3"],
+          "choices": [
+            {
+              "id": "pieux_nombreux",
+              "name": "Pieux nombreux",
+              "effects": [{"skill_mod": "pieux", "param": "count", "op": "add", "value": 2, "text": "+2 pieux"}]
+            },
+            {
+              "id": "pieux_vifs",
+              "name": "Pieux vifs",
+              "effects": [{"skill_mod": "pieux", "param": "cooldown", "op": "more", "value": 0.8, "text": "−20 % recharge des pieux"}]
+            },
+            {"id": "pieux_aceres", "name": "Pieux acérés", "effects": [{"stat": "area_damage", "op": "inc", "value": 0.25}]}
+          ]
+        },
+        {
+          "id": "p5",
+          "type": "mutation",
+          "mutates": "pieux",
+          "name": "Pieux transformés",
+          "at": [1.45, -0.35],
+          "links": ["p4"],
+          "choices": [
+            {
+              "id": "cercle_pieux",
+              "name": "Cercle de pieux",
+              "effects": [
+                {"skill_mod": "pieux", "param": "ring", "op": "set", "value": true, "text": "Les pieux jaillissent en cercle tout autour de toi."},
+                {"skill_mod": "pieux", "param": "count", "op": "add", "value": 4, "text": "+4 pieux"}
+              ]
+            },
+            {
+              "id": "palissade",
+              "name": "Palissade",
+              "effects": [
+                {"skill_mod": "pieux", "param": "stay", "op": "set", "value": 3.0, "text": "Les pieux restent 3 s et blessent les ennemis qui les frôlent."},
+                {"skill_mod": "pieux", "param": "damage", "op": "more", "value": 0.8, "text": "−20 % dégâts des pieux"}
+              ]
+            },
+            {
+              "id": "pieux_geants",
+              "name": "Pieux géants",
+              "effects": [
+                {"skill_mod": "pieux", "param": "count", "op": "add", "value": -2, "text": "−2 pieux"},
+                {"skill_mod": "pieux", "param": "damage", "op": "more", "value": 1.7, "text": "×1,7 dégâts des pieux"},
+                {"skill_mod": "pieux", "param": "radius", "op": "more", "value": 1.4, "text": "+40 % rayon des pieux"}
+              ]
+            }
+          ]
+        }
+      ],
+      "complete": {"name": "Pieux complets", "effects": [{"stat": "area_damage", "op": "more", "value": 1.08}, {"stat": "max_hp", "op": "inc", "value": 0.08}]}
+    },
+    {
+      "id": "epines",
+      "name": "Épines de bois",
+      "theme": "Qui frappe s'y pique",
+      "ring": 9.8,
+      "angle": 0.75,
+      "entry": ["t1"],
+      "nodes": [
+        {
+          "id": "t1",
+          "type": "notable",
+          "name": "Épines de bois",
+          "at": [0, 0],
+          "effects": [{"stat": "thorns", "op": "add", "value": 15}, {"stat": "damage", "op": "inc", "value": 0.1}]
+        },
+        {
+          "id": "t2",
+          "type": "notable",
+          "name": "Riposte",
+          "at": [0.5, -0.4],
+          "links": ["t1"],
+          "effects": [
+            {
+              "on": "hurt",
+              "do": "burst",
+              "radius": 120,
+              "factor": 1.2,
+              "branch": "racine",
+              "cooldown": 1.5,
+              "color": "#9fbf5a",
+              "text": "Quand un coup te touche, des échardes jaillissent autour de toi (120 % de tes dégâts, au plus toutes les 1,5 s)."
+            }
+          ]
+        },
+        {
+          "id": "t3",
+          "type": "notable",
+          "name": "Bois de fer",
+          "at": [0.5, 0.4],
+          "links": ["t1"],
+          "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.15}, {"stat": "area_damage", "op": "inc", "value": 0.15}]
+        },
+        {
+          "id": "t4",
+          "type": "mastery",
+          "name": "Maîtrise des épines",
+          "at": [1.0, 0],
+          "links": ["t2", "t3"],
+          "choices": [
+            {"id": "epines_longues", "name": "Épines longues", "effects": [{"stat": "thorns", "op": "add", "value": 20}]},
+            {"id": "epines_dures", "name": "Écorce armée", "effects": [{"stat": "armor", "op": "add", "value": 0.05}]},
+            {"id": "epines_fortes", "name": "Bois tranchant", "effects": [{"stat": "damage", "op": "inc", "value": 0.1}]}
+          ]
+        },
+        {
+          "id": "t5",
+          "type": "attack",
+          "name": "Échardes enracinantes",
+          "at": [1.5, 0],
+          "links": ["t4"],
+          "effects": [{"attack_mod": "enracine", "value": 0.12}, {"attack_mod": "secousse", "value": 0.2}]
+        }
+      ],
+      "complete": {"name": "Épines complètes", "effects": [{"stat": "damage", "op": "more", "value": 1.06}, {"stat": "thorns", "op": "add", "value": 10}]}
+    },
+    {
+      "id": "coeur",
+      "name": "Cœur des cernes",
+      "theme": "Après l'Ancien pétrifié",
+      "ring": 10.8,
+      "angle": 0.32,
+      "entry": ["h1"],
+      "nodes": [
+        {
+          "id": "h1",
+          "type": "notable",
+          "name": "Cerne premier",
+          "at": [0, 0],
+          "effects": [
+            {"stat": "armor", "op": "add", "value": 0.04},
+            {"stat": "max_hp", "op": "inc", "value": 0.08},
+            {"stat": "damage", "op": "inc", "value": 0.1}
+          ]
+        },
+        {
+          "id": "h2",
+          "type": "withered",
+          "requires_flag": "racine_coeur_purifie",
+          "name": "Cernes apaisés",
+          "at": [0.5, -0.45],
+          "links": ["h1"],
+          "requires_text": "Couvert de cendre tant que le Cœur des cernes n'est pas purifié.",
+          "effects": [{"stat": "max_hp", "op": "inc", "value": 0.15}, {"stat": "armor_cap", "op": "add", "value": 0.03}, {"stat": "armor", "op": "add", "value": 0.04}]
+        },
+        {
+          "id": "h3",
+          "type": "withered",
+          "requires_flag": "racine_boss_vaincu",
+          "name": "Héritage de l'Ancien",
+          "at": [0.5, 0.45],
+          "links": ["h1"],
+          "requires_text": "Couvert de cendre tant que l'Ancien pétrifié n'est pas vaincu.",
+          "effects": [
+            {"stat": "melee_damage", "op": "inc", "value": 0.2},
+            {"stat": "area_damage", "op": "inc", "value": 0.2},
+            {"stat": "projectile_damage", "op": "inc", "value": 0.2},
+            {"on": "kill", "do": "reduce_cooldown", "target": "pieux", "value": 0.2, "text": "Chaque ennemi vaincu réduit la recharge des pieux de 0,2 s."}
+          ]
+        },
+        {"id": "h4", "type": "graft", "name": "Greffon des cernes", "at": [1.0, 0], "links": ["h1", "h2", "h3"]}
+      ],
+      "complete": {"name": "Cœur complet", "effects": [{"stat": "damage", "op": "more", "value": 1.08}, {"stat": "armor", "op": "add", "value": 0.03}]}
+    }
   ]
 }

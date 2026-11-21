@@ -428,10 +428,12 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 	var kb := float(f.get("knockback", 0.0))
 	if f.get("deflect", false):
 		_deflect(main, player.position, dir, r, arc)
+	var struck := 0
 	for e in main.enemies_near(player.position, r):
 		var d: Vector2 = e.position - player.position
 		if arc < TAU and d.length() > 1.0 and absf(dir.angle_to(d)) > arc / 2.0 + e.radius / maxf(d.length(), 1.0):
 			continue
+		struck += 1
 		hit(main, e, dmg, str(f.get("branch", "")), on_hit)
 		apply_on_hit(main, on_hit, e, dmg, e.position)
 		if e.dead:
@@ -440,6 +442,10 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 			VentScript.push(e, d.normalized() * kb)
 		if main.has_method("on_melee_hit"):
 			main.on_melee_hit(e, dmg)
+	# Secousse (Racine) : un coup qui porte secoue le sol devant le joueur, une fois par coup.
+	if struck > 0 and on_hit.has("secousse"):
+		_quake(main, player.position + dir * r * (0.75 if arc < TAU else 0.0), dmg * float(on_hit["secousse"]),
+			str(f.get("branch", "")), arc >= TAU)
 
 
 ## Le souffle emporte les plumes de cendre prises dans son cône (le vent contre le vent).
@@ -554,6 +560,9 @@ static func apply_on_hit(main, m: Dictionary, e, dmg: float, at: Vector2) -> voi
 	# Sangsue (Sève) : chaque coup rend une part de ses dégâts, même celui qui tue.
 	if m.has("sangsue"):
 		_heal(main, dmg * float(m["sangsue"]))
+	# Aubier (Racine) : chaque coup couvre le joueur d'écorce, même celui qui tue.
+	if m.has("aubier"):
+		_bark(main, dmg * float(m["aubier"]))
 	if e.dead:
 		if m.has("eclat"):
 			_shards(main, m, at, dmg * float(m["eclat"]))
@@ -575,6 +584,29 @@ static func apply_on_hit(main, m: Dictionary, e, dmg: float, at: Vector2) -> voi
 		_afx(main, "enracine", {"pos": e.position, "r": float(e.radius)})
 	if m.has("eblouit") and main.rng.randf() < float(m["eblouit"]):
 		e.apply_status("ebloui", float(defs["eblouit"].get("crit", 0.2)), float(defs["eblouit"].get("duration", 2.5)))
+
+
+## Aubier (Racine) : « amount » points de bouclier d'écorce, sans dépasser « cap » × la vie maximale.
+static func _bark(main, amount: float) -> void:
+	if amount <= 0.0 or not ("player" in main) or main.player == null or not ("bark" in main.player):
+		return
+	var pl = main.player
+	var cap := float(_stats().get("max_hp", 100.0)) * float(mods().get("aubier", {}).get("cap", 0.15))
+	var before: float = pl.bark
+	pl.bark = minf(cap, pl.bark + amount)
+	if before <= 0.0 and pl.bark > 0.0:
+		_afx(main, "aubier", {"pos": pl.position, "follow": pl})
+
+
+## Secousse (Racine) : le sol se soulève au point « at » ; les ennemis autour (« radius » de
+## attack.json × taille des zones, plus large autour du joueur pour un coup en couronne) subissent
+## « dmg ».
+static func _quake(main, at: Vector2, dmg: float, branch: String, ring := false) -> void:
+	var r := float(mods().get("secousse", {}).get("radius", 80.0)) * float(_stats().get("area", 1.0)) * (1.6 if ring else 1.0)
+	_afx(main, "secousse", {"pos": at, "r": r})
+	for e in main.enemies_near(at, r):
+		if not e.dead:
+			main.player_hit_enemy(e, dmg, false, branch)
 
 
 ## Soigne le joueur de « amount » points de vie (Sève : sangsue, perles, rosée).
