@@ -69,6 +69,8 @@ var anchor := Vector2.ZERO
 ## Interface d'ennemi : enraciné, aucune résistance de région, comportement propre.
 var anchored := true
 var resist := {}
+## Part de l'armure du joueur ignorée par le coup en cours (player.take_hit), 0 d'ordinaire.
+var armor_pierce := 0.0
 var behavior := "boss"
 ## Teinte des éclats de sa mort (fx.death).
 var color := Color("3a2a2c")

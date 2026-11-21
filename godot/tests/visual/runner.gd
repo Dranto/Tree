@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -31,6 +31,7 @@ const HeartsScript = preload("res://tests/visual/galerie_coeurs.gd")
 const PlateauxScript = preload("res://tests/visual/plateaux.gd")
 const FalaisesScript = preload("res://tests/visual/falaises.gd")
 const ValleeScript = preload("res://tests/visual/vallee.gd")
+const ForetScript = preload("res://tests/visual/foret.gd")
 const FinaleScript = preload("res://tests/visual/finale.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Orb = preload("res://scripts/orb.gd")
@@ -133,6 +134,8 @@ func _ready() -> void:
 			await FalaisesScript.new().run(self)
 		"vallee":
 			await ValleeScript.new().run(self)
+		"foret":
+			await ForetScript.new().run(self)
 		"finale":
 			await FinaleScript.new().run(self)
 	_finish_audit()

@@ -1,6 +1,5 @@
-## Test du monde à cinq régions (et plus) : avec les régions du jeu (dont Sève et Aube) et la région
-## d'essai (branche Racine), les six secteurs sont
-## occupés. On vérifie que chaque région tient dans le monde (lieux, Cœur, arène), que les arènes ne se
+## Test du monde à six régions : les six régions du jeu (Racine, la dernière, depuis le jalon 9)
+## occupent les six secteurs. On vérifie que chaque région tient dans le monde (lieux, Cœur, arène), que les arènes ne se
 ## chevauchent pas, que la vraie région d'une branche l'emporte sur sa région factice, que check_data
 ## refuse une région qui déborde, que les dessins de chaque région (Cœur, arène) sont les siens, et que
 ## le robot de partie complète reste dans sa région.
@@ -46,10 +45,10 @@ func _run() -> void:
 	var game = root.get_node("Game")
 
 	print("Six secteurs")
-	check(Regions.ids() == ["ronce", "spore", "seve", "vent", "aube"], "sans les régions des tests : Ronce, Spore, Sève, Vent et Aube (%s)" % [Regions.ids()])
+	check(Regions.ids() == ["ronce", "spore", "seve", "vent", "aube", "racine"], "les six régions du jeu, une par branche, dans l'ordre du cercle (%s)" % [Regions.ids()])
 	Regions.set_extra_dirs(["res://tests/regions/"])
 	var ids: Array = Regions.ids()
-	check(ids == ["ronce", "spore", "seve", "vent", "aube", "essai"], "avec la région d'essai, une par branche, dans l'ordre du cercle (%s)" % [ids])
+	check(ids == ["ronce", "spore", "seve", "vent", "aube", "racine"], "la région d'essai n'a plus de secteur libre : Racine l'emporte (%s)" % [ids])
 	check(Regions.validate().is_empty(), "check_data accepte les six régions %s" % [Regions.validate()])
 	var angles := {}
 	for id in ids:
@@ -135,7 +134,11 @@ func _run() -> void:
 	check(Regions.art("aube").resource_path.ends_with("region_art/aube.gd"), "Aube : ses propres dessins (les falaises de verre)")
 	for f in ["draw_heart", "draw_heart_purified", "draw_arena_floor", "draw_arena_wall"]:
 		check(Regions.art("aube").get_script_method_list().any(func(m): return m["name"] == f), "Aube redessine %s" % f)
+	check(Regions.art("racine").resource_path.ends_with("region_art/racine.gd"), "Racine : ses propres dessins (la forêt pétrifiée)")
+	Regions.set_extra_dirs(["res://tests/regions/"], ["racine"])
+	check("essai" in Regions.ids() and not "racine" in Regions.ids(), "un test peut écarter Racine pour poser la région d'essai à sa place (%s)" % [Regions.ids()])
 	check(Regions.art("essai").resource_path == Regions.BASE_ART, "une région sans « art » : les dessins par défaut")
+	Regions.set_extra_dirs(["res://tests/regions/"])
 	for f in ["draw_heart", "draw_heart_purified", "draw_arena_floor", "draw_arena_wall"]:
 		var own := []
 		for id in ["spore", "vent"]:
@@ -163,7 +166,7 @@ func _run() -> void:
 			var node = main.sanctuary(str(s["id"]))
 			sanct = sanct and node != null and Regions.region_at(node.position) == id
 	check(sanct, "les sanctuaires de chaque région sont posés dans son secteur")
-	check(main.region_at(Regions.center("seve")) == "seve" and main.region_at(Regions.center("aube")) == "aube", "main.region_at reconnaît Sève et Aube")
+	check(main.region_at(Regions.center("seve")) == "seve" and main.region_at(Regions.center("aube")) == "aube" and main.region_at(Regions.center("racine")) == "racine", "main.region_at reconnaît Sève, Aube et Racine")
 
 	print("Robot de partie complète")
 	for id in ids:

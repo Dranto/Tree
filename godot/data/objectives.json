@@ -204,6 +204,44 @@
       "reward": {"text": "2 points d'arbre et une greffe"}
     },
     {
+      "id": "racine_sanctuaire", "region": "racine", "main": true,
+      "title": "Raviver un sanctuaire de la forêt",
+      "text": "Dans la forêt pétrifiée, tiens-toi quelques secondes dans un sanctuaire : tu y renaîtras si la pierre t'écrase.",
+      "condition": {"type": "flag_count", "prefix": "sanctuaire_", "exclude": ["sanctuaire_graine"], "count": 1, "region_only": true},
+      "target": {"type": "group", "group": "sanctuaire", "done_prefix": "sanctuaire_"},
+      "needs_group": "sanctuaire"
+    },
+    {
+      "id": "racine_autel", "region": "racine", "main": true,
+      "title": "Trouver un autel de la forêt",
+      "text": "Des autels dorment entre les racines géantes. Chacun offre un point d'arbre à qui les découvre.",
+      "condition": {"type": "flag_count", "prefix": "autel_", "count": 1, "region_only": true},
+      "target": {"type": "group", "group": "autel", "done_prefix": "autel_"},
+      "needs_group": "autel"
+    },
+    {
+      "id": "racine_noeud_cle", "region": "racine", "main": true,
+      "title": "Apprendre un nœud clé de Racine",
+      "text": "Suis la branche brune de l'Arbre jusqu'à un nœud clé : ton écorce tiendra contre la pierre.",
+      "condition": {"type": "keystone", "branch": "racine"},
+      "target": {"type": "none"}
+    },
+    {
+      "id": "racine_coeur", "region": "racine", "main": true, "milestone": true,
+      "title": "Purifier le Cœur des cernes",
+      "text": "Au cœur de la forêt, tiens la zone du Cœur. Écarte-toi des Tertres quand ils lèvent les poings.",
+      "condition": {"type": "flag", "flag": "racine_coeur_purifie"},
+      "target": {"type": "heart"}
+    },
+    {
+      "id": "racine_boss", "region": "racine", "main": true, "milestone": true,
+      "title": "Vaincre l'Ancien pétrifié",
+      "text": "La clairière de l'Ancien s'est ouverte au-delà du Cœur. Son pieu perce l'armure : ne reste pas dans sa ligne.",
+      "condition": {"type": "flag", "flag": "racine_boss_vaincu"},
+      "target": {"type": "arena"},
+      "reward": {"text": "2 points d'arbre et une greffe"}
+    },
+    {
       "id": "finale", "main": true, "milestone": true,
       "title": "Vaincre la Flétrissure sous la graine",
       "text": "Toutes les régions sont purifiées : la Flétrissure s'est retirée sous la graine. Tiens-toi dans la brèche à son pied pour descendre l'affronter.",
@@ -296,6 +334,22 @@
       "id": "aube_secret", "region": "aube", "main": false,
       "title": "Découvrir le secret des falaises",
       "text": "Une lumière plus ancienne que l'aube dort au bord des falaises, derrière le verre. Explore les recoins de la région.",
+      "condition": {"type": "flag_count", "prefix": "secret_", "count": 1, "region_only": true},
+      "reward": {"text": "1 point d'arbre et une greffe, donnés par le secret lui-même"}
+    },
+    {
+      "id": "racine_autels", "region": "racine", "main": false,
+      "title": "Réveiller tous les autels de la forêt",
+      "text": "Retrouve chacun des autels cachés dans la région de Racine.",
+      "condition": {"type": "flag_count", "prefix": "autel_", "count": 4, "region_only": true},
+      "target": {"type": "group", "group": "autel", "done_prefix": "autel_"},
+      "needs_group": "autel",
+      "reward": {"text": "1 point d'arbre", "points": 1}
+    },
+    {
+      "id": "racine_secret", "region": "racine", "main": false,
+      "title": "Découvrir le secret de la forêt",
+      "text": "Une racine plus vieille que la forêt plonge quelque part sous la roche, au bord de la région. Explore ses recoins.",
       "condition": {"type": "flag_count", "prefix": "secret_", "count": 1, "region_only": true},
       "reward": {"text": "1 point d'arbre et une greffe, donnés par le secret lui-même"}
     }

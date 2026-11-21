@@ -29,6 +29,9 @@ func _steps(n: int) -> void:
 
 func _run() -> void:
 	game = root.get_node("Game")
+	# Depuis que les six branches ont leur région, il n'y a plus de terre hors région au-delà du
+	# cercle de la graine : on écarte Racine le temps du test, pour vérifier les naissances hors région.
+	Regions.set_extra_dirs([], ["racine"])
 	main = load("res://scenes/main.tscn").instantiate()
 	main.autotest = true      # ni sauvegarde lue ni écrite
 	main.autotest_shots = []
@@ -217,4 +220,5 @@ func _run() -> void:
 	main.queue_free()
 	await process_frame
 	print("Région du roncier : %s" % ("tout est bon" if failures == 0 else "%d échec(s)" % failures))
+	Regions.set_extra_dirs([])
 	quit(1 if failures > 0 else 0)

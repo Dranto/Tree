@@ -79,6 +79,9 @@ const DAZZLE_SLOW := 0.75
 const DAZZLE_WEAK := 0.75
 var dazzle_time := 0.0
 var dazzle_value := 0.0
+## Perce-armure (Scarabée perce-écorce, région de Racine) : part de l'armure du joueur que ses coups
+## ignorent (« armor_pierce » de enemies.json, lu par player.take_hit).
+var armor_pierce := 0.0
 var hit_flash := 0.0
 var dead := false
 var t := 0.0
@@ -193,6 +196,7 @@ func setup(k, p: float) -> void:
 	_behavior = behavior_of(behavior)
 	region = data.get("region", "")
 	resist = data.get("resist", {})
+	armor_pierce = float(data.get("armor_pierce", 0.0))
 	anchored = _behavior.anchored
 	# Mise à l'échelle selon la menace (main.threat) et le choix de difficulté des options.
 	power = p
@@ -209,6 +213,11 @@ func setup(k, p: float) -> void:
 	# Les attaques ne partent pas toutes en même temps.
 	cd = float(data.get("cooldown", 0.0)) * randf_range(0.4, 1.0)
 	strafe = 1.0 if randf() < 0.5 else -1.0
+
+
+## Caché (la Mandragore sous terre) : le tir automatique du joueur ne le prend pas pour cible.
+func hidden() -> bool:
+	return _behavior.hidden(self)
 
 
 ## Sorte qui peut devenir une élite (ni le Nid, ni ses Rejetons, ni une élite déjà faite).
@@ -289,7 +298,7 @@ func _physics_process(delta: float) -> void:
 		hit = float(data.get("charge_damage", damage)) * damage_scale
 	if dazzle_time > 0.0:
 		hit *= DAZZLE_WEAK
-	if dist < radius + p.radius:
+	if dist < radius + p.radius and not _behavior.harmless(self):
 		p.take_hit(hit, self)
 	if poison_time > 0.0:
 		poison_time -= delta
