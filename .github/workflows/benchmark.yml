@@ -12,12 +12,14 @@ on:
 env:
   COEUR_BUDGET_MS: 45
   COEUR_P99_MS: 90
-  CINQ_BUDGET_MS: 34
+  SIX_BUDGET_MS: 34
+  FINALE_BUDGET_MS: 36
+  FINALE_P99_MS: 50
 
 jobs:
   bench:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -46,20 +48,28 @@ jobs:
           set -o pipefail
           SCENE=coeur RUNS=2 BUDGET_MS=${{ env.COEUR_BUDGET_MS }} P99_MS=${{ env.COEUR_P99_MS }} tools/bench.sh | tee bench_coeur.txt
 
-      # Monde à cinq régions (régions factices de tests/regions/ tant que Sève et Aube sont des ébauches).
-      - name: Banc à cinq régions (120 Flétris, meilleure de 2 mesures)
+      # Monde à six régions (régions factices de tests/regions/ : Racine, tant qu'elle n'est pas écrite).
+      - name: Banc à six régions (120 Flétris, meilleure de 2 mesures)
         if: always()
         shell: bash
         run: |
           set -o pipefail
-          REGIONS=cinq RUNS=2 BUDGET_MS=${{ env.CINQ_BUDGET_MS }} tools/bench.sh | tee bench_cinq.txt
+          REGIONS=six RUNS=2 BUDGET_MS=${{ env.SIX_BUDGET_MS }} tools/bench.sh | tee bench_six.txt
 
-      - name: Banc des pics à cinq régions, siège du Cœur (meilleure de 2 mesures)
+      - name: Banc des pics à six régions, siège du Cœur (meilleure de 2 mesures)
         if: always()
         shell: bash
         run: |
           set -o pipefail
-          REGIONS=cinq SCENE=coeur RUNS=2 BUDGET_MS=${{ env.COEUR_BUDGET_MS }} P99_MS=${{ env.COEUR_P99_MS }} tools/bench.sh | tee bench_cinq_coeur.txt
+          REGIONS=six SCENE=coeur RUNS=2 BUDGET_MS=${{ env.COEUR_BUDGET_MS }} P99_MS=${{ env.COEUR_P99_MS }} tools/bench.sh | tee bench_six_coeur.txt
+
+      # Finale : l'arène sous la graine et le colosse, à six régions (le monde entier est purifié).
+      - name: Banc de la finale, arène et colosse (meilleure de 2 mesures)
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          REGIONS=six SCENE=finale RUNS=2 BUDGET_MS=${{ env.FINALE_BUDGET_MS }} P99_MS=${{ env.FINALE_P99_MS }} tools/bench.sh | tee bench_finale.txt
 
       - name: Résumé du job
         if: always()
@@ -73,9 +83,13 @@ jobs:
             echo '```'
             cat bench_coeur.txt 2>/dev/null
             echo '```'
-            echo "### Banc à cinq régions"
+            echo "### Banc à six régions"
             echo '```'
-            cat bench_cinq.txt 2>/dev/null
-            cat bench_cinq_coeur.txt 2>/dev/null
+            cat bench_six.txt 2>/dev/null
+            cat bench_six_coeur.txt 2>/dev/null
+            echo '```'
+            echo "### Banc de la finale"
+            echo '```'
+            cat bench_finale.txt 2>/dev/null
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

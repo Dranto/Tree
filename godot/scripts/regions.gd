@@ -37,6 +37,8 @@ const BASE_ART := "res://scripts/region_art.gd"
 ## tests/region_engine_test.gd), à poser avec set_extra_dirs. Aussi par la ligne de commande :
 ## -- --regions=res://tests/regions/
 static var extra_dirs: Array = []
+## Régions du jeu écartées le temps d'un test (set_extra_dirs, « hide »).
+static var hidden: Array = []
 static var _defs: Dictionary = {}
 static var _ids: Array = []
 static var _loaded := false
@@ -67,8 +69,13 @@ static func branch_of(id: String) -> String:
 
 ## Ajoute des dossiers de régions (la région factice des tests) et relit tout. Passer par cette
 ## fonction : une affectation de extra_dirs depuis un autre script ne prend pas (Godot 4.3).
-static func set_extra_dirs(dirs: Array) -> void:
+##
+## « hide » : régions du jeu (data/regions/) à écarter le temps d'un test, pour laisser leur secteur à
+## une région factice : depuis que les six branches ont leur région (Racine, jalon 9), la région
+## d'essai ne trouve plus de secteur libre ; les tests lui donnent celui de Racine (hide = ["racine"]).
+static func set_extra_dirs(dirs: Array, hide: Array = []) -> void:
 	extra_dirs = dirs
+	hidden = hide
 	reload()
 
 
@@ -93,7 +100,8 @@ static func _load_all() -> void:
 	var found := {}
 	for dir in dirs:
 		# Une région des tests (dossiers en plus) n'occupe qu'un secteur resté libre : la vraie région
-		# d'une branche l'emporte sur sa région factice (tests/regions/aube.json ; celle de Sève est partie dans data/regions/).
+		# d'une branche l'emporte sur sa région factice (les six branches ont la leur depuis Racine : un test
+		# écarte une vraie région par set_extra_dirs(dirs, hide) pour y poser la région d'essai).
 		var taken := {}
 		for id in found:
 			taken[str(found[id].get("branch", id))] = true
@@ -108,6 +116,8 @@ static func _load_all() -> void:
 				continue
 			var id := str(data.get("id", file.get_basename()))
 			if dir != DIR and (taken.has(str(data.get("branch", id))) or found.has(id)):
+				continue
+			if dir == DIR and id in hidden:
 				continue
 			data["id"] = id
 			data["_path"] = path

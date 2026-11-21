@@ -17,6 +17,9 @@
 ## - pose(e, o) : ajoute à la pose de dessin (dictionnaire o de enemy.pose) ce que le comportement
 ##   seul connaît (la hauteur du bond du Crapaud…) ; mettre o["live"] = true si la silhouette doit
 ##   alors être dessinée image par image (hors du cache des silhouettes) ;
+## - harmless(e) : vrai tant que l'ennemi ne blesse pas au contact (la Mandragore sous terre) ;
+## - hidden(e) : vrai tant que l'ennemi est caché (la Mandragore sous terre) : le tir automatique du
+##   joueur ne le choisit pas pour cible ;
 ## - anchored : vrai pour un ennemi qui ne bouge pas (le Nid).
 ## Les réglages de la sorte sont dans e.data (enemies.json), mis à l'échelle par e.damage_scale.
 class_name EnemyBehavior
@@ -48,3 +51,11 @@ func calm(_e) -> bool:
 
 func pose(_e, _o: Dictionary) -> void:
 	pass
+
+
+func harmless(_e) -> bool:
+	return false
+
+
+func hidden(_e) -> bool:
+	return false

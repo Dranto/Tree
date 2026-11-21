@@ -98,6 +98,7 @@ func _build_legend() -> void:
 		_legend_row(["region", RegionUi.tint(reg), RegionUi.full_name(reg), sub + ("  ·  " + st if st != "" and sub != "" else st)])
 	for e in [
 		["seed", UiTheme.GOLD, "La graine", ""],
+		["breach", _breach_color(), RegionUi.UNDER_SEED_NAME, RegionUi.finale_summary()],
 		["sanctuary", Color("9ad7ff"), "Sanctuaire", ""],
 		["altar", Color("f2d06b"), "Autel découvert", ""],
 		["heart", Color("c84b44"), "Cœur de flétrissure", ""],
@@ -227,6 +228,10 @@ func draw_map(v: Control) -> void:
 	var seed_at := to_map(Vector2.ZERO, s)
 	draw_glyph(v, "seed", seed_at, UiTheme.GOLD, true, 1.0)
 	_text(v, font, seed_at + Vector2(14, 5), "Graine", Color(UiTheme.GOLD, 0.9))
+	# La brèche à son pied (la finale) : un anneau qui s'allume quand toutes les régions sont purifiées.
+	draw_glyph(v, "breach", seed_at, _breach_color(), true, 1.0)
+	if bool(Game.flags.get("finale_ouverte", false)) and not bool(Game.flags.get("finale_vaincue", false)):
+		_text(v, font, seed_at + Vector2(14, 21), "Brèche", Color(_breach_color(), 0.95))
 
 	# Sanctuaires et autels du monde (groupes « sanctuaire » et « autel »).
 	for n in main.get_tree().get_nodes_in_group("sanctuaire"):
@@ -307,6 +312,15 @@ func _text(v: Control, font: Font, pos: Vector2, s: String, color: Color) -> voi
 	UiAudit.draw_text(v, "carte", font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, color, v.get_global_transform())
 
 
+## Couleur de la brèche sous la graine : éteinte tant qu'elle est scellée, rouge braise ouverte, verte vaincue.
+func _breach_color() -> Color:
+	if bool(Game.flags.get("finale_vaincue", false)):
+		return Color("7fd36b")
+	if bool(Game.flags.get("finale_ouverte", false)):
+		return Color("e0675e")
+	return Color(0.55, 0.58, 0.55)
+
+
 ## Un signe de la carte (ou de la légende), centré sur « c ».
 func draw_glyph(ci: CanvasItem, kind: String, c: Vector2, color: Color, filled: bool, k: float, angle := 0.0) -> void:
 	var dark := Color(0.04, 0.05, 0.04, 0.9)
@@ -320,6 +334,12 @@ func draw_glyph(ci: CanvasItem, kind: String, c: Vector2, color: Color, filled: 
 			ci.draw_circle(c, 6.0 * k, dark)
 			ci.draw_circle(c, 4.0 * k, color)
 			ci.draw_line(c + Vector2(0, 4), c + Vector2(0, 9), color, 2.0)
+		"breach":
+			# Un anneau brisé autour de la graine : la brèche par où l'on descend affronter la Flétrissure.
+			for i in 3:
+				var a0 := TAU * i / 3.0 + 0.25
+				ci.draw_arc(c, 12.0 * k, a0, a0 + 1.4, 10, dark, 4.5)
+				ci.draw_arc(c, 12.0 * k, a0, a0 + 1.4, 10, color, 2.5)
 		"sanctuary":
 			var pts := PackedVector2Array([c + Vector2(0, -9), c + Vector2(7, 0), c + Vector2(0, 9), c + Vector2(-7, 0)])
 			if filled:

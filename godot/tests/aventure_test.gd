@@ -24,7 +24,7 @@ extends SceneTree
 const DT := 1.0 / 60.0
 const Regions = preload("res://scripts/regions.gd")
 ## Ordre d'un joueur, de la région la plus facile à la plus dure (les autres, dans l'ordre des secteurs, ensuite).
-const ORDER := ["ronce", "spore", "aube", "vent", "seve"]
+const ORDER := ["ronce", "spore", "aube", "vent", "seve", "racine"]
 ## Secondes de jeu sans objectif principal accompli au-delà desquelles c'est un blocage.
 const STALL := 900.0
 ## Durée maximale d'un combat de boss, d'une région entière, et nombre de morts maximal par région.

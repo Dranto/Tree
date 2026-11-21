@@ -18,12 +18,14 @@ const VENT := ["tornade", "ruee", "appel_air"]
 const AUBE := ["aurore", "prisme", "lance_aube"]
 ## Compétences de la branche Sève (cinquième page).
 const SEVE := ["liane", "fontaine", "cocon"]
+## Compétences de la branche Racine (sixième page).
+const RACINE := ["ecorce", "ancrage", "pieux"]
 const PHASES := ["début", "coup", "fin"]
 
 var view := Vector2(2560, 1440)
 var page := "heros"
 ## Page des compétences : les quatre premières (1), les quatre suivantes (2), celles de Vent (3), d'Aube (4),
-## de Sève (5).
+## de Sève (5), de Racine (6).
 var part := 1
 var t := 0.0
 var font: Font
@@ -43,6 +45,8 @@ func _skills() -> Array:
 		return AUBE
 	if part == 5:
 		return SEVE
+	if part == 6:
+		return RACINE
 	return SKILLS.slice((part - 1) * 4, part * 4)
 
 
@@ -179,6 +183,7 @@ const PHASE_K := {
 	"tornade": [0.04, 0.4, 0.95], "ruee": [0.1, 0.35, 0.8], "appel_air": [0.3, 0.68, 0.88],
 	"aurore": [0.06, 0.35, 0.8], "prisme": [0.02, 0.3, 0.96], "lance_aube": [0.6, 0.12, 0.7],
 	"liane": [0.04, 0.4, 0.95], "fontaine": [0.04, 0.4, 0.95], "cocon": [0.04, 0.5, 0.9],
+	"ecorce": [0.03, 0.4, 0.9], "ancrage": [0.06, 0.4, 0.93], "pieux": [0.08, 0.3, 0.85],
 }
 ## Échelle de chaque ligne : la zone de la compétence tient dans sa case.
 const CELL_SCALE := {
@@ -187,6 +192,7 @@ const CELL_SCALE := {
 	"tornade": 0.9, "ruee": 1.2, "appel_air": 0.55,
 	"aurore": 0.62, "prisme": 1.3, "lance_aube": 0.75,
 	"liane": 1.0, "fontaine": 0.95, "cocon": 1.6,
+	"ecorce": 1.6, "ancrage": 0.75, "pieux": 1.0,
 }
 
 
@@ -222,6 +228,8 @@ func _page_competences() -> void:
 		_aube_attaques()
 	if part == 5:
 		_seve_attaques()
+	if part == 6:
+		_racine_attaques()
 
 
 ## Une case : le héros (à gauche) et la signature de la compétence à l'instant k de sa durée.
@@ -256,7 +264,7 @@ func _skill_cell(id: String, r: Rect2, k: float, phase: int) -> void:
 ## La signature d'une compétence, dans le repère du héros (héros en 0, visée vers la droite).
 func _effect(id: String, target: Vector2, k: float, width: float) -> Dictionary:
 	var e := {"id": id, "t": 0.0, "pos": Vector2.ZERO, "dir": Vector2.RIGHT}
-	e["dur"] = SkillFx.DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, SeveFx.DUREE.get(id, 0.4))))
+	e["dur"] = SkillFx.DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, SeveFx.DUREE.get(id, RacineFx.DUREE.get(id, 0.4)))))
 	match id:
 		"graine":
 			e["id"] = "graine_depart" if k > 0.35 else "graine_impact"
@@ -322,6 +330,19 @@ func _effect(id: String, target: Vector2, k: float, width: float) -> Dictionary:
 		"cocon":
 			e["r"] = 30.0
 			e["part"] = [1.0, 0.6, 0.25][int(k * 2.2)]
+		"ecorce":
+			e["r"] = 28.0
+			e["part"] = [1.0, 0.6, 0.25][int(k * 2.2)]
+			e["seed"] = 5
+		"ancrage":
+			e["r"] = 190.0
+			e["seed"] = 4
+		"pieux":
+			# Trois pieux le long de la ligne, à des âges différents (le premier redescend).
+			e["id"] = "pieu"
+			e["pos"] = target
+			e["r"] = 46.0
+			e["seed"] = 9
 	return e
 
 
@@ -355,6 +376,12 @@ func _targets(id: String, target: Vector2) -> Array:
 			return [Vector2(90, -30)]
 		"cocon":
 			return [Vector2(60, -20)]
+		"ecorce":
+			return [Vector2(60, -20)]
+		"ancrage":
+			return [Vector2(130, -40), Vector2(-120, 60)]
+		"pieux":
+			return [target + Vector2(0, -6)]
 	return []
 
 
@@ -630,5 +657,40 @@ func _seve_attaques() -> void:
 		HeroArt.base = xf
 		HeroArt.draw(self, Vector2.ZERO, 14.0, 0.0, {"t": 0.3, "shoot": 0.5 if j == 0 else 0.0})
 		HeroArt.base = Transform2D.IDENTITY
+		draw_set_transform_matrix(Transform2D.IDENTITY)
+		_text(r.position + Vector2(12, 30), labels[j], 22, Art.c("texte"))
+
+
+## Attaque de Racine (dernière ligne de la sixième page) : massue en plein coup, secousse, aubier.
+func _racine_attaques() -> void:
+	var r0 := _cell_rect(3, 0)
+	Art.icon_badge(self, "attaque_massue", Rect2(30, r0.position.y + r0.size.y / 2.0 - 70, 96, 96))
+	_text(Vector2(30, r0.position.y + r0.size.y / 2.0 + 54), "Attaque de Racine", 22, Art.c("texte"), true)
+	var labels := ["Massue de bois : le coup", "Secousse : le sol se soulève", "Aubier : l'écorce se referme"]
+	for j in 3:
+		var r := _cell_rect(3, j)
+		_ground(r, 60 + j)
+		var hero := r.position + Vector2(r.size.x * 0.3, r.size.y * 0.55)
+		var xf := Transform2D(0.0, Vector2(1.2, 1.2), 0.0, hero)
+		draw_set_transform_matrix(xf)
+		match j:
+			0:
+				_fletri(Vector2(120, -20))
+				AttackFx.draw_effect(self, {"id": "massue", "pos": Vector2.ZERO, "dir": Vector2.RIGHT, "r": 150.0, "arc": 1.7, "t": 0.15, "dur": 0.32})
+			1:
+				_fletri(Vector2(110, 0))
+				_fletri(Vector2(150, 40))
+				AttackFx.draw_effect(self, {"id": "massue", "pos": Vector2.ZERO, "dir": Vector2.RIGHT, "r": 150.0, "arc": 1.7, "t": 0.22, "dur": 0.32})
+				AttackFx.draw_effect(self, {"id": "secousse", "pos": Vector2(112, 0), "r": 80.0, "t": 0.12, "dur": 0.4})
+			2:
+				_fletri(Vector2(110, 10))
+				AttackFx.draw_effect(self, {"id": "aubier", "pos": Vector2.ZERO, "t": 0.1, "dur": 0.35})
+		draw_set_transform_matrix(Transform2D.IDENTITY)
+		HeroArt.base = xf
+		HeroArt.draw(self, Vector2.ZERO, 14.0, 0.0, {"t": 0.3, "cast": 0.5 if j == 0 else 0.0, "cast_col": Art.ec("racine")})
+		HeroArt.base = Transform2D.IDENTITY
+		if j == 2:
+			draw_set_transform_matrix(xf)
+			AttackFx.draw_effect(self, {"id": "aubier", "pos": Vector2.ZERO, "t": 0.1, "dur": 0.35})
 		draw_set_transform_matrix(Transform2D.IDENTITY)
 		_text(r.position + Vector2(12, 30), labels[j], 22, Art.c("texte"))

@@ -132,6 +132,7 @@ const ELEMENT_DE_COMPETENCE := {
 	"tornade": "vent", "ruee": "vent", "appel_air": "vent",
 	"aurore": "lumiere", "prisme": "lumiere", "lance_aube": "lumiere",
 	"liane": "seve", "fontaine": "seve", "cocon": "seve",
+	"ecorce": "racine", "ancrage": "racine", "pieux": "racine",
 }
 
 # --- Traits, ombres, lumière ---
@@ -319,16 +320,35 @@ static func _motif_unit(ci: CanvasItem, element: String, p: Vector2, s: float, t
 			ci.draw_circle(p, s * 0.38, e["clair"])
 
 
+## En dessous de cette taille (px), un dessin d'effet qui s'éteint peut devenir un polygone dégénéré.
+const SMALL_POLY := 1.0
+
+
 ## Une pointe d'épine : base large, pointe dans la direction d.
 static func _thorn(ci: CanvasItem, base: Vector2, d: Vector2, len: float, col: Color) -> void:
 	var n := Vector2(-d.y, d.x)
-	ci.draw_colored_polygon(PackedVector2Array([base + n * len * 0.28, base + d * len, base - n * len * 0.28]), col)
+	var pts := PackedVector2Array([base + n * len * 0.28, base + d * len, base - n * len * 0.28])
+	if len < SMALL_POLY and Geometry2D.triangulate_polygon(pts).is_empty():
+		return
+	ci.draw_colored_polygon(pts, col)
 
 
 ## Une goutte : rond en bas, pointe en haut.
 static func _drop(ci: CanvasItem, p: Vector2, s: float, col: Color) -> void:
 	ci.draw_circle(p, s, col)
-	ci.draw_colored_polygon(PackedVector2Array([p + Vector2(-s * 0.92, -s * 0.3), p + Vector2(0, -s * 2.1), p + Vector2(s * 0.92, -s * 0.3)]), col)
+	var pts := PackedVector2Array([p + Vector2(-s * 0.92, -s * 0.3), p + Vector2(0, -s * 2.1), p + Vector2(s * 0.92, -s * 0.3)])
+	if s < SMALL_POLY and Geometry2D.triangulate_polygon(pts).is_empty():
+		return
+	ci.draw_colored_polygon(pts, col)
+
+
+## Remplit un polygone sauf s'il est dégénéré (effet qui finit de s'effacer : points confondus ou
+## qui se croisent). Godot ne dessinerait rien et écrirait « Invalid polygon data, triangulation
+## failed » dans le journal : le rendu est le même, sans le message.
+static func fill_safe(ci: CanvasItem, pts: PackedVector2Array, col: Color) -> void:
+	if Geometry2D.triangulate_polygon(pts).is_empty():
+		return
+	ci.draw_colored_polygon(pts, col)
 
 
 ## Une rafale : un trait qui file et s'enroule au bout (vers la droite).
@@ -443,11 +463,11 @@ static func delta_e(a: Color, b: Color) -> float:
 # Silhouettes pleines, lisibles à 20 px ; un détail clair au plus.
 const ICONES := {
 	"elements": ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent", "lumiere"],
-	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom", "vesse", "essaim", "eclosion", "tornade", "ruee", "appel_air", "aurore", "prisme", "lance_aube", "liane", "fontaine", "cocon"],
+	"competences": ["graine", "nova", "fouet", "racines", "volee", "saignee", "cloud", "bloom", "vesse", "essaim", "eclosion", "tornade", "ruee", "appel_air", "aurore", "prisme", "lance_aube", "liane", "fontaine", "cocon", "ecorce", "ancrage", "pieux"],
 	"statistiques": ["degats", "attaque", "projectile", "critique", "vie", "regen", "armure", "vitesse", "esquive", "zone", "collecte", "competence"],
 	"monde": ["sanctuaire", "autel", "coeur", "arene", "secret", "seve_perdue", "essence", "greffe"],
 	# Formes de l'attaque de base (data/attack.json) et nœud qui la modifie : Art.icon("attaque_<forme>").
-	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_spore_lobee", "attaque_dard", "attaque_lame", "attaque_bourrasque", "attaque_rayon", "attaque_perle", "attaque_mod"],
+	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_spore_lobee", "attaque_dard", "attaque_lame", "attaque_bourrasque", "attaque_rayon", "attaque_perle", "attaque_massue", "attaque_mod"],
 }
 ## Nom affiché de chaque icône (planche, infobulles).
 const NOM_ICONE := {
@@ -467,6 +487,7 @@ const NOM_ICONE := {
 	"aurore": "Aurore", "prisme": "Prisme", "lance_aube": "Lance d'aube", "attaque_rayon": "Attaque : rayon d'aube",
 	"liane": "Liane buveuse", "fontaine": "Fontaine de sève", "cocon": "Cocon de sève",
 	"attaque_perle": "Attaque : perles de sève",
+	"ecorce": "Bouclier d'écorce", "ancrage": "Ancrage", "pieux": "Pieux", "attaque_massue": "Attaque : massue de bois",
 }
 ## Élément de chaque forme de l'attaque de base (le même que dans data/attack.json).
 const ELEMENT_D_ATTAQUE := {
@@ -475,6 +496,7 @@ const ELEMENT_D_ATTAQUE := {
 	"attaque_lame": "vent", "attaque_bourrasque": "vent",
 	"attaque_rayon": "lumiere",
 	"attaque_perle": "seve",
+	"attaque_massue": "racine",
 }
 ## Couleur par défaut d'une icône qui n'est pas un élément.
 const COULEUR_ICONE := {
@@ -914,8 +936,9 @@ static func _icon_body(ci: CanvasItem, id: String, p: Vector2, s: float, col: Co
 			ci.draw_line(P.call(-0.45, 0.45), P.call(-0.85, 0.85), sombre.lightened(0.2), lw * 1.2, true)
 			ci.draw_line(P.call(-0.5, 0.5), P.call(0.55, -0.55), sombre, lw * 0.7, true)
 		_:
-			# Icônes des branches Vent (vent_fx.gd), Aube (aube_fx.gd) et Sève (seve_fx.gd).
-			if not VentFx.icon(ci, id, p, s, col, clair, sombre, lw) and not AubeFx.icon(ci, id, p, s, col, clair, sombre, lw) and not SeveFx.icon(ci, id, p, s, col, clair, sombre, lw):
+			# Icônes des branches Vent (vent_fx.gd), Aube (aube_fx.gd), Sève (seve_fx.gd) et Racine (racine_fx.gd).
+			if not VentFx.icon(ci, id, p, s, col, clair, sombre, lw) and not AubeFx.icon(ci, id, p, s, col, clair, sombre, lw) and not SeveFx.icon(ci, id, p, s, col, clair, sombre, lw) \
+					and not RacineFx.icon(ci, id, p, s, col, clair, sombre, lw):
 				ci.draw_circle(p, s * 0.35, col)
 
 

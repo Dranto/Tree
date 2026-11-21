@@ -129,13 +129,15 @@ func refresh() -> void:
 	_subtitle = _label(_box, sub, 14, Color(0.7, 0.78, 0.7))
 	# La section dépliée par défaut est celle de la région que suit le joueur (Objectives.followed).
 	var cur: Dictionary = Objectives.followed()
-	var cur_region := str(cur.get("region", ""))
-	# Sections : l'aventure (objectifs sans région) puis chaque région qui a des objectifs.
+	var cur_region := RegionUi.journal_section(cur)
+	# Sections : l'aventure (objectifs sans région), chaque région qui a des objectifs, puis « sous la
+	# graine » (la finale : scellée tant que toutes les régions ne sont pas purifiées).
 	var sections: Array = [""]
 	for id in Regions.ids():
 		sections.append(id)
+	sections.append(RegionUi.UNDER_SEED_ID)
 	for reg in sections:
-		var rows: Array = Objectives.for_region(reg)
+		var rows: Array = Objectives.list().filter(func(o): return RegionUi.journal_section(o) == reg)
 		if rows.is_empty():
 			continue
 		var is_open: bool = _manual.get(reg, reg == cur_region and not cur.is_empty())
@@ -161,8 +163,9 @@ func _add_section(reg: String, rows: Array, is_open: bool, cur: Dictionary) -> v
 	for o in mains:
 		if Objectives.is_done(o["id"]):
 			done += 1
-	var tint := RegionUi.tint(reg).lightened(0.2) if reg != "" else Color(0.6, 0.72, 0.6)
-	var title := "L'AVENTURE" if reg == "" else RegionUi.full_name(reg).to_upper()
+	var under_seed: bool = reg == RegionUi.UNDER_SEED_ID
+	var tint := RegionUi.UNDER_SEED_TINT if under_seed else (RegionUi.tint(reg).lightened(0.2) if reg != "" else Color(0.6, 0.72, 0.6))
+	var title := "L'AVENTURE" if reg == "" else (RegionUi.UNDER_SEED_NAME.to_upper() if under_seed else RegionUi.full_name(reg).to_upper())
 	var head := Button.new()
 	head.flat = true
 	head.focus_mode = Control.FOCUS_NONE
@@ -178,7 +181,7 @@ func _add_section(reg: String, rows: Array, is_open: bool, cur: Dictionary) -> v
 	line.add_child(chev)
 	var t := _label(line, title, 13, tint, true)
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var state := RegionUi.state(reg) if reg != "" else ""
+	var state := RegionUi.finale_state() if under_seed else (RegionUi.state(reg) if reg != "" else "")
 	var tail := "%d / %d" % [done, mains.size()] + ("   ·   " + state if state != "" else "")
 	var r := _label(line, tail, 13, Color(0.6, 0.68, 0.6))
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE

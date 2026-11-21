@@ -84,6 +84,8 @@ func _ready() -> void:
 	summary_button = _button(bar, "Résumé", Callable())
 	summary_button.toggle_mode = true
 	summary_button.toggled.connect(set_summary_visible)
+	# Avec près de 900 nœuds, on se perd vite en zoomant : un bouton (et la touche Origine) recadre l'arbre entier.
+	_button(bar, "Vue d'ensemble", func(): ui.fit_view())
 
 	plan_bar = PanelContainer.new()
 	plan_bar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -193,6 +195,9 @@ func _input(event: InputEvent) -> void:
 		search.grab_focus()
 		search.select_all()
 		get_viewport().set_input_as_handled()
+	elif key.keycode == KEY_HOME:
+		ui.fit_view()
+		get_viewport().set_input_as_handled()
 	elif key.is_command_or_control_pressed() and key.keycode == KEY_Z:
 		undo()
 		get_viewport().set_input_as_handled()
@@ -225,7 +230,7 @@ func set_query(text: String) -> void:
 
 
 func _on_search_changed(text: String) -> void:
-	matches = planner.search(text)
+	matches = _sweep(planner.search(text))
 	match_set = {}
 	for id in matches:
 		match_set[id] = true
@@ -234,11 +239,32 @@ func _on_search_changed(text: String) -> void:
 	_redraw()
 
 
-## Centre la caméra sur le résultat suivant (ou précédent) de la recherche.
+## Résultats rangés comme on parcourt l'arbre : branche par branche dans le sens des aiguilles d'une
+## montre (en partant du haut), de la graine vers l'extérieur dans chaque tranche de 10°.
+func _sweep(ids: Array) -> Array:
+	var nodes: Array = Game.tree.nodes
+	var key := func(id: int) -> Array:
+		var p: Vector2 = nodes[id]["pos"]
+		return [floori(fposmod(p.angle() + PI / 2.0, TAU) / deg_to_rad(10.0)), p.length_squared(), id]
+	var out := ids.duplicate()
+	out.sort_custom(func(a, b): return key.call(a) < key.call(b))
+	return out
+
+
+## Centre la caméra sur le résultat suivant (ou précédent) de la recherche. Le premier est le plus
+## proche du centre de la vue ; les suivants font le tour de l'arbre (voir _sweep).
 func next_match(step := 1) -> void:
 	if matches.is_empty():
 		return
-	match_index = posmod(match_index + step, matches.size()) if match_index >= 0 else (0 if step > 0 else matches.size() - 1)
+	if match_index >= 0:
+		match_index = posmod(match_index + step, matches.size())
+	else:
+		var best := INF
+		for i in matches.size():
+			var d: float = Game.tree.nodes[matches[i]]["pos"].distance_squared_to(ui.cam)
+			if d < best:
+				best = d
+				match_index = i
 	var n: Dictionary = Game.tree.nodes[matches[match_index]]
 	ui.cam = n["pos"]
 	if ui.zoom < 0.5:

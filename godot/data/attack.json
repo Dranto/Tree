@@ -183,6 +183,22 @@
       "size": 1.0,
       "fx": "rayon",
       "sound": "aube_rayon"
+    },
+    "massue": {
+      "name": "Massue de bois",
+      "desc": "Un lourd coup de massue en arc devant toi : lent, mais il écrase et repousse tout ce qu'il touche.",
+      "kind": "melee",
+      "tags": ["corps_a_corps"],
+      "branch": "racine",
+      "element": "racine",
+      "priority": 2,
+      "damage": 1.5,
+      "rate": 0.72,
+      "range": 150,
+      "arc": 1.7,
+      "knockback": 30,
+      "fx": "massue",
+      "sfx": "racine_massue"
     }
   },
   "mods": {
@@ -329,6 +345,19 @@
       "name": "Incandescence",
       "text": "Les coups critiques de l'attaque font {p} % de dégâts en plus.",
       "stack": "sum"
+    },
+    "secousse": {
+      "name": "Secousse",
+      "text": "Chaque coup au corps à corps secoue le sol devant toi : {p} % des dégâts aux ennemis autour du point d'impact.",
+      "stack": "sum",
+      "forms": ["massue", "fouet", "bourrasque"],
+      "radius": 80
+    },
+    "aubier": {
+      "name": "Aubier",
+      "text": "Chaque coup de l'attaque te couvre d'écorce : {p} % des dégâts en bouclier (au plus 15 % de ta vie maximale).",
+      "stack": "sum",
+      "cap": 0.15
     }
   }
 }

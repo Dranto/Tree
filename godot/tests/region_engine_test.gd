@@ -50,7 +50,7 @@ func _run() -> void:
 
 	print("Fichiers")
 	var ronce_center := Regions.center("ronce")
-	Regions.set_extra_dirs(["res://tests/regions/"])
+	Regions.set_extra_dirs(["res://tests/regions/"], ["racine"])
 	var ids: Array = Regions.ids()
 	var branches: Array = load("res://scripts/content.gd").tree().get("branches", [])
 	var ordered := ids.duplicate()

@@ -69,6 +69,8 @@ var anchor := Vector2.ZERO
 ## Interface d'ennemi : enraciné, aucune résistance de région, comportement propre.
 var anchored := true
 var resist := {}
+## Part de l'armure du joueur ignorée par le coup en cours (player.take_hit), 0 d'ordinaire.
+var armor_pierce := 0.0
 var behavior := "boss"
 ## Teinte des éclats de sa mort (fx.death).
 var color := Color("3a2a2c")
@@ -271,7 +273,8 @@ func apply_status(status: String, value: float, duration: float) -> void:
 			s["stacks"] = mini(max_bleed_stacks, int(s["stacks"]) + 1)
 			statuses[status] = s
 		"enracine":
-			if root_immune > 0.0 or statuses.has(status):
+			# Un boss qui déclare « var no_root := true » (l'Ancien pétrifié) ne se laisse pas entraver.
+			if root_immune > 0.0 or statuses.has(status) or get("no_root") == true:
 				return
 			statuses[status] = {"value": value, "time": minf(duration, 3.0), "stacks": 1}
 			main.fx.text(position + Vector2(0, -radius * 2.0), "Entravée", Color("9af07a"), 18, 0.8)

@@ -105,8 +105,21 @@ func _process(delta: float) -> void:
 
 # --- Données ---
 
+## Les objectifs d'une région absente du monde (écartée le temps d'un test, voir
+## Regions.set_extra_dirs) ne comptent pas. Liste gardée tant que les régions ne changent pas.
+var _list: Array = []
+var _list_regions: Array = []
+var _list_src = null
+
+
 func list() -> Array:
-	return Content._load("objectives").get("objectives", [])
+	var all: Array = Content._load("objectives").get("objectives", [])
+	var ids: Array = Regions.ids()
+	if not is_same(_list_src, all) or _list_regions != ids:
+		_list_src = all
+		_list_regions = ids.duplicate()
+		_list = all.filter(func(o): return str(o.get("region", "")) == "" or str(o["region"]) in ids)
+	return _list
 
 
 func get_def(id: String) -> Dictionary:

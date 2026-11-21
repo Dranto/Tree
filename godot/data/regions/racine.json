@@ -1,0 +1,90 @@
+{
+  "_doc": "Région de Racine (la forêt pétrifiée). Format décrit dans data/README.md, « Régions ». Positions : « dist » = distance à la graine en pixels ; « side » = écart au milieu du secteur, de -1 (bord gauche) à 1 (bord droit), ou « angle » = écart en radians. Secteur nord-ouest, en coin du monde : l'arène peut aller jusqu'à 1640 px de la graine (offset + rayon).",
+  "id": "racine",
+  "branch": "racine",
+  "name": "Région de Racine",
+  "place": "la forêt pétrifiée",
+  "map_name": "Forêt",
+  "color": "#b0915e",
+  "art": "racine",
+  "ground": {
+    "_doc": "Forêt pétrifiée : une roche grise veinée d'ocre, des aiguilles de pierre tant que le Cœur vit ; un humus brun et moussu une fois ravivée, piqué de lichens clairs.",
+    "colors": {
+      "roche": {"mix": ["sol_mort", "#7c766c", 0.4]},
+      "ocre": {"mix": ["sol_mort", "racine/sombre", 0.4]},
+      "humus": {"mix": ["sol_vivant", "racine/sombre", 0.32]}
+    },
+    "dead_dark": {"dark": ["$ocre", 0.18]},
+    "dead_light": {"mix": ["$roche", "$ocre", 0.3]},
+    "purified_dark": {"dark": [{"mix": ["sol_mort", "racine", 0.3]}, 0.14]},
+    "purified_light": {"mix": ["sol_mort", "racine", 0.22]},
+    "alive_dark": {"dark": ["$humus", 0.2]},
+    "alive_light": {"light": [{"mix": ["$humus", "racine/clair", 0.22]}, 0.04]},
+    "dot": "racine/clair",
+    "dot_cell": 14.0,
+    "dot_rarity": 0.986,
+    "dot_salt": [37.0, 59.0],
+    "dot_size": 0.14,
+    "dot_strength": 0.6,
+    "alive_mix": 0.85,
+    "alive_mix_purified": 0.35
+  },
+  "decor": {"kind": "foret", "seed": 47, "roots": 30, "stumps": 54, "lichens": 230, "clear_center": 340.0, "clear_seed": 560.0},
+  "landmarks": [
+    {"kind": "grand_arbre", "dist": 1100.0, "angle": -0.1, "size": 1.15},
+    {"kind": "ruine", "dist": 1450.0, "angle": 0.42, "size": 1.0},
+    {"kind": "rocher", "dist": 2050.0, "angle": -0.42, "size": 1.05},
+    {"kind": "grand_arbre", "dist": 2400.0, "angle": 0.35, "size": 0.95}
+  ],
+  "spawn": {
+    "kinds": {"termite": 0.36, "mandragore": 0.24, "scarabee": 0.26, "tertre": 0.14},
+    "share_near": 0.3,
+    "share_far": 0.85,
+    "far": 2400,
+    "min_dist": {"tertre": 1300},
+    "max_nests": 0,
+    "purified_factor": 0.4
+  },
+  "sanctuaries": [
+    {"id": "racine_souche", "name": "de la Souche", "dist": 820.0, "angle": -0.3},
+    {"id": "racine_cernes", "name": "des Cernes", "dist": 1250.0, "angle": 0.3},
+    {"id": "racine_silex", "name": "du Silex", "dist": 1700.0, "angle": -0.38},
+    {"id": "racine_futaie", "name": "de la Futaie", "dist": 2200.0, "angle": 0.3}
+  ],
+  "altars": [
+    {"id": "racine_1", "name": "Autel des cernes", "dist": 980, "side": -0.85, "points": 1, "graft": "greffe_cerne"},
+    {"id": "racine_2", "name": "Autel du gland", "dist": 1350, "side": 0.72, "points": 1, "graft": "greffe_gland"},
+    {"id": "racine_3", "name": "Autel de l'ambre", "dist": 2050, "side": -0.74, "points": 1, "graft": "greffe_ambre"},
+    {"id": "racine_4", "name": "Autel du silex", "dist": 2600, "side": 0.48, "points": 1, "graft": "greffe_silex"}
+  ],
+  "secrets": [
+    {"id": "racine", "name": "La racine profonde", "dist": 2450, "side": -0.94, "points": 1, "graft": "greffe_racine_profonde"}
+  ],
+  "heart": {
+    "name": "Cœur des cernes",
+    "zone": 250.0,
+    "hold_time": 30.0,
+    "waves": {"every": 6.0, "base": 4, "growth": 2, "kinds": ["fletri", "termite"], "second_share": 0.45, "big": "tertre", "big_from": 2},
+    "idle": {"every": 3.5, "max": 6, "kind": "termite"},
+    "reward": {"points": 1},
+    "life_radius": 840.0,
+    "life_color": "racine/clair",
+    "wake_banner": "Le Cœur des cernes s'éveille : tiens la zone, la pierre tremble !",
+    "purified_banner": "Le Cœur des cernes est purifié : la clairière de l'Ancien s'ouvre."
+  },
+  "boss": {
+    "script": "res://scripts/boss_racine.gd",
+    "name": "L'Ancien pétrifié",
+    "bar_color": "#b0915e",
+    "reward": {"points": 2, "graft": "greffe_coeur_de_chene"},
+    "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : la cime se fend", "Phase 3 sur 3 : la forêt se referme"],
+    "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "racine/clair"},
+    "wake_banner": "L'Ancien pétrifié s'arrache à la roche.",
+    "defeated_banner": "L'Ancien pétrifié est vaincu !"
+  },
+  "ending": {
+    "sub": "Région de Racine purifiée",
+    "title": "La forêt se réveille",
+    "body": "L'Ancien pétrifié s'est rendu à la terre. Sous la pierre, les vieilles racines respirent de nouveau : la sève remonte dans les troncs de roche, et l'Arbre de vie tient ferme sur ses six branches."
+  }
+}
