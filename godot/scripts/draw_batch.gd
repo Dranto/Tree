@@ -54,6 +54,21 @@ func polygon_tri(pts: PackedVector2Array, col: Color, tri: PackedInt32Array) -> 
 		_push(pts, col, tri)
 
 
+## Comme CanvasItem.draw_primitive : un triangle ou un quadrilatère (deux triangles) dont chaque
+## sommet a sa couleur (dégradé). Les coordonnées de texture sont ignorées.
+func draw_primitive(pts: PackedVector2Array, cols: PackedColorArray, _uvs := PackedVector2Array(), _tex = null) -> void:
+	var n := pts.size()
+	if (n != 3 and n != 4) or cols.size() < n:
+		return
+	var base := points.size()
+	points.append_array(pts)
+	for i in n:
+		colors.append(cols[i])
+	indices.append_array(PackedInt32Array([base, base + 1, base + 2]))
+	if n == 4:
+		indices.append_array(PackedInt32Array([base + 2, base + 3, base]))
+
+
 func draw_circle(c: Vector2, r: float, col: Color, _filled := true, _width := -1.0, _aa := false) -> void:
 	if col.a <= 0.0 or r <= 0.0:
 		return
@@ -63,6 +78,25 @@ func draw_circle(c: Vector2, r: float, col: Color, _filled := true, _width := -1
 	# Disque à n côtés (centre + n points) : forme unité en cache, placée par une transformation.
 	var d: Array = _DISCS[clampi(int(r) + 5, 6, 28) if lean else clampi(int(r * 0.7) + 8, 10, 28)]
 	_push(Transform2D(0.0, Vector2(r, r), 0.0, c) * (d[0] as PackedVector2Array), col, d[1])
+
+
+## Couronne entre deux cercles concentriques (mode « exact » : mêmes 64 points que draw_circle).
+## Des disques opaques empilés, du grand au petit, donnent les mêmes pixels qu'une suite de couronnes,
+## sans redessiner les pixels du centre à chaque couche (le coût en rendu logiciel suit les pixels).
+func ring(c: Vector2, r_out: float, r_in: float, col: Color) -> void:
+	if col.a <= 0.0 or r_out <= r_in:
+		return
+	var outer := _circle_points(c, r_out)
+	var inner := _circle_points(c, r_in)
+	var n := outer.size()
+	var base := points.size()
+	points.append_array(outer)
+	points.append_array(inner)
+	for i in n * 2:
+		colors.append(col)
+	for i in n:
+		var j := (i + 1) % n
+		indices.append_array(PackedInt32Array([base + i, base + j, base + n + j, base + i, base + n + j, base + n + i]))
 
 
 func draw_line(a: Vector2, b: Vector2, col: Color, width := -1.0, _aa := false) -> void:

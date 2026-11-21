@@ -160,7 +160,7 @@ Le banc des 120 Flétris coûte environ 2 ms de plus, parce que la graine touche
 
 ## Cinq régions (jalon 8, tâche P)
 
-`REGIONS=cinq tools/bench.sh` (aussi `-- --benchmark --regions=res://tests/regions/`) ajoute les régions
+`REGIONS=cinq tools/bench.sh` (aujourd'hui `REGIONS=six`, même banc) (aussi `-- --benchmark --regions=res://tests/regions/`) ajoute les régions
 factices de `tests/regions/` (Sève, Aube, Racine) à celles de `data/regions/` : une vraie région
 l'emporte sur sa factice, donc le banc suit la vraie Sève et la vraie Aube dès leur fusion. La CI
 lance ce banc (budget 34 ms) et le banc des pics du Cœur dans ce monde.
@@ -179,6 +179,24 @@ Constat (machine des tests, paires alternées, 20 à 40 s) :
 - Pistes non faites : poses d'action en cache (peu de réemploi : regard × étape × sorte) ; interface
   en texture (les emplacements coûtent ~3 à 5 ms de rendu d'après `--hide`, mais ils reçoivent la
   souris et les infobulles).
+
+## Six régions et finale (jalon 9, tâche P)
+
+`REGIONS=six tools/bench.sh` (alias de `cinq`) : avec Racine factice, le banc joue déjà à six régions ;
+la CI le lance (120 Flétris et siège du Cœur). `SCENE=finale tools/bench.sh` joue le combat du colosse
+sous la graine (`--bench-scene=boss --region=finale`), à six régions dans la CI (budget 36 ms, 99e centile 50 ms).
+
+Constat : la finale coûtait ~44 ms contre ~22 ms pour un boss ordinaire. Le coût venait des pixels :
+la terre du creux (un rectangle de 5 600 px) et dix disques opaques empilés pour le sol redessinaient dix
+fois le centre de l'écran. Ils sont maintenant tracés en couronnes (`DrawBatch.ring`, mode exact : mêmes
+64 points que `draw_circle`), sans rien changer aux pixels (références inchangées). Paires alternées
+base/branche : 44,7 → 37,9 ms (99e centile 59 → 54 ms).
+
+Essayé et écarté : tracer le colosse et la grotte entiers dans un lot « exact » ramène les objets de
+6 900 à 1 150 mais perd l'anticrénelage des traits (0,1 à 0,5 % de pixels en écart, bords d'une largeur d'un
+pixel) pour ~3 à 5 ms ; le lot n'est gardé que pour ce qui est rempli.
+Pistes non faites : poses d'action en cache (peu de réemploi, voir ci-dessus) ; interface en texture (les
+emplacements reçoivent la souris et les infobulles).
 
 ## Pistes suivantes
 
