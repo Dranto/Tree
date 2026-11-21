@@ -69,7 +69,7 @@ func _ready() -> void:
 					test_attack.append({"attack_form": name, "priority": 99})
 				elif Content.attack().get("mods", {}).has(name):
 					test_attack.append({"attack_mod": name, "value": float(part.get_slice(":", 1)) if part.contains(":") else 1.0})
-	for err in Content.validate(int(SkillTree.RINGS / 4.0)):
+	for err in Content.validate(SkillTree.KEYSTONES):
 		push_error("Données : " + err)
 	tree = SkillTree.new()
 	tree.build()
