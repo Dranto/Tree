@@ -70,20 +70,43 @@ static func start_form() -> String:
 
 ## État de l'attaque à partir des effets collectés par le moteur :
 ## forms_list : [{"form", "priority" (ou null), "ring", "order"}] ; mods_list : [effets attack_mod].
-## Renvoie {"form": id, "mods": {nom: valeur}, "factor": facteur de l'attaque renforcée}.
+## Renvoie {"form": forme principale, "echoes": [autres formes acquises], "mods": {nom: valeur},
+## "factor": facteur de l'attaque renforcée, "synergies": [synergies actives (data/synergies.json)]}.
+## Les formes se cumulent : la principale (règle de priorité) tire à la cadence du joueur, chaque
+## autre forme acquise tire aussi, en écho, à sa propre cadence et avec ses propres chiffres
+## (« echo » de attack.json). Les modificateurs agissent sur toutes les formes où ils s'appliquent.
 static func resolve(forms_list: Array, mods_list: Array) -> Dictionary:
 	var all := forms()
-	var best := start_form()
-	var best_key: Array = []
+	# Meilleure clé de chaque forme (une forme donnée par deux nœuds ne compte qu'une fois).
+	var keys := {}
 	for f in forms_list:
 		var id := str(f["form"])
 		if not all.has(id):
 			continue
 		var pr: float = float(f["priority"]) if f.get("priority") != null else float(all[id].get("priority", 0))
 		var key := [pr, float(f.get("ring", 0)), float(f.get("order", 0))]
-		if best_key.is_empty() or _after(key, best_key):
-			best_key = key
-			best = id
+		if not keys.has(id) or _after(key, keys[id]):
+			keys[id] = key
+	var ids: Array = keys.keys()
+	ids.sort_custom(func(a, b): return _after(keys[a], keys[b]) and keys[a] != keys[b])
+	var best: String = ids[0] if not ids.is_empty() else start_form()
+	var echoes: Array = ids.slice(1)
+	var acc := _accumulate(mods_list)
+	# Synergies : lues sur les formes et les modificateurs donnés par l'arbre (pas sur ceux
+	# qu'elles ajoutent elles-mêmes), puis leurs modificateurs s'ajoutent aux autres.
+	var active := active_synergies([best] + echoes, acc[0])
+	if not active.is_empty():
+		var extra: Array = mods_list.duplicate()
+		for sid in active:
+			for e in synergy(sid).get("effects", []):
+				if e is Dictionary and e.has("attack_mod"):
+					extra.append(e)
+		acc = _accumulate(extra)
+	return {"form": best, "echoes": echoes, "mods": acc[0], "factor": acc[1], "synergies": active}
+
+
+## Cumule les effets attack_mod selon leur « stack » : [{nom: valeur}, facteur de la renforcée].
+static func _accumulate(mods_list: Array) -> Array:
 	var defs := mods()
 	var out := {}
 	var factor := 0.0
@@ -103,11 +126,34 @@ static func resolve(forms_list: Array, mods_list: Array) -> Dictionary:
 			factor = maxf(factor, float(e["factor"]))
 	if out.has("renforcee") and factor <= 0.0:
 		factor = float(defs["renforcee"].get("factor", 2.0))
-	if out.has("enracine"):
-		out["enracine"] = minf(float(out["enracine"]), float(defs["enracine"].get("cap", 1.0)))
-	if out.has("eblouit"):
-		out["eblouit"] = minf(float(out["eblouit"]), float(defs["eblouit"].get("cap", 1.0)))
-	return {"form": best, "mods": out, "factor": factor}
+	for capped in ["enracine", "eblouit"]:
+		if out.has(capped):
+			out[capped] = minf(float(out[capped]), float(defs[capped].get("cap", 1.0)))
+	return [out, factor]
+
+
+## Toutes les formes actives : la principale, puis les échos.
+static func all_forms(st: Dictionary) -> Array:
+	return [str(st["form"])] + st.get("echoes", [])
+
+
+## État d'une forme en écho : mêmes modificateurs que la forme principale, sa propre forme.
+static func echo_state(st: Dictionary, id: String) -> Dictionary:
+	return {"form": id, "mods": st["mods"], "factor": st.get("factor", 0.0), "echo": true}
+
+
+## Réglages des échos (attack.json › « echo ») : part des dégâts, décalage du premier tir.
+static func echo_def() -> Dictionary:
+	return data().get("echo", {})
+
+
+## Facteur de dégâts d'un état : 1 pour la forme principale, « echo.damage » pour un écho
+## (« echo_damage » d'une forme passe devant).
+static func echo_factor(st: Dictionary) -> float:
+	if not st.get("echo", false):
+		return 1.0
+	var f := form_def(st)
+	return float(f.get("echo_damage", echo_def().get("damage", 1.0)))
 
 
 ## Vrai si la clé a (priorité, anneau, ordre) passe devant b, dans cet ordre.
@@ -173,7 +219,7 @@ static func multiplier(player, tags: Array, branch: String) -> float:
 static func hit_damage(player, st: Dictionary) -> float:
 	var f := form_def(st)
 	var base: float = player.current_damage() if player != null and player.has_method("current_damage") else float(_stats().get("damage", 1.0))
-	var dmg: float = base * float(f.get("damage", 1.0)) * multiplier(player, f.get("tags", []), str(f.get("branch", "")))
+	var dmg: float = base * float(f.get("damage", 1.0)) * multiplier(player, f.get("tags", []), str(f.get("branch", ""))) * echo_factor(st)
 	# Élan (Vent) : bonus tant que le joueur se déplace (ou vient de bouger).
 	var elan := mod(st, "elan")
 	if elan > 0.0 and player != null and "still_time" in player and float(player.still_time) < 0.25:
@@ -193,18 +239,31 @@ static func _rt(player) -> Dictionary:
 
 ## Lance l'attaque de base vers la cible (un ennemi, une position, ou null : vers player.aim_point).
 ## Compte les attaques (renforcée, volée), puis met en file les échardes de la rafale et les
-## répétitions. Renvoie la description du tir (pour les tests).
-static func fire(player, target = null) -> Dictionary:
-	var st := current()
+## répétitions. « st » : l'état d'une forme en écho (echo_state) ; vide, la forme principale.
+## Renvoie la description du tir (pour les tests).
+static func fire(player, target = null, st := {}) -> Dictionary:
+	if st.is_empty():
+		st = current()
 	var rt := _rt(player)
-	rt["count"] = int(rt["count"]) + 1
-	var n := int(rt["count"])
+	var echo: bool = st.get("echo", false)
+	var n := 0
+	if echo:
+		# Chaque écho compte ses propres attaques (une sur N renforcée, en couronne).
+		var counts: Dictionary = rt.get("counts", {})
+		counts[st["form"]] = int(counts.get(st["form"], 0)) + 1
+		rt["counts"] = counts
+		n = int(counts[st["form"]])
+	else:
+		rt["count"] = int(rt["count"]) + 1
+		n = int(rt["count"])
 	var shot := {
 		"dir": _dir_to(player, target),
 		"target": target,
 		"empowered": _every(st, "renforcee", n),
 		"ring": _every(st, "volee", n),
 	}
+	if echo:
+		shot["echo"] = str(st["form"])
 	var f := form_def(st)
 	_emit(player, st, shot)
 	# Rafale (échardes) : les tirs suivants partent avec un court décalage.
@@ -236,27 +295,89 @@ static func salvo(player, count: int) -> void:
 	_emit(player, st, {"dir": player.aim if "aim" in player else Vector2.RIGHT, "target": null, "empowered": false, "ring": true, "ring_count": maxi(1, count), "salvo": true})
 
 
-## À chaque pas de jeu : fait partir les tirs en file (rafale, répétition).
+## À chaque pas de jeu : fait tirer les formes en écho quand leur cadence le permet, puis
+## fait partir les tirs en file (rafale, répétition).
 static func step(player, delta: float) -> void:
-	if not "attack_rt" in player or player.attack_rt.is_empty():
+	if not "attack_rt" in player:
+		return
+	var st := current()
+	if not st.get("echoes", []).is_empty():
+		_step_echoes(player, st, delta)
+	if player.attack_rt.is_empty():
 		return
 	var q: Array = player.attack_rt["queue"]
 	if q.is_empty():
 		return
-	var st := current()
 	var i := 0
 	while i < q.size():
 		q[i]["t"] = float(q[i]["t"]) - delta
 		if q[i]["t"] <= 0.0:
 			var shot: Dictionary = q[i]
 			q.remove_at(i)
+			var sst := st
+			if shot.has("echo"):
+				# L'écho a pu disparaître (arbre changé) : son tir en file se perd.
+				if not shot["echo"] in st.get("echoes", []):
+					continue
+				sst = echo_state(st, shot["echo"])
 			# Une cible encore en vie est suivie ; sinon le tir garde sa direction.
 			var tg = shot.get("target")
 			if is_instance_valid(tg) and tg is Node2D and not tg.get("dead"):
 				shot["dir"] = _dir_to(player, tg)
-			_emit(player, st, shot)
+			_emit(player, sst, shot)
 		else:
 			i += 1
+
+
+## Formes en écho : chacune a sa recharge (sa cadence × la vitesse d'attaque) et tire dès qu'un
+## ennemi est à sa portée. Le premier tir d'un écho est décalé (« echo.offset » × sa recharge)
+## pour ne pas partir dans la même image que la forme principale.
+static func _step_echoes(player, st: Dictionary, delta: float) -> void:
+	var rt := _rt(player)
+	var cds: Dictionary = rt.get("echo_cd", {})
+	rt["echo_cd"] = cds
+	var s := _stats()
+	for id in st["echoes"]:
+		var est := echo_state(st, id)
+		if not cds.has(id):
+			cds[id] = interval(s, est) * float(echo_def().get("offset", 0.5))
+		cds[id] = float(cds[id]) - delta
+		if float(cds[id]) > 0.0:
+			continue
+		var pick := _echo_target(player, est)
+		if pick.is_empty():
+			cds[id] = 0.0
+			continue
+		fire(player, pick[0], est)
+		cds[id] = float(cds[id]) + interval(s, est)
+
+
+## Cible d'un écho : [cible] ou [] s'il n'y a personne à sa portée. La cible du joueur si elle
+## est à portée, sinon l'ennemi visible le plus proche. En visée « curseur », l'écho part vers le
+## curseur (cible null) dès qu'un ennemi est à sa portée.
+static func _echo_target(player, est: Dictionary) -> Array:
+	var main = player.main if "main" in player else null
+	if main == null or not main.has_method("enemies_near"):
+		return []
+	var r := reach(est)
+	var settings = _node("Settings")
+	var cursor: bool = settings != null and str(settings.get("aim_mode")) == "curseur" and not bool(main.get("autotest"))
+	var tg = player.get("target")
+	if not cursor and is_instance_valid(tg) and tg is Node2D and not tg.get("dead") \
+			and tg.position.distance_to(player.position) <= r + float(tg.get("radius") if tg.get("radius") != null else 0.0):
+		return [tg]
+	var best = null
+	var best_d := INF
+	for e in main.enemies_near(player.position, r):
+		if e.dead or (e.has_method("hidden") and e.hidden()):
+			continue
+		var d: float = e.position.distance_squared_to(player.position)
+		if d < best_d:
+			best_d = d
+			best = e
+	if best == null:
+		return []
+	return [null] if cursor else [best]
 
 
 static func _every(st: Dictionary, name: String, n: int) -> bool:
@@ -342,7 +463,7 @@ static func _shoot(player, st: Dictionary, shot: Dictionary) -> void:
 	var trap_dmg := 0.0
 	if form == "ronce_vive":
 		var base: float = player.current_damage() if player.has_method("current_damage") else float(s.get("damage", 1.0))
-		trap_dmg = base * float(f.get("trap_damage", 0.5)) * float(f.get("trap_tick", 0.5)) * multiplier(player, f.get("trap_tags", ["zone"]), str(f.get("branch", "")))
+		trap_dmg = base * float(f.get("trap_damage", 0.5)) * float(f.get("trap_tick", 0.5)) * multiplier(player, f.get("trap_tags", ["zone"]), str(f.get("branch", ""))) * echo_factor(st)
 		if empowered:
 			trap_dmg *= float(st["factor"])
 	if shot.get("burst", 0) == 0 and not shot.get("salvo", false):
@@ -853,26 +974,55 @@ static func mod_text(name: String, v: float, factor := 0.0) -> String:
 	return t
 
 
-## Lignes qui décrivent un état de l'attaque (forme puis modificateurs).
+## Lignes qui décrivent un état de l'attaque (forme principale, échos, modificateurs, synergies).
 static func describe(st: Dictionary) -> PackedStringArray:
 	var out := PackedStringArray()
 	var f := form_def(st)
 	out.append("%s : %s" % [f.get("name", st["form"]), f.get("desc", "")])
+	for id in st.get("echoes", []):
+		var ef: Dictionary = forms().get(id, {})
+		out.append("En écho, %s : %s" % [str(ef.get("name", id)).to_lower(), ef.get("desc", "")])
 	var names: Array = st["mods"].keys()
 	names.sort()
 	for name in names:
 		var line := mod_text(name, float(st["mods"][name]), float(st.get("factor", 0.0)))
-		if not applies(name, str(st["form"])):
-			line += " (sans effet sur : %s)" % str(f.get("name", st["form"])).to_lower()
+		if not applies_any(name, st):
+			line += " (sans effet sur : %s)" % ", ".join(all_forms(st).map(func(id): return str(forms().get(id, {}).get("name", id)).to_lower()))
 		out.append(line)
+	for sid in st.get("synergies", []):
+		out.append("Synergie « %s » : %s" % [synergy(sid).get("name", sid), synergy_text(sid)])
 	return out
 
 
+## Vrai si le modificateur agit sur au moins une des formes actives.
+static func applies_any(name: String, st: Dictionary) -> bool:
+	for id in all_forms(st):
+		if applies(name, id):
+			return true
+	return false
+
+
+static func _form_name(id: String) -> String:
+	return str(forms().get(id, {}).get("name", id))
+
+
 ## Différences entre deux états, pour l'aperçu de l'arbre : [{"text": "Attaque : Graines → Fouet"}, …].
+## Une forme ajoutée à côté de la principale part en écho : « Attaque : + fouet, en écho ».
 static func diff(before: Dictionary, after: Dictionary) -> Array:
 	var out: Array = []
+	var had := all_forms(before)
+	var has := all_forms(after)
 	if before["form"] != after["form"]:
-		out.append({"stat": "attack_form", "text": "Attaque : %s → %s" % [forms().get(before["form"], {}).get("name", before["form"]), forms().get(after["form"], {}).get("name", after["form"])]})
+		var line := "Attaque : %s → %s" % [_form_name(before["form"]), _form_name(after["form"])]
+		if before["form"] in has:
+			line += " (%s continue en écho)" % _form_name(before["form"]).to_lower()
+		out.append({"stat": "attack_form", "text": line})
+	for id in has:
+		if id != after["form"] and not id in had:
+			out.append({"stat": "attack_form", "text": "Attaque : + %s, en écho (tire en plus, à sa cadence)" % _form_name(id).to_lower()})
+	for id in had:
+		if not id in has and id != start_form():
+			out.append({"stat": "attack_form", "text": "Attaque : − %s" % _form_name(id).to_lower()})
 	var names := {}
 	for n in before["mods"]:
 		names[n] = true
@@ -893,9 +1043,134 @@ static func diff(before: Dictionary, after: Dictionary) -> Array:
 			line = "Attaque : − %s" % label.to_lower()
 		else:
 			line = "Attaque, %s : %s → %s" % [label.to_lower(), _num(a), _num(b)]
-		if not applies(n, str(after["form"])):
+		if not applies_any(n, after):
 			line += " (sans effet sur cette forme)"
 		out.append({"stat": "attack_mod", "text": line})
+	for sid in after.get("synergies", []):
+		if not sid in before.get("synergies", []):
+			out.append({"stat": "synergy", "text": "Synergie : + %s (%s)" % [synergy(sid).get("name", sid), synergy_text(sid)]})
+	for sid in before.get("synergies", []):
+		if not sid in after.get("synergies", []):
+			out.append({"stat": "synergy", "text": "Synergie : − %s" % synergy(sid).get("name", sid)})
+	return out
+
+
+# --- Synergies (data/synergies.json) ---
+
+## Familles de conditions d'une synergie : une forme active, un modificateur reçu de l'arbre,
+## une famille d'attaque (tags), une branche, un nombre de formes actives.
+const NEEDS := ["form", "mod", "family", "branch", "forms"]
+
+
+static func synergies() -> Dictionary:
+	return Content._load("synergies").get("synergies", {})
+
+
+static func synergy(id: String) -> Dictionary:
+	return synergies().get(id, {})
+
+
+## Synergies dont toutes les conditions sont vraies, dans l'ordre du fichier.
+static func active_synergies(form_ids: Array, mod_values: Dictionary) -> Array:
+	var out: Array = []
+	var all := synergies()
+	for sid in all:
+		var sy = all[sid]
+		if sy is Dictionary and _meets(sy.get("needs", []), form_ids, mod_values):
+			out.append(sid)
+	return out
+
+
+static func _meets(needs: Array, form_ids: Array, mod_values: Dictionary) -> bool:
+	if needs.is_empty():
+		return false
+	for n in needs:
+		if not need_met(n, form_ids, mod_values):
+			return false
+	return true
+
+
+## Une condition de synergie est-elle remplie par ces formes et ces modificateurs ?
+static func need_met(n: Dictionary, form_ids: Array, mod_values: Dictionary) -> bool:
+	if n.has("form"):
+		return str(n["form"]) in form_ids
+	if n.has("mod"):
+		return float(mod_values.get(str(n["mod"]), 0.0)) > 0.0
+	if n.has("forms"):
+		return form_ids.size() >= int(n["forms"])
+	for id in form_ids:
+		var f: Dictionary = forms().get(id, {})
+		if n.has("family") and (str(n["family"]) in f.get("tags", []) or str(n["family"]) in f.get("trap_tags", [])):
+			return true
+		if n.has("branch") and str(f.get("branch", "")) == str(n["branch"]):
+			return true
+	return false
+
+
+const BRANCH_NAMES := {"ronce": "Ronce", "spore": "Spore", "vent": "Vent", "seve": "Sève", "aube": "Aube", "racine": "Racine"}
+const FAMILY_NAMES := {"corps_a_corps": "une attaque au corps à corps", "projectile": "une attaque à projectiles", "zone": "une attaque de zone"}
+
+## Texte d'une condition : « Fouet », « une attaque de zone », « trois formes »…
+static func need_text(n: Dictionary) -> String:
+	if n.has("form"):
+		return _form_name(str(n["form"]))
+	if n.has("mod"):
+		return str(mods().get(str(n["mod"]), {}).get("name", n["mod"]))
+	if n.has("family"):
+		return str(FAMILY_NAMES.get(str(n["family"]), n["family"]))
+	if n.has("branch"):
+		return "une forme de %s" % str(BRANCH_NAMES.get(str(n["branch"]), n["branch"]))
+	if n.has("forms"):
+		return "%d formes d'attaque" % int(n["forms"])
+	return "?"
+
+
+## Phrase d'une synergie : « Rayon d'aube + Lames de vent : … ».
+static func synergy_text(sid: String) -> String:
+	var sy := synergy(sid)
+	var parts := PackedStringArray()
+	for n in sy.get("needs", []):
+		parts.append(need_text(n))
+	return "%s : %s" % [" + ".join(parts), str(sy.get("desc", ""))]
+
+
+## Synergies où entrent les effets d'un nœud (sa forme, ses modificateurs), pour l'infobulle de
+## l'arbre : [[texte, active]]. « st » : l'attaque actuelle (pour dire ce qui manque).
+static func synergy_hints(effects: Array, st: Dictionary) -> Array:
+	var out: Array = []
+	var gives_forms: Array = []
+	var gives_mods: Array = []
+	for e in effects:
+		if e is Dictionary and e.has("attack_form"):
+			gives_forms.append(str(e["attack_form"]))
+		elif e is Dictionary and e.has("attack_mod"):
+			gives_mods.append(str(e["attack_mod"]))
+	if gives_forms.is_empty() and gives_mods.is_empty():
+		return out
+	var all := synergies()
+	var active: Array = st.get("synergies", [])
+	for sid in all:
+		var sy: Dictionary = all[sid]
+		var concerned := false
+		for n in sy.get("needs", []):
+			if (n.has("form") and str(n["form"]) in gives_forms) or (n.has("mod") and str(n["mod"]) in gives_mods):
+				concerned = true
+			for id in gives_forms:
+				if need_met(n, [id], {}) and (n.has("family") or n.has("branch")):
+					concerned = true
+		if not concerned:
+			continue
+		out.append(["Synergie « %s » : %s" % [sy.get("name", sid), synergy_text(sid)], sid in active])
+	return out
+
+
+## Effets de statistiques et réactions des synergies actives (les attack_mod sont déjà dans l'état).
+static func synergy_effects(ids: Array) -> Array:
+	var out: Array = []
+	for sid in ids:
+		for e in synergy(sid).get("effects", []):
+			if e is Dictionary and not e.has("attack_mod"):
+				out.append(e)
 	return out
 
 
@@ -952,4 +1227,42 @@ static func validate() -> PackedStringArray:
 		for fid in m.get("forms", []):
 			if not all.has(fid):
 				errors.append("%s : forme inconnue « %s »" % [w, fid])
+	var echo = d.get("echo", {})
+	if not echo is Dictionary or not (echo.get("damage", 1.0) is float or echo.get("damage", 1.0) is int) or float(echo.get("damage", 1.0)) <= 0.0:
+		errors.append("attack.json : « echo.damage » doit être un nombre positif")
+	errors.append_array(validate_synergies())
+	return errors
+
+
+## Erreurs de data/synergies.json (conditions ; les effets sont vérifiés par content.gd).
+static func validate_synergies() -> PackedStringArray:
+	var errors := PackedStringArray()
+	var all := synergies()
+	for sid in all:
+		var sy = all[sid]
+		var w := "synergies.json, synergie « %s »" % sid
+		if not sy is Dictionary or str(sy.get("name", "")) == "" or str(sy.get("desc", "")) == "":
+			errors.append(w + " : « name » et « desc » sont obligatoires")
+			continue
+		var needs = sy.get("needs", [])
+		if not needs is Array or needs.size() < 2 and not (needs.size() == 1 and needs[0] is Dictionary and needs[0].has("forms")):
+			errors.append(w + " : « needs » demande au moins deux conditions")
+			continue
+		for n in needs:
+			if not n is Dictionary or n.size() != 1 or not str(n.keys()[0]) in NEEDS:
+				errors.append("%s : une condition est un objet à une clé parmi %s" % [w, ", ".join(NEEDS)])
+				continue
+			if n.has("form") and not forms().has(str(n["form"])):
+				errors.append("%s : forme inconnue « %s »" % [w, n["form"]])
+			if n.has("mod") and not mods().has(str(n["mod"])):
+				errors.append("%s : modificateur inconnu « %s »" % [w, n["mod"]])
+			if n.has("family") and not TAG_STATS.has(str(n["family"])):
+				errors.append("%s : famille inconnue « %s »" % [w, n["family"]])
+		var effects = sy.get("effects", [])
+		if not effects is Array or effects.is_empty():
+			errors.append(w + " : aucun effet")
+			continue
+		for e in effects:
+			if e is Dictionary and e.has("attack_form"):
+				errors.append(w + " : une synergie ne donne pas de forme (« attack_form »)")
 	return errors

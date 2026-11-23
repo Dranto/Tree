@@ -27,6 +27,7 @@ const TreeArt = preload("res://scripts/tree_art.gd")
 
 const Effects = preload("res://scripts/effects.gd")
 const Content = preload("res://scripts/content.gd")
+const AttackScript = preload("res://scripts/attack.gd")
 
 const RADIUS := {
 	"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0,
@@ -1684,6 +1685,13 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 			raw.append(["• " + line, 14, ink])
 	if n["desc"] != "":
 		raw.append(["• " + n["desc"], 14, ink])
+	# Synergies où entre la forme ou le modificateur d'attaque du nœud (data/synergies.json) :
+	# en or celles qui sont actives.
+	var attack_effects: Array = n["effects"].duplicate()
+	for ch in n["choices"]:
+		attack_effects.append_array(ch.get("effects", []))
+	for h in AttackScript.synergy_hints(attack_effects, Game.attack()):
+		raw.append(["◆ " + h[0], 13, UiTheme.GOLD if h[1] else dim])
 	var id: int = n["id"]
 	# Maîtrise ou mutation : tous les choix, celui qui est fait en doré.
 	if not n["choices"].is_empty():
@@ -1756,7 +1764,7 @@ func _wrap(text: String, fs: int, max_w: float) -> PackedStringArray:
 		out.append(text)
 		return out
 	# Chaque mot n'est mesuré qu'une fois : la largeur d'une ligne est la somme de ses mots et espaces.
-	var indent := "   " if text.begins_with("• ") else ""
+	var indent := "   " if text.begins_with("• ") or text.begins_with("◆ ") else ""
 	var space := font.get_string_size(" ", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var indent_w := font.get_string_size(indent, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x if indent != "" else 0.0
 	var line := ""

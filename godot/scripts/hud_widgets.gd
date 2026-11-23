@@ -318,3 +318,75 @@ class Corner extends Control:
 		var kx := x + 80.0
 		Art.icon(self, "cendre", Rect2(Vector2(kx, cy - 10), Vector2(20, 20)), Art.c("texte_doux"))
 		draw_string(soft, Vector2(kx + 23, cy + 5), str(kills), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.c("texte_doux"))
+
+
+## Attaque de base en cours : la forme principale, puis les formes en écho (plus petites), puis un
+## losange doré par synergie active (data/synergies.json). Masquée tant qu'il n'y a qu'une forme
+## et aucune synergie. L'infobulle détaille tout (Attack.describe).
+class AttackStrip extends Control:
+	const MAIN := 34.0
+	const ECHO := 26.0
+	const GAP := 6.0
+	const PIP := 9.0
+	var forms_shown: Array = []
+	var synergies_shown: Array = []
+	## Temps depuis la dernière synergie gagnée (éclat doré).
+	var glow_t := 1.0
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(MAIN, MAIN + 4.0)
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		visible = false
+
+	## Appelée à chaque image par hud.gd ; ne redessine que si l'attaque a changé.
+	func set_attack(form_ids: Array, syn: Array, tip: String) -> void:
+		if form_ids == forms_shown and syn == synergies_shown:
+			return
+		if syn.size() > synergies_shown.size() and not forms_shown.is_empty():
+			glow_t = 0.0
+		forms_shown = form_ids.duplicate()
+		synergies_shown = syn.duplicate()
+		tooltip_text = tip
+		visible = form_ids.size() > 1 or not syn.is_empty()
+		var w := MAIN + (form_ids.size() - 1) * (ECHO + GAP)
+		if not syn.is_empty():
+			w += GAP * 2.0 + syn.size() * (PIP * 2.0 + 4.0)
+		custom_minimum_size = Vector2(w, MAIN + 4.0)
+		size = custom_minimum_size
+		queue_redraw()
+
+	func _process(delta: float) -> void:
+		if glow_t < 1.0:
+			glow_t += delta
+			queue_redraw()
+
+	func _draw() -> void:
+		if forms_shown.is_empty():
+			return
+		var cy := MAIN / 2.0 + 2.0
+		var x := 0.0
+		for i in forms_shown.size():
+			var d := MAIN if i == 0 else ECHO
+			if i > 0:
+				# Un lien fin : l'écho tire avec la forme principale.
+				draw_line(Vector2(x - GAP - 1.0, cy), Vector2(x + 1.0, cy), Color(Art.c("or"), 0.55), 2.0, true)
+			Art.icon_badge(self, "attaque_" + str(forms_shown[i]), Rect2(Vector2(x, cy - d / 2.0), Vector2(d, d)))
+			x += d + GAP
+		if synergies_shown.is_empty():
+			return
+		x += GAP
+		var gold := Art.c("or")
+		for i in synergies_shown.size():
+			var c := Vector2(x + PIP, cy)
+			var k := 1.0 + (0.35 * (1.0 - glow_t) if glow_t < 1.0 and i == synergies_shown.size() - 1 else 0.0)
+			var r := PIP * k
+			var pts := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r * 0.8, 0), c + Vector2(0, r), c + Vector2(-r * 0.8, 0)])
+			draw_colored_polygon(pts, Art.c("contour"))
+			var inner := PackedVector2Array()
+			for p in pts:
+				inner.append(c + (p - c) * 0.72)
+			draw_colored_polygon(inner, gold)
+			draw_colored_polygon(PackedVector2Array([inner[0], inner[1], c]), gold.lerp(Color.WHITE, 0.45))
+			if glow_t < 1.0 and i == synergies_shown.size() - 1:
+				draw_arc(c, r + 6.0 * glow_t, 0.0, TAU, 24, Color(gold, 1.0 - glow_t), 2.0, true)
+			x += PIP * 2.0 + 4.0

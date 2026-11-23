@@ -1,0 +1,83 @@
+{
+  "_": "Synergies de l'attaque de base (scripts/attack.gd › active_synergies). Une synergie s'active quand toutes ses conditions « needs » sont vraies : {\"form\": id} une forme active (principale ou en écho), {\"mod\": nom} un modificateur reçu de l'arbre, {\"family\": corps_a_corps|projectile|zone} une forme de cette famille, {\"branch\": id} une forme de cette branche, {\"forms\": N} au moins N formes. « effects » : effets comme ceux des nœuds (stat, attack_mod, on), sans attack_form. Format décrit dans data/README.md, « Synergies ».",
+  "synergies": {
+    "aube_tranchante": {
+      "name": "Aube tranchante",
+      "desc": "les coups critiques de l'attaque font 25 % de dégâts en plus, +4 % de chance de critique.",
+      "needs": [{"form": "rayon"}, {"form": "lame"}],
+      "effects": [{"attack_mod": "incandescence", "value": 0.25}, {"stat": "crit", "op": "add", "value": 0.04}]
+    },
+    "ronces_croisees": {
+      "name": "Ronces croisées",
+      "desc": "chaque coup de l'attaque fait saigner (15 % des dégâts par seconde).",
+      "needs": [{"form": "fouet"}, {"form": "echarde"}],
+      "effects": [{"attack_mod": "saignement", "value": 0.15}]
+    },
+    "jardin_piege": {
+      "name": "Jardin piégé",
+      "desc": "chaque coup de l'attaque empoisonne (20 % des dégâts par seconde).",
+      "needs": [{"form": "ronce_vive"}, {"branch": "spore"}],
+      "effects": [{"attack_mod": "poison", "value": 0.2}]
+    },
+    "tempete_de_spores": {
+      "name": "Tempête de spores",
+      "desc": "un ennemi tué par l'attaque libère un nuage de spores (30 % des dégâts par seconde).",
+      "needs": [{"branch": "vent"}, {"branch": "spore"}],
+      "effects": [{"attack_mod": "bouffee", "value": 0.3}]
+    },
+    "seve_et_bois": {
+      "name": "Sève et bois",
+      "desc": "chaque coup de l'attaque te rend 2 % des dégâts infligés.",
+      "needs": [{"form": "perle"}, {"family": "corps_a_corps"}],
+      "effects": [{"attack_mod": "sangsue", "value": 0.02}]
+    },
+    "terre_fendue": {
+      "name": "Terre fendue",
+      "desc": "chaque coup au corps à corps secoue le sol (30 % des dégâts autour de l'impact).",
+      "needs": [{"form": "massue"}, {"branch": "ronce"}],
+      "effects": [{"attack_mod": "secousse", "value": 0.3}]
+    },
+    "prisme_d_epines": {
+      "name": "Prisme d'épines",
+      "desc": "au premier ennemi touché, le rayon se brise en un rayon oblique de plus.",
+      "needs": [{"form": "rayon"}, {"branch": "ronce"}],
+      "effects": [{"attack_mod": "refraction", "value": 1}]
+    },
+    "vent_double": {
+      "name": "Vent double",
+      "desc": "en mouvement, l'attaque fait 15 % de dégâts en plus.",
+      "needs": [{"form": "lame"}, {"form": "bourrasque"}],
+      "effects": [{"attack_mod": "elan", "value": 0.15}]
+    },
+    "rosee_d_aube": {
+      "name": "Rosée d'aube",
+      "desc": "un ennemi tué par l'attaque te rend 0,5 % de ta vie maximale.",
+      "needs": [{"form": "rayon"}, {"branch": "seve"}],
+      "effects": [{"attack_mod": "rosee", "value": 0.005}]
+    },
+    "pluie_fongique": {
+      "name": "Pluie fongique",
+      "desc": "au premier coup, le projectile se divise en une branche de plus.",
+      "needs": [{"form": "dard"}, {"form": "lame"}],
+      "effects": [{"attack_mod": "fourche", "value": 1}]
+    },
+    "massue_solaire": {
+      "name": "Massue solaire",
+      "desc": "15 % de chances d'éblouir l'ennemi touché.",
+      "needs": [{"form": "massue"}, {"branch": "aube"}],
+      "effects": [{"attack_mod": "eblouit", "value": 0.15}]
+    },
+    "racines_et_seve": {
+      "name": "Racines et sève",
+      "desc": "chaque coup de l'attaque te couvre d'écorce (4 % des dégâts en bouclier).",
+      "needs": [{"form": "massue"}, {"branch": "seve"}],
+      "effects": [{"attack_mod": "aubier", "value": 0.04}]
+    },
+    "arsenal": {
+      "name": "Arsenal",
+      "desc": "+8 % de vitesse d'attaque.",
+      "needs": [{"forms": 3}],
+      "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.08}]
+    }
+  }
+}
