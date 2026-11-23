@@ -1,4 +1,4 @@
-## Menu pause : Échap met le jeu en pause (sauf quand l'Arbre de vie est ouvert, qui gère déjà Échap).
+## Menu pause (direction « Herbier ») : un cadre orné au centre, entrées centrées. Échap met le jeu en pause (sauf quand l'Arbre de vie est ouvert, qui gère déjà Échap).
 extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
@@ -8,6 +8,8 @@ var main
 var menu_panel: PanelContainer
 var resume_button: Button
 var options: PanelContainer
+## Rappel discret sous les entrées : niveau et nœuds appris.
+var footer: Label
 
 
 func _ready() -> void:
@@ -17,32 +19,50 @@ func _ready() -> void:
 	visible = false
 
 	menu_panel = PanelContainer.new()
+	menu_panel.add_theme_stylebox_override("panel", UiTheme.cadre(true, Color(UiTheme.PAPER, 0.97), UiTheme.GOLD, 44))
 	menu_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	menu_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	menu_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	add_child(menu_panel)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 14)
+	col.add_theme_constant_override("separation", 0)
 	menu_panel.add_child(col)
+	var kicker := Label.new()
+	kicker.text = "LE MONDE RETIENT SON SOUFFLE"
+	kicker.add_theme_font_override("font", UiTheme.serif(500, 3))
+	kicker.add_theme_font_size_override("font_size", 14)
+	kicker.add_theme_color_override("font_color", Color(UiTheme.GOLD, 0.75))
+	kicker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(kicker)
 	var title := Label.new()
 	title.text = "Pause"
-	title.add_theme_font_size_override("font_size", 32)
-	title.add_theme_color_override("font_color", UiTheme.GOLD)
+	title.add_theme_font_override("font", UiTheme.display(600, 2))
+	title.add_theme_font_size_override("font_size", 50)
+	title.add_theme_color_override("font_color", UiTheme.INK)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(title)
-	resume_button = UiTheme.button("Reprendre")
+	var divider := Control.new()
+	divider.custom_minimum_size = Vector2(300, 30)
+	divider.draw.connect(func(): UiTheme.draw_divider(divider, divider.size.x / 2.0, 8.0, 120.0))
+	col.add_child(divider)
+	resume_button = UiTheme.menu_item("Reprendre", 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
 	resume_button.pressed.connect(close)
 	col.add_child(resume_button)
-	var opt := UiTheme.button("Options")
+	var opt := UiTheme.menu_item("Options", 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
 	opt.pressed.connect(_open_options)
 	col.add_child(opt)
-	var title_btn := UiTheme.button("Retour au titre")
+	var title_btn := UiTheme.menu_item("Retour au titre", 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
 	title_btn.pressed.connect(Flow.go_title)
 	col.add_child(title_btn)
 	if not OS.has_feature("web"):
-		var quit := UiTheme.button("Quitter")
+		var quit := UiTheme.menu_item("Quitter", 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
 		quit.pressed.connect(Flow.quit)
 		col.add_child(quit)
+	footer = Label.new()
+	footer.add_theme_font_size_override("font_size", 16)
+	footer.add_theme_color_override("font_color", Color(UiTheme.SOFT, 0.85))
+	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(footer)
 
 	options = OptionsPanel.new()
 	options.visible = false
@@ -54,7 +74,14 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55))
+	# Voile brun chaud et coins assombris : le jeu reste deviné derrière.
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.06, 0.045, 0.03, 0.72))
+	var edge := Color(0, 0, 0, 0.0)
+	var dark := Color(0, 0, 0, 0.45)
+	var w := size.x
+	var h := size.y
+	draw_polygon(PackedVector2Array([Vector2.ZERO, Vector2(w, 0), Vector2(w, h * 0.22), Vector2(0, h * 0.22)]), PackedColorArray([dark, dark, edge, edge]))
+	draw_polygon(PackedVector2Array([Vector2(0, h * 0.78), Vector2(w, h * 0.78), Vector2(w, h), Vector2(0, h)]), PackedColorArray([edge, edge, dark, dark]))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -75,6 +102,7 @@ func open() -> void:
 	get_tree().paused = true
 	menu_panel.visible = true
 	options.visible = false
+	footer.text = "Niveau %d  ·  %d nœuds appris" % [Game.level, Game.allocated.size()]
 	resume_button.grab_focus()
 	queue_redraw()
 

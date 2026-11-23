@@ -12,7 +12,7 @@ const Content = preload("res://scripts/content.gd")
 const Effects = preload("res://scripts/effects.gd")
 const GraftPickup = preload("res://scripts/graft_pickup.gd")
 
-const DIM := Color(0.65, 0.72, 0.68)
+const DIM := Color(0.731, 0.683, 0.574)
 const PLAN := Color("f2d06b")
 
 var ui
@@ -93,7 +93,7 @@ func _ready() -> void:
 	offset_left = 16.0
 	offset_bottom = -16.0
 	grow_vertical = Control.GROW_DIRECTION_BEGIN
-	var sb := UiTheme.box(Color(0.06, 0.08, 0.07, 0.94), Color(0.6, 0.8, 0.6, 0.3), 1, 8)
+	var sb := UiTheme.box(Color(UiTheme.PAPER, 0.94), Color(UiTheme.GOLD, 0.3), 1, 8)
 	for side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
 		sb.set_content_margin(side, 10)
 	add_theme_stylebox_override("panel", sb)
@@ -170,7 +170,7 @@ func refresh() -> void:
 		else:
 			it.place_label.text = "posée (emplacement pas encore appris)"
 		var selected := id == held
-		var box := UiTheme.box(Color(0.16, 0.14, 0.08, 0.95) if selected else Color(0.1, 0.13, 0.11, 0.9), UiTheme.GOLD if selected else Color(0.6, 0.8, 0.6, 0.18), 1, 6)
+		var box := UiTheme.box(Color(0.16, 0.14, 0.08, 0.95) if selected else Color(UiTheme.PAPER.lightened(0.04), 0.9), UiTheme.GOLD if selected else Color(UiTheme.GOLD, 0.18), 1, 6)
 		box.content_margin_left = 6
 		box.content_margin_right = 10
 		box.content_margin_top = 3

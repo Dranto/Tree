@@ -16,7 +16,7 @@ const PATH_OK := Color("7fd36b")
 const PATH_SHORT := Color("e0675e")
 const PLAN := Color("f2d06b")
 const MATCH := Color("8fd8ff")
-const DIM := Color(0.65, 0.72, 0.68)
+const DIM := Color(0.731, 0.683, 0.574)
 
 ## Écran de l'arbre (tree_ui.gd) : on lit hover, zoom, cam et t, et on dessine sur sa couche animée.
 var ui
@@ -131,8 +131,8 @@ func _ready() -> void:
 func _theme() -> Theme:
 	var t: Theme = UiTheme.make()
 	t.default_font_size = 15
-	var normal: StyleBoxFlat = UiTheme.box(Color(0.1, 0.13, 0.11, 0.95), Color(0.6, 0.8, 0.6, 0.25))
-	var focus: StyleBoxFlat = UiTheme.box(Color(0.1, 0.13, 0.11, 0.95), UiTheme.GOLD)
+	var normal: StyleBoxFlat = UiTheme.box(Color(UiTheme.PAPER.lightened(0.04), 0.95), Color(UiTheme.GOLD, 0.25))
+	var focus: StyleBoxFlat = UiTheme.box(Color(UiTheme.PAPER.lightened(0.04), 0.95), UiTheme.GOLD)
 	for sb in [normal, focus]:
 		sb.content_margin_left = 12
 		sb.content_margin_right = 12
@@ -141,7 +141,7 @@ func _theme() -> Theme:
 	t.set_stylebox("normal", "LineEdit", normal)
 	t.set_stylebox("focus", "LineEdit", focus)
 	t.set_color("font_color", "LineEdit", UiTheme.INK)
-	t.set_color("font_placeholder_color", "LineEdit", Color(0.6, 0.66, 0.62, 0.8))
+	t.set_color("font_placeholder_color", "LineEdit", Color(0.671, 0.627, 0.526, 0.8))
 	t.set_color("caret_color", "LineEdit", UiTheme.GOLD)
 	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
 		var sb: StyleBoxFlat = t.get_stylebox(state, "Button").duplicate()
@@ -150,7 +150,7 @@ func _theme() -> Theme:
 		sb.content_margin_top = 7
 		sb.content_margin_bottom = 7
 		t.set_stylebox(state, "Button", sb)
-	var panel: StyleBoxFlat = UiTheme.box(Color(0.06, 0.08, 0.07, 0.96), Color(0.6, 0.8, 0.6, 0.3), 1, 8)
+	var panel: StyleBoxFlat = UiTheme.box(Color(UiTheme.PAPER, 0.96), Color(UiTheme.GOLD, 0.3), 1, 8)
 	panel.content_margin_left = 12
 	panel.content_margin_right = 12
 	panel.content_margin_top = 8
@@ -533,7 +533,7 @@ func _fill_summary() -> void:
 		gauge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		gauge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var bg := StyleBoxFlat.new()
-		bg.bg_color = Color(0.12, 0.15, 0.13)
+		bg.bg_color = Color(0.143, 0.133, 0.112)
 		var fill := StyleBoxFlat.new()
 		fill.bg_color = b["color"]
 		gauge.add_theme_stylebox_override("background", bg)

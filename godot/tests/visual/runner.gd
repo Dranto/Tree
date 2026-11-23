@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "menus"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -138,6 +138,8 @@ func _ready() -> void:
 			await ForetScript.new().run(self)
 		"finale":
 			await FinaleScript.new().run(self)
+		"menus":
+			await _scenario_menus()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -192,6 +194,38 @@ func _scenario_resolution() -> void:
 	await _frames(30)
 	UiAudit.scan_controls("titre", title)
 	await _shot("titre_" + tag, "titre")
+
+
+## Menus (direction « Herbier ») à la résolution de la fenêtre : la pause, les quatre onglets des
+## options, l'écran de mort, puis l'écran titre et ses options.
+func _scenario_menus() -> void:
+	var tag := _res_tag()
+	await _frames(60)
+	main.hud.banner_time = 0.0
+	main.pause_menu.open()
+	await _frames(10)
+	UiAudit.scan_controls("pause", main.pause_menu)
+	await _shot("menu_pause_" + tag)
+	main.pause_menu._open_options()
+	for i in 4:
+		main.pause_menu.options.show_tab(i)
+		await _frames(6)
+		UiAudit.scan_controls("options", main.pause_menu.options)
+		await _shot("menu_options_%d_%s" % [i + 1, tag])
+	main.pause_menu.close()
+	Game.xp = 37.0
+	main.player_died()
+	main.hud.banner_time = 0.0
+	await _frames(30)
+	await _shot("menu_mort_" + tag, "jeu")
+	main.queue_free()
+	get_tree().paused = false
+	await _frames(2)
+	var title = TitleScene.instantiate()
+	add_child(title)
+	await _frames(30)
+	UiAudit.scan_controls("titre", title)
+	await _shot("menu_titre_" + tag, "titre")
 
 
 ## Planche de la charte graphique (tests/visual/charte.gd) : palette, éléments, icônes, annonces,

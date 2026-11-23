@@ -67,8 +67,8 @@ const GROUPES := [
 	["Flétris", ["ennemi", "ennemi_contour", "ennemi_oeil", "elite"]],
 	["Danger", ["danger", "danger_annonce", "danger_eclair"]],
 	["Utile", ["interactif", "butin"]],
-	["Interface", ["texte", "texte_doux", "accent", "or", "panneau"]],
-	["Traits", ["contour", "ombre"]],
+	["Interface", ["texte", "texte_doux", "accent", "or", "encre_rouge"]],
+	["Papier, traits", ["papier", "papier_sombre", "panneau", "contour", "ombre"]],
 ]
 
 # --- Éléments ---

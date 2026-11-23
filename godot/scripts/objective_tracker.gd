@@ -35,7 +35,7 @@ func _ready() -> void:
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, MARGIN)
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_panel.grow_vertical = Control.GROW_DIRECTION_END
-	var sb := UiTheme.box(Color(0.06, 0.08, 0.07, 0.8), Color(0.6, 0.8, 0.6, 0.2), 1, 4)
+	var sb := UiTheme.box(Color(UiTheme.PAPER, 0.8), Color(UiTheme.GOLD, 0.2), 1, 4)
 	sb.content_margin_left = 12
 	sb.content_margin_right = 12
 	sb.content_margin_top = 8
@@ -51,11 +51,11 @@ func _ready() -> void:
 	_title.add_theme_font_override("font", UiTheme.font(true))
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_title.custom_minimum_size.x = WIDTH - 26.0
-	_text = _label(v, 13, Color(0.78, 0.85, 0.78))
+	_text = _label(v, 13, Color(0.86, 0.803, 0.675))
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_text.custom_minimum_size.x = WIDTH - 26.0
 	_progress = _label(v, 13, UiTheme.LEAF)
-	_keys = _label(v, 12, Color(0.55, 0.6, 0.55))
+	_keys = _label(v, 12, Color(0.606, 0.567, 0.476))
 	Objectives.changed.connect(refresh)
 	refresh()
 

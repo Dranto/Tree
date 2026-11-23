@@ -227,7 +227,7 @@ func _build_bottom_center() -> void:
 	_hint_box.add_theme_constant_override("separation", 4)
 	v.add_child(_hint_box)
 	for i in 3:
-		var l := _label(_hint_box, 16, Color(0.9, 0.95, 0.85))
+		var l := _label(_hint_box, 16, Color(0.963, 0.9, 0.756))
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER

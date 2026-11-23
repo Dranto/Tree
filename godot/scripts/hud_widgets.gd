@@ -284,8 +284,8 @@ class Corner extends Control:
 		var pop := 1.0 + 0.25 * (1.0 - Anim.ease_out(level_t / 0.5)) if level_t < 0.5 else 1.0
 		draw_circle(c + Vector2(0, 2), r * pop, Art.c("ombre"))
 		draw_circle(c, r * pop, Art.c("contour"))
-		draw_circle(c, (r - 3.0) * pop, Color(0.1, 0.16, 0.1))
-		draw_arc(c, r - 1.5, 0.0, TAU, 40, Color(0.18, 0.28, 0.18), 3.0, true)
+		draw_circle(c, (r - 3.0) * pop, Color(0.128, 0.12, 0.101))
+		draw_arc(c, r - 1.5, 0.0, TAU, 40, Color(0.228, 0.213, 0.179), 3.0, true)
 		if xp > 0.0:
 			draw_arc(c, r - 1.5, -PI / 2.0, -PI / 2.0 + TAU * clampf(xp, 0.0, 1.0), 48, Art.c("accent"), 3.0, true)
 		var lv := str(level)
@@ -311,7 +311,7 @@ class Corner extends Control:
 		var cy := 46.0
 		var cr := 8.0
 		var wc := Vector2(x + cr, cy)
-		draw_arc(wc, cr, 0.0, TAU, 24, Color(0.2, 0.28, 0.2), 3.0, true)
+		draw_arc(wc, cr, 0.0, TAU, 24, Color(0.243, 0.227, 0.19), 3.0, true)
 		if world > 0.0:
 			draw_arc(wc, cr, -PI / 2.0, -PI / 2.0 + TAU * clampf(world, 0.0, 1.0), 32, Art.ec("seve"), 3.0, true)
 		draw_string(soft, Vector2(x + 2 * cr + 6, cy + 5), "%d %%" % roundi(world * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.c("texte"))
