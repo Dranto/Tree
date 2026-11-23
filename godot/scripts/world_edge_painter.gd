@@ -48,6 +48,8 @@ var u1 := 0.0
 var max_d := DEPTH
 ## Vrai : on dessine le décor ; faux : le dégradé de fond seulement.
 var decor_pass := true
+## Non vide : on ne dessine que la couche « vie » de cette région (le bord quand elle est purifiée).
+var life_id := ""
 var rng := RandomNumberGenerator.new()
 ## Région dont on dessine le décor, et ses couleurs.
 var rid := ""
@@ -146,7 +148,7 @@ static func chunk_rect(side_: int, i: int, depth := DEPTH) -> Rect2:
 
 
 ## Dessine la tuile (côté, rang) dans « batch », jusqu'à la profondeur « depth ».
-static func build(batch: DrawBatch, side_: int, i: int, depth: float, decor: bool) -> void:
+static func build(batch: DrawBatch, side_: int, i: int, depth: float, decor: bool, life_id := "") -> void:
 	load_regions()
 	var c = new()
 	c.b = batch
@@ -156,6 +158,7 @@ static func build(batch: DrawBatch, side_: int, i: int, depth: float, decor: boo
 	c.u1 = c.u0 + CHUNK
 	c.max_d = depth
 	c.decor_pass = decor
+	c.life_id = life_id
 	c.paint()
 
 
@@ -165,6 +168,9 @@ func paint() -> void:
 	var half := Regions.WORLD_HALF
 	# Hors du trapèze (coins en onglet) : rien à dessiner.
 	if u1 < -(half + max_d) or u0 > half + max_d:
+		return
+	if life_id != "":
+		_life()
 		return
 	if not decor_pass:
 		_gradient()
@@ -654,3 +660,69 @@ func _racines() -> void:
 			var wid := rng.randf_range(7.0, 15.0)
 			poly(PackedVector2Array([Vector2(u - wid, d), Vector2(u + wid, d), Vector2(u + rng.randf_range(-12.0, 12.0), d + hgt)]), Color(0.3, 0.28, 0.25), Vector2(-3, -3))
 			poly(PackedVector2Array([Vector2(u, d), Vector2(u + wid, d), Vector2(u + rng.randf_range(-12.0, 12.0), d + hgt)]), Color(0.18, 0.16, 0.14))
+
+
+## Régions présentes (poids > 0) le long de la tuile (côté, rang).
+static func present(side_: int, i: int) -> Array:
+	load_regions()
+	var out := []
+	var a := chunk_u0(i)
+	for k in 13:
+		for r in [0.0, 0.5, 1.0]:
+			var ang := to_world(side_, lerpf(a, a + CHUNK, k / 12.0), r * DEPTH).angle()
+			for id in regs:
+				if weight(id, ang) > 0.0 and not out.has(id):
+					out.append(id)
+	return out
+
+
+# --- La vie qui revient (région purifiée) ---
+
+## Couche posée sur le décor quand la région est purifiée (world_edge.gd la fait apparaître peu à peu) :
+## un voile de l'herbe de la région sur le fond, des taches de lumière et de petites fleurs. Pas de
+## remplacement du décor : le bord garde sa forme, il reprend des couleurs.
+func _life() -> void:
+	rid = life_id
+	var g := Regions.section(rid, "ground")
+	var named := Regions.named_colors(g)
+	var green: Color = Regions.color(g.get("alive_dark", "sol_vivant"), named).lerp(Regions.color(g.get("alive_light", "sol_vivant"), named), 0.45).lightened(0.12)
+	var bloom: Color = Regions.color(g.get("dot", "#ffffff"), named)
+	theme = THEMES[regs[rid]["theme"]]
+	far = theme["far"]
+	glow = theme["glow"]
+	rng.seed = hash("vie/%s/%d/%d" % [rid, side, index])
+	var half := Regions.WORLD_HALF
+	var cols := int(ceil(CHUNK / STEP))
+	for r in ROWS.size() - 1:
+		var d0: float = ROWS[r]
+		var d1: float = minf(ROWS[r + 1], max_d)
+		if d0 >= max_d:
+			break
+		for i in cols:
+			var ua := u0 + i * STEP
+			var pts := PackedVector2Array()
+			var cs := PackedColorArray()
+			for q in [[ua, d0], [ua + STEP, d0], [ua + STEP, d1], [ua, d1]]:
+				var uu := clampf(q[0], -(half + q[1]), half + q[1])
+				var p := to_world(side, uu, q[1])
+				pts.append(p)
+				var w := weight(rid, p.angle())
+				cs.append(Color(green, w * 0.3 * (1.0 - smoothstep(0.0, 1500.0, q[1])) * smoothstep(0.0, 100.0, q[1])))
+			if pts[0].distance_squared_to(pts[1]) < 1.0 and pts[2].distance_squared_to(pts[3]) < 1.0:
+				continue
+			b.draw_primitive(pts, cs)
+	# Taches de lumière, puis fleurs.
+	for k in 8:
+		var u := rng.randf_range(u0, u1)
+		var d := depth(60.0, 1100.0)
+		var rx := rng.randf_range(120.0, 320.0)
+		if ok(u, d, 0.0):
+			blob(u, d, rx, rx * 0.5, Color(glow, 0.07), rng.randf() * PI, Vector2.ZERO, 12)
+	for k in 70:
+		var u := rng.randf_range(u0, u1)
+		var d := depth(20.0, 900.0, 1.4)
+		if not ok(u, d, 6.0):
+			continue
+		var s := rng.randf_range(3.0, 6.0)
+		blob(u, d, s * 2.6, s * 2.6, fade(Color(bloom, 0.16), d), 0.0, Vector2.ZERO, 8)
+		blob(u, d, s, s, fade(Color(bloom.lightened(0.2), 0.95), d), 0.0, Vector2.ZERO, 7)

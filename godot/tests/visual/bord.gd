@@ -22,6 +22,13 @@ func run(runner) -> void:
 	var ids := Regions.ids()
 	await _look("bord_frontiere", _edge_point(Regions.angle_of(ids[0]) + Regions.half_width()))
 	await _look("bord_coin", Vector2(1, 1) * (Regions.WORLD_HALF - 60.0))
+	# Régions purifiées : le bord reverdit (deux régions, les autres restent mortes).
+	for id in ["ronce", "spore", "aube"]:
+		Game.flags[Regions.heart_flag(id)] = true
+	await r._frames(240)
+	for id in ["ronce", "spore", "aube"]:
+		await _look("bord_vivant_" + id, _edge_point(Regions.angle_of(id)))
+	await r._frames(5)
 	main.player.position = Vector2(0, 600)
 	main.quest_ui.toggle("carte")
 	await r._frames(3)
