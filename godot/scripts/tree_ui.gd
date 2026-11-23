@@ -422,7 +422,8 @@ func _view_changed(zoom_changed: bool) -> void:
 		return
 	_idle = 0.0
 	var s := _open_scale()
-	_world.position = view_center() - cam * zoom * s
+	_update_snap()
+	_world.position = view_center() - cam * zoom * s + _snap
 	_world.scale = Vector2(zoom, zoom) * s
 	# La couche fixe n'est pas redessinée ici : _process décide quand refaire son image.
 	if zoom_changed:
@@ -449,7 +450,8 @@ func _process(delta: float) -> void:
 	if _open < 1.0:
 		_open = minf(_open + delta / OPEN_DUR, 1.0)
 		var s := _open_scale()
-		_world.position = view_center() - cam * zoom * s
+		_update_snap()
+		_world.position = view_center() - cam * zoom * s + _snap
 		_world.scale = Vector2(zoom, zoom) * s
 		_view.queue_redraw()
 		_labels.modulate.a = Anim.ease_out(_open)
@@ -489,11 +491,11 @@ func lod_for(z: float) -> int:
 
 
 func to_tree(p: Vector2) -> Vector2:
-	return (p - view_center()) / zoom + cam
+	return (p - view_center() - _snap) / zoom + cam
 
 
 func to_screen(p: Vector2) -> Vector2:
-	return (p - cam) * zoom + view_center()
+	return (p - cam) * zoom + view_center() + _snap
 
 
 ## Centre de la zone de l'arbre (sous l'en-tête et la barre d'outils) : là où se place la caméra.
@@ -941,6 +943,8 @@ func _draw_world(c: CanvasItem) -> void:
 	var area: Rect2 = _rec["area"]
 	var keep := area.grow(80.0 / z + 40.0)
 	_backdrop_quad.queue_redraw()
+	# Marges : brume, cernes, radicelles et spores au-delà de l'arbre (seulement si l'écran y atteint).
+	TreeArt.margin(c, _extent(), _branch_colors(), area, z)
 
 	var batches := _link_batches(level, z)
 	TreeArt.flush(c, batches[0])
@@ -1292,7 +1296,13 @@ func _flush_once() -> void:
 		_cache_zoom = _cache_next["zoom"]
 		_cache_cam = _cache_next["cam"]
 		_cache_next = {}
+		_update_snap()
+		var os := _open_scale()
+		_world.position = view_center() - cam * zoom * os + _snap
 		_view.queue_redraw()
+		_anim.queue_redraw()
+		_life.queue_redraw()
+		_labels.queue_redraw()
 
 
 func _render_cache(rz := -1.0) -> void:
@@ -1361,16 +1371,34 @@ func _draw_backdrop_quad(c: CanvasItem) -> void:
 	c.draw_texture_rect(_backdrop_vp.get_texture(), sq, false)
 
 
-func _draw_backdrop(c: CanvasItem) -> void:
-	var tree = Game.tree
-	var br := _backdrop_radius()
-	c.draw_rect(Rect2(-br, -br, 2.0 * br, 2.0 * br), BG)
+func _branch_colors() -> Array:
 	var colors: Array = []
 	for bi in SkillTree.BRANCHES.size():
-		colors.append(tree.branch_color(bi))
+		colors.append(Game.tree.branch_color(bi))
+	return colors
+
+
+func _draw_backdrop(c: CanvasItem) -> void:
+	var br := _backdrop_radius()
+	c.draw_rect(Rect2(-br, -br, 2.0 * br, 2.0 * br), BG)
+	var colors: Array = _branch_colors()
 	var z := _backdrop.scale.x
 	TreeArt.background(c, _extent(), colors, _rings, z)
 	TreeArt.silhouette(c, _extent(), colors, _branch_sap, z)
+
+
+## Décalage (moins d'un pixel) qui pose l'image de la couche fixe sur la grille des pixels réels.
+## Les couches vivantes (_world) et les libellés le reprennent : sinon, pendant un déplacement,
+## les halos et les libellés bougeraient d'un demi-pixel par rapport aux nœuds de l'image.
+var _snap := Vector2.ZERO
+
+
+func _update_snap() -> void:
+	var rect := _cache_rect()
+	if _cache_ok and absf(rect.size.x - _cache_logical.x) < 0.01:
+		_snap = (rect.position * _cache_px).round() / _cache_px - rect.position
+	else:
+		_snap = Vector2.ZERO
 
 
 ## Où l'image de la couche fixe se pose à l'écran pour la vue actuelle (avec l'agrandissement
@@ -1609,6 +1637,8 @@ func _draw_labels(c: CanvasItem) -> void:
 	for l in layout_labels():
 		var rect: Rect2 = l[0]
 		var base := Vector2(rect.position.x, rect.position.y + font.get_ascent(l[2]))
+		# Fond léger : le texte reste lisible sur les liens et les nœuds qu'il croise.
+		c.draw_rect(rect.grow(2.0), Color(BG, 0.55))
 		c.draw_string_outline(font, base, l[1], HORIZONTAL_ALIGNMENT_LEFT, -1, l[2], maxi(3, int(l[2] / 4.0)), Color(BG, 0.9))
 		c.draw_string(font, base, l[1], HORIZONTAL_ALIGNMENT_LEFT, -1, l[2], l[3])
 		label_rects.append(rect)

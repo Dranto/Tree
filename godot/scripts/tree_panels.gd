@@ -440,8 +440,10 @@ func draw_overlay(c: CanvasItem) -> void:
 				_link(nodes[route[i - 1]], nodes[route[i]], col, w, false)
 				_ring(nodes[route[i]], 5.0, col, w)
 	# Résultats de la recherche.
+	# Résultats : anneau fin (2 px à l'écran), pour ne pas recouvrir les icônes ni les libellés.
+	var mw := maxf(2.0, 2.0 / z)
 	for id in matches:
-		_ring(nodes[id], 9.0, MATCH, w)
+		_ring(nodes[id], 6.0, MATCH, mw)
 	if match_index >= 0 and match_index < matches.size():
 		var pulse: float = 0.5 + 0.5 * sin(ui.t * 5.0)
 		_ring(nodes[matches[match_index]], 16.0 + 6.0 * pulse, Color.WHITE, w)
