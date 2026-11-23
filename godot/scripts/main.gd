@@ -1193,7 +1193,7 @@ func _on_level_up(lvl: int) -> void:
 	fx.pickup(player.position, "seve", 12)
 	hud.banner("Niveau %d : un point à placer dans l'Arbre de vie (%s)" % [lvl, hud.key_label("toggle_tree")])
 	request_autosave()
-	player.heal(Game.stats["max_hp"] * 0.25)
+	player.heal(Game.stats["max_hp"] * 0.25, true)
 
 
 # --- Mode de test automatique ---

@@ -128,6 +128,25 @@ func player_hurt(frac := 0.1, amount := 0.0, pos := Vector2.ZERO) -> void:
 			_rng.randf_range(0.16, 0.3), 2.0, danger, 0.0, 6.0)
 
 
+## Coup reçu puni (jalon 10 C) : étourdissement (éclat jaune pâle), sève perdue (goutte verte qui
+## s'échappe) et soin bloqué (le texte l'annonce ; la barre de vie se grise, voir hud_widgets.gd).
+func player_punished(pos: Vector2, stunned: bool, sap_lost: float, heal_blocked: bool) -> void:
+	if stunned:
+		ring(pos, 12.0, 54.0, 0.28, Art.c("or"), 4.0)
+		if main != null and main.get("screen_fx") != null:
+			main.screen_fx.glow(Color(Art.c("or"), 0.5), 0.35, 0.3)
+		Sfx.play("etourdi")
+	if Settings.show_damage_numbers and texts.size() < MAX_TEXTS - 2:
+		if sap_lost >= 1.0:
+			text(pos + Vector2(26.0, -52.0), "Sève −%d" % roundi(sap_lost), Art.ec("seve"), 17, 1.1, 2)
+		if heal_blocked and stunned:
+			text(pos + Vector2(-26.0, -70.0), "étourdi", Art.c("or"), 16, 0.8, 2)
+	if sap_lost >= 1.0 and not Settings.reduce_effects:
+		for i in mini(4, 1 + int(sap_lost / 15.0)):
+			var a := _rng.randf_range(-PI, 0.0)
+			_particle(0, pos, Vector2.from_angle(a) * _rng.randf_range(60.0, 140.0), _rng.randf_range(0.4, 0.7), 3.0, Art.ec("seve"), 0.0, -40.0)
+
+
 ## Ramassage : un petit éclat à la couleur de l'élément (bref : l'essence est le butin le plus fréquent).
 ## « vers » (position du monde) : des particules qui s'envolent vers cet endroit, pour un butin rare.
 func pickup(pos: Vector2, element := "seve", count := 5, vers := Vector2.INF) -> void:

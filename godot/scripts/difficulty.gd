@@ -108,6 +108,17 @@ static func damage_mult() -> float:
 	return float(mode(_current()).get("damage", 1.0))
 
 
+## Multiplicateur de vie d'un boss régional (data/difficulty.json › bosses › hp).
+static func boss_hp_factor(region_id: String) -> float:
+	var h = _section("bosses").get("hp", {})
+	return float(h.get(region_id, 1.0)) if h is Dictionary else 1.0
+
+
+## Réglages des coups reçus punis (data/difficulty.json › punish).
+static func punish() -> Dictionary:
+	return _section("punish")
+
+
 static func _current() -> String:
 	var settings = Engine.get_main_loop().root.get_node_or_null("Settings") if Engine.get_main_loop() is SceneTree else null
 	if settings != null and "difficulty" in settings:
@@ -121,7 +132,7 @@ static func validate() -> PackedStringArray:
 	if d.is_empty():
 		errors.append("difficulty.json est absent, vide ou illisible")
 		return errors
-	for section in ["threat", "scaling", "xp", "spawn", "modes"]:
+	for section in ["threat", "scaling", "xp", "spawn", "modes", "bosses", "punish"]:
 		if not d.get(section) is Dictionary:
 			errors.append("difficulty.json : section « %s » manquante" % section)
 	for m in MODES:

@@ -90,6 +90,44 @@ func _run() -> void:
 		ok = ok and Difficulty.target_minutes(l) > 0.0 and Difficulty.target_minutes(l) <= 3.0
 	check(ok, "durée visée par niveau entre 0 et 3 minutes jusqu'au niveau 30")
 
+	print("Coups reçus punis")
+	var pz: Dictionary = Difficulty.punish()
+	check(pz.has("stagger") and pz.has("sap_loss") and pz.has("heal_block") and pz.has("damage_per_level"), "difficulty.json › punish est renseigné")
+	var pl = main.player
+	game.level = 10
+	game.xp = 40.0
+	pl.invuln = 0.0
+	pl.hp = game.stats["max_hp"]
+	pl.heal_block = 0.0
+	pl.stagger = 0.0
+	var before_xp: float = game.xp
+	var big_hit: float = game.stats["max_hp"] * 0.2
+	pl.take_hit(big_hit, null)
+	var expected_mult: float = 1.0 + float(pz["damage_per_level"]) * 9.0 + float(pz["damage_per_heart"]) * main.hearts_purified()
+	check(is_equal_approx(game.stats["max_hp"] - pl.hp, big_hit * (1.0 - game.stats["armor"]) * expected_mult), "les dégâts reçus montent avec le niveau (× %.3f)" % expected_mult)
+	check(pl.stagger > 0.0 and pl.stagger_slow() < 1.0, "un gros coup étourdit : vitesse × %.2f" % pl.stagger_slow())
+	check(game.xp < before_xp, "un coup fait perdre de la sève (%.1f → %.1f)" % [before_xp, game.xp])
+	check(game.xp >= 0.0 and game.level == 10, "la sève perdue ne fait jamais perdre un niveau")
+	check(pl.heal_block > 0.0, "le soin est bloqué après un coup")
+	var hp_now: float = pl.hp
+	pl.heal(50.0)
+	check(is_equal_approx(pl.hp, hp_now), "heal() ne soigne pas pendant le blocage")
+	pl.heal(5.0, true)
+	check(pl.hp > hp_now, "heal(force) passe outre (sanctuaire, niveau gagné)")
+	pl.heal_block = 0.0
+	hp_now = pl.hp
+	pl.heal(5.0)
+	check(pl.hp > hp_now, "le soin revient quand le blocage finit")
+	pl.invuln = 0.0
+	pl.stagger = 0.0
+	pl.heal_block = 0.0
+	game.xp = 40.0
+	pl.take_hit(game.stats["max_hp"] * 0.005, null)
+	check(pl.stagger == 0.0 and pl.heal_block == 0.0 and is_equal_approx(game.xp, 40.0), "une petite brûlure n'étourdit pas et ne coûte pas de sève")
+	pl.invuln = 1.0e9
+	check(Difficulty.boss_hp_factor("ronce") > 1.0 and Difficulty.boss_hp_factor("inconnue") == 1.0, "les boss régionaux ont plus de vie, une région inconnue × 1")
+	game.level = 20
+
 	print("Choix de difficulté")
 	var p: float = main.threat(Vector2.ZERO)
 	var base = main.spawn_enemy_kind(0, Vector2(500, 0), p)

@@ -20,6 +20,7 @@ const HOME_LIFE := 0.45
 ## Statistique de dégâts de chaque famille d'attaque (champ « tags » de skills.json).
 const TAG_STATS := {"corps_a_corps": "melee_damage", "projectile": "projectile_damage", "zone": "area_damage"}
 const Content = preload("res://scripts/content.gd")
+const Difficulty = preload("res://scripts/difficulty.gd")
 ## Attaque de base : forme et modificateurs donnés par l'arbre (attack.gd, data/attack.json).
 const AttackScript = preload("res://scripts/attack.gd")
 const Regions = preload("res://scripts/regions.gd")
@@ -55,6 +56,10 @@ var rooted_walk := 0.0
 ## après l'armure, le cocon et le bouclier d'écorce.
 var bark := 0.0
 var hurt_flash := 0.0
+## Coups reçus punis (data/difficulty.json › punish) : secondes d'étourdissement restantes (vitesse
+## réduite) et de soin bloqué restantes.
+var stagger := 0.0
+var heal_block := 0.0
 ## Secondes d'éblouissement restantes (apply_dazzle). Côté ennemis, l'état « ebloui » est autre chose.
 var dazzle := 0.0
 ## Direction et point visés par les compétences (le curseur ; pour le robot, sa cible).
@@ -378,6 +383,8 @@ func _physics_process(delta: float) -> void:
 	invuln -= delta
 	hurt_flash -= delta
 	dazzle = maxf(0.0, dazzle - delta)
+	stagger = maxf(0.0, stagger - delta)
+	heal_block = maxf(0.0, heal_block - delta)
 	for k in cds:
 		cds[k] = maxf(0.0, cds[k] - delta)
 
@@ -425,7 +432,7 @@ func _physics_process(delta: float) -> void:
 		dash_time -= delta
 		position += dash_dir * DASH_SPEED * delta
 	else:
-		position += mv * s["move_speed"] * (DAZZLE_SLOW if dazzle > 0.0 else 1.0) * delta
+		position += mv * s["move_speed"] * (DAZZLE_SLOW if dazzle > 0.0 else 1.0) * stagger_slow() * delta
 	if main.has_method("clamp_to_world"):
 		position = main.clamp_to_world(position)
 	else:
@@ -588,8 +595,51 @@ func apply_dazzle(dur: float) -> void:
 		main.screen_fx.fade(Color(1.0, 0.97, 0.86), 0.3 if Settings.reduce_effects else 0.6, 0.0, dur)
 
 
-func heal(v: float) -> void:
+## Soigne le héros. Un coup reçu bloque le soin un instant (« heal_block ») ; « force » (sanctuaire,
+## montée de niveau) passe outre.
+func heal(v: float, force := false) -> void:
+	if heal_block > 0.0 and not force:
+		return
 	hp = minf(Game.stats["max_hp"], hp + v)
+
+
+## Part de vitesse gardée pendant l'étourdissement d'un coup reçu (1 = pas étourdi).
+func stagger_slow() -> float:
+	return float(Difficulty.punish().get("stagger_speed", 1.0)) if stagger > 0.0 else 1.0
+
+
+## Multiplicateur des dégâts reçus : monte avec le niveau et les Cœurs purifiés.
+func _punish_damage_mult(pz: Dictionary) -> float:
+	return 1.0 + float(pz.get("damage_per_level", 0.0)) * (Game.level - 1) \
+		+ float(pz.get("damage_per_heart", 0.0)) * main.hearts_purified()
+
+
+## Un vrai coup (pas une brûlure) : étourdit s'il est gros, recule, fait perdre de la sève et
+## bloque le soin. Retour visuel et sonore dans fx.player_punished.
+func _punish(taken: float, source, pz: Dictionary) -> void:
+	var s: Dictionary = Game.stats
+	var frac: float = taken / maxf(s["max_hp"], 1.0)
+	# Un coup mortel a sa propre règle (la sève tombe au sol, player_died).
+	if hp <= 0.0 or frac < float(pz.get("min_frac", 0.0)):
+		return
+	var boss_k := 1.0
+	if source is Object and is_instance_valid(source) and source.get("phase") != null:
+		boss_k = float(pz.get("boss", 1.0))
+	var stunned: bool = frac * boss_k >= float(pz.get("stagger_min", 1.0)) and dash_time <= 0.0
+	if stunned:
+		stagger = maxf(stagger, float(pz.get("stagger", 0.0)))
+		if source is Object and is_instance_valid(source) and "position" in source:
+			var away: Vector2 = (position - source.position).normalized()
+			position += away * float(pz.get("recoil", 0.0))
+	var lost := 0.0
+	var loss := float(pz.get("sap_loss", 0.0)) * boss_k
+	if loss > 0.0 and Game.xp > 0.0:
+		lost = minf(Game.xp, Game.xp_to_next() * loss)
+		Game.xp -= lost
+	var block := float(pz.get("heal_block", 0.0))
+	if block > 0.0:
+		heal_block = maxf(heal_block, block)
+	main.fx.player_punished(position, stunned, lost, block > 0.0)
 
 
 func take_hit(amount: float, source) -> void:
@@ -602,7 +652,8 @@ func take_hit(amount: float, source) -> void:
 		var pierce = source.get("armor_pierce")
 		if pierce != null:
 			armor *= 1.0 - clampf(float(pierce), 0.0, 1.0)
-	var taken: float = amount * (1.0 - armor)
+	var pz: Dictionary = Difficulty.punish()
+	var taken: float = amount * (1.0 - armor) * _punish_damage_mult(pz)
 	# Cocon de sève : le bouclier boit le coup d'abord (scripts/skills/cocon.gd).
 	var cocoon = _skill_objects.get("cocon")
 	if cocoon != null and cocoon.shield > 0.0:
@@ -627,6 +678,7 @@ func take_hit(amount: float, source) -> void:
 	Sfx.play("degats")
 	invuln = 0.35
 	main.fx.player_hurt(taken / maxf(s["max_hp"], 1.0), taken, position)
+	_punish(taken, source, pz)
 	Game.fire("hurt", {"main": main, "base": amount})
 	if s["thorns"] > 0.0 and is_instance_valid(source) and not source.dead:
 		source.take_damage(s["thorns"] * main.branch_factor(source, "ronce"), false)
