@@ -139,8 +139,7 @@ class Slot extends Control:
 						var fs := 20
 						var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
 						var p := Vector2(c.x - w / 2.0, c.y + fs * 0.36)
-						draw_string(font, p + Vector2(1.5, 1.5), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.85))
-						draw_string(font, p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Art.c("texte"))
+						UiTheme.draw_text(self, font, p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Art.c("texte"))
 				if ready_t < 0.35:
 					# Prête : un éclair d'anneau qui s'élargit.
 					var k := ready_t / 0.35
@@ -171,13 +170,13 @@ class Slot extends Control:
 			draw_line(body_r.position + Vector2(2.0, 12.0), body_r.position + Vector2(18.0, 12.0), Color(ink, 0.95), 1.5)
 		elif state != LOCKED and key_text != "":
 			# Touche : une petite plaque sous le médaillon.
-			var fs2 := 13
+			var fs2 := UiTheme.MIN_HUD_SIZE
 			var w2 := font.get_string_size(key_text, HORIZONTAL_ALIGNMENT_CENTER, -1, fs2).x
-			var plate := Rect2(Vector2(size.x / 2.0 - w2 / 2.0 - 6.0, diam + 6.0), Vector2(w2 + 12.0, 17.0))
+			var plate := Rect2(Vector2(size.x / 2.0 - w2 / 2.0 - 6.0, diam + 5.0), Vector2(w2 + 12.0, 19.0))
 			var on := state == SKILL
-			draw_rect(plate, Color(Art.c("contour"), 0.85 if on else 0.5))
-			draw_rect(plate, Color(Art.c("texte_doux"), 0.7 if on else 0.3), false, 1.0)
-			draw_string(font, plate.position + Vector2(6.0, 13.0), key_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2,
+			draw_rect(plate, Color(Art.c("contour"), 0.92 if on else 0.8))
+			draw_rect(plate, Color(Art.c("texte_doux"), 0.7 if on else 0.4), false, 1.0)
+			draw_string(font, plate.position + Vector2(6.0, 15.0), key_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2,
 				Art.c("texte") if on else Art.c("texte_doux"))
 
 
@@ -235,8 +234,7 @@ class Vital extends Control:
 		# Cœur de vie, à gauche : l'icône de la charte dans son médaillon.
 		Art.icon_badge(self, "vie", Rect2(Vector2(0, 0), Vector2(size.y, size.y)))
 		var font := UiTheme.font(true)
-		draw_string(font, back.position + Vector2(8, back.size.y - 5), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0, 0, 0, 0.8))
-		draw_string(font, back.position + Vector2(7, back.size.y - 6), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.c("texte"))
+		UiTheme.draw_text(self, font, back.position + Vector2(8, back.size.y - 4), text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE, Art.c("texte"), 4)
 
 
 ## Coin d'informations : médaillon de niveau cerclé par l'expérience, points à dépenser,
@@ -291,14 +289,14 @@ class Corner extends Control:
 		var pop := 1.0 + 0.25 * (1.0 - Anim.ease_out(level_t / 0.5)) if level_t < 0.5 else 1.0
 		draw_circle(c + Vector2(0, 2), r * pop, Art.c("ombre"))
 		draw_circle(c, r * pop, Art.c("contour"))
-		draw_circle(c, (r - 3.0) * pop, Color(0.1, 0.16, 0.1))
-		draw_arc(c, r - 1.5, 0.0, TAU, 40, Color(0.18, 0.28, 0.18), 3.0, true)
+		draw_circle(c, (r - 3.0) * pop, Color(0.128, 0.12, 0.101))
+		draw_arc(c, r - 1.5, 0.0, TAU, 40, Color(0.228, 0.213, 0.179), 3.0, true)
 		if xp > 0.0:
 			draw_arc(c, r - 1.5, -PI / 2.0, -PI / 2.0 + TAU * clampf(xp, 0.0, 1.0), 48, Art.c("accent"), 3.0, true)
 		var lv := str(level)
 		var fs := 22 if level < 100 else 16
 		var w := font.get_string_size(lv, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
-		draw_string(font, c + Vector2(-w / 2.0, fs * 0.36), lv, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Art.c("texte"))
+		UiTheme.draw_text(self, font, c + Vector2(-w / 2.0, fs * 0.36), lv, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Art.c("texte"), 3)
 		# Points à dépenser : un repère or qui pulse tant qu'il en reste.
 		var x := 68.0
 		if points > 0:
@@ -308,9 +306,9 @@ class Corner extends Control:
 			draw_rect(chip, Color(Art.c("or"), 0.55 + 0.4 * pulse), false, 1.5)
 			Art.icon(self, "competence", Rect2(chip.position + Vector2(3, 1), Vector2(24, 24)))
 			var s1 := "+%d" % points
-			draw_string(font, chip.position + Vector2(30, 19), s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Art.c("or"))
-			var kw := font.get_string_size(s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-			draw_string(soft, chip.position + Vector2(36 + kw, 18), tree_key, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.c("texte_doux"))
+			UiTheme.draw_text(self, font, chip.position + Vector2(30, 19), s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Art.c("or"), 4)
+			var kw := font.get_string_size(s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+			UiTheme.draw_text(self, soft, chip.position + Vector2(36 + kw, 19), tree_key, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE, Art.c("texte"), 4)
 			if points_t < 0.4:
 				var k := points_t / 0.4
 				draw_rect(chip.grow(6.0 * Anim.ease_out(k)), Color(Art.c("or"), 0.8 * (1.0 - k)), false, 2.0)
@@ -318,10 +316,10 @@ class Corner extends Control:
 		var cy := 46.0
 		var cr := 8.0
 		var wc := Vector2(x + cr, cy)
-		draw_arc(wc, cr, 0.0, TAU, 24, Color(0.2, 0.28, 0.2), 3.0, true)
+		draw_arc(wc, cr, 0.0, TAU, 24, Color(0.243, 0.227, 0.19), 3.0, true)
 		if world > 0.0:
 			draw_arc(wc, cr, -PI / 2.0, -PI / 2.0 + TAU * clampf(world, 0.0, 1.0), 32, Art.ec("seve"), 3.0, true)
-		draw_string(soft, Vector2(x + 2 * cr + 6, cy + 5), "%d %%" % roundi(world * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.c("texte"))
+		UiTheme.draw_text(self, font, Vector2(x + 2 * cr + 6, cy + 6), "%d %%" % roundi(world * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE + 1, Art.c("texte"))
 		var kx := x + 80.0
 		Art.icon(self, "cendre", Rect2(Vector2(kx, cy - 10), Vector2(20, 20)), Art.c("texte_doux"))
-		draw_string(soft, Vector2(kx + 23, cy + 5), str(kills), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.c("texte_doux"))
+		UiTheme.draw_text(self, font, Vector2(kx + 23, cy + 6), str(kills), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE + 1, Art.c("texte"))

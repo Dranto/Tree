@@ -12,7 +12,7 @@ const Content = preload("res://scripts/content.gd")
 const Effects = preload("res://scripts/effects.gd")
 const GraftPickup = preload("res://scripts/graft_pickup.gd")
 
-const DIM := Color(0.65, 0.72, 0.68)
+const DIM := Color(0.731, 0.683, 0.574)
 const PLAN := Color("f2d06b")
 
 var ui
@@ -52,7 +52,7 @@ class Item extends PanelContainer:
 		name_label.add_theme_font_size_override("font_size", 15)
 		col.add_child(name_label)
 		place_label = Label.new()
-		place_label.add_theme_font_size_override("font_size", 12)
+		place_label.add_theme_font_size_override("font_size", 14)
 		place_label.add_theme_color_override("font_color", DIM)
 		col.add_child(place_label)
 
@@ -93,7 +93,7 @@ func _ready() -> void:
 	offset_left = 16.0
 	offset_bottom = -16.0
 	grow_vertical = Control.GROW_DIRECTION_BEGIN
-	var sb := UiTheme.box(Color(0.06, 0.08, 0.07, 0.94), Color(0.6, 0.8, 0.6, 0.3), 1, 8)
+	var sb := UiTheme.box(Color(UiTheme.PAPER, 0.94), Color(UiTheme.GOLD, 0.3), 1, 8)
 	for side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
 		sb.set_content_margin(side, 10)
 	add_theme_stylebox_override("panel", sb)
@@ -111,7 +111,7 @@ func _ready() -> void:
 	_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(_list)
 	_hint = Label.new()
-	_hint.add_theme_font_size_override("font_size", 12)
+	_hint.add_theme_font_size_override("font_size", 14)
 	_hint.add_theme_color_override("font_color", DIM)
 	box.add_child(_hint)
 	Game.tree_changed.connect(refresh)
@@ -170,7 +170,7 @@ func refresh() -> void:
 		else:
 			it.place_label.text = "posée (emplacement pas encore appris)"
 		var selected := id == held
-		var box := UiTheme.box(Color(0.16, 0.14, 0.08, 0.95) if selected else Color(0.1, 0.13, 0.11, 0.9), UiTheme.GOLD if selected else Color(0.6, 0.8, 0.6, 0.18), 1, 6)
+		var box := UiTheme.box(Color(0.16, 0.14, 0.08, 0.95) if selected else Color(UiTheme.PAPER.lightened(0.04), 0.9), UiTheme.GOLD if selected else Color(UiTheme.GOLD, 0.18), 1, 6)
 		box.content_margin_left = 6
 		box.content_margin_right = 10
 		box.content_margin_top = 3
@@ -241,16 +241,16 @@ func tooltip_lines(n: Dictionary) -> Array:
 	for e in g.get("effects", []):
 		var line := Effects.describe(e)
 		if line != "":
-			lines.append(["   " + line, 13, PLAN])
+			lines.append(["   " + line, 15, PLAN])
 	var owned: bool = Game.allocated.has(n["id"])
 	var changes: Array = ui.panels.planner.preview_graft(n["id"], held)
 	if not changes.is_empty():
-		lines.append(["Statistiques" + ("" if owned else ", une fois l'emplacement appris") + " :", 13, DIM])
+		lines.append(["Statistiques" + ("" if owned else ", une fois l'emplacement appris") + " :", 15, DIM])
 		for c in changes:
 			lines.append(["   " + c["text"], 14, PLAN])
 	elif not owned:
-		lines.append(["Elle agira quand l'emplacement sera appris.", 13, DIM])
+		lines.append(["Elle agira quand l'emplacement sera appris.", 15, DIM])
 	var current := Game.graft_of(n["id"])
 	if current != "" and current != held:
-		lines.append(["Remplace « %s », qui revient dans l'inventaire." % Content.grafts()[current]["name"], 13, DIM])
+		lines.append(["Remplace « %s », qui revient dans l'inventaire." % Content.grafts()[current]["name"], 15, DIM])
 	return lines

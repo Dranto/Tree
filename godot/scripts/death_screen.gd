@@ -1,4 +1,4 @@
-## Écran de mort : quelques secondes au centre de l'écran pour dire ce qui est perdu, où renaît
+## Écran de mort (direction « Herbier ») : quelques secondes au centre de l'écran pour dire ce qui est perdu, où renaît
 ## le joueur et où reprendre sa sève. Le jeu continue derrière (les ennemis ont été dissipés et
 ## le joueur est invulnérable un instant). Ensuite, tant que la sève perdue n'est pas reprise,
 ## une flèche au bord de l'écran montre où elle est.
@@ -20,6 +20,8 @@ var _veil: ColorRect
 var _panel: PanelContainer
 var _title: Label
 var _lines: VBoxContainer
+## Fil qui se consume : le temps qui reste avant que l'écran ne s'efface.
+var _fuse: Control
 var _pointer: Control
 var _pointer_label: Label
 ## Position de la flèche à l'écran et direction (vers la sève).
@@ -32,35 +34,60 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_veil = ColorRect.new()
-	_veil.color = Color(0.05, 0.02, 0.02, 0.55)
+	_veil.color = Color(0.1, 0.04, 0.025, 0.78)
 	_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_veil)
 	_panel = PanelContainer.new()
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sb := UiTheme.box(Color(0.07, 0.05, 0.05, 0.92), Color(0.78, 0.4, 0.35, 0.5), 1, 10)
+	# Pas de boîte : une feuille flétrie gravée, le titre, un séparateur, les lignes, puis un fil
+	# rouge qui se consume pendant que l'écran reste affiché.
+	var sb := StyleBoxEmpty.new()
 	sb.set_content_margin_all(22)
 	_panel.add_theme_stylebox_override("panel", sb)
 	add_child(_panel)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
+	v.add_theme_constant_override("separation", 4)
 	_panel.add_child(v)
+	var leaf := Control.new()
+	leaf.custom_minimum_size = Vector2(0, 96)
+	leaf.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	leaf.draw.connect(_draw_leaf.bind(leaf))
+	v.add_child(leaf)
+	var kicker := Label.new()
+	kicker.text = "LA FLÉTRISSURE T'A RATTRAPÉ"
+	kicker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	kicker.add_theme_font_override("font", UiTheme.serif(500, 3))
+	kicker.add_theme_font_size_override("font_size", 15)
+	kicker.add_theme_color_override("font_color", Color(UiTheme.RED, 0.85))
+	v.add_child(kicker)
 	_title = Label.new()
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title.add_theme_font_size_override("font_size", 34)
-	_title.add_theme_color_override("font_color", Color("e8907f"))
+	_title.add_theme_font_override("font", UiTheme.display(600, 1))
+	_title.add_theme_font_size_override("font_size", 66)
+	_title.add_theme_color_override("font_color", Color("ecc3b3"))
 	v.add_child(_title)
+	var divider := Control.new()
+	divider.custom_minimum_size = Vector2(0, 26)
+	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	divider.draw.connect(func(): UiTheme.draw_divider(divider, divider.size.x / 2.0, 6.0, 170.0, UiTheme.RED))
+	v.add_child(divider)
 	_lines = VBoxContainer.new()
 	_lines.add_theme_constant_override("separation", 6)
 	v.add_child(_lines)
+	_fuse = Control.new()
+	_fuse.custom_minimum_size = Vector2(0, 40)
+	_fuse.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fuse.draw.connect(_draw_fuse)
+	v.add_child(_fuse)
 	_pointer = Control.new()
 	_pointer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_pointer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_pointer.draw.connect(_draw_pointer)
 	add_child(_pointer)
 	_pointer_label = Label.new()
-	_pointer_label.add_theme_font_size_override("font_size", 14)
-	_pointer_label.add_theme_color_override("font_color", Color("e8d36b"))
+	_pointer_label.add_theme_font_size_override("font_size", 17)
+	_pointer_label.add_theme_color_override("font_color", UiTheme.GOLD)
 	_pointer.add_child(_pointer_label)
 	_veil.hide()
 	_panel.hide()
@@ -74,18 +101,18 @@ func show_death(info: Dictionary) -> void:
 	var dropped := roundi(float(info.get("dropped", 0.0)))
 	if dropped > 0:
 		if str(info.get("reset", "")) == "boss":
-			texts.append(["Ta sève (%d d'expérience) t'attend devant l'arène : va la reprendre." % dropped, Color("e8d36b")])
+			texts.append(["Ta sève (%d d'expérience) t'attend devant l'arène : va la reprendre." % dropped, UiTheme.GOLD])
 		else:
-			texts.append(["Ta sève (%d d'expérience) est restée là où tu es tombé : va la reprendre." % dropped, Color("e8d36b")])
+			texts.append(["Ta sève (%d d'expérience) est restée là où tu es tombé : va la reprendre." % dropped, UiTheme.GOLD])
 	else:
 		texts.append(["Tu n'avais pas de sève à perdre.", UiTheme.INK])
 	var lost := roundi(float(info.get("lost", 0.0)))
 	if lost > 0:
-		texts.append(["La sève de ta mort précédente (%d) est perdue pour de bon." % lost, Color("e8907f")])
+		texts.append(["La sève de ta mort précédente (%d) est perdue pour de bon." % lost, UiTheme.RED])
 	match str(info.get("reset", "")):
-		"coeur": texts.append(["Le Cœur de flétrissure s'est rendormi : le siège est à recommencer.", Color("e8907f")])
-		"boss": texts.append(["La Mère-Ronce s'est rendormie avec toute sa vie.", Color("e8907f")])
-	texts.append(["Ton Arbre de vie est intact : aucun nœud ni point perdu.", Color("9fd88a")])
+		"coeur": texts.append(["Le Cœur de flétrissure s'est rendormi : le siège est à recommencer.", UiTheme.RED])
+		"boss": texts.append(["La Mère-Ronce s'est rendormie avec toute sa vie.", UiTheme.RED])
+	texts.append(["Ton Arbre de vie est intact : aucun nœud ni point perdu.", Color("8fc76f")])
 	for c in _lines.get_children():
 		_lines.remove_child(c)
 		c.queue_free()
@@ -93,7 +120,7 @@ func show_death(info: Dictionary) -> void:
 		var l := Label.new()
 		l.text = line[0]
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.add_theme_font_size_override("font_size", 18)
+		l.add_theme_font_size_override("font_size", 22)
 		l.add_theme_color_override("font_color", line[1])
 		_lines.add_child(l)
 	time_left = DURATION
@@ -120,10 +147,32 @@ func _process(delta: float) -> void:
 		_veil.modulate.a = a
 		_panel.modulate.a = a
 		_layout()
+		_fuse.queue_redraw()
 		if time_left <= 0.0:
 			_veil.hide()
 			_panel.hide()
 	_update_pointer()
+
+
+## Feuille flétrie, gravée en rouge : elle penche et se recroqueville.
+func _draw_leaf(c: Control) -> void:
+	var p := Vector2(c.size.x / 2.0 - 30.0, 30.0)
+	var col := Color(UiTheme.RED, 0.8)
+	UiTheme.draw_leaf(c, p, 0.6, 66.0, 17.0, col, Color(UiTheme.RED, 0.12), 1.3)
+	var d := Vector2.from_angle(0.6)
+	for i in 5:
+		var q := p + d * (12.0 + i * 10.0)
+		c.draw_line(q, q + Vector2.from_angle(0.6 - 1.1) * (11.0 - i), Color(UiTheme.RED, 0.5), 0.9, true)
+		c.draw_line(q, q + Vector2.from_angle(0.6 + 1.1) * (9.0 - i), Color(UiTheme.RED, 0.35), 0.9, true)
+
+
+func _draw_fuse() -> void:
+	var cx := _fuse.size.x / 2.0
+	var y := 26.0
+	var k := clampf(time_left / DURATION, 0.0, 1.0)
+	_fuse.draw_line(Vector2(cx - 140, y), Vector2(cx + 140, y), Color(UiTheme.RED, 0.2), 1.0, true)
+	_fuse.draw_line(Vector2(cx - 140, y), Vector2(cx - 140 + 280 * k, y), Color(UiTheme.RED, 0.75), 1.5, true)
+	_fuse.draw_circle(Vector2(cx - 140 + 280 * k, y), 2.5, Color("f4b08f"))
 
 
 ## Flèche au bord de l'écran vers la sève perdue, quand elle est hors de vue.
@@ -161,4 +210,4 @@ func _draw_pointer() -> void:
 	var side := d.orthogonal()
 	var pulse := 0.5 + 0.5 * sin(t * 4.0)
 	_pointer.draw_circle(p - d * 8.0, 20.0, Color(0.9, 0.83, 0.42, 0.15 + 0.1 * pulse))
-	_pointer.draw_colored_polygon(PackedVector2Array([p + d * 14.0, p - d * 10.0 + side * 11.0, p - d * 4.0, p - d * 10.0 - side * 11.0]), Color("e8d36b"))
+	_pointer.draw_colored_polygon(PackedVector2Array([p + d * 14.0, p - d * 10.0 + side * 11.0, p - d * 4.0, p - d * 10.0 - side * 11.0]), UiTheme.GOLD)

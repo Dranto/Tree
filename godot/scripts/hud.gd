@@ -45,6 +45,8 @@ var _corner
 var _vital
 var _banner: Label
 var _hint_box: VBoxContainer
+## Bande sombre derrière l'aide de départ (suit sa visibilité).
+var _hint_back: PanelContainer
 var _slots: Array = []
 ## Écran de mort et flèche vers la sève perdue (death_screen.gd).
 var death_screen
@@ -223,11 +225,21 @@ func _build_bottom_center() -> void:
 	v.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	v.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(v)
+	# Aide de départ : sur une bande de papier sombre, lisible sur n'importe quel sol.
+	var hint_back := PanelContainer.new()
+	hint_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var hb := UiTheme.box(Color(UiTheme.PAPER_DARK, 0.72), Color(0, 0, 0, 0), 0, 2)
+	hb.content_margin_top = 6
+	hb.content_margin_bottom = 6
+	hint_back.add_theme_stylebox_override("panel", hb)
+	hint_back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	v.add_child(hint_back)
+	_hint_back = hint_back
 	_hint_box = VBoxContainer.new()
 	_hint_box.add_theme_constant_override("separation", 4)
-	v.add_child(_hint_box)
+	hint_back.add_child(_hint_box)
 	for i in 3:
-		var l := _label(_hint_box, 16, Color(0.9, 0.95, 0.85))
+		var l := _label(_hint_box, 16, Color(0.963, 0.9, 0.756))
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -379,6 +391,8 @@ func _refresh() -> void:
 	var show_hint := hint_time > 0.0 and Settings.show_hints and not in_boss_fight()
 	_hint_box.modulate.a = clampf(hint_time / 2.0, 0.0, 1.0) if show_hint else 0.0
 	_hint_box.visible = show_hint
+	_hint_back.modulate.a = _hint_box.modulate.a
+	_hint_back.visible = show_hint
 	if not show_hint:
 		return
 	var lines := [

@@ -28,7 +28,7 @@ On demande une couleur par son rôle, jamais par sa teinte : `Art.c("ennemi")`, 
 | Flétris | `ennemi`, `ennemi_contour`, `ennemi_oeil`, `elite` |
 | Danger | `danger`, `danger_annonce` (voile), `danger_eclair` (frappe) |
 | Utile | `interactif`, `butin` |
-| Interface | `texte`, `texte_doux`, `accent`, `or`, `panneau` (repris tels quels par `ui_theme.gd`) |
+| Interface | `texte`, `texte_doux`, `accent`, `or`, `encre_rouge` ; papier : `papier`, `papier_sombre`, `panneau` (repris tels quels par `ui_theme.gd`) |
 | Traits | `contour`, `ombre` |
 
 ## 3. Éléments
@@ -154,7 +154,17 @@ L'écran de l'arbre suit la même charte. Le dessin est dans `godot/scripts/tree
 - **Performance** : les couches fixes ne sont redessinées qu'au zoom. Les ombres, le volume et les reflets n'apparaissent qu'au zoom proche, et les animations ne dessinent que ce qui est à l'écran. Le banc `tests/tree_bench.gd` doit rester au niveau d'avant.
 - `tools/arbre-anim.sh` produit un GIF de ces animations.
 
-## 11. Vérifier
+## 11. Interface : direction « Herbier » (jalon 10)
+
+L'interface est une planche botanique gravée : papier brun chaud, encre ivoire, filets et vrilles d'or.
+
+- **Une seule police pour tous les textes** : Cormorant Garamond (OFL), agrandie de 20 % par `tools/font-herbier.py` (son œil est petit), chiffres alignés. Texte courant en demi-gras (600), gras 700, titres plus fins et espacés. `UiTheme.install()` en fait aussi la police par défaut du moteur : les textes dessinés sans thème la prennent.
+- **Couleurs** : texte ivoire, texte doux, or pour ce qui est choisi ou à lire en premier, vert seulement pour une bonne nouvelle, encre rouge pour la mort et les pertes.
+- **Panneaux** : `UiTheme.cadre()` (papier, double filet d'or, losanges aux coins, vrilles et feuilles si orné).
+- **Menus** : entrées sans boîte (`UiTheme.menu_item`) ; l'entrée choisie passe en or, avec une feuille devant et un filet dessous. Séparateur : filets et losanges (`draw_divider`).
+- Captures : scénario visuel `menus` (titre, pause, quatre onglets d'options, mort) en 1280x720 et 3440x1440.
+
+## 12. Vérifier
 
 - `tools/godot.sh --headless -s res://tests/art_test.gd` vérifie :
   - la palette et la hiérarchie de lecture ;

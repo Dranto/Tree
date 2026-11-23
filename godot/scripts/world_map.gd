@@ -87,22 +87,22 @@ func _ready() -> void:
 	_panel.custom_minimum_size = Vector2(290, 0)
 	add_child(_panel)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 6)
+	v.add_theme_constant_override("separation", 4)
 	_panel.add_child(v)
-	_label(v, "OBJECTIF", 12, UiTheme.GOLD)
-	_goal_region = _label(v, "", 12, Color(0.78, 0.85, 0.78))
+	_label(v, "OBJECTIF", 14, UiTheme.GOLD)
+	_goal_region = _label(v, "", 14, Color(0.86, 0.803, 0.675))
 	_goal_title = _label(v, "", 17, UiTheme.INK, true)
 	_goal_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_goal_title.custom_minimum_size.x = 250.0
-	_goal_text = _label(v, "", 13, Color(0.78, 0.85, 0.78))
+	_goal_text = _label(v, "", 15, Color(0.86, 0.803, 0.675))
 	_goal_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_goal_text.custom_minimum_size.x = 250.0
 	v.add_child(HSeparator.new())
-	_label(v, "LÉGENDE", 12, Color(0.55, 0.65, 0.55))
+	_label(v, "LÉGENDE", 14, UiTheme.SOFT)
 	_legend = VBoxContainer.new()
-	_legend.add_theme_constant_override("separation", 6)
+	_legend.add_theme_constant_override("separation", 3)
 	v.add_child(_legend)
-	_label(v, "M ou Échap : fermer   ·   J : journal", 12, Color(0.55, 0.6, 0.55))
+	_label(v, "M ou Échap : fermer   ·   J : journal", 14, Color(0.606, 0.567, 0.476))
 	resized.connect(_layout)
 
 
@@ -142,9 +142,9 @@ func _legend_row(e: Array) -> void:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 0)
 	row.add_child(col)
-	_label(col, e[2], 13, Color(0.82, 0.88, 0.82))
+	_label(col, e[2], 15, Color(0.899, 0.84, 0.706))
 	if str(e[3]) != "":
-		var sub := _label(col, e[3], 11, Color(0.6, 0.68, 0.6))
+		var sub := _label(col, e[3], 14, Color(0.671, 0.627, 0.526))
 		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		sub.custom_minimum_size.x = 215.0
 	_legend.add_child(row)
@@ -170,7 +170,9 @@ func _layout() -> void:
 	_edge_view.size = _view.size
 	_edge_view.queue_redraw()
 	_panel.reset_size()
-	_panel.position = Vector2(size.x - _panel.size.x - 40.0, 90.0)
+	# Le panneau (objectif et légende) descend jusqu'au bas de l'écran au plus : s'il est plus haut
+	# que la place sous le titre, il remonte.
+	_panel.position = Vector2(size.x - _panel.size.x - 40.0, clampf(size.y - _panel.size.y - 12.0, 12.0, 90.0))
 
 
 func _draw() -> void:
@@ -271,7 +273,7 @@ func draw_map(v: Control) -> void:
 	# La brèche à son pied (la finale) : un anneau qui s'allume quand toutes les régions sont purifiées.
 	draw_glyph(v, "breach", seed_at, _breach_color(), true, 1.0)
 	if bool(Game.flags.get("finale_ouverte", false)) and not bool(Game.flags.get("finale_vaincue", false)):
-		_text(v, font, seed_at + Vector2(14, 21), "Brèche", Color(_breach_color(), 0.95))
+		_text(v, font, seed_at + Vector2(14, 30), "Brèche", Color(_breach_color(), 0.95))
 
 	# Sanctuaires et autels du monde (groupes « sanctuaire » et « autel »).
 	for n in main.get_tree().get_nodes_in_group("sanctuaire"):
@@ -303,12 +305,12 @@ func draw_map(v: Control) -> void:
 			draw_glyph(v, "arena", ac, RegionUi.tint(reg).lightened(0.15), true, 1.0)
 		else:
 			draw_seal(v, ac, RegionUi.tint(reg).lightened(0.15), 0.0)
-		_text(v, font, ac + Vector2(-70, 4), "Arène", Color("e9e2c8"))
+		_text(v, font, ac + Vector2(-70, 4), "Arène", UiTheme.INK)
 		var n := Regions.hearts_done(reg, Game.flags)
 		var total := list.size()
 		var label := "Cœurs %d / %d" % [n, total] if total > 1 else "Cœur"
 		var gc := to_map(main.hearts[reg].center, s)
-		_text(v, font, gc + Vector2(-60, 26), label, Color("e9e2c8"))
+		_text(v, font, gc + Vector2(-60, 26), label, UiTheme.INK)
 
 	# Objectif : un anneau qui bat autour de la cible.
 	var goal = Objectives.target_pos(Objectives.followed())
@@ -331,7 +333,7 @@ func draw_map(v: Control) -> void:
 
 	# Le joueur, tourné vers sa visée.
 	draw_glyph(v, "player", to_map(main.map_position(main.player.position), s), Color.WHITE, true, 1.0, main.player.aim.angle())
-	v.draw_rect(wr, Color(0.6, 0.8, 0.6, 0.5), false, 2.0)
+	v.draw_rect(wr, Color(UiTheme.GOLD, 0.5), false, 2.0)
 	UiAudit.scan_controls("carte", self)
 
 
@@ -387,7 +389,7 @@ func _draw_region(v: Control, reg: String, s: Vector2, font: Font) -> void:
 ## Texte posé sur la carte, avec un liseré sombre pour rester lisible sur toutes les teintes.
 func _text(v: Control, font: Font, pos: Vector2, s: String, color: Color) -> void:
 	v.draw_string_outline(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 4, Color(0, 0, 0, 0.8))
-	UiAudit.draw_text(v, "carte", font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, color, v.get_global_transform())
+	UiAudit.draw_text(v, "carte", font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, color, v.get_global_transform())
 
 
 ## Avancée (0 à 1) de l'animation d'une région qui reverdit sur la carte ; 1 sans animation.
@@ -424,12 +426,12 @@ func _breach_color() -> Color:
 		return Color("7fd36b")
 	if bool(Game.flags.get("finale_ouverte", false)):
 		return Color("e0675e")
-	return Color(0.55, 0.58, 0.55)
+	return Color(0.599, 0.56, 0.47)
 
 
 ## Un signe de la carte (ou de la légende), centré sur « c ».
 func draw_glyph(ci: CanvasItem, kind: String, c: Vector2, color: Color, filled: bool, k: float, angle := 0.0) -> void:
-	var dark := Color(0.04, 0.05, 0.04, 0.9)
+	var dark := Color(0.0464, 0.0433, 0.0364, 0.9)
 	match kind:
 		"land":
 			ci.draw_rect(Rect2(c - Vector2(9, 7), Vector2(18, 14)), color)

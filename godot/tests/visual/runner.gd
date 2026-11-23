@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -141,6 +141,8 @@ func _ready() -> void:
 			await FinaleScript.new().run(self)
 		"bord":
 			await BordScript.new().run(self)
+		"menus":
+			await _scenario_menus()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -195,6 +197,38 @@ func _scenario_resolution() -> void:
 	await _frames(30)
 	UiAudit.scan_controls("titre", title)
 	await _shot("titre_" + tag, "titre")
+
+
+## Menus (direction « Herbier ») à la résolution de la fenêtre : la pause, les quatre onglets des
+## options, l'écran de mort, puis l'écran titre et ses options.
+func _scenario_menus() -> void:
+	var tag := _res_tag()
+	await _frames(60)
+	main.hud.banner_time = 0.0
+	main.pause_menu.open()
+	await _frames(10)
+	UiAudit.scan_controls("pause", main.pause_menu)
+	await _shot("menu_pause_" + tag)
+	main.pause_menu._open_options()
+	for i in 4:
+		main.pause_menu.options.show_tab(i)
+		await _frames(6)
+		UiAudit.scan_controls("options", main.pause_menu.options)
+		await _shot("menu_options_%d_%s" % [i + 1, tag])
+	main.pause_menu.close()
+	Game.xp = 37.0
+	main.player_died()
+	main.hud.banner_time = 0.0
+	await _frames(30)
+	await _shot("menu_mort_" + tag, "jeu")
+	main.queue_free()
+	get_tree().paused = false
+	await _frames(2)
+	var title = TitleScene.instantiate()
+	add_child(title)
+	await _frames(30)
+	UiAudit.scan_controls("titre", title)
+	await _shot("menu_titre_" + tag, "titre")
 
 
 ## Planche de la charte graphique (tests/visual/charte.gd) : palette, éléments, icônes, annonces,
@@ -1209,9 +1243,12 @@ func _far_small(skip := 0) -> int:
 
 
 ## Contrôles sans image : aucun texte hors écran, aucun libellé qui en recouvre un autre.
-func _audit(screen: String, strict := true) -> void:
+func _audit(screen: String, strict := true, img: Image = null) -> void:
 	var tag := _res_tag()
-	for issue in UiAudit.check(screen, get_viewport().get_visible_rect(), strict):
+	var issues: Array = UiAudit.check(screen, get_viewport().get_visible_rect(), strict)
+	if img != null:
+		issues.append_array(UiAudit.check_contrast(screen, img, get_viewport().get_visible_rect().size))
+	for issue in issues:
 		var key := "%s|%s" % [tag, issue["key"]]
 		if key in seen_issues:
 			continue
@@ -1262,13 +1299,17 @@ func _shot(shot_name: String, screen := "") -> void:
 	img.convert(Image.FORMAT_RGB8)
 	if screen == "" and shot_name.begins_with("arbre"):
 		screen = "arbre"
+	# Toute capture du jeu en cours passe aussi l'audit de l'interface (textes coupés, qui se
+	# recouvrent ou sans contraste sur leur fond) : le HUD doit rester lisible partout.
+	if screen == "" and is_instance_valid(main) and main.is_inside_tree() and main.visible and not main.tree_ui.visible:
+		screen = "jeu"
 	if screen != "":
 		if screen == "jeu":
 			UiAudit.begin("jeu")
 			UiAudit.scan_controls("jeu", main)
 		if not screen in _screens_checked:
 			_screens_checked.append(screen)
-		_audit(screen, not shot_name.ends_with("proche"))
+		_audit(screen, not shot_name.ends_with("proche"), img)
 	await _shot_image(shot_name, img)
 
 

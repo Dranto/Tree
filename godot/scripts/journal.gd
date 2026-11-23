@@ -12,6 +12,7 @@ const Regions = preload("res://scripts/regions.gd")
 const RegionUi = preload("res://scripts/region_ui.gd")
 
 var _panel: PanelContainer
+var _footer: VBoxContainer
 var _scroll: ScrollContainer
 var _box: VBoxContainer
 var _subtitle: Label
@@ -33,7 +34,7 @@ class Dot extends Control:
 
 	func _draw() -> void:
 		var c := size / 2.0
-		var col := UiTheme.LEAF if done else (UiTheme.GOLD if current else Color(0.5, 0.55, 0.5))
+		var col := UiTheme.LEAF if done else (UiTheme.GOLD if current else Color(0.553, 0.517, 0.434))
 		if optional:
 			var pts := PackedVector2Array([c + Vector2(0, -9), c + Vector2(9, 0), c + Vector2(0, 9), c + Vector2(-9, 0)])
 			if done:
@@ -49,7 +50,7 @@ class Dot extends Control:
 			if current:
 				draw_circle(c, 3.5, col)
 		if done:
-			var ink := Color(0.05, 0.1, 0.05)
+			var ink := Color(0.0713, 0.0667, 0.056)
 			draw_polyline(PackedVector2Array([c + Vector2(-4, 0), c + Vector2(-1, 3.5), c + Vector2(5, -3.5)]), ink, 2.0)
 
 
@@ -81,17 +82,24 @@ func _ready() -> void:
 	add_child(center)
 	_panel = PanelContainer.new()
 	_panel.custom_minimum_size = Vector2(780, 0)
-	var sb := UiTheme.box(UiTheme.PANEL_BG, Color(0.6, 0.8, 0.6, 0.3), 1, 10)
+	var sb := UiTheme.box(UiTheme.PANEL_BG, Color(UiTheme.GOLD, 0.3), 1, 10)
 	sb.content_margin_top = 14
 	sb.content_margin_bottom = 12
 	_panel.add_theme_stylebox_override("panel", sb)
 	center.add_child(_panel)
 	# Le contenu défile si plusieurs régions sont dépliées et dépassent l'écran (voir _fit).
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 6)
+	_panel.add_child(outer)
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_panel.add_child(_scroll)
+	outer.add_child(_scroll)
+	# Pied fixe, hors du défilement : les commandes et la touche pour fermer restent toujours visibles.
+	_footer = VBoxContainer.new()
+	_footer.add_theme_constant_override("separation", 3)
+	outer.add_child(_footer)
 	_box = VBoxContainer.new()
-	_box.add_theme_constant_override("separation", 6)
+	_box.add_theme_constant_override("separation", 3)
 	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_box)
 	Objectives.changed.connect(func(): if visible: refresh())
@@ -126,7 +134,7 @@ func refresh() -> void:
 	var sub := "%s : %d / %d objectifs principaux accomplis" % ["Aventure" if multi else "Tranche de Ronce", Objectives.main_done_count(), Objectives.main_total()]
 	if multi:
 		sub += "   ·   %d / %d régions purifiées" % [purified, Regions.ids().size()]
-	_subtitle = _label(_box, sub, 14, Color(0.7, 0.78, 0.7))
+	_subtitle = _label(_box, sub, 14, Color(0.778, 0.727, 0.61))
 	# La section dépliée par défaut est celle de la région que suit le joueur (Objectives.followed).
 	var cur: Dictionary = Objectives.followed()
 	var cur_region := RegionUi.journal_section(cur)
@@ -142,16 +150,20 @@ func refresh() -> void:
 			continue
 		var is_open: bool = _manual.get(reg, reg == cur_region and not cur.is_empty())
 		_add_section(reg, rows, is_open, cur)
-	_label(_box, "COMMANDES", 12, Color(0.55, 0.65, 0.55))
-	_box.add_child(ControlsCard.new(13))
-	_label(_box, "J ou Échap : fermer   ·   M : carte", 12, Color(0.55, 0.6, 0.55))
+	for c in _footer.get_children():
+		_footer.remove_child(c)
+		c.queue_free()
+	_label(_footer, "COMMANDES", 14, UiTheme.SOFT)
+	_footer.add_child(ControlsCard.new(14))
+	_label(_footer, "J ou Échap : fermer   ·   M : carte", 14, UiTheme.SOFT)
 	_fit()
 
 
 ## Le cadre prend la hauteur du contenu, sans dépasser l'écran (au-delà, le contenu défile).
 func _fit() -> void:
 	var need := _box.get_combined_minimum_size()
-	_scroll.custom_minimum_size = Vector2(need.x, minf(need.y, maxf(200.0, size.y - 90.0)))
+	var foot := _footer.get_combined_minimum_size().y + 6.0
+	_scroll.custom_minimum_size = Vector2(need.x, minf(need.y, maxf(200.0, size.y - 90.0 - foot)))
 	_panel.reset_size()
 
 
@@ -164,7 +176,7 @@ func _add_section(reg: String, rows: Array, is_open: bool, cur: Dictionary) -> v
 		if Objectives.is_done(o["id"]):
 			done += 1
 	var under_seed: bool = reg == RegionUi.UNDER_SEED_ID
-	var tint := RegionUi.UNDER_SEED_TINT if under_seed else (RegionUi.tint(reg).lightened(0.2) if reg != "" else Color(0.6, 0.72, 0.6))
+	var tint := RegionUi.UNDER_SEED_TINT if under_seed else (RegionUi.tint(reg).lightened(0.2) if reg != "" else Color(0.685, 0.64, 0.538))
 	var title := "L'AVENTURE" if reg == "" else (RegionUi.UNDER_SEED_NAME.to_upper() if under_seed else RegionUi.full_name(reg).to_upper())
 	var head := Button.new()
 	head.flat = true
@@ -179,11 +191,11 @@ func _add_section(reg: String, rows: Array, is_open: bool, cur: Dictionary) -> v
 	chev.open = is_open
 	chev.color = tint
 	line.add_child(chev)
-	var t := _label(line, title, 13, tint, true)
+	var t := _label(line, title, 15, tint, true)
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var state := RegionUi.finale_state() if under_seed else (RegionUi.state(reg) if reg != "" else "")
 	var tail := "%d / %d" % [done, mains.size()] + ("   ·   " + state if state != "" else "")
-	var r := _label(line, tail, 13, Color(0.6, 0.68, 0.6))
+	var r := _label(line, tail, 15, Color(0.671, 0.627, 0.526))
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	r.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -199,7 +211,7 @@ func _add_section(reg: String, rows: Array, is_open: bool, cur: Dictionary) -> v
 		var part: Array = rows.filter(func(o): return bool(o.get("main", false)) == pass_main)
 		if part.is_empty():
 			continue
-		var sub := _label(_box, "OBJECTIFS PRINCIPAUX" if pass_main else "FACULTATIFS", 11, Color(0.5, 0.6, 0.5))
+		var sub := _label(_box, "OBJECTIFS PRINCIPAUX" if pass_main else "FACULTATIFS", 14, Color(0.571, 0.533, 0.448))
 		sub.add_theme_constant_override("line_spacing", 0)
 		for o in part:
 			_add_row(o, not cur.is_empty() and cur["id"] == o["id"])
@@ -225,7 +237,7 @@ func _add_row(o: Dictionary, is_current: bool) -> void:
 	row.add_child(col)
 	var head := HBoxContainer.new()
 	col.add_child(head)
-	var ink := Color(0.5, 0.58, 0.5) if done else (UiTheme.INK if is_current or not o.get("main", false) else Color(0.72, 0.76, 0.7))
+	var ink := Color(0.564, 0.527, 0.442) if done else (UiTheme.INK if is_current or not o.get("main", false) else Color(0.778, 0.727, 0.61))
 	var title: String = o["title"]
 	var pr: Array = Objectives.progress(o)
 	if not pr.is_empty():
@@ -237,11 +249,11 @@ func _add_row(o: Dictionary, is_current: bool) -> void:
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var reward: String = o.get("reward", {}).get("text", "")
 	if reward != "":
-		var r := _label(head, reward, 13, UiTheme.GOLD if not done else Color(0.6, 0.55, 0.35))
+		var r := _label(head, reward, 15, UiTheme.GOLD if not done else Color(0.6, 0.55, 0.35))
 		r.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_label(col, o["text"], 13, Color(0.45, 0.5, 0.45) if done else Color(0.75, 0.82, 0.75))
+	_label(col, o["text"], 15, Color(0.499, 0.467, 0.392) if done else UiTheme.SOFT)
 	if is_current:
-		var hl := UiTheme.box(Color(0.12, 0.16, 0.1, 0.8), Color(UiTheme.GOLD, 0.6), 1, 6)
+		var hl := UiTheme.box(Color(UiTheme.PAPER.lightened(0.08), 0.8), Color(UiTheme.GOLD, 0.6), 1, 6)
 		hl.content_margin_top = 4
 		hl.content_margin_bottom = 4
 		hl.content_margin_left = 8

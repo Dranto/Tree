@@ -14,6 +14,7 @@ const SkillTree = preload("res://scripts/skill_tree.gd")
 const Content = preload("res://scripts/content.gd")
 const Effects = preload("res://scripts/effects.gd")
 const Difficulty = preload("res://scripts/difficulty.gd")
+const UiTheme = preload("res://scripts/ui_theme.gd")
 
 var tree = null
 var allocated: Dictionary = {}
@@ -54,6 +55,8 @@ var test_attack: Array = []
 
 
 func _ready() -> void:
+	# Police du jeu pour tous les textes, même ceux dessinés sans thème (voir ui_theme.gd).
+	UiTheme.install()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--seed="):
 			forced_seed = int(arg.get_slice("=", 1))

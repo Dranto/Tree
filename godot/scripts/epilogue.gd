@@ -135,7 +135,7 @@ func _build_credits() -> void:
 		if str(entry.get("title", "")) != "":
 			_credit(str(entry["title"]), 44, UiTheme.GOLD, true, 30.0)
 			continue
-		_credit(str(entry.get("head", "")).to_upper(), 13, Color(0.62, 0.72, 0.62), false, 46.0)
+		_credit(str(entry.get("head", "")).to_upper(), 15, Color(0.62, 0.72, 0.62), false, 46.0)
 		var lines: Array = entry.get("lines", [])
 		match str(entry.get("auto", "")):
 			"regions":
