@@ -80,6 +80,7 @@ Le fichier est un JSON lisible dans le dossier de données de Godot (`user://sav
 - `tools/godot.sh --headless -s res://tests/save_test.gd -- --new-game` : teste la sauvegarde (aller-retour, nœuds disparus, formats anciens ou trop récents).
 - `tools/godot.sh --xvfb -s res://tests/tree_ui_test.gd` : vérifie la lisibilité de l'Arbre de vie à la résolution choisie (`--resolution 1280x720` avant `-s`) : aucun libellé hors de l'écran ni sur un autre, les six branches visibles à l'ouverture, infobulle dans l'écran. `-- --shots=DOSSIER` enregistre les captures.
 - `tools/godot.sh --xvfb -s res://tests/tree_bench.gd` : mesure le temps par image de l'écran de l'arbre (immobile, survol, déplacement et zoom).
+- `tools/godot.sh --headless -s res://tests/world_edge_test.gd` : teste le bord du monde (poids des régions, fond, tuiles dessinées, bord de la carte).
 - `tools/godot.sh --headless -s res://tests/sound_test.gd` : teste le son (synthèse, boucle de musique, `.wav` à jour, limite de sons identiques, mélange selon la vie du sol, volumes).
 - `tools/godot.sh --headless -s res://tests/planner_test.gd` : teste les outils de l'arbre (plus court chemin, simulation sans effet de bord, annulation, recherche, plan sauvegardé et rechargé).
 - `tools/godot.sh --xvfb -s res://tests/planner_captures.gd` : enregistre une capture de chaque outil de l'arbre dans `godot/tests/visual/out/`.

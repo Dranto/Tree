@@ -7,6 +7,7 @@ const WORLD_HALF := Regions.WORLD_HALF
 const TREE_TO_WORLD := 2.1
 
 const Ground = preload("res://scripts/ground.gd")
+const WorldEdge = preload("res://scripts/world_edge.gd")
 const Flora = preload("res://scripts/flora.gd")
 const Fx = preload("res://scripts/fx.gd")
 const ScreenFx = preload("res://scripts/screen_fx.gd")
@@ -48,6 +49,7 @@ const BuildBot = preload("res://scripts/build_bot.gd")
 
 var world_half := WORLD_HALF
 var ground
+var world_edge
 var flora
 var fx
 var screen_fx
@@ -168,6 +170,10 @@ func _ready() -> void:
 
 	ground = Ground.new()
 	add_child(ground)
+	# Le décor du bord du monde, juste au-dessus du sol (voir world_edge.gd).
+	world_edge = WorldEdge.new()
+	world_edge.main = self
+	add_child(world_edge)
 	# Les arbres du décor, les Flétris et le joueur partagent un calque trié en profondeur :
 	# un personnage plus haut à l'écran qu'un arbre passe derrière lui.
 	actors_layer = Node2D.new()

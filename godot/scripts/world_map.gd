@@ -9,6 +9,7 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const Regions = preload("res://scripts/regions.gd")
 const Content = preload("res://scripts/content.gd")
 const RegionUi = preload("res://scripts/region_ui.gd")
+const WorldEdge = preload("res://scripts/world_edge.gd")
 
 const TEX_SIZE := 160
 const DEAD := Color(0.17, 0.16, 0.18)
@@ -48,6 +49,15 @@ class MapView extends Control:
 		owner_map.draw_map(self)
 
 
+## Le bord du monde (world_edge.gd) dans la marge du cadre : dessiné une fois à l'ouverture, sous la carte.
+class EdgeView extends Control:
+	var owner_map
+
+	func _draw() -> void:
+		owner_map.draw_edge(self)
+
+
+var _edge_view: Control
 var _tex: ImageTexture
 
 
@@ -57,6 +67,11 @@ func _ready() -> void:
 	theme = UiTheme.make()
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	_edge_view = EdgeView.new()
+	_edge_view.owner_map = self
+	_edge_view.clip_contents = true
+	_edge_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_edge_view)
 	_view = MapView.new()
 	_view.owner_map = self
 	_view.clip_contents = true
@@ -145,6 +160,9 @@ func _layout() -> void:
 	var side := minf(size.y - 130.0, size.x - 400.0)
 	_view.position = Vector2(40, 90)
 	_view.size = Vector2(side, side)
+	_edge_view.position = _view.position
+	_edge_view.size = _view.size
+	_edge_view.queue_redraw()
 	_panel.reset_size()
 	_panel.position = Vector2(size.x - _panel.size.x - 40.0, 90.0)
 
@@ -206,10 +224,21 @@ func _rebuild_texture() -> void:
 	_tex = ImageTexture.create_from_image(img)
 
 
-## Passage du monde au cadre : le monde carré (± world_half) remplit le cadre.
+## Place du monde carré (± world_half) dans le cadre : au centre, la marge autour montre le bord du monde.
+func world_rect(view_size: Vector2) -> Rect2:
+	var side := view_size.x / (1.0 + 2.0 * WorldEdge.MAP_MARGIN)
+	return Rect2((view_size - Vector2(side, side)) * 0.5, Vector2(side, side))
+
+
+## Passage du monde au cadre : le monde carré (± world_half) remplit le carré central du cadre.
 func to_map(p: Vector2, view_size: Vector2) -> Vector2:
 	var half: float = main.world_half
-	return (p / half * 0.5 + Vector2(0.5, 0.5)) * view_size
+	var r := world_rect(view_size)
+	return r.position + (p / half * 0.5 + Vector2(0.5, 0.5)) * r.size
+
+
+func draw_edge(v: Control) -> void:
+	WorldEdge.draw_map_frame(v, Rect2(Vector2.ZERO, v.size), world_rect(v.size))
 
 
 func draw_map(v: Control) -> void:
@@ -219,7 +248,8 @@ func draw_map(v: Control) -> void:
 	UiAudit.text("carte", Rect2(Vector2(40, 36), Vector2(70, 36)), "Carte", "titre")
 	var s := v.size
 	var font := UiTheme.font(true)
-	v.draw_texture_rect(_tex, Rect2(Vector2.ZERO, s), false)
+	var wr := world_rect(s)
+	v.draw_texture_rect(_tex, wr, false)
 	# Chaque région : un secteur teinté, borné par ses deux bords et le cercle intérieur.
 	for reg in Regions.ids():
 		_draw_region(v, reg, s, font)
@@ -275,7 +305,7 @@ func draw_map(v: Control) -> void:
 
 	# Le joueur, tourné vers sa visée.
 	draw_glyph(v, "player", to_map(main.map_position(main.player.position), s), Color.WHITE, true, 1.0, main.player.aim.angle())
-	v.draw_rect(Rect2(Vector2.ZERO, s), Color(0.6, 0.8, 0.6, 0.5), false, 2.0)
+	v.draw_rect(wr, Color(0.6, 0.8, 0.6, 0.5), false, 2.0)
 	UiAudit.scan_controls("carte", self)
 
 
@@ -290,9 +320,13 @@ func _draw_region(v: Control, reg: String, s: Vector2, font: Font) -> void:
 		pts.append(to_map(Vector2.from_angle(a - h + 2.0 * h * i / 12.0) * Regions.INNER, s))
 	for i in 13:
 		pts.append(to_map(Vector2.from_angle(a + h - 2.0 * h * i / 12.0) * far, s))
-	v.draw_colored_polygon(pts, Color(tint, 0.13))
-	var edge1 := PackedVector2Array([to_map(Vector2.from_angle(a - h) * Regions.INNER, s), to_map(Vector2.from_angle(a - h) * far, s)])
-	var edge2 := PackedVector2Array([to_map(Vector2.from_angle(a + h) * Regions.INNER, s), to_map(Vector2.from_angle(a + h) * far, s)])
+	# Le secteur est rogné au carré du monde (la marge du cadre montre le bord, pas la région).
+	var wr := world_rect(s)
+	var clipped := Geometry2D.intersect_polygons(pts, PackedVector2Array([wr.position, Vector2(wr.end.x, wr.position.y), wr.end, Vector2(wr.position.x, wr.end.y)]))
+	for poly in clipped:
+		v.draw_colored_polygon(poly, Color(tint, 0.13))
+	var edge1 := PackedVector2Array([to_map(Vector2.from_angle(a - h) * Regions.INNER, s), to_map(Vector2.from_angle(a - h) * Regions.reach(a - h), s)])
+	var edge2 := PackedVector2Array([to_map(Vector2.from_angle(a + h) * Regions.INNER, s), to_map(Vector2.from_angle(a + h) * Regions.reach(a + h), s)])
 	v.draw_polyline(edge1, Color(tint, 0.55), 1.5)
 	v.draw_polyline(edge2, Color(tint, 0.55), 1.5)
 	var arc := PackedVector2Array()
