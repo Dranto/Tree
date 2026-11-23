@@ -66,6 +66,7 @@ func _run() -> void:
 			check(Rect2(Vector2.ZERO, ui.size).encloses(r), "infobulle du nœud %d dans l'écran (souris en %s)" % [id, m])
 	ui.hover = _keystone(game)
 	ui.mouse = ui.size - Vector2(5, 5)
+	await _frames(4)
 	await _shot("infobulle_coin", res)
 	ui.toggle()
 	await _frames(2)
