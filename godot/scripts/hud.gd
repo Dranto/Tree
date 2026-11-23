@@ -417,7 +417,7 @@ func _refresh_attack() -> void:
 		return
 	for sid in syn:
 		if not sid in _synergies_seen:
-			banner("Synergie « %s » : %s" % [Attack.synergy(sid).get("name", sid), Attack.synergy_text(sid)])
+			banner("Synergie : %s (%s)" % [Attack.synergy(sid).get("name", sid), Attack.synergy_needs(sid)])
 	_synergies_seen = syn.duplicate()
 
 

@@ -1134,13 +1134,17 @@ static func need_text(n: Dictionary) -> String:
 	return "?"
 
 
+## Conditions d'une synergie : « Rayon d'aube + Lames de vent ».
+static func synergy_needs(sid: String) -> String:
+	var parts := PackedStringArray()
+	for n in synergy(sid).get("needs", []):
+		parts.append(need_text(n))
+	return " + ".join(parts)
+
+
 ## Phrase d'une synergie : « Rayon d'aube + Lames de vent : … ».
 static func synergy_text(sid: String) -> String:
-	var sy := synergy(sid)
-	var parts := PackedStringArray()
-	for n in sy.get("needs", []):
-		parts.append(need_text(n))
-	return "%s : %s" % [" + ".join(parts), str(sy.get("desc", ""))]
+	return "%s : %s" % [synergy_needs(sid), str(synergy(sid).get("desc", ""))]
 
 
 ## Synergies où entrent les effets d'un nœud (sa forme, ses modificateurs), pour l'infobulle de
@@ -1169,7 +1173,11 @@ static func synergy_hints(effects: Array, st: Dictionary) -> Array:
 					concerned = true
 		if not concerned:
 			continue
-		out.append(["Synergie « %s » : %s" % [sy.get("name", sid), synergy_text(sid)], sid in active])
+		# Active : la phrase entière ; possible : le nom et ce qu'elle demande, pour rester court.
+		if sid in active:
+			out.append(["Synergie « %s » : %s" % [sy.get("name", sid), synergy_text(sid)], true])
+		else:
+			out.append(["Synergie possible « %s » : %s" % [sy.get("name", sid), synergy_needs(sid)], false])
 	return out
 
 

@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "cumul"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -138,6 +138,8 @@ func _ready() -> void:
 			await ForetScript.new().run(self)
 		"finale":
 			await FinaleScript.new().run(self)
+		"cumul":
+			await _scenario_cumul()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -382,6 +384,48 @@ func _scenario_attaque() -> void:
 	add_child(layer)
 	await _frames(3)
 	await _shot("galerie_attaque")
+
+
+## Attaques cumulées (jalon 10) : rayon d'aube principal, lames de vent et massue en écho, trois
+## synergies (Aube tranchante, Massue solaire, Arsenal) : le bandeau au-dessus de la vie, les trois
+## formes qui tirent ensemble, puis l'infobulle d'un nœud de Lames de vent qui cite ses synergies.
+func _scenario_cumul() -> void:
+	var p = main.player
+	Game.test_attack = [{"attack_form": "rayon", "priority": 99}, {"attack_form": "lame"}, {"attack_form": "massue"}]
+	Game.recompute()
+	main.hud.hint_time = 0.0
+	main.autotest = false
+	p.set_physics_process(false)
+	p.invuln = 0.4
+	main.spawn_timer = 1e9
+	await _frames(2)
+	for i in 4:
+		_spawn_at(Vector2(260 + (i % 2) * 50, -90 + i * 55), 0)
+	_spawn_at(Vector2(-90, 40), 1)
+	_spawn_at(Vector2(-60, -70), 0)
+	await _frames(2)
+	p.aim = Vector2.RIGHT
+	p.target = main.enemies[0]
+	Attack.fire(p, main.enemies[0])
+	for i in 40:
+		Attack.step(p, 1.0 / 60.0)
+		await _frames(1)
+	await _shot("jeu_attaques_cumulees", "jeu")
+	main.tree_ui.toggle()
+	await _frames(10)
+	var lame := -1
+	for n in Game.tree.nodes:
+		for e in n["effects"]:
+			if e is Dictionary and str(e.get("attack_form", "")) == "lame":
+				lame = int(n["id"])
+	# Le nœud en haut de l'écran : l'infobulle s'ouvre en dessous, loin de la barre d'outils.
+	main.tree_ui.zoom = ZOOMS["moyen"]
+	main.tree_ui.cam = Game.tree.nodes[lame]["pos"] + Vector2(0, 260.0 / ZOOMS["moyen"])
+	await _frames(2)
+	_hover(lame)
+	await _frames(2)
+	await _shot("arbre_synergies")
+	Game.test_attack = []
 
 
 ## Galerie : ennemis et effets, puis les six états d'un nœud de l'arbre sur une planche.
