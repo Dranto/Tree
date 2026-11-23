@@ -355,7 +355,8 @@ static func _step_echoes(player, st: Dictionary, delta: float) -> void:
 			continue
 		var pick := _echo_target(player, est)
 		if pick.is_empty():
-			cds[id] = 0.0
+			# Personne à sa portée : l'écho regarde de nouveau un peu plus tard (pas à chaque image).
+			cds[id] = float(echo_def().get("retry", 0.1))
 			continue
 		fire(player, pick[0], est)
 		cds[id] = float(cds[id]) + interval(s, est)
