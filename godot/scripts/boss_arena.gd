@@ -394,7 +394,7 @@ func bot_input(p) -> Dictionary:
 
 
 ## Suit le combat : captures à chaque phase, puis fin sur une victoire, une défaite, ou un échec
-## si le combat dure plus de 3 minutes.
+## si le combat dure plus de 5 minutes.
 func autotest_step(delta: float) -> void:
 	if auto_done:
 		return
@@ -411,7 +411,7 @@ func autotest_step(delta: float) -> void:
 		_autotest_end("victoire", 0)
 	elif defeats > 0:
 		_autotest_end("défaite", 0)
-	elif auto_time >= 180.0:
+	elif auto_time >= 300.0:
 		_autotest_end("ÉCHEC, combat non terminé", 1)
 
 

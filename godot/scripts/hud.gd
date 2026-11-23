@@ -343,7 +343,7 @@ func _refresh() -> void:
 	var s: Dictionary = Game.stats
 	var p = main.player
 	var hp_ratio: float = clampf(p.hp / s["max_hp"], 0.0, 1.0)
-	_vital.set_value(hp_ratio, "%d / %d" % [roundi(p.hp), roundi(s["max_hp"])])
+	_vital.set_value(hp_ratio, "%d / %d" % [roundi(p.hp), roundi(s["max_hp"])], p.heal_block > 0.0)
 	var revived := minf(1.0, main.ground.ratio() / REVIVABLE)
 	_corner.set_values(Game.level, clampf(Game.xp / Game.xp_to_next(), 0.0, 1.0), Game.points, key_label("toggle_tree"), revived, Game.kills)
 

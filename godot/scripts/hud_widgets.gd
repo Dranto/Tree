@@ -188,12 +188,17 @@ class Vital extends Control:
 	var text := ""
 	var flash := 0.0
 	var _prev := 1.0
+	## Soin bloqué par un coup reçu (player.heal_block) : le remplissage se grise.
+	var blocked := false
 
 	func _init() -> void:
 		custom_minimum_size = Vector2(300, 26)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	func set_value(v: float, label: String) -> void:
+	func set_value(v: float, label: String, heal_blocked := false) -> void:
+		if heal_blocked != blocked:
+			blocked = heal_blocked
+			queue_redraw()
 		if v == ratio and label == text:
 			return
 		if v < _prev - 0.001:
@@ -222,6 +227,8 @@ class Vital extends Control:
 		if ghost > ratio:
 			draw_rect(Rect2(back.position, Vector2(back.size.x * ghost, back.size.y)), Color(Art.c("danger_eclair"), 0.55))
 		var fill := Color(0.78, 0.25, 0.25).lerp(Color.WHITE, 0.6 * flash)
+		if blocked:
+			fill = Color(0.5, 0.36, 0.4)
 		var fw := back.size.x * ratio
 		draw_rect(Rect2(back.position, Vector2(fw, back.size.y)), fill)
 		draw_rect(Rect2(back.position, Vector2(fw, back.size.y * 0.4)), Color(1, 1, 1, 0.12))
