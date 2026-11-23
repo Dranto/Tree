@@ -71,7 +71,7 @@ const MIN_SCREEN_RADIUS := {
 ## Taille des textes (pixels à l'écran, quel que soit le zoom).
 const FONT_BRANCH := 30
 const FONT_KEYSTONE := 15
-const FONT_NOTABLE := 13
+const FONT_NOTABLE := 14
 const FONT_ROOT := 15
 const TOOLTIP_MAX_W := 380.0
 ## Largeur de la colonne du médaillon, à gauche du nom dans l'infobulle.
@@ -1677,7 +1677,7 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 		sub += " · " + bname + " · anneau %d" % n["ring"]
 	var dim := Color(0.731, 0.683, 0.574)
 	var ink := Color(0.995, 0.93, 0.781)
-	raw.append([sub, 13, dim])
+	raw.append([sub, 15, dim])
 	for e in n["effects"]:
 		var line := Effects.describe(e)
 		if line != "":
@@ -1689,17 +1689,17 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 	if not n["choices"].is_empty():
 		var chosen: int = Game.choice_index(id) if st == "owned" else -1
 		if n["type"] == "mutation":
-			raw.append(["Transforme « %s » : un seul choix" % Content.skills().get(n["mutates"], {}).get("name", n["mutates"]), 13, dim])
+			raw.append(["Transforme « %s » : un seul choix" % Content.skills().get(n["mutates"], {}).get("name", n["mutates"]), 15, dim])
 		else:
-			raw.append(["Un bonus à choisir, modifiable à tout moment", 13, dim])
+			raw.append(["Un bonus à choisir, modifiable à tout moment", 15, dim])
 		for i in n["choices"].size():
 			var ch: Dictionary = n["choices"][i]
 			var text := "› %s : %s" % [ch.get("name", ""), SkillTree.describe_effects(ch.get("effects", []))]
 			raw.append([text + ("  (choisi)" if i == chosen else ""), 14, UiTheme.GOLD if i == chosen else (ink if chosen < 0 else dim)])
 		if st == "owned" and chosen < 0:
-			raw.append(["Clic pour faire ton choix", 13, UiTheme.GOLD])
+			raw.append(["Clic pour faire ton choix", 15, UiTheme.GOLD])
 		elif st == "owned" and n["type"] == "mastery":
-			raw.append(["Clic pour changer de bonus", 13, UiTheme.GOLD])
+			raw.append(["Clic pour changer de bonus", 15, UiTheme.GOLD])
 	if n["type"] == "graft":
 		var g = Content.grafts().get(Game.graft_of(id))
 		if g is Dictionary:
@@ -1712,14 +1712,14 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 			raw.append(["• Emplacement vide : reçoit une greffe trouvée dans le monde.", 14, ink])
 		raw.append_array(grafts_panel.tooltip_lines(n))
 		if grafts_panel.held == "" and g is Dictionary and st == "owned":
-			raw.append(["Clic pour retirer la greffe", 13, UiTheme.GOLD])
+			raw.append(["Clic pour retirer la greffe", 15, UiTheme.GOLD])
 	# Grappe écrite à la main : avancement et bonus de grappe complète.
 	if n["cluster"] != "" and tree.clusters.has(n["cluster"]):
 		var cl: Dictionary = tree.clusters[n["cluster"]]
 		var prog: Array = Game.cluster_progress(n["cluster"])
-		raw.append(["Grappe « %s » : %d / %d nœuds" % [cl["name"], prog[0], prog[1]], 13, dim])
+		raw.append(["Grappe « %s » : %d / %d nœuds" % [cl["name"], prog[0], prog[1]], 15, dim])
 		if not cl["effects"].is_empty():
-			raw.append(["Grappe complète : " + SkillTree.describe_effects(cl["effects"]), 13, UiTheme.GOLD if prog[0] == prog[1] else dim])
+			raw.append(["Grappe complète : " + SkillTree.describe_effects(cl["effects"]), 15, UiTheme.GOLD if prog[0] == prog[1] else dim])
 	# Résonance de la branche (des deux branches pour un nœud de frontière) : le prochain palier.
 	for bi in [n["branch"], n["border"]]:
 		if bi < 0:
@@ -1734,11 +1734,11 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 					next = tier
 					break
 			if next.is_empty():
-				raw.append(["Résonance de %s : tous les paliers atteints (%d nœuds)" % [bname, count], 13, UiTheme.GOLD])
+				raw.append(["Résonance de %s : tous les paliers atteints (%d nœuds)" % [bname, count], 15, UiTheme.GOLD])
 			else:
-				raw.append(["Résonance de %s : %d / %d nœuds, puis %s" % [bname, count, int(next["count"]), SkillTree.describe_effects(next.get("effects", []))], 13, dim])
+				raw.append(["Résonance de %s : %d / %d nœuds, puis %s" % [bname, count, int(next["count"]), SkillTree.describe_effects(next.get("effects", []))], 15, dim])
 	if st != "owned" and _locks.has(id):
-		raw.append([_locks[id], 13, LOCK_COLOR])
+		raw.append([_locks[id], 15, LOCK_COLOR])
 	else:
 		raw.append_array(panels.tooltip_lines(n, st))
 	var maxw := minf(TOOLTIP_MAX_W, size.x - 2.0 * MARGIN - 28.0)

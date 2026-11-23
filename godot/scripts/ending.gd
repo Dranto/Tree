@@ -78,7 +78,7 @@ func _build() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	_right.add_child(v)
-	_label(v, "TA PARTIE", 12, UiTheme.SOFT)
+	_label(v, "TA PARTIE", 14, UiTheme.SOFT)
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 16)

@@ -1237,9 +1237,12 @@ func _far_small(skip := 0) -> int:
 
 
 ## Contrôles sans image : aucun texte hors écran, aucun libellé qui en recouvre un autre.
-func _audit(screen: String, strict := true) -> void:
+func _audit(screen: String, strict := true, img: Image = null) -> void:
 	var tag := _res_tag()
-	for issue in UiAudit.check(screen, get_viewport().get_visible_rect(), strict):
+	var issues: Array = UiAudit.check(screen, get_viewport().get_visible_rect(), strict)
+	if img != null:
+		issues.append_array(UiAudit.check_contrast(screen, img, get_viewport().get_visible_rect().size))
+	for issue in issues:
 		var key := "%s|%s" % [tag, issue["key"]]
 		if key in seen_issues:
 			continue
@@ -1290,13 +1293,17 @@ func _shot(shot_name: String, screen := "") -> void:
 	img.convert(Image.FORMAT_RGB8)
 	if screen == "" and shot_name.begins_with("arbre"):
 		screen = "arbre"
+	# Toute capture du jeu en cours passe aussi l'audit de l'interface (textes coupés, qui se
+	# recouvrent ou sans contraste sur leur fond) : le HUD doit rester lisible partout.
+	if screen == "" and is_instance_valid(main) and main.is_inside_tree() and main.visible and not main.tree_ui.visible:
+		screen = "jeu"
 	if screen != "":
 		if screen == "jeu":
 			UiAudit.begin("jeu")
 			UiAudit.scan_controls("jeu", main)
 		if not screen in _screens_checked:
 			_screens_checked.append(screen)
-		_audit(screen, not shot_name.ends_with("proche"))
+		_audit(screen, not shot_name.ends_with("proche"), img)
 	await _shot_image(shot_name, img)
 
 

@@ -52,7 +52,7 @@ class Item extends PanelContainer:
 		name_label.add_theme_font_size_override("font_size", 15)
 		col.add_child(name_label)
 		place_label = Label.new()
-		place_label.add_theme_font_size_override("font_size", 12)
+		place_label.add_theme_font_size_override("font_size", 14)
 		place_label.add_theme_color_override("font_color", DIM)
 		col.add_child(place_label)
 
@@ -111,7 +111,7 @@ func _ready() -> void:
 	_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(_list)
 	_hint = Label.new()
-	_hint.add_theme_font_size_override("font_size", 12)
+	_hint.add_theme_font_size_override("font_size", 14)
 	_hint.add_theme_color_override("font_color", DIM)
 	box.add_child(_hint)
 	Game.tree_changed.connect(refresh)
@@ -241,16 +241,16 @@ func tooltip_lines(n: Dictionary) -> Array:
 	for e in g.get("effects", []):
 		var line := Effects.describe(e)
 		if line != "":
-			lines.append(["   " + line, 13, PLAN])
+			lines.append(["   " + line, 15, PLAN])
 	var owned: bool = Game.allocated.has(n["id"])
 	var changes: Array = ui.panels.planner.preview_graft(n["id"], held)
 	if not changes.is_empty():
-		lines.append(["Statistiques" + ("" if owned else ", une fois l'emplacement appris") + " :", 13, DIM])
+		lines.append(["Statistiques" + ("" if owned else ", une fois l'emplacement appris") + " :", 15, DIM])
 		for c in changes:
 			lines.append(["   " + c["text"], 14, PLAN])
 	elif not owned:
-		lines.append(["Elle agira quand l'emplacement sera appris.", 13, DIM])
+		lines.append(["Elle agira quand l'emplacement sera appris.", 15, DIM])
 	var current := Game.graft_of(n["id"])
 	if current != "" and current != held:
-		lines.append(["Remplace « %s », qui revient dans l'inventaire." % Content.grafts()[current]["name"], 13, DIM])
+		lines.append(["Remplace « %s », qui revient dans l'inventaire." % Content.grafts()[current]["name"], 15, DIM])
 	return lines

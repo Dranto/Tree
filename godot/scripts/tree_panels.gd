@@ -377,7 +377,7 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 	var id: int = n["id"]
 	if st == "owned":
 		var ok: bool = Game.can_refund(id)
-		lines.append(["Appris" + ("  ·  clic droit pour l'oublier" if ok else ""), 13, UiTheme.LEAF])
+		lines.append(["Appris" + ("  ·  clic droit pour l'oublier" if ok else ""), 15, UiTheme.LEAF])
 		return lines
 	var p := _preview_for(id)
 	var count: int = p["path"].size()
@@ -390,22 +390,22 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 			title = "Après le plan et ce chemin (%d nœuds) :" % (planner.plan_cost() + count)
 		elif count > 1:
 			title = "Après ce chemin (%d nœuds) :" % count
-		lines.append([title, 13, DIM])
+		lines.append([title, 15, DIM])
 		for c in p["changes"]:
 			lines.append(["   " + c["text"], 14, PLAN])
 	if planned:
-		lines.append(["Dans le plan  ·  clic pour l'en retirer", 13, PLAN])
+		lines.append(["Dans le plan  ·  clic pour l'en retirer", 15, PLAN])
 	elif plan_mode:
-		lines.append(["Clic pour ajouter au plan (%d nœud(s), %d point(s))" % [count, count], 13, PLAN])
+		lines.append(["Clic pour ajouter au plan (%d nœud(s), %d point(s))" % [count, count], 15, PLAN])
 	elif count <= Game.points:
 		if count == 1:
-			lines.append(["Clic pour apprendre (1 point)", 13, UiTheme.GOLD])
+			lines.append(["Clic pour apprendre (1 point)", 15, UiTheme.GOLD])
 		else:
-			lines.append(["Chemin de %d nœuds, %d points  ·  clic pour tout apprendre" % [count, count], 13, UiTheme.GOLD])
+			lines.append(["Chemin de %d nœuds, %d points  ·  clic pour tout apprendre" % [count, count], 15, UiTheme.GOLD])
 	elif Game.points <= 0 and count == 1:
-		lines.append(["Pas de point disponible : monte de niveau", 13, PATH_SHORT])
+		lines.append(["Pas de point disponible : monte de niveau", 15, PATH_SHORT])
 	else:
-		lines.append(["Chemin de %d nœuds : il te manque %d point(s)" % [count, count - Game.points], 13, PATH_SHORT])
+		lines.append(["Chemin de %d nœuds : il te manque %d point(s)" % [count, count - Game.points], 15, PATH_SHORT])
 	return lines
 
 
@@ -508,9 +508,9 @@ func _fill_summary() -> void:
 
 	_text("Résumé du build", 20, UiTheme.GOLD)
 	var head := "%d nœuds appris sur %d  ·  %d point(s) à placer" % [now["nodes"], now["total"], now["points"]]
-	_text(head, 13, DIM)
+	_text(head, 15, DIM)
 	if with_plan:
-		_text("Les valeurs après « → » tiennent compte du plan (%d nœuds)." % planner.plan_cost(), 13, PLAN)
+		_text("Les valeurs après « → » tiennent compte du plan (%d nœuds)." % planner.plan_cost(), 15, PLAN)
 
 	_section("Branches")
 	var grid := GridContainer.new()

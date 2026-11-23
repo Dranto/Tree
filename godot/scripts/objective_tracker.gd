@@ -35,7 +35,7 @@ func _ready() -> void:
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, MARGIN)
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_panel.grow_vertical = Control.GROW_DIRECTION_END
-	var sb := UiTheme.box(Color(UiTheme.PAPER, 0.8), Color(UiTheme.GOLD, 0.2), 1, 4)
+	var sb := UiTheme.box(Color(UiTheme.PAPER, 0.93), Color(UiTheme.GOLD, 0.3), 1, 2)
 	sb.content_margin_left = 12
 	sb.content_margin_right = 12
 	sb.content_margin_top = 8
@@ -46,16 +46,16 @@ func _ready() -> void:
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_theme_constant_override("separation", 3)
 	_panel.add_child(v)
-	_head = _label(v, 12, UiTheme.GOLD)
-	_title = _label(v, 17, UiTheme.INK)
+	_head = _label(v, 14, UiTheme.GOLD)
+	_title = _label(v, 19, UiTheme.INK)
 	_title.add_theme_font_override("font", UiTheme.font(true))
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_title.custom_minimum_size.x = WIDTH - 26.0
-	_text = _label(v, 13, Color(0.86, 0.803, 0.675))
+	_text = _label(v, UiTheme.MIN_HUD_SIZE, Color(0.86, 0.803, 0.675))
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_text.custom_minimum_size.x = WIDTH - 26.0
-	_progress = _label(v, 13, UiTheme.LEAF)
-	_keys = _label(v, 12, Color(0.606, 0.567, 0.476))
+	_progress = _label(v, UiTheme.MIN_HUD_SIZE, UiTheme.LEAF)
+	_keys = _label(v, 14, UiTheme.SOFT)
 	Objectives.changed.connect(refresh)
 	refresh()
 
@@ -155,6 +155,6 @@ func _draw() -> void:
 	var font := UiTheme.font()
 	var label := "%d m" % int(world_d / 12.0)
 	var at := pos - dir * 40.0
-	var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+	var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE).x
 	var origin := Vector2(clampf(at.x - w / 2.0, 4.0, size.x - w - 4.0), clampf(at.y + 5.0, 18.0, size.y - 6.0))
-	UiAudit.draw_text(self, "fleche", font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(UiTheme.GOLD, 0.9))
+	UiAudit.draw_text(self, "fleche", font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE, UiTheme.GOLD)

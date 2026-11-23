@@ -16,6 +16,11 @@ const PAPER_DARK: Color = Art.PALETTE["papier_sombre"]
 const PANEL_BG: Color = Art.PALETTE["panneau"]
 ## Filet d'or des cadres et des séparateurs.
 const FILET := Color(0.851, 0.71, 0.4, 0.45)
+## Halo des textes posés sur le jeu (épaisseur en pixels, couleur) : voir draw_text().
+const OUTLINE := 5
+const HALO := Color(0.055, 0.04, 0.025, 0.88)
+## Taille minimale des textes du HUD (pixels de la vue de base 1600 x 900 ; 12 px à 1280 x 720).
+const MIN_HUD_SIZE := 15
 const FONT_SERIF := "res://assets/fonts/CormorantGaramond-Herbier.ttf"
 ## Graisses : texte courant en demi-gras (plus lisible en petit), « gras » franc, titres plus fins.
 const WEIGHT_REGULAR := 600
@@ -56,6 +61,13 @@ static func install() -> void:
 		return
 	_installed = true
 	ThemeDB.fallback_font = font()
+
+
+## Texte avec son halo sombre (draw_string_outline puis draw_string) : à utiliser pour tout
+## texte dessiné sur le jeu, dont le fond change.
+static func draw_text(ci: CanvasItem, f: Font, pos: Vector2, s: String, align: int, width: float, fs: int, col: Color, outline := OUTLINE) -> void:
+	ci.draw_string_outline(f, pos, s, align, width, fs, outline, Color(HALO, HALO.a * col.a))
+	ci.draw_string(f, pos, s, align, width, fs, col)
 
 
 ## Boîte simple (boutons, cases) : coins presque droits, filet fin.
@@ -255,6 +267,10 @@ static func make() -> Theme:
 	t.set_stylebox("hover_pressed", "Button", box(Color(PAPER.lightened(0.1), 1.0), GOLD))
 	t.set_stylebox("disabled", "Button", box(Color(PAPER_DARK, 0.7), Color(SOFT, 0.15)))
 	t.set_color("font_color", "Label", INK)
+	# Halo sombre autour de chaque libellé : invisible sur un panneau, il garde le texte lisible
+	# quand il est posé sur le monde (sol clair d'Aube ou de Vent, voile rouge d'un coup reçu).
+	t.set_constant("outline_size", "Label", OUTLINE)
+	t.set_color("font_outline_color", "Label", HALO)
 	# Cases à cocher : losange vide ou plein.
 	t.set_color("font_color", "CheckBox", INK)
 	t.set_color("font_hover_color", "CheckBox", GOLD)
