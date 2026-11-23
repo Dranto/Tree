@@ -8,7 +8,9 @@
 ## - "fermee"  : une région au moins n'est pas purifiée ; rien ne se voit au pied de la graine ;
 ## - "ouverte" : toutes les régions sont purifiées (Regions.all_purified) : drapeau finale_ouverte,
 ##               la brèche s'ouvre ; descendre, puis s'avancer vers le centre, réveille le boss ;
-## - "combat"  : le mur de racines tient le joueur ; il se resserre en phase 3 (start_shrink) ;
+## - "combat"  : le mur de racines tient le joueur ; en phase 3 (seconde forme du boss), le creux
+##               s'effondre (start_collapse) : le sol au-delà de radius_collapse tombe dans le
+##               gouffre, il ne reste qu'une île plus étroite autour d'elle ;
 ## - "vaincue" : drapeau finale_vaincue ; le creux refleurit et l'épilogue suit (quest_ui.gd).
 ##
 ## Même interface que boss_arena.gd (dont elle hérite le combat, la barre et le robot du mode
@@ -30,6 +32,11 @@ const DESCENT_HOLD := 1.0
 const WAKE_MARGIN := 170.0
 ## Niveau du build de test du robot (« -- --autotest=boss --region=finale »).
 const AUTOTEST_LEVEL := 20
+## Le combat du robot dure plus longtemps qu'en région (seconde forme) : durée maximale.
+const AUTOTEST_MAX_TIME := 330.0
+## Effondrement : part de sa durée où le futur bord s'annonce (rien ne bouge), puis où le sol tombe.
+const COLLAPSE_WARN := 0.3
+const COLLAPSE_FALL := 0.6
 
 var opened_banner := ""
 var descent_banner := ""
@@ -41,11 +48,20 @@ var hold := 0.0
 var armed := false
 ## Floraison du creux après la victoire (0 → 1).
 var bloom := 0.0
+## Rayon de l'île qui reste après l'effondrement (« arena › radius_collapse »).
+var collapse_radius := 380.0
+## Effondrement en cours : temps écoulé (-1 : aucun) sur collapse_time.
+var collapse_t := -1.0
+var collapse_time := 3.6
+## Avancée visible de l'effondrement (0 : creux entier, 1 : île au-dessus du gouffre) ; la
+## floraison le referme après la victoire.
+var collapse_k := 0.0
 
 
 func configure(_id: String) -> void:
 	region = FINALE_PATH
 	flag = Objectives.FINALE_WON
+	auto_max = AUTOTEST_MAX_TIME
 	var data: Dictionary = Content._load("finale")
 	var b: Dictionary = data.get("boss", {})
 	boss_script = load(str(b.get("script", "res://scripts/boss_finale.gd")))
@@ -58,6 +74,7 @@ func configure(_id: String) -> void:
 	var ar: Dictionary = b.get("arena", {})
 	max_radius = float(ar.get("radius", 520.0))
 	min_radius = float(ar.get("radius_min", 370.0))
+	collapse_radius = float(ar.get("radius_collapse", 380.0))
 	life_color = Regions.color(ar.get("life_color", "seve/clair"))
 	radius = max_radius
 	opened_banner = str(data.get("opened_banner", ""))
@@ -152,11 +169,15 @@ func _physics_process(delta: float) -> void:
 				_fight_lost()
 				return
 			_shrink_step(delta)
+			var falling := collapse_t >= 0.0
+			_collapse_step(delta)
 			var d: float = p.position.distance_to(center)
 			var limit: float = radius - p.radius - 10.0
 			if d > limit:
 				p.position = center + (p.position - center) / maxf(d, 0.01) * limit
-				p.take_hit(WALL_DAMAGE * boss.damage_scale, null)
+				# Pendant l'effondrement, le sol qui tombe pousse le joueur sans le blesser.
+				if not falling:
+					p.take_hit(WALL_DAMAGE * boss.damage_scale, null)
 			update_bar()
 		"vaincue":
 			bar.hide_bar()
@@ -174,6 +195,42 @@ func _open() -> void:
 		if opened_banner != "":
 			main.hud.banner(opened_banner)
 		main.request_autosave()
+
+
+## Seconde forme du boss : le creux s'effondre en « duration » secondes (le futur bord s'annonce
+## d'abord, puis le sol tombe dans le gouffre jusqu'à collapse_radius).
+func start_collapse(duration: float) -> void:
+	shrinking = false
+	collapse_t = 0.0
+	collapse_time = maxf(duration, 0.5)
+
+
+func _collapse_step(delta: float) -> void:
+	if collapse_t < 0.0:
+		return
+	var before := collapse_t / collapse_time
+	collapse_t += delta
+	var u := collapse_t / collapse_time
+	if before < COLLAPSE_WARN and u >= COLLAPSE_WARN:
+		main.fx.shake(9.0)
+		main.fx.ring(center, collapse_radius, max_radius + 40.0, 0.7, Color(Art.ec("cendre", "clair"), 0.8), 8.0)
+	var fall := clampf((u - COLLAPSE_WARN) / COLLAPSE_FALL, 0.0, 1.0)
+	collapse_k = Anim.ease_out(fall)
+	radius = lerpf(max_radius, collapse_radius, collapse_k)
+	if fall >= 1.0:
+		collapse_t = -1.0
+		collapse_k = 1.0
+		radius = collapse_radius
+
+
+func _reset_collapse() -> void:
+	collapse_t = -1.0
+	collapse_k = 0.0
+
+
+func _start_fight() -> void:
+	_reset_collapse()
+	super._start_fight()
 
 
 func _keep_inside(p, r: float) -> void:
@@ -256,6 +313,7 @@ func boss_defeated() -> void:
 	state = "vaincue"
 	gap_open = 1.0
 	shrinking = false
+	collapse_t = -1.0
 	shrink_warn = 0.0
 	main.spawn_paused = false
 	Game.flags[flag] = true
@@ -271,6 +329,7 @@ func boss_defeated() -> void:
 
 
 func _fight_lost() -> void:
+	_reset_collapse()
 	super._fight_lost()
 	Game.flags["stat_finale_essais"] = int(Game.flags.get("stat_finale_essais", 0)) + 1
 
@@ -281,6 +340,9 @@ func _life_wave_step(delta: float) -> void:
 		return
 	life_wave += delta
 	bloom = clampf(life_wave / 3.0, 0.0, 1.0)
+	# Le creux effondré se referme à mesure qu'il refleurit.
+	collapse_k = minf(collapse_k, 1.0 - bloom)
+	radius = lerpf(max_radius, collapse_radius, collapse_k)
 	if life_wave >= 3.0:
 		life_wave = -1.0
 		bloom = 1.0
@@ -370,10 +432,14 @@ func _draw_cave() -> void:
 	# Dix teintes concentriques, tracées en couronnes (lot « exact » : mêmes pixels que des disques
 	# empilés, mais sans redessiner dix fois le centre : le coût en rendu logiciel suit les pixels).
 	_floor_batch.exact = true
+	# Effondrement fini : le sol s'arrête au bord de l'île (le gouffre recouvre le reste ; en rendu
+	# logiciel, le coût suit les pixels remplis).
+	var keep := radius + 2.0 if collapse_k >= 1.0 else r
 	for i in 10:
 		var col := floor_dead.lerp(floor_alive, life).lightened(0.016 * i)
-		if i < 9:
-			_floor_batch.ring(c, r * (1.0 - i / 10.0), r * (1.0 - (i + 1) / 10.0), col)
+		var outer_i := minf(r * (1.0 - i / 10.0), keep)
+		if i < 9 and outer_i > r * (1.0 - (i + 1) / 10.0):
+			_floor_batch.ring(c, outer_i, r * (1.0 - (i + 1) / 10.0), col)
 		else:
 			_floor_batch.draw_circle(c, r * 0.1, col)
 	_floor_batch.flush(self)
@@ -392,6 +458,7 @@ func _draw_cave() -> void:
 	for i in 18:
 		var q := c + Vector2.from_angle(rng_d.randf() * TAU) * rng_d.randf_range(90.0, r * 0.88)
 		draw_colored_polygon(Art.ellipse(q, rng_d.randf_range(14.0, 30.0), rng_d.randf_range(8.0, 16.0), 12), Color(Art.ec("cendre", "sombre"), 0.35 * (1.0 - life)))
+	_draw_abyss()
 	# La racine pivot de la graine plonge du nord jusqu'au centre.
 	var tap := PackedVector2Array([c + Vector2(-34, -r - 60), c + Vector2(-20, -r * 0.55), c + Vector2(-10, -90), c + Vector2(10, -90), c + Vector2(22, -r * 0.55), c + Vector2(40, -r - 60)])
 	Art.volume(self, tap, Art.ec("racine", "sombre").lerp(Art.ec("racine"), 0.3 + 0.4 * life), 0.4)
@@ -430,19 +497,92 @@ func _draw_cave() -> void:
 		boss_script.draw_victory(self)
 
 
+## L'effondrement (seconde forme du boss) : d'abord le futur bord clignote et le sol se fend, puis
+## la couronne de sol entre l'île et l'ancien mur tombe en blocs dans un gouffre où rougeoient des
+## braises ; des débris flottent encore au-dessus, des braises en montent.
+func _draw_abyss() -> void:
+	var c := center
+	var warn := collapse_t >= 0.0 and collapse_t / collapse_time < COLLAPSE_WARN
+	var k := collapse_k
+	if not warn and k <= 0.0:
+		return
+	var rng_a := RandomNumberGenerator.new()
+	rng_a.seed = 23
+	var crack := Art.ec("cendre")
+	if warn:
+		var u := collapse_t / (collapse_time * COLLAPSE_WARN)
+		var blink := 0.5 + 0.5 * sin(t * 14.0)
+		draw_arc(c, collapse_radius, 0.0, TAU, 96, Color(Art.c("danger"), 0.4 + 0.5 * blink), 5.0)
+		for i in 20:
+			var a := TAU * i / 20.0 + rng_a.randf_range(-0.08, 0.08)
+			var from := c + Vector2.from_angle(a) * collapse_radius
+			var to := c + Vector2.from_angle(a + rng_a.randf_range(-0.1, 0.1)) * lerpf(collapse_radius, max_radius, u)
+			draw_line(from, to, Color(crack, 0.5 + 0.4 * blink), 3.0, true)
+		return
+	var outer := max_radius + 30.0
+	var inner := radius
+	var abyss := Color(0.025, 0.018, 0.02)
+	_floor_batch.exact = true
+	_floor_batch.ring(c, outer, inner, abyss)
+	_floor_batch.flush(self)
+	# La lueur des braises au fond, plus vive près de l'île.
+	# Le fond rougeoie : des bandes de braise, plus vives au milieu du gouffre, qui ondulent.
+	var glow := Art.ec("cendre", "sombre")
+	var mid := (inner + outer) * 0.5
+	for j in 2:
+		var w := (outer - inner) * (0.6 - 0.3 * j)
+		draw_arc(c, mid + 6.0 * sin(t * 0.8 + j), 0.0, TAU, 96, Color(glow.lerp(Art.ec("cendre"), 0.4 * j), (0.4 + 0.15 * j) * k), w, true)
+	# Sous la lèvre de l'île, l'ombre de la falaise, puis son bord éclairé par en dessous.
+	draw_arc(c, inner + 10.0, 0.0, TAU, 96, Color(0.0, 0.0, 0.0, 0.6 * k), 18.0, true)
+	# La lèvre de l'île : de la terre arrachée, en dents irrégulières sous le mur.
+	var lip := Art.c("sol_mort").darkened(0.5)
+	for i in 40:
+		var a := TAU * i / 40.0
+		var a2 := a + TAU / 40.0
+		var drop := rng_a.randf_range(14.0, 34.0) * k
+		draw_colored_polygon(PackedVector2Array([c + Vector2.from_angle(a) * inner, c + Vector2.from_angle(a2) * inner, c + Vector2.from_angle((a + a2) * 0.5) * (inner + drop)]), lip)
+	draw_arc(c, inner, 0.0, TAU, 96, Color(Art.ec("cendre", "clair"), 0.65 * k), 3.0, true)
+	# Les blocs qui tombent (puis flottent, très bas, en dérivant), de plus en plus petits.
+	var earth := Art.c("sol_mort").darkened(0.3)
+	for i in 30:
+		var a := rng_a.randf() * TAU
+		var d0 := rng_a.randf_range(collapse_radius + 20.0, max_radius - 10.0)
+		var size := rng_a.randf_range(14.0, 34.0)
+		var delay := rng_a.randf_range(0.0, 0.5)
+		var f := clampf((k - delay) / (1.0 - delay), 0.0, 1.0) if k < 1.0 else 1.0
+		var shrink := lerpf(1.0, 0.35, f)
+		var drift := Vector2.from_angle(a) * (d0 + 30.0 * f) + Vector2(4.0 * sin(t * 0.7 + i), 3.0 * cos(t * 0.5 + i)) * f
+		var q := c + drift
+		var col := earth.lerp(abyss, 0.65 * f)
+		var block := PackedVector2Array()
+		for v in 5:
+			block.append(q + Vector2.from_angle(TAU * v / 5.0 + i + 0.3 * f) * size * shrink * (0.7 + 0.3 * ((v + i) % 3) / 2.0))
+		draw_colored_polygon(block, col)
+		if f < 1.0:
+			draw_polyline(block + PackedVector2Array([block[0]]), Color(Art.c("contour"), 0.6 * (1.0 - f)), 1.5, true)
+	# Des braises montent du gouffre.
+	for i in 24:
+		var f := fposmod(t * 0.3 + i * 0.173, 1.0)
+		var a := TAU * i / 24.0 + 0.4 * sin(i * 3.1)
+		var q := c + Vector2.from_angle(a) * lerpf(inner + 30.0, outer - 20.0, fposmod(i * 0.618, 1.0)) - Vector2(0, f * 60.0)
+		draw_circle(q, 2.0 + 1.5 * (1.0 - f), Color(Art.ec("cendre", "clair"), 0.7 * sin(PI * f) * k))
+
+
 ## Le mur de racines : de grosses racines brunes couchées en cercle, des radicelles qui pendent.
-## Il suit le rayon courant (resserrement de la phase 3).
+## Il suit le rayon courant (resserrement), ou reste au bord du gouffre après l'effondrement.
 func _draw_wall() -> void:
 	var c := center
+	# Après l'effondrement, le mur reste de l'autre côté du gouffre (l'île n'a plus que sa lèvre).
+	var wr := lerpf(radius, max_radius, collapse_k)
 	var bark := Art.ec("racine", "sombre").lerp(Art.c("decor"), 0.25)
 	var light := Art.ec("racine").darkened(0.15)
 	var n := _wall.size()
-	draw_arc(c, radius + 26.0, 0.0, TAU, 96, Color(Art.c("contour"), 0.8), 46.0, true)
+	draw_arc(c, wr + 26.0, 0.0, TAU, 96, Color(Art.c("contour"), 0.8), 46.0, true)
 	for i in n:
 		var w: Array = _wall[i]
 		var a := TAU * i / n + float(w[0])
 		var a2 := a + TAU / n * 1.6
-		var rr := radius + 18.0 + 8.0 * float(w[2])
+		var rr := wr + 18.0 + 8.0 * float(w[2])
 		var p1 := c + Vector2.from_angle(a) * rr
 		var p2 := c + Vector2.from_angle(a2) * (rr + 6.0)
 		var width := 18.0 * float(w[1])
@@ -457,7 +597,7 @@ func _draw_wall() -> void:
 	# Lueurs de sève prisonnières des racines (éteintes avant la victoire).
 	for i in 12:
 		var a := TAU * (i + 0.5) / 12.0
-		var q := c + Vector2.from_angle(a) * (radius + 20.0)
+		var q := c + Vector2.from_angle(a) * (wr + 20.0)
 		var on := 0.25 + 0.75 * bloom
 		draw_circle(q, 5.0, Color(Art.ec("seve" if bloom > 0.0 else "cendre", "clair"), (0.25 + 0.2 * sin(t * 1.7 + i)) * on))
 

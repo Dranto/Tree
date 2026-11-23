@@ -15,7 +15,15 @@
 ##   - lumiere (Aube)   : des rayons partent d'elle en étoile, l'un vers le joueur (se glisser entre) ;
 ##   - racines (Racine) : une ligne de racines jaillit d'elle jusqu'au joueur, l'une après l'autre ;
 ##   - rejetons (dès la phase 2) : des Flétris sortent du sol (pas en rouge : ce n'est pas un coup).
-## Phase 3 : le mur de racines se resserre (finale_arena.gd › start_shrink).
+## Seconde forme (à 33 %, phase 3) : elle se transforme sur place (TRANSFORM, sans écran à part,
+## invulnérable le temps de la transformation). Le creux s'effondre autour d'elle (finale_arena.gd
+## › start_collapse) : il ne reste qu'une île plus étroite au-dessus du gouffre. Elle rejette son
+## manteau d'écorce et sa couronne, son cœur se fend sur un noyau de braise, six éclats des
+## gardiens tournent autour d'elle (draw_colossus, « form »). Aux traits des phases 1 et 2
+## s'ajoutent les attaques combinées des six régions, deux gardiens à la fois :
+##   - tempete  (Vent + Ronce)   : la rafale part vers le joueur, et des épines volent dans son souffle ;
+##   - floraison (Spore + Sève)  : des cercles de spores qui boivent : chaque dégât porté la soigne ;
+##   - aurore   (Aube + Racine)  : les rayons de lumière, puis des racines jaillissent le long de chacun.
 ## Sa mort : les bras retombent en cendre, le cœur se fend, et la sève qu'il retenait jaillit ; à
 ## sa place, une pousse de l'Arbre de vie aux six couleurs (draw_victory).
 ##
@@ -26,14 +34,27 @@ const PHASE_LIMITS := [0.66, 0.33]
 ## Rayon du corps (contact, coups reçus) ; le dessin s'étend bien au-delà (bras, couronne, racines).
 const BODY_RADIUS := 100.0
 ## Vie : BASE_HP + HP_PER_LEVEL par niveau du joueur (multipliée par la difficulté).
-const BASE_HP := 2400.0
-const HP_PER_LEVEL := 850.0
+## Réglée pour un combat de 3 à 4 minutes du robot au niveau 20 (« -- --autotest=boss --region=finale »).
+const BASE_HP := 5600.0
+const HP_PER_LEVEL := 2000.0
 ## Par phase : pause entre deux attaques, ordre des attaques et ampleur.
 const PHASES := {
 	1: {"gap": 1.25, "order": ["epines", "spores", "epines", "spores"], "volleys": 2, "thorns": 9, "clouds": 3},
 	2: {"gap": 1.05, "order": ["siphon", "rafale", "spores", "rejetons", "epines", "rafale"], "volleys": 2, "thorns": 11, "clouds": 4, "minions": 2},
-	3: {"gap": 0.85, "order": ["lumiere", "racines", "rafale", "siphon", "lumiere", "racines", "spores", "rejetons"], "volleys": 3, "thorns": 11, "clouds": 4, "minions": 2, "rays": 5},
+	3: {"gap": 0.95, "order": ["tempete", "lumiere", "floraison", "racines", "aurore", "rafale", "rejetons", "tempete", "siphon", "floraison", "epines", "aurore"], "volleys": 3, "thorns": 11, "clouds": 4, "minions": 2, "rays": 5},
 }
+## La transformation en seconde forme : durée (invulnérable), et part de cette durée où le corps
+## se défait (le manteau et la couronne tombent, le cœur s'ouvre).
+const TRANSFORM := {"time": 3.6, "morph": 0.7}
+## Attaques combinées de la seconde forme. tempete : épines plus rapides, éventail plus large ;
+## floraison : nuages en plus, part des dégâts reprise ; aurore : racines par rayon, après l'éclair.
+const STORM := {"thorn_speed": 1.3, "spread": 1.35, "volleys": 2}
+const BLOOM := {"extra": 1, "drain": 1.0}
+const DAWN := {"per_ray": 4, "delay": 0.35, "first": 150.0, "spacing": 95.0}
+## Les six éclats qui tournent autour d'elle en seconde forme : rayon et vitesse de l'orbite.
+const SHARDS := {"orbit": 2.05, "speed": 0.45}
+## Attaque combinée -> les deux bras (rangs dans ARMS) qui s'allument pendant son annonce.
+const COMBO_ARMS := {"tempete": [3, 0], "floraison": [1, 2], "aurore": [4, 5]}
 ## Les six bras, dans l'ordre où ils s'éveillent : trait, élément de la charte (couleur et motif),
 ## phase où il s'éveille et attaque qu'il porte.
 const ARMS := [
@@ -85,6 +106,10 @@ var buds: Array = []
 ## Éclair de la dernière frappe (rafale, lumière), de 0 à FLASH ; -1 : aucun.
 var strike_flash := -1.0
 var flash_kind := ""
+## Transformation en seconde forme : temps écoulé (0 → TRANSFORM › time), -1 hors transformation.
+var morph_time := -1.0
+## Seconde forme atteinte (phase 3 entamée).
+var unbound := false
 
 
 func _setup() -> void:
@@ -100,6 +125,10 @@ func _setup() -> void:
 
 
 func _projectiles_step(delta: float) -> void:
+	if morph_time >= 0.0:
+		morph_time += delta
+		if morph_time >= TRANSFORM["time"]:
+			morph_time = -1.0
 	_update_thorns(delta)
 	_update_clouds(delta)
 	_update_roots(delta)
@@ -147,6 +176,26 @@ func _hurt_player(amount: float, drain := 0.0) -> void:
 		main.fx.text(anchor + Vector2(0, -radius * 2.2), "+%d" % roundi(gain), Art.ec("seve", "clair"), 16, 0.7)
 
 
+## Pendant sa transformation, elle ne prend aucun dégât (la vie reste sur le seuil de la phase 3).
+func take_damage(amount: float, crit: bool, dot := false) -> void:
+	if transforming():
+		return
+	super.take_damage(amount, crit, dot)
+
+
+func transforming() -> bool:
+	return morph_time >= 0.0
+
+
+## Avancée de la transformation du corps (0 : première forme, 1 : seconde forme).
+func form_k() -> float:
+	if not unbound:
+		return 0.0
+	if morph_time < 0.0:
+		return 1.0
+	return Anim.ease_out(clampf(morph_time / (TRANSFORM["time"] * TRANSFORM["morph"]), 0.0, 1.0))
+
+
 # --- Attaques ---
 
 func _begin(kind: String) -> void:
@@ -162,10 +211,10 @@ func _begin(kind: String) -> void:
 	match kind:
 		"epines":
 			_set_timer(THORNS["annonce"])
-		"spores":
-			_set_timer(SPORES["annonce"])
+		"spores", "floraison":
+			_set_timer(SPORES["annonce"] * (1.1 if kind == "floraison" else 1.0))
 			spore_marks = []
-			var n: int = cfg["clouds"]
+			var n: int = cfg["clouds"] + (BLOOM["extra"] if kind == "floraison" else 0)
 			for i in n:
 				var at := p
 				if i > 0:
@@ -173,15 +222,25 @@ func _begin(kind: String) -> void:
 				spore_marks.append(_in_arena(at, SPORES["radius"] * 0.6))
 		"siphon":
 			_set_timer(SIPHON["annonce"])
-		"rafale":
-			_set_timer(GUST["annonce"])
+		"rafale", "tempete":
+			_set_timer(GUST["annonce"] * (1.15 if kind == "tempete" else 1.0))
 			gust_len = _reach_to_wall(aim)
-		"lumiere":
+		"lumiere", "aurore":
 			_set_timer(LIGHT["annonce"])
 			rays = []
 			var n: int = cfg.get("rays", LIGHT["rays"])
 			for i in n:
 				rays.append(aim.angle() + TAU * i / n)
+			if kind == "aurore":
+				# Les racines suivent chaque rayon, du centre vers le mur, après l'éclair de lumière.
+				roots = []
+				for a in rays:
+					var dir := Vector2.from_angle(float(a))
+					for i in DAWN["per_ray"]:
+						var at: Vector2 = anchor + dir * (DAWN["first"] + DAWN["spacing"] * i)
+						if at.distance_to(arena.center) > arena.radius - ROOTS["radius"] * 0.5:
+							break
+						roots.append({"pos": at, "fuse": LIGHT["annonce"] + DAWN["delay"] + ROOTS["step"] * i, "burst": -1.0})
 		"racines":
 			_set_timer(ROOTS["annonce"])
 			roots = []
@@ -220,11 +279,11 @@ func _in_arena(pt: Vector2, margin: float) -> Vector2:
 
 ## Pendant le début de l'annonce, l'éventail et la rafale suivent le joueur, puis se verrouillent.
 func _announce_step() -> void:
-	if attack in ["epines", "rafale"] and timer > stage_time * 0.4:
+	if attack in ["epines", "rafale", "tempete"] and timer > stage_time * 0.4:
 		var to: Vector2 = main.player.position - anchor
 		if to.length() > 1.0:
 			aim = to.normalized()
-			if attack == "rafale":
+			if attack != "epines":
 				gust_len = _reach_to_wall(aim)
 
 
@@ -236,30 +295,43 @@ func _strike() -> void:
 			volleys_left = PHASES[phase]["volleys"]
 			volley_timer = 0.0
 			_set_timer(THORNS["between"] * volleys_left)
-		"spores":
+		"spores", "floraison":
+			var drinks := attack == "floraison"
 			for m in spore_marks:
-				clouds.append({"pos": m, "time": SPORES["linger"]})
-				main.fx.ring(m, 10.0, SPORES["radius"], 0.35, Color(Art.ec("poison", "clair"), 0.8), 3.0)
+				clouds.append({"pos": m, "time": SPORES["linger"], "drain": drinks})
+				main.fx.ring(m, 10.0, SPORES["radius"], 0.35, Color(Art.ec("seve" if drinks else "poison", "clair"), 0.8), 3.0)
 			spore_marks = []
 			_end_attack()
 		"siphon":
 			_siphon_tick = 0.0
 			_set_timer(SIPHON["duration"])
-		"rafale":
+		"rafale", "tempete":
 			if _in_gust(p.position, p.radius * 0.5):
 				_hurt_player(GUST["damage"] * damage_scale)
 				p.position += aim * GUST["push"]
 			strike_flash = 0.0
 			flash_kind = "rafale"
 			main.fx.shake(4.0)
-			_end_attack()
-		"lumiere":
+			if attack == "tempete":
+				# Les épines partent dans le souffle de la rafale, l'une après l'autre.
+				volleys_left = STORM["volleys"]
+				volley_timer = 0.0
+				_set_timer(THORNS["between"] * volleys_left)
+			else:
+				_end_attack()
+		"lumiere", "aurore":
 			if _in_rays(p.position, p.radius * 0.5):
 				_hurt_player(LIGHT["damage"] * damage_scale)
 			strike_flash = 0.0
 			flash_kind = "lumiere"
 			main.fx.shake(3.0)
-			_end_attack()
+			if attack == "aurore":
+				var last := 0.0
+				for r in roots:
+					last = maxf(last, float(r["fuse"]))
+				_set_timer(last + 0.1)
+			else:
+				_end_attack()
 		"racines":
 			# Les racines jaillissent l'une après l'autre (_update_roots) : l'attaque est finie quand la dernière est sortie.
 			_set_timer(ROOTS["step"] * maxi(1, roots.size()) + 0.1)
@@ -273,12 +345,14 @@ func _strike() -> void:
 
 func _strike_step(delta: float) -> void:
 	match attack:
-		"epines":
+		"epines", "tempete":
 			volley_timer -= delta
 			if volleys_left > 0 and volley_timer <= 0.0:
 				volley_timer = THORNS["between"]
-				for dir in thorn_dirs(volleys_left % 2 == 0):
-					thorns.append({"pos": anchor + dir * radius * 0.9, "vel": dir * THORNS["speed"]})
+				var storm := attack == "tempete"
+				var speed: float = THORNS["speed"] * (STORM["thorn_speed"] if storm else 1.0)
+				for dir in thorn_dirs(volleys_left % 2 == 0, STORM["spread"] if storm else 1.0):
+					thorns.append({"pos": anchor + dir * radius * 0.9, "vel": dir * speed})
 				volleys_left -= 1
 		"siphon":
 			_siphon_tick -= delta
@@ -290,12 +364,12 @@ func _strike_step(delta: float) -> void:
 
 
 ## Directions des épines d'une salve (les salves paires sont décalées d'un demi-écart).
-func thorn_dirs(offset := false) -> Array:
+func thorn_dirs(offset := false, widen := 1.0) -> Array:
 	var n: int = PHASES[phase]["thorns"]
 	var out: Array = []
 	var shift := 0.5 if offset else 0.0
 	for i in n:
-		out.append(Vector2.from_angle(aim.angle() + (i - (n - 1) / 2.0 + shift) * THORNS["spread"]))
+		out.append(Vector2.from_angle(aim.angle() + (i - (n - 1) / 2.0 + shift) * THORNS["spread"] * widen))
 	return out
 
 
@@ -348,14 +422,16 @@ func _update_clouds(delta: float) -> void:
 	var p = main.player
 	var kept: Array = []
 	var hurt := false
+	var drinks := false
 	for c in clouds:
 		c["time"] -= delta
 		if tick and not hurt and p.position.distance_to(c["pos"]) < SPORES["radius"] + p.radius * 0.3:
 			hurt = true
+			drinks = c.get("drain", false)
 		if c["time"] > 0.0:
 			kept.append(c)
 	if hurt:
-		_hurt_player(SPORES["dps"] * SPORES["tick"] * damage_scale)
+		_hurt_player(SPORES["dps"] * SPORES["tick"] * damage_scale, BLOOM["drain"] if drinks else 0.0)
 	clouds = kept
 
 
@@ -391,7 +467,25 @@ func _enter_phase(n: int) -> void:
 	if n == 2:
 		main.hud.banner("La Flétrissure boit la sève et lève le vent : ne reste ni près d'elle, ni dans son souffle.", "combat")
 	else:
-		main.hud.banner("La lumière et les racines s'éveillent : les racines de la graine se resserrent !", "combat")
+		_unbind()
+
+
+## Seconde forme : elle se transforme sur place, invulnérable ; le creux s'effondre autour d'elle.
+## Ce qu'elle avait lancé s'éteint (rien ne frappe pendant la transformation).
+func _unbind() -> void:
+	unbound = true
+	morph_time = 0.0
+	transition = TRANSFORM["time"]
+	_clear_attacks()
+	strike_flash = -1.0
+	main.hud.banner("Le creux s'effondre ! La Flétrissure rejette son écorce et unit les six gardiens.", "combat")
+	main.fx.shake(10.0)
+	main.screen_fx.glow(Art.ec("cendre"), 0.55, 1.4)
+	for i in 3:
+		main.fx.ring(anchor, radius * 0.8, 300.0 + 160.0 * i, 0.9 + 0.35 * i, Color(Art.ec(ARMS[i * 2 + 1]["element"], "clair"), 0.85), 6.0)
+	if arena.has_method("start_collapse"):
+		arena.start_collapse(TRANSFORM["time"])
+	else:
 		arena.start_shrink()
 
 
@@ -419,17 +513,32 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 					var along := to.dot(dir)
 					if along > 0.0 and absf(to.dot(dir.orthogonal())) < THORNS["radius"] + margin:
 						best = minf(best, wait + along / THORNS["speed"])
-		"spores":
+		"spores", "floraison":
 			for m in spore_marks:
 				if pos.distance_to(m) < SPORES["radius"] + margin:
 					best = minf(best, timer)
+		"tempete":
+			if stage == "annonce":
+				if _in_gust(pos, margin):
+					best = minf(best, timer)
+				for offset in [false, true]:
+					for dir in thorn_dirs(offset, STORM["spread"]):
+						var along := to.dot(dir)
+						if along > 0.0 and absf(to.dot(dir.orthogonal())) < THORNS["radius"] + margin:
+							best = minf(best, timer + along / (THORNS["speed"] * STORM["thorn_speed"]))
+			else:
+				for offset in [false, true]:
+					for dir in thorn_dirs(offset, STORM["spread"]):
+						var along := to.dot(dir)
+						if along > 0.0 and absf(to.dot(dir.orthogonal())) < THORNS["radius"] + margin:
+							best = minf(best, maxf(volley_timer, 0.0) + along / (THORNS["speed"] * STORM["thorn_speed"]))
 		"siphon":
 			if d < SIPHON["radius"] + margin:
 				best = minf(best, timer if stage == "annonce" else 0.0)
 		"rafale":
 			if stage == "annonce" and _in_gust(pos, margin):
 				best = minf(best, timer)
-		"lumiere":
+		"lumiere", "aurore":
 			if stage == "annonce" and _in_rays(pos, margin):
 				best = minf(best, timer)
 	if d < radius + margin + 20.0:
@@ -446,6 +555,7 @@ func _clear_attacks() -> void:
 	rays = []
 	roots = []
 	buds = []
+	volleys_left = 0
 
 
 ## Le robot tourne autour d'elle, hors du siphon quand il s'annonce.
@@ -486,16 +596,20 @@ func _wake_k() -> float:
 
 func _draw() -> void:
 	var lit := -1
+	var lit2 := -1
 	for i in ARMS.size():
 		if attack == ARMS[i]["trait"] or (attack == "rejetons" and i == 5):
 			lit = i
+	if COMBO_ARMS.has(attack):
+		lit = COMBO_ARMS[attack][0]
+		lit2 = COMBO_ARMS[attack][1]
 	var die := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
-	draw_colossus(self, Vector2.ZERO, radius, t, phase, _announce_k(), lit, die, _wake_k(), _color)
+	draw_colossus(self, Vector2.ZERO, radius, t, phase, _announce_k(), lit, die, _wake_k(), _color, lit2, form_k())
 
 
 ## Le sol autour d'elle, sous les annonces (draw_marks) : une flaque de brume de cendre et les
 ## grosses racines qui l'ancrent au creux ; des braises y couvent dès la phase 2.
-static func draw_floor(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, die := 0.0) -> void:
+static func draw_floor(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, die := 0.0, form := 0.0) -> void:
 	var fade := 1.0 - die
 	var mist := FletriArt.ash_color().lerp(Art.c("ennemi"), 0.25).darkened(0.55)
 	for j in 3:
@@ -504,7 +618,7 @@ static func draw_floor(ci: CanvasItem, c: Vector2, r: float, t: float, phase: in
 	var ember := Art.ec("cendre")
 	for i in 11:
 		var a := TAU * i / 11.0 + 0.23 * sin(i * 7.3)
-		var length := r * (2.3 + 0.7 * fposmod(i * 0.618, 1.0))
+		var length := r * (2.3 + 0.7 * fposmod(i * 0.618, 1.0)) * (1.0 - 0.45 * form)
 		var path := _wiggle(c + Vector2.from_angle(a) * r * 0.55, a, length, r * 0.16, i * 1.9)
 		_limb(ci, path, r * 0.15, r * 0.025, Color(bark, 0.95 * fade), Color(Art.c("ennemi_contour"), 0.18 * fade))
 		# Une radicelle de côté.
@@ -515,53 +629,81 @@ static func draw_floor(ci: CanvasItem, c: Vector2, r: float, t: float, phase: in
 			var f := fposmod(t * 0.35 + i * 0.29, 1.0)
 			var q := path[1].lerp(path[path.size() - 2], f)
 			ci.draw_circle(q, r * 0.05, Color(ember, 0.55 * sin(PI * f)))
+	# Seconde forme : les racines qui l'ancraient cassent, le sol se fend de braise sous elle.
+	if form > 0.0:
+		var hot := Art.ec("cendre", "clair")
+		for i in 9:
+			var a := TAU * i / 9.0 + 0.4
+			var path := _wiggle(c + Vector2.from_angle(a) * r * 0.4, a, r * (1.4 + 0.9 * form + 0.3 * fposmod(i * 0.618, 1.0)), r * 0.12, i * 2.7)
+			var pulse := 0.6 + 0.4 * sin(t * 3.0 + i)
+			ci.draw_polyline(path, Color(Art.ec("cendre", "sombre"), 0.7 * form * fade), 9.0, true)
+			ci.draw_polyline(path, Color(hot, 0.75 * form * pulse * fade), 3.0, true)
 
 
 ## La Flétrissure entière, en coordonnées locales autour de « c » (son pied) : la couronne de bois
 ## mort derrière, les six bras, le manteau d'écorce, le cœur noué de racines et fendu de braises,
 ## l'œil, et la cendre qui monte. Statique : sert aussi au boss endormi (draw_sleeper).
-##   lit : bras allumé par l'annonce (-1 : aucun), k : avancée de l'annonce ;
+##   lit, lit2 : bras allumés par l'annonce (-1 : aucun), k : avancée de l'annonce ;
 ##   die : avancée de la mort (0 → 1) ; wake : 0 endormie, 1 dressée ;
-##   tint : couleur d'une partie du corps (éclair du coup, poison, cendre ; BossBase._color).
-static func draw_colossus(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, k: float, lit: int, die: float, wake: float, tint: Callable) -> void:
+##   tint : couleur d'une partie du corps (éclair du coup, poison, cendre ; BossBase._color) ;
+##   form : seconde forme (0 → 1) : le manteau et la couronne tombent, les liens de racine cassent,
+##          le cœur s'ouvre en deux sur un noyau de braise où l'œil grandit, six éclats des
+##          gardiens tournent autour d'elle.
+static func draw_colossus(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, k: float, lit: int, die: float, wake: float, tint: Callable, lit2 := -1, form := 0.0) -> void:
 	var h := c + Vector2(0, -r * 0.45)
-	var beat := Anim.breathe(t * (1.7 if phase >= 3 else 1.0), 0.035 * wake)
+	var beat := Anim.breathe(t * (1.7 if phase >= 3 else 1.0) * (1.0 + 0.6 * form), (0.035 + 0.025 * form) * wake)
 	var ash := FletriArt.ash_color()
-	Art.shadow(ci, c + Vector2(0, r * 0.15), r * 1.7)
-	_draw_crown(ci, h, r, t, phase, die, wake, tint)
+	Art.shadow(ci, c + Vector2(0, r * 0.15), r * (1.7 + 0.2 * form))
+	if form > 0.0:
+		_draw_shards(ci, h, r, t, form, lit, lit2, k, die, false)
+	if form < 1.0:
+		_draw_crown(ci, h, r, t, phase, die, wake, tint, form)
 	for i in ARMS.size():
 		var awake: bool = phase >= int(ARMS[i]["phase"])
-		_draw_arm(ci, h, _arm_angle_at(i, t, wake), r, str(ARMS[i]["element"]), awake, k if i == lit else 0.0, die, wake, t + i * 1.3, tint)
-	# Le manteau : des plaques d'écorce, en couronne autour du cœur ; elles s'écartent à la mort.
-	var plate_col: Color = tint.call(Art.c("ennemi").darkened(0.55).lerp(Art.ec("racine", "sombre"), 0.4))
-	for i in 10:
-		var a := TAU * i / 10.0 + PI / 10.0 + 0.04 * sin(t * 0.9 + i)
-		var d := Vector2.from_angle(a)
-		var o := d.orthogonal()
-		var base := h + d * r * (0.32 + 0.45 * die)
-		var plen := r * (1.18 + 0.08 * sin(i * 2.7)) * beat
-		var plate := PackedVector2Array([base + o * r * 0.2, base + d * plen * 0.55 + o * r * 0.27, h + d * plen + d * r * 0.45 * die, base + d * plen * 0.55 - o * r * 0.27, base - o * r * 0.2])
-		var alpha := 1.0 - die * 0.85
-		Art.volume(ci, plate, Color(plate_col, alpha), 0.45)
-		Art.outline(ci, plate, Color(Art.c("ennemi_contour"), 0.45 * alpha), Art.TRAIT_FIN)
-		ci.draw_line(base + d * r * 0.1, base + d * plen * 0.8, Color(plate_col.lightened(0.18), 0.7 * alpha), 2.0, true)
-	# Le cœur : une graine noire, côtelée, qui bat.
+		var arm_lit := k if (i == lit or i == lit2) else 0.25 * form
+		_draw_arm(ci, h, _arm_angle_at(i, t * (1.0 + form), wake), r, str(ARMS[i]["element"]), awake, arm_lit, die, wake, t + i * 1.3, tint, form)
+	# Le manteau : des plaques d'écorce, en couronne autour du cœur ; elles s'écartent à la mort et
+	# tombent pendant la transformation.
+	if form < 1.0:
+		var plate_col: Color = tint.call(Art.c("ennemi").darkened(0.55).lerp(Art.ec("racine", "sombre"), 0.4))
+		for i in 10:
+			var a := TAU * i / 10.0 + PI / 10.0 + 0.04 * sin(t * 0.9 + i) + 0.3 * form * (1 if i % 2 == 0 else -1)
+			var d := Vector2.from_angle(a)
+			var o := d.orthogonal()
+			var off := 0.45 * die + 1.2 * form
+			var base := h + d * r * (0.32 + off) + Vector2(0, r * 0.9 * form * form)
+			var plen := r * (1.18 + 0.08 * sin(i * 2.7)) * beat * (1.0 - 0.35 * form)
+			var plate := PackedVector2Array([base + o * r * 0.2, base + d * plen * 0.55 + o * r * 0.27, base + d * (plen - r * 0.32 + r * 0.45 * die), base + d * plen * 0.55 - o * r * 0.27, base - o * r * 0.2])
+			var alpha := (1.0 - die * 0.85) * (1.0 - form)
+			Art.volume(ci, plate, Color(plate_col, alpha), 0.45)
+			Art.outline(ci, plate, Color(Art.c("ennemi_contour"), 0.45 * alpha), Art.TRAIT_FIN)
+			ci.draw_line(base + d * r * 0.1, base + d * plen * 0.8, Color(plate_col.lightened(0.18), 0.7 * alpha), 2.0, true)
+	# Le cœur : une graine noire, côtelée, qui bat. En seconde forme, elle s'ouvre en deux moitiés.
 	var rx := r * 0.86 * beat
 	var ry := r * 1.0 * beat
-	var heart := Art.ellipse(h, rx, ry, 32)
+	var gap := r * 0.2 * form
 	var body: Color = tint.call(Art.c("ennemi").darkened(0.45).lerp(Art.ec("cendre", "sombre"), 0.35))
-	Art.volume(ci, heart, body, 0.55)
+	var crack_col := Art.ec("seve", "clair") if die > 0.0 else Art.ec("cendre")
+	var glow := (0.6 + 0.35 * sin(t * (5.0 if phase >= 3 else 3.0))) * wake if die <= 0.0 else 1.0 - die * 0.5
+	if form > 0.0:
+		_draw_core(ci, h, r, t, form, die, glow)
+	var halves: Array = [Art.ellipse(h, rx, ry, 32)]
+	if form > 0.0:
+		halves = [_half_ellipse(h - Vector2(gap, 0), rx, ry, -1, form), _half_ellipse(h + Vector2(gap, 0), rx, ry, 1, form)]
+	for heart in halves:
+		Art.volume(ci, heart, body, 0.55)
 	var rib: Color = body.darkened(0.35)
 	for j in 5:
 		var u := (j + 1) / 6.0 * 2.0 - 1.0
+		if form > 0.0 and absf(u) < 0.2:
+			continue
+		var sx := signf(u) * gap
 		var pts := PackedVector2Array()
 		for q in 9:
 			var v := q / 8.0 * 2.0 - 1.0
-			pts.append(h + Vector2(u * rx * sqrt(maxf(1.0 - v * v, 0.0)) * 0.92, v * ry * 0.9))
+			pts.append(h + Vector2(sx + u * rx * sqrt(maxf(1.0 - v * v, 0.0)) * 0.92, v * ry * 0.9))
 		ci.draw_polyline(pts, Color(rib, 0.8), 2.5, true)
 	# Les fentes de braise : deux, puis une de plus à chaque phase ; à la mort, la sève en jaillit.
-	var crack_col := Art.ec("seve", "clair") if die > 0.0 else Art.ec("cendre")
-	var glow := (0.6 + 0.35 * sin(t * (5.0 if phase >= 3 else 3.0))) * wake if die <= 0.0 else 1.0 - die * 0.5
 	var cracks := [
 		[Vector2(-0.12, -0.95), Vector2(0.04, -0.7), Vector2(-0.06, -0.45)],
 		[Vector2(0.42, -0.55), Vector2(0.22, -0.3), Vector2(0.36, -0.02), Vector2(0.2, 0.2)],
@@ -574,31 +716,40 @@ static func draw_colossus(ci: CanvasItem, c: Vector2, r: float, t: float, phase:
 	for j in shown:
 		var pts := PackedVector2Array()
 		for q in cracks[j]:
-			pts.append(h + Vector2(q.x * rx, q.y * ry))
+			# En seconde forme, chaque fente suit sa moitié du cœur.
+			var x: float = q.x * rx + (gap if q.x >= 0.0 else -gap)
+			pts.append(h + Vector2(x, q.y * ry))
 		ci.draw_polyline(pts, Color(crack_col, 0.22 * glow), 10.0 + 6.0 * die, true)
 		ci.draw_polyline(pts, Color(crack_col.lightened(0.2), glow), 3.0 + 3.0 * die, true)
-	# Les racines qui l'enserrent : deux liens épais, en travers, par-dessus les fentes.
-	var knot: Color = tint.call(Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.3))
-	for j in 2:
-		var y0 := ry * (-0.25 + 0.6 * j)
-		var pts := PackedVector2Array()
-		for q in 11:
-			var u := q / 10.0 * 2.0 - 1.0
-			var x := u * rx * sqrt(maxf(1.0 - pow(y0 / ry, 2.0), 0.05)) * 1.04
-			pts.append(h + Vector2(x, y0 + ry * 0.12 * u * (1 if j == 0 else -1) + 4.0 * sin(u * 5.0 + j)))
-		ci.draw_polyline(pts, knot.darkened(0.3), 11.0, true)
-		ci.draw_polyline(pts, knot, 7.0, true)
-		for q in [2, 5, 8]:
-			ci.draw_circle(pts[q], 6.5, knot.lightened(0.08))
-	Art.outline(ci, heart, Color(Art.c("ennemi_contour"), 1.0 - die * 0.8), Art.TRAIT_FORT)
-	_draw_eye(ci, h + Vector2(0, -ry * 0.3), r, t, phase, k, die, wake)
+	# Les racines qui l'enserrent : deux liens épais, en travers, par-dessus les fentes ; ils
+	# cassent au début de la transformation.
+	var bind := clampf(1.0 - form * 2.5, 0.0, 1.0)
+	if bind > 0.0:
+		var knot: Color = tint.call(Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.3))
+		for j in 2:
+			var y0 := ry * (-0.25 + 0.6 * j)
+			var pts := PackedVector2Array()
+			for q in 11:
+				var u := q / 10.0 * 2.0 - 1.0
+				var x := u * rx * sqrt(maxf(1.0 - pow(y0 / ry, 2.0), 0.05)) * 1.04
+				pts.append(h + Vector2(x + signf(u) * gap * 2.0, y0 + ry * 0.12 * u * (1 if j == 0 else -1) + 4.0 * sin(u * 5.0 + j) + r * 0.4 * form * absf(u)))
+			ci.draw_polyline(pts, Color(knot.darkened(0.3), bind), 11.0, true)
+			ci.draw_polyline(pts, Color(knot, bind), 7.0, true)
+			for q in [2, 5, 8]:
+				ci.draw_circle(pts[q], 6.5, Color(knot.lightened(0.08), bind))
+	for heart in halves:
+		Art.outline(ci, heart, Color(Art.c("ennemi_contour"), 1.0 - die * 0.8), Art.TRAIT_FORT)
+	if form > 0.0:
+		_draw_eye(ci, h + Vector2(0, -ry * 0.3 * (1.0 - form)), r * (1.0 + 0.3 * form), t, phase, k, die, wake)
+	else:
+		_draw_eye(ci, h + Vector2(0, -ry * 0.3), r, t, phase, k, die, wake)
 	# La cendre qui monte autour d'elle ; des braises parmi, de plus en plus, à chaque phase.
 	if die < 1.0:
 		for i in 18:
-			var f := fposmod(t * (0.18 + 0.04 * (i % 4)) + i * 0.137, 1.0)
+			var f := fposmod(t * (0.18 + 0.04 * (i % 4) + 0.12 * form) + i * 0.137, 1.0)
 			var x := sin(i * 12.9898) * r * 1.5 + sin(t + i) * r * 0.08
 			var q := c + Vector2(x, r * 0.2 - f * r * 2.6)
-			var hot := i % 4 < phase - 1 and die <= 0.0
+			var hot := (i % 4 < phase - 1 or form > 0.0) and die <= 0.0
 			var col := ash.lightened(0.15) if not hot else Art.ec("cendre", "clair")
 			ci.draw_circle(q, r * (0.022 + 0.018 * (i % 3)), Color(col, 0.55 * sin(PI * f) * (1.0 - die) * (0.4 + 0.6 * wake)))
 	# Mort : des gouttes de sève montent des fentes et pâlissent.
@@ -611,6 +762,63 @@ static func draw_colossus(ci: CanvasItem, c: Vector2, r: float, t: float, phase:
 			var q := h + Vector2.from_angle(a) * r * (0.3 + 1.0 * u) - Vector2(0, r * 0.8 * u)
 			ci.draw_circle(q, r * (0.04 + 0.07 * u), Color(Art.ec("seve", "clair"), 0.75 * (1.0 - u)))
 		ci.draw_circle(h, r * 0.55 * die, Color(ash, 0.25 * die))
+	if form > 0.0:
+		_draw_shards(ci, h, r, t, form, lit, lit2, k, die, true)
+
+
+## Une moitié du cœur ouvert (side : -1 gauche, 1 droite), un peu penchée vers l'extérieur.
+static func _half_ellipse(h: Vector2, rx: float, ry: float, side: int, form: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	var tilt := 0.12 * form * side
+	for q in 17:
+		var a := -PI / 2.0 + PI * q / 16.0
+		var p := Vector2(cos(a) * rx * side, sin(a) * ry)
+		# Le bord intérieur est déchiqueté (la graine s'est fendue).
+		if q == 0 or q == 16:
+			p.x = 0.0
+		pts.append(h + p.rotated(tilt))
+	for q in 5:
+		var v := 1.0 - (q + 1) / 6.0 * 2.0
+		pts.append(h + Vector2(side * rx * (0.06 + 0.08 * (q % 2)), v * ry * 0.95).rotated(tilt))
+	return pts
+
+
+## Le noyau de braise entre les deux moitiés du cœur ouvert : une lueur qui bat, des veines des six
+## couleurs qui y convergent.
+static func _draw_core(ci: CanvasItem, h: Vector2, r: float, t: float, form: float, die: float, glow: float) -> void:
+	var hot := Art.ec("cendre", "clair")
+	var fade := form * (1.0 - die)
+	var pulse := 0.75 + 0.25 * sin(t * 6.0)
+	ci.draw_colored_polygon(Art.ellipse(h, r * 0.62 * form, r * 0.95, 24), Color(Art.ec("cendre", "sombre").darkened(0.3), fade))
+	ci.draw_colored_polygon(Art.ellipse(h, r * 0.48 * form, r * 0.82, 24), Color(Art.ec("cendre"), 0.85 * fade * pulse))
+	ci.draw_colored_polygon(Art.ellipse(h, r * 0.3 * form, r * 0.6, 20), Color(hot, 0.9 * fade * glow))
+	for i in ARMS.size():
+		var a := TAU * (i + 0.5) / ARMS.size() - PI / 2.0
+		var from := h + Vector2(cos(a) * r * 0.45 * form, sin(a) * r * 0.8)
+		var col := Art.ec(str(ARMS[i]["element"]), "clair")
+		ci.draw_line(from, h.lerp(from, 0.25), Color(col, 0.8 * fade * pulse), 3.0, true)
+
+
+## Les six éclats des gardiens, en orbite autour d'elle (vue de dessus, aplatie) : ceux de derrière
+## (front faux) avant le corps, ceux de devant après. L'éclat d'un bras allumé brille.
+static func _draw_shards(ci: CanvasItem, h: Vector2, r: float, t: float, form: float, lit: int, lit2: int, k: float, die: float, front: bool) -> void:
+	var fade := form * (1.0 - die)
+	if fade <= 0.0:
+		return
+	for i in ARMS.size():
+		var a := t * SHARDS["speed"] + TAU * i / ARMS.size()
+		if (sin(a) > 0.0) != front:
+			continue
+		var orbit: float = r * SHARDS["orbit"] * (0.5 + 0.5 * form)
+		var p := h + Vector2(cos(a) * orbit, sin(a) * orbit * 0.42 - r * 0.15)
+		var element := str(ARMS[i]["element"])
+		var on := k if (i == lit or i == lit2) else 0.0
+		var s := r * (0.15 + 0.03 * sin(t * 3.0 + i)) * (1.0 + 0.4 * on)
+		ci.draw_circle(p, s * (2.0 + on), Color(Art.ec(element, "clair"), (0.14 + 0.3 * on) * fade))
+		var gem := PackedVector2Array([p + Vector2(0, -s * 1.6), p + Vector2(s * 0.75, 0), p + Vector2(0, s * 1.1), p + Vector2(-s * 0.75, 0)])
+		Art.volume(ci, gem, Color(Art.ec(element), fade), 1.0)
+		Art.outline(ci, gem, Color(Art.ec(element, "sombre"), fade), Art.TRAIT_FIN)
+		ci.draw_line(p + Vector2(0, -s * 1.2), p + Vector2(0, s * 0.6), Color(Art.ec(element, "clair"), 0.8 * fade), 1.5, true)
 
 
 ## L'œil : une fente de braise verticale au milieu du cœur, deux petits yeux de part et d'autre.
@@ -642,23 +850,25 @@ static func _draw_eye(ci: CanvasItem, e: Vector2, r: float, t: float, phase: int
 
 
 ## La couronne de bois mort au-dessus du cœur : cinq branches fourchues, braises au bout dès la phase 2.
-static func _draw_crown(ci: CanvasItem, h: Vector2, r: float, t: float, phase: int, die: float, wake: float, tint: Callable) -> void:
+## gone : seconde forme (0 → 1) : les branches basculent vers l'extérieur et tombent en cendre.
+static func _draw_crown(ci: CanvasItem, h: Vector2, r: float, t: float, phase: int, die: float, wake: float, tint: Callable, gone := 0.0) -> void:
 	var wood: Color = tint.call(Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.2).darkened(0.35))
 	var rise := 0.65 + 0.35 * wake
+	var keep := (1.0 - die * 0.6) * (1.0 - gone)
 	for i in 5:
 		var u := (i - 2) / 2.0
-		var a := -PI / 2.0 + u * 0.75 + 0.03 * sin(t * 0.7 + i)
-		var from := h + Vector2(u * r * 0.45, -r * 0.7)
+		var a := -PI / 2.0 + u * 0.75 + 0.03 * sin(t * 0.7 + i) + gone * (1.1 if u >= 0.0 else -1.1) * (0.4 + absf(u))
+		var from := h + Vector2(u * r * (0.45 + 0.6 * gone), -r * 0.7 + r * 0.8 * gone * gone)
 		var length := r * (1.35 - 0.3 * absf(u)) * rise * (1.0 - 0.4 * die)
 		var path := _wiggle(from, a, length, r * 0.12, i * 2.3)
-		_limb(ci, path, r * 0.11, r * 0.02, Color(wood, 1.0 - die * 0.6), Color(Art.c("ennemi_contour"), 0.4 * (1.0 - die)), 0.5)
+		_limb(ci, path, r * 0.11, r * 0.02, Color(wood, keep), Color(Art.c("ennemi_contour"), 0.4 * (1.0 - die) * (1.0 - gone)), 0.5)
 		for sgn in [-1, 1]:
 			var at := path[2 if sgn < 0 else 3]
 			var tw := _wiggle(at, a + sgn * 0.7, length * 0.42, r * 0.05, i + sgn)
-			_limb(ci, tw, r * 0.05, r * 0.012, Color(wood, 1.0 - die * 0.6))
-			if phase >= 2 and die <= 0.0:
+			_limb(ci, tw, r * 0.05, r * 0.012, Color(wood, keep))
+			if phase >= 2 and die <= 0.0 and gone <= 0.0:
 				ci.draw_circle(tw[tw.size() - 1], r * 0.045, Color(Art.ec("cendre", "clair"), 0.5 + 0.4 * sin(t * 4.0 + i + sgn)))
-		if phase >= 3 and die <= 0.0:
+		if phase >= 3 and die <= 0.0 and gone <= 0.0:
 			Art.glow(ci, path[path.size() - 1], r * 0.18, "cendre")
 
 
@@ -669,11 +879,12 @@ static func _arm_angle_at(i: int, t: float, wake: float) -> float:
 
 ## Un bras : une longue racine courbe, nouée, épineuse, veinée de son élément, et le motif de
 ## l'élément au bout. Endormi, gris de cendre et replié ; lit : allumage pendant l'annonce (0 → 1).
-static func _draw_arm(ci: CanvasItem, h: Vector2, ang: float, r: float, element: String, awake: bool, lit: float, die: float, wake: float, t: float, tint: Callable) -> void:
+## form : seconde forme (0 → 1) : le bras s'allonge et se tord davantage.
+static func _draw_arm(ci: CanvasItem, h: Vector2, ang: float, r: float, element: String, awake: bool, lit: float, die: float, wake: float, t: float, tint: Callable, form := 0.0) -> void:
 	var dir := Vector2.from_angle(ang)
 	var side := dir.orthogonal()
-	var stretch := lerpf(1.7, 2.6 if awake else 2.0, wake) * (1.0 - 0.4 * die)
-	var bend := r * (0.55 - 0.3 * wake + 0.12 * sin(t * 0.9)) * (1.0 + die)
+	var stretch := lerpf(1.7, 2.6 if awake else 2.0, wake) * (1.0 - 0.4 * die) * (1.0 + 0.18 * form)
+	var bend := r * (0.55 - 0.3 * wake + (0.12 + 0.12 * form) * sin(t * (0.9 + 0.8 * form))) * (1.0 + die)
 	var from := h + dir * r * 0.6
 	var tip := h + dir * r * stretch + side * bend * 0.35
 	var ctrl := h + dir * r * stretch * 0.6 + side * bend
@@ -845,7 +1056,7 @@ static func _taper(path: PackedVector2Array, w0: float, w1: float) -> PackedVect
 ## blessent pas, ne sont pas en rouge ; les nuages de spores posés gardent leur couleur.
 func draw_marks(c: CanvasItem) -> void:
 	var k := _announce_k()
-	draw_floor(c, anchor, radius, t, phase, clampf(dying / death_time, 0.0, 1.0) if dead else 0.0)
+	draw_floor(c, anchor, radius, t, phase, clampf(dying / death_time, 0.0, 1.0) if dead else 0.0, form_k())
 	# Nuages de spores posés : violets, bulles qui montent, bord rouge (toujours dangereux).
 	for cl in clouds:
 		var pos: Vector2 = cl["pos"]
@@ -857,12 +1068,22 @@ func draw_marks(c: CanvasItem) -> void:
 			var q: Vector2 = pos + Vector2.from_angle(j * 2.1) * SPORES["radius"] * 0.6 * f - Vector2(0, 10.0 * f)
 			c.draw_circle(q, 3.0 + 3.0 * f, Color(Art.ec("poison", "clair"), 0.5 * (1.0 - f) * fade))
 		c.draw_arc(pos, SPORES["radius"], 0.0, TAU, 32, Color(Art.c("danger"), 0.55 * fade), Art.TRAIT, true)
+		# Floraison (seconde forme) : le nuage boit, un filet de sève remonte jusqu'à elle.
+		if cl.get("drain", false):
+			var sap := Art.ec("seve", "clair")
+			c.draw_circle(pos, SPORES["radius"] * 0.4, Color(Art.ec("seve"), 0.22 * fade))
+			for j in 4:
+				var f := fposmod(t * 0.9 + j * 0.25, 1.0)
+				c.draw_circle(pos.lerp(anchor, f), 3.5 * (1.0 - 0.5 * f), Color(sap, 0.75 * sin(PI * f) * fade))
 	match attack:
-		"epines":
+		"epines", "tempete":
 			if stage == "annonce":
 				var n: int = PHASES[phase]["thorns"]
-				Art.telegraph(c, {"type": "cone", "centre": anchor, "direction": aim.angle(), "ouverture": THORNS["spread"] * n, "rayon": 380.0}, k, -1.0, t)
-		"spores":
+				var widen: float = STORM["spread"] if attack == "tempete" else 1.0
+				Art.telegraph(c, {"type": "cone", "centre": anchor, "direction": aim.angle(), "ouverture": THORNS["spread"] * n * widen, "rayon": 380.0}, k, -1.0, t)
+				if attack == "tempete":
+					Art.telegraph(c, {"type": "ligne", "de": anchor, "a": anchor + aim * gust_len, "largeur": GUST["width"]}, k, -1.0, t)
+		"spores", "floraison":
 			for m in spore_marks:
 				Art.telegraph(c, {"type": "cercle", "centre": m, "rayon": SPORES["radius"]}, k, -1.0, t)
 		"siphon":
@@ -878,7 +1099,7 @@ func draw_marks(c: CanvasItem) -> void:
 		"rafale":
 			if stage == "annonce":
 				Art.telegraph(c, {"type": "ligne", "de": anchor, "a": anchor + aim * gust_len, "largeur": GUST["width"]}, k, -1.0, t)
-		"lumiere":
+		"lumiere", "aurore":
 			if stage == "annonce":
 				for a in rays:
 					Art.telegraph(c, {"type": "cone", "centre": anchor, "direction": float(a), "ouverture": LIGHT["opening"], "rayon": arena.radius}, k, -1.0, t)

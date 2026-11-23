@@ -66,6 +66,8 @@ var rng := RandomNumberGenerator.new()
 
 # Robot du mode « -- --autotest=boss ».
 var auto_time := 0.0
+## Durée maximale du combat du robot (« -- --autotest=boss ») avant l'échec.
+var auto_max := 180.0
 var auto_done := false
 var auto_shots := {}
 var auto_boss_left := 1.0
@@ -411,7 +413,11 @@ func autotest_step(delta: float) -> void:
 		_autotest_end("victoire", 0)
 	elif defeats > 0:
 		_autotest_end("défaite", 0)
+<<<<<<< HEAD
 	elif auto_time >= 300.0:
+=======
+	elif auto_time >= auto_max:
+>>>>>>> origin/sel8ux
 		_autotest_end("ÉCHEC, combat non terminé", 1)
 
 

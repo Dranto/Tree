@@ -410,7 +410,7 @@ La célébration « région purifiée » se lance sur place peu après la victoi
 
 ```json
 "boss": {"script": "res://scripts/boss_finale.gd", "name": "La Flétrissure", "bar_color": "cendre",
-         "phases": ["…", "…", "…"], "arena": {"radius": 520, "radius_min": 370, "life_color": "seve/clair"},
+         "phases": ["…", "…", "…"], "arena": {"radius": 520, "radius_min": 370, "radius_collapse": 380, "life_color": "seve/clair"},
          "wake_banner": "…", "defeated_banner": "…", "reward": {"points": 3}},
 "opened_banner": "…", "descent_banner": "…", "ascent_banner": "…",
 "epilogue": {"sub": "…", "title": "…", "body": "…"},
@@ -418,7 +418,7 @@ La célébration « région purifiée » se lance sur place peu après la victoi
 ```
 
 - **Ouverture** (`finale_arena.gd`, `main.finale`) : toutes les régions purifiées, le drapeau `finale_ouverte` est posé et `opened_banner` annoncé ; une brèche s'ouvre au pied de la graine (`descent_point()`, 150 px au sud du sanctuaire de la Graine). S'y tenir une seconde fait descendre le joueur **sous la graine** : l'arène est un creux hors du carré du monde (`CAVE`), où rien ne naît et qu'aucun Flétri du monde ne suit. Le puits de lumière où l'on arrive fait remonter (hors combat) ; s'avancer vers le centre réveille le boss.
-- **Combat** : comme une arène de région (`finale_arena.gd` étend `boss_arena.gd`) : barre, phases (`phases`, trois), mur de racines qui se resserre en phase 3 jusqu'à `radius_min`. Mourir ramène au dernier sanctuaire, la sève attend près de la brèche (`entrance()`), le boss se rendort ; `stat_finale_essais` compte les combats perdus. Une partie sauvegardée sous la graine reprend au pied de la graine.
+- **Combat** : comme une arène de région (`finale_arena.gd` étend `boss_arena.gd`) : barre, phases (`phases`, trois). En phase 3, la Flétrissure prend sa seconde forme (invulnérable le temps de la transformation) et le creux s'effondre : il ne reste qu'une île de `radius_collapse` au-dessus du gouffre (`radius_min` sert seulement au resserrement des arènes de région). Mourir ramène au dernier sanctuaire, la sève attend près de la brèche (`entrance()`), le boss se rendort ; `stat_finale_essais` compte les combats perdus. Une partie sauvegardée sous la graine reprend au pied de la graine.
 - **Victoire** : `finale_vaincue`, `reward › points` (une seule fois, clé `finale_boss`), `stat_finale_fin` (temps de jeu) ; le creux refleurit, puis l'épilogue (`epilogue.gd`, `quest_ui.epilogue`) : le monde entier reverdit, les textes d'`epilogue`, les statistiques de toute l'aventure, le générique (`credits` : `title` en grand, ou `head` et ses `lines` ; `auto` : `regions` ou `bosses` remplit la liste avec les régions du monde et leurs gardiens, plus la Flétrissure), puis « Continuer à jouer » / « Retour au titre ». Il pose `fin_aventure_vue` et ne revient plus.
 - **Boss** (`boss_finale.gd`, sur `BossBase`) : un trait de chaque région, deux nouveaux par phase : épines (Ronce) et spores (Spore), puis sève (siphon qui la soigne) et vent (rafale qui repousse), puis lumière (rayons) et racines (ligne qui jaillit jusqu'au joueur) ; des rejetons dès la phase 2. Robot : `tools/godot.sh --headless --fixed-fps 60 -- --autotest=boss --region=finale` (build de test au niveau 20, points dans la première branche).
 - **Musique** (crochets de la tâche H) : `data/audio.json › regions › finale` (sons `boss`, et `music` pour le combat) et `› generique` (`music` du générique). Sans `music`, la musique du monde.
