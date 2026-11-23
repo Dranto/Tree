@@ -301,10 +301,14 @@ static func step(player, delta: float) -> void:
 	if not "attack_rt" in player:
 		return
 	var st := current()
+	if not player.attack_rt.is_empty():
+		_step_queue(player, st, delta)
+	# Après la file : un écho qui tire maintenant ne voit pas sa rafale avancer dans le même pas.
 	if not st.get("echoes", []).is_empty():
 		_step_echoes(player, st, delta)
-	if player.attack_rt.is_empty():
-		return
+
+
+static func _step_queue(player, st: Dictionary, delta: float) -> void:
 	var q: Array = player.attack_rt["queue"]
 	if q.is_empty():
 		return

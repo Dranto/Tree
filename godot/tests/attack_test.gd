@@ -118,6 +118,8 @@ func _run() -> void:
 	await _test_graine()
 	await _test_forms()
 	await _test_mods()
+	await _test_echoes()
+	_test_synergies()
 	await _test_node_and_planner()
 
 	b["clusters"] = real_clusters
@@ -228,6 +230,84 @@ func _test_forms() -> void:
 		await _frames(40)
 		check(e.hp < e.max_hp and e.root_time > 0.0 or e.hp < e.max_hp, "un ennemi dans la ronce est blessé (%d)" % int(e.max_hp - e.hp))
 	_clear()
+
+
+func _test_echoes() -> void:
+	print("Formes cumulées : la principale et les échos")
+	var st := AttackScript.resolve([{"form": "echarde", "priority": null, "ring": 4, "order": 0}, {"form": "fouet", "priority": null, "ring": 4, "order": 1},
+		{"form": "echarde", "priority": null, "ring": 2, "order": 2}], [])
+	check(st["form"] == "fouet" and st["echoes"] == ["echarde"], "la forme principale reste, l'autre part en écho (une seule fois)")
+	check(AttackScript.resolve([], [])["echoes"].is_empty(), "sans forme acquise : aucun écho")
+	_with([{"attack_form": "echarde"}, {"attack_form": "fouet"}])
+	st = game.attack()
+	check(st["form"] == "fouet" and st["echoes"] == ["echarde"], "en jeu : fouet principal, échardes en écho")
+	var e = _spawn(Vector2(80, 0))
+	var est := AttackScript.echo_state(st, "echarde")
+	var period := AttackScript.interval(game.stats, est)
+	check(absf(period - 1.0 / game.stats["fire_rate"]) < 1e-6, "l'écho tire à sa propre cadence (%s s)" % period)
+	AttackScript.step(p, period * 0.4)
+	check(_shots().is_empty(), "le premier tir de l'écho est décalé")
+	AttackScript.step(p, period * 0.2)
+	var shots := _shots()
+	check(shots.size() == 1 and shots[0].style == "echarde", "puis l'écho tire ses échardes (%d)" % shots.size())
+	var main_st := AttackScript.resolve([{"form": "echarde", "priority": null, "ring": 1, "order": 0}], [])
+	if shots.size() == 1:
+		check(absf(shots[0].damage - AttackScript.hit_damage(p, main_st)) < 1e-4, "l'écho garde son plein bonus : mêmes dégâts que la forme seule (%s)" % shots[0].damage)
+	for i in 4:
+		AttackScript.step(p, 0.05)
+	check(_shots().size() == 3, "toute la rafale de l'écho part (%d)" % _shots().size())
+	AttackScript.fire(p, e)
+	check(e.hp < e.max_hp, "la forme principale frappe toujours (fouet)")
+	_clear()
+	# Personne à portée de l'écho : il attend.
+	_spawn(Vector2(600, 0))
+	for i in 20:
+		AttackScript.step(p, 0.1)
+	check(_shots().is_empty(), "sans ennemi à sa portée, l'écho ne tire pas")
+	_clear()
+	# Un modificateur agit sur toutes les formes où il s'applique.
+	_with([{"attack_form": "echarde"}, {"attack_form": "fouet"}, {"attack_mod": "fourche", "value": 1}])
+	st = game.attack()
+	check(AttackScript.mod(st, "fourche") == 0.0 and AttackScript.mod(AttackScript.echo_state(st, "echarde"), "fourche") == 1.0, "la fourche agit sur l'écho d'échardes, pas sur le fouet")
+	check(AttackScript.applies_any("fourche", st), "l'infobulle ne dit pas « sans effet » quand un écho en profite")
+	var lines := AttackScript.describe(st)
+	check(lines.size() >= 2 and lines[1].begins_with("En écho"), "la description cite l'écho (%s)" % (lines[1] if lines.size() > 1 else ""))
+	var before := AttackScript.resolve([{"form": "fouet", "priority": null, "ring": 1, "order": 0}], [])
+	var d := AttackScript.diff(before, AttackScript.resolve([{"form": "fouet", "priority": null, "ring": 1, "order": 0}, {"form": "echarde", "priority": null, "ring": 0, "order": 1}], []))
+	check(not d.is_empty() and "en écho" in str(d[0]["text"]), "l'aperçu annonce la nouvelle forme en écho (%s)" % str(d))
+	# Arbre changé : les tirs en file d'un écho perdu se perdent.
+	_spawn(Vector2(80, 0))
+	AttackScript.fire(p, Vector2(300, 0), AttackScript.echo_state(st, "echarde"))
+	_with([{"attack_form": "fouet"}])
+	var n := _shots().size()
+	for i in 4:
+		AttackScript.step(p, 0.05)
+	check(_shots().size() == n, "un écho retiré ne finit pas sa rafale")
+	_clear()
+
+
+func _test_synergies() -> void:
+	print("Synergies")
+	check(AttackScript.validate_synergies().is_empty(), "synergies.json est valide (%s)" % ", ".join(AttackScript.validate_synergies()))
+	check(AttackScript.synergies().size() >= 10, "au moins dix synergies (%d)" % AttackScript.synergies().size())
+	var st := AttackScript.resolve([{"form": "rayon", "priority": null, "ring": 1, "order": 0}, {"form": "lame", "priority": null, "ring": 1, "order": 1}], [])
+	check("aube_tranchante" in st["synergies"], "rayon d'aube + lames de vent : « Aube tranchante »")
+	check(absf(float(st["mods"].get("incandescence", 0.0)) - 0.25) < 1e-6, "la synergie ajoute son modificateur d'attaque")
+	var alone := AttackScript.resolve([{"form": "rayon", "priority": null, "ring": 1, "order": 0}], [])
+	check(alone["synergies"].is_empty() and not alone["mods"].has("incandescence"), "une seule forme : pas de synergie")
+	var crit0: float = game.stats["crit"]
+	_with([{"attack_form": "rayon"}, {"attack_form": "lame"}])
+	check(absf(game.stats["crit"] - 0.05 - 0.04) < 1e-6 or absf(game.stats["crit"] - crit0 - 0.04) < 1e-6, "la synergie ajoute ses statistiques (critique %s)" % game.stats["crit"])
+	var arsenal := AttackScript.resolve([{"form": "rayon", "priority": null, "ring": 1, "order": 0}, {"form": "lame", "priority": null, "ring": 1, "order": 1}, {"form": "massue", "priority": null, "ring": 1, "order": 2}], [])
+	check("arsenal" in arsenal["synergies"] and "massue_solaire" in arsenal["synergies"], "trois formes : « Arsenal », et la massue avec une forme d'Aube (%s)" % str(arsenal["synergies"]))
+	var hints := AttackScript.synergy_hints([{"attack_form": "lame"}], game.attack())
+	check(hints.any(func(h): return "Aube tranchante" in str(h[0]) and h[1]), "l'infobulle d'un nœud cite ses synergies, actives en or (%d)" % hints.size())
+	var d := AttackScript.diff(alone, st)
+	check(d.any(func(x): return x["stat"] == "synergy"), "l'aperçu annonce la synergie gagnée")
+	var errs := PackedStringArray()
+	Content._check_effects([{"stat": "inconnue", "op": "inc", "value": 1}], "test", errs)
+	check(not errs.is_empty(), "check_data vérifie les effets d'une synergie comme ceux d'un nœud")
+	_with([])
 
 
 func _test_mods() -> void:
