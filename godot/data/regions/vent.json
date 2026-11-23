@@ -74,6 +74,11 @@
     "hold_time": 30.0,
     "waves": {"every": 6.0, "base": 4, "growth": 2, "kinds": ["fletri", "plongeur"], "second_share": 0.4, "big": "menhir", "big_from": 2},
     "idle": {"every": 3.5, "max": 6, "kind": "fletri"},
+    "spots": [
+      {"dist": 1825, "side": -0.72, "zone": 210.0, "hold_time": 25.0, "size": 0.8, "life_radius": 620.0},
+      {"dist": 2475, "side": 0.66, "zone": 210.0, "hold_time": 25.0, "size": 0.8, "life_radius": 620.0},
+      {"dist": 1650, "side": 0.0}
+    ],
     "reward": {"points": 1},
     "life_radius": 840.0,
     "life_color": "vent/clair",

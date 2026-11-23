@@ -211,6 +211,10 @@ func _run() -> void:
 	print("Cœur des rafales")
 	p.fire_cd = 0.0
 	var heart = main.hearts["vent"]
+	# Les deux autres Cœurs de la région sont déjà purifiés : le Grand Cœur ouvre l'arène.
+	for h in main.region_hearts["vent"]:
+		if h != heart:
+			game.flags[h.flag] = true
 	var arena = main.arenas["vent"]
 	check(heart.state == "fletri" and arena.state == "fermee", "Cœur flétri, arène fermée")
 	_place(heart.center + Vector2(heart.zone * 0.6, 0))

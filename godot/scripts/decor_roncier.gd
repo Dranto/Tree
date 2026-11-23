@@ -31,7 +31,6 @@ func spawn() -> void:
 	r.seed = int(cfg.get("seed", 8))
 	var mid: float = Regions.angle_of(region)
 	var half: float = Regions.half_width()
-	var center: Vector2 = Regions.center(region)
 	var h := 2850.0
 	var brambles := int(cfg.get("brambles", 130))
 	var clear_center := float(cfg.get("clear_center", 340.0))
@@ -45,7 +44,7 @@ func spawn() -> void:
 		var sd := r.randi()
 		if absf(p.x) > h or absf(p.y) > h or Regions.weight(p, region) < 0.6:
 			continue
-		if bush and (p.distance_to(center) < clear_center or p.length() < clear_seed):
+		if bush and (Regions.near_heart(region, p, clear_center) or p.length() < clear_seed):
 			continue
 		var t = F.DecorBush.new() if bush else F.DecorBramble.new()
 		t.position = p

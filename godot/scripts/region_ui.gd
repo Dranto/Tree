@@ -23,7 +23,7 @@ static func full_name(id: String) -> String:
 
 
 ## Avancement : {sanctuaires: [ravivés, total], autels: [trouvés, total], secrets: [trouvés, total],
-## coeur: purifié ?, boss: vaincu ?}.
+## coeurs: [purifiés, total], coeur: tous purifiés ?, boss: vaincu ?}.
 static func progress(id: String, flags: Dictionary = Game.flags) -> Dictionary:
 	var d := Regions.def(id)
 	var out := {}
@@ -35,6 +35,7 @@ static func progress(id: String, flags: Dictionary = Game.flags) -> Dictionary:
 			if bool(flags.get(pair[2] + str(spot.get("id", "")), false)):
 				done += 1
 		out[pair[0]] = [done, total]
+	out["coeurs"] = [Regions.hearts_done(id, flags), Regions.heart_count(id)]
 	out["coeur"] = bool(flags.get(Regions.heart_flag(id), false))
 	out["boss"] = bool(flags.get(Regions.boss_flag(id), false))
 	return out
@@ -50,13 +51,15 @@ static func summary(id: String, flags: Dictionary = Game.flags) -> String:
 	return " · ".join(parts)
 
 
-## Où en est la région : « Boss vaincu », « Cœur purifié », ou "" tant que rien n'est fait.
+## Où en est la région : « région purifiée », « Cœurs purifiés », « 1 / 3 Cœurs », ou "" tant que rien n'est fait.
 static func state(id: String, flags: Dictionary = Game.flags) -> String:
 	var p := progress(id, flags)
 	if p["boss"]:
 		return "région purifiée"
 	if p["coeur"]:
-		return "Cœur purifié"
+		return "Cœurs purifiés" if p["coeurs"][1] > 1 else "Cœur purifié"
+	if p["coeurs"][0] > 0:
+		return "%d / %d Cœurs" % p["coeurs"]
 	return ""
 
 

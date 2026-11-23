@@ -1,5 +1,7 @@
-## Séquence « région purifiée », lancée quand le boss d'une région est vaincu : le monde reverdit,
-## un texte de fin, les statistiques de la partie, puis « Continuer à jouer » ou « Retour au titre ».
+## Écran plein de fin (le monde reverdit, un texte, les statistiques, puis « Continuer à jouer » ou
+## « Retour au titre »). Depuis le jalon 10, il ne sert plus que de base à l'épilogue de la finale
+## (epilogue.gd) : un boss régional vaincu lance une célébration sur place, sans pause
+## (region_fanfare.gd). Ci-dessous, la description d'origine de la séquence.
 ## Les textes viennent de la région (« ending » de data/regions/<id>.json) ; quand toutes les
 ## régions sont purifiées, c'est la fin de l'aventure (Objectives.ending_texts). Tout est dessiné
 ## par le code (voir _draw) ; les textes et les boutons sont des nœuds Control avec le thème commun.

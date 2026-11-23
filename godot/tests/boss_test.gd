@@ -76,6 +76,13 @@ func _run() -> void:
 	heart.progress = heart.hold_time - 0.2
 	await _steps(30)
 	check(heart.state == "purifie" and game.flags.get(heart.flag, false) == true, "30 s tenues : Cœur purifié, drapeau posé")
+	check(heart.great and main.region_hearts[arena.region].size() == 3, "c'est le Grand Cœur, l'un des trois de la région")
+	check(arena.state == "fermee" and not game.flags.get(arena.region + "_coeur_purifie", false), "un Cœur sur trois : l'arène reste scellée")
+	for h in main.region_hearts[arena.region]:
+		if h != heart:
+			game.flags[h.flag] = true
+	await _steps(5)
+	check(game.flags.get(arena.region + "_coeur_purifie", false), "les trois Cœurs purifiés : drapeau de la région posé")
 	check(arena.state == "ouverte", "l'arène s'ouvre")
 	check(not heart.bar.visible, "la barre du Cœur disparaît")
 	await _steps(150)

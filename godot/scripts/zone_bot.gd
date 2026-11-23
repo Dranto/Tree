@@ -79,9 +79,12 @@ func set_region(reg: String, build: String) -> void:
 	set_build(build)
 
 
-## Cœur et arène de la région jouée.
+## Cœur de la région jouée à purifier (le plus proche du joueur, ou celui qu'il assiège), et arène.
 func heart_of(main):
-	return main.hearts.get(region, main.heart) if "hearts" in main else main.heart
+	var s = main.siege_heart()
+	if s != null and s.region == region:
+		return s
+	return main.next_heart(region, main.player.position)
 
 
 func arena_of(main):

@@ -22,6 +22,12 @@ var _goal_text: Label
 var _goal_region: Label
 var _legend: VBoxContainer
 var t := 0.0
+## Régions purifiées depuis la dernière ouverture de la carte (quest_ui, célébration) : à l'ouverture,
+## leur secteur reverdit et leur sceau se brise sous les yeux du joueur (REVEAL_TIME secondes).
+var pending_reveal: Array = []
+## Animations en cours : région -> instant (t) où elle a commencé.
+var _reveal: Dictionary = {}
+const REVEAL_TIME := 3.2
 
 
 ## Un signe de la légende, avec la même forme que sur la carte.
@@ -101,8 +107,8 @@ func _build_legend() -> void:
 		["breach", _breach_color(), RegionUi.UNDER_SEED_NAME, RegionUi.finale_summary()],
 		["sanctuary", Color("9ad7ff"), "Sanctuaire", ""],
 		["altar", Color("f2d06b"), "Autel découvert", ""],
-		["heart", Color("c84b44"), "Cœur de flétrissure", ""],
-		["arena", Color("e0675e"), "Arène du boss", ""],
+		["heart", Color("c84b44"), "Cœur de flétrissure", "trois par région"],
+		["arena", Color("e0675e"), "Arène du boss", "scellée tant qu'un Cœur vit"],
 		["player", Color.WHITE, "Toi", ""],
 	]:
 		_legend_row(e)
@@ -155,6 +161,10 @@ func _draw() -> void:
 
 
 func open() -> void:
+	_reveal = {}
+	for reg in pending_reveal:
+		_reveal[reg] = t + 0.35
+	pending_reveal = []
 	_build_legend()
 	_layout()
 	_rebuild_texture()
@@ -241,18 +251,34 @@ func draw_map(v: Control) -> void:
 		if Game.flags.get("autel_" + str(n.get("id")), false):
 			draw_glyph(v, "altar", to_map(n.position, s), Color("f2d06b"), true, 1.0)
 
-	# Le Cœur et l'arène de chaque région.
-	for reg in main.hearts:
-		var heart = main.hearts[reg]
-		var purified := bool(Game.flags.get(heart.flag, false))
-		var hc := to_map(heart.center, s)
-		draw_glyph(v, "heart", hc, Color("7fd36b") if purified else Color("c84b44"), true, 1.0)
-		_text(v, font, hc + Vector2(-60, 24), "Cœur", Color("e9e2c8"))
+	# Les Cœurs et l'arène de chaque région : l'arène est scellée tant qu'un Cœur vit, ouverte ensuite,
+	# et son sceau brisé une fois le boss vaincu.
+	for reg in main.arenas:
+		var list: Array = main.region_hearts.get(reg, [main.hearts[reg]]) if "region_hearts" in main else [main.hearts[reg]]
+		for heart in list:
+			var hc := to_map(heart.center, s)
+			draw_glyph(v, "heart", hc, Color("7fd36b") if heart.flag_set() else Color("c84b44"), true, 0.8 if not heart.great else 1.0)
 		var arena = main.arenas[reg]
 		var beaten := bool(Game.flags.get(arena.flag, false))
+		var open_ := bool(Game.flags.get(Regions.heart_flag(reg), false))
 		var ac := to_map(arena.center, s)
-		draw_glyph(v, "arena", ac, Color("7fd36b") if beaten else RegionUi.tint(reg).lightened(0.15), true, 1.0)
+		var rk := _reveal_k(reg)
+		if beaten and rk < 1.0:
+			# Le sceau se brise pendant l'animation de la région qui reverdit.
+			draw_seal(v, ac, RegionUi.tint(reg).lightened(0.15), rk)
+		elif beaten:
+			draw_glyph(v, "arena", ac, Color("7fd36b"), true, 1.0)
+			draw_seal(v, ac, Color("7fd36b"), 1.0)
+		elif open_:
+			draw_glyph(v, "arena", ac, RegionUi.tint(reg).lightened(0.15), true, 1.0)
+		else:
+			draw_seal(v, ac, RegionUi.tint(reg).lightened(0.15), 0.0)
 		_text(v, font, ac + Vector2(-70, 4), "Arène", Color("e9e2c8"))
+		var n := Regions.hearts_done(reg, Game.flags)
+		var total := list.size()
+		var label := "Cœurs %d / %d" % [n, total] if total > 1 else "Cœur"
+		var gc := to_map(main.hearts[reg].center, s)
+		_text(v, font, gc + Vector2(-60, 26), label, Color("e9e2c8"))
 
 	# Objectif : un anneau qui bat autour de la cible.
 	var goal = Objectives.target_pos(Objectives.followed())
@@ -291,6 +317,22 @@ func _draw_region(v: Control, reg: String, s: Vector2, font: Font) -> void:
 	for i in 13:
 		pts.append(to_map(Vector2.from_angle(a + h - 2.0 * h * i / 12.0) * far, s))
 	v.draw_colored_polygon(pts, Color(tint, 0.13))
+	# Région purifiée : un voile vert ; à l'ouverture qui suit sa purification, il avance de la graine
+	# vers le bord du monde (la région reverdit sous les yeux du joueur).
+	if bool(Game.flags.get(Regions.boss_flag(reg), false)):
+		var k := _reveal_k(reg)
+		var reach_ := lerpf(Regions.INNER, far, Anim.ease_out(k))
+		var green := PackedVector2Array()
+		for i in 13:
+			green.append(to_map(Vector2.from_angle(a - h + 2.0 * h * i / 12.0) * Regions.INNER, s))
+		for i in 13:
+			green.append(to_map(Vector2.from_angle(a + h - 2.0 * h * i / 12.0) * reach_, s))
+		v.draw_colored_polygon(green, Color(ALIVE.lightened(0.2), 0.16 + 0.2 * (1.0 - k) * float(k > 0.0)))
+		if k < 1.0 and k > 0.0:
+			var front := PackedVector2Array()
+			for i in 25:
+				front.append(to_map(Vector2.from_angle(a - h + 2.0 * h * i / 24.0) * reach_, s))
+			v.draw_polyline(front, Color(Color("b8f09a"), 0.9 * (1.0 - k)), 3.0)
 	var edge1 := PackedVector2Array([to_map(Vector2.from_angle(a - h) * Regions.INNER, s), to_map(Vector2.from_angle(a - h) * far, s)])
 	var edge2 := PackedVector2Array([to_map(Vector2.from_angle(a + h) * Regions.INNER, s), to_map(Vector2.from_angle(a + h) * far, s)])
 	v.draw_polyline(edge1, Color(tint, 0.55), 1.5)
@@ -310,6 +352,34 @@ func _draw_region(v: Control, reg: String, s: Vector2, font: Font) -> void:
 func _text(v: Control, font: Font, pos: Vector2, s: String, color: Color) -> void:
 	v.draw_string_outline(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 4, Color(0, 0, 0, 0.8))
 	UiAudit.draw_text(v, "carte", font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, color, v.get_global_transform())
+
+
+## Avancée (0 à 1) de l'animation d'une région qui reverdit sur la carte ; 1 sans animation.
+func _reveal_k(reg: String) -> float:
+	if not _reveal.has(reg):
+		return 1.0
+	return clampf((t - float(_reveal[reg])) / REVEAL_TIME, 0.0, 1.0)
+
+
+## Sceau d'une arène : un anneau à sept pointes, entier tant que les Cœurs vivent (k = 0) ; ses éclats
+## s'écartent et s'éteignent à mesure qu'il se brise (k de 0 à 1).
+static func draw_seal(ci: CanvasItem, c: Vector2, color: Color, k: float) -> void:
+	var dark := Color(0.04, 0.05, 0.04, 0.9)
+	var spread := 9.0 * k * k
+	var fade := 1.0 - 0.75 * k
+	for i in 7:
+		var a0 := TAU * i / 7.0 - PI / 2.0
+		var off := Vector2.from_angle(a0 + PI / 7.0) * spread
+		ci.draw_arc(c + off, 13.0, a0 + 0.06, a0 + TAU / 7.0 - 0.06, 6, Color(dark, dark.a * fade), 5.0)
+		ci.draw_arc(c + off, 13.0, a0 + 0.06, a0 + TAU / 7.0 - 0.06, 6, Color(color, fade), 2.5)
+		var tip := c + off + Vector2.from_angle(a0) * 13.0
+		ci.draw_line(tip, tip + Vector2.from_angle(a0) * 5.0, Color(color, fade), 2.0)
+	if k <= 0.0:
+		# Le verrou au centre : scellée.
+		ci.draw_rect(Rect2(c - Vector2(4, 2), Vector2(8, 7)), color)
+		ci.draw_arc(c + Vector2(0, -2), 3.5, PI, TAU, 8, color, 1.8)
+	elif k < 1.0:
+		ci.draw_circle(c, 3.0 + 9.0 * k, Color(Color("d8ffc0"), 0.6 * (1.0 - k)))
 
 
 ## Couleur de la brèche sous la graine : éteinte tant qu'elle est scellée, rouge braise ouverte, verte vaincue.

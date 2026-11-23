@@ -104,6 +104,22 @@ func _run() -> void:
 	check(save.load_into(main, PATH), "une sauvegarde du format 3 se charge")
 	check(game.flags.get("ronce_fin_vue", false) and not game.flags.has("fin_ronce_vue"), "« fin_ronce_vue » devient « ronce_fin_vue »")
 	check(not game.flags.has("fin_aventure_vue") and game.flags.get("ronce_boss_vaincu", false), "la fin de l'aventure n'est pas marquée vue, le boss reste vaincu")
+	# Version 5 -> 6 (trois Cœurs par région) : un Cœur purifié en version 5 vaut les trois.
+	_write({"format": "seve-save", "version": 5, "game": {"level": 18, "flags": {"ronce_coeur_purifie": true, "points_ronce_coeur": true, "obj_coeur": true}}})
+	check(save.load_into(main, PATH), "une sauvegarde du format 5 se charge")
+	var all3 := true
+	for i in 3:
+		all3 = all3 and game.flags.get("ronce_coeur%d_purifie" % (i + 1), false)
+	check(all3 and game.flags.get("ronce_coeur_purifie", false), "Cœur purifié en version 5 : les trois Cœurs de Ronce le sont")
+	check(not game.flags.has("spore_coeur1_purifie"), "les autres régions ne changent pas")
+	await process_frame
+	await physics_frame
+	await physics_frame
+	var ok_hearts := true
+	for h in main.region_hearts["ronce"]:
+		ok_hearts = ok_hearts and h.state == "purifie"
+	check(ok_hearts and main.arenas["ronce"].state != "fermee", "les trois Cœurs sont purifiés en jeu, l'arène est ouverte")
+	check(game.flags.get("points_ronce_coeur", false), "la récompense déjà donnée n'est pas redonnée")
 
 	save.delete_save(PATH)
 	for f in DirAccess.get_files_at("user://tests"):

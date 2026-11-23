@@ -1168,14 +1168,17 @@ func _scenario_quetes() -> void:
 	Game.flags["ronce_coeur_purifie"] = true
 	Game.flags["ronce_boss_vaincu"] = true
 	Objectives.check()
+	# Célébration de la région, sur place et sans pause (region_fanfare.gd) : le médaillon où la région
+	# reverdit et son sceau se brise, puis les textes.
 	q.start_ending()
 	if tag == "1920x1080":
-		q.ending.set_time(6.0)
+		q.fanfare.set_time(2.3)
 		await _frames(2)
-		await _shot("fin_arbre", "fin")
-	q.ending.set_time(10.0)
+		await _shot("region_purifiee_sceau", "jeu")
+	q.fanfare.set_time(4.0)
 	await _frames(2)
-	await _shot("fin_" + tag, "fin")
+	await _shot("region_purifiee_" + tag, "jeu")
+	q.fanfare.finish()
 
 
 # --- Outils ---

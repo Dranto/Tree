@@ -1,4 +1,5 @@
-## Interface des objectifs : suivi à l'écran et flèche, journal (J), carte (M) et fin de la tranche.
+## Interface des objectifs : suivi à l'écran et flèche, journal (J), carte (M), célébration d'une
+## région purifiée (sur place, sans pause : region_fanfare.gd) et épilogue de la finale.
 ## La scène de jeu en crée une seule (voir main.gd). Chaque écran vit dans son propre calque pour ne
 ## pas toucher au HUD : suivi sous l'Arbre de vie, journal et carte au-dessus, fin au-dessus de tout.
 extends Node
@@ -6,11 +7,11 @@ extends Node
 const Tracker = preload("res://scripts/objective_tracker.gd")
 const Journal = preload("res://scripts/journal.gd")
 const WorldMap = preload("res://scripts/world_map.gd")
-const Ending = preload("res://scripts/ending.gd")
+const Fanfare = preload("res://scripts/region_fanfare.gd")
 const Epilogue = preload("res://scripts/epilogue.gd")
 
-## Délai entre la mort de la Mère-Ronce et le début de la séquence de fin (la vague de vie passe).
-const ENDING_DELAY := 5.0
+## Délai entre la mort d'un boss régional et sa célébration (l'annonce de la victoire passe).
+const ENDING_DELAY := 3.5
 ## Délai entre la mort de la Flétrissure et l'épilogue (le creux refleurit).
 const EPILOGUE_DELAY := 4.0
 
@@ -18,7 +19,8 @@ var main
 var tracker
 var journal
 var world_map
-var ending
+## Célébration « région purifiée » en cours ou passée (region_fanfare.gd) : le jeu continue dessous.
+var fanfare
 ## Épilogue et générique de l'aventure, après la finale (epilogue.gd).
 var epilogue
 ## "" (rien d'ouvert), "journal" ou "carte".
@@ -54,9 +56,14 @@ func _ready() -> void:
 	end_layer.layer = 30
 	end_layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(end_layer)
-	ending = Ending.new()
-	end_layer.add_child(ending)
-	ending.closed.connect(_on_ending_closed)
+	# La célébration d'une région : sous le journal et la carte, au-dessus du suivi d'objectif.
+	var fanfare_layer := CanvasLayer.new()
+	fanfare_layer.layer = 7
+	fanfare_layer.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(fanfare_layer)
+	fanfare = Fanfare.new()
+	fanfare.main = main
+	fanfare_layer.add_child(fanfare)
 	epilogue = Epilogue.new()
 	end_layer.add_child(epilogue)
 	epilogue.closed.connect(_on_ending_closed)
@@ -89,7 +96,7 @@ func key_name(action: String) -> String:
 
 
 func _input(event: InputEvent) -> void:
-	if (ending.active and ending.visible) or (epilogue.active and epilogue.visible):
+	if epilogue.active and epilogue.visible:
 		return
 	if event.is_action_pressed("toggle_journal"):
 		toggle("journal")
@@ -104,7 +111,7 @@ func _input(event: InputEvent) -> void:
 
 ## Une fenêtre modale (Arbre, pause, fin) est déjà ouverte : le journal et la carte attendent.
 func _blocked() -> bool:
-	return main.tree_ui.visible or main.pause_menu.visible or ending.active or epilogue.active or (get_tree().paused and current == "")
+	return main.tree_ui.visible or main.pause_menu.visible or epilogue.active or (get_tree().paused and current == "")
 
 
 func toggle(which: String) -> void:
@@ -139,10 +146,10 @@ func _veil() -> void:
 		main.screen_fx.fade(Art.c("decor"), 0.45, 0.0, main.screen_fx.FADE_PANEL)
 
 
-## Le suivi s'efface par-dessus l'Arbre de vie (il couvre tout l'écran), pendant la fin et pendant
-## le combat de boss (seules les informations du combat restent).
+## Le suivi s'efface par-dessus l'Arbre de vie (il couvre tout l'écran), pendant l'épilogue, pendant
+## le combat de boss (seules les informations du combat restent) et pendant la célébration d'une région.
 func tracker_shown() -> bool:
-	return not main.tree_ui.visible and not ending.active and not epilogue.active and not main.in_boss_fight()
+	return not main.tree_ui.visible and not epilogue.active and not main.in_boss_fight() and not fanfare.active
 
 
 func _on_ending_closed() -> void:
@@ -152,8 +159,8 @@ func _on_ending_closed() -> void:
 
 func _process(delta: float) -> void:
 	_tracker_layer.visible = tracker_shown()
-	# Fin de la tranche : une fois le boss vaincu, après un court délai, une seule fois.
-	if not ending_enabled or ending.active or epilogue.active:
+	# Célébration d'une région : une fois son boss vaincu, après un court délai, une seule fois.
+	if not ending_enabled or fanfare.active or epilogue.active:
 		return
 	# Épilogue : la Flétrissure vaincue, après un court délai, une seule fois.
 	if Objectives.epilogue_due() and not Objectives.ending_due():
@@ -175,16 +182,15 @@ func _process(delta: float) -> void:
 		_ending_wait = 0.0
 
 
-## Lance la séquence de fin tout de suite (appelée après le délai, ou par les tests).
+## Lance la célébration de la région due tout de suite (appelée après le délai, ou par les tests) :
+## sans pause ni écran plein, le joueur continue à jouer. La carte rejouera la région qui reverdit.
 func start_ending() -> void:
-	if current != "":
-		close()
-	if main.pause_menu.visible:
-		main.pause_menu.close()
+	var reg := Objectives.ending_region()
+	if reg == "":
+		return
+	world_map.pending_reveal.append(reg)
 	_tracker_layer.visible = false
-	# Les annonces en attente reprendront après « Continuer à jouer » : rien par-dessus la fin.
-	main.hud.get_parent().visible = false
-	ending.begin(main)
+	fanfare.begin(main, reg)
 
 
 ## Lance l'épilogue tout de suite (appelée après le délai, ou par les tests et les robots) : le

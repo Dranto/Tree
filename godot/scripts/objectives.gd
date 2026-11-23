@@ -251,6 +251,9 @@ func progress(o: Dictionary) -> Array:
 	match c.get("type", ""):
 		"flag_count":
 			return [mini(_count_flags(c, o), int(c["count"])), int(c["count"])]
+		"hearts":
+			var reg := str(o.get("region", ""))
+			return [Regions.hearts_done(reg, Game.flags), Regions.heart_count(reg)]
 		"counter":
 			return [mini(int(Game.flags.get(c["flag"], 0)), int(c["count"])), int(c["count"])]
 	return []
@@ -293,6 +296,10 @@ func condition_met(o: Dictionary) -> bool:
 			return Game.allocated.size() - 1 >= int(c["count"])
 		"flag":
 			return bool(Game.flags.get(c["flag"], false))
+		"hearts":
+			# Tous les Cœurs de la région de l'objectif (le drapeau de la région les vaut tous).
+			var reg := str(o.get("region", ""))
+			return Regions.hearts_done(reg, Game.flags) >= Regions.heart_count(reg)
 		"flag_count":
 			return _count_flags(c, o) >= int(c["count"])
 		"counter":
@@ -361,7 +368,8 @@ func target_pos(o: Dictionary):
 				return Vector2.ZERO
 			return f.center if f.holds(main.player.position) else f.descent_point()
 		"heart":
-			var h = main.hearts.get(str(o.get("region", "")), main.heart) if "hearts" in main else main.heart
+			# Le Cœur de la région le plus proche du joueur parmi ceux qui restent à purifier.
+			var h = main.next_heart(str(o.get("region", "")), main.player.position) if main.has_method("next_heart") else main.heart
 			return h.center if h != null else null
 		"arena":
 			var a = main.arenas.get(str(o.get("region", "")), main.arena) if "arenas" in main else main.arena

@@ -34,7 +34,6 @@ func spawn() -> void:
 	r.seed = int(cfg.get("seed", 33))
 	var mid: float = Regions.angle_of(region)
 	var half: float = Regions.half_width()
-	var center: Vector2 = Regions.center(region)
 	var arena: Vector2 = Regions.arena_center(region)
 	var arena_r := float(Regions.section(region, "boss").get("arena", {}).get("radius", 460.0))
 	var h := 2850.0
@@ -52,7 +51,7 @@ func spawn() -> void:
 		var sd := r.randi()
 		if absf(p.x) > h or absf(p.y) > h or Regions.weight(p, region) < 0.6:
 			continue
-		if solid and (p.distance_to(center) < clear_center or p.length() < clear_seed or p.distance_to(arena) < arena_r + 60.0):
+		if solid and (Regions.near_heart(region, p, clear_center) or p.length() < clear_seed or p.distance_to(arena) < arena_r + 60.0):
 			continue
 		var t: Flora.DecorTree
 		if cliff:

@@ -4,7 +4,7 @@
 ## Mère-Ronce. Son sol et son mur sont dessinés par les dessins de la région (Regions.art : ronces du
 ## roncier par défaut, champignons de Spore, pierres levées de Vent…).
 ##
-## - "fermee"  : tant que le Cœur n'est pas purifié, son mur (de ronces mortes dans le roncier) en interdit l'entrée ;
+## - "fermee"  : tant que les Cœurs de la région ne sont pas tous purifiés, son mur (de ronces mortes dans le roncier) en interdit l'entrée ;
 ## - "ouverte" : le Cœur est purifié, le mur s'écarte ; y entrer réveille le boss ;
 ## - "combat"  : le mur se referme derrière le joueur ; il peut se resserrer (start_shrink) ;
 ## - "vaincue" : Game.flags["<région>_boss_vaincu"] est posé, l'arène refleurit.
@@ -150,7 +150,7 @@ func _physics_process(delta: float) -> void:
 		if state != "vaincue":
 			state = "vaincue"
 			gap_open = 1.0
-	elif state == "fermee" and Game.flags.get(heart.flag, false):
+	elif state == "fermee" and Game.flags.get(Regions.heart_flag(region), false):
 		state = "ouverte"
 	match state:
 		"fermee":
@@ -301,7 +301,7 @@ func _draw() -> void:
 ## Cœur déjà purifié et le joueur posé dans l'arène.
 func autotest_begin() -> void:
 	autotest_build(12, Regions.branch_of(region))
-	Game.flags[heart.flag] = true
+	Game.flags[Regions.heart_flag(region)] = true
 	main.player.hp = Game.stats["max_hp"]
 	main.player.position = center + (heart.center - center).normalized() * (max_radius - 110.0)
 	main.player.reset_physics_interpolation()

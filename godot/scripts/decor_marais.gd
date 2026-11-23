@@ -35,7 +35,6 @@ func spawn() -> void:
 	r.seed = int(cfg.get("seed", 21))
 	var mid: float = Regions.angle_of(region)
 	var half: float = Regions.half_width()
-	var center: Vector2 = Regions.center(region)
 	var h := 2850.0
 	var clear_center := float(cfg.get("clear_center", 340.0))
 	var clear_seed := float(cfg.get("clear_seed", 560.0))
@@ -52,7 +51,7 @@ func spawn() -> void:
 			var rot := r.randf_range(-0.6, 0.6)
 			if absf(p.x) > h or absf(p.y) > h or Regions.weight(p, region) < 0.6:
 				continue
-			if kind == "log" and (p.distance_to(center) < clear_center or p.length() < clear_seed):
+			if kind == "log" and (Regions.near_heart(region, p, clear_center) or p.length() < clear_seed):
 				continue
 			var t
 			match kind:

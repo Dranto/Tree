@@ -16,6 +16,7 @@
 extends SceneTree
 
 
+const Regions = preload("res://scripts/regions.gd")
 const DT := 1.0 / 60.0
 ## Temps de jeu maximal, et temps sans objectif principal accompli au-delà duquel c'est un blocage.
 const MAX_TIME := 2700.0
@@ -113,7 +114,7 @@ func _run() -> void:
 		if not paused:
 			t += DT
 		_track()
-		if main.quest_ui.ending.active:
+		if main.quest_ui.fanfare.active:
 			await _ending()
 			continue
 		_invariants()
@@ -159,7 +160,8 @@ func _track() -> void:
 		_log_next += 60.0
 		print("ZONE %4d s  niveau %2d  objectif %-14s robot : %-32s vie %d/%d  morts %d" % [int(t), game.level, obj.current(region).get("id", "—"), bot.goal, int(main.player.hp), int(game.stats["max_hp"]), main.deaths])
 		if _is_heart_step(obj.current(region)):
-			print("       Cœur : %s, %.1f s tenues, joueur à %d px du centre (zone %d), %d ennemis" % [main.heart.state, main.heart.progress, int(main.player.position.distance_to(main.heart.center)), int(main.heart.zone), main.enemies.size()])
+			var h = _heart()
+			print("       Cœur %d/%d : %s, %.1f s tenues, joueur à %d px du centre (zone %d), %d ennemis" % [h.index + 1, h.count, h.state, h.progress, int(main.player.position.distance_to(h.center)), int(h.zone), main.enemies.size()])
 
 
 func _finished() -> bool:
@@ -204,10 +206,10 @@ func _invariants() -> void:
 		var r: Rect2 = hud._banner.get_global_rect()
 		if tracker_on and r.intersects(q.tracker._panel.get_global_rect()):
 			_bad("annonce sur le cadre d'objectif", banner)
-		for bar in [main.heart.bar, main.arena.bar]:
+		for bar in [_heart().bar, main.arena.bar]:
 			if bar.visible and r.intersects(_bar_rect(bar)):
 				_bad("annonce sur une barre de combat", banner)
-	for bar in [main.heart.bar, main.arena.bar]:
+	for bar in [_heart().bar, main.arena.bar]:
 		if bar.visible and tracker_on and q.tracker._panel.get_global_rect().intersects(_bar_rect(bar)):
 			_bad("cadre d'objectif sur une barre de combat")
 	# Le cadre suit l'objectif en cours.
@@ -226,6 +228,12 @@ func _bar_rect(bar) -> Rect2:
 
 
 ## Vrai pour l'étape « purifier le Cœur » de la région (sa cible est le Cœur).
+## Le Cœur qui compte en ce moment : celui qu'on assiège, sinon le prochain à purifier.
+func _heart():
+	var h = main.siege_heart()
+	return h if h != null else main.next_heart(region, main.player.position)
+
+
 func _is_heart_step(o: Dictionary) -> bool:
 	return str(o.get("target", {}).get("type", "")) == "heart"
 
@@ -248,10 +256,13 @@ func _coherence(where: String) -> void:
 	for o in obj.list():
 		if obj.condition_met(o) and not obj.is_done(o["id"]):
 			problems.append("« %s » rempli mais pas accompli" % o["id"])
-	var purified: bool = game.flags.get(main.heart.flag, false)
+	var purified: bool = game.flags.get(Regions.heart_flag(region), false)
 	var beaten: bool = game.flags.get(main.arena.flag, false)
-	if purified != (main.heart.state == "purifie"):
-		problems.append("Cœur %s, drapeau %s" % [main.heart.state, purified])
+	for h in main.region_hearts[region]:
+		if h.flag_set() != (h.state == "purifie"):
+			problems.append("Cœur %d %s, drapeau %s" % [h.index + 1, h.state, h.flag_set()])
+	if purified != (Regions.hearts_done(region, game.flags) == Regions.heart_count(region)):
+		problems.append("drapeau de la région %s, %d Cœurs purifiés" % [purified, Regions.hearts_done(region, game.flags)])
 	if beaten and main.arena.state != "vaincue":
 		problems.append("arène %s, boss vaincu" % main.arena.state)
 	if not beaten and purified and not main.arena.state in ["ouverte", "combat"]:
@@ -366,7 +377,7 @@ func _reload(why: String) -> void:
 # --- Évènements provoqués ---
 
 func _forced_events() -> void:
-	var heart = main.heart
+	var heart = _heart()
 	var arena = main.arena
 	if heart.state == "siege" and heart.progress > 12.0 and not done_events.has("mort_siege"):
 		done_events["mort_siege"] = true
@@ -445,7 +456,7 @@ func _resolutions(where: String) -> void:
 			"cadre d'objectif": main.quest_ui.tracker._panel.get_global_rect() if main.quest_ui._tracker_layer.visible else Rect2(),
 			"annonce": main.hud._banner.get_global_rect() if main.hud.visible_banner() != "" else Rect2(),
 			"barre du boss": _bar_rect(main.arena.bar) if main.arena.bar.visible else Rect2(),
-			"barre du Cœur": _bar_rect(main.heart.bar) if main.heart.bar.visible else Rect2(),
+			"barre du Cœur": _bar_rect(_heart().bar) if _heart().bar.visible else Rect2(),
 		}
 		for s in main.hud._slots:
 			rects["emplacement %d" % s.index] = s.get_global_rect()
@@ -462,18 +473,19 @@ func _resolutions(where: String) -> void:
 
 func _ending() -> void:
 	var q = main.quest_ui
-	check(not main.hud.get_parent().visible and not q._tracker_layer.visible, "fin de la tranche : rien de l'interface de jeu par-dessus")
-	check(paused and game.flags.get(region + "_fin_vue", false), "fin de la tranche : jeu en pause, fin notée comme vue")
-	# Une greffe ramassée pendant la séquence de fin (transition) n'est pas perdue.
+	var reg: String = q.fanfare.region
+	check(not paused and main.hud.get_parent().visible, "célébration : sans pause, l'interface de jeu reste là")
+	check(game.flags.get(reg + "_fin_vue", false), "célébration : notée comme vue dès le début")
+	check(not q._tracker_layer.visible, "célébration : le cadre d'objectif s'efface le temps de la célébration")
+	# Une greffe ramassée pendant la célébration n'est pas perdue.
 	for g in main.orbs_layer.get_children():
 		if _is_graft(g) and not g.is_queued_for_deletion():
 			var id: String = g.graft_id
 			g.pick_up()
-			check(game.has_graft(id), "greffe ramassée pendant la fin : dans l'inventaire")
-	q.ending.set_time(30.0)
-	q.ending._on_continue()
+			check(game.has_graft(id), "greffe ramassée pendant la célébration : dans l'inventaire")
+	q.fanfare.set_time(q.fanfare.duration)
 	await _frames(2)
-	check(not paused and main.hud.get_parent().visible and q._tracker_layer.visible, "« Continuer à jouer » : l'interface revient")
+	check(not q.fanfare.active and q._tracker_layer.visible, "fin de la célébration : le cadre d'objectif revient")
 	_coherence("après la fin")
 	pending_reload = "après la fin"
 

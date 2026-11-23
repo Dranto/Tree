@@ -38,18 +38,18 @@
     },
     {
       "id": "coeur", "region": "ronce", "main": true, "milestone": true,
-      "title": "Purifier le Cœur de flétrissure",
-      "text": "Au fond du roncier, tiens la zone du Cœur pendant que les vagues de Flétris déferlent.",
-      "condition": {"type": "flag", "flag": "ronce_coeur_purifie"},
+      "title": "Purifier les trois Cœurs de flétrissure",
+      "text": "Trois Cœurs gardent l'arène du roncier. Tiens la zone de chacun pendant que les vagues de Flétris déferlent.",
+      "condition": {"type": "hearts"},
       "target": {"type": "heart"}
     },
     {
       "id": "boss", "region": "ronce", "main": true, "milestone": true,
       "title": "Vaincre la Mère-Ronce",
-      "text": "L'arène s'est ouverte au-delà du Cœur. Entre, et libère le roncier.",
+      "text": "L'arène s'est ouverte au-delà des Cœurs. Entre, et libère le roncier.",
       "condition": {"type": "flag", "flag": "ronce_boss_vaincu"},
       "target": {"type": "arena"},
-      "reward": {"text": "2 points d'arbre, une greffe et la fin de la tranche"}
+      "reward": {"text": "2 points d'arbre et une greffe"}
     },
     {
       "id": "spore_sanctuaire", "region": "spore", "main": true,
@@ -76,15 +76,15 @@
     },
     {
       "id": "spore_coeur", "region": "spore", "main": true, "milestone": true,
-      "title": "Purifier le Cœur de moisissure",
-      "text": "Au fond du marais, tiens la zone du Cœur pendant que les vagues déferlent. Gare aux flaques des Traîne-vase.",
-      "condition": {"type": "flag", "flag": "spore_coeur_purifie"},
+      "title": "Purifier les trois Cœurs de moisissure",
+      "text": "Trois Cœurs gardent l'arène du marais. Tiens la zone de chacun pendant que les vagues déferlent. Gare aux flaques des Traîne-vase.",
+      "condition": {"type": "hearts"},
       "target": {"type": "heart"}
     },
     {
       "id": "spore_boss", "region": "spore", "main": true, "milestone": true,
       "title": "Vaincre l'Amanite-Mère",
-      "text": "L'arène s'est ouverte au-delà du Cœur. Sors des nuages de spores, et libère le marais.",
+      "text": "L'arène s'est ouverte au-delà des Cœurs. Sors des nuages de spores, et libère le marais.",
       "condition": {"type": "flag", "flag": "spore_boss_vaincu"},
       "target": {"type": "arena"},
       "reward": {"text": "2 points d'arbre et une greffe"}
@@ -114,15 +114,15 @@
     },
     {
       "id": "vent_coeur", "region": "vent", "main": true, "milestone": true,
-      "title": "Purifier le Cœur des rafales",
-      "text": "Au milieu des plateaux, tiens la zone du Cœur malgré le vent et les Piqueurs qui plongent.",
-      "condition": {"type": "flag", "flag": "vent_coeur_purifie"},
+      "title": "Purifier les trois Cœurs des rafales",
+      "text": "Trois Cœurs gardent l'aire du Harfang. Tiens la zone de chacun malgré le vent et les Piqueurs qui plongent.",
+      "condition": {"type": "hearts"},
       "target": {"type": "heart"}
     },
     {
       "id": "vent_boss", "region": "vent", "main": true, "milestone": true,
       "title": "Vaincre le Harfang de cendre",
-      "text": "Son aire s'est ouverte au-delà du Cœur. Méfie-toi de son ombre : quand elle se fige, il pique.",
+      "text": "Son aire s'est ouverte au-delà des Cœurs. Méfie-toi de son ombre : quand elle se fige, il pique.",
       "condition": {"type": "flag", "flag": "vent_boss_vaincu"},
       "target": {"type": "arena"},
       "reward": {"text": "2 points d'arbre et une greffe"}
@@ -152,15 +152,15 @@
     },
     {
       "id": "seve_coeur", "region": "seve", "main": true, "milestone": true,
-      "title": "Purifier le Cœur des sources",
-      "text": "Au fond de la vallée, tiens la zone du Cœur. Tue d'abord les Souches gorgées : elles soignent les autres.",
-      "condition": {"type": "flag", "flag": "seve_coeur_purifie"},
+      "title": "Purifier les trois Cœurs des sources",
+      "text": "Trois Cœurs gardent l'étang du Saule. Tiens la zone de chacun. Tue d'abord les Souches gorgées : elles soignent les autres.",
+      "condition": {"type": "hearts"},
       "target": {"type": "heart"}
     },
     {
       "id": "seve_boss", "region": "seve", "main": true, "milestone": true,
       "title": "Vaincre le Saule exsangue",
-      "text": "L'étang du Saule s'est ouvert au-delà du Cœur. Chaque coup qu'il te porte le soigne : ne reste pas sous ses branches.",
+      "text": "L'étang du Saule s'est ouvert au-delà des Cœurs. Chaque coup qu'il te porte le soigne : ne reste pas sous ses branches.",
       "condition": {"type": "flag", "flag": "seve_boss_vaincu"},
       "target": {"type": "arena"},
       "reward": {"text": "2 points d'arbre et une greffe"}
@@ -190,15 +190,15 @@
     },
     {
       "id": "aube_coeur", "region": "aube", "main": true, "milestone": true,
-      "title": "Purifier le Cœur de l'aurore",
-      "text": "Au milieu des falaises, tiens la zone du Cœur malgré les Lucioles qui affluent. Détourne les yeux des miroirs.",
-      "condition": {"type": "flag", "flag": "aube_coeur_purifie"},
+      "title": "Purifier les trois Cœurs de l'aurore",
+      "text": "Trois Cœurs gardent le cercle de la Phalène. Tiens la zone de chacun malgré les Lucioles qui affluent. Détourne les yeux des miroirs.",
+      "condition": {"type": "hearts"},
       "target": {"type": "heart"}
     },
     {
       "id": "aube_boss", "region": "aube", "main": true, "milestone": true,
       "title": "Vaincre la Phalène de verre",
-      "text": "Son cercle s'est ouvert au-delà du Cœur. Quand ses ailes blanchissent, sors du cône de lumière.",
+      "text": "Son cercle s'est ouvert au-delà des Cœurs. Quand ses ailes blanchissent, sors du cône de lumière.",
       "condition": {"type": "flag", "flag": "aube_boss_vaincu"},
       "target": {"type": "arena"},
       "reward": {"text": "2 points d'arbre et une greffe"}
@@ -228,15 +228,15 @@
     },
     {
       "id": "racine_coeur", "region": "racine", "main": true, "milestone": true,
-      "title": "Purifier le Cœur des cernes",
-      "text": "Au cœur de la forêt, tiens la zone du Cœur. Écarte-toi des Tertres quand ils lèvent les poings.",
-      "condition": {"type": "flag", "flag": "racine_coeur_purifie"},
+      "title": "Purifier les trois Cœurs des cernes",
+      "text": "Trois Cœurs gardent la clairière de l'Ancien. Tiens la zone de chacun. Écarte-toi des Tertres quand ils lèvent les poings.",
+      "condition": {"type": "hearts"},
       "target": {"type": "heart"}
     },
     {
       "id": "racine_boss", "region": "racine", "main": true, "milestone": true,
       "title": "Vaincre l'Ancien pétrifié",
-      "text": "La clairière de l'Ancien s'est ouverte au-delà du Cœur. Son pieu perce l'armure : ne reste pas dans sa ligne.",
+      "text": "La clairière de l'Ancien s'est ouverte au-delà des Cœurs. Son pieu perce l'armure : ne reste pas dans sa ligne.",
       "condition": {"type": "flag", "flag": "racine_boss_vaincu"},
       "target": {"type": "arena"},
       "reward": {"text": "2 points d'arbre et une greffe"}
