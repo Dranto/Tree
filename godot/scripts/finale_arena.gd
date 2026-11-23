@@ -432,10 +432,14 @@ func _draw_cave() -> void:
 	# Dix teintes concentriques, tracées en couronnes (lot « exact » : mêmes pixels que des disques
 	# empilés, mais sans redessiner dix fois le centre : le coût en rendu logiciel suit les pixels).
 	_floor_batch.exact = true
+	# Effondrement fini : le sol s'arrête au bord de l'île (le gouffre recouvre le reste ; en rendu
+	# logiciel, le coût suit les pixels remplis).
+	var keep := radius + 2.0 if collapse_k >= 1.0 else r
 	for i in 10:
 		var col := floor_dead.lerp(floor_alive, life).lightened(0.016 * i)
-		if i < 9:
-			_floor_batch.ring(c, r * (1.0 - i / 10.0), r * (1.0 - (i + 1) / 10.0), col)
+		var outer_i := minf(r * (1.0 - i / 10.0), keep)
+		if i < 9 and outer_i > r * (1.0 - (i + 1) / 10.0):
+			_floor_batch.ring(c, outer_i, r * (1.0 - (i + 1) / 10.0), col)
 		else:
 			_floor_batch.draw_circle(c, r * 0.1, col)
 	_floor_batch.flush(self)
@@ -522,10 +526,14 @@ func _draw_abyss() -> void:
 	_floor_batch.ring(c, outer, inner, abyss)
 	_floor_batch.flush(self)
 	# La lueur des braises au fond, plus vive près de l'île.
+	# Le fond rougeoie : des bandes de braise, plus vives au milieu du gouffre, qui ondulent.
 	var glow := Art.ec("cendre", "sombre")
-	for j in 3:
-		draw_arc(c, inner + 14.0 + 26.0 * j, 0.0, TAU, 96, Color(glow, (0.32 - 0.09 * j) * k), 22.0, true)
-	draw_arc(c, inner + 4.0, 0.0, TAU, 96, Color(Art.ec("cendre"), 0.55 * k), 4.0, true)
+	var mid := (inner + outer) * 0.5
+	for j in 2:
+		var w := (outer - inner) * (0.6 - 0.3 * j)
+		draw_arc(c, mid + 6.0 * sin(t * 0.8 + j), 0.0, TAU, 96, Color(glow.lerp(Art.ec("cendre"), 0.4 * j), (0.4 + 0.15 * j) * k), w, true)
+	# Sous la lèvre de l'île, l'ombre de la falaise, puis son bord éclairé par en dessous.
+	draw_arc(c, inner + 10.0, 0.0, TAU, 96, Color(0.0, 0.0, 0.0, 0.6 * k), 18.0, true)
 	# La lèvre de l'île : de la terre arrachée, en dents irrégulières sous le mur.
 	var lip := Art.c("sol_mort").darkened(0.5)
 	for i in 40:
@@ -533,6 +541,7 @@ func _draw_abyss() -> void:
 		var a2 := a + TAU / 40.0
 		var drop := rng_a.randf_range(14.0, 34.0) * k
 		draw_colored_polygon(PackedVector2Array([c + Vector2.from_angle(a) * inner, c + Vector2.from_angle(a2) * inner, c + Vector2.from_angle((a + a2) * 0.5) * (inner + drop)]), lip)
+	draw_arc(c, inner, 0.0, TAU, 96, Color(Art.ec("cendre", "clair"), 0.65 * k), 3.0, true)
 	# Les blocs qui tombent (puis flottent, très bas, en dérivant), de plus en plus petits.
 	var earth := Art.c("sol_mort").darkened(0.3)
 	for i in 30:
@@ -560,18 +569,20 @@ func _draw_abyss() -> void:
 
 
 ## Le mur de racines : de grosses racines brunes couchées en cercle, des radicelles qui pendent.
-## Il suit le rayon courant (resserrement de la phase 3).
+## Il suit le rayon courant (resserrement), ou reste au bord du gouffre après l'effondrement.
 func _draw_wall() -> void:
 	var c := center
+	# Après l'effondrement, le mur reste de l'autre côté du gouffre (l'île n'a plus que sa lèvre).
+	var wr := lerpf(radius, max_radius, collapse_k)
 	var bark := Art.ec("racine", "sombre").lerp(Art.c("decor"), 0.25)
 	var light := Art.ec("racine").darkened(0.15)
 	var n := _wall.size()
-	draw_arc(c, radius + 26.0, 0.0, TAU, 96, Color(Art.c("contour"), 0.8), 46.0, true)
+	draw_arc(c, wr + 26.0, 0.0, TAU, 96, Color(Art.c("contour"), 0.8), 46.0, true)
 	for i in n:
 		var w: Array = _wall[i]
 		var a := TAU * i / n + float(w[0])
 		var a2 := a + TAU / n * 1.6
-		var rr := radius + 18.0 + 8.0 * float(w[2])
+		var rr := wr + 18.0 + 8.0 * float(w[2])
 		var p1 := c + Vector2.from_angle(a) * rr
 		var p2 := c + Vector2.from_angle(a2) * (rr + 6.0)
 		var width := 18.0 * float(w[1])
@@ -586,7 +597,7 @@ func _draw_wall() -> void:
 	# Lueurs de sève prisonnières des racines (éteintes avant la victoire).
 	for i in 12:
 		var a := TAU * (i + 0.5) / 12.0
-		var q := c + Vector2.from_angle(a) * (radius + 20.0)
+		var q := c + Vector2.from_angle(a) * (wr + 20.0)
 		var on := 0.25 + 0.75 * bloom
 		draw_circle(q, 5.0, Color(Art.ec("seve" if bloom > 0.0 else "cendre", "clair"), (0.25 + 0.2 * sin(t * 1.7 + i)) * on))
 

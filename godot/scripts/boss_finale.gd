@@ -107,7 +107,7 @@ var buds: Array = []
 var strike_flash := -1.0
 var flash_kind := ""
 ## Transformation en seconde forme : temps écoulé (0 → TRANSFORM › time), -1 hors transformation.
-var transform := -1.0
+var morph_time := -1.0
 ## Seconde forme atteinte (phase 3 entamée).
 var unbound := false
 
@@ -125,10 +125,10 @@ func _setup() -> void:
 
 
 func _projectiles_step(delta: float) -> void:
-	if transform >= 0.0:
-		transform += delta
-		if transform >= TRANSFORM["time"]:
-			transform = -1.0
+	if morph_time >= 0.0:
+		morph_time += delta
+		if morph_time >= TRANSFORM["time"]:
+			morph_time = -1.0
 	_update_thorns(delta)
 	_update_clouds(delta)
 	_update_roots(delta)
@@ -184,16 +184,16 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 
 
 func transforming() -> bool:
-	return transform >= 0.0
+	return morph_time >= 0.0
 
 
 ## Avancée de la transformation du corps (0 : première forme, 1 : seconde forme).
 func form_k() -> float:
 	if not unbound:
 		return 0.0
-	if transform < 0.0:
+	if morph_time < 0.0:
 		return 1.0
-	return Anim.ease_out(clampf(transform / (TRANSFORM["time"] * TRANSFORM["morph"]), 0.0, 1.0))
+	return Anim.ease_out(clampf(morph_time / (TRANSFORM["time"] * TRANSFORM["morph"]), 0.0, 1.0))
 
 
 # --- Attaques ---
@@ -474,7 +474,7 @@ func _enter_phase(n: int) -> void:
 ## Ce qu'elle avait lancé s'éteint (rien ne frappe pendant la transformation).
 func _unbind() -> void:
 	unbound = true
-	transform = 0.0
+	morph_time = 0.0
 	transition = TRANSFORM["time"]
 	_clear_attacks()
 	strike_flash = -1.0

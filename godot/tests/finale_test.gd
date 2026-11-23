@@ -150,13 +150,20 @@ func _run() -> void:
 	check(seen.has("siphon") and seen.has("rafale"), "phase 2 : la sève et le vent (%s)" % ", ".join(seen.keys()))
 	boss.take_damage(boss.max_hp * 0.3, false)
 	check(await _until(func(): return boss.phase == 3), "sous 33 % de vie : phase 3")
-	check(await _until(func(): return finale.radius < finale.max_radius), "en phase 3 le mur de racines se resserre")
+	check(boss.unbound and boss.transforming(), "sous 33 % : elle prend sa seconde forme")
+	var hp_before: float = boss.hp
+	boss.take_damage(500.0, false)
+	check(boss.hp == hp_before, "invulnérable pendant la transformation")
+	check(await _until(func(): return finale.radius < finale.max_radius), "le creux s'effondre autour d'elle")
+	check(await _until(func(): return not boss.transforming() and finale.radius == finale.collapse_radius and finale.collapse_k == 1.0), "il ne reste qu'une île de radius_collapse au-dessus du gouffre")
+	check(boss.form_k() == 1.0, "la transformation est finie")
 	seen = {}
-	for i in 900:
+	for i in 1500:
 		if boss.attack != "":
 			seen[boss.attack] = true
 		await physics_frame
-	check(seen.has("lumiere") and seen.has("racines"), "phase 3 : la lumière et les racines (%s)" % ", ".join(seen.keys()))
+	check(seen.has("lumiere") and seen.has("racines"), "seconde forme : la lumière et les racines (%s)" % ", ".join(seen.keys()))
+	check(seen.has("tempete") and seen.has("floraison") and seen.has("aurore"), "seconde forme : les attaques combinées des six gardiens (%s)" % ", ".join(seen.keys()))
 
 	print("Mort face à la Flétrissure")
 	main.player_died()
