@@ -47,7 +47,7 @@ func _run() -> void:
 	var near := Painter.base_color(0.0, 0.0)
 	var mid := Painter.base_color(0.0, 450.0)
 	var deep := Painter.base_color(0.0, Painter.DEPTH)
-	check(near.a == 0.0 and mid.a == 1.0 and deep.a == 1.0, "fond transparent au bord du monde, opaque ensuite")
+	check(near.a == 1.0 and mid.a == 1.0 and deep.a == 1.0, "fond opaque dès le bord du monde")
 	check(deep.get_luminance() < 0.1, "fond sombre au loin (%.3f)" % deep.get_luminance())
 	# Chaque tuile se dessine, vite, et à l'identique.
 	var worst := 0.0

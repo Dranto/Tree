@@ -100,8 +100,8 @@ static func weight(id: String, angle: float) -> float:
 
 
 ## Couleur du fond à la profondeur « d » dans la direction « angle » : du ton du sol mort au bord du monde
-## vers « mid » puis « far », mélangée entre régions voisines ; transparente au bord même (le sol du
-## monde y passe encore) puis opaque.
+## vers « mid » puis « far », mélangée entre régions voisines. Toujours opaque : le sol, qui
+## déborde un peu du monde (ground.SIZE), est couvert, et le rendu ne dépend pas de lui.
 static func base_color(angle: float, d: float) -> Color:
 	var out := Color(0, 0, 0, 0)
 	var sum := 0.0
@@ -119,9 +119,9 @@ static func base_color(angle: float, d: float) -> Color:
 		out += Color(c.r * w, c.g * w, c.b * w, 0.0)
 		sum += w
 	if sum <= 0.0:
-		return Color(0.05, 0.05, 0.05, clampf(d / 100.0, 0.0, 1.0))
+		return Color(0.05, 0.05, 0.05, 1.0)
 	out = Color(out.r / sum, out.g / sum, out.b / sum, 1.0)
-	out.a = smoothstep(0.0, 100.0, d)
+	out.a = 1.0
 	return out
 
 
@@ -707,7 +707,7 @@ func _life() -> void:
 				var p := to_world(side, uu, q[1])
 				pts.append(p)
 				var w := weight(rid, p.angle())
-				cs.append(Color(green, w * 0.3 * (1.0 - smoothstep(0.0, 1500.0, q[1])) * smoothstep(0.0, 100.0, q[1])))
+				cs.append(Color(green, w * 0.3 * (1.0 - smoothstep(0.0, 1500.0, q[1])) * smoothstep(0.0, 30.0, q[1])))
 			if pts[0].distance_squared_to(pts[1]) < 1.0 and pts[2].distance_squared_to(pts[3]) < 1.0:
 				continue
 			b.draw_primitive(pts, cs)
