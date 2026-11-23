@@ -100,7 +100,7 @@ func _layout() -> void:
 
 ## Centre du médaillon : sous les annonces (hud.gd, 140 à 180 px du haut).
 func _medal_center() -> Vector2:
-	return Vector2(size.x / 2.0, 200.0 + 58.0 * _scale())
+	return Vector2(size.x / 2.0, 215.0 + 70.0 * _scale())
 
 
 ## Lance la célébration de la région (le boss vient de tomber).
@@ -235,7 +235,7 @@ func _draw_medal(c: Vector2, r: float, a: float) -> void:
 	var at := c + Vector2.from_angle(Regions.angle_of(region)) * (r + 4.0)
 	var seal_col := RegionUi.tint(region).lightened(0.2).lerp(green, seal_k)
 	var ci := self
-	draw_set_transform(at, 0.0, Vector2.ONE * (r / 48.0))
+	draw_set_transform(at, 0.0, Vector2.ONE * (1.3 * r / 48.0))
 	WorldMap.draw_seal(ci, Vector2.ZERO, Color(seal_col, a), seal_k)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# L'éclat de la brisure : un anneau de sève qui s'élargit.

@@ -108,7 +108,7 @@ func _build_legend() -> void:
 		["sanctuary", Color("9ad7ff"), "Sanctuaire", ""],
 		["altar", Color("f2d06b"), "Autel découvert", ""],
 		["heart", Color("c84b44"), "Cœur de flétrissure", "trois par région"],
-		["arena", Color("e0675e"), "Arène du boss", "scellée tant qu'un Cœur vit"],
+		["seal", Color("e0675e"), "Arène du boss", "scellée tant qu'un Cœur vit"],
 		["player", Color.WHITE, "Toi", ""],
 	]:
 		_legend_row(e)
@@ -424,11 +424,13 @@ func draw_glyph(ci: CanvasItem, kind: String, c: Vector2, color: Color, filled: 
 			line.append(pts[0])
 			ci.draw_polyline(line, dark, 1.5)
 		"heart":
-			ci.draw_circle(c, 9.0, dark)
-			ci.draw_circle(c, 6.5, color)
+			ci.draw_circle(c, 9.0 * k, dark)
+			ci.draw_circle(c, 6.5 * k, color)
 			for i in 8:
 				var d := Vector2.from_angle(TAU * i / 8.0)
-				ci.draw_line(c + d * 8.0, c + d * 13.0, color, 2.0)
+				ci.draw_line(c + d * 8.0 * k, c + d * 13.0 * k, color, 2.0)
+		"seal":
+			draw_seal(ci, c, color, 0.0)
 		"arena":
 			ci.draw_arc(c, 11.0, 0.0, TAU, 28, dark, 5.0)
 			ci.draw_arc(c, 11.0, 0.0, TAU, 28, color, 3.0)
