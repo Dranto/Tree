@@ -238,7 +238,8 @@ func _run() -> void:
 	var between: Vector2 = boss.anchor + Vector2.from_angle(boss.aim.angle() + boss.ROOTS["spread"] * 0.5) * 300.0
 	check(boss.danger_time(between, 0.0) == INF, "entre deux couloirs, rien ne menace")
 	check(await _until(func(): return boss.attack == "", 200) and p.hp < 100.0, "les racines jaillissent et blessent le joueur")
-	# Éboulis : des cercles autour du joueur, le premier sous lui.
+	# Éboulis : des cercles autour du joueur, le premier sous lui (le coup des racines l'a fait reculer).
+	_place(spot2)
 	p.hp = 100.0
 	p.invuln = 0.0
 	boss._begin("eboulis")

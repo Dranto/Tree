@@ -64,6 +64,9 @@ func _clear() -> void:
 	for c in main.projectiles_layer.get_children():
 		c.queue_free()
 	p.attack_rt = {}
+	# Un coup reçu bloque le soin un instant (difficulty.json › punish) : chaque test repart sans.
+	p.heal_block = 0.0
+	p.stagger = 0.0
 	main._rebuild_grid()
 
 

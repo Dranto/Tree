@@ -7,6 +7,7 @@ extends SceneTree
 const AttackScript = preload("res://scripts/attack.gd")
 const Planner = preload("res://scripts/tree_planner.gd")
 const Content = preload("res://scripts/content.gd")
+const Difficulty = preload("res://scripts/difficulty.gd")
 const DT := 1.0 / 60.0
 
 var MainScene
@@ -64,6 +65,9 @@ func _clear() -> void:
 	for c in main.projectiles_layer.get_children():
 		c.queue_free()
 	p.attack_rt = {}
+	# Un coup reçu bloque le soin un instant (difficulty.json › punish) : chaque test repart sans.
+	p.heal_block = 0.0
+	p.stagger = 0.0
 	main._rebuild_grid()
 
 
@@ -233,12 +237,15 @@ func _test_cocon() -> void:
 	var full: float = game.stats["max_hp"] * float(p.skill("cocon")["shield"])
 	check(absf(obj.shield - full) < 0.01, "bouclier de %.0f" % full)
 	p.take_hit(10.0, null)
-	check(p.hp == game.stats["max_hp"] and absf(obj.shield - (full - 10.0)) < 0.01, "le cocon boit le coup")
+	# Les dégâts reçus montent avec le niveau et les Cœurs (difficulty.json › punish).
+	var drunk: float = 10.0 * p._punish_damage_mult(Difficulty.punish())
+	check(p.hp == game.stats["max_hp"] and absf(obj.shield - (full - drunk)) < 0.01, "le cocon boit le coup")
 	p.invuln = 0.0
 	p.take_hit(full * 2.0, null)
 	check(obj.shield == 0.0 and p.hp < game.stats["max_hp"], "percé, le reste du coup passe")
 	# Fin du cocon : le reste soigne et l'éclatement blesse.
 	p.invuln = 1e9
+	p.heal_block = 0.0
 	p.hp = 20.0
 	var e = _spawn(Vector2(80, 0))
 	p.cast("cocon", game.stats)
