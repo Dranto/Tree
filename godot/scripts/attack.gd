@@ -2,17 +2,22 @@
 ##
 ## L'attaque a une FORME (graine, échardes, fouet, ronces vives…) et des MODIFICATEURS
 ## cumulables (fourche, ricochet, saignement…). L'arbre les change par deux effets de nœud :
-##   {"attack_form": "fouet"}                     remplace la forme (une seule active)
+##   {"attack_form": "fouet"}                     ajoute une forme (elles se cumulent)
 ##   {"attack_mod": "fourche", "value": 1}        ajoute un modificateur (cumulable)
 ## Trois sortes de formes (« kind ») : projectile, melee (arc autour du joueur) et beam (rayon d'Aube,
 ## instantané, qui traverse tout).
 ## Le moteur d'effets (effects.gd) les collecte ; resolve() en tire l'état de l'attaque, recalculé
 ## depuis les nœuds appris (rien n'est sauvegardé en plus).
 ##
-## Règle de priorité entre formes : la « priority » la plus haute l'emporte (celle de l'effet si
-## elle est écrite, sinon celle de la forme dans attack.json) ; à égalité, le nœud le plus loin de
-## la graine (anneau le plus grand), qu'on a forcément pris après sur un même chemin ; à égalité
-## encore, la dernière source dans l'ordre du moteur. Sans aucun effet, la forme est « start ».
+## Formes cumulées : la forme principale est choisie par la règle de priorité ci-dessous ; chaque
+## autre forme acquise tire aussi, en ÉCHO, à sa propre cadence et avec ses propres chiffres
+## (_step_echoes). Les SYNERGIES (data/synergies.json) ajoutent un bonus quand deux formes,
+## familles ou modificateurs se croisent.
+##
+## Règle de priorité de la forme principale : la « priority » la plus haute l'emporte (celle de
+## l'effet si elle est écrite, sinon celle de la forme dans attack.json) ; à égalité, le nœud le
+## plus loin de la graine (anneau le plus grand) ; à égalité encore, la dernière source dans
+## l'ordre du moteur. Sans aucun effet, la forme est « start ».
 ##
 ## Le joueur appelle Attack.fire(player, cible) à sa cadence (Attack.interval) et Attack.step à
 ## chaque pas : rafales et répétitions partent avec un court décalage. Le dessin est dans
