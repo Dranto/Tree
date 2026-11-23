@@ -17,6 +17,8 @@ var game
 var main
 var p
 var bid := ""
+## Touffes de traînée posées par le dernier tir de _volley_damage.
+var _tufts := 0
 
 
 func check(cond: bool, what: String) -> void:
@@ -119,6 +121,7 @@ func _run() -> void:
 	await _test_forms()
 	await _test_mods()
 	await _test_echoes()
+	await _test_every_mod_every_form()
 	_test_synergies()
 	await _test_node_and_planner()
 
@@ -163,7 +166,7 @@ func _test_resolve() -> void:
 	check(absf(st["mods"]["enracine"] - 0.6) < 0.001, "la chance d'enraciner est plafonnée (0,6)")
 	check(absf(st["mods"]["taille"] - 0.5) < 0.001, "la taille s'additionne comme un « inc »")
 	check(not st["mods"].has("inconnu"), "un modificateur inconnu est ignoré")
-	check(AttackScript.mod({"form": "fouet", "mods": {"fourche": 2.0}, "factor": 0.0}, "fourche") == 0.0, "la fourche n'agit pas sur le fouet")
+	check(AttackScript.mod({"form": "fouet", "mods": {"fourche": 2.0}, "factor": 0.0}, "fourche") == 2.0, "la fourche agit aussi sur le fouet (tous les modificateurs sur toutes les formes)")
 
 
 func _test_graine() -> void:
@@ -268,7 +271,7 @@ func _test_echoes() -> void:
 	# Un modificateur agit sur toutes les formes où il s'applique.
 	_with([{"attack_form": "echarde"}, {"attack_form": "fouet"}, {"attack_mod": "fourche", "value": 1}])
 	st = game.attack()
-	check(AttackScript.mod(st, "fourche") == 0.0 and AttackScript.mod(AttackScript.echo_state(st, "echarde"), "fourche") == 1.0, "la fourche agit sur l'écho d'échardes, pas sur le fouet")
+	check(AttackScript.mod(st, "fourche") == 1.0 and AttackScript.mod(AttackScript.echo_state(st, "echarde"), "fourche") == 1.0, "la fourche agit sur le fouet principal et sur l'écho d'échardes")
 	check(AttackScript.applies_any("fourche", st), "l'infobulle ne dit pas « sans effet » quand un écho en profite")
 	var lines := AttackScript.describe(st)
 	check(lines.size() >= 2 and lines[1].begins_with("En écho"), "la description cite l'écho (%s)" % (lines[1] if lines.size() > 1 else ""))
@@ -284,6 +287,58 @@ func _test_echoes() -> void:
 		AttackScript.step(p, 0.05)
 	check(_shots().size() == n, "un écho retiré ne finit pas sa rafale")
 	_clear()
+
+
+## Tous les modificateurs se combinent avec toutes les formes : pour chaque forme et chaque
+## modificateur autrefois réservé à certaines formes, un tir avec le modificateur fait plus de
+## dégâts (ou sème une traînée) qu'un tir sans.
+func _test_every_mod_every_form() -> void:
+	print("Chaque modificateur sur chaque forme")
+	for name in AttackScript.mods():
+		check(not AttackScript.mods()[name].has("forms"), "« %s » n'est réservé à aucune forme" % name)
+	var cases := {"fourche": 2, "ricochet": 2, "saut": 2, "trainee": 0.6, "refraction": 2, "secousse": 0.6}
+	var bad: Array = []
+	await _volley_damage([{"attack_form": "graine", "priority": 99}], "graine")   # mise en route
+	for form in AttackScript.forms():
+		var base := await _volley_damage([{"attack_form": form, "priority": 99}], form)
+		for name in cases:
+			var with := await _volley_damage([{"attack_form": form, "priority": 99}, {"attack_mod": name, "value": cases[name]}], form)
+			# La traînée se juge à ses touffes (un coup qui repousse peut écarter les ennemis).
+			var ok: bool = _tufts > 0 if name == "trainee" else with > base + 0.5
+			if not ok:
+				bad.append("%s + %s (%d contre %d)" % [form, name, int(with), int(base)])
+	check(bad.is_empty(), "chaque forme profite de fourche, ricochet, saut, traînée, réfraction et secousse (%s)" % ", ".join(bad))
+	_with([])
+
+
+## Dégâts totaux d'une attaque (avec ses rafales et ce qu'elle fait naître) sur un petit groupe
+## d'ennemis empoisonnés, en 80 pas de jeu.
+func _volley_damage(effects: Array, form: String) -> float:
+	_clear()
+	_with(effects)
+	main.rng.seed = 7
+	var foes: Array = []
+	# La cible, un ennemi sur le chemin, une couronne serrée autour de la cible, et des ennemis plus loin.
+	var spots: Array = [Vector2(110, 0), Vector2(58, 0)]
+	for i in 8:
+		spots.append(Vector2(110, 0) + Vector2.from_angle(i * TAU / 8.0 + 0.2) * 48.0)
+	spots.append_array([Vector2(190, 0), Vector2(250, 20), Vector2(300, -60), Vector2(280, 90)])
+	for at in spots:
+		var e = _spawn(at)
+		e.apply_poison(0.001, 30.0)
+		foes.append(e)
+	await _frames(1)
+	AttackScript.fire(p, foes[0])
+	for i in 80:
+		AttackScript.step(p, 1.0 / 60.0)
+		await _frames(1)
+	_tufts = main.attack_fx.zones.filter(func(z): return z["kind"] == "trainee").size()
+	var total := 0.0
+	for e in foes:
+		if is_instance_valid(e):
+			total += e.max_hp - e.hp
+	_clear()
+	return total
 
 
 func _test_synergies() -> void:
@@ -410,7 +465,7 @@ func _test_node_and_planner() -> void:
 	var texts: Array = changes.map(func(c): return c["text"])
 	check(sim["attack"]["form"] == "fouet" and sim["attack"]["mods"].get("fourche", 0.0) == 2.0, "la simulation donne le fouet et la fourche")
 	check(texts.has("Attaque : Graines → Fouet"), "l'aperçu montre la forme avant → après (%s)" % ", ".join(texts))
-	check(texts.any(func(t): return t.begins_with("Attaque : + fourche") and t.ends_with("(sans effet sur cette forme)")), "et le modificateur, signalé sans effet sur le fouet")
+	check(texts.any(func(t): return t.begins_with("Attaque : + fourche") and not t.ends_with("(sans effet sur cette forme)")), "et le modificateur, qui agit aussi sur le fouet")
 	check(game.attack() == before, "la simulation ne touche pas l'attaque de la partie")
 	game.points = path.size()
 	check(planner.learn_path(path), "le chemin s'apprend")

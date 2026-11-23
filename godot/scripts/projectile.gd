@@ -24,6 +24,8 @@ var branch := ""
 var empowered := false
 var attack: Dictionary = {}
 var forked := false
+## Le premier coup est passé (Attack.first_hit) : ses branches, rebonds et sauts ne le refont pas.
+var primed := false
 var bounces := 0
 var plant := false
 var trap_dmg := 0.0

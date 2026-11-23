@@ -541,6 +541,8 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 	var dir: Vector2 = shot["dir"]
 	var r: float = reach(st) * (1.0 + 0.5 * mod(st, "taille"))
 	var arc: float = float(f.get("arc", 1.9)) * (1.0 + mod(st, "taille"))
+	# Projectiles en plus (statistique « projectiles ») : au corps à corps, un arc plus ouvert.
+	arc *= 1.0 + float(data().get("melee_arc_per_projectile", 0.25)) * maxf(0.0, float(s.get("projectiles", 1)) - 1.0)
 	var dmg := hit_damage(player, st)
 	if empowered:
 		dmg *= float(st["factor"])
@@ -560,11 +562,16 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 	if f.get("deflect", false):
 		_deflect(main, player.position, dir, r, arc)
 	var struck := 0
+	var first = null
+	var touched := {}
 	for e in main.enemies_near(player.position, r):
 		var d: Vector2 = e.position - player.position
 		if arc < TAU and d.length() > 1.0 and absf(dir.angle_to(d)) > arc / 2.0 + e.radius / maxf(d.length(), 1.0):
 			continue
 		struck += 1
+		touched[e.get_instance_id()] = true
+		if first == null:
+			first = e
 		hit(main, e, dmg, str(f.get("branch", "")), on_hit)
 		apply_on_hit(main, on_hit, e, dmg, e.position)
 		if e.dead:
@@ -577,6 +584,14 @@ static func _strike(player, st: Dictionary, shot: Dictionary) -> void:
 	if struck > 0 and on_hit.has("secousse"):
 		_quake(main, player.position + dir * r * (0.75 if arc < TAU else 0.0), dmg * float(on_hit["secousse"]),
 			str(f.get("branch", "")), arc >= TAU)
+	# Les modificateurs pensés pour les projectiles et le rayon agissent aussi sur un coup qui porte :
+	# depuis la cible du coup (ou le premier ennemi touché), dans l'axe joueur → cible.
+	if first != null:
+		var tg = shot.get("target")
+		if is_instance_valid(tg) and tg is Node2D and touched.has(tg.get_instance_id()):
+			first = tg
+		var axis: Vector2 = first.position - player.position
+		first_hit(main, on_hit, first, dmg, first.position, axis.normalized() if axis.length() > 1.0 else dir, "melee", str(f.get("branch", "")), touched)
 
 
 ## Le souffle emporte les plumes de cendre prises dans son cône (le vent contre le vent).
@@ -615,7 +630,12 @@ static func _beam(player, st: Dictionary, shot: Dictionary) -> void:
 	var on_hit := _hit_mods(st)
 	var branch := str(f.get("branch", ""))
 	for dir in _directions(st, shot, count, float(f.get("spread", 0.2))):
-		beam_line(main, player.position + dir * 18.0, dir, reach(st), width, dmg, on_hit, branch, empowered)
+		var struck := beam_line(main, player.position + dir * 18.0, dir, reach(st), width, dmg, on_hit, branch, empowered)
+		if not struck.is_empty():
+			var touched := {}
+			for e in struck:
+				touched[e.get_instance_id()] = true
+			first_hit(main, on_hit, struck[0], dmg, struck[0].position, dir, "beam", branch, touched)
 	if empowered:
 		_afx(main, "renforcee", {"pos": player.position, "follow": player, "element": str(f.get("element", "lumiere"))})
 	if shot.get("ring", false):
@@ -792,6 +812,119 @@ static func _shards(main, m: Dictionary, at: Vector2, dmg: float) -> void:
 		p.branch = "ronce"
 
 
+## Premier ennemi touché par un tir de l'attaque : les modificateurs qu'une forme n'a pas « en
+## natif » y prennent une forme commune, pour que tous les modificateurs se combinent avec toutes
+## les formes. « kind » : projectile (fourche, ricochet, saut, traînée natifs), return (lame qui
+## revient : fourche et traînée natives), lob (spore lobée, à l'impact), melee (secousse native),
+## beam (réfraction native).
+##   fourche     : des éclats partent en éventail du point d'impact (un rayon : rayons obliques) ;
+##   ricochet    : le coup rebondit d'ennemi en ennemi (chaîne) ; saut : idem vers les empoisonnés ;
+##   traînée     : une touffe d'épines au point d'impact ;
+##   réfraction  : des rayons obliques partent du point d'impact ;
+##   secousse    : le sol se soulève au point d'impact.
+## « touched » : ennemis déjà frappés par ce tir (la chaîne ne les reprend pas).
+static func first_hit(main, m: Dictionary, e, dmg: float, at: Vector2, dir: Vector2, kind: String, branch: String, touched := {}) -> void:
+	if main == null or m.is_empty():
+		return
+	var defs := mods()
+	if dir.length() < 0.1:
+		dir = Vector2.RIGHT
+	if m.has("fourche") and kind in ["lob", "melee"]:
+		_spray(main, m, at, dir, int(round(float(m["fourche"]))), dmg * float(defs.get("fourche", {}).get("factor", 0.6)), branch, e)
+	if m.has("fourche") and kind == "beam":
+		_oblique(main, m, at, dir, int(round(float(m["fourche"]))), dmg * float(defs.get("fourche", {}).get("factor", 0.6)), branch, e, ["fourche", "refraction"])
+	if m.has("ricochet") and not kind in ["projectile"]:
+		_chain(main, m, e, dmg, int(round(float(m["ricochet"]))), "ricochet", branch, touched)
+	if m.has("saut") and not kind in ["projectile"]:
+		_chain(main, m, e, dmg, int(round(float(m["saut"]))), "saut", branch, touched)
+	if m.has("trainee"):
+		# Une touffe au point d'impact pour toutes les formes (un projectile en sème aussi en vol).
+		trail(main, at, dmg, float(m["trainee"]))
+	if m.has("refraction") and kind != "beam":
+		_oblique(main, m, at, dir, int(round(float(m["refraction"]))), dmg * float(defs.get("refraction", {}).get("factor", 0.6)), branch, e, ["refraction", "fourche"])
+	if m.has("secousse") and kind != "melee":
+		_quake(main, at, dmg * float(m["secousse"]), branch, false)
+
+
+## Modificateurs sans les effets « au premier coup » (pour ce qu'ils font naître : pas de boucle).
+static func _calm(m: Dictionary, drop: Array) -> Dictionary:
+	var out := m.duplicate()
+	for k in drop:
+		out.erase(k)
+	return out
+
+
+## Fourche d'un coup qui n'est pas un projectile : n éclats en éventail depuis le point d'impact.
+static func _spray(main, m: Dictionary, at: Vector2, dir: Vector2, n: int, dmg: float, branch: String, skip) -> void:
+	if n <= 0 or not main.has_method("spawn_projectile"):
+		return
+	var def: Dictionary = mods().get("fourche", {})
+	var ang := float(def.get("angle", 0.42))
+	var calm := _calm(m, ["fourche", "ricochet", "saut", "refraction", "secousse", "trainee"])
+	_afx(main, "fourche", {"pos": at, "dir": dir, "n": n, "a": ang, "element": _element(m)})
+	for i in n:
+		var side := -1.0 if i % 2 == 0 else 1.0
+		var k := float(i / 2 + 1)
+		var v := dir.rotated(side * ang * k) * float(def.get("speed", 620.0))
+		var c = main.spawn_projectile(at + v.normalized() * 10.0, v, dmg, 0, 0.8)
+		c.life = float(def.get("life", 0.4))
+		c.style = "eclat"
+		c.branch = branch
+		c.attack = calm
+		c.forked = true
+		c.primed = true
+		if skip != null and is_instance_valid(skip):
+			c.hit[skip.get_instance_id()] = true
+
+
+## Rayons obliques (réfraction, ou fourche d'un rayon) depuis le point d'impact.
+static func _oblique(main, m: Dictionary, at: Vector2, dir: Vector2, n: int, dmg: float, branch: String, skip, drop: Array) -> void:
+	if n <= 0:
+		return
+	var def: Dictionary = mods().get("refraction", {})
+	var ang := float(def.get("angle", 0.55))
+	var length := float(forms().get("rayon", {}).get("range", 640.0)) * float(def.get("length", 0.5))
+	var width := float(forms().get("rayon", {}).get("width", 26.0)) * 0.7
+	var calm := _calm(m, drop)
+	calm["form"] = "rayon"
+	for i in n:
+		var side := -1.0 if i % 2 == 0 else 1.0
+		var k := float(i / 2 + 1)
+		beam_line(main, at, dir.rotated(side * ang * k), length, width, dmg, calm, branch, false, skip)
+
+
+## Ricochet ou saut d'un coup qui n'est pas un projectile : le coup passe d'ennemi en ennemi
+## (au plus n fois, dans la portée « reach » du modificateur, × « factor » à chaque fois).
+## Le saut ne va que vers les ennemis empoisonnés.
+static func _chain(main, m: Dictionary, from, dmg: float, n: int, name: String, branch: String, touched: Dictionary) -> void:
+	var def: Dictionary = mods().get(name, {})
+	var seen := touched.duplicate()
+	var cur = from
+	var calm := _calm(m, ["fourche", "ricochet", "saut", "refraction", "secousse", "trainee"])
+	for i in n:
+		if cur == null or not is_instance_valid(cur):
+			return
+		var best = null
+		var best_d := INF
+		for o in main.enemies_near(cur.position, float(def.get("reach", 240.0))):
+			if o.dead or o == cur or seen.has(o.get_instance_id()):
+				continue
+			if name == "saut" and float(o.get("poison_time") if o.get("poison_time") != null else 0.0) <= 0.0:
+				continue
+			var d: float = o.position.distance_squared_to(cur.position)
+			if d < best_d:
+				best_d = d
+				best = o
+		if best == null:
+			return
+		dmg *= float(def.get("factor", 0.8))
+		seen[best.get_instance_id()] = true
+		_afx(main, name, {"pos": cur.position, "to": best.position, "element": _element(m)})
+		hit(main, best, dmg, branch, calm)
+		apply_on_hit(main, calm, best, dmg, best.position)
+		cur = best
+
+
 ## Un projectile de l'attaque a touché l'ennemi e (appelé par projectile.gd) : effets au coup,
 ## puis fourche au premier coup.
 static func on_projectile_hit(p, e) -> void:
@@ -800,6 +933,10 @@ static func on_projectile_hit(p, e) -> void:
 	var f: Dictionary = forms().get(str(m.get("form", "")), {})
 	if f.has("splash") or f.has("leech"):
 		_splash(p, e, f)
+	if not p.primed:
+		# Premier coup du projectile (ses branches, rebonds et sauts ne recomptent pas).
+		p.primed = true
+		first_hit(p.main, m, e, p.damage, p.position, p.vel.normalized(), "return" if p.returning else "projectile", p.branch, p.hit)
 	if m.has("fourche") and not p.forked:
 		p.forked = true
 		var def: Dictionary = mods().get("fourche", {})
@@ -817,6 +954,7 @@ static func on_projectile_hit(p, e) -> void:
 			c.branch = p.branch
 			c.attack = m
 			c.forked = true
+			c.primed = true
 			c.plant = p.plant
 			c.trap_dmg = p.trap_dmg
 			c.hit = p.hit.duplicate()
@@ -889,11 +1027,18 @@ static func land(p) -> void:
 	var grow: float = float(s.get("area", 1.0)) * (1.0 + float(m.get("taille", 0.0))) * (1.5 if p.empowered else 1.0)
 	var r: float = float(f.get("burst_radius", 56.0)) * grow
 	_afx(main, "eclosion_spore", {"pos": p.position, "r": r})
+	var first = null
+	var touched := {}
 	for e in main.enemies_near(p.position, r):
 		if e.dead:
 			continue
+		touched[e.get_instance_id()] = true
+		if first == null:
+			first = e
 		hit(main, e, p.damage, p.branch, m)
 		apply_on_hit(main, m, e, p.damage, e.position)
+	if first != null:
+		first_hit(main, m, first, p.damage, p.position, p.vel.normalized(), "lob", p.branch, touched)
 	var tick := float(f.get("cloud_tick", 0.5))
 	# Dégâts du nuage : part des dégâts du coup par seconde, à chaque à-coup.
 	cloud(main, p.position, float(f.get("cloud_radius", 60.0)) * grow, float(f.get("cloud_duration", 2.4)), tick,
