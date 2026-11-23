@@ -7,9 +7,9 @@
     "phases": [
       "Phase 1 sur 3 : épines et spores",
       "Phase 2 sur 3 : sève et vent",
-      "Phase 3 sur 3 : lumière et racines"
+      "Seconde forme : les six gardiens à la fois"
     ],
-    "arena": {"radius": 520.0, "radius_min": 370.0, "life_color": "seve/clair"},
+    "arena": {"radius": 520.0, "radius_min": 370.0, "radius_collapse": 380.0, "life_color": "seve/clair"},
     "wake_banner": "La Flétrissure s'éveille : elle a pris quelque chose à chaque gardien.",
     "defeated_banner": "La Flétrissure est vaincue !",
     "reward": {"points": 3}
