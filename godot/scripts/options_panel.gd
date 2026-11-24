@@ -1,5 +1,5 @@
 ## Panneau d'options (direction « Herbier ») : cadre orné et quatre onglets (Son, Affichage, Jeu,
-## Commandes). Volume, plein écran, aide de départ, secousse, rafales de vent, difficulté, déplacement, visée, commandes de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
+## Commandes). Volume, plein écran, glyphes du tutoriel, secousse, rafales de vent, difficulté, déplacement, visée, commandes de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
 extends PanelContainer
 
 signal closed
@@ -102,7 +102,7 @@ func _ready() -> void:
 	fullscreen_box.toggled.connect(func(on): Settings.set_fullscreen(on); Settings.save_settings())
 	p_aff.add_child(fullscreen_box)
 	hints_box = CheckBox.new()
-	hints_box.text = "Afficher l'aide de départ en jeu"
+	hints_box.text = "Afficher les glyphes de touches (tutoriel)"
 	hints_box.button_pressed = Settings.show_hints
 	hints_box.toggled.connect(func(on): Settings.set_show_hints(on); Settings.save_settings())
 	p_aff.add_child(hints_box)

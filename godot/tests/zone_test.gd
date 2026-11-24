@@ -105,9 +105,7 @@ func _run() -> void:
 	obj.completed.connect(_on_completed)
 	print("ZONE graine %d : nouvelle partie" % seed_n)
 	check(obj.current(region).get("id", "") == obj.main_list()[0]["id"] or obj.current(region).get("region", "") == region, "nouvelle partie : l'aventure commence par le premier nœud")
-	for i in 30:
-		await physics_frame
-	check(main.hud.glyphs.step == "bouger", "le premier glyphe (se déplacer) est prêt")
+	check(main.hud.glyphs != null and not main.hud.glyphs.done("bouger") and main.hud.glyphs.glyph_for("bouger").size() == 2, "nouvelle partie : le glyphe « se déplacer » attend le premier pas")
 
 	while true:
 		await physics_frame

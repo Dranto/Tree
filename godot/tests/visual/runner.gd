@@ -1247,6 +1247,8 @@ func _scenario_quetes() -> void:
 		# Le Cœur est l'objectif : il est loin, la flèche borde l'écran.
 		Objectives.complete("noeud_cle", true)
 		await _frames(30)
+		q.vein.alpha = 1.0
+		await _frames(2)
 		await _shot("jeu_objectif", "jeu")
 
 	Game.flags["ronce_coeur_purifie"] = true

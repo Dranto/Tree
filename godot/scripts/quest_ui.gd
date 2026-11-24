@@ -173,6 +173,7 @@ func start_ending() -> void:
 	if reg == "":
 		return
 	world_map.pending_reveal.append(reg)
+	_tracker_layer.visible = false
 	fanfare.begin(main, reg)
 
 
@@ -184,4 +185,5 @@ func start_epilogue() -> void:
 		close()
 	if main.pause_menu.visible:
 		main.pause_menu.close()
+	_tracker_layer.visible = false
 	world_ending.begin(main)

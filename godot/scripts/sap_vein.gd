@@ -54,6 +54,10 @@ func _process(delta: float) -> void:
 		_check = 0.25
 		_target = Objectives.target_pos(Objectives.followed())
 		_calm = _is_calm()
+	# Un combat de boss ou un siège qui commence éteint la veine tout de suite.
+	if main.in_boss_fight() or main.siege_heart() != null:
+		_calm = false
+		alpha = 0.0
 	var goal := 1.0 if wanted() else 0.0
 	alpha = move_toward(alpha, goal, delta * (0.8 if goal > alpha else 2.5))
 	if alpha > 0.0 or visible:
@@ -99,6 +103,7 @@ func _draw() -> void:
 		var p := from + dir * s + side * wave
 		var pulse := 0.8 + 0.2 * sin(t * 5.0 - s * 0.05)
 		var a := alpha * fade * pulse
-		draw_circle(p, 6.0, Color(deep, 0.16 * a))
-		draw_circle(p, 3.0, Color(col, 0.75 * a))
+		draw_circle(p, 9.0, Color(deep, 0.2 * a))
+		draw_circle(p, 4.5, Color(col, 0.9 * a))
+		draw_circle(p, 2.0, Color(1, 1, 0.92, 0.8 * a))
 		s += STEP

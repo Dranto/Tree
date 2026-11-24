@@ -37,6 +37,8 @@ var shown := 0.0
 var alpha := 0.0
 var _start = null
 var _check := 0.0
+## Partie déjà bien avancée (sauvegarde d'avant le jalon 11) : aucun glyphe, sans toucher aux drapeaux.
+var _veteran := false
 
 
 func _ready() -> void:
@@ -70,10 +72,7 @@ func _process(delta: float) -> void:
 	var p = main.player
 	if _start == null:
 		_start = p.position
-		# Partie déjà bien avancée (sauvegarde d'avant le jalon 11) : rien à apprendre.
-		if Game.level > 3:
-			for id in STEPS:
-				Game.flags[flag(id)] = true
+		_veteran = Game.level > 3 and not done("bouger")
 	_validate(p)
 	_check -= delta
 	if _check <= 0.0:
@@ -108,6 +107,8 @@ func _validate(p) -> void:
 
 
 func _pick(p) -> String:
+	if _veteran:
+		return ""
 	if not done("bouger"):
 		return "bouger"
 	if not done("esquive") and (p.hurt_flash > 0.0 or not main.enemies_near(p.position, DODGE_NEAR).is_empty()):

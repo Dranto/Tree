@@ -332,6 +332,8 @@ func _ready() -> void:
 		player.reset_physics_interpolation()
 		cam.reset_smoothing()
 	Flow.continue_requested = false
+	_fresh_game = Flow.fresh_game and not loaded
+	Flow.fresh_game = false
 	# Après la reprise de la partie : le premier contrôle des objectifs rattrape l'état sans annonce.
 	quest_ui = QuestUi.new()
 	quest_ui.main = self
@@ -462,15 +464,16 @@ func _physics_process(delta: float) -> void:
 const FIRST_FLETRI_MAX := 25.0
 var _first_fletri = null
 var _first_fletri_t := 0.0
+## La partie vient de « Nouvelle partie » (Flow.fresh_game, lu au démarrage).
+var _fresh_game := false
 
 
 ## Vrai tant que le premier Flétri occupe la scène (les apparitions ordinaires attendent).
 func _first_fletri_step(delta: float) -> bool:
-	if Game.flags.get("tuto_premier_fletri", false) or autotest or benchmark:
+	if not _fresh_game or Game.flags.get("tuto_premier_fletri", false) or autotest or benchmark:
 		return false
 	if _first_fletri == null and (Game.level > 2 or Game.kills > 0):
 		# Partie déjà commencée (sauvegarde d'avant le jalon 11) : rien à apprendre.
-		Game.flags["tuto_premier_fletri"] = true
 		return false
 	if _first_fletri == null:
 		var ids: Array = Regions.ids()
