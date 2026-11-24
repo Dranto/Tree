@@ -359,10 +359,17 @@ func set_moba_main_2_key(code: int) -> void:
 func key_name(physical_keycode: int) -> String:
 	if physical_keycode == KEY_NONE:
 		return "—"
+	if KEY_FR.has(physical_keycode):
+		return KEY_FR[physical_keycode]
 	var kc := physical_keycode
 	if DisplayServer.get_name() != "headless":
 		kc = DisplayServer.keyboard_get_keycode_from_physical(kc)
 	return OS.get_keycode_string(kc)
+
+
+## Noms français des touches que Godot nomme en anglais.
+const KEY_FR := {KEY_UP: "Flèche haut", KEY_DOWN: "Flèche bas", KEY_LEFT: "Flèche gauche", KEY_RIGHT: "Flèche droite",
+	KEY_SPACE: "Espace", KEY_SHIFT: "Maj", KEY_TAB: "Tab", KEY_ENTER: "Entrée", KEY_CTRL: "Ctrl", KEY_BACKSPACE: "Retour arrière"}
 
 
 ## Action du jeu (hors barre de compétences) qui utilise déjà cette liaison, ou "".
