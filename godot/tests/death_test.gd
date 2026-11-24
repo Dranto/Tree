@@ -44,11 +44,9 @@ func _die_at(pos: Vector2) -> void:
 	await _steps(2)
 
 
-func _death_text() -> String:
-	var parts: Array = []
-	for l in main.hud.death_screen._lines.get_children():
-		parts.append(l.text)
-	return " | ".join(parts)
+## Icônes de l'écran de mort (jalon 11 : plus de phrases), séparées par des espaces.
+func _death_icons() -> Array:
+	return main.hud.death_screen.icon_list()
 
 
 func _run() -> void:
@@ -115,8 +113,9 @@ func _run() -> void:
 	check(main.lost_sap != null and main.lost_sap.position == fall and is_equal_approx(main.lost_sap.amount, xp), "la sève perdue reste au sol là où il est tombé")
 	check(is_equal_approx(float(game.flags.get("seve_perdue", 0.0)), xp), "elle est gardée dans les drapeaux de la partie")
 	check(main.hud.death_screen.is_showing(), "l'écran de mort s'affiche")
-	var text := _death_text()
-	check("Lisière" in text and ("%d d'expérience" % roundi(xp)) in text and "intact" in text, "il dit où l'on renaît, ce qui est au sol et que l'arbre est intact : « %s »" % text)
+	var icons := _death_icons()
+	check(icons == ["renaissance", "seve", "arbre"] and roundi(float(main.hud.death_screen.info.get("dropped", 0.0))) == roundi(xp), "ses icônes : renaissance, sève au sol, arbre intact (%s)" % [icons])
+	check(main.hud.death_screen.find_children("*", "Label", true, false).filter(func(l): return l.visible and l.text.length() > 12).is_empty(), "aucune phrase à lire")
 	check(main.enemies.is_empty(), "les ennemis se sont dissipés")
 	await _steps(30)
 	check(main.hud.death_screen._pointer_label.visible, "une flèche au bord de l'écran montre la sève hors de vue")
@@ -146,8 +145,7 @@ func _run() -> void:
 	await _die_at(b)
 	check(main.lost_sap != null and main.lost_sap.position == b and main.lost_sap.amount == 3.0, "la nouvelle sève tombe au nouvel endroit")
 	check(main.orbs_layer.get_children().filter(func(n): return n.get_script() == main.LostSap and not n.is_queued_for_deletion()).size() == 1, "l'ancienne sève est perdue")
-	text = _death_text()
-	check(("(%d)" % roundi(first_drop)) in text, "l'écran le dit : « %s »" % text)
+	check("seve_perdue" in _death_icons(), "l'écran le montre (sève perdue barrée, %d)" % roundi(first_drop))
 	await _die_at(a)
 	check(main.lost_sap == null and not game.flags.has("seve_perdue"), "mourir sans expérience ne laisse rien au sol et perd la sève restante")
 	check(game.points == points and game.allocated_uids() == uids, "toujours aucun point ni nœud perdu après trois morts")
@@ -159,7 +157,7 @@ func _run() -> void:
 	check(heart.state == "siege" and heart.progress > 1.5, "le siège a commencé")
 	await _die_at(heart.center + Vector2(heart.zone * 0.5, 0))
 	check(heart.state == "fletri" and heart.progress == 0.0 and not heart.bar.visible, "mourir pendant le siège remet le Cœur à zéro")
-	check("Cœur" in _death_text(), "l'écran de mort le dit")
+	check("reprise" in _death_icons(), "l'écran de mort le montre (flèche de reprise)")
 	check(main.player.position == lisiere.position, "renaissance à la Lisière")
 
 	print("Autre sanctuaire visité")

@@ -329,7 +329,6 @@ func _ready() -> void:
 	if not loaded:
 		Game.reset()
 	else:
-		hud.banner("Partie reprise : niveau %d" % Game.level)
 		player.reset_physics_interpolation()
 		cam.reset_smoothing()
 	Flow.continue_requested = false
@@ -418,6 +417,9 @@ func _physics_process(delta: float) -> void:
 	var under := underground()
 	if under:
 		Music.set_mood(finale.music_life(), "finale")
+	elif quest_ui != null and quest_ui.world_ending.active:
+		# La fin jouée dans le monde : la musique du générique (data/audio.json › regions › generique).
+		Music.set_mood(1.0, "generique")
 	else:
 		Music.set_mood(ground.life_at(player.position), Regions.region_at(player.position))
 	autosave_timer -= delta
@@ -444,11 +446,45 @@ func _physics_process(delta: float) -> void:
 	if spawn_paused or under:
 		spawn_timer = maxf(spawn_timer, 0.5)
 	var cap := Difficulty.spawn_cap(Game.level, depth)
+	if _first_fletri_step(delta):
+		return
 	if spawn_timer <= 0.0:
 		spawn_timer = Difficulty.spawn_interval(Game.level)
 		for i in Difficulty.spawn_burst(Game.level, depth):
 			if enemies.size() < cap:
 				_spawn_enemy()
+
+
+## Tutoriel discret (jalon 11) : dans une nouvelle partie, le premier Flétri arrive seul, sur le
+## chemin de Ronce ; rien d'autre ne naît tant qu'il vit (au plus FIRST_FLETRI_MAX secondes). On le
+## voit tomber sous l'attaque automatique et la terre reverdir : tuer, c'est soigner.
+## Une fois passé, le drapeau « tuto_premier_fletri » (sauvegarde) l'empêche de revenir.
+const FIRST_FLETRI_MAX := 25.0
+var _first_fletri = null
+var _first_fletri_t := 0.0
+
+
+## Vrai tant que le premier Flétri occupe la scène (les apparitions ordinaires attendent).
+func _first_fletri_step(delta: float) -> bool:
+	if Game.flags.get("tuto_premier_fletri", false) or autotest or benchmark:
+		return false
+	if _first_fletri == null and (Game.level > 2 or Game.kills > 0):
+		# Partie déjà commencée (sauvegarde d'avant le jalon 11) : rien à apprendre.
+		Game.flags["tuto_premier_fletri"] = true
+		return false
+	if _first_fletri == null:
+		var ids: Array = Regions.ids()
+		var toward: Vector2 = Regions.center("ronce" if "ronce" in ids else str(ids[0])) if not ids.is_empty() else Vector2.RIGHT
+		var pos: Vector2 = player.position + (toward - player.position).normalized() * 620.0
+		_first_fletri = spawn_enemy_kind(_pick_kind(pos), pos, threat(pos))
+		_first_fletri_t = 0.0
+		return true
+	_first_fletri_t += delta
+	if not is_instance_valid(_first_fletri) or _first_fletri.dead or _first_fletri_t > FIRST_FLETRI_MAX:
+		Game.flags["tuto_premier_fletri"] = true
+		spawn_timer = maxf(spawn_timer, 2.0)
+		return false
+	return true
 
 
 func _rebuild_grid() -> void:
@@ -1165,7 +1201,6 @@ func recover_sap() -> void:
 	fx.ring(at, 4.0, 60.0, 0.35, Art.c("danger_eclair"), 3.0)
 	fx.pickup(at, "seve", 16, player.position)
 	screen_fx.glow(Art.c("or"), 0.25, 0.8)
-	hud.banner("Sève reprise : %d d'expérience." % roundi(amount))
 	request_autosave()
 
 
@@ -1191,7 +1226,7 @@ func revive(world_pos: Vector2, radius: float, tint: Color, strength := 0.9) -> 
 func _on_level_up(lvl: int) -> void:
 	fx.ring(player.position, 20.0, 160.0, 0.6, Art.c("or"), 5.0)
 	fx.pickup(player.position, "seve", 12)
-	hud.banner("Niveau %d : un point à placer dans l'Arbre de vie (%s)" % [lvl, hud.key_label("toggle_tree")])
+	# Plus d'annonce : la touche de l'Arbre de vie pulse dans le HUD (glyphe, hud.gd) tant qu'un point attend.
 	request_autosave()
 	player.heal(Game.stats["max_hp"] * 0.25, true)
 

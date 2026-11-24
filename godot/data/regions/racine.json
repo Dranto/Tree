@@ -73,9 +73,7 @@
     ],
     "reward": {"points": 1},
     "life_radius": 840.0,
-    "life_color": "racine/clair",
-    "wake_banner": "Le Cœur des cernes s'éveille : tiens la zone, la pierre tremble !",
-    "purified_banner": "Le Cœur des cernes est purifié : la clairière de l'Ancien s'ouvre."
+    "life_color": "racine/clair"
   },
   "boss": {
     "script": "res://scripts/boss_racine.gd",
@@ -83,13 +81,6 @@
     "bar_color": "#b0915e",
     "reward": {"points": 2, "graft": "greffe_coeur_de_chene"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : la cime se fend", "Phase 3 sur 3 : la forêt se referme"],
-    "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "racine/clair"},
-    "wake_banner": "L'Ancien pétrifié s'arrache à la roche.",
-    "defeated_banner": "L'Ancien pétrifié est vaincu !"
-  },
-  "ending": {
-    "sub": "Région de Racine purifiée",
-    "title": "La forêt se réveille",
-    "body": "L'Ancien pétrifié s'est rendu à la terre. Sous la pierre, les vieilles racines respirent de nouveau : la sève remonte dans les troncs de roche, et l'Arbre de vie tient ferme sur ses six branches."
+    "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "racine/clair"}
   }
 }

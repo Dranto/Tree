@@ -124,7 +124,6 @@ func _run() -> void:
 
 	print("Fin")
 	check(objectives.ending_region() == "essai", "la fin de la région d'essai est due")
-	check(objectives.ending_texts("essai").get("title", "") == "La clairière respire", "avec ses textes")
 	check(not Regions.all_purified(game.flags), "l'aventure n'est pas finie : Ronce reste à purifier")
 	objectives.mark_ending_seen("essai")
 	# Les autres régions (Ronce, et celles des branches suivantes) : leurs boss vaincus, Ronce en dernier.
@@ -135,7 +134,7 @@ func _run() -> void:
 	check(not Regions.all_purified(game.flags), "Ronce reste à purifier")
 	game.flags["ronce_boss_vaincu"] = true
 	check(Regions.all_purified(game.flags), "tous les boss vaincus : toutes les régions sont purifiées")
-	check(objectives.ending_region() == "ronce" and objectives.ending_texts("ronce").get("sub", "") == Content._load("objectives").get("adventure_ending", {}).get("sub", "?"), "la dernière fin est celle de l'aventure")
+	check(objectives.ending_region() == "ronce", "la dernière reverdie est celle de Ronce")
 
 	Regions.set_extra_dirs([])
 	print("RÉSULTAT : " + ("tout est bon" if failures == 0 else "%d échec(s)" % failures))

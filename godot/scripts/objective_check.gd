@@ -53,12 +53,6 @@ static func validate() -> Array:
 			errors.append("objectif %s : « needs_flag » vide" % id)
 	if mains == 0:
 		errors.append("objectives.json : aucun objectif principal")
-	var adv = data.get("adventure_ending", {})
-	if not adv is Dictionary or str(adv.get("title", "")) == "":
-		errors.append("objectives.json : « adventure_ending » (sub, title, body) manque")
-	for reg in Regions.ids():
-		if str(Regions.section(reg, "ending").get("title", "")) == "":
-			errors.append("data/regions/%s.json : « ending » (sub, title, body) manque" % reg)
 	return errors
 
 
@@ -91,13 +85,6 @@ static func validate_finale() -> Array:
 			errors.append("%s, boss › arena : « life_color » mal écrite" % w)
 		if float(ar.get("radius_min", 0.0)) > float(ar.get("radius", 520.0)):
 			errors.append("%s, boss › arena : « radius_min » plus grand que « radius »" % w)
-	for k in ["opened_banner", "descent_banner"]:
-		if str(data.get(k, "")) == "":
-			errors.append("%s : « %s » manque" % [w, k])
-	var ep = data.get("epilogue", {})
-	for f in ["sub", "title", "body"]:
-		if not ep is Dictionary or str(ep.get(f, "")) == "":
-			errors.append("%s, epilogue : « %s » manque" % [w, f])
 	var credits = data.get("credits", [])
 	if not credits is Array or credits.is_empty():
 		errors.append("%s : « credits » doit être une liste non vide" % w)

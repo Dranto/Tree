@@ -20,10 +20,6 @@ const MARGIN := 20
 const BANNER_TIME := 3.0
 ## Une annonce de combat attend au plus ce temps qu'une annonce ordinaire ait été lue.
 const BANNER_MIN := 1.2
-## Durée maximale de l'aide de départ (s) ; elle s'efface plus tôt dès qu'elle a servi.
-const HINT_TIME := 12.0
-## Un ennemi à moins de cette distance du joueur (pixels du monde) : le combat commence, l'aide s'efface.
-const HINT_ENEMY_NEAR := 420.0
 
 var main
 var banner_text := ""
@@ -33,24 +29,15 @@ var banner_kind := "info"
 ## Annonces en attente, dans l'ordre : [texte, sorte]. Une seule annonce est visible à la fois.
 ## Pendant un combat de boss et l'écran de mort, les annonces ordinaires attendent la fin.
 var banner_queue: Array = []
-var hint_time := HINT_TIME
-## Aide de départ : le joueur s'est déplacé, a lancé une compétence (les deux gestes qu'elle enseigne :
-## l'attaque de base part toute seule).
-var _hint_moved := false
-var _hint_skill := false
-var _hint_start = null
+## Tutoriel discret : glyphes de touches qui apparaissent au bon moment (tutorial_glyphs.gd).
+var glyphs
 
 var _labels := {}
 var _corner
 var _vital
 ## Formes de l'attaque (principale et échos) et synergies actives, au-dessus de la vie.
 var _attack_strip
-## Synergies déjà annoncées (une annonce à chaque nouvelle synergie).
-var _synergies_seen = null
 var _banner: Label
-var _hint_box: VBoxContainer
-## Bande sombre derrière l'aide de départ (suit sa visibilité).
-var _hint_back: PanelContainer
 var _slots: Array = []
 ## Écran de mort et flèche vers la sève perdue (death_screen.gd).
 var death_screen
@@ -58,6 +45,7 @@ var death_screen
 
 const Widgets = preload("res://scripts/hud_widgets.gd")
 const Controls = preload("res://scripts/controls_text.gd")
+const Glyphs = preload("res://scripts/tutorial_glyphs.gd")
 
 
 func _ready() -> void:
@@ -68,13 +56,13 @@ func _ready() -> void:
 	_build_bottom_left()
 	_build_bottom_center()
 	_build_banner()
+	glyphs = Glyphs.new()
+	glyphs.main = main
+	add_child(glyphs)
 	death_screen = DeathScreen.new()
 	death_screen.main = main
 	add_child(death_screen)
 	Settings.changed.connect(func(): _labels.clear())
-	Game.points_granted.connect(_on_points_granted)
-	Game.graft_found.connect(_on_graft_found)
-	Game.node_allocated.connect(_on_attack_node)
 	_refresh()
 
 
@@ -147,9 +135,9 @@ func banners_idle() -> bool:
 	return banner_time <= 0.0 and banner_queue.is_empty()
 
 
-## L'aide de départ est-elle à l'écran ?
+## Un glyphe du tutoriel est-il à l'écran ?
 func hint_visible() -> bool:
-	return _hint_box.visible and _hint_box.modulate.a > 0.01
+	return glyphs != null and glyphs.visible_step() != ""
 
 
 ## Écran de mort (voir death_screen.gd et main.player_died).
@@ -160,37 +148,6 @@ func show_death(info: Dictionary) -> void:
 	banner_time = 0.0
 	_banner.visible = false
 	death_screen.show_death(info)
-## Points d'arbre gagnés hors niveau : la source et le nombre de points.
-func _on_points_granted(n: int, source: String) -> void:
-	banner("%s : +%d point%s de l'Arbre de vie (%s)" % [Game.point_source_label(source), n, "s" if n > 1 else "", key_label("toggle_tree")])
-
-
-## Premier nœud qui change la forme de l'attaque de base : une annonce explique ce qui vient de se passer
-## (tutoriel : l'attaque évolue avec l'arbre, voir attack.gd). Les nœuds sans effet « attack_form » n'en déclenchent pas.
-func _on_attack_node(node: Dictionary) -> void:
-	var changes := str(node.get("type", "")) == "attack"
-	for e in node.get("effects", []):
-		if e is Dictionary and e.has("attack_form"):
-			changes = true
-	if changes and not bool(Game.flags.get("tuto_attaque", false)):
-		Game.flags["tuto_attaque"] = true
-		banner("Ton attaque a changé : %s. L'Arbre de vie la fera encore évoluer." % node.get("name", "nouveau nœud"))
-
-
-func _on_graft_found(id: String) -> void:
-	var g: Dictionary = Content.grafts().get(id, {})
-	banner("Greffe trouvée : %s. Pose-la dans l'Arbre de vie (%s)" % [g.get("name", id), key_label("toggle_tree")])
-
-
-## Première ligne de l'aide de départ : se déplacer (selon le mode choisi dans les options), l'attaque automatique, l'esquive.
-func move_hint_line() -> String:
-	return Controls.move_line()
-
-## Deuxième ligne : les compétences principales (souris) et secondaires.
-func skills_hint_line() -> String:
-	return Controls.skills_line()
-
-
 ## Nom de la touche selon la disposition du clavier du joueur (Z sur AZERTY pour « avancer »).
 func key_label(action: String) -> String:
 	if not _labels.has(action):
@@ -235,22 +192,6 @@ func _build_bottom_center() -> void:
 	v.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	v.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(v)
-	# Aide de départ : sur une bande de papier sombre, lisible sur n'importe quel sol.
-	var hint_back := PanelContainer.new()
-	hint_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var hb := UiTheme.box(Color(UiTheme.PAPER_DARK, 0.72), Color(0, 0, 0, 0), 0, 2)
-	hb.content_margin_top = 6
-	hb.content_margin_bottom = 6
-	hint_back.add_theme_stylebox_override("panel", hb)
-	hint_back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	v.add_child(hint_back)
-	_hint_back = hint_back
-	_hint_box = VBoxContainer.new()
-	_hint_box.add_theme_constant_override("separation", 4)
-	hint_back.add_child(_hint_box)
-	for i in 3:
-		var l := _label(_hint_box, 16, Color(0.963, 0.9, 0.756))
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 6)
@@ -330,33 +271,7 @@ func _process(delta: float) -> void:
 	if banner_kind != "combat" and holds_info() and banner_time > 0.4:
 		banner_time = 0.4
 	_next_banner()
-	hint_time -= delta
-	_update_hint()
 	_refresh()
-
-
-## L'aide de départ s'efface dès qu'elle a servi (le joueur s'est déplacé et a tiré), qu'un
-## combat commence (ennemi proche, coup reçu, siège du Cœur, boss) ou que l'Arbre est ouvert.
-func _update_hint() -> void:
-	if hint_time <= 0.0 or main == null or main.player == null:
-		return
-	var p = main.player
-	if _hint_start == null:
-		_hint_start = p.position
-	if p.position.distance_to(_hint_start) > 60.0:
-		_hint_moved = true
-	for cd in p.cds.values():
-		if float(cd) > 0.0:
-			_hint_skill = true
-			break
-	var fight: bool = in_boss_fight() or p.hurt_flash > 0.0 or main.siege_heart() != null
-	if not fight:
-		for e in main.enemies_near(p.position, HINT_ENEMY_NEAR):
-			fight = true
-			break
-	var done: bool = (_hint_moved and _hint_skill) or fight or Game.allocated.size() > 1
-	if done:
-		hint_time = minf(hint_time, 0.5)
 
 
 func _refresh() -> void:
@@ -400,24 +315,8 @@ func _refresh() -> void:
 	# Pendant le combat de boss, seules les informations du combat restent (vie, compétences, barre du boss).
 	_corner.visible = not in_boss_fight()
 
-	var show_hint := hint_time > 0.0 and Settings.show_hints and not in_boss_fight()
-	_hint_box.modulate.a = clampf(hint_time / 2.0, 0.0, 1.0) if show_hint else 0.0
-	_hint_box.visible = show_hint
-	_hint_back.modulate.a = _hint_box.modulate.a
-	_hint_back.visible = show_hint
-	if not show_hint:
-		return
-	var lines := [
-		move_hint_line(),
-		skills_hint_line(),
-		"%s : ouvrir l'Arbre de vie. Chaque nœud appris ravive une région du monde." % key_label("toggle_tree"),
-	]
-	for i in 3:
-		(_hint_box.get_child(i) as Label).text = lines[i]
 
-
-## Formes de l'attaque et synergies : le bandeau au-dessus de la vie, et une annonce pour chaque
-## nouvelle synergie (pas pour celles déjà là au chargement d'une partie).
+## Formes de l'attaque et synergies : le bandeau au-dessus de la vie (sans annonce écrite).
 func _refresh_attack() -> void:
 	var st: Dictionary = Game.attack()
 	var forms: Array = [st["form"]] + st.get("echoes", [])
@@ -426,13 +325,6 @@ func _refresh_attack() -> void:
 		_attack_strip.set_attack(forms, syn, "\n".join(Attack.describe(st)))
 		_attack_strip.offset_top = _attack_strip.offset_bottom - _attack_strip.custom_minimum_size.y
 		_attack_strip.offset_right = _attack_strip.offset_left + _attack_strip.custom_minimum_size.x
-	if _synergies_seen == null:
-		_synergies_seen = syn.duplicate()
-		return
-	for sid in syn:
-		if not sid in _synergies_seen:
-			banner("Synergie : %s (%s)" % [Attack.synergy(sid).get("name", sid), Attack.synergy_needs(sid)])
-	_synergies_seen = syn.duplicate()
 
 
 ## Textes de l'interface qui ne dépendent que des réglages (touches, noms) : calculés une fois, puis

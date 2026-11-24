@@ -326,8 +326,9 @@ func _run() -> void:
 	panel.queue_free()
 	for mode in settings.MOVE_MODES:
 		settings.move_mode = mode
-		var line: String = main.hud.move_hint_line()
-		check(line.contains("esquive") and line.contains("toute seule") and (mode != "moba" or line.contains("Clic droit")) and (mode != "curseur" or line.contains("souris")), "aide de départ adaptée (%s)" % mode)
+		var g: Array = main.hud.glyphs.glyph_for("bouger")
+		var want: Array = {"clavier": ["cross"], "moba": ["mouse", "right"], "curseur": ["mouse", "move"]}.get(mode, ["cross"])
+		check(g[0] == want[0] and (want.size() == 1 or g[1] == want[1]), "glyphe de départ adapté (%s)" % mode)
 	# Remet les options du poste comme avant le test.
 	if had_cfg:
 		var f := FileAccess.open(cfg_path, FileAccess.WRITE)

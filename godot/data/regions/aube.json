@@ -71,9 +71,7 @@
     ],
     "reward": {"points": 1},
     "life_radius": 820.0,
-    "life_color": "#fff4cf",
-    "wake_banner": "Le Cœur de l'aurore s'éveille : tiens la zone malgré la lumière crue !",
-    "purified_banner": "Le Cœur de l'aurore est purifié : le cercle de la Phalène s'ouvre."
+    "life_color": "#fff4cf"
   },
   "boss": {
     "script": "res://scripts/boss_aube.gd",
@@ -81,13 +79,6 @@
     "bar_color": "#f2d06b",
     "reward": {"points": 2, "graft": "greffe_aile_de_verre"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : la Phalène brise la lumière", "Phase 3 sur 3 : la lumière tombe du ciel"],
-    "arena": {"radius": 460.0, "radius_min": 320.0, "offset": 720.0, "life_color": "#fff4cf"},
-    "wake_banner": "La Phalène de verre ouvre ses ailes.",
-    "defeated_banner": "La Phalène de verre est vaincue !"
-  },
-  "ending": {
-    "sub": "Région d'Aube purifiée",
-    "title": "Le jour se lève sur les falaises",
-    "body": "La Phalène de verre s'est brisée. Sur les falaises, la lumière n'aveugle plus : elle dore l'herbe neuve et fait chanter le verre, et l'Arbre de vie boit sa première aube."
+    "arena": {"radius": 460.0, "radius_min": 320.0, "offset": 720.0, "life_color": "#fff4cf"}
   }
 }

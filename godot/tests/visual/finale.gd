@@ -158,18 +158,19 @@ func run(runner) -> void:
 	main.fx.rings = []
 	await _shot_at("finale_vaincue", pos, finale.center)
 
-	# L'épilogue : les textes et les statistiques de toute l'aventure, le générique, sa fin.
+	# La fin jouée dans le monde (world_ending.gd) : le joueur au pied de la graine, les vagues de
+	# vie, le générique qui s'écrit dans l'herbe, puis tous les noms écrits.
 	var q = main.quest_ui
 	q.start_epilogue()
-	q.epilogue.set_time(11.0)
-	await r._frames(2)
-	await r._shot("epilogue_texte", "fin")
-	q.epilogue.set_time(q.epilogue.E_CREDITS + 9.0)
-	await r._frames(2)
-	await r._shot("epilogue_generique", "fin")
-	q.epilogue.set_time(q.epilogue.end_time + 2.0)
-	await r._frames(2)
-	await r._shot("epilogue_fin", "fin")
+	var ending = q.world_ending
+	ending.set_time(ending.STEP * 3.0 + 1.0)
+	main.ground.finish_waves()
+	await r._frames(3)
+	await r._shot("fin_generique", "jeu")
+	ending.set_time(ending.duration() + 1.0)
+	main.ground.finish_waves()
+	await r._frames(3)
+	await r._shot("fin_monde", "jeu")
 
 
 ## Place le joueur (tourné vers « look »), redessine les poses figées, puis capture l'écran de jeu.

@@ -72,9 +72,7 @@
     ],
     "reward": {"points": 1},
     "life_radius": 820.0,
-    "life_color": "poison/clair",
-    "wake_banner": "Le Cœur de moisissure s'éveille : tiens la zone !",
-    "purified_banner": "Le Cœur est purifié : l'arène de l'Amanite-Mère s'ouvre."
+    "life_color": "poison/clair"
   },
   "boss": {
     "script": "res://scripts/boss_spore.gd",
@@ -82,14 +80,7 @@
     "bar_color": "#8a5cd0",
     "reward": {"points": 2, "graft": "greffe_sporange"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : les lamelles s'ouvrent", "Phase 3 sur 3 : le mycélium se déchaîne"],
-    "arena": {"radius": 440.0, "radius_min": 300.0, "offset": 700.0, "life_color": "poison/clair"},
-    "wake_banner": "L'Amanite-Mère s'éveille.",
-    "defeated_banner": "L'Amanite-Mère est vaincue !"
-  },
-  "ending": {
-    "sub": "Région de Spore purifiée",
-    "title": "Le marais respire",
-    "body": "L'Amanite-Mère s'est éteinte. Sur la vase apaisée, la mousse reprend, et les spores ne portent plus que la vie.\n\nD'autres régions attendent encore ton passage."
+    "arena": {"radius": 440.0, "radius_min": 300.0, "offset": 700.0, "life_color": "poison/clair"}
   },
   "ambience": "marais",
   "music": "marais"

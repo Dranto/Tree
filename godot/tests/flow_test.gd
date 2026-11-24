@@ -45,15 +45,21 @@ func _run() -> void:
 	game.allocate(nid)
 	check(lvl > 1 and game.allocated.has(nid), "progression simulée (niveau %d)" % lvl)
 
-	print("Aide des commandes")
+	print("Tutoriel discret")
 	var hud = current_scene.hud
 	var settings = root.get_node("Settings")
+	var glyphs = hud.glyphs
 	settings.set_move_mode("clavier")
-	check(hud.move_hint_line().contains("l'attaque part toute seule") and hud.move_hint_line().contains("se déplacer"), "aide : le clavier se déplace, l'attaque part seule")
-	check(hud.skills_hint_line().contains("Clic gauche") and hud.skills_hint_line().contains("Clic droit"), "aide : clic gauche et clic droit pour les compétences")
+	var g: Array = glyphs.glyph_for("bouger")
+	check(g[0] == "cross" and g[1].size() == 4, "tutoriel : se déplacer au clavier montre les quatre touches")
+	check(glyphs.glyph_for("competence") == ["mouse", "left"], "tutoriel : la compétence se montre sur le clic gauche")
 	settings.set_move_mode("moba")
-	check(hud.move_hint_line().contains("Clic droit") and not hud.skills_hint_line().contains("Clic droit"), "mode MOBA : le clic droit marche, la compétence 2 passe sur une touche")
+	check(glyphs.glyph_for("bouger") == ["mouse", "right"] and glyphs.glyph_for("competence") == ["mouse", "left"], "mode MOBA : le clic droit marche")
 	settings.set_move_mode("clavier")
+	game.flags.erase("tuto_esquive")
+	glyphs.step = "esquive"
+	glyphs.finish("esquive")
+	check(glyphs.step == "" and glyphs.done("esquive"), "tutoriel : un geste réussi efface son glyphe pour de bon")
 	check(hud.slot_keys_text(0) == "" and hud.slot_is_key(0) == false, "la barre : le clic gauche est dessiné, sans texte")
 	check(hud.slot_keys_text(2).contains(" · 1"), "la barre : une secondaire donne sa touche et son chiffre")
 	var pl = current_scene.player
@@ -62,16 +68,8 @@ func _run() -> void:
 	check(pl.bar[0] == before[1] and pl.bar[1] == before[0], "glisser-déposer : deux emplacements échangent leur compétence")
 	pl.swap_slots(0, 1)
 	check(pl.bar == before, "l'échange est réversible")
-	game.flags.erase("tuto_attaque")
-	hud.banner_queue.clear()
-	hud.banner_time = 0.0
-	hud._on_attack_node({"type": "attack", "name": "Échardes", "effects": [{"attack_form": "echarde"}]})
-	check(hud.banner_text.contains("Échardes") and game.flags.get("tuto_attaque", false), "tutoriel : la première transformation de l'attaque est annoncée")
-	hud.banner_time = 0.0
-	hud.banner_queue.clear()
-	hud._on_attack_node({"type": "attack", "name": "Autre", "effects": [{"attack_form": "fouet"}]})
-	check(hud.banner_queue.is_empty() and not hud.banner_text.contains("Autre"), "tutoriel : annoncée une seule fois")
-	game.flags.erase("tuto_attaque")
+	hud._process(0.1)
+	check(hud.banners_idle(), "aucune annonce écrite pendant la partie")
 
 	print("Retour au titre")
 	flow.go_title()
@@ -86,7 +84,7 @@ func _run() -> void:
 	check(game.allocated.has(nid), "nœud appris repris")
 	check(flow.continue_requested == false, "la demande de reprise est consommée")
 
-	print("Objectifs et célébration de la région")
+	print("Objectifs et reverdie de la région")
 	var obj = root.get_node("Objectives")
 	var boss_done: Array = []
 	obj.completed.connect(func(id): if id == "boss": boss_done.append(id))
@@ -100,18 +98,18 @@ func _run() -> void:
 	obj.check()
 	check(obj.is_done("boss") and boss_done.size() == 1, "le boss vaincu accomplit son objectif")
 	q._process(q.ENDING_DELAY + 0.5)
-	check(q.fanfare.active and bool(game.flags.get("ronce_fin_vue", false)), "la célébration de la région se déclenche")
+	check(q.fanfare.active and bool(game.flags.get("ronce_fin_vue", false)), "la reverdie de la région se déclenche")
 	check(not paused_now(), "sans pause ni écran plein : on continue à jouer")
 	q.fanfare.set_time(30.0)
 	q._process(60.0)
-	check(not q.fanfare.active, "la célébration ne se déclenche qu'une fois")
+	check(not q.fanfare.active, "la reverdie ne se déclenche qu'une fois")
 	flow.go_title()
 	await _frames(5)
 	flow.continue_game()
 	await _frames(5)
 	q = current_scene.quest_ui
 	q._process(60.0)
-	check(obj.is_done("boss") and not q.fanfare.active and not obj.ending_due(), "après Continuer, la célébration ne revient pas")
+	check(obj.is_done("boss") and not q.fanfare.active and not obj.ending_due(), "après Continuer, la reverdie ne revient pas")
 	check(boss_done.size() == 1, "l'objectif du boss n'est pas ré-accompli au chargement")
 
 	print("Nouvelle partie par-dessus une sauvegarde")
