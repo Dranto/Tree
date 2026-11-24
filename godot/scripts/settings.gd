@@ -64,17 +64,17 @@ var high_contrast := false
 var pause_on_focus_loss := true
 ## Commandes du jeu hors barre de compétences : touche principale de chaque action, réassignable
 ## (touche physique, comme la barre). Les flèches restent toujours actives pour se déplacer, T pour
-## l'arbre. Le journal et la carte gardent par défaut la lettre logique (J, M) quelle que soit la
-## disposition du clavier ; réassignés, ils prennent la touche physique pressée.
-const GAME_ACTIONS := ["move_up", "move_left", "move_down", "move_right", "dash", "toggle_tree", "toggle_map", "toggle_journal"]
+## l'arbre. La carte garde par défaut la lettre logique (M) quelle que soit la
+## disposition du clavier ; réassignée, elle prend la touche physique pressée.
+const GAME_ACTIONS := ["move_up", "move_left", "move_down", "move_right", "dash", "toggle_tree", "toggle_map"]
 const GAME_ACTION_NAMES := {"move_up": "Avancer", "move_left": "Aller à gauche", "move_down": "Reculer", "move_right": "Aller à droite",
-	"dash": "Esquive", "toggle_tree": "Arbre de vie", "toggle_map": "Carte", "toggle_journal": "Journal"}
+	"dash": "Esquive", "toggle_tree": "Arbre de vie", "toggle_map": "Carte"}
 const ACTION_DEFAULTS := {"move_up": KEY_W, "move_left": KEY_A, "move_down": KEY_S, "move_right": KEY_D,
-	"dash": KEY_SPACE, "toggle_tree": KEY_TAB, "toggle_map": KEY_M, "toggle_journal": KEY_J}
+	"dash": KEY_SPACE, "toggle_tree": KEY_TAB, "toggle_map": KEY_M}
 ## Touches toujours actives en plus (non réassignables, ne gênent pas une réassignation).
 const ACTION_EXTRAS := {"move_up": [KEY_UP], "move_left": [KEY_LEFT], "move_down": [KEY_DOWN], "move_right": [KEY_RIGHT], "toggle_tree": [KEY_T]}
 ## Actions dont la touche par défaut est une lettre logique (et non une position physique).
-const LOGICAL_DEFAULTS := ["toggle_map", "toggle_journal"]
+const LOGICAL_DEFAULTS := ["toggle_map"]
 var action_keys: Dictionary = ACTION_DEFAULTS.duplicate()
 ## Force des rafales de vent (région de Vent, wind.gd), de 0 (coupées) à 1 (pleine) : elles poussent
 ## le joueur et dévient les projectiles. Accessibilité : on peut les couper.
@@ -171,7 +171,7 @@ func save_settings() -> void:
 
 
 ## Crée ou remet à jour les actions de la barre (« skill_main_1 », « skill_main_2 », « slot_1 » à
-## « slot_4 »), les commandes du jeu (GAME_ACTIONS : déplacement, arbre, carte, journal) et
+## « slot_4 »), les commandes du jeu (GAME_ACTIONS : déplacement, esquive, arbre, carte) et
 ## l'esquive (sa touche, plus Maj hors du mode « moba »).
 func apply_bindings() -> void:
 	for a in GAME_ACTIONS:
@@ -206,7 +206,7 @@ func apply_bindings() -> void:
 
 
 ## Évènement principal d'une commande du jeu : touche physique, sauf la lettre logique par défaut
-## du journal et de la carte.
+## de la carte.
 func _action_event(a: String) -> InputEvent:
 	var k: int = action_keys[a]
 	if a in LOGICAL_DEFAULTS and k == ACTION_DEFAULTS[a]:

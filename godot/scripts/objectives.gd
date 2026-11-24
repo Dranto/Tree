@@ -342,9 +342,10 @@ func complete(id: String, silent := false) -> bool:
 			else:
 				Game.points += pts
 				Game.tree_changed.emit()
-		if main != null and is_instance_valid(main) and main.get("hud") != null:
-			var more: String = ("  (" + o["reward"]["text"] + ")") if pts > 0 else ""
-			main.hud.banner("Objectif accompli : %s%s" % [o["title"], more])
+		# Plus d'annonce écrite : un éclat de sève sur le joueur et un son.
+		if main != null and is_instance_valid(main) and main.get("fx") != null and main.get("player") != null:
+			main.fx.ring(main.player.position, 16.0, 120.0, 0.6, Art.ec("seve", "clair"), 4.0)
+			main.fx.pickup(main.player.position, "seve", 8)
 			Sfx.play("niveau")
 	completed.emit(id)
 	changed.emit()
@@ -419,12 +420,6 @@ func ending_region() -> String:
 ## Textes de la séquence de fin pour cette région : ceux de la région (« ending » de son fichier),
 ## ou, quand toutes les régions sont purifiées, l'annonce de la finale (« adventure_ending » de
 ## objectives.json : la Flétrissure se retire sous la graine). {sub, title, body}.
-func ending_texts(region: String) -> Dictionary:
-	if Regions.all_purified(Game.flags):
-		return Content._load("objectives").get("adventure_ending", {})
-	return Regions.section(region, "ending")
-
-
 ## Note la séquence de fin de cette région comme vue. La fin de l'aventure (ENDING_SEEN) n'est
 ## posée que par l'épilogue, après la finale.
 func mark_ending_seen(region: String) -> void:

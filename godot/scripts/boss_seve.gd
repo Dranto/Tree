@@ -277,10 +277,7 @@ func _enter_phase(n: int) -> void:
 	cycle = 0
 	gap = 0.3
 	main.fx.ring(anchor, radius, 420.0, 0.7, Color(Art.ec("seve", "clair"), 0.9), 8.0)
-	if n == 2:
-		main.hud.banner("Le Saule exsangue boit la vallée : ne reste pas sous ses branches.", "combat")
-	else:
-		main.hud.banner("L'étang se vide : le Saule exsangue tire tout à lui !", "combat")
+	if n != 2:
 		arena.start_shrink()
 
 

@@ -17,7 +17,7 @@
       "boss": {"eveil": "finale_boss_eveil", "phase": "finale_boss_phase", "mort": "finale_boss_mort"}
     },
     "generique": {
-      "_doc": "Épilogue et générique (epilogue.gd) : seule la couche lumineuse est jouée, un thème qui reprend les accords des régions (do, la, fa, sol) en arpège lent, ample et clair. La couche sombre n'est écrite que pour que la paire existe.",
+      "_doc": "Fin et générique joués dans le monde (world_ending.gd) : seule la couche lumineuse est jouée, un thème qui reprend les accords des régions (do, la, fa, sol) en arpège lent, ample et clair. La couche sombre n'est écrite que pour que la paire existe.",
       "music": {
         "seed": 71,
         "roots": [3, 0, -4, -2],

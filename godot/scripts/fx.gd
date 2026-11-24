@@ -246,6 +246,17 @@ func pickup(pos: Vector2, element := "seve", count := 5, vers := Vector2.INF) ->
 				_rng.randf_range(0.25, 0.4), _rng.randf_range(1.8, 2.8), clair if i % 2 == 0 else col, 0.0, 4.0)
 
 
+## Cendre qui reflue (fin de la dernière région, region_fanfare.gd) : des flocons gris qui partent
+## autour de « pos » et dérivent dans la direction « dir » (vers la graine).
+func ash_drift(pos: Vector2, dir: Vector2, count := 3) -> void:
+	if Settings.reduce_effects:
+		count = mini(count, 1)
+	for i in count:
+		var at := pos + Vector2(_rng.randf_range(-640.0, 640.0), _rng.randf_range(-380.0, 380.0))
+		var grey := Color(0.36, 0.34, 0.33, 0.9).lerp(Color(0.55, 0.52, 0.5, 0.9), _rng.randf())
+		_particle(1, at, dir * _rng.randf_range(160.0, 260.0), _rng.randf_range(1.4, 2.2), _rng.randf_range(2.4, 3.8), grey, 0.0, 0.2)
+
+
 ## Ajoute à la secousse d'écran (0 à 1, cumulée). Sans effet si la secousse est coupée.
 func shake(amount: float) -> void:
 	if Settings.shake_strength() <= 0.0:

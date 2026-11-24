@@ -108,8 +108,6 @@ func _physics_process(delta: float) -> void:
 	if seen <= 0.0 and d < CLEAR[kind]:
 		seen = 1.0
 		Game.flags[flag() + "_vu"] = true
-		if kind == "secret":
-			main.hud.banner("Quelque chose brille sous la cendre…")
 	if active:
 		return
 	if d < ZONE:

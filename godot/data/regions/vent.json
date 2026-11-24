@@ -81,9 +81,7 @@
     ],
     "reward": {"points": 1},
     "life_radius": 840.0,
-    "life_color": "vent/clair",
-    "wake_banner": "Le Cœur des rafales s'éveille : tiens la zone malgré le vent !",
-    "purified_banner": "Le Cœur des rafales est purifié : l'aire du Harfang s'ouvre."
+    "life_color": "vent/clair"
   },
   "boss": {
     "script": "res://scripts/boss_vent.gd",
@@ -91,14 +89,7 @@
     "bar_color": "vent",
     "reward": {"points": 2, "graft": "greffe_oeil_tempete"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : le Harfang prend son envol", "Phase 3 sur 3 : la tempête se lève"],
-    "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "vent/clair"},
-    "wake_banner": "Le Harfang de cendre déploie ses ailes.",
-    "defeated_banner": "Le Harfang de cendre est vaincu !"
-  },
-  "ending": {
-    "sub": "Région de Vent purifiée",
-    "title": "Les plateaux respirent",
-    "body": "Le Harfang de cendre est tombé. Sur les hauts plateaux, le vent ne charrie plus la cendre : il couche l'herbe blonde et porte au loin les graines de l'Arbre de vie."
+    "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "vent/clair"}
   },
   "ambience": "plateau",
   "music": "plateau"

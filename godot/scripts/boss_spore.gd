@@ -306,10 +306,7 @@ func _enter_phase(n: int) -> void:
 	cycle = 0
 	gap = 0.3
 	main.fx.ring(anchor, radius, 420.0, 0.7, Color(Art.ec("poison", "clair"), 0.9), 8.0)
-	if n == 2:
-		main.hud.banner("L'Amanite-Mère ouvre ses lamelles : les spores tourbillonnent.", "combat")
-	else:
-		main.hud.banner("L'Amanite-Mère se déchire : le mycélium fend le sol !", "combat")
+	if n != 2:
 		arena.start_shrink()
 
 

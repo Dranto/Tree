@@ -34,8 +34,6 @@ var boss_script: GDScript
 var boss_name := "La Mère-Ronce"
 var bar_color := Color("c84b44")
 var phase_names: Array = ["Phase 1 sur 3", "Phase 2 sur 3 : les bourgeons éclosent", "Phase 3 sur 3 : les ronces se resserrent"]
-var wake_banner := "La Mère-Ronce s'éveille."
-var defeated_banner := "La Mère-Ronce est vaincue !"
 ## Rayon de l'arène, rayon final quand elle se resserre, et distance entre le Cœur et son centre
 ## (vers l'extérieur du monde).
 var max_radius := 470.0
@@ -82,8 +80,6 @@ func configure(id: String) -> void:
 	boss_name = str(b.get("name", boss_name))
 	bar_color = Regions.color(b.get("bar_color", "#c84b44"))
 	phase_names = b.get("phases", phase_names)
-	wake_banner = str(b.get("wake_banner", boss_name + " s'éveille."))
-	defeated_banner = str(b.get("defeated_banner", boss_name + " est vaincue !"))
 	var ar: Dictionary = b.get("arena", {})
 	max_radius = float(ar.get("radius", max_radius))
 	min_radius = float(ar.get("radius_min", min_radius))
@@ -202,7 +198,6 @@ func _start_fight() -> void:
 	main.enemies_layer.add_child(boss)
 	main.enemies.append(boss)
 	main.big_enemies.append(boss)
-	main.hud.banner(wake_banner, "combat")
 	main.fx.ring(center, 30.0, max_radius, 0.8, Color(1.0, 0.45, 0.3, 0.8), 6.0)
 	# Entrée dans l'arène : le mur se referme, l'écran rougit sur les bords et tremble.
 	main.screen_fx.glow(Art.c("danger"), 0.45, main.screen_fx.FADE_ARENA * 1.6)
@@ -232,7 +227,6 @@ func boss_defeated() -> void:
 	main.spawn_paused = false
 	Game.flags[flag] = true
 	# Récompense (« boss › reward » de la région) : points d'arbre, donnés une seule fois, et une greffe au sol.
-	main.hud.banner(defeated_banner)
 	var reward: Dictionary = Content.rewards().get("boss", {}).get(region, {})
 	Game.grant_points(int(reward.get("points", REWARD_POINTS)), "boss", region + "_boss")
 	if str(reward.get("graft", "")) != "":

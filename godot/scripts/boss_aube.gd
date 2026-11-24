@@ -316,10 +316,6 @@ func _enter_phase(n: int) -> void:
 	cycle = 0
 	gap = 0.3
 	main.fx.ring(anchor, radius, 440.0, 0.7, Color(A.pal("lumiere_clair"), 0.9), 8.0)
-	if n == 2:
-		main.hud.banner("La Phalène de verre brise la lumière.", "combat")
-	else:
-		main.hud.banner("La lumière tombe du ciel !", "combat")
 
 
 func danger_time(pos: Vector2, margin := 26.0) -> float:

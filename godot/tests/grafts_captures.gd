@@ -28,7 +28,7 @@ func _run() -> void:
 	main.autotest = false
 	main.autosave_enabled = false
 	main.spawn_paused = true
-	main.hud.hint_time = 0.0
+	main.hud.glyphs.hide()
 
 	# Un autel aperçu, encore couvert de cendre, puis ravivé : sa greffe tombe au sol.
 	var altar = main.altars[1]

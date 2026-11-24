@@ -116,21 +116,10 @@ func _run() -> void:
 	check(not "Arène de la Mère-Ronce" in texts, "plus de nom de boss écrit en dur")
 	q.close()
 
-	print("Journal")
-	q.toggle("journal")
-	await _frames(2)
-	var jt := _texts(q.journal._box, [])
-	check("L'AVENTURE" in jt and "RÉGION DE RONCE" in jt, "sections : l'aventure et Ronce")
-	check(RegionUi.UNDER_SEED_NAME.to_upper() in jt, "section « sous la graine » pour la finale")
-	check(not "RÉGION D'ESSAI" in jt, "pas de section pour une région sans objectifs")
-	check(jt.any(func(t): return t.begins_with("Aventure :") and "régions purifiées" in t), "sous-titre de l'aventure : %s" % [jt.slice(0, 3)])
-	q.close()
-
-	print("Suivi")
+	print("Feuille de sève (plus de journal ni de suivi écrit)")
 	var tracker = q.tracker
 	obj.complete("premier_noeud", true)
-	tracker.refresh()
-	check(tracker._head.text.contains("Roncier") or obj.current().get("region", "") == "", "le suivi dit la région de l'objectif quand il y en a plusieurs : %s" % tracker._head.text)
+	check(tracker.find_children("*", "Label", true, false).is_empty(), "la feuille ne porte aucun texte")
 
 	root.remove_child(main)
 	main.queue_free()

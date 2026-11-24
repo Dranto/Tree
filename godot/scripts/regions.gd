@@ -431,7 +431,7 @@ static func validate() -> PackedStringArray:
 	for id in ids():
 		var d := def(id)
 		var w := "%s" % d.get("_path", id)
-		for f in ["name", "place", "map_name", "color", "ground", "heart", "boss", "ending"]:
+		for f in ["name", "place", "map_name", "color", "ground", "heart", "boss"]:
 			if not d.has(f):
 				errors.append("%s : champ « %s » manquant" % [w, f])
 		var br := branch_of(id)
@@ -548,7 +548,4 @@ static func validate() -> PackedStringArray:
 			for sp in spots:
 				if ac.distance_to(sp["pos"]) < ar_r + float(sp["zone"]):
 					errors.append("%s, boss › arena : l'arène empiète sur la zone d'un Cœur" % w)
-		for f in ["sub", "title", "body"]:
-			if str(section(id, "ending").get(f, "")) == "":
-				errors.append("%s, ending : « %s » manquant" % [w, f])
 	return errors

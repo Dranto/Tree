@@ -18,6 +18,10 @@ func _ready() -> void:
 
 ## Vrai quand la partie qui démarre doit reprendre la sauvegarde (lu par la scène de jeu).
 var continue_requested := false
+## Vrai quand la partie qui démarre vient de « Nouvelle partie » (lu et remis à faux par la scène
+## de jeu) : le premier Flétri y arrive seul (tutoriel discret, main.gd). Les tests qui ouvrent la
+## scène de jeu directement ne l'ont pas.
+var fresh_game := false
 
 
 ## Autoload de sauvegarde, s'il existe : les menus n'en dépendent pas.
@@ -41,6 +45,7 @@ func save_summary() -> Dictionary:
 
 func new_game() -> void:
 	continue_requested = false
+	fresh_game = true
 	Game.reset()
 	_open(GAME_SCENE)
 

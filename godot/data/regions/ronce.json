@@ -70,9 +70,7 @@
     ],
     "reward": {"points": 1},
     "life_radius": 820.0,
-    "life_color": "saignement/clair",
-    "wake_banner": "Le Cœur de flétrissure s'éveille : tiens la zone !",
-    "purified_banner": "Le Cœur est purifié : l'arène de la Mère-Ronce s'ouvre."
+    "life_color": "saignement/clair"
   },
   "boss": {
     "script": "res://scripts/boss_ronce.gd",
@@ -80,14 +78,7 @@
     "bar_color": "#c84b44",
     "reward": {"points": 2, "graft": "greffe_mere"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : les bourgeons éclosent", "Phase 3 sur 3 : les ronces se resserrent"],
-    "arena": {"radius": 470.0, "radius_min": 310.0, "offset": 800.0, "life_color": "#e0675e"},
-    "wake_banner": "La Mère-Ronce s'éveille.",
-    "defeated_banner": "La Mère-Ronce est vaincue !"
-  },
-  "ending": {
-    "sub": "Région de Ronce purifiée",
-    "title": "Le roncier reverdit",
-    "body": "La Mère-Ronce n'est plus. Là où la cendre étouffait la terre, les racines respirent de nouveau, et l'Arbre de vie étend ses branches vers d'autres horizons.\n\nCinq régions attendent encore ton passage."
+    "arena": {"radius": 470.0, "radius_min": 310.0, "offset": 800.0, "life_color": "#e0675e"}
   },
   "ambience": "roncier",
   "music": "roncier"

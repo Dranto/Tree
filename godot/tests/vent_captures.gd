@@ -34,7 +34,7 @@ func _run() -> void:
 	main.autotest = false
 	main.autosave_enabled = false
 	main.spawn_paused = true
-	main.hud.hint_time = 0.0
+	main.hud.glyphs.hide()
 	if shot == "arbre":
 		await _tree()
 	else:

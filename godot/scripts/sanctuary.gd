@@ -151,12 +151,12 @@ func rest(just_lit: bool) -> void:
 	p.heal(Game.stats["max_hp"], true)
 	var before := str(Game.flags.get("renaissance", "graine"))
 	Game.flags["renaissance"] = id
-	if just_lit:
-		main.hud.banner("Sanctuaire %s ravivé : tu renaîtras ici." % place)
-	elif before != id:
-		main.hud.banner("Tu renaîtras au sanctuaire %s." % place)
-	else:
+	# Plus d'annonce : la flamme qui s'allume dit qu'on renaîtra ici. Un autre sanctuaire déjà
+	# ravivé reprend la renaissance avec une onde douce.
+	if not just_lit and before == id:
 		return
+	if not just_lit:
+		main.fx.ring(position, 10.0, RADIUS * 1.6, 0.6, Color(Art.ec("seve", "clair"), 0.8), 3.0)
 	main.request_autosave()
 
 
