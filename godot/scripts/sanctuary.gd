@@ -43,6 +43,9 @@ var progress := 0.0
 var inside := false
 var frozen := false
 var t := 0.0
+## Temps depuis le dernier dessin : redessiné 15 fois par seconde au plus, sauf pendant l'onde du
+## ravivement (docs/performances.md).
+var _since_draw := 1.0
 ## Éclat qui suit le moment où le sanctuaire est ravivé (1 puis retombe à 0).
 var flash := 0.0
 var _stones: Array = []
@@ -90,7 +93,9 @@ func is_lit() -> bool:
 func _process(delta: float) -> void:
 	t += delta
 	flash = maxf(0.0, flash - delta / 1.2)
-	if main.player.position.distance_squared_to(position) < 1300.0 * 1300.0 and _near_view():
+	_since_draw += delta
+	if (_since_draw >= 1.0 / 15.0 - 0.001 or flash > 0.0) and main.player.position.distance_squared_to(position) < 1300.0 * 1300.0 and _near_view():
+		_since_draw = 0.0
 		queue_redraw()
 
 
