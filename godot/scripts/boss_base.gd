@@ -172,6 +172,7 @@ func _physics_process(delta: float) -> void:
 	if phase != _last_phase:
 		_last_phase = phase
 		_region_sound("phase")
+		main.fx.boss_phase(position, radius)
 	_projectiles_step(delta)
 	minions = minions.filter(func(e): return is_instance_valid(e) and not e.dead and not e.is_queued_for_deletion())
 	var p = main.player
@@ -247,8 +248,11 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 	hp -= amount
 	if not dot:
 		hit_flash = 0.08
-		if crit:
-			main.fx.text(position + Vector2(0, -radius * 2.0), str(roundi(amount)), Color("f2d06b"), 20, 0.6)
+		# Éclats sur le bord du corps tourné vers le Porte-Graine (data/feel.json, comme les Flétris).
+		var to: Vector2 = main.player.position - position if main.player != null else Vector2.DOWN
+		var at := position + (to.normalized() if to.length() > 1.0 else Vector2.DOWN) * radius * 0.8
+		var heavy: bool = amount >= max_hp * main.fx.feel("heavy", "boss_frac", 0.04)
+		main.fx.impact(at, amount, crit, 18.0, "", heavy, true)
 	if hp <= 0.0:
 		_die()
 
@@ -340,6 +344,7 @@ func _die() -> void:
 		if is_instance_valid(e) and not e.dead:
 			e.take_damage(e.hp + 1.0, false)
 	main.on_enemy_killed(self)
+	main.fx.boss_kill(position, radius)
 	arena.boss_defeated()
 
 

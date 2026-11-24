@@ -206,11 +206,12 @@
           ]
         },
         {
-          "id": "f8",
-          "type": "graft",
-          "name": "Greffon de la lanière",
+          "id": "f8n",
+          "type": "small",
+          "name": "Lanière fine",
           "at": [1.95, 0.1],
-          "links": ["f6"]
+          "links": ["f6"],
+          "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.04}, {"stat": "bleed", "op": "add", "value": 0.008}]
         },
         {
           "id": "f9",
@@ -896,11 +897,12 @@
           "requires_text": "Couvert de cendre tant que la Mère-Ronce n'est pas vaincue."
         },
         {
-          "id": "h4",
-          "type": "graft",
-          "name": "Greffon de ronce",
+          "id": "h4n",
+          "type": "small",
+          "name": "Épine ancienne",
           "at": [1.0, 0],
-          "links": ["h1", "h2", "h3"]
+          "links": ["h1", "h2", "h3"],
+          "effects": [{"stat": "thorns", "op": "add", "value": 4}, {"stat": "max_hp", "op": "add", "value": 8}]
         }
       ],
       "complete": {
@@ -990,11 +992,12 @@
           ]
         },
         {
-          "id": "p5",
-          "type": "graft",
-          "name": "Greffon venimeux",
+          "id": "p5n",
+          "type": "small",
+          "name": "Suc amer",
           "at": [1.5, 0],
-          "links": ["p4"]
+          "links": ["p4"],
+          "effects": [{"stat": "poison", "op": "add", "value": 0.03}, {"stat": "thorns", "op": "add", "value": 3}]
         }
       ],
       "complete": {
@@ -1076,11 +1079,12 @@
           ]
         },
         {
-          "id": "o5",
-          "type": "graft",
-          "name": "Greffon de la souche",
+          "id": "o5n",
+          "type": "small",
+          "name": "Souche vive",
           "at": [1.5, 0],
-          "links": ["o4"]
+          "links": ["o4"],
+          "effects": [{"stat": "max_hp", "op": "add", "value": 10}, {"stat": "regen", "op": "add", "value": 0.2}]
         }
       ],
       "complete": {

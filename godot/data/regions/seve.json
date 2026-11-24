@@ -72,9 +72,7 @@
     ],
     "reward": {"points": 1},
     "life_radius": 840.0,
-    "life_color": "seve/clair",
-    "wake_banner": "Le Cœur des sources s'éveille : tiens la zone !",
-    "purified_banner": "Le Cœur des sources est purifié : l'étang du Saule s'ouvre."
+    "life_color": "seve/clair"
   },
   "boss": {
     "script": "res://scripts/boss_seve.gd",
@@ -82,13 +80,6 @@
     "bar_color": "seve",
     "reward": {"points": 2, "graft": "greffe_coeur_de_saule"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : le Saule boit la vallée", "Phase 3 sur 3 : l'étang se vide"],
-    "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "seve/clair"},
-    "wake_banner": "Le Saule exsangue tend ses racines vers toi.",
-    "defeated_banner": "Le Saule exsangue est vaincu !"
-  },
-  "ending": {
-    "sub": "Région de Sève purifiée",
-    "title": "Les sources chantent",
-    "body": "Le Saule exsangue est tombé. Dans la vallée, les sources rendent ce qu'il avait bu : l'eau court de nouveau sous les saules, et la sève remonte jusqu'aux racines de l'Arbre de vie."
+    "arena": {"radius": 480.0, "radius_min": 330.0, "offset": 800.0, "life_color": "seve/clair"}
   }
 }

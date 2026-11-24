@@ -39,7 +39,7 @@
     {"id": "traine_vase", "name": "Traîne-vase", "behavior": "puddler", "region": "spore", "art": "spore",
      "hp": 44, "speed": 62, "damage": 9, "radius": 17, "xp": 5, "color": "#5a4a6a",
      "resist": {"spore": 0.25},
-     "cooldown": 1.7, "windup": 0.45, "puddle_radius": 46, "puddle_life": 6.0, "puddle_dps": 8, "max_puddles": 4},
+     "cooldown": 1.7, "windup": 0.5, "puddle_radius": 46, "puddle_life": 6.0, "puddle_dps": 8, "max_puddles": 4},
     {"id": "scissipore", "name": "Scissipore", "behavior": "splitter", "region": "spore", "art": "spore",
      "hp": 32, "speed": 92, "damage": 8, "radius": 15, "xp": 4, "color": "#6a4c7a",
      "resist": {"spore": 0.25},

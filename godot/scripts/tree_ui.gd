@@ -31,11 +31,11 @@ const AttackScript = preload("res://scripts/attack.gd")
 
 const RADIUS := {
 	"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0,
-	"skill": 23.0, "mutation": 20.0, "mastery": 19.0, "graft": 17.0, "withered": 18.0, "attack": 21.0,
+	"skill": 23.0, "mutation": 20.0, "mastery": 19.0, "withered": 18.0, "attack": 21.0,
 }
 const KIND_LABEL := {
 	"root": "Origine", "small": "Nœud", "notable": "Nœud notable", "keystone": "Nœud clé",
-	"skill": "Compétence", "mutation": "Mutation", "mastery": "Maîtrise", "graft": "Emplacement de greffe", "withered": "Nœud flétri",
+	"skill": "Compétence", "mutation": "Mutation", "mastery": "Maîtrise", "withered": "Nœud flétri",
 	"attack": "Attaque de base",
 }
 ## Couleurs de la cendre qui couvre un nœud flétri tant qu'il n'est pas libéré.
@@ -66,7 +66,7 @@ const LOD_NEAR := 0.8
 ## Taille minimale à l'écran (en pixels) des nœuds importants, pour qu'ils restent visibles dézoomés.
 const MIN_SCREEN_RADIUS := {
 	"root": 9.0, "keystone": 8.0, "notable": 5.0, "small": 0.0,
-	"skill": 7.0, "mutation": 6.0, "mastery": 6.0, "graft": 5.0, "withered": 5.0, "attack": 6.0,
+	"skill": 7.0, "mutation": 6.0, "mastery": 6.0, "withered": 5.0, "attack": 6.0,
 }
 
 ## Taille des textes (pixels à l'écran, quel que soit le zoom).
@@ -107,7 +107,7 @@ var font: Font
 var t := 0.0
 ## Outils de planification (recherche, chemins, plan, résumé) : voir tree_panels.gd.
 var panels
-## Inventaire des greffes (tree_grafts.gd), en bas à gauche.
+## Couronne de greffes (tree_grafts.gd), en bas à gauche : indépendante des nœuds de l'arbre.
 var grafts_panel
 
 ## Rectangles (à l'écran) des textes dessinés par la couche des libellés, pour les contrôles automatiques.
@@ -202,10 +202,16 @@ var _view: Control
 var _cache_ok := false
 var _cache_zoom := 1.0
 var _cache_cam := Vector2.ZERO
-var _once_queue: Array = []   # SubViewport dont le rendu est demandé à l'image suivante
-var _cache_next := {}          # géométrie de la couche fixe à adopter avec ce rendu
 var _cache_logical := Vector2.ZERO
 var _cache_px := 1.0
+## Zoom à la molette en douceur : zoom visé (0 : aucun) et point de l'écran qui reste fixe.
+## ZOOM_EASE : vitesse à laquelle la vue rejoint le zoom visé (environ 0,15 s pour un cran).
+const ZOOM_EASE := 22.0
+var _zoom_goal := 0.0
+var _zoom_anchor := Vector2.ZERO
+## Trajet en cours vers une vue (glide_to) ; GLIDE_DUR : sa durée.
+const GLIDE_DUR := 0.42
+var _glide := {}
 ## Temps depuis le dernier changement de vue venu de la souris (molette, glisser).
 var _idle := 0.0
 var _interactive := false
@@ -213,6 +219,10 @@ var _interactive := false
 const OPEN_DUR := 0.4
 var _open := 1.0
 var _closing: TextureRect = null
+## Repères de test (tests/tree_align_test.gd) : petits carrés de couleur pure posés à des points de
+## l'arbre dans le fond (« backdrop »), la couche fixe (« world ») et la couche de vie (« life »).
+## Le test vérifie qu'ils tombent à l'écran là où to_screen() les attend, image par image.
+var test_marks := {}
 ## Rendu sans mélange pour poser l'image opaque de la couche fixe (moins coûteux en rendu logiciel).
 static var _opaque_mat: ShaderMaterial = null
 
@@ -252,6 +262,12 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	visible = false
 	focus_mode = Control.FOCUS_NONE
+	# Pas d'interpolation physique dans l'arbre (et ses images en cache) : avec elle (réglage du projet),
+	# un Node2D déplacé en dehors d'un pas physique est dessiné entre son ancienne et sa nouvelle place.
+	# À plus d'une image par pas physique (vraie carte graphique, 144 Hz), l'image en cache était
+	# enregistrée à mi-chemin et les couches vivantes traînaient : le fond se décalait des nœuds.
+	# Les SubViewport n'en héritent pas : chacune est réglée à part (_cache_vp, _backdrop_vp).
+	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	font = ThemeDB.fallback_font
 	_rings = TreeArt.growth_rings(SkillTree.RINGS, SkillTree.RING_GAP)
 	# Image de la couche fixe : rendue à part, une fois, puis posée à l'écran par _view.
@@ -260,6 +276,7 @@ func _ready() -> void:
 	_cache_vp.transparent_bg = false
 	_cache_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_cache_vp.size = Vector2i(2, 2)
+	_cache_vp.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	add_child(_cache_vp)
 	_static = Layer.new()
 	_static.ui = self
@@ -281,6 +298,7 @@ func _ready() -> void:
 	_backdrop_vp.transparent_bg = false
 	_backdrop_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_backdrop_vp.size = Vector2i(BACKDROP_PX, BACKDROP_PX)
+	_backdrop_vp.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	add_child(_backdrop_vp)
 	_backdrop = Layer.new()
 	_backdrop.ui = self
@@ -374,8 +392,10 @@ func toggle() -> void:
 	toggled.emit(visible)
 
 
-## Cadre la vue pour que l'arbre entier et les noms des branches tiennent à l'écran.
+## Cadre la vue pour que l'arbre entier et les noms des branches tiennent à l'écran (tout de suite).
 func fit_view() -> void:
+	_glide = {}
+	_zoom_goal = 0.0
 	min_zoom = fit_zoom() * ZOOM_MIN_FACTOR
 	zoom = fit_zoom()
 	cam = Vector2.ZERO
@@ -458,6 +478,7 @@ func _process(delta: float) -> void:
 		_labels.modulate.a = Anim.ease_out(_open)
 	elif _labels.modulate.a < 1.0:
 		_labels.modulate.a = 1.0
+	_ease_view(delta)
 	_update_cache()
 	_hover_since += delta
 	for id in _blooms.keys():
@@ -587,17 +608,84 @@ func zoom_at(p: Vector2, factor: float) -> void:
 	_fitted = false
 
 
+## Zoom à la molette : chaque cran change le zoom visé, que la vue rejoint en douceur (_ease_view),
+## le point sous le curseur restant sous le curseur.
+func zoom_smooth(p: Vector2, factor: float) -> void:
+	_glide = {}
+	if Settings.reduce_effects:
+		zoom_at(p, factor)
+		return
+	var base := _zoom_goal if _zoom_goal > 0.0 else zoom
+	_zoom_goal = clampf(base * factor, min_zoom if min_zoom > 0.0 else 0.05, ZOOM_MAX)
+	_zoom_anchor = p
+	_interactive = true
+	_fitted = false
+
+
+## Trajet en douceur vers une vue (recherche, vue d'ensemble) : le zoom passe par un léger recul
+## quand le trajet est long, pour qu'on voie d'où l'on part et où l'on arrive.
+func glide_to(to_cam: Vector2, to_zoom: float, fitted := false) -> void:
+	_zoom_goal = 0.0
+	to_zoom = clampf(to_zoom, min_zoom if min_zoom > 0.0 else 0.05, ZOOM_MAX)
+	if Settings.reduce_effects or not visible:
+		zoom = to_zoom
+		cam = to_cam
+		_fitted = fitted
+		return
+	var travel := (to_cam - cam).length() * minf(zoom, to_zoom) / maxf(size.x, 1.0)
+	_glide = {"cam": cam, "zoom": zoom, "to_cam": to_cam, "to_zoom": to_zoom, "k": 0.0,
+		"dip": clampf(travel * 0.5, 0.0, 0.35), "fitted": fitted}
+	_interactive = true
+	_fitted = false
+
+
+## Vue d'ensemble, en douceur (bouton, touche Origine).
+func glide_fit() -> void:
+	min_zoom = fit_zoom() * ZOOM_MIN_FACTOR
+	glide_to(Vector2.ZERO, fit_zoom(), true)
+
+
+## Fait avancer le zoom à la molette et les trajets (appelé à chaque image).
+func _ease_view(delta: float) -> void:
+	if not _glide.is_empty():
+		_glide["k"] = minf(_glide["k"] + delta / GLIDE_DUR, 1.0)
+		var e: float = Anim.ease_in_out(_glide["k"])
+		# Zoom interpolé en échelle logarithmique (régulier à l'œil), avec un recul au milieu.
+		var z: float = exp(lerpf(log(_glide["zoom"]), log(_glide["to_zoom"]), e)) * (1.0 - _glide["dip"] * sin(PI * e))
+		_interactive = true
+		zoom = z
+		cam = (_glide["cam"] as Vector2).lerp(_glide["to_cam"], e)
+		if _glide["k"] >= 1.0:
+			_fitted = _glide["fitted"]
+			_glide = {}
+		return
+	if _zoom_goal <= 0.0:
+		return
+	var before := to_tree(_zoom_anchor)
+	var r := log(_zoom_goal / zoom)
+	if absf(r) < 0.002:
+		zoom = _zoom_goal
+		_zoom_goal = 0.0
+	else:
+		zoom = zoom * exp(r * (1.0 - exp(-delta * ZOOM_EASE)))
+	_interactive = true
+	cam = before - (_zoom_anchor - view_center()) / zoom
+
+
 # --- Entrées ---
 
 func _gui_input(event: InputEvent) -> void:
 	var mb := event as InputEventMouseButton
 	if mb:
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zoom_at(mb.position, 1.15)
+			zoom_smooth(mb.position, 1.15)
 		elif mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zoom_at(mb.position, 1.0 / 1.15)
+			zoom_smooth(mb.position, 1.0 / 1.15)
 		elif mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
+				# Saisir la vue arrête un trajet ou un zoom en cours.
+				_glide = {}
+				_zoom_goal = 0.0
 				dragging = true
 				drag_moved = 0.0
 			else:
@@ -622,19 +710,6 @@ func _gui_input(event: InputEvent) -> void:
 				cam -= mm.relative / zoom
 				_fitted = false
 		hover = pick(mouse)
-
-
-## Glisser-déposer d'une greffe de l'inventaire : le nœud survolé montre l'aperçu de la greffe.
-func _can_drop_data(at: Vector2, data) -> bool:
-	if not (data is Dictionary and data.has("graft")):
-		return false
-	mouse = at
-	hover = pick(at)
-	return true
-
-
-func _drop_data(at: Vector2, data) -> void:
-	grafts_panel.drop_on(pick(at), str(data["graft"]))
 
 
 # --- États ---
@@ -710,12 +785,6 @@ func click(id: int) -> void:
 				panels.say("Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre.")
 			else:
 				open_choice(id)
-		elif n["type"] == "graft":
-			grafts_panel.click_slot(id)
-		return
-	# Une greffe tenue se pose aussi dans un emplacement pas encore appris.
-	if n["type"] == "graft" and grafts_panel.held != "":
-		grafts_panel.click_slot(id)
 		return
 	if not panels.plan_mode:
 		# Un nœud à règle (flétri, mutation sans sa compétence, incompatible) dit pourquoi il résiste.
@@ -979,6 +1048,7 @@ func _draw_world(c: CanvasItem) -> void:
 			continue
 		draw_node(c, n, p, r, st, w, level)
 		_draw_seam(c, n, p, r * (1.12 if kind == "keystone" else 1.0), st, w)
+	_draw_test_marks(c, "world", 3.0 / z)
 
 
 ## Nœud de frontière hybride : anneau aux deux couleurs, chacune du côté de sa branche.
@@ -1066,7 +1136,7 @@ func _link_batches(level: int, z: float) -> Array:
 
 
 ## Dessine un nœud (tout sauf les petits et la graine) : son médaillon à la forme de son type,
-## puis ce qui le distingue (icône, rameau, points de choix, greffe, cendre). Sert à la couche fixe
+## puis ce qui le distingue (icône, rameau, points de choix, cendre). Sert à la couche fixe
 ## et au médaillon de l'infobulle.
 func draw_node(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w: float, level: int) -> void:
 	var col: Color = Game.tree.node_color(n)
@@ -1078,9 +1148,6 @@ func draw_node(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w
 	if ashen:
 		# Cendre : médaillon gris, quel que soit l'état.
 		TreeArt.medallion(c, shape, p, r, "locked", Art.c("brume").lightened(0.25), w, detail, ring_w)
-	elif kind == "graft" and st == "owned":
-		# Un emplacement reste creux : c'est la greffe qui le remplit.
-		TreeArt.medallion(c, shape, p, r, "available", col, w, detail, ring_w)
 	else:
 		TreeArt.medallion(c, shape, p, r, st, col, w, detail, ring_w)
 	if kind == "keystone" and detail:
@@ -1101,8 +1168,6 @@ func draw_node(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w
 		"mastery":
 			if level != LOD_OVERVIEW:
 				_draw_mastery_dots(c, n, p, r, st, ic, w)
-		"graft":
-			_draw_graft(c, n, p, r, st, col, w, level)
 		"withered":
 			if ashen:
 				_draw_ash(c, n, p, r, w)
@@ -1119,8 +1184,8 @@ func _edge_color(e: Vector2i) -> Color:
 
 
 ## Contour d'un nœud selon son type (vide = cercle, pour un notable) : losange pour un nœud clé,
-## hexagone pour une compétence, triangle pour une mutation, carré pour une maîtrise, octogone pour
-## un emplacement de greffe, disque fendu pour un nœud flétri, étoile à quatre épines pour un nœud
+## hexagone pour une compétence, triangle pour une mutation, carré pour une maîtrise,
+## disque fendu pour un nœud flétri, étoile à quatre épines pour un nœud
 ## qui change l'attaque de base.
 func shape_points(kind: String, p: Vector2, r: float) -> PackedVector2Array:
 	var pts := PackedVector2Array()
@@ -1136,10 +1201,6 @@ func shape_points(kind: String, p: Vector2, r: float) -> PackedVector2Array:
 		"mastery":
 			var h := r * 0.9
 			pts = PackedVector2Array([p + Vector2(-h, -h), p + Vector2(h, -h), p + Vector2(h, h), p + Vector2(-h, h)])
-		"graft":
-			# Octogone : un écusson où se pose la greffe.
-			for i in 8:
-				pts.append(p + Vector2.from_angle(i * TAU / 8.0 + TAU / 16.0) * r * 1.04)
 		"withered":
 			# Disque fendu : un contour irrégulier, toujours le même.
 			for i in 11:
@@ -1171,23 +1232,6 @@ func _draw_mastery_dots(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: 
 			c.draw_circle(q, r * 0.2, col)
 		else:
 			c.draw_arc(q, r * 0.15, 0.0, TAU, 12, col, maxf(r * 0.07, w))
-
-
-## Emplacement de greffe : un anneau creux marqué d'une croix, ou une feuille dorée quand une greffe est posée.
-func _draw_graft(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, col: Color, w: float, level: int) -> void:
-	var a := 0.9 if st == "owned" else (0.75 if st == "available" else 0.4)
-	c.draw_arc(p, r * 0.68, 0.0, TAU, 24, Color(col.r, col.g, col.b, a * 0.6), maxf(r * 0.08, w))
-	var gid := Game.graft_of(n["id"])
-	if gid != "":
-		# La greffe posée, avec sa forme et sa couleur (les mêmes qu'au sol et dans l'inventaire).
-		var g: Dictionary = Content.grafts().get(gid, {})
-		c.draw_circle(p, r * 0.56, Color(0.23, 0.16, 0.1, a))
-		TreeGrafts.GraftPickup.draw_shape(c, str(g.get("shape", "feuille")), p, r * 0.42, Color(Color(str(g.get("color", "#f2d06b"))), a))
-	elif level != LOD_OVERVIEW:
-		var s := r * 0.32
-		var lw := maxf(r * 0.12, 1.2 * w)
-		c.draw_line(p + Vector2(-s, 0), p + Vector2(s, 0), Color(col.r, col.g, col.b, a), lw)
-		c.draw_line(p + Vector2(0, -s), p + Vector2(0, s), Color(col.r, col.g, col.b, a), lw)
 
 
 ## Nœud flétri : fissures et flocons de cendre, toujours aux mêmes endroits pour un nœud donné.
@@ -1252,7 +1296,6 @@ func _pixel_scale() -> float:
 ## déplacement à la souris, l'image en cours est agrandie ou déplacée, et refaite seulement quand
 ## le mouvement s'arrête, quand elle s'écarte trop du zoom, ou quand l'écran sort de l'image.
 func _update_cache() -> void:
-	_flush_once()
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
 	if _backdrop_wait > 0:
@@ -1268,8 +1311,10 @@ func _update_cache() -> void:
 	# Pendant le mouvement, au plus une image refaite tous les CACHE_GAP s.
 	# Un saut de zoom (bouton « Vue d'ensemble », recherche) ne doit pas laisser une image périmée
 	# (un rectangle aux bords durs dans le vide) : on la refait tout de suite.
+	# L'écran qui sort de l'image (glisser vite) la fait refaire tout de suite : sinon une bande vide,
+	# aux bords durs, suivait le bord de l'image jusqu'à CACHE_GAP s (une trentaine d'images à 144 Hz).
 	var jump := k < CACHE_JUMP.x or k > CACHE_JUMP.y
-	var rushed := (not covered or k < CACHE_RATIO.x or k > CACHE_RATIO.y) and (jump or t - _cache_time >= CACHE_GAP)
+	var rushed := not covered or jump or ((k < CACHE_RATIO.x or k > CACHE_RATIO.y) and t - _cache_time >= CACHE_GAP)
 	if rushed:
 		# En dézoomant, l'image est faite un peu plus loin que la vue : elle couvre l'écran plus longtemps.
 		_render_cache(zoom * (CACHE_AHEAD if k < 1.0 else 1.0))
@@ -1279,43 +1324,38 @@ func _update_cache() -> void:
 		_interactive = false
 
 
-## Demande un nouveau rendu d'une image (SubViewport). Depuis Godot 4.7, l'image est faite avec l'état
-## des nœuds de l'image précédente si le rendu est demandé dans la même image que leur changement
-## (transformation, redessin) : on le demande à l'image suivante (_flush_once), et la géométrie
-## d'affichage de la couche fixe (_cache_cam, _cache_zoom) change à ce moment-là, avec l'image.
+## Demande le rendu d'une image (SubViewport) pour cette image-ci, avec l'état actuel de ses nœuds.
+## Remettre UPDATE_ONCE sur une image qui l'a déjà ne relance rien : on repasse par UPDATE_DISABLED.
+## L'image et la géométrie qui la pose à l'écran (_cache_cam, _cache_zoom) changent ensemble, dans la
+## même image : rien ne peut les désaccorder. (L'ancien décalage « d'une image » venait de
+## l'interpolation physique, coupée dans _ready, et non d'un rendu en retard.)
 func _render_once(vp: SubViewport) -> void:
 	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	if not _once_queue.has(vp):
-		_once_queue.append(vp)
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
-func _flush_once() -> void:
-	for vp in _once_queue:
-		vp.render_target_update_mode = SubViewport.UPDATE_ONCE
-	_once_queue.clear()
-	if not _cache_next.is_empty():
-		_cache_zoom = _cache_next["zoom"]
-		_cache_cam = _cache_next["cam"]
-		_cache_next = {}
-		_update_snap()
-		var os := _open_scale()
-		_world.position = view_center() - cam * zoom * os + _snap
-		_view.queue_redraw()
-		_anim.queue_redraw()
-		_life.queue_redraw()
-		_labels.queue_redraw()
+## Replace les couches vivantes sur l'image de la couche fixe (calage au pixel, _snap).
+func _place_layers() -> void:
+	_update_snap()
+	var os := _open_scale()
+	_world.position = view_center() - cam * zoom * os + _snap
+	_world.scale = Vector2(zoom, zoom) * os
+	_view.queue_redraw()
+	_labels.queue_redraw()
 
 
 func _render_cache(rz := -1.0) -> void:
 	if rz <= 0.0:
 		rz = zoom
 	var ps := _pixel_scale()
-	_cache_logical = (size * (1.0 + 2.0 * CACHE_PAD)).ceil()
-	var px := Vector2i((_cache_logical * ps).ceil())
+	# Taille en pixels entiers d'abord : l'image se pose alors sans être étirée d'une fraction de pixel.
+	var px := Vector2i((size * (1.0 + 2.0 * CACHE_PAD) * ps).ceil())
+	_cache_logical = Vector2(px) / ps
 	if _cache_vp.size != px:
 		_cache_vp.size = px
 	_cache_px = ps
-	_cache_next = {"zoom": rz, "cam": cam}
+	_cache_zoom = rz
+	_cache_cam = cam
 	if _backdrop_version != _states_version:
 		_render_backdrop()
 	# La couche fixe n'est réenregistrée que si ses états, son niveau de détail ou (de plus de 30 %)
@@ -1331,7 +1371,7 @@ func _render_cache(rz := -1.0) -> void:
 	_cache_time = t
 	_cache_ok = true
 	_interactive = false
-	_view.queue_redraw()
+	_place_layers()
 
 
 ## Rayon (coordonnées de l'arbre) du carré couvert par l'image du fond et de la silhouette.
@@ -1386,6 +1426,7 @@ func _draw_backdrop(c: CanvasItem) -> void:
 	var z := _backdrop.scale.x
 	TreeArt.background(c, _extent(), colors, _rings, z)
 	TreeArt.silhouette(c, _extent(), colors, _branch_sap, z)
+	_draw_test_marks(c, "backdrop", 4.0 / z)
 
 
 ## Décalage (moins d'un pixel) qui pose l'image de la couche fixe sur la grille des pixels réels.
@@ -1495,6 +1536,7 @@ func _draw_life(c: CanvasItem) -> void:
 				TreeArt.embers(c, n["pos"], _radius(n, zoom), t, id)
 	_draw_sap(c)
 	_draw_blooms(c)
+	_draw_test_marks(c, "life", 3.0 / zoom)
 	# Ouverture : une onde de sève part de la graine et parcourt l'arbre.
 	if _intro < TreeArt.INTRO_DUR:
 		var k := _intro / TreeArt.INTRO_DUR
@@ -1502,6 +1544,14 @@ func _draw_life(c: CanvasItem) -> void:
 		var col := Art.ec("seve", "clair")
 		c.draw_arc(Vector2.ZERO, rr, 0.0, TAU, 96, Color(col, 0.45 * (1.0 - k)), maxf(4.0, 14.0 * (1.0 - k)) / zoom)
 		c.draw_arc(Vector2.ZERO, rr * 0.9, 0.0, TAU, 96, Color(col, 0.15 * (1.0 - k)), maxf(8.0, 40.0 * (1.0 - k)) / zoom)
+
+
+func _draw_test_marks(c: CanvasItem, layer: String, half: float) -> void:
+	if test_marks.is_empty():
+		return
+	var spec: Dictionary = test_marks.get(layer, {})
+	for p in spec.get("points", []):
+		c.draw_rect(Rect2(p - Vector2.ONE * maxf(half, spec.get("min_half", 0.0)), Vector2.ONE * 2.0 * maxf(half, spec.get("min_half", 0.0))), spec["color"])
 
 
 ## Sève : de petites lueurs qui circulent le long des liens appris, de l'origine vers l'extérieur.
@@ -1742,19 +1792,6 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 			raw.append(["Clic pour faire ton choix", 15, UiTheme.GOLD])
 		elif st == "owned" and n["type"] == "mastery":
 			raw.append(["Clic pour changer de bonus", 15, UiTheme.GOLD])
-	if n["type"] == "graft":
-		var g = Content.grafts().get(Game.graft_of(id))
-		if g is Dictionary:
-			raw.append(["Greffe : " + str(g.get("name", "")), 14, UiTheme.GOLD])
-			for e in g.get("effects", []):
-				var line := Effects.describe(e)
-				if line != "":
-					raw.append(["• " + line, 14, ink])
-		else:
-			raw.append(["• Emplacement vide : reçoit une greffe trouvée dans le monde.", 14, ink])
-		raw.append_array(grafts_panel.tooltip_lines(n))
-		if grafts_panel.held == "" and g is Dictionary and st == "owned":
-			raw.append(["Clic pour retirer la greffe", 15, UiTheme.GOLD])
 	# Grappe écrite à la main : avancement et bonus de grappe complète.
 	if n["cluster"] != "" and tree.clusters.has(n["cluster"]):
 		var cl: Dictionary = tree.clusters[n["cluster"]]

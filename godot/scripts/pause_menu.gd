@@ -30,14 +30,14 @@ func _ready() -> void:
 	var kicker := Label.new()
 	kicker.text = "LE MONDE RETIENT SON SOUFFLE"
 	kicker.add_theme_font_override("font", UiTheme.serif(500, 3))
-	kicker.add_theme_font_size_override("font_size", 14)
+	kicker.add_theme_font_size_override("font_size", UiTheme.fs(14))
 	kicker.add_theme_color_override("font_color", Color(UiTheme.GOLD, 0.75))
 	kicker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(kicker)
 	var title := Label.new()
 	title.text = "Pause"
 	title.add_theme_font_override("font", UiTheme.display(600, 2))
-	title.add_theme_font_size_override("font_size", 50)
+	title.add_theme_font_size_override("font_size", UiTheme.fs(50))
 	title.add_theme_color_override("font_color", UiTheme.INK)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(title)
@@ -59,7 +59,7 @@ func _ready() -> void:
 		quit.pressed.connect(Flow.quit)
 		col.add_child(quit)
 	footer = Label.new()
-	footer.add_theme_font_size_override("font_size", 16)
+	footer.add_theme_font_size_override("font_size", UiTheme.fs(16))
 	footer.add_theme_color_override("font_color", Color(UiTheme.SOFT, 0.85))
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(footer)

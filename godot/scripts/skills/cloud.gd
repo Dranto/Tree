@@ -15,7 +15,7 @@ func cast(p, s := {}) -> void:
 	elif off.length() > k["range"]:
 		target = p.position + off.normalized() * k["range"]
 	var per_factor: float = p.current_damage() * p.skill_multiplier("cloud")
-	Sfx.play("nuage")
+	Sfx.play("spore_nuage")
 	p.main.fx.cloud(target, k["radius"] * s["area"], k["duration"], per_factor * (k["damage"] + s["poison"]))
 	if follow:
 		p.main.fx.clouds[-1]["follow"] = p

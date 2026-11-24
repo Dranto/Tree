@@ -1,7 +1,7 @@
 ## Robot d'aventure : une nouvelle partie jouée d'un bout à l'autre par le robot de zone
 ## (scripts/zone_bot.gd) : les régions l'une après l'autre, dans l'ordre d'un joueur (de la plus
 ## facile à la plus dure), chaque Cœur assiégé, chaque boss battu, puis la finale quand le jeu en a
-## une (main.finale, épilogue et générique : main.quest_ui.epilogue). À chaque étape principale
+## une (main.finale, puis la fin jouée dans le monde : main.quest_ui.world_ending). À chaque étape principale
 ## accomplie, et à la fin de chaque région, la partie est sauvegardée puis rechargée : elle doit
 ## être retrouvée à l'identique et rester cohérente (Cœurs, arènes, objectifs, finale).
 ##
@@ -195,7 +195,7 @@ func _run() -> void:
 		if main.quest_ui.fanfare.active:
 			await _ending()
 			continue
-		var epi = main.quest_ui.get("epilogue")
+		var epi = main.quest_ui.get("world_ending")
 		if epi != null and epi.active:
 			await _epilogue(epi)
 			continue
@@ -385,8 +385,8 @@ func _finale_over() -> bool:
 	if _finale_done:
 		return true
 	if game.flags.get("finale_vaincue", false):
-		# Épilogue et générique : le jeu les lance seul ; le robot les passe (voir _epilogue).
-		var epi = main.quest_ui.get("epilogue")
+		# Fin et générique dans le monde : le jeu les lance seul ; le robot les passe (voir _epilogue).
+		var epi = main.quest_ui.get("world_ending")
 		if epi == null or (not epi.active and t - _finale_start > 1.0 and game.flags.get("finale_vaincue", false) and _epilogue_seen):
 			_finale_done = true
 			return true
@@ -408,16 +408,21 @@ func _finale_blocked() -> bool:
 	return false
 
 
-## Épilogue, statistiques et générique de la finale : le robot les fait défiler, puis continue.
+## Fin de l'aventure jouée dans le monde (world_ending.gd) : sans pause ni écran ; le robot avance
+## jusqu'au dernier nom du générique, puis continue.
 func _epilogue(epi) -> void:
 	_epilogue_seen = true
-	check(paused or epi.visible, "épilogue : affiché")
-	check(not main.hud.get_parent().visible and not main.quest_ui._tracker_layer.visible, "épilogue : rien de l'interface de jeu par-dessus")
-	epi.set_time(1.0e6)
-	epi._on_continue()
+	check(not paused and main.hud.get_parent().visible, "fin : sans pause ni écran")
+	check(not finale_holds_player(), "fin : le joueur est remonté au pied de la graine")
+	epi.set_time(epi.duration() + 1.0)
 	await _frames(2)
-	check(not epi.active, "épilogue : « Continuer à jouer » le ferme")
-	pending_reload = "après l'épilogue"
+	check(not epi.active and epi.group_k(epi.groups.size() - 1) == 1.0, "fin : tout le générique est écrit dans l'herbe")
+	pending_reload = "après la fin de l'aventure"
+
+
+func finale_holds_player() -> bool:
+	var f = main.get("finale")
+	return f != null and f.holds(main.player.position)
 
 
 ## Séquence « région purifiée » : la regarder, puis « Continuer à jouer ».
@@ -426,7 +431,7 @@ func _ending() -> void:
 	var reg: String = q.fanfare.region
 	check(not paused and main.hud.get_parent().visible, "célébration : sans pause, l'interface de jeu reste là")
 	check(game.flags.get(reg + "_fin_vue", false), "célébration : notée comme vue dès le début")
-	check(not q._tracker_layer.visible, "célébration : le cadre d'objectif s'efface le temps de la célébration")
+	check(not q._tracker_layer.visible, "reverdie : la feuille de sève s'efface le temps de la reverdie")
 	# Une greffe ramassée pendant la célébration n'est pas perdue.
 	for g in main.orbs_layer.get_children():
 		if _is_graft(g) and not g.is_queued_for_deletion():
@@ -435,7 +440,7 @@ func _ending() -> void:
 			check(game.has_graft(id), "greffe ramassée pendant la célébration : dans l'inventaire")
 	q.fanfare.set_time(q.fanfare.duration)
 	await _frames(2)
-	check(not q.fanfare.active and q._tracker_layer.visible, "fin de la célébration : le cadre d'objectif revient")
+	check(not q.fanfare.active and q._tracker_layer.visible, "fin de la reverdie : la feuille de sève revient")
 	pending_reload = "après la fin de région"
 
 
@@ -443,7 +448,7 @@ func _snapshot() -> Dictionary:
 	return {
 		"level": game.level, "xp": game.xp, "points": game.points, "kills": game.kills,
 		"uids": game.allocated_uids(), "inventory": game.graft_inventory.duplicate(),
-		"grafts": game.grafts.duplicate(), "flags": game.flags.duplicate(true),
+		"crown": game.placed_grafts(), "flags": game.flags.duplicate(true),
 		"ground": main.export_ground_grafts(),
 	}
 
@@ -595,7 +600,7 @@ func _final() -> void:
 		var fin = main.get("finale") if main != null and is_instance_valid(main) else null
 		if fin != null:
 			check(game.flags.get("finale_vaincue", false), "finale vaincue")
-			check(_epilogue_seen, "épilogue et générique passés")
+			check(_epilogue_seen, "fin et générique joués dans le monde")
 		check(reloads >= order.size() * 3, "au moins %d reprises (%d)" % [order.size() * 3, reloads])
 	print("=== AVENTURE : résumé (graine %d) ===" % seed_n)
 	for r in order:

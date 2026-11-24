@@ -20,7 +20,7 @@ func cast(p, s := {}) -> void:
 		target = p.position + off.normalized() * float(k["range"])
 	while shrooms.size() >= maxi(1, int(k["max"])):
 		_burst(shrooms.pop_front())
-	Sfx.play("racines")
+	Sfx.play("spore_piege")
 	var fx := {}
 	if "skill_fx" in p.main and p.main.skill_fx != null:
 		fx = p.main.skill_fx.play("vesse", {"pos": target, "r": float(k["radius"]) * s["area"],
@@ -57,7 +57,7 @@ func _burst(sh: Dictionary) -> void:
 	var r: float = float(k["radius"]) * s["area"]
 	var hit: float = p.skill_damage("vesse")
 	var pos: Vector2 = sh["pos"]
-	Sfx.play("nuage", pos)
+	Sfx.play("spore_eclat", pos)
 	var venom := float(k.get("poison", 0.0))
 	for e in p.main.enemies_near(pos, r):
 		if e.dead:

@@ -18,8 +18,10 @@ var main
 var time_left := 0.0
 var _veil: ColorRect
 var _panel: PanelContainer
-var _title: Label
-var _lines: VBoxContainer
+## Icônes de ce que la mort a coûté (jalon 11 : plus de phrases) : renaissance au sanctuaire, sève
+## laissée sur place (avec sa quantité), sève perdue pour de bon, siège ou boss à reprendre, Arbre intact.
+var _icons: Control
+var info: Dictionary = {}
 ## Fil qui se consume : le temps qui reste avant que l'écran ne s'efface.
 var _fuse: Control
 var _pointer: Control
@@ -54,27 +56,11 @@ func _ready() -> void:
 	leaf.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	leaf.draw.connect(_draw_leaf.bind(leaf))
 	v.add_child(leaf)
-	var kicker := Label.new()
-	kicker.text = "LA FLÉTRISSURE T'A RATTRAPÉ"
-	kicker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	kicker.add_theme_font_override("font", UiTheme.serif(500, 3))
-	kicker.add_theme_font_size_override("font_size", 15)
-	kicker.add_theme_color_override("font_color", Color(UiTheme.RED, 0.85))
-	v.add_child(kicker)
-	_title = Label.new()
-	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title.add_theme_font_override("font", UiTheme.display(600, 1))
-	_title.add_theme_font_size_override("font_size", 66)
-	_title.add_theme_color_override("font_color", Color("ecc3b3"))
-	v.add_child(_title)
-	var divider := Control.new()
-	divider.custom_minimum_size = Vector2(0, 26)
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	divider.draw.connect(func(): UiTheme.draw_divider(divider, divider.size.x / 2.0, 6.0, 170.0, UiTheme.RED))
-	v.add_child(divider)
-	_lines = VBoxContainer.new()
-	_lines.add_theme_constant_override("separation", 6)
-	v.add_child(_lines)
+	_icons = Control.new()
+	_icons.custom_minimum_size = Vector2(420, 84)
+	_icons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_icons.draw.connect(_draw_icons)
+	v.add_child(_icons)
 	_fuse = Control.new()
 	_fuse.custom_minimum_size = Vector2(0, 40)
 	_fuse.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -86,7 +72,7 @@ func _ready() -> void:
 	_pointer.draw.connect(_draw_pointer)
 	add_child(_pointer)
 	_pointer_label = Label.new()
-	_pointer_label.add_theme_font_size_override("font_size", 17)
+	_pointer_label.add_theme_font_size_override("font_size", UiTheme.fs(17))
 	_pointer_label.add_theme_color_override("font_color", UiTheme.GOLD)
 	_pointer.add_child(_pointer_label)
 	_veil.hide()
@@ -95,38 +81,74 @@ func _ready() -> void:
 
 
 ## Affiche l'écran. info : {"place", "dropped", "lost", "reset"} (voir main.player_died).
-func show_death(info: Dictionary) -> void:
-	_title.text = "Tu t'es flétri"
-	var texts: Array = [["Tu renais au sanctuaire %s." % info.get("place", "de la Graine"), UiTheme.INK]]
-	var dropped := roundi(float(info.get("dropped", 0.0)))
-	if dropped > 0:
-		if str(info.get("reset", "")) == "boss":
-			texts.append(["Ta sève (%d d'expérience) t'attend devant l'arène : va la reprendre." % dropped, UiTheme.GOLD])
-		else:
-			texts.append(["Ta sève (%d d'expérience) est restée là où tu es tombé : va la reprendre." % dropped, UiTheme.GOLD])
-	else:
-		texts.append(["Tu n'avais pas de sève à perdre.", UiTheme.INK])
-	var lost := roundi(float(info.get("lost", 0.0)))
-	if lost > 0:
-		texts.append(["La sève de ta mort précédente (%d) est perdue pour de bon." % lost, UiTheme.RED])
-	match str(info.get("reset", "")):
-		"coeur": texts.append(["Le Cœur de flétrissure s'est rendormi : le siège est à recommencer.", UiTheme.RED])
-		"boss": texts.append(["La Mère-Ronce s'est rendormie avec toute sa vie.", UiTheme.RED])
-	texts.append(["Ton Arbre de vie est intact : aucun nœud ni point perdu.", Color("8fc76f")])
-	for c in _lines.get_children():
-		_lines.remove_child(c)
-		c.queue_free()
-	for line in texts:
-		var l := Label.new()
-		l.text = line[0]
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.add_theme_font_size_override("font_size", 22)
-		l.add_theme_color_override("font_color", line[1])
-		_lines.add_child(l)
+func show_death(i: Dictionary) -> void:
+	info = i
 	time_left = DURATION
 	_veil.show()
 	_panel.show()
+	_icons.queue_redraw()
 	_layout()
+
+
+## Icônes alignées, de gauche à droite (voir _icons).
+func icon_list() -> Array:
+	var out: Array = ["renaissance"]
+	if roundi(float(info.get("dropped", 0.0))) > 0:
+		out.append("seve")
+	if roundi(float(info.get("lost", 0.0))) > 0:
+		out.append("seve_perdue")
+	if str(info.get("reset", "")) in ["coeur", "boss"]:
+		out.append("reprise")
+	out.append("arbre")
+	return out
+
+
+func _draw_icons() -> void:
+	var list := icon_list()
+	var gap := 92.0
+	var x0 := _icons.size.x / 2.0 - gap * (list.size() - 1) / 2.0
+	var font := UiTheme.font(true)
+	for i in list.size():
+		var c := Vector2(x0 + gap * i, 36.0)
+		match str(list[i]):
+			"renaissance":
+				# La flamme du sanctuaire, sur sa pierre.
+				_icons.draw_rect(Rect2(c + Vector2(-16, 14), Vector2(32, 8)), Color(UiTheme.INK, 0.8))
+				_flame(c + Vector2(0, 6), 1.0, Art.ec("seve", "clair"))
+			"seve":
+				_drop(c, Color("e8d36b"))
+				var n := str(roundi(float(info.get("dropped", 0.0))))
+				var w := font.get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+				_icons.draw_string(font, Vector2(c.x - w / 2.0, c.y + 44.0), n, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, UiTheme.GOLD)
+			"seve_perdue":
+				_drop(c, Color(UiTheme.RED, 0.8))
+				_icons.draw_line(c + Vector2(-18, -18), c + Vector2(18, 18), UiTheme.RED, 3.0, true)
+			"reprise":
+				# Une flèche qui revient sur elle-même : le siège ou le boss repart de zéro.
+				_icons.draw_arc(c, 16.0, 0.4, TAU - 0.4, 24, UiTheme.RED, 3.0, true)
+				var tip := c + Vector2.from_angle(0.4) * 16.0
+				_icons.draw_colored_polygon(PackedVector2Array([tip + Vector2(-2, -9), tip + Vector2(8, 2), tip + Vector2(-6, 5)]), UiTheme.RED)
+			"arbre":
+				# Une feuille saine : l'Arbre de vie est intact.
+				UiTheme.draw_leaf(_icons, c + Vector2(-14, 10), -0.7, 34.0, 11.0, Color("8fc76f"), Color("8fc76f", 0.35), 1.6)
+
+
+func _drop(c: Vector2, col: Color) -> void:
+	var pts := PackedVector2Array()
+	for i in 17:
+		var a := PI / 2.0 + TAU * i / 16.0
+		var r := 13.0
+		var p := c + Vector2(0, 6) + Vector2.from_angle(a) * r
+		if a > PI and a < TAU:
+			p.y -= (1.0 - absf(cos(a))) * 18.0 * absf(sin(a))
+		pts.append(p)
+	_icons.draw_colored_polygon(pts, Color(col, 0.85))
+
+
+func _flame(c: Vector2, k: float, col: Color) -> void:
+	var f := 1.0 + 0.08 * sin(t * 9.0)
+	var pts := PackedVector2Array([c + Vector2(0, -26) * f * k, c + Vector2(10, -6) * k, c + Vector2(6, 6) * k, c + Vector2(-6, 6) * k, c + Vector2(-10, -6) * k])
+	_icons.draw_colored_polygon(pts, Color(col, 0.9))
 
 
 func is_showing() -> bool:
@@ -191,7 +213,7 @@ func _update_pointer() -> void:
 			var sy := (inner.size.y / 2.0) / maxf(absf(d.y), 0.001)
 			_arrow_pos = mid + d * minf(sx, sy)
 			_arrow_dir = d.normalized()
-			_pointer_label.text = "Sève perdue (%d)" % roundi(sap.amount)
+			_pointer_label.text = str(roundi(sap.amount))
 			_pointer_label.reset_size()
 			# Libellé sous la flèche (au-dessus si elle est en bas de l'écran), centré sur elle.
 			var ls := _pointer_label.size

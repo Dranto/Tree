@@ -248,10 +248,7 @@ func _enter_phase(n: int) -> void:
 	gap = 0.3
 	main.fx.ring(anchor, radius, 420.0, 0.7, Color(Art.ec("racine", "clair"), 0.9), 8.0)
 	main.fx.shake(5.0)
-	if n == 2:
-		main.hud.banner("La cime de l'Ancien se fend : des pans de pierre vont tomber.", "combat")
-	else:
-		main.hud.banner("La forêt se referme autour de l'Ancien pétrifié !", "combat")
+	if n != 2:
 		arena.start_shrink()
 
 

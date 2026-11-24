@@ -43,6 +43,9 @@ var progress := 0.0
 var inside := false
 var frozen := false
 var t := 0.0
+## Temps depuis le dernier dessin : redessiné 15 fois par seconde au plus, sauf pendant l'onde du
+## ravivement (docs/performances.md).
+var _since_draw := 1.0
 ## Éclat qui suit le moment où le sanctuaire est ravivé (1 puis retombe à 0).
 var flash := 0.0
 var _stones: Array = []
@@ -90,7 +93,9 @@ func is_lit() -> bool:
 func _process(delta: float) -> void:
 	t += delta
 	flash = maxf(0.0, flash - delta / 1.2)
-	if main.player.position.distance_squared_to(position) < 1300.0 * 1300.0 and _near_view():
+	_since_draw += delta
+	if (_since_draw >= 1.0 / 15.0 - 0.001 or flash > 0.0) and main.player.position.distance_squared_to(position) < 1300.0 * 1300.0 and _near_view():
+		_since_draw = 0.0
 		queue_redraw()
 
 
@@ -146,12 +151,12 @@ func rest(just_lit: bool) -> void:
 	p.heal(Game.stats["max_hp"], true)
 	var before := str(Game.flags.get("renaissance", "graine"))
 	Game.flags["renaissance"] = id
-	if just_lit:
-		main.hud.banner("Sanctuaire %s ravivé : tu renaîtras ici." % place)
-	elif before != id:
-		main.hud.banner("Tu renaîtras au sanctuaire %s." % place)
-	else:
+	# Plus d'annonce : la flamme qui s'allume dit qu'on renaîtra ici. Un autre sanctuaire déjà
+	# ravivé reprend la renaissance avec une onde douce.
+	if not just_lit and before == id:
 		return
+	if not just_lit:
+		main.fx.ring(position, 10.0, RADIUS * 1.6, 0.6, Color(Art.ec("seve", "clair"), 0.8), 3.0)
 	main.request_autosave()
 
 

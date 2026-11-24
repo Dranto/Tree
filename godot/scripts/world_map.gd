@@ -18,9 +18,6 @@ const ALIVE := Color(0.33, 0.6, 0.27)
 var main
 var _view: Control
 var _panel: PanelContainer
-var _goal_title: Label
-var _goal_text: Label
-var _goal_region: Label
 var _legend: VBoxContainer
 var t := 0.0
 ## Régions purifiées depuis la dernière ouverture de la carte (quest_ui, célébration) : à l'ouverture,
@@ -89,20 +86,12 @@ func _ready() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
 	_panel.add_child(v)
-	_label(v, "OBJECTIF", 14, UiTheme.GOLD)
-	_goal_region = _label(v, "", 14, Color(0.86, 0.803, 0.675))
-	_goal_title = _label(v, "", 17, UiTheme.INK, true)
-	_goal_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_goal_title.custom_minimum_size.x = 250.0
-	_goal_text = _label(v, "", 15, Color(0.86, 0.803, 0.675))
-	_goal_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_goal_text.custom_minimum_size.x = 250.0
-	v.add_child(HSeparator.new())
+	# Jalon 11 : plus de texte d'objectif sur la carte ; le prochain lieu y est marqué par sa feuille.
 	_label(v, "LÉGENDE", 14, UiTheme.SOFT)
 	_legend = VBoxContainer.new()
 	_legend.add_theme_constant_override("separation", 3)
 	v.add_child(_legend)
-	_label(v, "M ou Échap : fermer   ·   J : journal", 14, Color(0.606, 0.567, 0.476))
+	_label(v, "M ou Échap : fermer", 14, Color(0.606, 0.567, 0.476))
 	resized.connect(_layout)
 
 
@@ -153,7 +142,7 @@ func _legend_row(e: Array) -> void:
 func _label(parent: Node, text: String, size_px: int, color: Color, bold := false) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", size_px)
+	l.add_theme_font_size_override("font_size", UiTheme.fs(size_px))
 	l.add_theme_color_override("font_color", color)
 	if bold:
 		l.add_theme_font_override("font", UiTheme.font(true))
@@ -198,20 +187,6 @@ func close() -> void:
 
 
 func _refresh_goal() -> void:
-	var o: Dictionary = Objectives.followed()
-	var reg := str(o.get("region", ""))
-	_goal_region.text = RegionUi.full_name(reg) if reg != "" and Regions.ids().size() > 1 else ""
-	_goal_region.add_theme_color_override("font_color", RegionUi.tint(reg).lightened(0.25) if _goal_region.text != "" else Color.WHITE)
-	_goal_region.visible = _goal_region.text != ""
-	if not o.is_empty():
-		_goal_title.text = o["title"]
-		_goal_text.text = o["text"]
-	elif Regions.ids().size() > 1:
-		_goal_title.text = "Aventure accomplie"
-		_goal_text.text = "Toutes les régions sont purifiées."
-	else:
-		_goal_title.text = "Tranche accomplie"
-		_goal_text.text = "Le roncier est libre."
 	_layout()
 
 

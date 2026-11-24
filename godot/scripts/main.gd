@@ -329,10 +329,11 @@ func _ready() -> void:
 	if not loaded:
 		Game.reset()
 	else:
-		hud.banner("Partie reprise : niveau %d" % Game.level)
 		player.reset_physics_interpolation()
 		cam.reset_smoothing()
 	Flow.continue_requested = false
+	_fresh_game = Flow.fresh_game and not loaded
+	Flow.fresh_game = false
 	# Après la reprise de la partie : le premier contrôle des objectifs rattrape l'état sans annonce.
 	quest_ui = QuestUi.new()
 	quest_ui.main = self
@@ -371,6 +372,19 @@ func save_game() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		save_game()
+	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_pause_on_focus_loss()
+
+
+## La fenêtre perd le focus (Alt-Tab…) : le menu pause s'ouvre, si le réglage le demande et si
+## rien n'a déjà figé le jeu (arbre, carte, autre menu). Jamais pendant un test ou un banc.
+func _pause_on_focus_loss() -> bool:
+	if not Settings.pause_on_focus_loss or autotest or benchmark or pause_menu == null:
+		return false
+	if get_tree().paused or pause_menu.visible:
+		return false
+	pause_menu.open()
+	return true
 
 
 ## Quitter la scène (« Retour au titre » ou « Quitter » du menu pause) sauvegarde la partie.
@@ -381,24 +395,9 @@ func _exit_tree() -> void:
 
 
 func _setup_input() -> void:
-	_keys("move_up", [KEY_W, KEY_UP])
-	_keys("move_down", [KEY_S, KEY_DOWN])
-	_keys("move_left", [KEY_A, KEY_LEFT])
-	_keys("move_right", [KEY_D, KEY_RIGHT])
-	# Esquive et barre de compétences (clics gauche et droit, A E R F et 1 à 4, réassignables) :
-	# settings.gd, qui les adapte au mode de déplacement. L'attaque de base part toute seule.
+	# Toutes les commandes (déplacement, esquive, arbre, carte, journal, barre de compétences) sont
+	# réassignables : settings.gd les crée et les adapte au mode de déplacement.
 	Settings.apply_bindings()
-	_keys("toggle_tree", [KEY_TAB, KEY_T])
-
-
-## Les touches sont des positions physiques (QWERTY) : W A S D devient Z Q S D sur un clavier AZERTY.
-func _keys(action: String, list: Array) -> void:
-	if not InputMap.has_action(action):
-		InputMap.add_action(action)
-	for k in list:
-		var ev := InputEventKey.new()
-		ev.physical_keycode = k
-		InputMap.action_add_event(action, ev)
 
 
 ## Mesure du banc de performance : une fois par image affichée.
@@ -418,8 +417,13 @@ func _physics_process(delta: float) -> void:
 	var under := underground()
 	if under:
 		Music.set_mood(finale.music_life(), "finale")
+	elif quest_ui != null and quest_ui.world_ending.active:
+		# La fin jouée dans le monde : la musique du générique (data/audio.json › regions › generique).
+		Music.set_mood(1.0, "generique")
 	else:
 		Music.set_mood(ground.life_at(player.position), Regions.region_at(player.position))
+	if Music.enabled and Engine.get_physics_frames() % 6 == 0:
+		_music_state()
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
 		save_game()
@@ -444,11 +448,46 @@ func _physics_process(delta: float) -> void:
 	if spawn_paused or under:
 		spawn_timer = maxf(spawn_timer, 0.5)
 	var cap := Difficulty.spawn_cap(Game.level, depth)
+	if _first_fletri_step(delta):
+		return
 	if spawn_timer <= 0.0:
 		spawn_timer = Difficulty.spawn_interval(Game.level)
 		for i in Difficulty.spawn_burst(Game.level, depth):
 			if enemies.size() < cap:
 				_spawn_enemy()
+
+
+## Tutoriel discret (jalon 11) : dans une nouvelle partie, le premier Flétri arrive seul, sur le
+## chemin de Ronce ; rien d'autre ne naît tant qu'il vit (au plus FIRST_FLETRI_MAX secondes). On le
+## voit tomber sous l'attaque automatique et la terre reverdir : tuer, c'est soigner.
+## Une fois passé, le drapeau « tuto_premier_fletri » (sauvegarde) l'empêche de revenir.
+const FIRST_FLETRI_MAX := 25.0
+var _first_fletri = null
+var _first_fletri_t := 0.0
+## La partie vient de « Nouvelle partie » (Flow.fresh_game, lu au démarrage).
+var _fresh_game := false
+
+
+## Vrai tant que le premier Flétri occupe la scène (les apparitions ordinaires attendent).
+func _first_fletri_step(delta: float) -> bool:
+	if not _fresh_game or Game.flags.get("tuto_premier_fletri", false) or autotest or benchmark:
+		return false
+	if _first_fletri == null and (Game.level > 2 or Game.kills > 0):
+		# Partie déjà commencée (sauvegarde d'avant le jalon 11) : rien à apprendre.
+		return false
+	if _first_fletri == null:
+		var ids: Array = Regions.ids()
+		var toward: Vector2 = Regions.center("ronce" if "ronce" in ids else str(ids[0])) if not ids.is_empty() else Vector2.RIGHT
+		var pos: Vector2 = player.position + (toward - player.position).normalized() * 620.0
+		_first_fletri = spawn_enemy_kind(_pick_kind(pos), pos, threat(pos))
+		_first_fletri_t = 0.0
+		return true
+	_first_fletri_t += delta
+	if not is_instance_valid(_first_fletri) or _first_fletri.dead or _first_fletri_t > FIRST_FLETRI_MAX:
+		Game.flags["tuto_premier_fletri"] = true
+		spawn_timer = maxf(spawn_timer, 2.0)
+		return false
+	return true
 
 
 func _rebuild_grid() -> void:
@@ -596,6 +635,18 @@ func clamp_to_world(pos: Vector2) -> Vector2:
 ## Position à montrer sur la carte du monde : sous la graine, la brèche à son pied.
 func map_position(pos: Vector2) -> Vector2:
 	return finale.descent_point() if finale != null and finale.holds(pos) else pos
+
+
+## Couches de la musique (music.gd) : combat selon les Flétris proches (une élite compte triple), siège
+## d'un Cœur où se tient le joueur, combat de boss.
+func _music_state() -> void:
+	var n := 0.0
+	for e in enemies_near(player.position, 560.0, false):
+		n += 3.0 if e.get("elite") == true else 1.0
+	Music.set_combat(clampf(n / 6.0, 0.0, 1.0))
+	var h = siege_heart()
+	Music.set_heart(1.0 if h != null and h.center.distance_to(player.position) < h.zone * 1.3 else 0.0)
+	Music.set_boss(in_boss_fight())
 
 
 ## Vrai pendant un combat de boss, dans n'importe quelle région.
@@ -925,9 +976,10 @@ func enemy_sound(e, key: String, fallback: String) -> String:
 
 func on_enemy_killed(e) -> void:
 	Game.kills += 1
-	Sfx.play(enemy_sound(e, "sound_death", "mort"), e.position)
 	# Une élite laisse une gerbe d'essences, et parfois une greffe (tâche B).
 	var is_elite: bool = e.get("elite") == true
+	# Une élite meurt avec un son à elle (s'il existe, sinon celui de sa sorte).
+	Sfx.play("mort_elite" if is_elite and Sfx.has_sound("mort_elite") else enemy_sound(e, "sound_death", "mort"), e.position)
 	var n_orbs := 6 if is_elite else 1
 	for i in n_orbs:
 		var o = Orb.new()
@@ -952,7 +1004,7 @@ func on_enemy_killed(e) -> void:
 		if flower != Vector2.INF:
 			flora.add_flower(flower)
 		fx.ring(pos, r, r * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
-		fx.death(pos, r, col, ground.life_at(pos) > 0.45))
+		fx.death(pos, r, col, ground.life_at(pos) > 0.45, is_elite))
 	Game.fire("kill", enemy_ctx(e, 0.0))
 
 
@@ -1165,7 +1217,6 @@ func recover_sap() -> void:
 	fx.ring(at, 4.0, 60.0, 0.35, Art.c("danger_eclair"), 3.0)
 	fx.pickup(at, "seve", 16, player.position)
 	screen_fx.glow(Art.c("or"), 0.25, 0.8)
-	hud.banner("Sève reprise : %d d'expérience." % roundi(amount))
 	request_autosave()
 
 
@@ -1191,7 +1242,7 @@ func revive(world_pos: Vector2, radius: float, tint: Color, strength := 0.9) -> 
 func _on_level_up(lvl: int) -> void:
 	fx.ring(player.position, 20.0, 160.0, 0.6, Art.c("or"), 5.0)
 	fx.pickup(player.position, "seve", 12)
-	hud.banner("Niveau %d : un point à placer dans l'Arbre de vie (%s)" % [lvl, hud.key_label("toggle_tree")])
+	# Plus d'annonce : la touche de l'Arbre de vie pulse dans le HUD (glyphe, hud.gd) tant qu'un point attend.
 	request_autosave()
 	player.heal(Game.stats["max_hp"] * 0.25, true)
 

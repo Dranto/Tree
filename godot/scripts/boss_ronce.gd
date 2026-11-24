@@ -293,10 +293,7 @@ func _enter_phase(n: int) -> void:
 	cycle = 0
 	gap = 0.3
 	main.fx.ring(anchor, radius, 420.0, 0.7, Color(1.0, 0.45, 0.3, 0.9), 8.0)
-	if n == 2:
-		main.hud.banner("La Mère-Ronce s'ouvre : ses bourgeons éclosent.", "combat")
-	else:
-		main.hud.banner("La Mère-Ronce enrage : les ronces se resserrent !", "combat")
+	if n != 2:
 		arena.start_shrink()
 
 

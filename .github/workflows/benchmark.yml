@@ -5,7 +5,7 @@ name: Banc de performance
 on:
   pull_request:
   push:
-    branches: [main, master, "claude/project-thread-9liy48"]
+    branches: [main, master, develop, "claude/project-thread-9liy48"]
   workflow_dispatch:
 
 # Budgets du banc des pics sur la machine de la CI (docs/performances.md).
@@ -34,11 +34,20 @@ jobs:
           path: ~/.cache/godot
           key: godot-4.7-stable
 
+      # La vitesse de la machine de la CI varie de ±15 % d'un job à l'autre (27,5 puis 31,5 ms pour le
+      # même code, 24/11) : sur une PR, le banc de jeu est mesuré en paires avec la branche visée.
+      - name: Préparer la base de la PR (mesure en paires)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+          git worktree add ../base FETCH_HEAD
+
       # pipefail : sans lui, « | tee » rendait le code de tee et un dépassement passait inaperçu.
-      - name: Banc de jeu (meilleure de 2 mesures)
+      - name: Banc de jeu (meilleure de 2 mesures, en paires avec la base sur une PR)
         shell: bash
         run: |
           set -o pipefail
+          [ -d ../base ] && export BASE_DIR=../base
           RUNS=2 tools/bench.sh | tee bench.txt
 
       - name: Banc des pics, siège du Cœur (meilleure de 2 mesures)

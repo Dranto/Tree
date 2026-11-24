@@ -1,0 +1,8 @@
+{
+  "_doc": "Couronne de greffes (écran de l'Arbre de vie, Game.crown) : emplacements où poser les greffes trouvées dans le monde, indépendants de l'arbre. « start » : emplacements ouverts au départ ; « per_region_hearts » : en plus quand tous les Cœurs d'une région sont purifiés ; « per_boss » : en plus par boss de région vaincu ; « finale » : en plus quand la Flétrissure est vaincue ; « max » : plafond.",
+  "start": 2,
+  "per_region_hearts": 1,
+  "per_boss": 1,
+  "finale": 1,
+  "max": 16
+}

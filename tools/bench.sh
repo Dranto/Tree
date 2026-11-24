@@ -11,6 +11,10 @@
 #   REGIONS=six tools/bench.sh      # monde à six régions : ajoute les régions factices de tests/regions/
 #                                   # (aujourd'hui Racine) à celles de data/regions/ ; une vraie région l'emporte
 #                                   # (« cinq » : ancien nom, même banc)
+#   BASE_DIR=../base tools/bench.sh # mesure en paires : alterne le banc de la base (une autre copie du
+#                                   # dépôt, ex. develop) et celui-ci. Échoue seulement si ce banc dépasse
+#                                   # la limite ET la base de plus de REGRESSION (8 % par défaut) : la
+#                                   # vitesse de la machine de la CI varie de ±15 % d'un job à l'autre.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # Budget du temps moyen par image (ms) sur la machine de référence, et marge tolérée.
@@ -20,6 +24,8 @@ RUNS="${RUNS:-1}"
 SCENE="${SCENE:-}"
 P99_MS="${P99_MS:-}"
 REGIONS="${REGIONS:-}"
+BASE_DIR="${BASE_DIR:-}"
+REGRESSION="${REGRESSION:-0.08}"
 SCENE_ARG=()
 # La finale est le banc du boss, joué sous la graine (--region=finale).
 if [ "$SCENE" = "finale" ]; then
@@ -42,9 +48,21 @@ for attempt in 1 2 3; do
   echo "Import du projet : échec (essai $attempt), fin du journal :"
   tail -n 15 "$OUT/import.log"
 done
+if [ -n "$BASE_DIR" ]; then
+  BASE_DIR="$(cd "$BASE_DIR" && pwd)"
+  "$BASE_DIR/tools/godot.sh" --headless --import > "$OUT/import_base.log" 2>&1 || \
+    "$BASE_DIR/tools/godot.sh" --headless --import > "$OUT/import_base.log" 2>&1 || true
+fi
 best=""
 best_p99=""
+base_best=""
 for i in $(seq 1 "$RUNS"); do
+  if [ -n "$BASE_DIR" ]; then
+    "$BASE_DIR/tools/godot.sh" --xvfb --audio-driver Dummy -- --benchmark "${SCENE_ARG[@]}" 2>&1 | grep -E "BENCHMARK|SCRIPT ERROR" > "$OUT/banc${TAG}_base_$i.txt"
+    bavg=$(sed -nE 's/.*moyen ([0-9.]+) ms.*/\1/p' "$OUT/banc${TAG}_base_$i.txt")
+    echo "Base, mesure $i : ${bavg:-sans résultat} ms"
+    if [ -n "$bavg" ] && { [ -z "$base_best" ] || awk -v a="$bavg" -v b="$base_best" 'BEGIN{exit !(a < b)}'; }; then base_best="$bavg"; fi
+  fi
   "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy -- --benchmark "${SCENE_ARG[@]}" 2>&1 | grep -E "BENCHMARK|SCRIPT ERROR" > "$OUT/banc${TAG}_$i.txt"
   cat "$OUT/banc${TAG}_$i.txt"
   if grep -q "SCRIPT ERROR" "$OUT/banc${TAG}_$i.txt"; then
@@ -60,8 +78,22 @@ done
 limit=$(awk -v b="$BUDGET_MS" -v t="$TOLERANCE" 'BEGIN{printf "%.2f", b * (1 + t)}')
 echo "Temps moyen par image : ${best} ms (budget ${BUDGET_MS} ms, limite ${limit} ms)"
 if awk -v a="$best" -v l="$limit" 'BEGIN{exit !(a > l)}'; then
-  echo "ÉCHEC : le jeu dépasse son budget de temps par image (voir docs/performances.md)"
-  exit 1
+  if [ -n "$base_best" ]; then
+    blimit=$(awk -v b="$base_best" -v r="$REGRESSION" 'BEGIN{printf "%.2f", b * (1 + r)}')
+    echo "Base mesurée sur la même machine : ${base_best} ms (au-delà de ${blimit} ms : régression)"
+    if awk -v a="$best" -v l="$blimit" 'BEGIN{exit !(a > l)}'; then
+      echo "ÉCHEC : le jeu dépasse son budget et ralentit par rapport à la base (voir docs/performances.md)"
+      exit 1
+    fi
+    echo "AVERTISSEMENT : au-dessus de la limite, mais pas plus lent que la base sur cette machine (machine lente)"
+    echo "OK : pas de régression"
+    exit 0
+  else
+    echo "ÉCHEC : le jeu dépasse son budget de temps par image (voir docs/performances.md)"
+    exit 1
+  fi
+elif [ -n "$base_best" ]; then
+  echo "Base mesurée sur la même machine : ${base_best} ms"
 fi
 if [ -n "$P99_MS" ]; then
   plimit=$(awk -v b="$P99_MS" -v t="$TOLERANCE" 'BEGIN{printf "%.2f", b * (1 + t)}')

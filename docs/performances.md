@@ -198,6 +198,22 @@ pixel) pour ~3 à 5 ms ; le lot n'est gardé que pour ce qui est rempli.
 Pistes non faites : poses d'action en cache (peu de réemploi, voir ci-dessus) ; interface en texture (les
 emplacements reçoivent la souris et les infobulles).
 
+## Jalon 11 (tâche E) : un banc fiable sur la CI
+
+- **La machine de la CI varie de ±15 %** d'un job à l'autre : le même code (develop c725f6e) a mesuré
+  27,5 ms puis 31,5 ms au banc des 120 Flétris (24/11). Un budget fixe échouait donc sans régression.
+  Sur une PR, `benchmark.yml` mesure maintenant le banc **en paires** : `BASE_DIR=../base tools/bench.sh`
+  alterne la branche visée (copie dans `../base`) et la PR, sur la même machine. Le banc échoue
+  seulement si la PR dépasse la limite (budget + 15 %) **et** la base de plus de 8 % (`REGRESSION`).
+  Au-dessus de la limite mais pas plus lente que la base : avertissement (machine lente), pas d'échec.
+  Les autres bancs (Cœur, six régions, finale) gardent leurs budgets, qui ont de la marge.
+- Cœurs (`heart.gd`) et sanctuaires (`sanctuary.gd`) redessinés comme les autres objets animés :
+  30 fois par seconde au plus pendant le siège, 15 sinon (le sanctuaire reste à chaque image pendant
+  l'onde du ravivement). Profil (`tools/perf-profile.sh`) : dessin du Cœur 1,8 → 0,9 ms par image,
+  sanctuaires 0,34 → 0,16 ms, sur le banc à ~25 images/s (le gain est plus grand en jeu à 60 images/s).
+  Références visuelles refaites (décors et marais : 0,07 à 0,14 % de pixels, l'anneau du Cœur à un
+  autre instant).
+
 ## Pistes suivantes
 
 - **Objectif de 20 ms** : atteint à ~2 ms près sur la machine des tests du jalon 7 (22,3 ms, dont

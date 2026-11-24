@@ -464,9 +464,7 @@ func _enter_phase(n: int) -> void:
 	var arm_col := Art.ec(ARMS[(n - 1) * 2]["element"], "clair")
 	main.fx.ring(anchor, radius, 460.0, 0.8, Color(arm_col, 0.9), 8.0)
 	main.fx.shake(6.0)
-	if n == 2:
-		main.hud.banner("La Flétrissure boit la sève et lève le vent : ne reste ni près d'elle, ni dans son souffle.", "combat")
-	else:
+	if n != 2:
 		_unbind()
 
 
@@ -478,7 +476,6 @@ func _unbind() -> void:
 	transition = TRANSFORM["time"]
 	_clear_attacks()
 	strike_flash = -1.0
-	main.hud.banner("Le creux s'effondre ! La Flétrissure rejette son écorce et unit les six gardiens.", "combat")
 	main.fx.shake(10.0)
 	main.screen_fx.glow(Art.ec("cendre"), 0.55, 1.4)
 	for i in 3:

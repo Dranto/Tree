@@ -66,10 +66,6 @@ var big_from := 2
 ## Grande vague de vie à la purification : rayon final et couleur des fleurs.
 var life_radius := 820.0
 var life_color := Color.WHITE
-var wake_banner := "Le Cœur de flétrissure s'éveille : tiens la zone !"
-var purified_banner := "Le Cœur est purifié : l'arène s'ouvre."
-## Annonce d'un Cœur purifié quand d'autres restent (« part_banner » : %d purifiés, %d en tout).
-var part_banner := "Cœur purifié : %d / %d. L'arène s'ouvrira quand tous les Cœurs seront purifiés."
 var center := FALLBACK_CENTER
 ## Emplacement lu dans le fichier de la région (sans scène de jeu : celui du centre).
 var _spot := {}
@@ -86,6 +82,9 @@ var spawned: Array = []
 var life_wave := -1.0
 var life_step := 0.0
 var t := 0.0
+## Temps depuis le dernier dessin (voir _process : redessiné 30 fois par seconde au plus pendant
+## le siège, 15 sinon, comme les autres objets animés, docs/performances.md).
+var _since_draw := 1.0
 ## Figé par les tests visuels : la logique ne tourne plus, l'état posé reste affiché.
 var frozen := false
 var rng := RandomNumberGenerator.new()
@@ -137,9 +136,6 @@ func configure(id: String) -> void:
 	idle_kind = str(idle.get("kind", idle_kind))
 	life_radius = float(_spot.get("life_radius", h.get("life_radius", life_radius)))
 	life_color = Regions.color(h.get("life_color", "saignement/clair"))
-	wake_banner = str(h.get("wake_banner", wake_banner))
-	purified_banner = str(h.get("purified_banner", purified_banner))
-	part_banner = str(h.get("part_banner", part_banner))
 
 
 func _ready() -> void:
@@ -175,7 +171,11 @@ func _process(delta: float) -> void:
 	t += delta
 	# Rien à animer quand le Cœur est loin de l'écran (avec trois régions, deux Cœurs tombaient
 	# souvent à moins de 1600 px du joueur sans être visibles) : on regarde le cadre de la caméra.
+	_since_draw += delta
+	if _since_draw < (1.0 / 30.0 if state == "siege" else 1.0 / 15.0) - 0.001:
+		return
 	if not frozen and main.player.position.distance_squared_to(center) < 1600.0 * 1600.0 and _near_view():
+		_since_draw = 0.0
 		queue_redraw()
 		body.queue_redraw()
 
@@ -211,7 +211,6 @@ func _physics_process(delta: float) -> void:
 			state = "siege"
 			wave_index = 0
 			wave_timer = 1.0
-			main.hud.banner(wake_banner, "combat")
 		progress += delta
 	else:
 		progress = maxf(0.0, progress - delta * DECAY)
@@ -286,12 +285,9 @@ func purify() -> void:
 	var done := Regions.hearts_done(region, Game.flags) if Regions.exists(region) else count
 	if done >= count:
 		Game.flags[region_flag] = true
-		main.hud.banner(purified_banner)
 		# Récompense de la région (« heart › reward ») : une fois, avec le dernier Cœur.
 		var reward: Dictionary = Content.rewards().get("coeur", {}).get(region, {})
 		Game.grant_points(int(reward.get("points", 1)), "coeur", region + "_coeur")
-	else:
-		main.hud.banner(part_banner % [done, count] if part_banner.count("%d") == 2 else part_banner)
 	for i in 3:
 		main.fx.ring(center, body_radius, life_radius * (0.4 + 0.3 * i), 0.9 + 0.5 * i, Color(Art.ec("seve"), 0.9), 6.0)
 	for e in main.enemies_near(center, zone + 420.0):

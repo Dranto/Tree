@@ -34,9 +34,7 @@
     "waves": {"every": 4.0, "base": 2, "growth": 1, "kinds": ["fletri"]},
     "idle": {"every": 5.0, "max": 2, "kind": "fletri"},
     "life_color": "vent/clair",
-    "reward": {"points": 1},
-    "wake_banner": "Le Cœur d'essai s'éveille.",
-    "purified_banner": "Le Cœur d'essai est purifié."
+    "reward": {"points": 1}
   },
   "boss": {
     "script": "res://tests/regions/boss_essai.gd",
@@ -50,7 +48,7 @@
     "music": {
       "seed": 5,
       "roots": [0, -5, -2, -7],
-      "dark": {"chord": [0, 5, 10], "wind_period": 2.0},
+      "dark": {"chord": [0, 5, 10]},
       "bright": {"chord": [0, 5, 9], "pattern": [0, 5, 9, 5]}
     },
     "ambience": {
@@ -59,10 +57,5 @@
       "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.6, "vel": [120.0, 0.0], "sway": [10.0, 4.0], "size": [1.0, 1.5], "length": 20.0}
     },
     "boss": {"eveil": "vent_boss_eveil", "mort": "vent_boss_mort"}
-  },
-  "ending": {
-    "sub": "Fin de la région d'essai",
-    "title": "La clairière respire",
-    "body": "Région factice des tests."
   }
 }

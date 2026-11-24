@@ -13,7 +13,7 @@ var live: Array = []
 func cast(p, s := {}) -> void:
 	if s.is_empty():
 		s = Game.stats
-	Sfx.play("appel_air")
+	Sfx.play("vent_appel")
 	var k: Dictionary = p.skill("appel_air")
 	var target: Vector2 = p.aim_point
 	var off: Vector2 = target - p.position

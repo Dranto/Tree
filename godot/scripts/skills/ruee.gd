@@ -18,7 +18,7 @@ var _fx: Dictionary = {}
 func cast(p, s := {}) -> void:
 	if s.is_empty():
 		s = Game.stats
-	Sfx.play("ruee")
+	Sfx.play("vent_ruee")
 	var k: Dictionary = p.skill("ruee")
 	dir = p.aim
 	left = float(k["length"])

@@ -10,7 +10,7 @@ const OPS := ["add", "inc", "more", "flat"]
 ## Opérations d'un effet « skill_mod » (mutation d'un réglage de compétence).
 const SKILL_OPS := ["add", "inc", "more", "set"]
 ## Types de nœuds qu'une grappe écrite à la main peut contenir (voir skill_tree.gd).
-const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "graft", "withered", "attack"]
+const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "withered", "attack"]
 ## Moments du jeu auxquels un effet peut réagir (champ « on »).
 ## bleed_tick : à-coup de saignement ; root : ennemi enraciné ; melee_hit : coup au corps à corps.
 ## hurt : le joueur est touché (« base » = dégâts du coup) ; dash : le joueur esquive.
@@ -59,7 +59,17 @@ static func attack() -> Dictionary:
 	return _load("attack")
 
 
-## Greffes : objets à insérer dans un emplacement de greffe de l'arbre.
+## Ressenti du combat : arrêt sur image, secousse, recul, éclats (scripts/fx.gd). Réglages d'image seulement.
+static func feel() -> Dictionary:
+	return _load("feel")
+
+
+## Couronne de greffes : emplacements au départ et gagnés dans l'aventure (data/crown.json, Game.crown_size).
+static func crown() -> Dictionary:
+	return _load("crown")
+
+
+## Greffes : objets trouvés dans le monde, à poser dans la couronne de greffes (Game.crown).
 ## Les clés qui commencent par « _ » (commentaires) sont écartées.
 static func grafts() -> Dictionary:
 	if not _cache.has("#grafts"):
@@ -185,7 +195,7 @@ static func _load(name: String) -> Dictionary:
 static func validate(keystones_per_branch := -1) -> PackedStringArray:
 	_cache = {}
 	var errors := PackedStringArray()
-	for name in ["tree", "stats", "skills", "conditions", "grafts", "attack"]:
+	for name in ["tree", "stats", "skills", "conditions", "grafts", "attack", "feel", "crown"]:
 		if _load(name).is_empty():
 			errors.append("%s.json est absent, vide ou illisible" % name)
 	# Chargé à l'exécution : attack.gd lit lui-même ce fichier (pas de dépendance circulaire).
@@ -197,6 +207,12 @@ static func validate(keystones_per_branch := -1) -> PackedStringArray:
 				_check_effects(syn[sid]["effects"], "synergies.json, synergie « %s »" % sid, errors)
 	else:
 		errors.append("synergies.json : « synergies » doit être un objet")
+	var cr := crown()
+	for k in ["start", "per_region_hearts", "per_boss", "finale", "max"]:
+		if not (cr.get(k) is float or cr.get(k) is int) or float(cr[k]) < 0.0:
+			errors.append("crown.json : « %s » doit être un nombre positif ou nul" % k)
+	if float(cr.get("max", 0)) < float(cr.get("start", 0)) or float(cr.get("start", 0)) < 1.0:
+		errors.append("crown.json : il faut au moins un emplacement au départ, et « max » ≥ « start »")
 	var t := tree()
 	_check_effects(t.get("root", {}).get("effects", []), "tree.json, graine", errors)
 	for gid in grafts():
@@ -449,9 +465,6 @@ static func _check_cluster_node(cn: Dictionary, where: String, seen_keys: Dictio
 		"withered":
 			if str(cn.get("requires_flag", "")) == "":
 				errors.append(where + " : un nœud flétri demande « requires_flag »")
-		"graft":
-			if has_effects:
-				errors.append(where + " : un emplacement de greffe ne porte pas d'effet (c'est la greffe qui en donne)")
 		"attack":
 			if str(cn.get("name", "")) == "":
 				errors.append(where + " : « name » est obligatoire pour un nœud d'attaque")

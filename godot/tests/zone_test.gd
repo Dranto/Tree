@@ -3,7 +3,7 @@
 ## objectif principal, des reprises en plein siège et en plein combat, une mort pendant le siège et
 ## une mort face au boss, une greffe ramassée pendant une transition et des changements de
 ## résolution. À chaque image, il vérifie que l'écran reste lisible et cohérent :
-## - le cadre d'objectif, le journal, la carte et la flèche suivent l'objectif en cours ;
+## - la veine de sève, la feuille au bord de l'écran et la carte suivent l'objectif en cours ;
 ## - une seule annonce à la fois, jamais sur le cadre d'objectif ni sur une barre de combat ;
 ## - pendant le combat de boss, seules les informations du combat restent ;
 ## - rien par-dessus l'écran de mort et la séquence de fin.
@@ -105,7 +105,7 @@ func _run() -> void:
 	obj.completed.connect(_on_completed)
 	print("ZONE graine %d : nouvelle partie" % seed_n)
 	check(obj.current(region).get("id", "") == obj.main_list()[0]["id"] or obj.current(region).get("region", "") == region, "nouvelle partie : l'aventure commence par le premier nœud")
-	check(main.hud.hint_visible(), "l'aide de départ est affichée")
+	check(main.hud.glyphs != null and not main.hud.glyphs.done("bouger") and main.hud.glyphs.glyph_for("bouger").size() == 2, "nouvelle partie : le glyphe « se déplacer » attend le premier pas")
 
 	while true:
 		await physics_frame
@@ -187,36 +187,20 @@ func _invariants() -> void:
 	var q = main.quest_ui
 	var banner: String = hud.visible_banner()
 	var tracker_on: bool = q._tracker_layer.visible
+	# Jalon 11 : plus aucune annonce écrite en jeu (seule « Sauvegarde illisible » reste).
+	if banner != "":
+		_bad("annonce écrite en jeu", banner)
 	if main.arena.in_combat():
 		if tracker_on:
-			_bad("cadre d'objectif visible pendant le boss")
+			_bad("feuille de sève visible pendant le boss")
 		if hud._corner.visible:
 			_bad("infos de partie visibles pendant le boss")
-		if hud.hint_visible():
-			_bad("aide de départ pendant le boss")
-		if banner != "" and hud.banner_kind != "combat":
-			_bad("annonce hors combat pendant le boss", banner)
-	if hud.death_screen.is_showing() and banner != "":
-		_bad("annonce sur l'écran de mort", banner)
-	if hud.hint_visible() and hud.hint_time > 0.6:
-		for e in main.enemies_near(main.player.position, hud.HINT_ENEMY_NEAR):
-			_bad("aide de départ pendant un combat")
-			break
-	if banner != "":
-		var r: Rect2 = hud._banner.get_global_rect()
-		if tracker_on and r.intersects(q.tracker._panel.get_global_rect()):
-			_bad("annonce sur le cadre d'objectif", banner)
-		for bar in [_heart().bar, main.arena.bar]:
-			if bar.visible and r.intersects(_bar_rect(bar)):
-				_bad("annonce sur une barre de combat", banner)
-	for bar in [_heart().bar, main.arena.bar]:
-		if bar.visible and tracker_on and q.tracker._panel.get_global_rect().intersects(_bar_rect(bar)):
-			_bad("cadre d'objectif sur une barre de combat")
-	# Le cadre suit l'objectif en cours.
-	var cur: Dictionary = obj.followed()
-	var want: String = cur.get("title", "Tous les objectifs sont accomplis")
-	if q.tracker._title.text != want:
-		_bad("cadre d'objectif en retard", "%s au lieu de %s" % [q.tracker._title.text, want])
+		if q.vein.alpha > 0.5:
+			_bad("veine de sève pendant le boss")
+	if hud.death_screen.is_showing() and hud.hint_visible():
+		_bad("glyphe sur l'écran de mort")
+	if main.siege_heart() != null and q.vein.alpha > 0.5:
+		_bad("veine de sève pendant le siège d'un Cœur")
 
 
 ## Rectangle à l'écran du cadre d'une barre de combat (boss_bar.gd).
@@ -279,22 +263,13 @@ func _coherence(where: String) -> void:
 	var has_sap: bool = main.lost_sap != null and is_instance_valid(main.lost_sap)
 	if (sap > 0.0) != has_sap:
 		problems.append("sève perdue %s, nœud %s" % [sap, has_sap])
-	# Suivi, journal et carte lisent le même objectif.
+	# La veine de sève vise le lieu de l'objectif suivi (Objectives.followed).
 	var q = main.quest_ui
-	q.tracker.refresh()
-	# Le cadre et le journal suivent la région où se tient le joueur (Objectives.followed).
-	var shown: Dictionary = obj.followed()
-	var want: String = shown.get("title", "Tous les objectifs sont accomplis")
-	if q.tracker._title.text != want:
-		problems.append("cadre « %s » au lieu de « %s »" % [q.tracker._title.text, want])
-	if not shown.is_empty() and q.tracker._head.text.find("%d / " % obj.current_rank(obj.followed_region())) < 0:
-		problems.append("rang du cadre « %s »" % q.tracker._head.text)
-	q.journal.refresh()
-	var titles: Array = q.journal.find_children("*", "Label", true, false).map(func(l): return l.text)
-	# Le journal déplie la section de l'objectif suivi : son titre y est, les autres sections sont repliées.
-	var fol: Dictionary = obj.followed()
-	if not fol.is_empty() and not titles.any(func(x): return str(x).begins_with(fol["title"])):
-		problems.append("journal sans « %s »" % fol["title"])
+	q.vein._check = 0.0
+	q.vein._process(0.0)
+	var goal = obj.target_pos(obj.followed())
+	if goal != q.vein._target:
+		problems.append("veine vers %s au lieu de %s" % [q.vein._target, goal])
 	check(problems.is_empty(), "%s : état cohérent %s" % [where, "" if problems.is_empty() else str(problems)])
 
 
@@ -304,7 +279,7 @@ func _snapshot() -> Dictionary:
 	return {
 		"level": game.level, "xp": game.xp, "points": game.points, "kills": game.kills,
 		"uids": game.allocated_uids(), "inventory": game.graft_inventory.duplicate(),
-		"grafts": game.grafts.duplicate(), "flags": game.flags.duplicate(true),
+		"crown": game.placed_grafts(), "flags": game.flags.duplicate(true),
 		"ground": main.export_ground_grafts(),
 	}
 
@@ -403,7 +378,7 @@ func _forced_events() -> void:
 		var sap = main.lost_sap
 		check(sap != null and sap.position.distance_to(arena.center) > arena.max_radius - 70.0 + 20.0,
 			"sève perdue dans l'arène : posée devant l'entrée, hors de la zone qui réveille la Mère-Ronce")
-		check(main.quest_ui.tracker_shown(), "mort face au boss : le cadre d'objectif revient")
+		check(main.quest_ui.tracker_shown(), "mort face au boss : la feuille de sève revient")
 		_coherence("mort face au boss")
 		pending_reload = "avec la sève au sol"
 	elif t > 40.0 and not done_events.has("resolution"):
@@ -440,8 +415,7 @@ func _graft_while_tree_open(g) -> void:
 	main.tree_ui.toggle()
 	await process_frame
 	check(not paused, "l'Arbre se referme, le jeu reprend")
-	var queued: bool = main.hud.banner_queue.any(func(b): return str(b[0]).begins_with("Greffe trouvée")) or main.hud.banner_text.begins_with("Greffe trouvée")
-	check(queued, "l'annonce de la greffe est faite après la fermeture")
+	check(main.hud.banners_idle(), "pas d'annonce écrite de la greffe")
 
 
 ## Changement de résolution en cours de partie : l'interface reste dans l'écran.
@@ -453,7 +427,6 @@ func _resolutions(where: String) -> void:
 		var view: Rect2 = root.get_visible_rect()
 		var out: Array = []
 		var rects := {
-			"cadre d'objectif": main.quest_ui.tracker._panel.get_global_rect() if main.quest_ui._tracker_layer.visible else Rect2(),
 			"annonce": main.hud._banner.get_global_rect() if main.hud.visible_banner() != "" else Rect2(),
 			"barre du boss": _bar_rect(main.arena.bar) if main.arena.bar.visible else Rect2(),
 			"barre du Cœur": _bar_rect(_heart().bar) if _heart().bar.visible else Rect2(),
@@ -476,7 +449,7 @@ func _ending() -> void:
 	var reg: String = q.fanfare.region
 	check(not paused and main.hud.get_parent().visible, "célébration : sans pause, l'interface de jeu reste là")
 	check(game.flags.get(reg + "_fin_vue", false), "célébration : notée comme vue dès le début")
-	check(not q._tracker_layer.visible, "célébration : le cadre d'objectif s'efface le temps de la célébration")
+	check(not q._tracker_layer.visible, "reverdie : la feuille de sève s'efface le temps de la reverdie")
 	# Une greffe ramassée pendant la célébration n'est pas perdue.
 	for g in main.orbs_layer.get_children():
 		if _is_graft(g) and not g.is_queued_for_deletion():
@@ -485,7 +458,7 @@ func _ending() -> void:
 			check(game.has_graft(id), "greffe ramassée pendant la célébration : dans l'inventaire")
 	q.fanfare.set_time(q.fanfare.duration)
 	await _frames(2)
-	check(not q.fanfare.active and q._tracker_layer.visible, "fin de la célébration : le cadre d'objectif revient")
+	check(not q.fanfare.active and q._tracker_layer.visible, "fin de la reverdie : la feuille de sève revient")
 	_coherence("après la fin")
 	pending_reload = "après la fin"
 

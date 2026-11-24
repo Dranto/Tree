@@ -1,4 +1,4 @@
-## Test des objectifs, du journal, de la carte et de la fin de la tranche : la suite d'objectifs
+## Test des objectifs, de la veine de sève, de la carte et de la fin de la tranche : la suite d'objectifs
 ## principaux s'enchaîne par des appels directs, les facultatifs rapportent leur point, la fin se
 ## déclenche une seule fois, tout survit à une sauvegarde.
 ## Lancer : tools/godot.sh --headless --fixed-fps 60 -s res://tests/objectives_test.gd
@@ -124,8 +124,10 @@ func _run() -> void:
 	check(obj.current().get("id", "") == "autel" and not obj.skipped(obj.get_def("autel")), "sans grande étape franchie, l'ordre du début reste libre : l'autel redevient l'objectif")
 	game.flags["ronce_coeur_purifie"] = true
 	obj.check()
-	main.quest_ui.tracker.refresh()
-	check(main.quest_ui.tracker._title.text == obj.get_def("boss")["title"] and main.quest_ui.tracker._head.text.find("6 / %d" % obj.main_total("ronce")) >= 0, "le cadre d'objectif montre le boss, 6 / %d (Ronce)" % obj.main_total("ronce"))
+	var vein = main.quest_ui.vein
+	vein._check = 0.0
+	vein._process(0.01)
+	check(obj.followed().get("id", "") == "boss" and vein._target == main.arena.center, "la veine de sève mène à l'arène du boss")
 	game.flags = flags_saved
 
 	print("Trois Cœurs, puis le boss")
@@ -169,22 +171,20 @@ func _run() -> void:
 	obj._process(1.0)
 	check(int(game.flags.get("stat_morts", 0)) == 2 and obj.deaths_total() == 2, "elles sont reportées dans les drapeaux, sans double compte")
 
-	print("Journal et carte")
+	print("Carte (plus de journal)")
 	var q = main.quest_ui
-	q.toggle("journal")
-	check(paused and q.current == "journal" and q.journal.visible, "J ouvre le journal et met le jeu en pause")
-	check(q.journal.find_children("*", "Label", true, false).size() > 20, "le journal liste les objectifs")
+	check(q.get("journal") == null and not InputMap.has_action("toggle_journal"), "plus de journal ni de touche J")
 	q.toggle("carte")
-	check(q.current == "carte" and q.world_map.visible and not q.journal.visible, "M passe à la carte")
+	check(paused and q.current == "carte" and q.world_map.visible, "M ouvre la carte")
 	q.toggle("carte")
 	check(not paused and q.current == "" and not q.world_map.visible, "M referme la carte")
 	main.tree_ui.toggle()
-	q.toggle("journal")
-	check(q.current == "", "le journal ne s'ouvre pas par-dessus l'Arbre de vie")
+	q.toggle("carte")
+	check(q.current == "", "la carte ne s'ouvre pas par-dessus l'Arbre de vie")
 	main.tree_ui.toggle()
 	await _frames(2)
 
-	print("Célébration de la région (sans écran plein)")
+	print("Reverdie de la région (sans écran ni texte)")
 	check(obj.ending_due(), "la célébration est due après le boss")
 	q._process(q.ENDING_DELAY - 1.0)
 	check(not q.fanfare.active, "elle n'a pas lieu avant le délai")
@@ -192,7 +192,7 @@ func _run() -> void:
 	check(q.fanfare.active and not paused, "elle se lance après le délai, sans pause")
 	check(main.hud.get_parent().visible, "l'interface de jeu reste là")
 	check(bool(game.flags.get("ronce_fin_vue", false)) and not obj.ending_due(), "elle est marquée comme vue")
-	check(q.fanfare._title.text == "Le roncier reverdit", "le titre de la région s'affiche")
+	check(not q.fanfare is CanvasItem, "aucun texte ni médaillon par-dessus le jeu")
 	check("ronce" in q.world_map.pending_reveal, "la carte rejouera la région qui reverdit")
 	check(main.spawn_paused, "aucun Flétri ne naît pendant la célébration")
 	q.fanfare.set_time(30.0)

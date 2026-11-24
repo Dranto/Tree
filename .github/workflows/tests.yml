@@ -1,0 +1,46 @@
+# Tests de logique : chaque godot/tests/*_test.gd (sauf les robots longs aventure et zone),
+# en parallèle, chacun avec son propre dossier user:// (tools/unit-tests.sh). Les tests qui ont
+# besoin d'un écran (direct_screen, draw_batch, move, tree_ui) tournent sous xvfb.
+name: Tests de logique
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, develop, "claude/project-thread-9liy48"]
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer l'écran virtuel et le rendu logiciel
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1
+
+      - name: Cache de Godot
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/godot
+          key: godot-4.7-stable
+
+      - name: Lancer les tests
+        run: tools/unit-tests.sh
+
+      - name: Résumé du job
+        if: always()
+        run: |
+          [ -f godot/tests/unit-out/resume.md ] && cat godot/tests/unit-out/resume.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Publier les journaux
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-logique
+          path: |
+            godot/tests/unit-out/*.log
+            godot/tests/unit-out/resume.md
+          if-no-files-found: ignore

@@ -10,10 +10,16 @@ var volume := 0.8
 ## Réglages séparés de la musique et des bruitages, en plus du volume général.
 var music_volume := 0.7
 var sfx_volume := 0.9
+## Ambiance sonore (vent, eau, oiseaux…), bus « Ambiance ».
+var ambience_volume := 0.8
 var fullscreen := false
 var show_hints := true
-## Chiffres de dégâts flottants (infligés et reçus).
-var show_damage_numbers := true
+## Chiffres de dégâts flottants : « aucun » (par défaut, choix d'Antoine au jalon 11 : le coup se
+## lit à l'impact), « critiques » (coups critiques et dégâts reçus) ou « tous ».
+## Clé à part (« gameplay/damage_numbers ») : l'ancien réglage, toujours enregistré à vrai, n'est pas repris.
+const DAMAGE_NUMBERS := ["aucun", "critiques", "tous"]
+const DAMAGE_NUMBERS_NAMES := {"aucun": "Aucun", "critiques": "Critiques et dégâts reçus", "tous": "Tous"}
+var damage_numbers := "aucun"
 ## Commandes de la barre de compétences : six emplacements, alignés sur player.bar.
 ## - 0 et 1 : les deux compétences principales, sur les clics gauche et droit (actions
 ##   « skill_main_1 » et « skill_main_2 ») ;
@@ -38,8 +44,40 @@ var moba_main_2_key: int = MOBA_MAIN_2_DEFAULT
 const AIM_MODES := ["auto", "curseur"]
 const AIM_MODE_NAMES := {"auto": "Automatique", "curseur": "Vers le curseur"}
 var aim_mode := "auto"
-## Secousse d'écran, de 0 (aucune) à 1 (pleine).
-var shake := 0.6
+## Secousse d'écran, de 0 (aucune) à 1 (pleine). Ancienne clé « gameplay/shake », reprise.
+var shake_scale := 0.6
+## Éclats lumineux (flash plein écran, blanchiment d'un impact), de 0 (aucun) à 1 (pleins).
+var flash_scale := 1.0
+## Durée des micro-pauses à l'impact, de 0 (aucune) à 1 (pleine).
+var hitstop_scale := 1.0
+## Accessibilité (jalon 11). Mode daltonien : palette adaptée des signaux de danger, d'élite et de
+## butin (Art.c), et motifs ajoutés aux zones de danger annoncées. Voir COLORBLIND_MODES.
+const COLORBLIND_MODES := ["aucun", "protanopie", "deuteranopie", "tritanopie"]
+const COLORBLIND_NAMES := {"aucun": "Aucun", "protanopie": "Protanopie (rouge)", "deuteranopie": "Deutéranopie (vert)", "tritanopie": "Tritanopie (bleu)"}
+var colorblind_mode := "aucun"
+## Taille des textes de l'interface (menus, panneaux, bannières), en facteur du thème Herbier.
+const TEXT_SCALES := [1.0, 1.15, 1.3]
+const TEXT_SCALE_NAMES := ["Normale", "Grande", "Très grande"]
+var text_scale := 1.0
+## Contraste renforcé : textes secondaires en pleine encre, filets et panneaux plus marqués, zones de
+## danger plus opaques.
+var high_contrast := false
+## Met le jeu en pause quand la fenêtre perd le focus (Alt-Tab, autre fenêtre au premier plan).
+var pause_on_focus_loss := true
+## Commandes du jeu hors barre de compétences : touche principale de chaque action, réassignable
+## (touche physique, comme la barre). Les flèches restent toujours actives pour se déplacer, T pour
+## l'arbre. La carte garde par défaut la lettre logique (M) quelle que soit la
+## disposition du clavier ; réassignée, elle prend la touche physique pressée.
+const GAME_ACTIONS := ["move_up", "move_left", "move_down", "move_right", "dash", "toggle_tree", "toggle_map"]
+const GAME_ACTION_NAMES := {"move_up": "Avancer", "move_left": "Aller à gauche", "move_down": "Reculer", "move_right": "Aller à droite",
+	"dash": "Esquive", "toggle_tree": "Arbre de vie", "toggle_map": "Carte"}
+const ACTION_DEFAULTS := {"move_up": KEY_W, "move_left": KEY_A, "move_down": KEY_S, "move_right": KEY_D,
+	"dash": KEY_SPACE, "toggle_tree": KEY_TAB, "toggle_map": KEY_M}
+## Touches toujours actives en plus (non réassignables, ne gênent pas une réassignation).
+const ACTION_EXTRAS := {"move_up": [KEY_UP], "move_left": [KEY_LEFT], "move_down": [KEY_DOWN], "move_right": [KEY_RIGHT], "toggle_tree": [KEY_T]}
+## Actions dont la touche par défaut est une lettre logique (et non une position physique).
+const LOGICAL_DEFAULTS := ["toggle_map"]
+var action_keys: Dictionary = ACTION_DEFAULTS.duplicate()
 ## Force des rafales de vent (région de Vent, wind.gd), de 0 (coupées) à 1 (pleine) : elles poussent
 ## le joueur et dévient les projectiles. Accessibilité : on peut les couper.
 var wind := 1.0
@@ -63,6 +101,7 @@ func _ready() -> void:
 	load_settings()
 	apply_bindings()
 	apply()
+	_apply_access.call_deferred()
 
 
 func load_settings() -> void:
@@ -72,9 +111,11 @@ func load_settings() -> void:
 	volume = clampf(float(cfg.get_value("audio", "volume", volume)), 0.0, 1.0)
 	music_volume = clampf(float(cfg.get_value("audio", "music_volume", music_volume)), 0.0, 1.0)
 	sfx_volume = clampf(float(cfg.get_value("audio", "sfx_volume", sfx_volume)), 0.0, 1.0)
+	ambience_volume = clampf(float(cfg.get_value("audio", "ambience_volume", ambience_volume)), 0.0, 1.0)
 	fullscreen = bool(cfg.get_value("video", "fullscreen", fullscreen))
 	show_hints = bool(cfg.get_value("gameplay", "show_hints", show_hints))
-	show_damage_numbers = bool(cfg.get_value("gameplay", "show_damage_numbers", show_damage_numbers))
+	var dn := str(cfg.get_value("gameplay", "damage_numbers", damage_numbers))
+	damage_numbers = dn if dn in DAMAGE_NUMBERS else "aucun"
 	# Section « bindings » (jalon 6) : les anciennes touches « controls/slot_N » visaient une autre
 	# disposition de la barre et ne sont plus lues.
 	for i in SLOT_COUNT:
@@ -84,7 +125,17 @@ func load_settings() -> void:
 	moba_main_2_key = mk if mk > 0 else MOBA_MAIN_2_DEFAULT
 	var aim := str(cfg.get_value("controls", "aim_mode", aim_mode))
 	aim_mode = aim if aim in AIM_MODES else "auto"
-	shake = clampf(float(cfg.get_value("gameplay", "shake", shake)), 0.0, 1.0)
+	shake_scale = clampf(float(cfg.get_value("gameplay", "shake_scale", cfg.get_value("gameplay", "shake", shake_scale))), 0.0, 1.0)
+	flash_scale = clampf(float(cfg.get_value("gameplay", "flash_scale", flash_scale)), 0.0, 1.0)
+	hitstop_scale = clampf(float(cfg.get_value("gameplay", "hitstop_scale", hitstop_scale)), 0.0, 1.0)
+	var cb := str(cfg.get_value("access", "colorblind_mode", colorblind_mode))
+	colorblind_mode = cb if cb in COLORBLIND_MODES else "aucun"
+	text_scale = _nearest_text_scale(float(cfg.get_value("access", "text_scale", text_scale)))
+	high_contrast = bool(cfg.get_value("access", "high_contrast", high_contrast))
+	pause_on_focus_loss = bool(cfg.get_value("access", "pause_on_focus_loss", pause_on_focus_loss))
+	for a in GAME_ACTIONS:
+		var k := int(cfg.get_value("actions", a, action_keys[a]))
+		action_keys[a] = k if k > 0 else ACTION_DEFAULTS[a]
 	wind = clampf(float(cfg.get_value("gameplay", "wind", wind)), 0.0, 1.0)
 	reduce_effects = bool(cfg.get_value("gameplay", "reduce_effects", reduce_effects))
 	var diff := str(cfg.get_value("gameplay", "difficulty", difficulty))
@@ -99,14 +150,23 @@ func save_settings() -> void:
 	cfg.set_value("audio", "volume", volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
+	cfg.set_value("audio", "ambience_volume", ambience_volume)
 	cfg.set_value("video", "fullscreen", fullscreen)
 	cfg.set_value("gameplay", "show_hints", show_hints)
-	cfg.set_value("gameplay", "show_damage_numbers", show_damage_numbers)
+	cfg.set_value("gameplay", "damage_numbers", damage_numbers)
 	for i in SLOT_COUNT:
 		cfg.set_value("bindings", SLOT_ACTIONS[i], bindings[i])
 	cfg.set_value("bindings", "moba_main_2", moba_main_2_key)
 	cfg.set_value("controls", "aim_mode", aim_mode)
-	cfg.set_value("gameplay", "shake", shake)
+	cfg.set_value("gameplay", "shake_scale", shake_scale)
+	cfg.set_value("gameplay", "flash_scale", flash_scale)
+	cfg.set_value("gameplay", "hitstop_scale", hitstop_scale)
+	cfg.set_value("access", "colorblind_mode", colorblind_mode)
+	cfg.set_value("access", "text_scale", text_scale)
+	cfg.set_value("access", "high_contrast", high_contrast)
+	cfg.set_value("access", "pause_on_focus_loss", pause_on_focus_loss)
+	for a in GAME_ACTIONS:
+		cfg.set_value("actions", a, action_keys[a])
 	cfg.set_value("gameplay", "wind", wind)
 	cfg.set_value("gameplay", "reduce_effects", reduce_effects)
 	cfg.set_value("gameplay", "difficulty", difficulty)
@@ -115,8 +175,20 @@ func save_settings() -> void:
 
 
 ## Crée ou remet à jour les actions de la barre (« skill_main_1 », « skill_main_2 », « slot_1 » à
-## « slot_4 ») et l'esquive (Espace, plus Maj hors du mode « moba »).
+## « slot_4 »), les commandes du jeu (GAME_ACTIONS : déplacement, esquive, arbre, carte) et
+## l'esquive (sa touche, plus Maj hors du mode « moba »).
 func apply_bindings() -> void:
+	for a in GAME_ACTIONS:
+		if a == "dash":
+			continue
+		if InputMap.has_action(a):
+			InputMap.action_erase_events(a)
+		else:
+			InputMap.add_action(a)
+		InputMap.action_add_event(a, _action_event(a))
+		for k in ACTION_EXTRAS.get(a, []):
+			if k != action_keys[a]:
+				InputMap.action_add_event(a, _event(k))
 	for i in SLOT_COUNT:
 		var action: String = SLOT_ACTIONS[i]
 		if InputMap.has_action(action):
@@ -131,10 +203,67 @@ func apply_bindings() -> void:
 		InputMap.action_erase_events("dash")
 	else:
 		InputMap.add_action("dash")
-	var dash_keys := [KEY_SPACE] if move_mode == "moba" else [KEY_SPACE, KEY_SHIFT]
+	var dash_keys := [action_keys["dash"]] if move_mode == "moba" else [action_keys["dash"], KEY_SHIFT]
 	for k in dash_keys:
-		if not _bound(k):
+		if not _bound(k) and InputMap.action_get_events("dash").all(func(e): return (e as InputEventKey).physical_keycode != k):
 			InputMap.action_add_event("dash", _event(k))
+
+
+## Évènement principal d'une commande du jeu : touche physique, sauf la lettre logique par défaut
+## de la carte.
+func _action_event(a: String) -> InputEvent:
+	var k: int = action_keys[a]
+	if a in LOGICAL_DEFAULTS and k == ACTION_DEFAULTS[a]:
+		var ev := InputEventKey.new()
+		ev.keycode = k
+		return ev
+	return _event(k)
+
+
+## Nom affiché de la touche d'une commande du jeu.
+func action_key_name(a: String) -> String:
+	var k: int = action_keys.get(a, KEY_NONE)
+	if a in LOGICAL_DEFAULTS and k == ACTION_DEFAULTS[a]:
+		return OS.get_keycode_string(k)
+	return key_name(k)
+
+
+## Commande du jeu ou emplacement de la barre qui utilise déjà cette touche (hors `except`), ou "".
+func key_user(code: int, except := "") -> String:
+	for a in GAME_ACTIONS:
+		if a != except and action_keys[a] == code:
+			return GAME_ACTION_NAMES[a]
+	for i in SLOT_COUNT:
+		if SLOT_ACTIONS[i] != except and effective_binding(i) == code:
+			return "compétence %d" % (i + 1)
+	if move_mode == "moba" and except != "moba_main_2" and moba_main_2_key == code:
+		return "compétence principale 2 (MOBA)"
+	return ""
+
+
+## Réassigne la touche principale d'une commande du jeu. Refusé (renvoie le nom de la commande qui
+## l'utilise) si la touche est déjà prise ; Échap reste réservé au menu.
+func set_action_key(a: String, code: int) -> String:
+	if not a in GAME_ACTIONS or code <= 0:
+		return "?"
+	if code == KEY_ESCAPE:
+		return "le menu"
+	var user := key_user(code, a)
+	if user != "":
+		return user
+	action_keys[a] = code
+	apply_bindings()
+	changed.emit()
+	return ""
+
+
+## Remet toutes les commandes (barre et jeu) à leurs touches par défaut.
+func reset_bindings() -> void:
+	bindings = BINDING_DEFAULTS.duplicate()
+	moba_main_2_key = MOBA_MAIN_2_DEFAULT
+	action_keys = ACTION_DEFAULTS.duplicate()
+	apply_bindings()
+	changed.emit()
 
 
 ## Une touche déjà prise par la barre (la touche du clic droit en mode « moba », par exemple).
@@ -239,10 +368,17 @@ func set_moba_main_2_key(code: int) -> void:
 func key_name(physical_keycode: int) -> String:
 	if physical_keycode == KEY_NONE:
 		return "—"
+	if KEY_FR.has(physical_keycode):
+		return KEY_FR[physical_keycode]
 	var kc := physical_keycode
 	if DisplayServer.get_name() != "headless":
 		kc = DisplayServer.keyboard_get_keycode_from_physical(kc)
 	return OS.get_keycode_string(kc)
+
+
+## Noms français des touches que Godot nomme en anglais.
+const KEY_FR := {KEY_UP: "Flèche haut", KEY_DOWN: "Flèche bas", KEY_LEFT: "Flèche gauche", KEY_RIGHT: "Flèche droite",
+	KEY_SPACE: "Espace", KEY_SHIFT: "Maj", KEY_TAB: "Tab", KEY_ENTER: "Entrée", KEY_CTRL: "Ctrl", KEY_BACKSPACE: "Retour arrière"}
 
 
 ## Action du jeu (hors barre de compétences) qui utilise déjà cette liaison, ou "".
@@ -268,6 +404,7 @@ func apply() -> void:
 	AudioServer.set_bus_mute(0, volume <= 0.001)
 	_set_bus("Musique", music_volume)
 	_set_bus("Effets", sfx_volume)
+	_set_bus("Ambiance", ambience_volume)
 	if DisplayServer.get_name() != "headless":
 		var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 		if DisplayServer.window_get_mode() != mode:
@@ -293,6 +430,11 @@ func set_sfx_volume(v: float) -> void:
 	apply()
 
 
+func set_ambience_volume(v: float) -> void:
+	ambience_volume = clampf(v, 0.0, 1.0)
+	apply()
+
+
 func set_volume(v: float) -> void:
 	volume = clampf(v, 0.0, 1.0)
 	apply()
@@ -308,9 +450,66 @@ func set_show_hints(on: bool) -> void:
 	apply()
 
 
-func set_shake(v: float) -> void:
-	shake = clampf(v, 0.0, 1.0)
+func set_damage_numbers(id: String) -> void:
+	damage_numbers = id if id in DAMAGE_NUMBERS else "aucun"
 	changed.emit()
+
+
+## Vrai si un chiffre doit s'afficher : crit (ou dégât reçu) vaut pour « critiques ».
+func shows_number(crit: bool) -> bool:
+	return damage_numbers == "tous" or (crit and damage_numbers == "critiques")
+
+
+func set_shake(v: float) -> void:
+	shake_scale = clampf(v, 0.0, 1.0)
+	changed.emit()
+
+
+func set_flash(v: float) -> void:
+	flash_scale = clampf(v, 0.0, 1.0)
+	changed.emit()
+
+
+func set_colorblind_mode(id: String) -> void:
+	colorblind_mode = id if id in COLORBLIND_MODES else "aucun"
+	_apply_access()
+	changed.emit()
+
+
+func set_text_scale(v: float) -> void:
+	text_scale = _nearest_text_scale(v)
+	changed.emit()
+
+
+func set_high_contrast(on: bool) -> void:
+	high_contrast = on
+	_apply_access()
+	changed.emit()
+
+
+func set_pause_on_focus_loss(on: bool) -> void:
+	pause_on_focus_loss = on
+	changed.emit()
+
+
+static func _nearest_text_scale(v: float) -> float:
+	var best: float = TEXT_SCALES[0]
+	for t in TEXT_SCALES:
+		if absf(t - v) < absf(best - v):
+			best = t
+	return best
+
+
+## Transmet le mode daltonien et le contraste à la charte (Art.c) et au thème de l'interface.
+func _apply_access() -> void:
+	Art.set_access(colorblind_mode, high_contrast)
+	# Chargé ici et non préchargé : ui_theme.gd nomme des autoloads créés après celui-ci.
+	load("res://scripts/ui_theme.gd").refresh_access(high_contrast)
+
+
+## Couleur de danger adaptée au mode daltonien (zones annoncées, signaux d'attaque).
+func danger_color() -> Color:
+	return Art.c("danger")
 
 
 func set_wind(v: float) -> void:
@@ -362,4 +561,14 @@ func move_mode_text(id: String) -> String:
 
 ## Force réellement appliquée de la secousse d'écran (0 si les effets sont réduits).
 func shake_strength() -> float:
-	return 0.0 if reduce_effects else shake
+	return 0.0 if reduce_effects else shake_scale
+
+
+## Force réellement appliquée des éclats lumineux (0 si les effets sont réduits).
+func flash_strength() -> float:
+	return 0.0 if reduce_effects else flash_scale
+
+
+## Part réellement appliquée de la durée des arrêts sur image (0 si les effets sont réduits).
+func hitstop_strength() -> float:
+	return 0.0 if reduce_effects else hitstop_scale

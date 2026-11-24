@@ -1,10 +1,5 @@
 {
-  "_doc": "Objectifs de l'aventure (format dans data/README.md, « Objectifs »). « region » : objectif propre à une région (cibles et comptes limités à ses lieux avec « region_only ») ; sans lui, objectif commun. Vaincre le boss d'une région lance la séquence « région purifiée » (textes « ending » du fichier de la région) ; quand toutes les régions sont purifiées, la dernière séquence montre « adventure_ending » à la place : la Flétrissure se retire sous la graine, où attend la finale (data/finale.json). L'épilogue et le générique viennent après la finale.",
-  "adventure_ending": {
-    "sub": "Toutes les régions sont purifiées",
-    "title": "La Flétrissure se retire",
-    "body": "Les gardiens sont tombés, mais la cendre ne s'est pas dissipée : elle reflue de toutes les régions vers sa source. Sous la graine, au creux des racines de l'Arbre de vie, la Flétrissure s'est retirée pour un dernier combat."
-  },
+  "_doc": "Objectifs de l'aventure (format dans data/README.md, « Objectifs »). « region » : objectif propre à une région (cibles et comptes limités à ses lieux avec « region_only ») ; sans lui, objectif commun. Titres et textes : pour les robots et les tests seulement, rien ne s'affiche en jeu (jalon 11 : la veine de sève suit « target »). Vaincre le boss d'une région lance sa reverdie, sans texte ; quand toutes les régions sont purifiées, la cendre reflue sous la graine, où attend la finale (data/finale.json). La fin et le générique se jouent ensuite dans le monde.",
   "objectives": [
     {
       "id": "premier_noeud", "main": true,

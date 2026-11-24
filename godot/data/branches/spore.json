@@ -444,11 +444,12 @@
           ]
         },
         {
-          "id": "n8",
-          "type": "graft",
-          "name": "Greffon de la vesse",
+          "id": "n8n",
+          "type": "small",
+          "name": "Vesse légère",
           "at": [1.95, 0.1],
-          "links": ["n7"]
+          "links": ["n7"],
+          "effects": [{"stat": "area", "op": "inc", "value": 0.03}, {"stat": "area_damage", "op": "inc", "value": 0.03}]
         },
         {
           "id": "n9",
@@ -1383,11 +1384,12 @@
           ]
         },
         {
-          "id": "r7",
-          "type": "graft",
-          "name": "Greffon de la pourriture",
+          "id": "r7n",
+          "type": "small",
+          "name": "Moisi",
           "at": [1.5, 0],
-          "links": ["r4"]
+          "links": ["r4"],
+          "effects": [{"stat": "poison", "op": "add", "value": 0.03}, {"stat": "area_damage", "op": "inc", "value": 0.03}]
         }
       ],
       "complete": {
@@ -1477,11 +1479,12 @@
           "requires_text": "Couvert de cendre tant que l'Amanite-Mère n'est pas vaincue."
         },
         {
-          "id": "h4",
-          "type": "graft",
-          "name": "Greffon de moisissure",
+          "id": "h4n",
+          "type": "small",
+          "name": "Mycélium fin",
           "at": [1.0, 0],
-          "links": ["h1", "h2", "h3"]
+          "links": ["h1", "h2", "h3"],
+          "effects": [{"stat": "poison", "op": "add", "value": 0.03}, {"stat": "max_hp", "op": "add", "value": 8}]
         }
       ],
       "complete": {
@@ -1599,11 +1602,12 @@
           ]
         },
         {
-          "id": "u5",
-          "type": "graft",
-          "name": "Greffon du terreau",
+          "id": "u5n",
+          "type": "small",
+          "name": "Humus léger",
           "at": [1.5, 0],
-          "links": ["u4"]
+          "links": ["u4"],
+          "effects": [{"stat": "regen", "op": "add", "value": 0.2}, {"stat": "poison", "op": "add", "value": 0.03}]
         }
       ]
     }

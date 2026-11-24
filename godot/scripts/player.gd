@@ -592,7 +592,7 @@ func auto_target():
 func apply_dazzle(dur: float) -> void:
 	dazzle = maxf(dazzle, dur)
 	if main != null and main.get("screen_fx") != null:
-		main.screen_fx.fade(Color(1.0, 0.97, 0.86), 0.3 if Settings.reduce_effects else 0.6, 0.0, dur)
+		main.screen_fx.fade(Color(1.0, 0.97, 0.86), 0.6, 0.0, dur)
 
 
 ## Soigne le héros. Un coup reçu bloque le soin un instant (« heal_block ») ; « force » (sanctuaire,

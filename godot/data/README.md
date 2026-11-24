@@ -18,7 +18,8 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `stats.json` | Les statistiques du personnage : libellé, valeur de base, bornes, arrondi. |
 | `branches/<id>.json` | Une branche : nom, couleur, effets des petits nœuds, bonus et noms des nœuds notables, nœuds clés, résonance, grappes écrites à la main. |
 | `borders/<a>-<b>.json` | Une frontière hybride entre deux branches voisines : grappes à cheval sur la limite des deux secteurs. Voir « Frontières hybrides ». |
-| `grafts.json` | Les greffes : objets à poser dans un emplacement de greffe de l'arbre (nom, effets, d'où elles viennent, dessin). |
+| `grafts.json` | Les greffes : objets à poser dans la couronne de greffes (nom, effets, d'où elles viennent, dessin). |
+| `crown.json` | La couronne de greffes : emplacements au départ, gagnés par région purifiée, par boss et à la finale, plafond. Voir « Greffes ». |
 | `regions/<id>.json` | Une région du monde, tout entière : sol, décor, apparitions, sanctuaires, autels, secret, Cœur, boss, fin. Voir « Régions ». |
 | `skills.json` | Réglages des compétences actives (recharge, rayon, dégâts, texte). |
 | `builds.json` | Builds types joués par le robot d'équilibrage (`tools/balance.sh`), chacun avec sa branche (`branch`). |
@@ -27,6 +28,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `objectives.json` | Les objectifs : principaux (dans l'ordre), facultatifs, chacun rattaché à sa région, et la fin de l'aventure. Voir « Objectifs ». |
 | `attack.json` | L'attaque de base du Porte-Graine (`scripts/attack.gd`) : forme de départ, formes (graine, échardes, fouet, ronces vives, spores lobées, dards fongiques) et modificateurs cumulables, réglage des formes en écho. Voir « L'attaque de base ». |
 | `synergies.json` | Synergies de l'attaque de base : bonus quand deux formes, familles ou modificateurs se croisent (`scripts/attack.gd`). Voir « L'attaque de base ». |
+| `feel.json` | Ressenti du combat (`scripts/fx.gd`), réglages d'image seulement (aucune puissance) : arrêt sur image dosé par coup (`hitstop` : critique, coup lourd, critique sur un boss, morts, mort d'élite, changement de phase et mort d'un boss ; un arrêt « fort » passe outre le délai), secousse (`shake`), seuil d'un coup lourd (`heavy`, part de la vie maximale), recul visible et éclair du coup (`recoil`), éclats et étoile des critiques (`sparks`), traits et voile des morts (`death`). Les options `Settings.shake_strength()`, `flash_strength()` et `hitstop_strength()` multiplient ces valeurs. Vérifié par `tests/feel_test.gd`, qui contrôle aussi que toute attaque annoncée dure au moins `Anim.DUREE["annonce_min"]`. |
 | `enemies.json` | Sortes d'ennemis (`kinds` : statistiques, comportement `chase`/`shooter`/`charger`/`nest`/`kite`/`guard`/`bomber`/`puddler`/`splitter`/`lichen` et ses réglages, `region`, `resist` par branche, `poison_resist` : part du poison ignorée, `no_affix` : modificateurs d'élite interdits, `art` : silhouette dessinée par `scripts/enemy_art/<art>.gd` au lieu de `fletri_art.gd`), Flétris ordinaires (`ordinary` : poids, `min_level` niveau d'apparition, `max_alive` nombre maximal en vie) Le comportement `<nom>` est le fichier `scripts/enemy_behaviors/<nom>.gd` (classe `EnemyBehavior`). Les apparitions de chaque région sont dans son fichier (`regions/<id>.json`, `spawn`). Les élites sont réglées dans `difficulty.json`. Les trois premières sortes sont les Flétris d'origine. |
 
 ## Les effets
@@ -152,7 +154,7 @@ Une branche peut déclarer des `clusters` : des groupes de nœuds écrits à la 
      "choices": [{"name": "...", "effects": [...]}, {"name": "...", "effects": [...]}]},
     {"id": "s4", "type": "withered", "name": "...", "requires_flag": "ronce_boss_vaincu",
      "requires_text": "vaincs la Mère-Ronce.", "at": [2.1, -0.4], "links": ["s3"], "effects": [...]},
-    {"id": "s5", "type": "graft", "at": [2.1, 0.4], "links": ["s3"]}
+    {"id": "s5", "type": "small", "at": [2.1, 0.4], "links": ["s3"], "effects": [...]}
   ],
   "complete": {"effects": [...]}
 }]
@@ -175,7 +177,6 @@ Chaque nœud a un `id` local, un `type`, une position `at: [x, y]` en unités d'
 | `skill` | `skill` (ou un effet `{"skill": …}`) | Donne une compétence. Le nom par défaut est celui de la compétence. | Hexagone |
 | `mutation` | `mutates` (compétence), 2 ou 3 `choices` | Verrouillé tant que la compétence n'est pas acquise. Un seul choix, définitif tant que le nœud reste appris (l'oublier permet de rechoisir). | Triangle |
 | `mastery` | `name`, exactement 3 `choices` | Un bonus à choisir, modifiable ensuite sans rien dépenser. | Carré à trois points |
-| `graft` | aucun effet | Emplacement qui reçoit une greffe de `grafts.json` (`Game.set_graft(id, greffe)`). La greffe n'agit que si l'emplacement est appris. | Anneau creux |
 | `withered` | `name`, `effects`, `requires_flag`, `requires_text` facultatif | Verrouillé et couvert de cendre tant que `Game.flags[requires_flag]` n'est pas vrai. `requires_text` complète la phrase « Couvert de cendre : … ». | Cercle fissuré |
 | `attack` | `name`, `effects` avec au moins un `attack_form` ou `attack_mod` | Change la forme ou le comportement de l'attaque de base. Icône `Art.icon("attaque_<forme>")`, ou `attaque_mod` s'il n'ajoute que des modificateurs. | Pointe de flèche (provisoire) |
 
@@ -321,10 +322,12 @@ Chaque palier donne ses effets dès que `count` nœuds de la branche sont appris
 | Champ | Rôle |
 | --- | --- |
 | `sources` | D'où la greffe peut venir : `autel`, `boss`, `secret`, `elite`, `quete`. `Game.roll_graft(source)` tire une greffe de cette source, ni possédée ni déjà au sol (les élites en font tomber une avec `main.drop_graft(pos)`). |
-| `shape`, `color` | Dessin au sol, dans l'inventaire et dans l'emplacement : `feuille`, `epine`, `racine`, `fleur` ou `coeur`. |
-| `effects` | Mêmes effets qu'un nœud. Une greffe n'agit que posée dans un emplacement appris. |
+| `shape`, `color` | Dessin au sol et dans la couronne : `feuille`, `epine`, `racine`, `fleur` ou `coeur`. |
+| `effects` | Mêmes effets qu'un nœud. Une greffe agit dès qu'elle est posée dans la couronne. |
 
-Chaque greffe existe en un exemplaire. On la trouve au sol (`graft_pickup.gd`), elle entre dans l'inventaire (`Game.give_graft(id)`, signal `Game.graft_found`), puis on la pose dans l'écran de l'arbre : glisser depuis l'inventaire (en bas à gauche) jusqu'à un emplacement, ou clic sur la greffe puis sur l'emplacement. Un clic sur un emplacement appris et occupé retire la greffe. L'infobulle de l'emplacement montre l'effet de la greffe tenue (statistiques avant → après). En code : `Game.place_graft(emplacement, greffe)` (greffe possédée, déplacée si elle était ailleurs), `Game.set_graft` (outil bas niveau des tests).
+Chaque greffe existe en un exemplaire. On la trouve au sol (`graft_pickup.gd`), elle entre dans l'inventaire (`Game.give_graft(id)`, signal `Game.graft_found`), puis on la pose dans la **couronne de greffes**, indépendante des nœuds de l'arbre : un panneau en bas à gauche de l'écran de l'arbre (`tree_grafts.gd`). Glisser une greffe de la grille sur un emplacement, ou clic sur la greffe puis sur l'emplacement, ou double-clic pour la poser au premier emplacement libre. Un clic (ou clic droit) sur un emplacement occupé la retire ; on peut aussi la glisser d'un emplacement à l'autre ou la ramener dans la grille. La fiche du panneau montre la greffe survolée et l'aperçu des statistiques avant → après. En code : `Game.place_graft(emplacement, greffe)` (greffe possédée, déplacée si elle était ailleurs), `Game.unplace_graft(greffe)`, `Game.set_graft` (outil bas niveau des tests), `Game.crown` (liste, "" pour un emplacement vide).
+
+`crown.json` règle le nombre d'emplacements (`Game.crown_size()`, lu dans les drapeaux de l'aventure) : `start` au départ, `per_region_hearts` de plus quand tous les Cœurs d'une région sont purifiés, `per_boss` par boss vaincu, `finale` à la fin, plafonné à `max`. Avec les réglages actuels : 2 au départ, 15 en fin d'aventure. Les emplacements fermés sont dessinés en bourgeons ; ceux gagnés depuis la dernière visite de l'arbre luisent (drapeau `couronne_vue`).
 
 ## Régions
 
@@ -342,9 +345,8 @@ Une région est décrite tout entière par `regions/<id>.json`. `scripts/regions
 | `spawn` | Apparitions : sortes et poids (`kinds`), part près/loin de la graine (`share_near`, `share_far`, `far`), nids (`nest_min_dist`, `max_nests`, `nest_fallback`), colosses tenus loin de la graine (`min_dist` : sorte → distance minimale à la graine, en deçà on tire parmi les autres sortes), effet de la purification du Cœur (`purified_factor`). |
 | `sanctuaries` | Sanctuaires : `id` (unique dans le monde), `name` (« de la Lisière »), position. |
 | `altars`, `secrets` | Autels cachés et secret : `id`, `name`, position, `points`, `graft` (vide : une greffe tirée parmi celles de la source). |
-| `heart` | Les Cœurs de flétrissure : `name`, `zone`, `hold_time`, vagues (`waves` : `every`, `base`, `growth`, `kinds`, `second_share`, `big`, `big_from`), ennemis au repos (`idle`), `reward` (donnée avec le dernier Cœur), `life_radius` et `life_color` (vague de vie), bannières (`wake_banner`, `purified_banner` pour le dernier Cœur, `part_banner` pour les autres avec deux `%d` : purifiés, total). `spots` : un emplacement par Cœur (`dist` et `side` ou `angle`, comme les autres lieux ; `zone`, `hold_time`, `life_radius`, `name` et `size`, la taille du Cœur, y remplacent les réglages communs). Trois Cœurs par région depuis le jalon 10 ; le plus proche du centre de la région est le Grand Cœur, au pied de l'arène. Sans `spots`, un seul Cœur au centre. Chaque Cœur pose `<région>_coeur<n>_purifie` ; le dernier pose aussi `<région>_coeur_purifie`, qui ouvre l'arène (et vaut pour tous les Cœurs : une partie d'avant le jalon 10 les retrouve tous purifiés). `check_data` refuse une zone qui sort du secteur, touche une autre zone, l'arène, un sanctuaire, un autel ou un secret. |
+| `heart` | Les Cœurs de flétrissure : `name`, `zone`, `hold_time`, vagues (`waves` : `every`, `base`, `growth`, `kinds`, `second_share`, `big`, `big_from`), ennemis au repos (`idle`), `reward` (donnée avec le dernier Cœur), `life_radius` et `life_color` (vague de vie). `spots` : un emplacement par Cœur (`dist` et `side` ou `angle`, comme les autres lieux ; `zone`, `hold_time`, `life_radius`, `name` et `size`, la taille du Cœur, y remplacent les réglages communs). Trois Cœurs par région depuis le jalon 10 ; le plus proche du centre de la région est le Grand Cœur, au pied de l'arène. Sans `spots`, un seul Cœur au centre. Chaque Cœur pose `<région>_coeur<n>_purifie` ; le dernier pose aussi `<région>_coeur_purifie`, qui ouvre l'arène (et vaut pour tous les Cœurs : une partie d'avant le jalon 10 les retrouve tous purifiés). `check_data` refuse une zone qui sort du secteur, touche une autre zone, l'arène, un sanctuaire, un autel ou un secret. |
 | `boss` | Le boss : `script` (un fichier qui étend `BossBase`, voir `scripts/boss_base.gd`), `name`, `bar_color`, `phases` (noms affichés), `arena` (`radius`, `radius_min`, `offset` depuis le Cœur, `life_color`), `reward`, bannières. |
-| `ending` | Séquence « région purifiée » : `sub`, `title`, `body`. |
 | `ambience`, `music` | Humeur de l'ambiance sonore et de la musique. |
 | `wind` | Rafales de la région (Vent : `scripts/wind.gd`, posé par `decor_plateau.gd`) : `angle` (écart du vent dominant au milieu du secteur, en radians), `calm` (durée du calme, [min, max] s), `warn` (annonce, s), `gust` (rafale, s), `player_push` (px/s au plus fort), `projectile_push` (px/s²), `streaks` (traînées dessinées). Le joueur règle leur force dans les options (« Rafales », `Settings.wind`, de 0 à 1). |
 
@@ -356,30 +358,42 @@ Une région est décrite tout entière par `regions/<id>.json`. `scripts/regions
 
 ## Son et ambiance
 
-`data/audio.json` (clé `regions`, une entrée par identifiant de région) règle ce qu'on entend et voit d'une région. La région peut aussi porter une section `audio` dans son propre fichier, qui prime. Une région sans réglage garde la musique et les particules de Ronce. `check_data.gd` vérifie tout (sons connus, boucle de musique, formes et couleurs).
+Tout le son est synthétisé par le code : bruitages dans `scripts/synth.gd` (`SOUNDS`), musique et nappes d'ambiance dans `scripts/music_synth.gd`, réglages des régions dans `data/audio.json` (clé `regions`, une entrée par identifiant). La région peut aussi porter une section `audio` dans son propre fichier, qui prime. Une région sans réglage garde la musique, l'ambiance sonore et les particules de Ronce. `tools/gen-sounds.sh` écrit tous les `.wav` (en parallèle, ~1,5 min) et `assets/music/empreintes.json` ; commiter le tout (`sound_test.gd` échoue si une piste est périmée). `check_data.gd` vérifie les réglages.
+
+**Musique dynamique.** Chaque région a cinq couches de 12 s (4 accords de 3 s) qui tournent toujours en phase ; `music.gd` ne règle que leurs volumes, donc rien ne coupe :
+- `sombre` / `lumineux` : exploration, mélangées selon la vie du sol sous le joueur ;
+- `combat` : percussions, basse et cordes, ajoutées par-dessus quand des Flétris sont proches (une élite compte triple ; tient 4 s après le dernier) ;
+- `coeur` : chœur et battement pendant le siège d'un Cœur ;
+- `boss` : le thème du boss, seul, pendant le combat.
+Les grands bruitages (`duck` dans `SOUNDS`) baissent un instant la musique. Le jeu appelle `Music.set_mood(vie, région)`, `set_combat`, `set_heart`, `set_boss` (main.gd).
 
 ```json
 "spore": {
   "music": {
     "seed": 23, "roots": [-2, -7, -4, -9],
-    "dark":   {"chord": [0, 3, 6, 10], "wind": 0.5, "wind_lp": 0.012, "wind_period": 4.0},
-    "bright": {"chord": [0, 3, 7, 10], "pattern": [0, 3, 7, 10, 14, 10, 7, 3]}
+    "dark":   {"chord": [0, 3, 6, 10], "pad_lp": 520},
+    "bright": {"chord": [0, 3, 7, 10], "motif": [[0, 1, 3], [3, 2, 1], [4, 3, 4]]},
+    "combat": {"kit": "water", "kick": "x.....x...x.....", "bass": [0, null, 0, 3, null, 7, 10, 7]},
+    "heart":  {"vowel": "u"},
+    "boss":   {"chord": [0, 3, 6, 10], "motif": [[0, 0, 2], [2, 0, 1, 1]]}
   },
-  "ambience": {
-    "butterflies": 0,
-    "dead":  {"shape": "glow", "color": "poison/sombre", "alpha": 0.5, "vel": [4, -14], "sway": [10, 3], "size": [1.6, 3.4]},
-    "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.7, "vel": [170, 8], "sway": [24, 8], "size": [1, 1.8], "length": 26}
-  },
+  "bed": {"dead": {"wind": 0.3, "events": [{"kind": "bubble", "rate": 0.5, "vol": 0.35}]}, "alive": {"...": "..."}},
+  "ambience": {"...": "particules, voir plus bas"},
   "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort"}
 }
 ```
 
-- **`music`** : `roots` (quatre fondamentales en demi-tons depuis le ré, une par accord de 3 s), `seed` (hasard du vent), puis `dark` (terre morte) et `bright` (terre vivante), dont chaque réglage est facultatif (valeurs de Ronce par défaut, `Synth.DEFAULT_DARK` et `DEFAULT_BRIGHT`). `dark` : `chord` (demi-tons), `vol`, `vol2`, `detune`, `wind` (niveau du vent), `wind_lp` (clarté du vent), `wind_period` (**doit diviser 12 s**, pour que la boucle ne claque pas), `wind_fade` (estompe du vent aux bouts, pour un vent fort), `bell`. `bright` : `chord`, `octave`, `pattern` (1 à 24 notes réparties sur 3 s), `pad`, `pluck`, `sparkle`, `sparkle_note`. `tools/gen-sounds.sh` écrit `assets/music/<id>_sombre.wav` et `<id>_lumineux.wav` ; commiter les `.wav` (`sound_test.gd` échoue s'ils sont périmés).
-- **`ambience`** : `dead` et `alive` (terre morte ou vivante là où naît la particule), chacun avec `shape` (`dot`, `glow` halo qui scintille, `streak` brin qui file), `color` (couleur de région : `"#rrggbb"`, `"élément/variante"`…), `alpha`, `vel` (vitesse en pixels par seconde), `sway` (ondulation), `size` (min, max) et `length` (pour `streak`). `butterflies` à 0 supprime les papillons dans la région. « Réduire les effets » coupe toutes les particules.
-- **Sons choisis par les données** : `"sound"` dans une compétence (`skills.json`, joué après son lancement) ou dans une forme d'attaque (`attack.json`, remplace `tir`), `"sound_hit"`, `"sound_crit"` et `"sound_death"` dans une sorte d'ennemi (`enemies.json`). Le nom doit exister dans `Synth.SOUNDS` (`check_data.gd` le vérifie).
-- **Sons prêts pour Sève et Aube** (jalon 8, provisoires) : Sève `seve_goutte`, `seve_pousse`, `seve_soin`, `seve_source`, `seve_eclosion`, `seve_lien` ; Aube `aube_rayon`, `aube_eclat`, `aube_halo`, `aube_levant`, `aube_cloche`, `aube_nova` ; chaque région a aussi `<id>_boss_eveil`, `_phase` et `_mort`. Les compétences des branches s'y branchent par `"sound"` ; musique et ambiance de `seve` et `aube` sont dans `data/audio.json`.
-- **`boss`** : sons d'éveil (le combat commence), de phase (le boss change de phase) et de mort, joués par le socle `BossBase`. Un boss peut en jouer d'autres lui-même (`Sfx.play`).
-- **Finale et générique** (crochets pour la musique de la fin) : deux entrées qui ne sont pas des régions. `finale` : sous la graine, le jeu demande la musique de `finale` (`Music.set_mood(vie, "finale")`, couche lumineuse après la victoire) et ses sons `boss` ; `generique` : pendant l'épilogue et le générique, `Music.set_mood(1.0, "generique")`. Il suffit d'y écrire une section `music` et de lancer `tools/gen-sounds.sh` (pistes `finale_sombre.wav`, `finale_lumineux.wav`, `generique_*.wav`) ; sans pistes, la musique du monde.
+- **`music`** : `roots` (quatre fondamentales en demi-tons depuis le ré), `seed`, `layers` (facultatif : couches à écrire, toutes par défaut ; le générique n'a que `lumineux`), puis une section par couche, chaque réglage facultatif (valeurs de Ronce : `MusicSynth.DEFAULTS`).
+  - `dark` : `chord` (demi-tons), `pad` (nappe), `pad_lp` (clarté, Hz), `drone` (bourdon), `bell` et `bell_ratio` (cloche FM), `texture` (souffle), `verb`.
+  - `bright` : `chord`, `octave`, `pattern` (arpège de corde pincée, 1 à 24 notes sur 3 s), `pad`, `pad_lp`, `pluck`, `pluck_tone` (0 sourd à 1 clair), `sparkle`, `sparkle_note`, `bass`, `lead` et `lead_tone` (`flute` ou `brass`), `motif` (la mélodie du thème), `verb`.
+  - `combat` et `boss` : `kit` (`frame`, `taiko`, `wood`, `metal`, `water`), `kick`, `snare`, `hat`, `tom` (16 cases par accord : `x` frappe, `o` douce, `.` rien), `bass` (notes par accord, en demi-tons, `null` pour un silence), `bass_vol`, `pulse` (cordes en doubles croches), `drums`, `verb` ; `boss` ajoute `chord`, `pad`, `brass`, `choir`, `lead`, `lead_tone`, `motif`.
+  - `heart` : `vowel` (`a`, `o`, `u`, `e`), `choir`, `beat` (battement), `shimmer`, `verb`.
+  - **`motif`** : liste de notes `[croche, note de l'accord, durée en croches, altération]` ; la croche va de 0 à 31 (8 par accord), la note de l'accord compte depuis la fondamentale (0, 1, 2… puis l'octave au-dessus), l'altération (facultative) ajoute des demi-tons. La mélodie suit donc toujours les accords. La finale reprend en grand le thème du monde après la victoire.
+- **`bed`** (ambiance sonore, bus « Ambiance ») : `seed`, `dead` et `alive`, chacun avec `wind`, `wind_lp`, `gust`, `rumble`, `stream` (ruisseau), `waves` et `events` (`{"kind", "rate" par seconde, "vol"}`, sortes `bird`, `cricket`, `drip`, `bubble`, `creak`, `chime`, `rustle`, `knock`, `frog`). Fichiers `assets/ambience/<id>_mort.wav` et `_vif.wav`.
+- **`ambience`** (particules) : `dead` et `alive` (terre morte ou vivante là où naît la particule), chacun avec `shape` (`dot`, `glow` halo qui scintille, `streak` brin qui file), `color` (couleur de région : `"#rrggbb"`, `"élément/variante"`…), `alpha`, `vel` (vitesse en pixels par seconde), `sway` (ondulation), `size` (min, max) et `length` (pour `streak`). `butterflies` à 0 supprime les papillons dans la région. « Réduire les effets » coupe toutes les particules.
+- **`boss`** : sons d'éveil, de phase et de mort, joués par le socle `BossBase`. Un boss peut en jouer d'autres lui-même (`Sfx.play`).
+- **Bruitages** : couches superposées (oscillateur ou bruit, glissé de hauteur, filtre, saturation), petite réverbération, crête (`peak`, qui fixe le volume relatif), `variants` (variantes tirées au hasard), `duck`. Format en tête de `synth.gd`. **Sons choisis par les données** : `"sound"` dans une compétence (`skills.json`) ou une forme d'attaque (`attack.json`), `"sound_hit"`, `"sound_crit"` et `"sound_death"` dans une sorte d'ennemi (`enemies.json`) ; le nom doit exister dans `Synth.SOUNDS`. Sons de combat prêts à brancher : `impact`, `impact_lourd`, `critique`, `mort`, `mort_elite`, `annonce`, `annonce_boss`.
+- **Finale et générique** : `finale` (sous la graine, `Music.set_mood(vie, "finale")`) et `generique` (épilogue, `Music.set_mood(1.0, "generique")`) ne sont pas des régions.
 
 ## Points et greffes du monde
 
@@ -398,7 +412,7 @@ Les points passent par `Game.grant_points(n, source, clé)` : une même clé ne 
 
 ## Objectifs
 
-`objectives.json` : `{"adventure_ending": {...}, "objectives": [...]}`. Chaque objectif a un `id`, une `region` (sauf les objectifs communs, comme le premier nœud), un `title`, un `text`, `"main": true` pour la suite principale (ordre du fichier), une `condition`, éventuellement une `target` (cible de la flèche et de la carte) et une `reward` (`text` affiché, `points` donnés une seule fois). Un objectif est accompli dès que sa condition est vraie, dans n'importe quel ordre ; l'objectif en cours est le premier principal qui ne l'est pas, après la dernière étape marquée `"milestone": true` déjà accomplie (le Cœur, le boss) : un joueur qui purifie le Cœur avant d'avoir ravivé un sanctuaire n'est pas renvoyé en arrière, et l'étape sautée reste ouverte dans le journal (« étape passée »). Les drapeaux qui finissent par `_vu` (autel ou secret seulement aperçu) ne comptent pas dans `flag_count`.
+`objectives.json` : `{"objectives": [...]}`. Chaque objectif a un `id`, une `region` (sauf les objectifs communs, comme le premier nœud), un `title`, un `text`, `"main": true` pour la suite principale (ordre du fichier), une `condition`, éventuellement une `target` (cible de la veine de sève, de la feuille et de la carte) et une `reward` (`points` donnés une seule fois ; `text` n'est plus affiché). Un objectif est accompli dès que sa condition est vraie, dans n'importe quel ordre ; l'objectif en cours est le premier principal qui ne l'est pas, après la dernière étape marquée `"milestone": true` déjà accomplie (le Cœur, le boss) : un joueur qui purifie le Cœur avant d'avoir ravivé un sanctuaire n'est pas renvoyé en arrière, et l'étape sautée reste ouverte (« étape passée »). Les drapeaux qui finissent par `_vu` (autel ou secret seulement aperçu) ne comptent pas dans `flag_count`.
 
 | `condition.type` | Vrai quand |
 | --- | --- |
@@ -407,13 +421,13 @@ Les points passent par `Game.grant_points(n, source, clé)` : une même clé ne 
 | `flag_count` (`prefix`, `count`, `exclude`, `region_only`) | au moins `count` drapeaux vrais commencent par `prefix` (sauf ceux de `exclude`) ; avec `"region_only": true`, sans ceux des lieux des autres régions |
 | `counter` (`flag`, `count`) | `Game.flags[flag]` vaut au moins `count` |
 | `keystone` (`branch`) | un nœud clé de la branche est appris |
-| `hearts` | tous les Cœurs de la région de l'objectif sont purifiés ; le journal et le cadre montrent le compte (« 1 / 3 ») |
+| `hearts` | tous les Cœurs de la région de l'objectif sont purifiés |
 
 `target.type` : `none`, `seed`, `heart` (le Cœur de la région le plus proche du joueur parmi ceux qui restent) et `arena` (celle de la région de l'objectif), `finale` (la brèche au pied de la graine, puis la Flétrissure une fois descendu), ou `group` (le plus proche des nœuds du groupe `group`, dans la région de l'objectif, dont le drapeau `<done_prefix><id>` n'est pas levé). `needs_group` masque l'objectif tant que le groupe est vide (le monde n'a pas encore de sanctuaire ou d'autel) ; `needs_flag` le masque tant que ce drapeau n'est pas posé (l'objectif `finale` attend `finale_ouverte`).
 
 **Ce que les autres systèmes doivent poser** : `sanctuaire_<id>` à la ravivation d'un sanctuaire (le sanctuaire de la graine s'appelle `sanctuaire_graine` et ne compte pas), `autel_<id>` à la découverte d'un autel, `secret_<id>` pour un secret, `<région>_coeur<n>_purifie`, `<région>_coeur_purifie` et `<région>_boss_vaincu` (déjà posés). Les sanctuaires et les autels se rangent dans les groupes `sanctuaire` et `autel` (nœuds Node2D avec une propriété `id`) pour que la carte et la flèche les trouvent. Un élite vaincu émet `main.elite_killed(enemy)` : `Objectives` le compte dans `elites_tuees`. Les points des objectifs facultatifs passent par `Game.grant_points(n, "quete")` quand il existe.
 
-La célébration « région purifiée » se lance sur place peu après la victoire sur le boss d'une région (`<région>_boss_vaincu`), sans écran plein ni pause (depuis le jalon 10, `region_fanfare.gd`) : la région reverdit, le titre et le sous-titre de `ending` de son fichier s'affichent par-dessus le jeu avec un médaillon des régions où la sienne reverdit et son sceau se brise, puis on continue à jouer. Elle pose `<région>_fin_vue` dès le début et ne revient plus ; la carte du monde rejoue la région qui reverdit et le sceau brisé à sa prochaine ouverture. Quand le boss de chaque région est vaincu, la dernière célébration montre `adventure_ending` (avec son texte) : la Flétrissure se retire sous la graine, et la finale s'ouvre (voir « Finale »). L'écran plein (`epilogue.gd`) reste pour la fin de la finale. L'objectif en cours d'une région se lit avec `Objectives.current(région)`. `tools/godot.sh --headless -s res://scripts/check_data.gd` contrôle le fichier.
+La reverdie « région purifiée » se lance sur place peu après la victoire sur le boss d'une région (`<région>_boss_vaincu`), sans écran, sans pause et sans texte (`region_fanfare.gd`, jalon 11) : la région reverdit depuis l'arène, ses Cœurs et son centre. Elle pose `<région>_fin_vue` dès le début et ne revient plus ; la carte du monde rejoue la région qui reverdit et le sceau brisé à sa prochaine ouverture. Après la dernière région, la cendre reflue vers la graine (flocons qui dérivent, onde qui se resserre) et la finale s'ouvre (voir « Finale »). Les titres et textes des objectifs ne s'affichent plus en jeu (ni journal ni suivi écrit) : la veine de sève (`sap_vein.gd`) et la feuille au bord de l'écran suivent `target`. L'objectif en cours d'une région se lit avec `Objectives.current(région)`. `tools/godot.sh --headless -s res://scripts/check_data.gd` contrôle le fichier.
 
 ## Finale
 
@@ -422,15 +436,13 @@ La célébration « région purifiée » se lance sur place peu après la victoi
 ```json
 "boss": {"script": "res://scripts/boss_finale.gd", "name": "La Flétrissure", "bar_color": "cendre",
          "phases": ["…", "…", "…"], "arena": {"radius": 520, "radius_min": 370, "radius_collapse": 380, "life_color": "seve/clair"},
-         "wake_banner": "…", "defeated_banner": "…", "reward": {"points": 3}},
-"opened_banner": "…", "descent_banner": "…", "ascent_banner": "…",
-"epilogue": {"sub": "…", "title": "…", "body": "…"},
+         "reward": {"points": 3}},
 "credits": [{"title": "Sève"}, {"head": "Une aventure de", "lines": ["…"]}, {"head": "Régions", "auto": "regions"}, {"head": "Gardiens", "auto": "bosses"}]
 ```
 
-- **Ouverture** (`finale_arena.gd`, `main.finale`) : toutes les régions purifiées, le drapeau `finale_ouverte` est posé et `opened_banner` annoncé ; une brèche s'ouvre au pied de la graine (`descent_point()`, 150 px au sud du sanctuaire de la Graine). S'y tenir une seconde fait descendre le joueur **sous la graine** : l'arène est un creux hors du carré du monde (`CAVE`), où rien ne naît et qu'aucun Flétri du monde ne suit. Le puits de lumière où l'on arrive fait remonter (hors combat) ; s'avancer vers le centre réveille le boss.
+- **Ouverture** (`finale_arena.gd`, `main.finale`) : toutes les régions purifiées, le drapeau `finale_ouverte` est posé ; une brèche s'ouvre au pied de la graine (`descent_point()`, 150 px au sud du sanctuaire de la Graine). S'y tenir une seconde fait descendre le joueur **sous la graine** : l'arène est un creux hors du carré du monde (`CAVE`), où rien ne naît et qu'aucun Flétri du monde ne suit. Le puits de lumière où l'on arrive fait remonter (hors combat) ; s'avancer vers le centre réveille le boss.
 - **Combat** : comme une arène de région (`finale_arena.gd` étend `boss_arena.gd`) : barre, phases (`phases`, trois). En phase 3, la Flétrissure prend sa seconde forme (invulnérable le temps de la transformation) et le creux s'effondre : il ne reste qu'une île de `radius_collapse` au-dessus du gouffre (`radius_min` sert seulement au resserrement des arènes de région). Mourir ramène au dernier sanctuaire, la sève attend près de la brèche (`entrance()`), le boss se rendort ; `stat_finale_essais` compte les combats perdus. Une partie sauvegardée sous la graine reprend au pied de la graine.
-- **Victoire** : `finale_vaincue`, `reward › points` (une seule fois, clé `finale_boss`), `stat_finale_fin` (temps de jeu) ; le creux refleurit, puis l'épilogue (`epilogue.gd`, `quest_ui.epilogue`) : le monde entier reverdit, les textes d'`epilogue`, les statistiques de toute l'aventure, le générique (`credits` : `title` en grand, ou `head` et ses `lines` ; `auto` : `regions` ou `bosses` remplit la liste avec les régions du monde et leurs gardiens, plus la Flétrissure), puis « Continuer à jouer » / « Retour au titre ». Il pose `fin_aventure_vue` et ne revient plus.
+- **Victoire** : `finale_vaincue`, `reward › points` (une seule fois, clé `finale_boss`), `stat_finale_fin` (temps de jeu) ; le creux refleurit, puis la fin jouée dans le monde (`world_ending.gd`, `quest_ui.world_ending`), sans écran ni pause : le joueur remonte au pied de la graine, des vagues de vie partent de la graine vers tout le monde et le générique s'écrit dans l'herbe autour de la graine, un groupe à la fois (`credits` : `title` en grand, ou `head` et ses `lines` ; `auto` : `regions` ou `bosses` remplit la liste avec les régions du monde et leurs gardiens, plus la Flétrissure). Elle pose `fin_aventure_vue` et ne revient plus ; les noms restent écrits.
 - **Boss** (`boss_finale.gd`, sur `BossBase`) : un trait de chaque région, deux nouveaux par phase : épines (Ronce) et spores (Spore), puis sève (siphon qui la soigne) et vent (rafale qui repousse), puis lumière (rayons) et racines (ligne qui jaillit jusqu'au joueur) ; des rejetons dès la phase 2. Robot : `tools/godot.sh --headless --fixed-fps 60 -- --autotest=boss --region=finale` (build de test au niveau 20, points dans la première branche).
 - **Musique** (crochets de la tâche H) : `data/audio.json › regions › finale` (sons `boss`, et `music` pour le combat) et `› generique` (`music` du générique). Sans `music`, la musique du monde.
 - **Sauvegarde** : format 5. Une sauvegarde plus ancienne qui avait vu l'ancienne fin (`fin_aventure_vue` sans `finale_vaincue`) perd ce drapeau : la finale s'ouvre au chargement.

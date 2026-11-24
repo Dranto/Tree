@@ -108,7 +108,7 @@
           "links": ["p4"],
           "effects": [{"attack_mod": "sangsue", "value": 0.04}]
         },
-        {"id": "p6", "type": "graft", "name": "Greffon des perles", "at": [1.5, 0.35], "links": ["p4"]},
+        {"id": "p6n", "type": "small", "name": "Perle claire", "at": [1.5, 0.35], "links": ["p4"], "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.04}, {"stat": "regen", "op": "add", "value": 0.2}]},
         {
           "id": "p7",
           "type": "attack",
@@ -205,7 +205,7 @@
           ]
         },
         {"id": "n6", "type": "attack", "name": "Rosée", "at": [1.0, 0.8], "links": ["n3"], "effects": [{"attack_mod": "rosee", "value": 0.01}]},
-        {"id": "n7", "type": "graft", "name": "Greffon des lianes", "at": [1.95, 0.05], "links": ["n5"]}
+        {"id": "n7n", "type": "small", "name": "Vrille", "at": [1.95, 0.05], "links": ["n5"], "effects": [{"stat": "area_damage", "op": "inc", "value": 0.04}, {"stat": "lifesteal", "op": "add", "value": 0.003}]}
       ],
       "complete": {
         "name": "Lianes complètes",
@@ -365,7 +365,7 @@
           "excludes": ["seve_intarissable"],
           "effects": [{"stat": "lifesteal", "op": "add", "value": 0.05}, {"stat": "regen", "op": "more", "value": 0.0}]
         },
-        {"id": "c6", "type": "graft", "name": "Greffon de l'écorce", "at": [1.0, 0.8], "links": ["c3"]}
+        {"id": "c6n", "type": "small", "name": "Liber", "at": [1.0, 0.8], "links": ["c3"], "effects": [{"stat": "armor", "op": "add", "value": 0.012}, {"stat": "max_hp", "op": "add", "value": 8}]}
       ],
       "complete": {"name": "Écorce complète", "effects": [{"stat": "max_hp", "op": "more", "value": 1.1}]}
     },
@@ -542,7 +542,7 @@
           "requires_text": "Couvert de cendre tant que le Saule exsangue n'est pas vaincu.",
           "effects": [{"stat": "lifesteal", "op": "add", "value": 0.02}, {"stat": "damage", "op": "inc", "value": 0.2}]
         },
-        {"id": "h4", "type": "graft", "name": "Greffon des sources", "at": [1.0, 0], "links": ["h1", "h2", "h3"]}
+        {"id": "h4n", "type": "small", "name": "Source claire", "at": [1.0, 0], "links": ["h1", "h2", "h3"], "effects": [{"stat": "regen", "op": "add", "value": 0.25}, {"stat": "max_hp", "op": "add", "value": 8}]}
       ],
       "complete": {"name": "Cœur complet", "effects": [{"stat": "damage", "op": "more", "value": 1.08}, {"stat": "max_hp", "op": "inc", "value": 0.05}]}
     }

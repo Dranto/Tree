@@ -1,108 +1,147 @@
-## Musique dynamique : deux couches jouées ensemble en boucle, mélangées selon la vie du sol.
-## La couche sombre (accords mineurs, vent) domine en terre morte ; la lumineuse (accords majeurs,
-## arpèges) monte quand la terre revit. Music.set_mood(vie) avec vie entre 0 (cendre) et 1 (prairie).
+## Musique dynamique en couches et ambiance sonore.
 ##
-## Chaque région qui règle sa musique (data/audio.json, voir region_audio.gd) a sa propre paire de couches,
-## « <région>_sombre » et « <région>_lumineux » (tools/gen-sounds.sh). Toutes les paires tournent ensemble
-## (même boucle de 12 s, donc toujours en phase) ; on n'entend que celle de la région où se trouve le joueur,
-## par un fondu de ~2 s. Hors région (l'oasis) et pour une région sans réglage, c'est la musique du monde.
+## Chaque région (et le monde, « ») a jusqu'à cinq couches de 12 s générées par le code (music_synth.gd) :
+## sombre et lumineux (exploration, mélangées selon la vie du sol), combat (percussions et basse, ajoutées
+## quand des Flétris sont proches), coeur (pendant le siège d'un Cœur) et boss (thème du boss, seul).
+## Toutes les couches ont la même boucle et partent toujours au même point de l'horloge musicale : elles
+## restent en phase, et passer de l'une à l'autre n'est qu'un fondu de volume, sans coupure ni silence.
+## Une couche inaudible est arrêtée (rien à mixer) et relancée en phase quand elle remonte.
+##
+## L'ambiance sonore (vent, eau, oiseaux…) suit la même logique sur le bus « Ambiance » : une nappe de
+## terre morte et une de terre vivante par région (assets/ambience/).
+##
+## Appels du jeu : set_mood(vie, région), set_combat(0 à 1), set_heart(0 à 1), set_boss(vrai/faux),
+## duck(part) pour baisser un instant la musique sous un grand bruitage.
 extends Node
 
 const BUS := "Musique"
+const AMB_BUS := "Ambiance"
 const SfxScript = preload("res://scripts/sfx.gd")
 const RegionAudio = preload("res://scripts/region_audio.gd")
-## Vitesse du fondu (part du mélange par seconde) : le changement de couche prend ~2 s.
-const FADE := 0.5
+const LOOP := 12.0
+## Vitesses des fondus (part du mélange par seconde).
+const REGION_FADE := 0.5
+const MIX_FADE := 0.5
+const COMBAT_IN := 1.2
+const COMBAT_OUT := 0.25
+## Le combat reste dans la musique quelques secondes après le dernier Flétri proche (pas de va-et-vient).
+const COMBAT_HOLD := 4.0
+const HEART_FADE := 0.6
+const BOSS_FADE := 0.8
+const DUCK_RECOVER := 0.7
 const SILENT_DB := -60.0
+## L'ambiance sonore baisse pendant un combat de boss.
+const BED_BOSS := 0.55
 
 var enabled := true
-var dark: AudioStreamPlayer
-var bright: AudioStreamPlayer
-## Mélange visé et mélange actuel (0 = tout sombre, 1 = tout lumineux).
+var started := false
+## Mélange visé et actuel entre sombre (0) et lumineux (1).
 var target := 0.0
 var mix := 0.0
-var started := false
-## Paires de couches des régions : id -> {"dark", "bright", "gain"}. Le monde (dark, bright) a toujours le sien.
-var pairs: Dictionary = {}
-var world_gain := 1.0
-## Régions dont les pistes n'existent pas (pas encore générées) : on ne les cherche qu'une fois.
-var _missing: Dictionary = {}
-## Région dont on entend la musique ("" : le monde).
+var combat_target := 0.0
+var combat := 0.0
+var heart_target := 0.0
+var heart := 0.0
+var boss_target := 0.0
+var boss := 0.0
+var duck_gain := 1.0
+var _combat_hold := 0.0
+## Région dont on entend la musique ("" : le monde) et région de l'ambiance.
 var region := ""
+var bed_region := ""
+## Groupes de couches : id ("" : le monde) -> {"players": {couche: AudioStreamPlayer}, "gain": 0 à 1}.
+var groups: Dictionary = {}
+## Nappes d'ambiance : id -> {"players": {"mort": …, "vif": …}, "gain": 0 à 1}.
+var beds: Dictionary = {}
+## Position dans la boucle (s), recalée sur une couche qui joue.
+var clock := 0.0
+var _missing: Dictionary = {}
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	enabled = not SfxScript.is_silent_run()
 	SfxScript.ensure_bus(BUS)
+	SfxScript.ensure_bus(AMB_BUS)
 	if not enabled:
 		return
-	dark = _layer("res://assets/music/sombre.wav")
-	bright = _layer("res://assets/music/lumineux.wav")
-	refresh_regions()
-	_apply()
+	_ensure_group("")
+	_ensure_bed("")
+	groups[""]["gain"] = 1.0
+	beds[""]["gain"] = 1.0
 
 
-## Crée les couches des régions qui ont une musique propre et dont les fichiers existent (à rappeler
-## quand la liste des régions change, dans les tests).
+## Garde la compatibilité avec les tests qui ajoutent des régions : rien à précharger, tout se crée à la demande.
 func refresh_regions() -> void:
-	if not enabled:
-		return
 	_missing.clear()
-	for id in RegionAudio.music_regions():
-		_ensure_pair(id)
 
 
-func _ensure_pair(id: String) -> bool:
-	if pairs.has(id):
+func _ensure_group(id: String) -> bool:
+	if groups.has(id):
 		return true
-	if _missing.has(id):
+	if _missing.has("m" + id):
 		return false
-	if not ResourceLoader.exists(RegionAudio.music_path(id, "sombre")) and not FileAccess.file_exists(RegionAudio.music_path(id, "sombre")):
-		_missing[id] = true
+	var style := {} if id == "" else RegionAudio.music_style(id)
+	if id != "" and style.is_empty():
+		_missing["m" + id] = true
 		return false
-	var pair := {"dark": _layer(RegionAudio.music_path(id, "sombre")), "bright": _layer(RegionAudio.music_path(id, "lumineux")), "gain": 0.0}
-	pairs[id] = pair
-	if started:
-		# Rejoint la boucle en cours, à la même position que le monde, pour rester en phase.
-		var at: float = dark.get_playback_position() if dark != null and dark.playing else 0.0
-		for p in [pair["dark"], pair["bright"]]:
-			if p.stream != null:
-				p.play(at)
+	var players := {}
+	for layer in RegionAudio.music_layers(style):
+		var p := _layer(RegionAudio.music_path(id, layer), BUS)
+		if p != null:
+			players[layer] = p
+	if players.is_empty():
+		_missing["m" + id] = true
+		return false
+	groups[id] = {"players": players, "gain": 0.0}
 	return true
 
 
-func _layer(path: String) -> AudioStreamPlayer:
-	var p := AudioStreamPlayer.new()
-	p.bus = BUS
+func _ensure_bed(id: String) -> bool:
+	if beds.has(id):
+		return true
+	if _missing.has("b" + id):
+		return false
+	if id != "" and RegionAudio.bed(id).is_empty():
+		_missing["b" + id] = true
+		return false
+	var players := {}
+	for file in RegionAudio.BED_STATES:
+		var p := _layer(RegionAudio.bed_path(id, file), AMB_BUS)
+		if p != null:
+			players[file] = p
+	if players.is_empty():
+		_missing["b" + id] = true
+		return false
+	beds[id] = {"players": players, "gain": 0.0}
+	return true
+
+
+## Lecteur d'une piste en boucle (null si le fichier manque).
+func _layer(path: String, bus: String) -> AudioStreamPlayer:
+	if not ResourceLoader.exists(path) and not FileAccess.file_exists(path):
+		return null
 	var s := SfxScript.load_wav(path)
-	if s != null:
-		s = s.duplicate()
-		s.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		s.loop_begin = 0
-		s.loop_end = s.data.size() / 2
-		p.stream = s
+	if s == null:
+		return null
+	s = s.duplicate()
+	s.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	s.loop_begin = 0
+	s.loop_end = int(round(s.get_length() * s.mix_rate))
+	var p := AudioStreamPlayer.new()
+	p.bus = bus
+	p.stream = s
+	p.volume_db = SILENT_DB
 	add_child(p)
 	return p
 
 
-## Lance les deux couches (sans effet si elles jouent déjà).
+## Lance la musique (sans effet si elle joue déjà).
 func start() -> void:
 	if not enabled or started:
 		return
 	started = true
-	for p in _all_players():
-		if p.stream != null:
-			p.play()
 	_apply()
-
-
-func _all_players() -> Array:
-	var out: Array = [dark, bright]
-	for id in pairs:
-		out.append(pairs[id]["dark"])
-		out.append(pairs[id]["bright"])
-	return out
 
 
 func stop() -> void:
@@ -112,35 +151,115 @@ func stop() -> void:
 			p.stop()
 
 
+func _all_players() -> Array:
+	var out: Array = []
+	for d in [groups, beds]:
+		for id in d:
+			out.append_array(d[id]["players"].values())
+	return out
+
+
 ## vie : vie du sol sous le joueur, de 0 à 1. En dessous de 0,15 c'est la terre morte, au-dessus de 0,6 la prairie.
 ## reg : région où se trouve le joueur ("" : hors région, musique du monde).
 func set_mood(vie: float, reg := "") -> void:
 	target = smoothstep(0.15, 0.6, clampf(vie, 0.0, 1.0))
-	region = reg if reg != "" and enabled and _ensure_pair(reg) else ""
+	region = reg if reg != "" and enabled and _ensure_group(reg) else ""
+	bed_region = reg if reg != "" and enabled and _ensure_bed(reg) else ""
+
+
+## Intensité du combat autour du joueur (0 : calme, 1 : mêlée). Retombe après COMBAT_HOLD secondes.
+func set_combat(level: float) -> void:
+	level = clampf(level, 0.0, 1.0)
+	if level > 0.0:
+		_combat_hold = COMBAT_HOLD
+		combat_target = level
+
+
+## Siège d'un Cœur en cours (1) ou non (0).
+func set_heart(level: float) -> void:
+	heart_target = clampf(level, 0.0, 1.0)
+
+
+## Combat de boss en cours : le thème du boss de la région remplace les autres couches.
+func set_boss(on: bool) -> void:
+	boss_target = 1.0 if on else 0.0
+
+
+## Baisse brève de la musique (part de 0 à 1) sous un grand bruitage (mort d'un boss, Cœur purifié…).
+func duck(amount: float) -> void:
+	duck_gain = minf(duck_gain, 1.0 - clampf(amount, 0.0, 1.0) * 0.7)
 
 
 func _process(delta: float) -> void:
-	mix = move_toward(mix, target, FADE * delta)
-	world_gain = move_toward(world_gain, 1.0 if region == "" else 0.0, FADE * delta)
-	for id in pairs:
-		pairs[id]["gain"] = move_toward(pairs[id]["gain"], 1.0 if id == region else 0.0, FADE * delta)
+	_combat_hold -= delta
+	if _combat_hold <= 0.0:
+		combat_target = 0.0
+	mix = move_toward(mix, target, MIX_FADE * delta)
+	combat = move_toward(combat, combat_target, (COMBAT_IN if combat_target > combat else COMBAT_OUT) * delta)
+	heart = move_toward(heart, heart_target, HEART_FADE * delta)
+	boss = move_toward(boss, boss_target, BOSS_FADE * delta)
+	duck_gain = move_toward(duck_gain, 1.0, DUCK_RECOVER * delta)
+	for id in groups:
+		groups[id]["gain"] = move_toward(groups[id]["gain"], 1.0 if id == region else 0.0, REGION_FADE * delta)
+	for id in beds:
+		beds[id]["gain"] = move_toward(beds[id]["gain"], 1.0 if id == bed_region else 0.0, REGION_FADE * delta)
+	_tick_clock(delta)
 	_apply()
 
 
-## Mélange à puissance constante : le volume total reste stable pendant le fondu, entre les deux
-## couches d'une paire comme entre les régions.
+## Horloge musicale : recalée sur une couche qui joue, sinon avancée à la main.
+func _tick_clock(delta: float) -> void:
+	for id in groups:
+		for p in groups[id]["players"].values():
+			if p.playing:
+				clock = fposmod(p.get_playback_position() + AudioServer.get_time_since_last_mix(), LOOP)
+				return
+	clock = fposmod(clock + delta, LOOP)
+
+
+## Volume de chaque couche d'un groupe (0 à 1), selon l'exploration, le combat, le Cœur et le boss.
+func layer_gains(players: Dictionary) -> Dictionary:
+	var has_boss := players.has("boss")
+	var b := boss if has_boss else 0.0
+	# Sans thème de boss, le combat en tient lieu.
+	var c := maxf(combat, 0.0 if has_boss else boss)
+	var explore := (1.0 - b) * (1.0 - 0.35 * c) * (1.0 - 0.5 * heart)
+	return {
+		"sombre": cos(mix * PI / 2.0) * explore,
+		"lumineux": sin(mix * PI / 2.0) * explore,
+		"combat": sin(c * PI / 2.0) * (1.0 - b),
+		"coeur": sin(heart * PI / 2.0) * (1.0 - b),
+		"boss": sin(b * PI / 2.0),
+	}
+
+
+## Mélange à puissance constante : le volume total reste stable pendant les fondus.
 func _apply() -> void:
-	if not enabled or dark == null:
+	if not enabled:
 		return
-	_apply_pair(dark, bright, world_gain)
-	for id in pairs:
-		_apply_pair(pairs[id]["dark"], pairs[id]["bright"], pairs[id]["gain"])
+	for id in groups:
+		var g: Dictionary = groups[id]
+		var gains := layer_gains(g["players"])
+		var reg_g := sin(float(g["gain"]) * PI / 2.0) * duck_gain
+		for layer in g["players"]:
+			_set_volume(g["players"][layer], float(gains.get(layer, 0.0)) * reg_g)
+	for id in beds:
+		var g: Dictionary = beds[id]
+		var reg_g := sin(float(g["gain"]) * PI / 2.0) * (1.0 - (1.0 - BED_BOSS) * boss)
+		_set_volume(g["players"].get("mort"), cos(mix * PI / 2.0) * reg_g)
+		_set_volume(g["players"].get("vif"), sin(mix * PI / 2.0) * reg_g)
 
 
-func _apply_pair(d: AudioStreamPlayer, b: AudioStreamPlayer, gain: float) -> void:
-	var g := sin(gain * PI / 2.0)
-	d.volume_db = _db(cos(mix * PI / 2.0) * g)
-	b.volume_db = _db(sin(mix * PI / 2.0) * g)
+func _set_volume(p: AudioStreamPlayer, lin: float) -> void:
+	if p == null:
+		return
+	p.volume_db = _db(lin)
+	if not started:
+		return
+	if lin >= 0.001 and not p.playing and p.stream != null:
+		p.play(fposmod(clock, p.stream.get_length()))
+	elif lin < 0.001 and p.playing:
+		p.stop()
 
 
 static func _db(lin: float) -> float:

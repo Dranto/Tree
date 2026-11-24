@@ -182,12 +182,20 @@ func _scenario_combat() -> void:
 	await _shot("arbre_progression")
 
 
-## Le jeu, l'arbre et l'écran titre à la résolution de la fenêtre (fixée par tools/visual-tests.sh).
+## Le jeu, l'arbre (avec la couronne de greffes : quatorze greffes trouvées, deux posées, la fiche
+## de l'une d'elles) et l'écran titre à la résolution de la fenêtre (fixée par tools/visual-tests.sh).
 func _scenario_resolution() -> void:
 	var tag := _res_tag()
 	await _frames(60)
 	await _shot("jeu_" + tag, "jeu")
+	var ids: Array = Content.grafts().keys()
+	ids.sort()
+	for g in ids.slice(0, 14):
+		Game.give_graft(g)
+	Game.place_graft(0, ids[0])
+	Game.place_graft(1, ids[3])
 	main.tree_ui.toggle()
+	main.tree_ui.grafts_panel.set_hover_graft(ids[5])
 	await _frames(10)
 	await _shot("arbre_" + tag, "arbre")
 	main.tree_ui.toggle()
@@ -330,7 +338,7 @@ func _scenario_regions() -> void:
 	main.autotest = false
 	main.spawn_timer = 1.0e9
 	main.player.set_physics_process(false)
-	main.hud.hint_time = 0.0
+	main.hud.glyphs.hide()
 	main.set_process(false)
 	var layer := CanvasLayer.new()
 	layer.layer = 100
@@ -365,15 +373,15 @@ func _scenario_regions() -> void:
 	await _frames(1)
 
 
-## Carte et journal d'un monde à cinq régions et plus (celles des données et les régions factices de
-## tests/regions/) : la légende, les secteurs et les sections du journal doivent tenir à l'écran.
+## Carte d'un monde à cinq régions et plus (celles des données et les régions factices de
+## tests/regions/) : la légende et les secteurs doivent tenir à l'écran.
 ## Les régions sans objectifs dans les données reçoivent ici des objectifs factices de même forme.
 func _scenario_carte5() -> void:
 	var q = main.quest_ui
 	main.autotest = false
 	main.spawn_timer = 1.0e9
 	main.player.set_physics_process(false)
-	main.hud.hint_time = 0.0
+	main.hud.glyphs.hide()
 	var objs: Array = Content._load("objectives")["objectives"]
 	for id in Regions.ids():
 		if not Objectives.for_region(id).is_empty():
@@ -398,11 +406,6 @@ func _scenario_carte5() -> void:
 	Objectives.check()
 	Objectives.main = main
 	var tag := _res_tag()
-	q.toggle("journal")
-	await _frames(3)
-	UiAudit.begin("journal")
-	UiAudit.scan_controls("journal", q.journal)
-	await _shot("journal5_" + tag, "journal")
 	q.toggle("carte")
 	await _frames(3)
 	await _shot("carte5_" + tag, "carte")
@@ -430,7 +433,7 @@ func _scenario_cumul() -> void:
 	var p = main.player
 	Game.test_attack = [{"attack_form": "rayon", "priority": 99}, {"attack_form": "lame"}, {"attack_form": "massue"}]
 	Game.recompute()
-	main.hud.hint_time = 0.0
+	main.hud.glyphs.hide()
 	main.autotest = false
 	p.set_physics_process(false)
 	p.invuln = 0.4
@@ -550,7 +553,7 @@ func _scenario_galerie() -> void:
 ## Planche des formes de nœuds : chaque type (dont le nœud « attack » qui change l'attaque de base)
 ## dans ses trois états, tel que l'arbre le dessine de près.
 func _galerie_formes(ui) -> void:
-	var kinds := ["notable", "keystone", "skill", "mutation", "mastery", "graft", "withered", "attack"]
+	var kinds := ["notable", "keystone", "skill", "mutation", "mastery", "withered", "attack"]
 	var ronce := 0
 	for bi in Game.tree.BRANCHES.size():
 		if Game.tree.BRANCHES[bi]["id"] == "ronce":
@@ -593,27 +596,26 @@ func _galerie_types(ui, cw: int, ch: int) -> void:
 	var mutation := _first_of_type("mutation")
 	var mastery := _first_of_type("mastery")
 	var withered := _first_of_type("withered")
-	var graft := _first_of_type("graft")
+	var attack := _first_of_type("attack")
 	var sheet := Image.create(cw * 4, ch * 2, false, Image.FORMAT_RGB8)
-	var cells := [["compétence", skill], ["mutation verrouillée", mutation], ["flétri", withered], ["greffe vide", graft]]
+	var cells := [["compétence", skill], ["mutation verrouillée", mutation], ["flétri", withered], ["attaque", attack]]
 	for i in cells.size():
 		await _cell(ui, sheet, cells[i][0], cells[i][1], i, cw, ch)
 	# Tout apprendre : la maîtrise reçoit un choix, la mutation attend le sien, le drapeau libère le nœud flétri.
 	# Juste les points qu'il faut à chaque fois, pour que le robot n'ait rien à dépenser entre deux images.
 	var planner = ui.panels.planner
 	Game.flags[Game.tree.nodes[withered]["requires_flag"]] = true
-	for id in [skill, mastery, mutation, withered, graft]:
+	for id in [skill, mastery, mutation, withered, attack]:
 		if not Game.allocated.has(id):
 			var path: Array = planner.path_to(id)
 			Game.points = path.size()
 			planner.learn_path(path)
 	Game.points = 0
 	Game.set_choice(mastery, 1)
-	Game.set_graft(graft, "greffe_soeurs")
 	await _frames(2)
 	ui._choice_queue.clear()
 	ui.close_choice(false)
-	cells = [["maîtrise choisie", mastery], ["mutation à choisir", mutation], ["flétri libéré", withered], ["greffe posée", graft]]
+	cells = [["maîtrise choisie", mastery], ["mutation à choisir", mutation], ["flétri libéré", withered], ["attaque apprise", attack]]
 	for i in cells.size():
 		await _cell(ui, sheet, cells[i][0], cells[i][1], 4 + i, cw, ch)
 	await _shot_image("galerie_types", sheet)
@@ -654,7 +656,7 @@ func _scenario_competences() -> void:
 	Game.flags["barre"] = "fouet,racines,volee,saignee"
 	Game.recompute()
 	p.sync_bar()
-	main.hud.hint_time = 0.0
+	main.hud.glyphs.hide()
 	main.autotest = false   # ni robot ni expérience gagnée : rien ne bouge en dehors de ce qu'on lance
 	p.set_physics_process(false)   # le joueur ne bouge pas : les compétences sont lancées ici
 	p.invuln = 0.4   # figé (pas de pas physique) : aucun coup ne passe, sans le voile d'invulnérabilité
@@ -1184,7 +1186,8 @@ func _place_player(pos: Vector2) -> void:
 	await _frames(2)
 
 
-## Objectifs : le journal et la carte en cours de tranche, la flèche vers l'objectif, puis la fin.
+## Objectifs : le glyphe du tutoriel, la carte en cours de tranche, la veine de sève et la feuille
+## vers l'objectif, puis la reverdie de la région.
 ## Le jeu est figé (ni robot ni Flétris) et la partie est mise en scène par appels directs.
 ## Journal, carte et fin sont capturés à chaque résolution ; la flèche et le monde qui reverdit
 ## seulement en 1920x1080 (le suivi et la flèche font déjà partie des captures « jeu_ » de « resolution »).
@@ -1194,7 +1197,7 @@ func _scenario_quetes() -> void:
 	main.autotest = false
 	main.spawn_timer = 1.0e9
 	main.player.set_physics_process(false)
-	main.hud.hint_time = 0.0
+	main.hud.glyphs.hide()
 	var fake := load("res://tests/objectives_fake.gd")
 	var ronce: Vector2 = main.region_center("ronce")
 	for e in [["sanctuaire", "ronce_1", ronce * 0.45], ["sanctuaire", "ronce_2", ronce * 0.8 + Vector2(260, -180)],
@@ -1229,11 +1232,18 @@ func _scenario_quetes() -> void:
 	Objectives.check()
 	Objectives.main = main
 
-	q.toggle("journal")
-	await _frames(3)
-	UiAudit.begin("journal")
-	UiAudit.scan_controls("journal", q.journal)
-	await _shot("journal_" + tag, "journal")
+	if tag == "1920x1080":
+		# Tutoriel discret : le glyphe de la compétence (clic gauche) au-dessus du héros.
+		var gl = main.hud.glyphs
+		gl.show()
+		gl.set_process(false)
+		gl.step = "competence"
+		gl.alpha = 1.0
+		gl.queue_redraw()
+		await _frames(2)
+		await _shot("tutoriel_glyphe", "jeu")
+		gl.set_process(true)
+		gl.hide()
 	q.toggle("carte")
 	await _frames(3)
 	await _shot("carte_" + tag, "carte")
@@ -1244,18 +1254,15 @@ func _scenario_quetes() -> void:
 		# Le Cœur est l'objectif : il est loin, la flèche borde l'écran.
 		Objectives.complete("noeud_cle", true)
 		await _frames(30)
+		q.vein.alpha = 1.0
+		await _frames(2)
 		await _shot("jeu_objectif", "jeu")
 
 	Game.flags["ronce_coeur_purifie"] = true
 	Game.flags["ronce_boss_vaincu"] = true
 	Objectives.check()
-	# Célébration de la région, sur place et sans pause (region_fanfare.gd) : le médaillon où la région
-	# reverdit et son sceau se brise, puis les textes.
+	# Reverdie de la région, sur place, sans pause ni texte (region_fanfare.gd).
 	q.start_ending()
-	if tag == "1920x1080":
-		q.fanfare.set_time(2.3)
-		await _frames(2)
-		await _shot("region_purifiee_sceau", "jeu")
 	q.fanfare.set_time(4.0)
 	await _frames(2)
 	await _shot("region_purifiee_" + tag, "jeu")

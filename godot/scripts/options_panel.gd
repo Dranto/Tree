@@ -1,5 +1,7 @@
 ## Panneau d'options (direction « Herbier ») : cadre orné et quatre onglets (Son, Affichage, Jeu,
-## Commandes). Volume, plein écran, aide de départ, secousse, rafales de vent, difficulté, déplacement, visée, commandes de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
+## Commandes). Volume, plein écran, glyphes du tutoriel, accessibilité (contraste, taille du texte, mode
+## daltonien, secousse, éclats, micro-pauses), rafales de vent, difficulté, déplacement, visée,
+## pause hors focus, toutes les commandes. Les changements s'appliquent et s'enregistrent aussitôt.
 extends PanelContainer
 
 signal closed
@@ -10,14 +12,25 @@ const Difficulty = preload("res://scripts/difficulty.gd")
 var volume_slider: HSlider
 var music_slider: HSlider
 var sfx_slider: HSlider
+var ambience_slider: HSlider
 var fullscreen_box: CheckBox
 var hints_box: CheckBox
-var numbers_box: CheckBox
+var numbers_select: OptionButton
 var shake_slider: HSlider
 var shake_label: Label
 var wind_slider: HSlider
 var wind_label: Label
 var reduce_box: CheckBox
+var flash_slider: HSlider
+var hitstop_slider: HSlider
+var contrast_box: CheckBox
+var text_select: OptionButton
+var colorblind_select: OptionButton
+var access_hint: Label
+var focus_box: CheckBox
+## Boutons des commandes du jeu (Settings.GAME_ACTIONS), écoutés à partir de ACTION_ROW0.
+var action_buttons: Array = []
+const ACTION_ROW0 := 100
 var difficulty_select: OptionButton
 var difficulty_hint: Label
 var back_button: Button
@@ -52,7 +65,7 @@ func _ready() -> void:
 	var title := Label.new()
 	title.text = "Options"
 	title.add_theme_font_override("font", UiTheme.display(600, 2))
-	title.add_theme_font_size_override("font_size", 46)
+	title.add_theme_font_size_override("font_size", UiTheme.fs(46))
 	title.add_theme_color_override("font_color", UiTheme.INK)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	outer.add_child(title)
@@ -94,6 +107,7 @@ func _ready() -> void:
 	volume_slider = _slider_row(p_son, "Volume général", Settings.volume, _on_volume)
 	music_slider = _slider_row(p_son, "Musique", Settings.music_volume, func(v): Settings.set_music_volume(v); Settings.save_settings(); _update_labels())
 	sfx_slider = _slider_row(p_son, "Effets", Settings.sfx_volume, func(v): Settings.set_sfx_volume(v); Settings.save_settings(); _update_labels())
+	ambience_slider = _slider_row(p_son, "Ambiance", Settings.ambience_volume, func(v): Settings.set_ambience_volume(v); Settings.save_settings(); _update_labels())
 	_update_labels()
 
 	fullscreen_box = CheckBox.new()
@@ -102,23 +116,43 @@ func _ready() -> void:
 	fullscreen_box.toggled.connect(func(on): Settings.set_fullscreen(on); Settings.save_settings())
 	p_aff.add_child(fullscreen_box)
 	hints_box = CheckBox.new()
-	hints_box.text = "Afficher l'aide de départ en jeu"
+	hints_box.text = "Afficher les glyphes de touches (tutoriel)"
 	hints_box.button_pressed = Settings.show_hints
 	hints_box.toggled.connect(func(on): Settings.set_show_hints(on); Settings.save_settings())
 	p_aff.add_child(hints_box)
-	numbers_box = CheckBox.new()
-	numbers_box.text = "Afficher les chiffres de dégâts"
-	numbers_box.button_pressed = Settings.show_damage_numbers
-	numbers_box.toggled.connect(func(on): Settings.show_damage_numbers = on; Settings.save_settings())
-	p_aff.add_child(numbers_box)
+	numbers_select = _select_row(p_aff, "Chiffres de dégâts")
+	for id in Settings.DAMAGE_NUMBERS:
+		numbers_select.add_item(Settings.DAMAGE_NUMBERS_NAMES[id])
+	numbers_select.select(Settings.DAMAGE_NUMBERS.find(Settings.damage_numbers))
+	numbers_select.item_selected.connect(func(i): Settings.set_damage_numbers(Settings.DAMAGE_NUMBERS[i]); Settings.save_settings())
 	reduce_box = CheckBox.new()
 	reduce_box.text = "Réduire les effets (secousse, micro-pause, particules)"
 	reduce_box.button_pressed = Settings.reduce_effects
 	reduce_box.toggled.connect(func(on): Settings.set_reduce_effects(on); Settings.save_settings())
 	p_aff.add_child(reduce_box)
-	shake_slider = _slider_row(p_aff, "Secousse", Settings.shake, _on_shake, 0.1)
+	shake_slider = _slider_row(p_aff, "Secousse", Settings.shake_scale, _on_shake, 0.1)
 	shake_label = shake_slider.get_meta("label")
 	_update_shake_label()
+	flash_slider = _slider_row(p_aff, "Éclats lumineux", Settings.flash_scale, func(v): Settings.set_flash(v); Settings.save_settings(); _update_pct(flash_slider, "Aucun"), 0.1)
+	hitstop_slider = _slider_row(p_aff, "Micro-pauses", Settings.hitstop_scale, func(v): Settings.hitstop_scale = v; Settings.save_settings(); _update_pct(hitstop_slider, "Aucune"), 0.1)
+	_update_pct(flash_slider, "Aucun")
+	_update_pct(hitstop_slider, "Aucune")
+	# Accessibilité : contraste, taille du texte, mode daltonien.
+	contrast_box = CheckBox.new()
+	contrast_box.text = "Contraste renforcé"
+	contrast_box.button_pressed = Settings.high_contrast
+	contrast_box.toggled.connect(func(on): Settings.set_high_contrast(on); Settings.save_settings(); _update_access())
+	p_aff.add_child(contrast_box)
+	text_select = _select_row(p_aff, "Taille du texte")
+	for n in Settings.TEXT_SCALE_NAMES:
+		text_select.add_item(n)
+	text_select.item_selected.connect(func(i): Settings.set_text_scale(Settings.TEXT_SCALES[i]); Settings.save_settings(); _update_access())
+	colorblind_select = _select_row(p_aff, "Mode daltonien")
+	for id in Settings.COLORBLIND_MODES:
+		colorblind_select.add_item(Settings.COLORBLIND_NAMES[id])
+	colorblind_select.item_selected.connect(func(i): Settings.set_colorblind_mode(Settings.COLORBLIND_MODES[i]); Settings.save_settings(); _update_access())
+	access_hint = _hint(p_aff)
+	_update_access()
 
 	# Difficulté : vie et dégâts des ennemis (Normal par défaut).
 	difficulty_select = _select_row(p_jeu, "Difficulté")
@@ -145,6 +179,11 @@ func _ready() -> void:
 	wind_slider = _slider_row(p_jeu, "Rafales", Settings.wind, _on_wind, 0.1)
 	wind_label = wind_slider.get_meta("label")
 	_update_wind_label()
+	focus_box = CheckBox.new()
+	focus_box.text = "Mettre en pause quand la fenêtre perd le focus"
+	focus_box.button_pressed = Settings.pause_on_focus_loss
+	focus_box.toggled.connect(func(on): Settings.set_pause_on_focus_loss(on); Settings.save_settings())
+	p_jeu.add_child(focus_box)
 
 	var keys_title := Label.new()
 	keys_title.text = "Commandes des compétences"
@@ -166,7 +205,33 @@ func _ready() -> void:
 		b.pressed.connect(_listen.bind(i))
 		grid.add_child(b)
 		slot_buttons.append(b)
+	var game_title := Label.new()
+	game_title.text = "Commandes du jeu"
+	game_title.add_theme_color_override("font_color", UiTheme.GOLD)
+	p_cmd.add_child(game_title)
+	var grid2 := GridContainer.new()
+	grid2.columns = 2
+	grid2.add_theme_constant_override("h_separation", 16)
+	grid2.add_theme_constant_override("v_separation", 8)
+	p_cmd.add_child(grid2)
+	for i in Settings.GAME_ACTIONS.size():
+		var l := Label.new()
+		l.text = Settings.GAME_ACTION_NAMES[Settings.GAME_ACTIONS[i]]
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid2.add_child(l)
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(190, 0)
+		b.focus_mode = Control.FOCUS_ALL
+		b.pressed.connect(_listen.bind(ACTION_ROW0 + i))
+		grid2.add_child(b)
+		action_buttons.append(b)
 	keys_hint = _hint(p_cmd)
+	var reset := Button.new()
+	reset.text = "Rétablir les commandes par défaut"
+	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	reset.focus_mode = Control.FOCUS_ALL
+	reset.pressed.connect(func(): Settings.reset_bindings(); Settings.save_settings(); listening = -1; _update_keys(); _update_move_mode())
+	p_cmd.add_child(reset)
 	_update_keys()
 
 	back_button = UiTheme.menu_item("Retour", 28, HORIZONTAL_ALIGNMENT_CENTER, 240)
@@ -184,7 +249,7 @@ func _tab_button(text: String, group: ButtonGroup) -> Button:
 	b.button_group = group
 	b.focus_mode = Control.FOCUS_ALL
 	b.custom_minimum_size = Vector2(140, 40)
-	b.add_theme_font_size_override("font_size", 25)
+	b.add_theme_font_size_override("font_size", UiTheme.fs(25))
 	var pad := StyleBoxEmpty.new()
 	pad.content_margin_bottom = 6
 	for st in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
@@ -195,7 +260,7 @@ func _tab_button(text: String, group: ButtonGroup) -> Button:
 	b.add_theme_color_override("font_pressed_color", UiTheme.GOLD)
 	b.add_theme_color_override("font_hover_pressed_color", UiTheme.GOLD)
 	b.draw.connect(func():
-		var w := b.get_theme_font("font").get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 25).x
+		var w := b.get_theme_font("font").get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.fs(25)).x
 		var y := b.size.y - 2.0
 		if b.button_pressed:
 			b.draw_line(Vector2((b.size.x - w) / 2.0 - 6, y), Vector2((b.size.x + w) / 2.0 + 6, y), UiTheme.GOLD, 1.5, true)
@@ -235,7 +300,7 @@ func _select_row(parent: Control, text: String) -> OptionButton:
 
 func _hint(parent: Control) -> Label:
 	var l := Label.new()
-	l.add_theme_font_size_override("font_size", 17)
+	l.add_theme_font_size_override("font_size", UiTheme.fs(17))
 	l.add_theme_color_override("font_color", UiTheme.SOFT)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(l)
@@ -277,7 +342,7 @@ func _on_volume(v: float) -> void:
 
 
 func _update_labels() -> void:
-	for sl in [volume_slider, music_slider, sfx_slider]:
+	for sl in [volume_slider, music_slider, sfx_slider, ambience_slider]:
 		if sl != null:
 			sl.get_meta("label").text = "%d %%" % roundi(sl.value * 100.0)
 
@@ -298,7 +363,16 @@ func _update_keys() -> void:
 			var digit: int = Settings.SLOT_DIGITS[i]
 			var name := Settings.code_name(Settings.bindings[i])
 			b.text = name if digit == KEY_NONE else "%s (ou %s)" % [name, Settings.key_name(digit)]
-	if listening == MOBA_ROW:
+	for i in action_buttons.size():
+		var a: String = Settings.GAME_ACTIONS[i]
+		var extra: Array = Settings.ACTION_EXTRAS.get(a, [])
+		var txt := Settings.action_key_name(a)
+		if not extra.is_empty():
+			txt += " (ou %s)" % ", ".join(extra.map(func(k): return Settings.key_name(k)))
+		action_buttons[i].text = "…" if listening == ACTION_ROW0 + i else txt
+	if listening >= ACTION_ROW0:
+		keys_hint.text = "Appuie sur une touche pour : %s (Échap : annuler)." % Settings.GAME_ACTION_NAMES[Settings.GAME_ACTIONS[listening - ACTION_ROW0]].to_lower()
+	elif listening == MOBA_ROW:
 		keys_hint.text = "Appuie sur une touche pour la compétence principale 2 en mode MOBA (Échap : annuler)."
 	elif listening >= 0:
 		keys_hint.text = "Appuie sur une touche ou un bouton de la souris pour : %s (Échap : annuler, Retour arrière : aucune)." % SLOT_LABELS[listening].to_lower()
@@ -317,7 +391,7 @@ func _input(event: InputEvent) -> void:
 	var m := event as InputEventMouseButton
 	if k != null and k.pressed and not k.echo:
 		code = k.physical_keycode
-	elif m != null and m.pressed and listening != MOBA_ROW and m.button_index in Settings.MOUSE_BUTTONS:
+	elif m != null and m.pressed and listening < MOBA_ROW and m.button_index in Settings.MOUSE_BUTTONS:
 		code = -m.button_index
 	else:
 		return
@@ -326,6 +400,13 @@ func _input(event: InputEvent) -> void:
 	listening = -1
 	if code == KEY_ESCAPE:
 		pass
+	elif i >= ACTION_ROW0:
+		var taken := Settings.set_action_key(Settings.GAME_ACTIONS[i - ACTION_ROW0], code)
+		if taken == "":
+			Settings.save_settings()
+			keys_hint.text = ""
+		else:
+			keys_hint.text = "%s est déjà utilisée : %s." % [Settings.code_name(code), taken]
 	elif code == KEY_BACKSPACE and i != MOBA_ROW:
 		Settings.set_binding(i, KEY_NONE)
 		Settings.save_settings()
@@ -386,6 +467,26 @@ func _update_shake_label() -> void:
 	shake_label.text = "Aucune" if shake_slider.value <= 0.001 else "%d %%" % roundi(shake_slider.value * 100.0)
 
 
+## Pourcentage d'un curseur, ou « zero » à 0.
+func _update_pct(sl: HSlider, zero: String) -> void:
+	if sl != null:
+		sl.get_meta("label").text = zero if sl.value <= 0.001 else "%d %%" % roundi(sl.value * 100.0)
+
+
+func _update_access() -> void:
+	contrast_box.button_pressed = Settings.high_contrast
+	text_select.select(maxi(0, Settings.TEXT_SCALES.find(Settings.text_scale)))
+	colorblind_select.select(maxi(0, Settings.COLORBLIND_MODES.find(Settings.colorblind_mode)))
+	var parts: Array = []
+	if Settings.colorblind_mode != "aucun":
+		parts.append("Les dangers, les élites et le butin changent de teinte ; les zones d'attaque annoncées sont hachurées.")
+	if Settings.high_contrast:
+		parts.append("Textes secondaires et filets plus marqués, zones de danger plus opaques.")
+	if Settings.text_scale != 1.0:
+		parts.append("La taille du texte s'applique aux écrans ouverts ensuite.")
+	access_hint.text = " ".join(parts)
+
+
 func _on_wind(v: float) -> void:
 	Settings.set_wind(v)
 	Settings.save_settings()
@@ -417,10 +518,15 @@ func open() -> void:
 	volume_slider.value = Settings.volume
 	music_slider.value = Settings.music_volume
 	sfx_slider.value = Settings.sfx_volume
+	ambience_slider.value = Settings.ambience_volume
 	fullscreen_box.button_pressed = Settings.fullscreen
 	hints_box.button_pressed = Settings.show_hints
-	numbers_box.button_pressed = Settings.show_damage_numbers
-	shake_slider.value = Settings.shake
+	numbers_select.select(Settings.DAMAGE_NUMBERS.find(Settings.damage_numbers))
+	shake_slider.value = Settings.shake_scale
+	flash_slider.value = Settings.flash_scale
+	hitstop_slider.value = Settings.hitstop_scale
+	focus_box.button_pressed = Settings.pause_on_focus_loss
+	_update_access()
 	wind_slider.value = Settings.wind
 	reduce_box.button_pressed = Settings.reduce_effects
 	_update_difficulty()

@@ -8,6 +8,7 @@ extends SceneTree
 const Regions = preload("res://scripts/regions.gd")
 const RegionAudio = preload("res://scripts/region_audio.gd")
 const Synth = preload("res://scripts/synth.gd")
+const MusicSynth = preload("res://scripts/music_synth.gd")
 
 # region_ui.gd lit l'autoload Game : chargé à l'exécution, pas à la compilation du test.
 var RegionUi
@@ -76,9 +77,9 @@ func _run() -> void:
 	check(RegionAudio.of("essai").has("music"), "la section « audio » du fichier de la région prime")
 	check("essai" in RegionAudio.music_regions() and not "ronce" in RegionAudio.music_regions(), "les régions qui ont leur musique (pas Ronce, qui garde la musique de base) : %s" % [RegionAudio.music_regions()])
 	check(RegionAudio.boss_sound("essai", "eveil") == "vent_boss_eveil" and RegionAudio.boss_sound("essai", "phase") == "", "sons du boss : ceux qui sont réglés")
-	check(RegionAudio.boss_sound("ronce", "mort") == "", "Ronce : aucun son de boss ajouté")
+	check(RegionAudio.boss_sound("ronce", "mort") == "ronce_boss_mort", "Ronce : les sons de son boss (data/audio.json)")
 	check(RegionAudio.validate().is_empty(), "réglages valides : %s" % [RegionAudio.validate()])
-	check(Synth.music_dark(RegionAudio.music_style("essai")) != Synth.music_dark(), "la musique d'essai n'est pas celle de Ronce")
+	check(MusicSynth.fingerprint("sombre", RegionAudio.music_style("essai")) != MusicSynth.fingerprint("sombre", {}), "la musique d'essai n'est pas celle de Ronce")
 
 	var ambience = null
 	for c in main.get_children():
@@ -116,21 +117,10 @@ func _run() -> void:
 	check(not "Arène de la Mère-Ronce" in texts, "plus de nom de boss écrit en dur")
 	q.close()
 
-	print("Journal")
-	q.toggle("journal")
-	await _frames(2)
-	var jt := _texts(q.journal._box, [])
-	check("L'AVENTURE" in jt and "RÉGION DE RONCE" in jt, "sections : l'aventure et Ronce")
-	check(RegionUi.UNDER_SEED_NAME.to_upper() in jt, "section « sous la graine » pour la finale")
-	check(not "RÉGION D'ESSAI" in jt, "pas de section pour une région sans objectifs")
-	check(jt.any(func(t): return t.begins_with("Aventure :") and "régions purifiées" in t), "sous-titre de l'aventure : %s" % [jt.slice(0, 3)])
-	q.close()
-
-	print("Suivi")
+	print("Feuille de sève (plus de journal ni de suivi écrit)")
 	var tracker = q.tracker
 	obj.complete("premier_noeud", true)
-	tracker.refresh()
-	check(tracker._head.text.contains("Roncier") or obj.current().get("region", "") == "", "le suivi dit la région de l'objectif quand il y en a plusieurs : %s" % tracker._head.text)
+	check(tracker.find_children("*", "Label", true, false).is_empty(), "la feuille ne porte aucun texte")
 
 	root.remove_child(main)
 	main.queue_free()

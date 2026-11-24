@@ -38,9 +38,6 @@ const AUTOTEST_MAX_TIME := 330.0
 const COLLAPSE_WARN := 0.3
 const COLLAPSE_FALL := 0.6
 
-var opened_banner := ""
-var descent_banner := ""
-var ascent_banner := ""
 var reward_points := 3
 ## Temps passé dans la brèche ou le puits (0 → DESCENT_HOLD).
 var hold := 0.0
@@ -68,8 +65,6 @@ func configure(_id: String) -> void:
 	boss_name = str(b.get("name", "La Flétrissure"))
 	bar_color = Regions.color(b.get("bar_color", "cendre"))
 	phase_names = b.get("phases", ["Phase 1 sur 3", "Phase 2 sur 3", "Phase 3 sur 3"])
-	wake_banner = str(b.get("wake_banner", boss_name + " s'éveille."))
-	defeated_banner = str(b.get("defeated_banner", boss_name + " est vaincue !"))
 	reward_points = int(b.get("reward", {}).get("points", 3))
 	var ar: Dictionary = b.get("arena", {})
 	max_radius = float(ar.get("radius", 520.0))
@@ -77,9 +72,6 @@ func configure(_id: String) -> void:
 	collapse_radius = float(ar.get("radius_collapse", 380.0))
 	life_color = Regions.color(ar.get("life_color", "seve/clair"))
 	radius = max_radius
-	opened_banner = str(data.get("opened_banner", ""))
-	descent_banner = str(data.get("descent_banner", ""))
-	ascent_banner = str(data.get("ascent_banner", ""))
 
 
 func _ready() -> void:
@@ -192,8 +184,6 @@ func _open() -> void:
 	state = "ouverte"
 	if not Game.flags.get(Objectives.FINALE_OPEN, false):
 		Game.flags[Objectives.FINALE_OPEN] = true
-		if opened_banner != "":
-			main.hud.banner(opened_banner)
 		main.request_autosave()
 
 
@@ -273,8 +263,6 @@ func descend() -> void:
 			e.queue_free()
 	main.enemies = main.enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
 	_move_player(landing())
-	if descent_banner != "":
-		main.hud.banner(descent_banner)
 	main.screen_fx.fade(Art.c("decor").darkened(0.6), 1.0, 0.0, main.screen_fx.FADE_DEATH)
 	main.fx.ring(landing(), 12.0, 140.0, 0.8, Color(Art.ec("seve", "clair"), 0.8), 4.0)
 
@@ -284,8 +272,6 @@ func _ascend() -> void:
 	hold = 0.0
 	armed = false
 	_move_player(entrance())
-	if ascent_banner != "" and state != "fermee":
-		main.hud.banner(ascent_banner)
 	main.screen_fx.fade(Art.c("decor").darkened(0.6), 1.0, 0.0, main.screen_fx.FADE_PANEL)
 
 
@@ -318,7 +304,6 @@ func boss_defeated() -> void:
 	main.spawn_paused = false
 	Game.flags[flag] = true
 	Game.flags["stat_finale_fin"] = main.elapsed
-	main.hud.banner(defeated_banner)
 	Game.grant_points(reward_points, "boss", "finale_boss")
 	for i in 4:
 		main.fx.ring(center, 40.0, max_radius * (0.45 + 0.25 * i), 0.9 + 0.4 * i, Color(Art.ec("seve", "clair"), 0.9), 6.0)
