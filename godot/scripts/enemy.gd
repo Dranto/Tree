@@ -83,6 +83,10 @@ var dazzle_value := 0.0
 ## ignorent (« armor_pierce » de enemies.json, lu par player.take_hit).
 var armor_pierce := 0.0
 var hit_flash := 0.0
+## Durée de l'éclair du dernier coup, recul visible (part du rayon) et sa direction (fuyant le Porte-Graine).
+var hit_flash_dur := 0.08
+var hit_kick := 0.2
+var hit_dir := Vector2.ZERO
 var dead := false
 var t := 0.0
 ## Comportement : "" (déplacement), "windup" (attaque annoncée), "charge", "recover".
@@ -479,14 +483,27 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 	if _over:
 		_over.queue_redraw()
 	if not dot:
-		hit_flash = 0.08
-		main.fx.impact(position, shown, crit, radius)
+		_hit_feel(shown, crit)
 	if hp <= 0.0:
 		dead = true
 		_behavior.on_death(self)
 		_leave_remains()
 		main.on_enemy_killed(self)
 		queue_free()
+
+
+## Ressenti d'un coup direct (data/feel.json) : éclair, recul visible à l'opposé du Porte-Graine,
+## éclats, et pour un coup lourd ou critique, secousse et arrêt sur image. Rien ne change le jeu.
+func _hit_feel(shown: float, crit: bool) -> void:
+	var heavy: bool = shown >= max_hp * main.fx.feel("heavy", "enemy_frac", 0.4)
+	hit_flash_dur = main.fx.feel("recoil", "flash_crit" if crit else "flash", 0.08)
+	hit_flash = hit_flash_dur
+	hit_kick = main.fx.feel("recoil", "crit" if crit else ("heavy" if heavy else "normal"), 0.2)
+	if elite:
+		hit_kick *= main.fx.feel("recoil", "elite", 0.6)
+	var from: Vector2 = position - main.player.position if main.player != null else -face
+	hit_dir = from.normalized() if from.length() > 0.5 else -face
+	main.fx.impact(position, shown, crit, radius, "", heavy)
 
 
 # --- Animation (apparence seulement : rien ici ne change le jeu) ---
@@ -549,7 +566,7 @@ func _leave_remains() -> void:
 func pose() -> Dictionary:
 	var o := {"walk": walk, "moving": moving, "state": state, "k": windup_ratio()}
 	if hit_flash > 0.0:
-		o["flash"] = clampf(hit_flash / 0.08, 0.0, 1.0)
+		o["flash"] = clampf(hit_flash / maxf(hit_flash_dur, 0.01), 0.0, 1.0)
 	if strike_t >= 0.0:
 		o["strike"] = strike_t / STRIKE_TIME
 	if enraged:
@@ -610,7 +627,9 @@ func _redraw_parts(delta: float) -> void:
 		_body_face = face
 		_body.queue_redraw()
 	_body.rotation = angle_difference(_body_face.angle(), face.angle())
-	var knock := -face * radius * 0.18 * clampf(hit_flash / 0.08, 0.0, 1.0)
+	# Recul du coup reçu : poussé d'un coup, il revient en douceur (apparence seulement).
+	var kk := clampf(hit_flash / maxf(hit_flash_dur, 0.01), 0.0, 1.0)
+	var knock := (hit_dir if hit_dir != Vector2.ZERO else -face) * radius * hit_kick * kk * kk
 	_body.position = knock
 	_over.position = knock
 	if elite or guard_time > 0.0 or root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or _over_dirty:

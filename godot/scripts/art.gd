@@ -430,7 +430,8 @@ static func telegraph(ci: CanvasItem, forme: Dictionary, progression: float, fra
 		outline(ci, telegraph_polygon(forme, 1.0), Color(fl, 1.0 - k), TRAIT_FORT)
 		return
 	var p := clampf(progression, 0.0, 1.0)
-	ci.draw_colored_polygon(telegraph_polygon(forme, 1.0), Color(danger, 0.10))
+	var full := telegraph_polygon(forme, 1.0)
+	ci.draw_colored_polygon(full, Color(danger, 0.10))
 	if p > 0.0:
 		ci.draw_colored_polygon(telegraph_polygon(forme, p), c("danger_annonce"))
 	if motifs:
@@ -438,7 +439,71 @@ static func telegraph(ci: CanvasItem, forme: Dictionary, progression: float, fra
 	var a := 0.55 + 0.45 * p
 	if p >= ANNONCE_CLIGNOTE:
 		a = 0.6 + 0.4 * (0.5 + 0.5 * cos(t * TAU * 6.0))
-	outline(ci, telegraph_polygon(forme, 1.0), Color(danger, a), TRAIT)
+	outline(ci, full, Color(danger, a), TRAIT)
+	# Formes en plus de la couleur (daltonisme, foule) : un contour en tirets se resserre sur la
+	# zone jusqu'au coup (le temps qui reste se lit à sa distance), et des chevrons montrent le sens.
+	var marks := PackedVector2Array()
+	_telegraph_marks(marks, forme, full, p, t)
+	if not marks.is_empty():
+		ci.draw_multiline(marks, Color(danger, 0.5 + 0.5 * a), TRAIT_FIN)
+
+
+## Tirets qui se resserrent et chevrons d'une annonce, en segments (un seul appel de dessin).
+static func _telegraph_marks(out: PackedVector2Array, forme: Dictionary, full: PackedVector2Array, p: float, t: float) -> void:
+	var kind := str(forme.get("type", ""))
+	var o: Vector2
+	match kind:
+		"cercle", "cone":
+			o = forme["centre"]
+		"ligne":
+			o = forme["de"]
+		_:
+			return
+	# Contour en tirets, agrandi de 35 % au début de l'annonce, posé sur la zone au moment du coup.
+	var grow := 1.0 + 0.35 * (1.0 - p)
+	var n := full.size()
+	for i in n:
+		var a := o + (full[i] - o) * grow
+		var b := o + (full[(i + 1) % n] - o) * grow
+		var len := a.distance_to(b)
+		var steps := maxi(1, int(len / 14.0))
+		for j in steps:
+			if j % 2 == 0:
+				out.append(a.lerp(b, float(j) / steps))
+				out.append(a.lerp(b, float(j + 1) / steps))
+	# Chevrons qui avancent dans le sens du coup.
+	var dir: Vector2
+	var reach: float
+	var wing: float
+	match kind:
+		"cone":
+			dir = Vector2.from_angle(forme["direction"])
+			reach = forme["rayon"]
+			wing = minf(18.0, reach * 0.12)
+		"ligne":
+			var v: Vector2 = forme["a"] - forme["de"]
+			dir = v.normalized()
+			reach = v.length()
+			wing = minf(18.0, forme["largeur"] * 0.35)
+		_:
+			# Cercle : quatre chevrons sur le bord, tournés vers l'extérieur (la zone éclate).
+			var r: float = forme["rayon"]
+			wing = minf(14.0, r * 0.18)
+			for i in 4:
+				var d := Vector2.from_angle(TAU * i / 4.0 + PI / 4.0)
+				_chevron(out, o + d * r * (0.62 + 0.18 * fposmod(t * 1.5, 1.0)), d, wing)
+			return
+	if reach <= 1.0:
+		return
+	for i in 3:
+		var u := fposmod(t * 1.2 + i / 3.0, 1.0)
+		_chevron(out, o + dir * reach * (0.15 + 0.75 * u), dir, wing)
+
+
+static func _chevron(out: PackedVector2Array, tip: Vector2, d: Vector2, wing: float) -> void:
+	var back := tip - d * wing * 0.8
+	var n := d.orthogonal() * wing
+	out.append_array([back + n, tip, tip, back - n])
 
 
 ## Hachures diagonales dans un polygone (zones de danger en mode daltonien ou contraste renforcé).

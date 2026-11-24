@@ -1,0 +1,59 @@
+{
+	"_doc": "Ressenti du combat (scripts/fx.gd) : arrêt sur image, secousse, recul, éclats et morts. Rien ici ne change la puissance : ce sont des réglages d'image. Durées en secondes réelles ; secousse de 0 à 1 (cumulée, plafonnée à 1) ; recul en part du rayon de l'ennemi. Les options du joueur (Settings.shake_strength, flash_strength, hitstop_strength) multiplient ces valeurs.",
+	"hitstop": {
+		"_doc": "Arrêt sur image : vitesse du jeu pendant l'arrêt, délai minimal entre deux arrêts. Un arrêt « fort » (au moins strong) passe outre le délai et prolonge l'arrêt en cours.",
+		"scale": 0.05,
+		"cooldown": 0.2,
+		"strong": 0.08,
+		"crit": 0.055,
+		"heavy": 0.035,
+		"boss_crit": 0.07,
+		"kill_small": 0.035,
+		"kill_big": 0.06,
+		"elite_kill": 0.11,
+		"boss_phase": 0.14,
+		"boss_kill": 0.32
+	},
+	"shake": {
+		"crit": 0.32,
+		"heavy": 0.16,
+		"boss_hit": 0.05,
+		"boss_crit": 0.24,
+		"kill_base": 0.1,
+		"kill_per_radius": 0.006,
+		"elite_kill": 0.45,
+		"boss_phase": 0.6,
+		"boss_kill": 1.0
+	},
+	"heavy": {
+		"_doc": "Un coup est « lourd » s'il retire au moins cette part de la vie maximale (ennemi) ou du boss.",
+		"enemy_frac": 0.4,
+		"boss_frac": 0.04
+	},
+	"recoil": {
+		"_doc": "Recul visible de la silhouette, à l'opposé du Porte-Graine (part du rayon), et durée de l'éclair du coup.",
+		"normal": 0.2,
+		"heavy": 0.34,
+		"crit": 0.42,
+		"elite": 0.6,
+		"flash": 0.08,
+		"flash_crit": 0.13
+	},
+	"sparks": {
+		"_doc": "Éclats à l'impact (nombre), et rayons de l'étoile d'un critique.",
+		"hit": 4,
+		"heavy": 6,
+		"crit": 9,
+		"boss_hit": 2,
+		"boss_crit": 12,
+		"crit_rays": 8,
+		"crit_star": 2.4
+	},
+	"death": {
+		"_doc": "Mort d'un Flétri : traits qui jaillissent, onde, et pour une élite un voile bref sur l'écran (alpha, multiplié par flash_strength).",
+		"streaks": 6,
+		"elite_streaks": 14,
+		"elite_flash": 0.22,
+		"boss_flash": 0.4
+	}
+}

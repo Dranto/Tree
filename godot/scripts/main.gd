@@ -923,9 +923,10 @@ func enemy_sound(e, key: String, fallback: String) -> String:
 
 func on_enemy_killed(e) -> void:
 	Game.kills += 1
-	Sfx.play(enemy_sound(e, "sound_death", "mort"), e.position)
 	# Une élite laisse une gerbe d'essences, et parfois une greffe (tâche B).
 	var is_elite: bool = e.get("elite") == true
+	# Une élite meurt avec un son à elle (s'il existe, sinon celui de sa sorte).
+	Sfx.play("mort_elite" if is_elite and Sfx.has_sound("mort_elite") else enemy_sound(e, "sound_death", "mort"), e.position)
 	var n_orbs := 6 if is_elite else 1
 	for i in n_orbs:
 		var o = Orb.new()
@@ -950,7 +951,7 @@ func on_enemy_killed(e) -> void:
 		if flower != Vector2.INF:
 			flora.add_flower(flower)
 		fx.ring(pos, r, r * 2.5, 0.35, Color(0.85, 0.95, 0.75, 0.8), 3.0)
-		fx.death(pos, r, col, ground.life_at(pos) > 0.45))
+		fx.death(pos, r, col, ground.life_at(pos) > 0.45, is_elite))
 	Game.fire("kill", enemy_ctx(e, 0.0))
 
 
