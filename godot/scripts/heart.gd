@@ -86,6 +86,9 @@ var spawned: Array = []
 var life_wave := -1.0
 var life_step := 0.0
 var t := 0.0
+## Temps depuis le dernier dessin (voir _process : redessiné 30 fois par seconde au plus pendant
+## le siège, 15 sinon, comme les autres objets animés, docs/performances.md).
+var _since_draw := 1.0
 ## Figé par les tests visuels : la logique ne tourne plus, l'état posé reste affiché.
 var frozen := false
 var rng := RandomNumberGenerator.new()
@@ -175,7 +178,11 @@ func _process(delta: float) -> void:
 	t += delta
 	# Rien à animer quand le Cœur est loin de l'écran (avec trois régions, deux Cœurs tombaient
 	# souvent à moins de 1600 px du joueur sans être visibles) : on regarde le cadre de la caméra.
+	_since_draw += delta
+	if _since_draw < (1.0 / 30.0 if state == "siege" else 1.0 / 15.0) - 0.001:
+		return
 	if not frozen and main.player.position.distance_squared_to(center) < 1600.0 * 1600.0 and _near_view():
+		_since_draw = 0.0
 		queue_redraw()
 		body.queue_redraw()
 

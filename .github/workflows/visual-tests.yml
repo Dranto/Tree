@@ -7,13 +7,19 @@ name: Tests visuels
 on:
   pull_request:
   push:
-    branches: [main, master, "claude/project-thread-9liy48"]
+    branches: [main, master, develop, "claude/project-thread-9liy48"]
   workflow_dispatch:
 
 jobs:
+  # Deux parts jouées en parallèle (tools/visual-tests.sh, SHARD=k/2) : chacune reste loin du
+  # plafond de 10 minutes. Le job « rapport » réunit ensuite les captures dans un seul rapport.
   visual:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
 
@@ -28,26 +34,61 @@ jobs:
           path: ~/.cache/godot
           key: godot-4.7-stable
 
-      - name: Comparer les captures
-        run: tools/visual-tests.sh
+      - name: Comparer les captures (part ${{ matrix.shard }} sur 2)
+        run: SHARD=${{ matrix.shard }}/2 tools/visual-tests.sh
 
       - name: Résumé du job
         if: always()
         run: |
           if [ -f godot/tests/visual/out/resume.md ]; then
             cat godot/tests/visual/out/resume.md >> "$GITHUB_STEP_SUMMARY"
-            echo "Le rapport HTML complet est dans l'artefact « tests-visuels » (rapport.html)." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Durée sous 6 minutes
+      # Le plafond vaut pour chaque part : 10 minutes, comme l'ancien job unique.
+      - name: Durée sous 10 minutes
         run: |
           total=$(awk '{s+=$3} END{print s}' godot/tests/visual/out/durees.txt)
-          echo "Durée des scénarios : ${total} s"
-          # 10 minutes : le jalon 10 ajoute les scénarios bord, menus et cumul (~520 s en tout en local, 24/11).
-          [ "$total" -le 600 ] || { echo "Plus de 10 minutes : alléger les scénarios"; exit 1; }
+          echo "Durée des scénarios de la part : ${total} s"
+          [ "$total" -le 600 ] || { echo "Plus de 10 minutes : alléger les scénarios ou ajouter une part"; exit 1; }
+
+      - name: Publier les captures de la part
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-visuels-part-${{ matrix.shard }}
+          path: godot/tests/visual/out/
+          if-no-files-found: ignore
+
+  # Un seul rapport (rapport.html, résumé) pour toutes les parts, avec les références.
+  rapport:
+    needs: visual
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Récupérer les parts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tests-visuels-part-*
+          path: parts
+
+      - name: Réunir les captures et refaire le rapport
+        run: |
+          out=godot/tests/visual/out
+          mkdir -p "$out"
+          for d in parts/*/; do
+            for f in results.txt audit.txt durees.txt; do
+              [ -f "$d$f" ] && cat "$d$f" >> "$out/$f"
+            done
+            find "$d" -maxdepth 1 -name '*.png' -exec cp {} "$out/" \;
+          done
+          tools/visual-tests.sh --report || true
+          cat "$out/resume.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "Le rapport HTML complet est dans l'artefact « tests-visuels » (rapport.html)." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publier les captures et le rapport
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tests-visuels
