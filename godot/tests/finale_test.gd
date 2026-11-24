@@ -211,7 +211,7 @@ func _run() -> void:
 
 	print("Sauvegarde")
 	var data: Dictionary = JSON.parse_string(JSON.stringify(save.capture(main)))
-	check(int(data["version"]) == 6, "format 6")
+	check(int(data["version"]) == save.VERSION, "format %d" % save.VERSION)
 	for k in ["finale_ouverte", "finale_vaincue", "fin_aventure_vue"]:
 		check(data["game"]["flags"].get(k, false) == true, "drapeau « %s » sauvegardé" % k)
 	# Une sauvegarde du format 4 qui avait vu l'ancienne fin (toutes les régions, texte de fin) :
@@ -222,7 +222,7 @@ func _run() -> void:
 		old["game"]["flags"][Regions.heart_flag(id)] = true
 		old["game"]["flags"][Regions.ending_flag(id)] = true
 	var migrated: Dictionary = save._migrate(old.duplicate(true))
-	check(int(migrated["version"]) == 6 and not migrated["game"]["flags"].has("fin_aventure_vue"), "format 4 → 6 : l'ancienne fin n'est plus « l'aventure finie »")
+	check(int(migrated["version"]) == save.VERSION and not migrated["game"]["flags"].has("fin_aventure_vue"), "format 4 → %d : l'ancienne fin n'est plus « l'aventure finie »" % save.VERSION)
 	save.apply(migrated, main)
 	await _steps(3)
 	check(finale.state == "ouverte" and game.flags.get("finale_ouverte", false), "la finale s'ouvre au chargement")

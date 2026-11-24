@@ -18,6 +18,7 @@ LIMIT="${LIMIT:-600}"   # secondes au plus par test
 
 # nom|options de Godot (avant -s)|arguments du test (après --)
 TESTS=(
+  "access|--headless|"
   "art|--headless|"
   "attack|--headless --fixed-fps 60|"
   "aube|--headless --fixed-fps 60|"
@@ -29,6 +30,7 @@ TESTS=(
   "draw_batch|--xvfb|"
   "enemies|--headless|"
   "falaises|--headless --fixed-fps 60|"
+  "feel|--headless|"
   "finale|--headless --fixed-fps 60|"
   "flow|--headless|"
   "foret|--headless --fixed-fps 60|"
