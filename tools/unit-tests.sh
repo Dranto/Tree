@@ -50,6 +50,7 @@ TESTS=(
   "skills|--headless|"
   "sound|--headless|"
   "spore|--headless --fixed-fps 60|"
+  "tree_originals|--headless|"
   "tree_ui|--xvfb --resolution 1600x900|"
   "vallee|--headless --fixed-fps 60|"
   "vent|--headless --fixed-fps 60|"

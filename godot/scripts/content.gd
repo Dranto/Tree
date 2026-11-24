@@ -255,6 +255,7 @@ static func validate(keystones_per_branch := -1) -> PackedStringArray:
 		var names: Array = notable.get("names", [])
 		if names.size() != 2 or names[0].is_empty() or names[1].is_empty():
 			errors.append(where + " : « notable.names » doit contenir deux listes de mots non vides")
+		_check_generated(b, where, errors)
 		var keystones: Array = b.get("keystones", [])
 		if keystones_per_branch >= 0 and keystones.size() != keystones_per_branch:
 			errors.append("%s : %d nœuds clés attendus, %d trouvés" % [where, keystones_per_branch, keystones.size()])
@@ -273,6 +274,65 @@ static func validate(keystones_per_branch := -1) -> PackedStringArray:
 		_check_clusters(b.get("clusters", []), where, seen_keys, errors)
 	_check_borders(ids, seen_keys, errors)
 	return errors
+
+
+## Nœuds originaux des parties générées d'une branche (skill_tree.gd, _enliven) : « small_more »
+## (statistiques de plus pour les petits nœuds), « originals » (notables ou nœuds d'attaque écrits à la
+## main, donnés à tour de rôle aux nœuds promus) et « mutations » (mutations générées).
+static func _check_generated(b: Dictionary, where: String, errors: PackedStringArray) -> void:
+	var more = b.get("small_more", [])
+	if not more is Array:
+		errors.append(where + " : « small_more » doit être une liste")
+	else:
+		for e in more:
+			if not (e is Dictionary and e.has("stat") and not e.has("if")):
+				errors.append(where + " : « small_more » n'accepte que des effets de statistique sans condition")
+		_check_effects(more, where + ", small_more", errors)
+	var originals = b.get("originals", [])
+	if not originals is Array:
+		errors.append(where + " : « originals » doit être une liste")
+		originals = []
+	for i in originals.size():
+		var o = originals[i]
+		var ow := "%s, originals[%d]" % [where, i]
+		if not o is Dictionary:
+			errors.append(ow + " : un original doit être un objet")
+			continue
+		var names = o.get("names", [])
+		if not (names is Array and not names.is_empty()):
+			errors.append(ow + " : « names » doit être une liste de noms non vide")
+		if not str(o.get("type", "notable")) in ["notable", "attack"]:
+			errors.append(ow + " : « type » vaut « notable » ou « attack »")
+		var effects = o.get("effects", [])
+		if not (effects is Array and not effects.is_empty()):
+			errors.append(ow + " : aucun effet")
+		else:
+			_check_effects(effects, ow, errors)
+	var muts = b.get("mutations", [])
+	if not muts is Array:
+		errors.append(where + " : « mutations » doit être une liste")
+		muts = []
+	for i in muts.size():
+		var m = muts[i]
+		var mw := "%s, mutations[%d]" % [where, i]
+		if not m is Dictionary:
+			errors.append(mw + " : une mutation doit être un objet")
+			continue
+		if not skills().has(str(m.get("mutates", ""))):
+			errors.append("%s : « mutates » vise une compétence inconnue « %s »" % [mw, m.get("mutates", "")])
+		var choices = m.get("choices", [])
+		if not (choices is Array and choices.size() >= 2):
+			errors.append(mw + " : au moins deux « choices »")
+			continue
+		var ids := {}
+		for ch in choices:
+			if not (ch is Dictionary and str(ch.get("id", "")) != "" and str(ch.get("name", "")) != ""):
+				errors.append(mw + " : chaque choix demande un « id » et un « name »")
+				continue
+			if ids.has(str(ch["id"])):
+				errors.append("%s : choix « %s » en double" % [mw, ch["id"]])
+			ids[str(ch["id"])] = true
+			_check_effects(ch.get("effects", []), "%s, choix « %s »" % [mw, ch["id"]], errors)
 
 
 ## Frontières hybrides (data/borders/<a>-<b>.json) : deux branches voisines seulement, une seule
