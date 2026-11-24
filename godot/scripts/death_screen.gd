@@ -58,13 +58,13 @@ func _ready() -> void:
 	kicker.text = "LA FLÉTRISSURE T'A RATTRAPÉ"
 	kicker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	kicker.add_theme_font_override("font", UiTheme.serif(500, 3))
-	kicker.add_theme_font_size_override("font_size", 15)
+	kicker.add_theme_font_size_override("font_size", UiTheme.fs(15))
 	kicker.add_theme_color_override("font_color", Color(UiTheme.RED, 0.85))
 	v.add_child(kicker)
 	_title = Label.new()
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title.add_theme_font_override("font", UiTheme.display(600, 1))
-	_title.add_theme_font_size_override("font_size", 66)
+	_title.add_theme_font_size_override("font_size", UiTheme.fs(66))
 	_title.add_theme_color_override("font_color", Color("ecc3b3"))
 	v.add_child(_title)
 	var divider := Control.new()
@@ -86,7 +86,7 @@ func _ready() -> void:
 	_pointer.draw.connect(_draw_pointer)
 	add_child(_pointer)
 	_pointer_label = Label.new()
-	_pointer_label.add_theme_font_size_override("font_size", 17)
+	_pointer_label.add_theme_font_size_override("font_size", UiTheme.fs(17))
 	_pointer_label.add_theme_color_override("font_color", UiTheme.GOLD)
 	_pointer.add_child(_pointer_label)
 	_veil.hide()
@@ -120,7 +120,7 @@ func show_death(info: Dictionary) -> void:
 		var l := Label.new()
 		l.text = line[0]
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.add_theme_font_size_override("font_size", 22)
+		l.add_theme_font_size_override("font_size", UiTheme.fs(22))
 		l.add_theme_color_override("font_color", line[1])
 		_lines.add_child(l)
 	time_left = DURATION

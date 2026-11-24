@@ -7,7 +7,8 @@ extends RefCounted
 
 ## Couleurs de la charte (art.gd).
 const INK: Color = Art.PALETTE["texte"]
-const SOFT: Color = Art.PALETTE["texte_doux"]
+## Encre secondaire : une variable (et non une constante) pour suivre le contraste renforcé.
+static var SOFT: Color = Art.PALETTE["texte_doux"]
 const LEAF: Color = Art.PALETTE["accent"]
 const GOLD: Color = Art.PALETTE["or"]
 const RED: Color = Art.PALETTE["encre_rouge"]
@@ -15,7 +16,7 @@ const PAPER: Color = Art.PALETTE["papier"]
 const PAPER_DARK: Color = Art.PALETTE["papier_sombre"]
 const PANEL_BG: Color = Art.PALETTE["panneau"]
 ## Filet d'or des cadres et des séparateurs.
-const FILET := Color(0.851, 0.71, 0.4, 0.45)
+static var FILET := Color(0.851, 0.71, 0.4, 0.45)
 ## Halo des textes posés sur le jeu (épaisseur en pixels, couleur) : voir draw_text().
 const OUTLINE := 5
 const HALO := Color(0.055, 0.04, 0.025, 0.88)
@@ -25,6 +26,13 @@ const FONT_SERIF := "res://assets/fonts/CormorantGaramond-Herbier.ttf"
 ## Graisses : texte courant en demi-gras (plus lisible en petit), « gras » franc, titres plus fins.
 const WEIGHT_REGULAR := 600
 const WEIGHT_BOLD := 700
+
+## Contraste renforcé (Settings.high_contrast) : encre secondaire presque pleine, filets marqués.
+const SOFT_NORMAL: Color = Art.PALETTE["texte_doux"]
+const SOFT_CONTRASTE := Color("d9cfb6")
+const FILET_NORMAL := Color(0.851, 0.71, 0.4, 0.45)
+const FILET_CONTRASTE := Color(0.851, 0.71, 0.4, 0.85)
+static var contraste := false
 
 static var _fonts := {}
 static var _installed := false
@@ -248,11 +256,27 @@ static func draw_paper(ci: CanvasItem, r: Rect2, grain := 2600) -> void:
 # Thème Godot.
 # ---------------------------------------------------------------------------------------------
 
+## Applique le contraste renforcé (appelé par Settings). Vaut pour les écrans construits ensuite.
+static func refresh_access(on: bool) -> void:
+	contraste = on
+	SOFT = SOFT_CONTRASTE if on else SOFT_NORMAL
+	FILET = FILET_CONTRASTE if on else FILET_NORMAL
+
+
+## Taille de texte mise à l'échelle choisie dans les options (Settings.text_scale).
+static func fs(size: int) -> int:
+	var k := 1.0
+	var settings = Engine.get_main_loop().root.get_node_or_null("Settings") if Engine.get_main_loop() is SceneTree else null
+	if settings != null:
+		k = settings.text_scale
+	return roundi(size * k)
+
+
 static func make() -> Theme:
 	install()
 	var t := Theme.new()
 	t.default_font = font()
-	t.default_font_size = 22
+	t.default_font_size = fs(22)
 	# Boutons ordinaires (panneaux de l'arbre, commandes) : papier et filet, or au survol.
 	t.set_color("font_color", "Button", INK)
 	t.set_color("font_hover_color", "Button", GOLD)

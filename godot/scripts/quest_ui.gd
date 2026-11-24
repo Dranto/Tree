@@ -77,21 +77,14 @@ func _exit_tree() -> void:
 
 
 func _setup_input() -> void:
-	# Touches logiques (J et M, quelle que soit la disposition du clavier).
-	for pair in [["toggle_journal", KEY_J], ["toggle_map", KEY_M]]:
-		if not InputMap.has_action(pair[0]):
-			InputMap.add_action(pair[0])
-			var ev := InputEventKey.new()
-			ev.keycode = pair[1]
-			InputMap.action_add_event(pair[0], ev)
+	# Journal et carte : réassignables, créés par settings.gd (J et M logiques par défaut).
+	Settings.apply_bindings()
 
 
 ## Nom de la touche d'une action, pour les textes d'aide.
 func key_name(action: String) -> String:
-	for ev in InputMap.action_get_events(action):
-		var k := ev as InputEventKey
-		if k:
-			return OS.get_keycode_string(k.keycode if k.keycode != KEY_NONE else k.physical_keycode)
+	if action in Settings.GAME_ACTIONS:
+		return Settings.action_key_name(action)
 	return "?"
 
 
