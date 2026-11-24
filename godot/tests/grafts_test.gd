@@ -214,8 +214,12 @@ func _run() -> void:
 
 	print("Cœur et boss")
 	before = game.points
+	var others: Array = main.region_hearts["ronce"].filter(func(h): return h != main.heart)
+	others[0].purify()
+	check(game.points == before, "un Cœur sur trois : pas encore de point")
+	game.flags[others[1].flag] = true
 	main.heart.purify()
-	check(game.points == before + 1, "Cœur purifié : +1 point")
+	check(game.points == before + 1, "les trois Cœurs purifiés : +1 point")
 	main.heart.state = "fletri"
 	main.heart.purify()
 	check(game.points == before + 1, "une seconde purification ne redonne rien")
@@ -239,7 +243,7 @@ func _run() -> void:
 	check(ground.size() == 2, "deux greffes au sol à sauvegarder")
 	check(save.save_now(main, PATH), "sauvegarde écrite")
 	var data = JSON.parse_string(FileAccess.get_file_as_string(PATH))
-	check(int(data["version"]) == 5 and data["tree"]["inventory"].size() == inv.size() and data["world"]["ground_grafts"].size() == 2, "format 5 : inventaire et greffes au sol")
+	check(int(data["version"]) == 6 and data["tree"]["inventory"].size() == inv.size() and data["world"]["ground_grafts"].size() == 2, "format 6 : inventaire et greffes au sol")
 	game.reset()
 	main.import_ground_grafts([])
 	await _steps(2)

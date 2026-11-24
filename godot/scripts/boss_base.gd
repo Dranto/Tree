@@ -113,7 +113,7 @@ func _init() -> void:
 func _ready() -> void:
 	anchor = position
 	# Le choix de difficulté des options (Facile / Normal / Difficile) vaut aussi pour les boss.
-	max_hp = (base_hp + hp_per_level * Game.level) * Difficulty.hp_mult()
+	max_hp = (base_hp + hp_per_level * Game.level) * Difficulty.boss_hp_factor(region) * Difficulty.hp_mult()
 	hp = max_hp
 	damage_scale = (1.0 + damage_per_level * (Game.level - 1)) * Difficulty.damage_mult()
 	xp_value = 40.0 + 12.0 * Game.level

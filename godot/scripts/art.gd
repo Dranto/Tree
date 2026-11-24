@@ -37,12 +37,16 @@ const PALETTE := {
 	# Ce qui s'utilise ou se ramasse : clair et chaud.
 	"interactif": Color("f4d9a0"),
 	"butin": Color("ffd84a"),
-	# Interface (mêmes valeurs que ui_theme.gd, qui les lit ici).
-	"texte": Color("e9e2c8"),
-	"texte_doux": Color("a9a38f"),
+	# Interface, direction « Herbier » (jalon 10) : encre ivoire, filets d'or, papier brun chaud.
+	# Mêmes valeurs que ui_theme.gd, qui les lit ici.
+	"texte": Color("efe6cf"),
+	"texte_doux": Color("a99c80"),
 	"accent": Color("7fd36b"),
-	"or": Color("f2d06b"),
-	"panneau": Color(0.06, 0.08, 0.07, 0.92),
+	"or": Color("d9b566"),
+	"encre_rouge": Color("d98a76"),
+	"papier": Color("221c15"),
+	"papier_sombre": Color("17130e"),
+	"panneau": Color(0.118, 0.098, 0.074, 0.95),
 	# Traits et ombres.
 	"contour": Color("140f0c"),
 	"ombre": Color(0.0, 0.0, 0.0, 0.35),
@@ -63,8 +67,8 @@ const GROUPES := [
 	["Flétris", ["ennemi", "ennemi_contour", "ennemi_oeil", "elite"]],
 	["Danger", ["danger", "danger_annonce", "danger_eclair"]],
 	["Utile", ["interactif", "butin"]],
-	["Interface", ["texte", "texte_doux", "accent", "or", "panneau"]],
-	["Traits", ["contour", "ombre"]],
+	["Interface", ["texte", "texte_doux", "accent", "or", "encre_rouge"]],
+	["Papier, traits", ["papier", "papier_sombre", "panneau", "contour", "ombre"]],
 ]
 
 # --- Éléments ---

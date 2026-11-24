@@ -43,8 +43,14 @@ var _hint_start = null
 var _labels := {}
 var _corner
 var _vital
+## Formes de l'attaque (principale et échos) et synergies actives, au-dessus de la vie.
+var _attack_strip
+## Synergies déjà annoncées (une annonce à chaque nouvelle synergie).
+var _synergies_seen = null
 var _banner: Label
 var _hint_box: VBoxContainer
+## Bande sombre derrière l'aide de départ (suit sa visibilité).
+var _hint_back: PanelContainer
 var _slots: Array = []
 ## Écran de mort et flèche vers la sève perdue (death_screen.gd).
 var death_screen
@@ -212,6 +218,12 @@ func _build_bottom_left() -> void:
 	_vital.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, MARGIN)
 	_vital.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(_vital)
+	_attack_strip = Widgets.AttackStrip.new()
+	_attack_strip.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, MARGIN)
+	_attack_strip.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_attack_strip.offset_bottom = -(MARGIN + _vital.custom_minimum_size.y + 10.0)
+	_attack_strip.offset_top = _attack_strip.offset_bottom - _attack_strip.custom_minimum_size.y
+	add_child(_attack_strip)
 
 
 func _build_bottom_center() -> void:
@@ -223,11 +235,21 @@ func _build_bottom_center() -> void:
 	v.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	v.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(v)
+	# Aide de départ : sur une bande de papier sombre, lisible sur n'importe quel sol.
+	var hint_back := PanelContainer.new()
+	hint_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var hb := UiTheme.box(Color(UiTheme.PAPER_DARK, 0.72), Color(0, 0, 0, 0), 0, 2)
+	hb.content_margin_top = 6
+	hb.content_margin_bottom = 6
+	hint_back.add_theme_stylebox_override("panel", hb)
+	hint_back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	v.add_child(hint_back)
+	_hint_back = hint_back
 	_hint_box = VBoxContainer.new()
 	_hint_box.add_theme_constant_override("separation", 4)
-	v.add_child(_hint_box)
+	hint_back.add_child(_hint_box)
 	for i in 3:
-		var l := _label(_hint_box, 16, Color(0.9, 0.95, 0.85))
+		var l := _label(_hint_box, 16, Color(0.963, 0.9, 0.756))
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -343,7 +365,7 @@ func _refresh() -> void:
 	var s: Dictionary = Game.stats
 	var p = main.player
 	var hp_ratio: float = clampf(p.hp / s["max_hp"], 0.0, 1.0)
-	_vital.set_value(hp_ratio, "%d / %d" % [roundi(p.hp), roundi(s["max_hp"])])
+	_vital.set_value(hp_ratio, "%d / %d" % [roundi(p.hp), roundi(s["max_hp"])], p.heal_block > 0.0)
 	var revived := minf(1.0, main.ground.ratio() / REVIVABLE)
 	_corner.set_values(Game.level, clampf(Game.xp / Game.xp_to_next(), 0.0, 1.0), Game.points, key_label("toggle_tree"), revived, Game.kills)
 
@@ -365,6 +387,8 @@ func _refresh() -> void:
 			slot.name_label.text = _cached("short:" + id, func(): return Content.skills()[id].get("short", id))
 			slot.apply(Widgets.Slot.SKILL, id, cd / maxcd if cd > 0.0 else 0.0, cd, _cached("slot_keys:%d" % i, slot_keys_text.bind(i)), _cached("slot_tip:%d:%s" % [i, id], _skill_tip.bind(i, id)))
 
+	_refresh_attack()
+
 	if _banner.text != banner_text:
 		_banner.text = banner_text
 		var w := _banner.get_minimum_size().x
@@ -379,6 +403,8 @@ func _refresh() -> void:
 	var show_hint := hint_time > 0.0 and Settings.show_hints and not in_boss_fight()
 	_hint_box.modulate.a = clampf(hint_time / 2.0, 0.0, 1.0) if show_hint else 0.0
 	_hint_box.visible = show_hint
+	_hint_back.modulate.a = _hint_box.modulate.a
+	_hint_back.visible = show_hint
 	if not show_hint:
 		return
 	var lines := [
@@ -388,6 +414,25 @@ func _refresh() -> void:
 	]
 	for i in 3:
 		(_hint_box.get_child(i) as Label).text = lines[i]
+
+
+## Formes de l'attaque et synergies : le bandeau au-dessus de la vie, et une annonce pour chaque
+## nouvelle synergie (pas pour celles déjà là au chargement d'une partie).
+func _refresh_attack() -> void:
+	var st: Dictionary = Game.attack()
+	var forms: Array = [st["form"]] + st.get("echoes", [])
+	var syn: Array = st.get("synergies", [])
+	if forms != _attack_strip.forms_shown or syn != _attack_strip.synergies_shown:
+		_attack_strip.set_attack(forms, syn, "\n".join(Attack.describe(st)))
+		_attack_strip.offset_top = _attack_strip.offset_bottom - _attack_strip.custom_minimum_size.y
+		_attack_strip.offset_right = _attack_strip.offset_left + _attack_strip.custom_minimum_size.x
+	if _synergies_seen == null:
+		_synergies_seen = syn.duplicate()
+		return
+	for sid in syn:
+		if not sid in _synergies_seen:
+			banner("Synergie : %s (%s)" % [Attack.synergy(sid).get("name", sid), Attack.synergy_needs(sid)])
+	_synergies_seen = syn.duplicate()
 
 
 ## Textes de l'interface qui ne dépendent que des réglages (touches, noms) : calculés une fois, puis

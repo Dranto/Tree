@@ -143,7 +143,7 @@ func light() -> void:
 ## Le joueur se repose ici : toute sa vie, et il renaîtra ici.
 func rest(just_lit: bool) -> void:
 	var p = main.player
-	p.heal(Game.stats["max_hp"])
+	p.heal(Game.stats["max_hp"], true)
 	var before := str(Game.flags.get("renaissance", "graine"))
 	Game.flags["renaissance"] = id
 	if just_lit:

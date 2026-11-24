@@ -192,7 +192,7 @@ func _run() -> void:
 		if not paused:
 			t += DT
 		_track()
-		if main.quest_ui.ending.active:
+		if main.quest_ui.fanfare.active:
 			await _ending()
 			continue
 		var epi = main.quest_ui.get("epilogue")
@@ -423,21 +423,21 @@ func _epilogue(epi) -> void:
 ## Séquence « région purifiée » : la regarder, puis « Continuer à jouer ».
 func _ending() -> void:
 	var q = main.quest_ui
-	check(not main.hud.get_parent().visible and not q._tracker_layer.visible, "fin de région : rien de l'interface de jeu par-dessus")
-	check(paused, "fin de région : jeu en pause")
+	var reg: String = q.fanfare.region
+	check(not paused and main.hud.get_parent().visible, "célébration : sans pause, l'interface de jeu reste là")
+	check(game.flags.get(reg + "_fin_vue", false), "célébration : notée comme vue dès le début")
+	check(not q._tracker_layer.visible, "célébration : le cadre d'objectif s'efface le temps de la célébration")
+	# Une greffe ramassée pendant la célébration n'est pas perdue.
 	for g in main.orbs_layer.get_children():
 		if _is_graft(g) and not g.is_queued_for_deletion():
 			var id: String = g.graft_id
 			g.pick_up()
-			check(game.has_graft(id), "greffe ramassée pendant la fin : dans l'inventaire")
-	q.ending.set_time(30.0)
-	q.ending._on_continue()
+			check(game.has_graft(id), "greffe ramassée pendant la célébration : dans l'inventaire")
+	q.fanfare.set_time(q.fanfare.duration)
 	await _frames(2)
-	check(not paused and main.hud.get_parent().visible and q._tracker_layer.visible, "« Continuer à jouer » : l'interface revient")
+	check(not q.fanfare.active and q._tracker_layer.visible, "fin de la célébration : le cadre d'objectif revient")
 	pending_reload = "après la fin de région"
 
-
-# --- Sauvegarde et reprise ---
 
 func _snapshot() -> Dictionary:
 	return {
@@ -538,12 +538,14 @@ func _coherence(where: String) -> void:
 		if obj.condition_met(o) and not obj.is_done(o["id"]):
 			problems.append("« %s » rempli mais pas accompli" % o["id"])
 	for id in Regions.ids():
-		var heart = main.hearts[id]
 		var arena = main.arenas[id]
 		var purified: bool = game.flags.get(Regions.heart_flag(id), false)
 		var beaten: bool = game.flags.get(Regions.boss_flag(id), false)
-		if purified != (heart.state == "purifie"):
-			problems.append("%s : Cœur %s, drapeau %s" % [id, heart.state, purified])
+		for heart in main.region_hearts[id]:
+			if heart.flag_set() != (heart.state == "purifie"):
+				problems.append("%s : Cœur %d %s, drapeau %s" % [id, heart.index + 1, heart.state, heart.flag_set()])
+		if purified != (Regions.hearts_done(id, game.flags) == Regions.heart_count(id)):
+			problems.append("%s : drapeau de la région %s, %d Cœurs purifiés" % [id, purified, Regions.hearts_done(id, game.flags)])
 		if beaten and arena.state != "vaincue":
 			problems.append("%s : arène %s, boss vaincu" % [id, arena.state])
 		if not beaten and purified and not arena.state in ["ouverte", "combat"]:

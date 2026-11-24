@@ -2,7 +2,7 @@
 ##
 ## Format : un fichier JSON lisible dans user://saves/, versionné.
 ## {
-##   "format": "seve-save", "version": 5, "saved_at": <unix>,
+##   "format": "seve-save", "version": 6, "saved_at": <unix>,
 ##   "game":  {"level", "xp", "points", "kills", "flags"},
 ##   "tree":  {"allocated": [uid, …],            # identifiants stables, pas des index
 ##             "choices": {uid: choix},          # maîtrises et mutations (depuis la version 2)
@@ -25,8 +25,10 @@
 ## L'écriture passe par un fichier temporaire, et la sauvegarde précédente est gardée en .bak.
 extends Node
 
+const Regions = preload("res://scripts/regions.gd")
+
 const FORMAT := "seve-save"
-const VERSION := 5
+const VERSION := 6
 const DEFAULT_PATH := "user://saves/partie.json"
 
 ## Dernière erreur de chargement, lisible (vide si tout va bien).
@@ -252,6 +254,24 @@ func _migrate(data: Dictionary) -> Dictionary:
 		if not f.get("finale_vaincue", false):
 			f.erase("fin_aventure_vue")
 		data["version"] = 5
+	# Version 6 (jalon 10, trois Cœurs par région) : chaque Cœur a son drapeau
+	# (« <région>_coeur<n>_purifie »). Une région dont le Cœur était purifié en version 5 a tous ses
+	# Cœurs purifiés : son arène était ouverte (ou son boss vaincu), elle le reste, et sa récompense
+	# déjà donnée ne l'est pas une seconde fois (« points_<région>_coeur » est gardé).
+	if int(data["version"]) == 5:
+		if not data.get("game") is Dictionary:
+			data["game"] = {}
+		if not data["game"].get("flags") is Dictionary:
+			data["game"]["flags"] = {}
+		var f: Dictionary = data["game"]["flags"]
+		for key in f.keys():
+			var k := str(key)
+			if k.ends_with("_coeur_purifie") and bool(f[key]):
+				var reg := k.trim_suffix("_coeur_purifie")
+				var n := Regions.heart_count(reg) if Regions.exists(reg) else 1
+				for i in n:
+					f[Regions.heart_part_flag(reg, i)] = true
+		data["version"] = 6
 	return data
 
 

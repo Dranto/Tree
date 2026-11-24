@@ -1,9 +1,12 @@
-## Cœur de flétrissure d'une région (un par région, posé par main.gd) : une structure qui fait
-## naître des Flétris tant qu'elle vit. Pour la purifier, le Porte-Graine tient la zone qui l'entoure
-## pendant hold_time secondes, sous des vagues d'ennemis. La purification pose
-## Game.flags["<région>_coeur_purifie"], lance une grande vague de vie et ouvre l'arène du boss de la
-## région (boss_arena.gd). Ses réglages (zone, durée, vagues, textes) sont lus dans la section
-## « heart » de data/regions/<région>.json ; sans elle, ceux du Cœur de Ronce.
+## Cœur de flétrissure d'une région (trois par région depuis le jalon 10, posés par main.gd aux
+## emplacements « heart › spots » du fichier de la région, voir Regions.heart_spots) : une structure
+## qui fait naître des Flétris tant qu'elle vit. Pour la purifier, le Porte-Graine tient la zone qui
+## l'entoure pendant hold_time secondes, sous des vagues d'ennemis. La purification pose son drapeau
+## (« <région>_coeur<n>_purifie », Regions.heart_part_flag) et lance une vague de vie ; avec le
+## dernier Cœur de la région, le drapeau de la région (« <région>_coeur_purifie ») est posé et
+## l'arène du boss s'ouvre (boss_arena.gd). Les réglages (zone, durée, vagues, textes) sont lus dans
+## la section « heart » de data/regions/<région>.json ; un emplacement peut changer la zone, la durée,
+## la vague de vie et la taille du Cœur. Sans section, ceux du Cœur de Ronce.
 ##
 ## Ce nœud est au niveau du sol (sous les personnages) : il dessine la zone à tenir. Le Cœur
 ## lui-même (Body) est rangé dans le calque trié en profondeur, avec les arbres et les personnages.
@@ -21,7 +24,7 @@ const EnemyScript = preload("res://scripts/enemy.gd")
 const FALLBACK_CENTER := Vector2(750.0, -1299.0)
 ## Hors de la zone, l'avancée retombe lentement (jamais d'un coup, même après une mort).
 const DECAY := 0.5
-## Rayon du Cœur lui-même (obstacle).
+## Rayon du Grand Cœur lui-même (obstacle) ; les autres Cœurs de la région sont plus petits (« size »).
 const BODY_RADIUS := 44.0
 ## Le Cœur ne s'anime et ne fait naître des Flétris que si le joueur est à moins de WAKE.
 const WAKE := 800.0
@@ -31,7 +34,17 @@ const LIFE_TIME := 2.2
 var main
 ## Région du Cœur (data/regions/<région>.json) et son drapeau de purification.
 var region := "ronce"
-var flag := "ronce_coeur_purifie"
+## Rang du Cœur dans sa région (0, 1, 2), nombre de Cœurs de la région, et son drapeau à lui
+## (« ronce_coeur1_purifie »). Le drapeau de la région (region_flag) ouvre l'arène.
+var index := 0
+var count := 1
+var flag := "ronce_coeur1_purifie"
+var region_flag := "ronce_coeur_purifie"
+## Le Grand Cœur, au centre de la région et au pied de l'arène (Regions.heart_spots › great).
+var great := true
+## Taille du Cœur (1 pour le Grand Cœur) et rayon de son obstacle.
+var size := 1.0
+var body_radius := BODY_RADIUS
 var title := "Cœur de flétrissure"
 ## Rayon de la zone à tenir, et durée à y passer.
 var zone := 240.0
@@ -55,7 +68,11 @@ var life_radius := 820.0
 var life_color := Color.WHITE
 var wake_banner := "Le Cœur de flétrissure s'éveille : tiens la zone !"
 var purified_banner := "Le Cœur est purifié : l'arène s'ouvre."
+## Annonce d'un Cœur purifié quand d'autres restent (« part_banner » : %d purifiés, %d en tout).
+var part_banner := "Cœur purifié : %d / %d. L'arène s'ouvrira quand tous les Cœurs seront purifiés."
 var center := FALLBACK_CENTER
+## Emplacement lu dans le fichier de la région (sans scène de jeu : celui du centre).
+var _spot := {}
 ## "fletri" (en sommeil), "siege" (zone tenue, vagues) ou "purifie".
 var state := "fletri"
 ## Secondes passées à tenir la zone (0 à hold_time).
@@ -89,11 +106,23 @@ class Body extends Node2D:
 ## Lit les réglages du Cœur dans le fichier de la région (appelé par _ready).
 func configure(id: String) -> void:
 	region = id
-	flag = Regions.heart_flag(id)
+	region_flag = Regions.heart_flag(id)
+	var spots: Array = Regions.heart_spots(id) if Regions.exists(id) else []
+	count = maxi(1, spots.size())
+	index = clampi(index, 0, count - 1)
+	flag = Regions.heart_part_flag(id, index)
 	var h := Regions.section(id, "heart")
 	title = str(h.get("name", title))
 	zone = float(h.get("zone", zone))
 	hold_time = float(h.get("hold_time", hold_time))
+	if not spots.is_empty():
+		_spot = spots[index]
+		title = str(_spot["name"])
+		zone = float(_spot["zone"])
+		hold_time = float(_spot["hold_time"])
+		size = float(_spot["size"])
+		great = bool(_spot["great"])
+	body_radius = BODY_RADIUS * size
 	var w: Dictionary = h.get("waves", {})
 	wave_every = float(w.get("every", wave_every))
 	wave_base = int(w.get("base", wave_base))
@@ -106,18 +135,21 @@ func configure(id: String) -> void:
 	spawn_every = float(idle.get("every", spawn_every))
 	idle_max = int(idle.get("max", idle_max))
 	idle_kind = str(idle.get("kind", idle_kind))
-	life_radius = float(h.get("life_radius", life_radius))
+	life_radius = float(_spot.get("life_radius", h.get("life_radius", life_radius)))
 	life_color = Regions.color(h.get("life_color", "saignement/clair"))
 	wake_banner = str(h.get("wake_banner", wake_banner))
 	purified_banner = str(h.get("purified_banner", purified_banner))
+	part_banner = str(h.get("part_banner", part_banner))
 
 
 func _ready() -> void:
 	configure(region)
-	if main.has_method("region_center"):
+	if not _spot.is_empty():
+		center = _spot["pos"]
+	elif main.has_method("region_center"):
 		center = main.region_center(region)
-	# Tirage propre à chaque Cœur (celui de la première région garde l'ancien).
-	Game.seed_rng(rng, 3 + 10 * maxi(0, Regions.ids().find(region)))
+	# Tirage propre à chaque Cœur (le Grand Cœur de chaque région garde l'ancien).
+	Game.seed_rng(rng, 3 + 10 * maxi(0, Regions.ids().find(region)) + (0 if great else 100 * (index + 1)))
 	var shape := RandomNumberGenerator.new()
 	shape.seed = 41
 	for i in 11:
@@ -132,6 +164,11 @@ func _ready() -> void:
 
 func is_purified() -> bool:
 	return state == "purifie"
+
+
+## Le drapeau du Cœur ou celui de la région (qui vaut pour tous ses Cœurs) est posé.
+func flag_set() -> bool:
+	return bool(Game.flags.get(flag, false)) or bool(Game.flags.get(region_flag, false))
 
 
 func _process(delta: float) -> void:
@@ -156,7 +193,7 @@ func _physics_process(delta: float) -> void:
 	if frozen:
 		return
 	# Le drapeau fait foi : une partie chargée retrouve le Cœur déjà purifié.
-	if Game.flags.get(flag, false) and state != "purifie":
+	if flag_set() and state != "purifie":
 		_set_purified(false)
 	if state == "purifie":
 		_life_wave_step(delta)
@@ -166,8 +203,8 @@ func _physics_process(delta: float) -> void:
 	var p = main.player
 	var to: Vector2 = p.position - center
 	var d := to.length()
-	if d < BODY_RADIUS + p.radius and d > 0.01:
-		p.position = center + to / d * (BODY_RADIUS + p.radius)
+	if d < body_radius + p.radius and d > 0.01:
+		p.position = center + to / d * (body_radius + p.radius)
 	spawned = spawned.filter(func(e): return is_instance_valid(e) and not e.dead and not e.is_queued_for_deletion())
 	if d < zone:
 		if state == "fletri":
@@ -195,7 +232,7 @@ func _physics_process(delta: float) -> void:
 			if spawn_timer <= 0.0:
 				spawn_timer = spawn_every
 				if spawned.size() < idle_max:
-					_spawn(center + Vector2.from_angle(rng.randf() * TAU) * (BODY_RADIUS + 30.0), idle_kind)
+					_spawn(center + Vector2.from_angle(rng.randf() * TAU) * (body_radius + 30.0), idle_kind)
 
 
 ## Le joueur est mort pendant le siège : le Cœur se rendort, tout est à recommencer.
@@ -229,7 +266,7 @@ func _spawn_wave() -> void:
 			kind = big_kind
 		var a := base + rng.randf_range(-0.7, 0.7)
 		_spawn(center + Vector2.from_angle(a) * rng.randf_range(zone + 190.0, zone + 300.0), kind)
-	main.fx.ring(center, BODY_RADIUS, zone, 0.5, Color(Art.ec("cendre"), 0.7), 4.0)
+	main.fx.ring(center, body_radius, zone, 0.5, Color(Art.ec("cendre"), 0.7), 4.0)
 	wave_index += 1
 
 
@@ -238,18 +275,25 @@ func _spawn(pos: Vector2, kind: String) -> void:
 	spawned.append(e)
 
 
-## Purifie le Cœur : drapeau, vague de vie, ennemis proches purifiés, arène ouverte.
+## Purifie le Cœur : drapeau, vague de vie, ennemis proches purifiés. Le dernier Cœur de la région
+## pose le drapeau de la région, donne sa récompense et ouvre l'arène.
 func purify() -> void:
 	if state == "purifie":
 		return
 	Game.flags[flag] = true
 	_set_purified(true)
 	Sfx.play("coeur", center)
-	main.hud.banner(purified_banner)
-	var reward: Dictionary = Content.rewards().get("coeur", {}).get(region, {})
-	Game.grant_points(int(reward.get("points", 1)), "coeur", region + "_coeur")
+	var done := Regions.hearts_done(region, Game.flags) if Regions.exists(region) else count
+	if done >= count:
+		Game.flags[region_flag] = true
+		main.hud.banner(purified_banner)
+		# Récompense de la région (« heart › reward ») : une fois, avec le dernier Cœur.
+		var reward: Dictionary = Content.rewards().get("coeur", {}).get(region, {})
+		Game.grant_points(int(reward.get("points", 1)), "coeur", region + "_coeur")
+	else:
+		main.hud.banner(part_banner % [done, count] if part_banner.count("%d") == 2 else part_banner)
 	for i in 3:
-		main.fx.ring(center, BODY_RADIUS, life_radius * (0.4 + 0.3 * i), 0.9 + 0.5 * i, Color(Art.ec("seve"), 0.9), 6.0)
+		main.fx.ring(center, body_radius, life_radius * (0.4 + 0.3 * i), 0.9 + 0.5 * i, Color(Art.ec("seve"), 0.9), 6.0)
 	for e in main.enemies_near(center, zone + 420.0):
 		e.take_damage(e.hp + 1.0, false)
 	main.request_autosave()
@@ -302,7 +346,7 @@ func _draw() -> void:
 		var pts := PackedVector2Array()
 		for i in 7:
 			var u := i / 6.0
-			pts.append(center + Vector2.from_angle(a + v[2] * u * u) * lerpf(BODY_RADIUS * 0.6, zone * v[1], u))
+			pts.append(center + Vector2.from_angle(a + v[2] * u * u) * lerpf(body_radius * 0.6, zone * v[1], u))
 		# La vie remonte les veines depuis le bord à mesure que la zone est tenue.
 		draw_polyline(pts, Color(Art.c("ennemi").darkened(0.45), 0.7).lerp(Color(Art.c("decor_vivant"), 0.7), k), 5.0, true)
 		var glow := braise.lerp(seve, k)
@@ -328,10 +372,10 @@ func _draw() -> void:
 func draw_body(c: CanvasItem) -> void:
 	var art: GDScript = Regions.art(region) if Regions.exists(region) else load(Regions.BASE_ART)
 	# Dessiné un peu plus grand que son obstacle : on le repère de loin.
-	var r := BODY_RADIUS * 1.25 * pulse()
+	var r := body_radius * 1.25 * pulse()
 	var lift := Vector2(0, -r * 0.6)
 	if state == "purifie":
-		art.draw_heart_purified(c, self, lift, BODY_RADIUS * 1.3)
+		art.draw_heart_purified(c, self, lift, body_radius * 1.3)
 	else:
 		art.draw_heart(c, self, lift, r)
 

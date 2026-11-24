@@ -27,6 +27,7 @@ const TreeArt = preload("res://scripts/tree_art.gd")
 
 const Effects = preload("res://scripts/effects.gd")
 const Content = preload("res://scripts/content.gd")
+const AttackScript = preload("res://scripts/attack.gd")
 
 const RADIUS := {
 	"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0,
@@ -42,7 +43,7 @@ const ASH := Color(0.56, 0.55, 0.52)
 const ASH_DARK := Color(0.17, 0.17, 0.165)
 const LOCK_COLOR := Color("e0675e")
 
-const BG := Color(0.03, 0.045, 0.04)
+const BG := Color(0.041, 0.0383, 0.0322)
 const HEADER_H := 64.0
 ## Hauteur de la barre d'outils sous l'en-tête (recherche, plan, résumé : tree_panels.gd),
 ## que l'arbre cadré et ses libellés ne doivent pas recouvrir.
@@ -71,7 +72,7 @@ const MIN_SCREEN_RADIUS := {
 ## Taille des textes (pixels à l'écran, quel que soit le zoom).
 const FONT_BRANCH := 30
 const FONT_KEYSTONE := 15
-const FONT_NOTABLE := 13
+const FONT_NOTABLE := 14
 const FONT_ROOT := 15
 const TOOLTIP_MAX_W := 380.0
 ## Largeur de la colonne du médaillon, à gauche du nom dans l'infobulle.
@@ -180,6 +181,7 @@ const CACHE_PAD := 0.1
 const CACHE_SETTLE := 0.12
 const CACHE_RATIO := Vector2(0.75, 1.45)
 const CACHE_GAP := 0.2
+const CACHE_JUMP := Vector2(0.55, 1.8)
 const CACHE_AHEAD := 0.7
 var _cache_time := -INF
 var _cache_vp: SubViewport
@@ -421,7 +423,8 @@ func _view_changed(zoom_changed: bool) -> void:
 		return
 	_idle = 0.0
 	var s := _open_scale()
-	_world.position = view_center() - cam * zoom * s
+	_update_snap()
+	_world.position = view_center() - cam * zoom * s + _snap
 	_world.scale = Vector2(zoom, zoom) * s
 	# La couche fixe n'est pas redessinée ici : _process décide quand refaire son image.
 	if zoom_changed:
@@ -448,7 +451,8 @@ func _process(delta: float) -> void:
 	if _open < 1.0:
 		_open = minf(_open + delta / OPEN_DUR, 1.0)
 		var s := _open_scale()
-		_world.position = view_center() - cam * zoom * s
+		_update_snap()
+		_world.position = view_center() - cam * zoom * s + _snap
 		_world.scale = Vector2(zoom, zoom) * s
 		_view.queue_redraw()
 		_labels.modulate.a = Anim.ease_out(_open)
@@ -488,11 +492,11 @@ func lod_for(z: float) -> int:
 
 
 func to_tree(p: Vector2) -> Vector2:
-	return (p - view_center()) / zoom + cam
+	return (p - view_center() - _snap) / zoom + cam
 
 
 func to_screen(p: Vector2) -> Vector2:
-	return (p - cam) * zoom + view_center()
+	return (p - cam) * zoom + view_center() + _snap
 
 
 ## Centre de la zone de l'arbre (sous l'en-tête et la barre d'outils) : là où se place la caméra.
@@ -794,7 +798,7 @@ func open_choice(id: int) -> void:
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sub.custom_minimum_size = Vector2(560, 0)
 	sub.add_theme_font_size_override("font_size", 15)
-	sub.add_theme_color_override("font_color", Color(0.7, 0.78, 0.72))
+	sub.add_theme_color_override("font_color", Color(0.785, 0.733, 0.616))
 	box.add_child(sub)
 	var first: Button = null
 	for i in n["choices"].size():
@@ -940,6 +944,8 @@ func _draw_world(c: CanvasItem) -> void:
 	var area: Rect2 = _rec["area"]
 	var keep := area.grow(80.0 / z + 40.0)
 	_backdrop_quad.queue_redraw()
+	# Marges : brume, cernes, radicelles et spores au-delà de l'arbre (seulement si l'écran y atteint).
+	TreeArt.margin(c, _extent(), _branch_colors(), area, z)
 
 	var batches := _link_batches(level, z)
 	TreeArt.flush(c, batches[0])
@@ -1082,7 +1088,7 @@ func draw_node(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w
 		var crown := shape_points(kind, p, r * 1.28)
 		crown.append(crown[0])
 		c.draw_polyline(crown, Color(col, 0.55 if st != "locked" else 0.22), maxf(1.5, w))
-	var ic := Color(0.06, 0.08, 0.07, 0.9) if st == "owned" else Color(col.r, col.g, col.b, 0.9 if st == "available" else 0.55)
+	var ic := Color(UiTheme.PAPER, 0.9) if st == "owned" else Color(col.r, col.g, col.b, 0.9 if st == "available" else 0.55)
 	match kind:
 		"notable", "keystone", "skill", "attack":
 			if level == LOD_CLOSE:
@@ -1260,7 +1266,10 @@ func _update_cache() -> void:
 	var k := zoom / _cache_zoom
 	var covered := _cache_rect().encloses(Rect2(Vector2.ZERO, size))
 	# Pendant le mouvement, au plus une image refaite tous les CACHE_GAP s.
-	var rushed := (not covered or k < CACHE_RATIO.x or k > CACHE_RATIO.y) and t - _cache_time >= CACHE_GAP
+	# Un saut de zoom (bouton « Vue d'ensemble », recherche) ne doit pas laisser une image périmée
+	# (un rectangle aux bords durs dans le vide) : on la refait tout de suite.
+	var jump := k < CACHE_JUMP.x or k > CACHE_JUMP.y
+	var rushed := (not covered or k < CACHE_RATIO.x or k > CACHE_RATIO.y) and (jump or t - _cache_time >= CACHE_GAP)
 	if rushed:
 		# En dézoomant, l'image est faite un peu plus loin que la vue : elle couvre l'écran plus longtemps.
 		_render_cache(zoom * (CACHE_AHEAD if k < 1.0 else 1.0))
@@ -1288,7 +1297,13 @@ func _flush_once() -> void:
 		_cache_zoom = _cache_next["zoom"]
 		_cache_cam = _cache_next["cam"]
 		_cache_next = {}
+		_update_snap()
+		var os := _open_scale()
+		_world.position = view_center() - cam * zoom * os + _snap
 		_view.queue_redraw()
+		_anim.queue_redraw()
+		_life.queue_redraw()
+		_labels.queue_redraw()
 
 
 func _render_cache(rz := -1.0) -> void:
@@ -1357,16 +1372,34 @@ func _draw_backdrop_quad(c: CanvasItem) -> void:
 	c.draw_texture_rect(_backdrop_vp.get_texture(), sq, false)
 
 
-func _draw_backdrop(c: CanvasItem) -> void:
-	var tree = Game.tree
-	var br := _backdrop_radius()
-	c.draw_rect(Rect2(-br, -br, 2.0 * br, 2.0 * br), BG)
+func _branch_colors() -> Array:
 	var colors: Array = []
 	for bi in SkillTree.BRANCHES.size():
-		colors.append(tree.branch_color(bi))
+		colors.append(Game.tree.branch_color(bi))
+	return colors
+
+
+func _draw_backdrop(c: CanvasItem) -> void:
+	var br := _backdrop_radius()
+	c.draw_rect(Rect2(-br, -br, 2.0 * br, 2.0 * br), BG)
+	var colors: Array = _branch_colors()
 	var z := _backdrop.scale.x
 	TreeArt.background(c, _extent(), colors, _rings, z)
 	TreeArt.silhouette(c, _extent(), colors, _branch_sap, z)
+
+
+## Décalage (moins d'un pixel) qui pose l'image de la couche fixe sur la grille des pixels réels.
+## Les couches vivantes (_world) et les libellés le reprennent : sinon, pendant un déplacement,
+## les halos et les libellés bougeraient d'un demi-pixel par rapport aux nœuds de l'image.
+var _snap := Vector2.ZERO
+
+
+func _update_snap() -> void:
+	var rect := _cache_rect()
+	if _cache_ok and absf(rect.size.x - _cache_logical.x) < 0.01:
+		_snap = (rect.position * _cache_px).round() / _cache_px - rect.position
+	else:
+		_snap = Vector2.ZERO
 
 
 ## Où l'image de la couche fixe se pose à l'écran pour la vue actuelle (avec l'agrandissement
@@ -1581,13 +1614,13 @@ func layout_labels() -> Array:
 				continue
 			placed.append(rect)
 			var st: String = _states.get(n["id"], "locked")
-			var col := Color(0.85, 0.9, 0.85, 0.75)
+			var col := Color(0.927, 0.867, 0.728, 0.75)
 			if n["type"] == "root":
 				col = UiTheme.GOLD
 			elif st == "owned":
 				col = Color(1, 1, 1, 0.95)
 			elif not n["type"] in ["keystone", "skill"]:
-				col = Color(0.8, 0.85, 0.8, 0.7)
+				col = Color(0.874, 0.817, 0.686, 0.7)
 			out.append([rect, n["name"], fs, col])
 			break
 	return out
@@ -1605,6 +1638,8 @@ func _draw_labels(c: CanvasItem) -> void:
 	for l in layout_labels():
 		var rect: Rect2 = l[0]
 		var base := Vector2(rect.position.x, rect.position.y + font.get_ascent(l[2]))
+		# Fond léger : le texte reste lisible sur les liens et les nœuds qu'il croise.
+		c.draw_rect(rect.grow(2.0), Color(BG, 0.55))
 		c.draw_string_outline(font, base, l[1], HORIZONTAL_ALIGNMENT_LEFT, -1, l[2], maxi(3, int(l[2] / 4.0)), Color(BG, 0.9))
 		c.draw_string(font, base, l[1], HORIZONTAL_ALIGNMENT_LEFT, -1, l[2], l[3])
 		label_rects.append(rect)
@@ -1616,18 +1651,18 @@ func _draw_labels(c: CanvasItem) -> void:
 func _draw_overlay(c: CanvasItem) -> void:
 	var tree = Game.tree
 	# En-tête, puis bandeau des outils : l'arbre commence sous eux, rien ne se dessine dessous.
-	c.draw_rect(Rect2(0, 0, size.x, HEADER_H), Color(0.05, 0.07, 0.06))
-	c.draw_rect(Rect2(0, HEADER_H, size.x, TOOLBAR_H), Color(0.04, 0.055, 0.048))
-	c.draw_line(Vector2(0, HEADER_H), Vector2(size.x, HEADER_H), Color(0.6, 0.8, 0.6, 0.12), 1.0)
-	c.draw_line(Vector2(0, HEADER_H + TOOLBAR_H), Vector2(size.x, HEADER_H + TOOLBAR_H), Color(0.6, 0.8, 0.6, 0.18), 1.0)
+	c.draw_rect(Rect2(0, 0, size.x, HEADER_H), Color(0.0642, 0.06, 0.0504))
+	c.draw_rect(Rect2(0, HEADER_H, size.x, TOOLBAR_H), Color(0.051, 0.0477, 0.04))
+	c.draw_line(Vector2(0, HEADER_H), Vector2(size.x, HEADER_H), Color(UiTheme.GOLD, 0.12), 1.0)
+	c.draw_line(Vector2(0, HEADER_H + TOOLBAR_H), Vector2(size.x, HEADER_H + TOOLBAR_H), Color(UiTheme.GOLD, 0.18), 1.0)
 	# Un fondu sous le bandeau, pour que l'arbre y glisse doucement.
 	for i in 6:
 		c.draw_rect(Rect2(0, HEADER_H + TOOLBAR_H + 1 + i * 3, size.x, 3), Color(BG, 0.35 * (1.0 - i / 6.0)))
 	c.draw_string(font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.INK)
-	var pts_col := UiTheme.GOLD if Game.points > 0 else Color(0.7, 0.75, 0.7)
-	c.draw_string(font, Vector2(24, 54), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col)
-	c.draw_string(font, Vector2(0, 30), "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.7, 0.78, 0.72))
-	c.draw_string(font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.6, 0.8, 0.6))
+	var pts_col := UiTheme.GOLD if Game.points > 0 else UiTheme.SOFT
+	c.draw_string(font, Vector2(24, 57), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col)
+	c.draw_string(font, Vector2(0, 30), "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.785, 0.733, 0.616))
+	c.draw_string(font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, UiTheme.GOLD)
 	if hover >= 0:
 		_draw_tooltip(c, tree.nodes[hover], _states.get(hover, _state(hover)))
 	_audit_texts()
@@ -1647,7 +1682,7 @@ func _audit_texts() -> void:
 		UiAudit.text("arbre", l[0], l[1], "", branch_names.has(l[1]) and l[2] == FONT_BRANCH)
 	var tree = Game.tree
 	UiAudit.text_at("arbre", font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Transform2D.IDENTITY, "entete", true)
-	UiAudit.text_at("arbre", font, Vector2(24, 54), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Transform2D.IDENTITY, "entete", true)
+	UiAudit.text_at("arbre", font, Vector2(24, 57), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Transform2D.IDENTITY, "entete", true)
 	UiAudit.text_at("arbre", font, Vector2(0, 30), "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
 	UiAudit.text_at("arbre", font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
 	if hover >= 0:
@@ -1675,31 +1710,38 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 		sub += " · frontière %s et %s · anneau %d" % [bname, SkillTree.BRANCHES[n["border"]]["name"], n["ring"]]
 	elif bname != "":
 		sub += " · " + bname + " · anneau %d" % n["ring"]
-	var dim := Color(0.65, 0.72, 0.68)
-	var ink := Color(0.92, 0.95, 0.92)
-	raw.append([sub, 13, dim])
+	var dim := Color(0.731, 0.683, 0.574)
+	var ink := Color(0.995, 0.93, 0.781)
+	raw.append([sub, 15, dim])
 	for e in n["effects"]:
 		var line := Effects.describe(e)
 		if line != "":
 			raw.append(["• " + line, 14, ink])
 	if n["desc"] != "":
 		raw.append(["• " + n["desc"], 14, ink])
+	# Synergies où entre la forme ou le modificateur d'attaque du nœud (data/synergies.json) :
+	# en or celles qui sont actives.
+	var attack_effects: Array = n["effects"].duplicate()
+	for ch in n["choices"]:
+		attack_effects.append_array(ch.get("effects", []))
+	for h in AttackScript.synergy_hints(attack_effects, Game.attack()):
+		raw.append(["◆ " + h[0], 13, UiTheme.GOLD if h[1] else dim])
 	var id: int = n["id"]
 	# Maîtrise ou mutation : tous les choix, celui qui est fait en doré.
 	if not n["choices"].is_empty():
 		var chosen: int = Game.choice_index(id) if st == "owned" else -1
 		if n["type"] == "mutation":
-			raw.append(["Transforme « %s » : un seul choix" % Content.skills().get(n["mutates"], {}).get("name", n["mutates"]), 13, dim])
+			raw.append(["Transforme « %s » : un seul choix" % Content.skills().get(n["mutates"], {}).get("name", n["mutates"]), 15, dim])
 		else:
-			raw.append(["Un bonus à choisir, modifiable à tout moment", 13, dim])
+			raw.append(["Un bonus à choisir, modifiable à tout moment", 15, dim])
 		for i in n["choices"].size():
 			var ch: Dictionary = n["choices"][i]
 			var text := "› %s : %s" % [ch.get("name", ""), SkillTree.describe_effects(ch.get("effects", []))]
 			raw.append([text + ("  (choisi)" if i == chosen else ""), 14, UiTheme.GOLD if i == chosen else (ink if chosen < 0 else dim)])
 		if st == "owned" and chosen < 0:
-			raw.append(["Clic pour faire ton choix", 13, UiTheme.GOLD])
+			raw.append(["Clic pour faire ton choix", 15, UiTheme.GOLD])
 		elif st == "owned" and n["type"] == "mastery":
-			raw.append(["Clic pour changer de bonus", 13, UiTheme.GOLD])
+			raw.append(["Clic pour changer de bonus", 15, UiTheme.GOLD])
 	if n["type"] == "graft":
 		var g = Content.grafts().get(Game.graft_of(id))
 		if g is Dictionary:
@@ -1712,14 +1754,14 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 			raw.append(["• Emplacement vide : reçoit une greffe trouvée dans le monde.", 14, ink])
 		raw.append_array(grafts_panel.tooltip_lines(n))
 		if grafts_panel.held == "" and g is Dictionary and st == "owned":
-			raw.append(["Clic pour retirer la greffe", 13, UiTheme.GOLD])
+			raw.append(["Clic pour retirer la greffe", 15, UiTheme.GOLD])
 	# Grappe écrite à la main : avancement et bonus de grappe complète.
 	if n["cluster"] != "" and tree.clusters.has(n["cluster"]):
 		var cl: Dictionary = tree.clusters[n["cluster"]]
 		var prog: Array = Game.cluster_progress(n["cluster"])
-		raw.append(["Grappe « %s » : %d / %d nœuds" % [cl["name"], prog[0], prog[1]], 13, dim])
+		raw.append(["Grappe « %s » : %d / %d nœuds" % [cl["name"], prog[0], prog[1]], 15, dim])
 		if not cl["effects"].is_empty():
-			raw.append(["Grappe complète : " + SkillTree.describe_effects(cl["effects"]), 13, UiTheme.GOLD if prog[0] == prog[1] else dim])
+			raw.append(["Grappe complète : " + SkillTree.describe_effects(cl["effects"]), 15, UiTheme.GOLD if prog[0] == prog[1] else dim])
 	# Résonance de la branche (des deux branches pour un nœud de frontière) : le prochain palier.
 	for bi in [n["branch"], n["border"]]:
 		if bi < 0:
@@ -1734,11 +1776,11 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 					next = tier
 					break
 			if next.is_empty():
-				raw.append(["Résonance de %s : tous les paliers atteints (%d nœuds)" % [bname, count], 13, UiTheme.GOLD])
+				raw.append(["Résonance de %s : tous les paliers atteints (%d nœuds)" % [bname, count], 15, UiTheme.GOLD])
 			else:
-				raw.append(["Résonance de %s : %d / %d nœuds, puis %s" % [bname, count, int(next["count"]), SkillTree.describe_effects(next.get("effects", []))], 13, dim])
+				raw.append(["Résonance de %s : %d / %d nœuds, puis %s" % [bname, count, int(next["count"]), SkillTree.describe_effects(next.get("effects", []))], 15, dim])
 	if st != "owned" and _locks.has(id):
-		raw.append([_locks[id], 13, LOCK_COLOR])
+		raw.append([_locks[id], 15, LOCK_COLOR])
 	else:
 		raw.append_array(panels.tooltip_lines(n, st))
 	var maxw := minf(TOOLTIP_MAX_W, size.x - 2.0 * MARGIN - 28.0)
@@ -1756,7 +1798,7 @@ func _wrap(text: String, fs: int, max_w: float) -> PackedStringArray:
 		out.append(text)
 		return out
 	# Chaque mot n'est mesuré qu'une fois : la largeur d'une ligne est la somme de ses mots et espaces.
-	var indent := "   " if text.begins_with("• ") else ""
+	var indent := "   " if text.begins_with("• ") or text.begins_with("◆ ") else ""
 	var space := font.get_string_size(" ", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var indent_w := font.get_string_size(indent, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x if indent != "" else 0.0
 	var line := ""
@@ -1819,7 +1861,7 @@ func _draw_tooltip(c: CanvasItem, n: Dictionary, st: String) -> void:
 	var rect := tooltip_rect(lines)
 	var col: Color = Game.tree.node_color(n)
 	var box := StyleBoxFlat.new()
-	box.bg_color = Color(0.045, 0.06, 0.05, 0.97)
+	box.bg_color = Color(0.0553, 0.0517, 0.0434, 0.97)
 	box.border_color = Color(col, 0.45)
 	box.set_border_width_all(1)
 	box.set_corner_radius_all(9)

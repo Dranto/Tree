@@ -43,6 +43,7 @@ static var _defs: Dictionary = {}
 static var _ids: Array = []
 static var _loaded := false
 static var _arts: Dictionary = {}
+static var _spots: Dictionary = {}
 
 
 ## Identifiants des régions qui existent, dans l'ordre des branches de l'arbre.
@@ -85,6 +86,7 @@ static func reload() -> void:
 	_defs = {}
 	_ids = []
 	_arts = {}
+	_spots = {}
 	Content._cache.erase("#rewards")
 	_load_all()
 
@@ -178,6 +180,81 @@ static func region_at(pos: Vector2) -> String:
 
 static func center(id: String) -> Vector2:
 	return Vector2.from_angle(angle_of(id)) * CENTER_DIST
+
+
+# --- Cœurs de flétrissure (jalon 10 : trois par région) ---
+
+## Emplacements des Cœurs de la région (« heart › spots » de son fichier), dans l'ordre : chacun
+## {pos, zone, hold_time, life_radius, size, name, great}. Un emplacement donne « dist » et « side »
+## (ou « angle ») comme les autres lieux, et peut changer la zone, la durée du siège, la vague de vie,
+## la taille du Cœur (« size », 1 pour le Grand Cœur) et son nom. Sans « spots », un seul Cœur au
+## centre de la région (les régions factices des tests). Le Grand Cœur (« great ») est celui du
+## centre de la région, au pied de l'arène : l'arène se place et s'ouvre par rapport à lui.
+static func heart_spots(id: String) -> Array:
+	_load_all()
+	if _spots.has(id):
+		return _spots[id]
+	var h := section(id, "heart")
+	var raw = h.get("spots", [])
+	var out: Array = []
+	if raw is Array and not raw.is_empty():
+		for spot in raw:
+			if spot is Dictionary:
+				out.append(_heart_spot(id, h, spot))
+	if out.is_empty():
+		out.append(_heart_spot(id, h, {"dist": CENTER_DIST, "side": 0.0}))
+	# Le Grand Cœur : le plus proche du centre de la région.
+	var best := 0
+	for i in out.size():
+		if out[i]["pos"].distance_to(center(id)) < out[best]["pos"].distance_to(center(id)):
+			best = i
+	out[best]["great"] = true
+	_spots[id] = out
+	return out
+
+
+static func _heart_spot(id: String, h: Dictionary, spot: Dictionary) -> Dictionary:
+	return {
+		"pos": place(id, spot),
+		"zone": float(spot.get("zone", h.get("zone", 240.0))),
+		"hold_time": float(spot.get("hold_time", h.get("hold_time", 30.0))),
+		"life_radius": float(spot.get("life_radius", h.get("life_radius", 820.0))),
+		"size": float(spot.get("size", 1.0)),
+		"name": str(spot.get("name", h.get("name", "Cœur de flétrissure"))),
+		"great": false,
+	}
+
+
+## Nombre de Cœurs de la région.
+static func heart_count(id: String) -> int:
+	return heart_spots(id).size()
+
+
+## Drapeau d'un Cœur de la région (« index » à partir de 0) : « ronce_coeur1_purifie »… Le drapeau
+## de la région (heart_flag, « ronce_coeur_purifie ») n'est posé qu'avec le dernier : il ouvre l'arène.
+static func heart_part_flag(id: String, index: int) -> String:
+	return "%s_coeur%d_purifie" % [id, index + 1]
+
+
+## Cœurs purifiés de la région. Le drapeau de la région fait foi : posé (partie d'avant le jalon 10,
+## région forcée par un test), tous ses Cœurs le sont.
+static func hearts_done(id: String, flags: Dictionary) -> int:
+	var n := heart_count(id)
+	if flags.get(heart_flag(id), false):
+		return n
+	var done := 0
+	for i in n:
+		if flags.get(heart_part_flag(id, i), false):
+			done += 1
+	return done
+
+
+## Vrai si « p » est à moins de « clear » px d'un Cœur de la région (le décor y laisse la place).
+static func near_heart(id: String, p: Vector2, clear: float) -> bool:
+	for s in heart_spots(id):
+		if p.distance_to(s["pos"]) < clear * float(s["zone"]) / maxf(1.0, float(section(id, "heart").get("zone", s["zone"]))):
+			return true
+	return false
 
 
 ## Distance entre la graine et le bord du monde carré, dans la direction « angle ».
@@ -418,10 +495,29 @@ static func validate() -> PackedStringArray:
 		# Dessins de la région (Cœur, mur de l'arène) : un script de scripts/region_art/.
 		if d.has("art") and not ResourceLoader.exists(ART_DIR + str(d["art"]) + ".gd"):
 			errors.append("%s : dessins inconnus « %s » (scripts/region_art/%s.gd)" % [w, d["art"], d["art"]])
-		# Le Cœur, sa zone et l'arène du boss tiennent dans le secteur et dans le monde.
+		# Les Cœurs et leurs zones tiennent dans le secteur et dans le monde, sans se toucher ni
+		# couvrir un sanctuaire, un autel ou un secret.
 		var zone := float(h.get("zone", 240.0))
-		if inside_distance(center(id), id) < zone or not fits_world(center(id), zone):
-			errors.append("%s, heart : la zone du Cœur (%.0f px) déborde du secteur ou du monde" % [w, zone])
+		var spots := heart_spots(id)
+		var raw_spots = h.get("spots", [])
+		if h.has("spots") and not (raw_spots is Array and not raw_spots.is_empty()):
+			errors.append("%s, heart : « spots » doit être une liste d'emplacements" % w)
+		elif raw_spots is Array:
+			for spot in raw_spots:
+				if not spot is Dictionary or not (spot.get("dist") is float or spot.get("dist") is int):
+					errors.append("%s, heart › spots : emplacement sans « dist »" % w)
+		for i in spots.size():
+			var sp: Dictionary = spots[i]
+			var z := float(sp["zone"])
+			if inside_distance(sp["pos"], id) < z or not fits_world(sp["pos"], z):
+				errors.append("%s, heart : la zone du Cœur %d (%.0f px) déborde du secteur ou du monde" % [w, i + 1, z])
+			for j in range(i + 1, spots.size()):
+				if sp["pos"].distance_to(spots[j]["pos"]) < z + float(spots[j]["zone"]) + 80.0:
+					errors.append("%s, heart : les zones des Cœurs %d et %d se touchent" % [w, i + 1, j + 1])
+			for kind in ["sanctuaries", "altars", "secrets"]:
+				for spot in d.get(kind, []):
+					if spot is Dictionary and place(id, spot).distance_to(sp["pos"]) < z + 60.0:
+						errors.append("%s, heart : la zone du Cœur %d couvre « %s » (%s)" % [w, i + 1, spot.get("id", "?"), kind])
 		# Boss : un script qui étend BossBase.
 		var b := section(id, "boss")
 		var path := str(b.get("script", ""))
@@ -448,8 +544,10 @@ static func validate() -> PackedStringArray:
 				w, reach(angle_of(id)) - WORLD_MARGIN - CENTER_DIST])
 		elif inside_distance(ac, id) < ar_r:
 			errors.append("%s, boss › arena : le mur de l'arène déborde du secteur" % w)
-		elif ac.distance_to(center(id)) < ar_r + zone:
-			errors.append("%s, boss › arena : l'arène empiète sur la zone du Cœur" % w)
+		else:
+			for sp in spots:
+				if ac.distance_to(sp["pos"]) < ar_r + float(sp["zone"]):
+					errors.append("%s, boss › arena : l'arène empiète sur la zone d'un Cœur" % w)
 		for f in ["sub", "title", "body"]:
 			if str(section(id, "ending").get(f, "")) == "":
 				errors.append("%s, ending : « %s » manquant" % [w, f])

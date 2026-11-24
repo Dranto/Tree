@@ -88,8 +88,9 @@ func _run() -> void:
 	await _steps(3)
 	check(finale.state == "ouverte" and game.flags.get("finale_ouverte", false), "toutes les régions purifiées : la brèche s'ouvre")
 	q.start_ending()
-	check(q.ending.active and not game.flags.has("fin_aventure_vue"), "la séquence de région n'est pas la fin de l'aventure")
-	q.ending._on_continue()
+	check(q.fanfare.active and not game.flags.has("fin_aventure_vue"), "la célébration de région n'est pas la fin de l'aventure")
+	check(q.fanfare._title.text == retreat.get("title", "?") and q.fanfare._body.visible, "elle annonce la retraite sous la graine, avec son texte")
+	q.fanfare.finish()
 	await _steps(2)
 	check(not objectives.ending_due() and not objectives.epilogue_due(), "plus de séquence due, pas d'épilogue avant la finale")
 	objectives.check()
@@ -150,13 +151,20 @@ func _run() -> void:
 	check(seen.has("siphon") and seen.has("rafale"), "phase 2 : la sève et le vent (%s)" % ", ".join(seen.keys()))
 	boss.take_damage(boss.max_hp * 0.3, false)
 	check(await _until(func(): return boss.phase == 3), "sous 33 % de vie : phase 3")
-	check(await _until(func(): return finale.radius < finale.max_radius), "en phase 3 le mur de racines se resserre")
+	check(boss.unbound and boss.transforming(), "sous 33 % : elle prend sa seconde forme")
+	var hp_before: float = boss.hp
+	boss.take_damage(500.0, false)
+	check(boss.hp == hp_before, "invulnérable pendant la transformation")
+	check(await _until(func(): return finale.radius < finale.max_radius), "le creux s'effondre autour d'elle")
+	check(await _until(func(): return not boss.transforming() and finale.radius == finale.collapse_radius and finale.collapse_k == 1.0), "il ne reste qu'une île de radius_collapse au-dessus du gouffre")
+	check(boss.form_k() == 1.0, "la transformation est finie")
 	seen = {}
-	for i in 900:
+	for i in 1500:
 		if boss.attack != "":
 			seen[boss.attack] = true
 		await physics_frame
-	check(seen.has("lumiere") and seen.has("racines"), "phase 3 : la lumière et les racines (%s)" % ", ".join(seen.keys()))
+	check(seen.has("lumiere") and seen.has("racines"), "seconde forme : la lumière et les racines (%s)" % ", ".join(seen.keys()))
+	check(seen.has("tempete") and seen.has("floraison") and seen.has("aurore"), "seconde forme : les attaques combinées des six gardiens (%s)" % ", ".join(seen.keys()))
 
 	print("Mort face à la Flétrissure")
 	main.player_died()
@@ -204,7 +212,7 @@ func _run() -> void:
 
 	print("Sauvegarde")
 	var data: Dictionary = JSON.parse_string(JSON.stringify(save.capture(main)))
-	check(int(data["version"]) == 5, "format 5")
+	check(int(data["version"]) == 6, "format 6")
 	for k in ["finale_ouverte", "finale_vaincue", "fin_aventure_vue"]:
 		check(data["game"]["flags"].get(k, false) == true, "drapeau « %s » sauvegardé" % k)
 	# Une sauvegarde du format 4 qui avait vu l'ancienne fin (toutes les régions, texte de fin) :
@@ -215,7 +223,7 @@ func _run() -> void:
 		old["game"]["flags"][Regions.heart_flag(id)] = true
 		old["game"]["flags"][Regions.ending_flag(id)] = true
 	var migrated: Dictionary = save._migrate(old.duplicate(true))
-	check(int(migrated["version"]) == 5 and not migrated["game"]["flags"].has("fin_aventure_vue"), "format 4 → 5 : l'ancienne fin n'est plus « l'aventure finie »")
+	check(int(migrated["version"]) == 6 and not migrated["game"]["flags"].has("fin_aventure_vue"), "format 4 → 6 : l'ancienne fin n'est plus « l'aventure finie »")
 	save.apply(migrated, main)
 	await _steps(3)
 	check(finale.state == "ouverte" and game.flags.get("finale_ouverte", false), "la finale s'ouvre au chargement")

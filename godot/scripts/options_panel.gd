@@ -1,4 +1,5 @@
-## Panneau d'options : volume, plein écran, aide de départ, secousse, rafales de vent, difficulté, déplacement, visée, commandes de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
+## Panneau d'options (direction « Herbier ») : cadre orné et quatre onglets (Son, Affichage, Jeu,
+## Commandes). Volume, plein écran, aide de départ, secousse, rafales de vent, difficulté, déplacement, visée, commandes de la barre de compétences. Les changements s'appliquent et s'enregistrent aussitôt.
 extends PanelContainer
 
 signal closed
@@ -32,217 +33,228 @@ var keys_hint: Label
 var _scroll: ScrollContainer
 var _content: VBoxContainer
 const MOBA_ROW := 6
+const TAB_NAMES := ["Son", "Affichage", "Jeu", "Commandes"]
+## Largeur des libellés devant les curseurs et les listes.
+const LABEL_W := 170.0
+var pages: Array = []
+var tab_buttons: Array = []
+var tab := 0
 const SLOT_LABELS := ["Compétence principale 1", "Compétence principale 2", "Compétence secondaire 1", "Compétence secondaire 2", "Compétence secondaire 3", "Compétence secondaire 4"]
 
 
 func _ready() -> void:
 	theme = UiTheme.make()
-	custom_minimum_size = Vector2(520, 0)
-	# Le contenu défile : à 1280 x 720 le panneau entier ne tient pas à l'écran.
+	add_theme_stylebox_override("panel", UiTheme.cadre(true, Color(UiTheme.PAPER, 0.97), UiTheme.GOLD, 44))
+	custom_minimum_size = Vector2(680, 0)
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 10)
+	add_child(outer)
+	var title := Label.new()
+	title.text = "Options"
+	title.add_theme_font_override("font", UiTheme.display(600, 2))
+	title.add_theme_font_size_override("font_size", 46)
+	title.add_theme_color_override("font_color", UiTheme.INK)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	outer.add_child(title)
+	# Onglets : Son, Affichage, Jeu, Commandes (un seul visible à la fois).
+	var tab_row := HBoxContainer.new()
+	tab_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	tab_row.add_theme_constant_override("separation", 8)
+	outer.add_child(tab_row)
+	var rule := Control.new()
+	rule.custom_minimum_size = Vector2(0, 8)
+	rule.draw.connect(func(): rule.draw_line(Vector2(0, 0), Vector2(rule.size.x, 0), Color(UiTheme.GOLD, 0.25), 1.0))
+	outer.add_child(rule)
+	# Le contenu défile si besoin : à 1280 x 720 une page longue peut ne pas tenir.
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.follow_focus = true
-	add_child(_scroll)
+	outer.add_child(_scroll)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 18)
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(col)
 	_content = col
 	get_viewport().size_changed.connect(_fit)
+	var group := ButtonGroup.new()
+	for i in TAB_NAMES.size():
+		var page := VBoxContainer.new()
+		page.add_theme_constant_override("separation", 16)
+		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_child(page)
+		pages.append(page)
+		var tb := _tab_button(TAB_NAMES[i], group)
+		tb.pressed.connect(show_tab.bind(i))
+		tab_row.add_child(tb)
+		tab_buttons.append(tb)
+	var p_son: VBoxContainer = pages[0]
+	var p_aff: VBoxContainer = pages[1]
+	var p_jeu: VBoxContainer = pages[2]
+	var p_cmd: VBoxContainer = pages[3]
 
-	var title := Label.new()
-	title.text = "Options"
-	title.add_theme_font_size_override("font_size", 32)
-	title.add_theme_color_override("font_color", UiTheme.GOLD)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(title)
-
-	volume_slider = _slider_row(col, "Volume", Settings.volume, _on_volume)
-	music_slider = _slider_row(col, "Musique", Settings.music_volume, func(v): Settings.set_music_volume(v); Settings.save_settings(); _update_labels())
-	sfx_slider = _slider_row(col, "Effets", Settings.sfx_volume, func(v): Settings.set_sfx_volume(v); Settings.save_settings(); _update_labels())
+	volume_slider = _slider_row(p_son, "Volume général", Settings.volume, _on_volume)
+	music_slider = _slider_row(p_son, "Musique", Settings.music_volume, func(v): Settings.set_music_volume(v); Settings.save_settings(); _update_labels())
+	sfx_slider = _slider_row(p_son, "Effets", Settings.sfx_volume, func(v): Settings.set_sfx_volume(v); Settings.save_settings(); _update_labels())
 	_update_labels()
 
 	fullscreen_box = CheckBox.new()
 	fullscreen_box.text = "Plein écran"
 	fullscreen_box.button_pressed = Settings.fullscreen
 	fullscreen_box.toggled.connect(func(on): Settings.set_fullscreen(on); Settings.save_settings())
-	col.add_child(fullscreen_box)
-
+	p_aff.add_child(fullscreen_box)
 	hints_box = CheckBox.new()
 	hints_box.text = "Afficher l'aide de départ en jeu"
 	hints_box.button_pressed = Settings.show_hints
 	hints_box.toggled.connect(func(on): Settings.set_show_hints(on); Settings.save_settings())
-	col.add_child(hints_box)
+	p_aff.add_child(hints_box)
 	numbers_box = CheckBox.new()
 	numbers_box.text = "Afficher les chiffres de dégâts"
 	numbers_box.button_pressed = Settings.show_damage_numbers
 	numbers_box.toggled.connect(func(on): Settings.show_damage_numbers = on; Settings.save_settings())
-	col.add_child(numbers_box)
-
-	var shake_row := HBoxContainer.new()
-	shake_row.add_theme_constant_override("separation", 14)
-	col.add_child(shake_row)
-	var shake_name := Label.new()
-	shake_name.text = "Secousse"
-	shake_name.custom_minimum_size = Vector2(110, 0)
-	shake_row.add_child(shake_name)
-	shake_slider = HSlider.new()
-	shake_slider.min_value = 0.0
-	shake_slider.max_value = 1.0
-	shake_slider.step = 0.1
-	shake_slider.value = Settings.shake
-	shake_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shake_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	shake_slider.focus_mode = Control.FOCUS_ALL
-	shake_slider.value_changed.connect(_on_shake)
-	shake_row.add_child(shake_slider)
-	shake_label = Label.new()
-	shake_label.custom_minimum_size = Vector2(60, 0)
-	shake_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	shake_row.add_child(shake_label)
-	_update_shake_label()
-
-	# Rafales de la région de Vent (wind.gd) : elles poussent le joueur et dévient les projectiles.
-	var wind_row := HBoxContainer.new()
-	wind_row.add_theme_constant_override("separation", 14)
-	col.add_child(wind_row)
-	var wind_name := Label.new()
-	wind_name.text = "Rafales"
-	wind_name.custom_minimum_size = Vector2(110, 0)
-	wind_row.add_child(wind_name)
-	wind_slider = HSlider.new()
-	wind_slider.min_value = 0.0
-	wind_slider.max_value = 1.0
-	wind_slider.step = 0.1
-	wind_slider.value = Settings.wind
-	wind_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	wind_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	wind_slider.focus_mode = Control.FOCUS_ALL
-	wind_slider.value_changed.connect(_on_wind)
-	wind_row.add_child(wind_slider)
-	wind_label = Label.new()
-	wind_label.custom_minimum_size = Vector2(60, 0)
-	wind_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	wind_row.add_child(wind_label)
-	_update_wind_label()
-
+	p_aff.add_child(numbers_box)
 	reduce_box = CheckBox.new()
 	reduce_box.text = "Réduire les effets (secousse, micro-pause, particules)"
 	reduce_box.button_pressed = Settings.reduce_effects
 	reduce_box.toggled.connect(func(on): Settings.set_reduce_effects(on); Settings.save_settings())
-	col.add_child(reduce_box)
+	p_aff.add_child(reduce_box)
+	shake_slider = _slider_row(p_aff, "Secousse", Settings.shake, _on_shake, 0.1)
+	shake_label = shake_slider.get_meta("label")
+	_update_shake_label()
 
 	# Difficulté : vie et dégâts des ennemis (Normal par défaut).
-	var diff_row := HBoxContainer.new()
-	diff_row.add_theme_constant_override("separation", 14)
-	col.add_child(diff_row)
-	var diff_name := Label.new()
-	diff_name.text = "Difficulté"
-	diff_name.custom_minimum_size = Vector2(110, 0)
-	diff_row.add_child(diff_name)
-	difficulty_select = OptionButton.new()
-	difficulty_select.focus_mode = Control.FOCUS_ALL
-	difficulty_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	difficulty_select = _select_row(p_jeu, "Difficulté")
 	for id in Settings.DIFFICULTIES:
 		difficulty_select.add_item(Difficulty.mode_name(id))
 	difficulty_select.item_selected.connect(_on_difficulty)
-	diff_row.add_child(difficulty_select)
-	difficulty_hint = Label.new()
-	difficulty_hint.add_theme_font_size_override("font_size", 13)
-	difficulty_hint.add_theme_color_override("font_color", Color(0.7, 0.75, 0.7))
-	difficulty_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(difficulty_hint)
+	difficulty_hint = _hint(p_jeu)
 	_update_difficulty()
-
 	# Déplacement : suivre le curseur (par défaut), clic droit façon MOBA, ou clavier.
-	var move_row := HBoxContainer.new()
-	move_row.add_theme_constant_override("separation", 14)
-	col.add_child(move_row)
-	var move_name := Label.new()
-	move_name.text = "Déplacement"
-	move_name.custom_minimum_size = Vector2(110, 0)
-	move_row.add_child(move_name)
-	move_select = OptionButton.new()
-	move_select.focus_mode = Control.FOCUS_ALL
-	move_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	move_select = _select_row(p_jeu, "Déplacement")
 	for id in Settings.MOVE_MODES:
 		move_select.add_item(Settings.MOVE_MODE_NAMES[id])
 	move_select.item_selected.connect(_on_move_mode)
-	move_row.add_child(move_select)
-	move_hint = Label.new()
-	move_hint.add_theme_font_size_override("font_size", 13)
-	move_hint.add_theme_color_override("font_color", Color(0.7, 0.75, 0.7))
-	move_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(move_hint)
+	move_hint = _hint(p_jeu)
 	_update_move_mode()
-
 	# Visée de l'attaque automatique : l'ennemi le plus proche du curseur, ou toujours le curseur.
-	var aim_row := HBoxContainer.new()
-	aim_row.add_theme_constant_override("separation", 14)
-	col.add_child(aim_row)
-	var aim_name := Label.new()
-	aim_name.text = "Visée"
-	aim_name.custom_minimum_size = Vector2(110, 0)
-	aim_row.add_child(aim_name)
-	aim_select = OptionButton.new()
-	aim_select.focus_mode = Control.FOCUS_ALL
-	aim_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	aim_select = _select_row(p_jeu, "Visée")
 	for id in Settings.AIM_MODES:
 		aim_select.add_item(Settings.AIM_MODE_NAMES[id])
 	aim_select.item_selected.connect(_on_aim_mode)
-	aim_row.add_child(aim_select)
-	aim_hint = Label.new()
-	aim_hint.add_theme_font_size_override("font_size", 13)
-	aim_hint.add_theme_color_override("font_color", Color(0.7, 0.75, 0.7))
-	aim_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(aim_hint)
+	aim_hint = _hint(p_jeu)
 	_update_aim_mode()
+	# Rafales de la région de Vent (wind.gd) : elles poussent le joueur et dévient les projectiles.
+	wind_slider = _slider_row(p_jeu, "Rafales", Settings.wind, _on_wind, 0.1)
+	wind_label = wind_slider.get_meta("label")
+	_update_wind_label()
 
 	var keys_title := Label.new()
 	keys_title.text = "Commandes des compétences"
-	col.add_child(keys_title)
+	keys_title.add_theme_color_override("font_color", UiTheme.GOLD)
+	p_cmd.add_child(keys_title)
 	var grid := GridContainer.new()
-	grid.columns = 4
-	grid.add_theme_constant_override("h_separation", 12)
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 16)
 	grid.add_theme_constant_override("v_separation", 8)
-	col.add_child(grid)
+	p_cmd.add_child(grid)
 	for i in Settings.SLOT_COUNT + 1:
 		var l := Label.new()
-		l.text = "Principale 2, mode MOBA" if i == MOBA_ROW else SLOT_LABELS[i].replace("Compétence p", "P").replace("Compétence s", "S")
+		l.text = "Principale 2, mode MOBA" if i == MOBA_ROW else SLOT_LABELS[i]
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(l)
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(100, 0)
+		b.custom_minimum_size = Vector2(190, 0)
 		b.focus_mode = Control.FOCUS_ALL
 		b.pressed.connect(_listen.bind(i))
 		grid.add_child(b)
 		slot_buttons.append(b)
-	keys_hint = Label.new()
-	keys_hint.add_theme_font_size_override("font_size", 13)
-	keys_hint.add_theme_color_override("font_color", Color(0.7, 0.75, 0.7))
-	keys_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(keys_hint)
+	keys_hint = _hint(p_cmd)
 	_update_keys()
 
-	back_button = UiTheme.button("Retour", 200)
+	back_button = UiTheme.menu_item("Retour", 28, HORIZONTAL_ALIGNMENT_CENTER, 240)
 	back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	back_button.pressed.connect(close)
-	col.add_child(back_button)
+	outer.add_child(back_button)
+	show_tab(0)
+
+
+## Onglet : texte seul, en or et souligné quand il est ouvert.
+func _tab_button(text: String, group: ButtonGroup) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.toggle_mode = true
+	b.button_group = group
+	b.focus_mode = Control.FOCUS_ALL
+	b.custom_minimum_size = Vector2(140, 40)
+	b.add_theme_font_size_override("font_size", 25)
+	var pad := StyleBoxEmpty.new()
+	pad.content_margin_bottom = 6
+	for st in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
+		b.add_theme_stylebox_override(st, pad)
+	b.add_theme_color_override("font_color", UiTheme.SOFT)
+	b.add_theme_color_override("font_hover_color", UiTheme.INK)
+	b.add_theme_color_override("font_focus_color", UiTheme.INK)
+	b.add_theme_color_override("font_pressed_color", UiTheme.GOLD)
+	b.add_theme_color_override("font_hover_pressed_color", UiTheme.GOLD)
+	b.draw.connect(func():
+		var w := b.get_theme_font("font").get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 25).x
+		var y := b.size.y - 2.0
+		if b.button_pressed:
+			b.draw_line(Vector2((b.size.x - w) / 2.0 - 6, y), Vector2((b.size.x + w) / 2.0 + 6, y), UiTheme.GOLD, 1.5, true)
+		elif b.has_focus():
+			b.draw_line(Vector2((b.size.x - w) / 2.0, y), Vector2((b.size.x + w) / 2.0, y), Color(UiTheme.GOLD, 0.5), 1.0, true))
+	b.focus_entered.connect(b.queue_redraw)
+	b.focus_exited.connect(b.queue_redraw)
+	b.mouse_entered.connect(func(): Sfx.play("survol"))
+	b.pressed.connect(func(): Sfx.play("clic"))
+	return b
+
+
+## Ouvre l'onglet i (0 Son, 1 Affichage, 2 Jeu, 3 Commandes).
+func show_tab(i: int) -> void:
+	tab = i
+	for k in pages.size():
+		pages[k].visible = k == i
+		tab_buttons[k].set_pressed_no_signal(k == i)
+		tab_buttons[k].queue_redraw()
+	_fit.call_deferred()
+
+
+func _select_row(parent: Control, text: String) -> OptionButton:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	parent.add_child(row)
+	var name := Label.new()
+	name.text = text
+	name.custom_minimum_size = Vector2(LABEL_W, 0)
+	row.add_child(name)
+	var sel := OptionButton.new()
+	sel.focus_mode = Control.FOCUS_ALL
+	sel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(sel)
+	return sel
+
+
+func _hint(parent: Control) -> Label:
+	var l := Label.new()
+	l.add_theme_font_size_override("font_size", 17)
+	l.add_theme_color_override("font_color", UiTheme.SOFT)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	parent.add_child(l)
+	return l
 
 
 ## Une ligne « nom, curseur, pourcentage ». Le libellé du pourcentage est rangé dans la méta « label » du curseur.
-func _slider_row(parent: Control, text: String, value: float, on_change: Callable) -> HSlider:
+func _slider_row(parent: Control, text: String, value: float, on_change: Callable, step := 0.05) -> HSlider:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	parent.add_child(row)
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.custom_minimum_size = Vector2(110, 0)
+	lbl.custom_minimum_size = Vector2(LABEL_W, 0)
 	row.add_child(lbl)
 	var sl := HSlider.new()
 	sl.min_value = 0.0
 	sl.max_value = 1.0
-	sl.step = 0.05
+	sl.step = step
 	sl.value = value
 	sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -250,8 +262,9 @@ func _slider_row(parent: Control, text: String, value: float, on_change: Callabl
 	sl.value_changed.connect(on_change)
 	row.add_child(sl)
 	var pct := Label.new()
-	pct.custom_minimum_size = Vector2(60, 0)
+	pct.custom_minimum_size = Vector2(76, 0)
 	pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	pct.add_theme_color_override("font_color", UiTheme.GOLD)
 	row.add_child(pct)
 	sl.set_meta("label", pct)
 	return sl
@@ -387,8 +400,12 @@ func _update_wind_label() -> void:
 func _fit() -> void:
 	if _scroll == null:
 		return
-	var room := get_viewport().get_visible_rect().size.y * 0.9 - 40.0
-	_scroll.custom_minimum_size = Vector2(0, minf(_content.get_combined_minimum_size().y, room))
+	# Hauteur fixe, celle de l'onglet le plus long : le cadre ne saute pas d'un onglet à l'autre.
+	var room := get_viewport().get_visible_rect().size.y * 0.9 - 250.0
+	var tallest := 0.0
+	for page in pages:
+		tallest = maxf(tallest, page.get_combined_minimum_size().y)
+	_scroll.custom_minimum_size = Vector2(0, minf(tallest, room))
 
 
 func open() -> void:
@@ -409,7 +426,8 @@ func open() -> void:
 	_update_difficulty()
 	_update_move_mode()
 	_update_aim_mode()
-	volume_slider.grab_focus()
+	show_tab(0)
+	tab_buttons[0].grab_focus()
 
 
 func close() -> void:

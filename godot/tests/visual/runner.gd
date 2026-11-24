@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -33,6 +33,7 @@ const FalaisesScript = preload("res://tests/visual/falaises.gd")
 const ValleeScript = preload("res://tests/visual/vallee.gd")
 const ForetScript = preload("res://tests/visual/foret.gd")
 const FinaleScript = preload("res://tests/visual/finale.gd")
+const BordScript = preload("res://tests/visual/bord.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Orb = preload("res://scripts/orb.gd")
 const Content = preload("res://scripts/content.gd")
@@ -138,6 +139,12 @@ func _ready() -> void:
 			await ForetScript.new().run(self)
 		"finale":
 			await FinaleScript.new().run(self)
+		"bord":
+			await BordScript.new().run(self)
+		"menus":
+			await _scenario_menus()
+		"cumul":
+			await _scenario_cumul()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -192,6 +199,38 @@ func _scenario_resolution() -> void:
 	await _frames(30)
 	UiAudit.scan_controls("titre", title)
 	await _shot("titre_" + tag, "titre")
+
+
+## Menus (direction « Herbier ») à la résolution de la fenêtre : la pause, les quatre onglets des
+## options, l'écran de mort, puis l'écran titre et ses options.
+func _scenario_menus() -> void:
+	var tag := _res_tag()
+	await _frames(60)
+	main.hud.banner_time = 0.0
+	main.pause_menu.open()
+	await _frames(10)
+	UiAudit.scan_controls("pause", main.pause_menu)
+	await _shot("menu_pause_" + tag)
+	main.pause_menu._open_options()
+	for i in 4:
+		main.pause_menu.options.show_tab(i)
+		await _frames(6)
+		UiAudit.scan_controls("options", main.pause_menu.options)
+		await _shot("menu_options_%d_%s" % [i + 1, tag])
+	main.pause_menu.close()
+	Game.xp = 37.0
+	main.player_died()
+	main.hud.banner_time = 0.0
+	await _frames(30)
+	await _shot("menu_mort_" + tag, "jeu")
+	main.queue_free()
+	get_tree().paused = false
+	await _frames(2)
+	var title = TitleScene.instantiate()
+	add_child(title)
+	await _frames(30)
+	UiAudit.scan_controls("titre", title)
+	await _shot("menu_titre_" + tag, "titre")
 
 
 ## Planche de la charte graphique (tests/visual/charte.gd) : palette, éléments, icônes, annonces,
@@ -382,6 +421,48 @@ func _scenario_attaque() -> void:
 	add_child(layer)
 	await _frames(3)
 	await _shot("galerie_attaque")
+
+
+## Attaques cumulées (jalon 10) : rayon d'aube principal, lames de vent et massue en écho, trois
+## synergies (Aube tranchante, Massue solaire, Arsenal) : le bandeau au-dessus de la vie, les trois
+## formes qui tirent ensemble, puis l'infobulle d'un nœud de Lames de vent qui cite ses synergies.
+func _scenario_cumul() -> void:
+	var p = main.player
+	Game.test_attack = [{"attack_form": "rayon", "priority": 99}, {"attack_form": "lame"}, {"attack_form": "massue"}]
+	Game.recompute()
+	main.hud.hint_time = 0.0
+	main.autotest = false
+	p.set_physics_process(false)
+	p.invuln = 0.4
+	main.spawn_timer = 1e9
+	await _frames(2)
+	for i in 4:
+		_spawn_at(Vector2(260 + (i % 2) * 50, -90 + i * 55), 0)
+	_spawn_at(Vector2(-90, 40), 1)
+	_spawn_at(Vector2(-60, -70), 0)
+	await _frames(2)
+	p.aim = Vector2.RIGHT
+	p.target = main.enemies[0]
+	Attack.fire(p, main.enemies[0])
+	for i in 40:
+		Attack.step(p, 1.0 / 60.0)
+		await _frames(1)
+	await _shot("jeu_attaques_cumulees", "jeu")
+	main.tree_ui.toggle()
+	await _frames(10)
+	var lame := -1
+	for n in Game.tree.nodes:
+		for e in n["effects"]:
+			if e is Dictionary and str(e.get("attack_form", "")) == "lame":
+				lame = int(n["id"])
+	# Le nœud en haut de l'écran : l'infobulle s'ouvre en dessous, loin de la barre d'outils.
+	main.tree_ui.zoom = ZOOMS["moyen"]
+	main.tree_ui.cam = Game.tree.nodes[lame]["pos"] + Vector2(0, 260.0 / ZOOMS["moyen"])
+	await _frames(2)
+	_hover(lame)
+	await _frames(2)
+	await _shot("arbre_synergies")
+	Game.test_attack = []
 
 
 ## Galerie : ennemis et effets, puis les six états d'un nœud de l'arbre sur une planche.
@@ -1168,14 +1249,17 @@ func _scenario_quetes() -> void:
 	Game.flags["ronce_coeur_purifie"] = true
 	Game.flags["ronce_boss_vaincu"] = true
 	Objectives.check()
+	# Célébration de la région, sur place et sans pause (region_fanfare.gd) : le médaillon où la région
+	# reverdit et son sceau se brise, puis les textes.
 	q.start_ending()
 	if tag == "1920x1080":
-		q.ending.set_time(6.0)
+		q.fanfare.set_time(2.3)
 		await _frames(2)
-		await _shot("fin_arbre", "fin")
-	q.ending.set_time(10.0)
+		await _shot("region_purifiee_sceau", "jeu")
+	q.fanfare.set_time(4.0)
 	await _frames(2)
-	await _shot("fin_" + tag, "fin")
+	await _shot("region_purifiee_" + tag, "jeu")
+	q.fanfare.finish()
 
 
 # --- Outils ---
@@ -1203,9 +1287,12 @@ func _far_small(skip := 0) -> int:
 
 
 ## Contrôles sans image : aucun texte hors écran, aucun libellé qui en recouvre un autre.
-func _audit(screen: String, strict := true) -> void:
+func _audit(screen: String, strict := true, img: Image = null) -> void:
 	var tag := _res_tag()
-	for issue in UiAudit.check(screen, get_viewport().get_visible_rect(), strict):
+	var issues: Array = UiAudit.check(screen, get_viewport().get_visible_rect(), strict)
+	if img != null:
+		issues.append_array(UiAudit.check_contrast(screen, img, get_viewport().get_visible_rect().size))
+	for issue in issues:
 		var key := "%s|%s" % [tag, issue["key"]]
 		if key in seen_issues:
 			continue
@@ -1256,13 +1343,17 @@ func _shot(shot_name: String, screen := "") -> void:
 	img.convert(Image.FORMAT_RGB8)
 	if screen == "" and shot_name.begins_with("arbre"):
 		screen = "arbre"
+	# Toute capture du jeu en cours passe aussi l'audit de l'interface (textes coupés, qui se
+	# recouvrent ou sans contraste sur leur fond) : le HUD doit rester lisible partout.
+	if screen == "" and is_instance_valid(main) and main.is_inside_tree() and main.visible and not main.tree_ui.visible:
+		screen = "jeu"
 	if screen != "":
 		if screen == "jeu":
 			UiAudit.begin("jeu")
 			UiAudit.scan_controls("jeu", main)
 		if not screen in _screens_checked:
 			_screens_checked.append(screen)
-		_audit(screen, not shot_name.ends_with("proche"))
+		_audit(screen, not shot_name.ends_with("proche"), img)
 	await _shot_image(shot_name, img)
 
 

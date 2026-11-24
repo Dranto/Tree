@@ -86,7 +86,7 @@ func _run() -> void:
 	check(game.allocated.has(nid), "nœud appris repris")
 	check(flow.continue_requested == false, "la demande de reprise est consommée")
 
-	print("Objectifs et fin de la tranche")
+	print("Objectifs et célébration de la région")
 	var obj = root.get_node("Objectives")
 	var boss_done: Array = []
 	obj.completed.connect(func(id): if id == "boss": boss_done.append(id))
@@ -100,19 +100,18 @@ func _run() -> void:
 	obj.check()
 	check(obj.is_done("boss") and boss_done.size() == 1, "le boss vaincu accomplit son objectif")
 	q._process(q.ENDING_DELAY + 0.5)
-	check(q.ending.active and bool(game.flags.get("ronce_fin_vue", false)), "la fin se déclenche")
-	q.ending.set_time(10.0)
-	q.ending._on_continue()
-	check(not paused_now(), "« Continuer à jouer » reprend la partie")
+	check(q.fanfare.active and bool(game.flags.get("ronce_fin_vue", false)), "la célébration de la région se déclenche")
+	check(not paused_now(), "sans pause ni écran plein : on continue à jouer")
+	q.fanfare.set_time(30.0)
 	q._process(60.0)
-	check(not q.ending.active, "la fin ne se déclenche qu'une fois")
+	check(not q.fanfare.active, "la célébration ne se déclenche qu'une fois")
 	flow.go_title()
 	await _frames(5)
 	flow.continue_game()
 	await _frames(5)
 	q = current_scene.quest_ui
 	q._process(60.0)
-	check(obj.is_done("boss") and not q.ending.active and not obj.ending_due(), "après Continuer, la fin ne revient pas")
+	check(obj.is_done("boss") and not q.fanfare.active and not obj.ending_due(), "après Continuer, la célébration ne revient pas")
 	check(boss_done.size() == 1, "l'objectif du boss n'est pas ré-accompli au chargement")
 
 	print("Nouvelle partie par-dessus une sauvegarde")

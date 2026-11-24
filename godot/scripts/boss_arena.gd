@@ -4,7 +4,7 @@
 ## Mère-Ronce. Son sol et son mur sont dessinés par les dessins de la région (Regions.art : ronces du
 ## roncier par défaut, champignons de Spore, pierres levées de Vent…).
 ##
-## - "fermee"  : tant que le Cœur n'est pas purifié, son mur (de ronces mortes dans le roncier) en interdit l'entrée ;
+## - "fermee"  : tant que les Cœurs de la région ne sont pas tous purifiés, son mur (de ronces mortes dans le roncier) en interdit l'entrée ;
 ## - "ouverte" : le Cœur est purifié, le mur s'écarte ; y entrer réveille le boss ;
 ## - "combat"  : le mur se referme derrière le joueur ; il peut se resserrer (start_shrink) ;
 ## - "vaincue" : Game.flags["<région>_boss_vaincu"] est posé, l'arène refleurit.
@@ -66,6 +66,8 @@ var rng := RandomNumberGenerator.new()
 
 # Robot du mode « -- --autotest=boss ».
 var auto_time := 0.0
+## Durée maximale du combat du robot (« -- --autotest=boss ») avant l'échec.
+var auto_max := 300.0
 var auto_done := false
 var auto_shots := {}
 var auto_boss_left := 1.0
@@ -150,7 +152,7 @@ func _physics_process(delta: float) -> void:
 		if state != "vaincue":
 			state = "vaincue"
 			gap_open = 1.0
-	elif state == "fermee" and Game.flags.get(heart.flag, false):
+	elif state == "fermee" and Game.flags.get(Regions.heart_flag(region), false):
 		state = "ouverte"
 	match state:
 		"fermee":
@@ -301,7 +303,7 @@ func _draw() -> void:
 ## Cœur déjà purifié et le joueur posé dans l'arène.
 func autotest_begin() -> void:
 	autotest_build(12, Regions.branch_of(region))
-	Game.flags[heart.flag] = true
+	Game.flags[Regions.heart_flag(region)] = true
 	main.player.hp = Game.stats["max_hp"]
 	main.player.position = center + (heart.center - center).normalized() * (max_radius - 110.0)
 	main.player.reset_physics_interpolation()
@@ -394,7 +396,7 @@ func bot_input(p) -> Dictionary:
 
 
 ## Suit le combat : captures à chaque phase, puis fin sur une victoire, une défaite, ou un échec
-## si le combat dure plus de 3 minutes.
+## si le combat dure plus de 5 minutes.
 func autotest_step(delta: float) -> void:
 	if auto_done:
 		return
@@ -411,7 +413,7 @@ func autotest_step(delta: float) -> void:
 		_autotest_end("victoire", 0)
 	elif defeats > 0:
 		_autotest_end("défaite", 0)
-	elif auto_time >= 180.0:
+	elif auto_time >= auto_max:
 		_autotest_end("ÉCHEC, combat non terminé", 1)
 
 

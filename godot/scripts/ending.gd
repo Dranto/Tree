@@ -1,5 +1,7 @@
-## Séquence « région purifiée », lancée quand le boss d'une région est vaincu : le monde reverdit,
-## un texte de fin, les statistiques de la partie, puis « Continuer à jouer » ou « Retour au titre ».
+## Écran plein de fin (le monde reverdit, un texte, les statistiques, puis « Continuer à jouer » ou
+## « Retour au titre »). Depuis le jalon 10, il ne sert plus que de base à l'épilogue de la finale
+## (epilogue.gd) : un boss régional vaincu lance une célébration sur place, sans pause
+## (region_fanfare.gd). Ci-dessous, la description d'origine de la séquence.
 ## Les textes viennent de la région (« ending » de data/regions/<id>.json) ; quand toutes les
 ## régions sont purifiées, c'est la fin de l'aventure (Objectives.ending_texts). Tout est dessiné
 ## par le code (voir _draw) ; les textes et les boutons sont des nœuds Control avec le thème commun.
@@ -78,14 +80,14 @@ func _build() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	_right.add_child(v)
-	_label(v, "TA PARTIE", 12, Color(0.55, 0.65, 0.55))
+	_label(v, "TA PARTIE", 14, UiTheme.SOFT)
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 16)
 	grid.add_theme_constant_override("v_separation", 4)
 	v.add_child(grid)
 	for pair in stats:
-		var a := _label(grid, pair[0], 15, Color(0.75, 0.82, 0.75))
+		var a := _label(grid, pair[0], 15, UiTheme.SOFT)
 		a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var b := _label(grid, pair[1], 15, UiTheme.INK, true)
 		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

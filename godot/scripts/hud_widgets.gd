@@ -139,8 +139,7 @@ class Slot extends Control:
 						var fs := 20
 						var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
 						var p := Vector2(c.x - w / 2.0, c.y + fs * 0.36)
-						draw_string(font, p + Vector2(1.5, 1.5), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.85))
-						draw_string(font, p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Art.c("texte"))
+						UiTheme.draw_text(self, font, p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Art.c("texte"))
 				if ready_t < 0.35:
 					# Prête : un éclair d'anneau qui s'élargit.
 					var k := ready_t / 0.35
@@ -171,13 +170,13 @@ class Slot extends Control:
 			draw_line(body_r.position + Vector2(2.0, 12.0), body_r.position + Vector2(18.0, 12.0), Color(ink, 0.95), 1.5)
 		elif state != LOCKED and key_text != "":
 			# Touche : une petite plaque sous le médaillon.
-			var fs2 := 13
+			var fs2 := UiTheme.MIN_HUD_SIZE
 			var w2 := font.get_string_size(key_text, HORIZONTAL_ALIGNMENT_CENTER, -1, fs2).x
-			var plate := Rect2(Vector2(size.x / 2.0 - w2 / 2.0 - 6.0, diam + 6.0), Vector2(w2 + 12.0, 17.0))
+			var plate := Rect2(Vector2(size.x / 2.0 - w2 / 2.0 - 6.0, diam + 5.0), Vector2(w2 + 12.0, 19.0))
 			var on := state == SKILL
-			draw_rect(plate, Color(Art.c("contour"), 0.85 if on else 0.5))
-			draw_rect(plate, Color(Art.c("texte_doux"), 0.7 if on else 0.3), false, 1.0)
-			draw_string(font, plate.position + Vector2(6.0, 13.0), key_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2,
+			draw_rect(plate, Color(Art.c("contour"), 0.92 if on else 0.8))
+			draw_rect(plate, Color(Art.c("texte_doux"), 0.7 if on else 0.4), false, 1.0)
+			draw_string(font, plate.position + Vector2(6.0, 15.0), key_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs2,
 				Art.c("texte") if on else Art.c("texte_doux"))
 
 
@@ -188,12 +187,17 @@ class Vital extends Control:
 	var text := ""
 	var flash := 0.0
 	var _prev := 1.0
+	## Soin bloqué par un coup reçu (player.heal_block) : le remplissage se grise.
+	var blocked := false
 
 	func _init() -> void:
 		custom_minimum_size = Vector2(300, 26)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	func set_value(v: float, label: String) -> void:
+	func set_value(v: float, label: String, heal_blocked := false) -> void:
+		if heal_blocked != blocked:
+			blocked = heal_blocked
+			queue_redraw()
 		if v == ratio and label == text:
 			return
 		if v < _prev - 0.001:
@@ -222,14 +226,15 @@ class Vital extends Control:
 		if ghost > ratio:
 			draw_rect(Rect2(back.position, Vector2(back.size.x * ghost, back.size.y)), Color(Art.c("danger_eclair"), 0.55))
 		var fill := Color(0.78, 0.25, 0.25).lerp(Color.WHITE, 0.6 * flash)
+		if blocked:
+			fill = Color(0.5, 0.36, 0.4)
 		var fw := back.size.x * ratio
 		draw_rect(Rect2(back.position, Vector2(fw, back.size.y)), fill)
 		draw_rect(Rect2(back.position, Vector2(fw, back.size.y * 0.4)), Color(1, 1, 1, 0.12))
 		# Cœur de vie, à gauche : l'icône de la charte dans son médaillon.
 		Art.icon_badge(self, "vie", Rect2(Vector2(0, 0), Vector2(size.y, size.y)))
 		var font := UiTheme.font(true)
-		draw_string(font, back.position + Vector2(8, back.size.y - 5), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0, 0, 0, 0.8))
-		draw_string(font, back.position + Vector2(7, back.size.y - 6), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.c("texte"))
+		UiTheme.draw_text(self, font, back.position + Vector2(8, back.size.y - 4), text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE, Art.c("texte"), 4)
 
 
 ## Coin d'informations : médaillon de niveau cerclé par l'expérience, points à dépenser,
@@ -284,14 +289,14 @@ class Corner extends Control:
 		var pop := 1.0 + 0.25 * (1.0 - Anim.ease_out(level_t / 0.5)) if level_t < 0.5 else 1.0
 		draw_circle(c + Vector2(0, 2), r * pop, Art.c("ombre"))
 		draw_circle(c, r * pop, Art.c("contour"))
-		draw_circle(c, (r - 3.0) * pop, Color(0.1, 0.16, 0.1))
-		draw_arc(c, r - 1.5, 0.0, TAU, 40, Color(0.18, 0.28, 0.18), 3.0, true)
+		draw_circle(c, (r - 3.0) * pop, Color(0.128, 0.12, 0.101))
+		draw_arc(c, r - 1.5, 0.0, TAU, 40, Color(0.228, 0.213, 0.179), 3.0, true)
 		if xp > 0.0:
 			draw_arc(c, r - 1.5, -PI / 2.0, -PI / 2.0 + TAU * clampf(xp, 0.0, 1.0), 48, Art.c("accent"), 3.0, true)
 		var lv := str(level)
 		var fs := 22 if level < 100 else 16
 		var w := font.get_string_size(lv, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
-		draw_string(font, c + Vector2(-w / 2.0, fs * 0.36), lv, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Art.c("texte"))
+		UiTheme.draw_text(self, font, c + Vector2(-w / 2.0, fs * 0.36), lv, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Art.c("texte"), 3)
 		# Points à dépenser : un repère or qui pulse tant qu'il en reste.
 		var x := 68.0
 		if points > 0:
@@ -301,9 +306,9 @@ class Corner extends Control:
 			draw_rect(chip, Color(Art.c("or"), 0.55 + 0.4 * pulse), false, 1.5)
 			Art.icon(self, "competence", Rect2(chip.position + Vector2(3, 1), Vector2(24, 24)))
 			var s1 := "+%d" % points
-			draw_string(font, chip.position + Vector2(30, 19), s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Art.c("or"))
-			var kw := font.get_string_size(s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-			draw_string(soft, chip.position + Vector2(36 + kw, 18), tree_key, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.c("texte_doux"))
+			UiTheme.draw_text(self, font, chip.position + Vector2(30, 19), s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Art.c("or"), 4)
+			var kw := font.get_string_size(s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+			UiTheme.draw_text(self, soft, chip.position + Vector2(36 + kw, 19), tree_key, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE, Art.c("texte"), 4)
 			if points_t < 0.4:
 				var k := points_t / 0.4
 				draw_rect(chip.grow(6.0 * Anim.ease_out(k)), Color(Art.c("or"), 0.8 * (1.0 - k)), false, 2.0)
@@ -311,10 +316,82 @@ class Corner extends Control:
 		var cy := 46.0
 		var cr := 8.0
 		var wc := Vector2(x + cr, cy)
-		draw_arc(wc, cr, 0.0, TAU, 24, Color(0.2, 0.28, 0.2), 3.0, true)
+		draw_arc(wc, cr, 0.0, TAU, 24, Color(0.243, 0.227, 0.19), 3.0, true)
 		if world > 0.0:
 			draw_arc(wc, cr, -PI / 2.0, -PI / 2.0 + TAU * clampf(world, 0.0, 1.0), 32, Art.ec("seve"), 3.0, true)
-		draw_string(soft, Vector2(x + 2 * cr + 6, cy + 5), "%d %%" % roundi(world * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.c("texte"))
+		UiTheme.draw_text(self, font, Vector2(x + 2 * cr + 6, cy + 6), "%d %%" % roundi(world * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE + 1, Art.c("texte"))
 		var kx := x + 80.0
 		Art.icon(self, "cendre", Rect2(Vector2(kx, cy - 10), Vector2(20, 20)), Art.c("texte_doux"))
-		draw_string(soft, Vector2(kx + 23, cy + 5), str(kills), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Art.c("texte_doux"))
+		UiTheme.draw_text(self, font, Vector2(kx + 23, cy + 6), str(kills), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE + 1, Art.c("texte"))
+
+
+## Attaque de base en cours : la forme principale, puis les formes en écho (plus petites), puis un
+## losange doré par synergie active (data/synergies.json). Masquée tant qu'il n'y a qu'une forme
+## et aucune synergie. L'infobulle détaille tout (Attack.describe).
+class AttackStrip extends Control:
+	const MAIN := 34.0
+	const ECHO := 26.0
+	const GAP := 6.0
+	const PIP := 9.0
+	var forms_shown: Array = []
+	var synergies_shown: Array = []
+	## Temps depuis la dernière synergie gagnée (éclat doré).
+	var glow_t := 1.0
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(MAIN, MAIN + 4.0)
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		visible = false
+
+	## Appelée à chaque image par hud.gd ; ne redessine que si l'attaque a changé.
+	func set_attack(form_ids: Array, syn: Array, tip: String) -> void:
+		if form_ids == forms_shown and syn == synergies_shown:
+			return
+		if syn.size() > synergies_shown.size() and not forms_shown.is_empty():
+			glow_t = 0.0
+		forms_shown = form_ids.duplicate()
+		synergies_shown = syn.duplicate()
+		tooltip_text = tip
+		visible = form_ids.size() > 1 or not syn.is_empty()
+		var w := MAIN + (form_ids.size() - 1) * (ECHO + GAP)
+		if not syn.is_empty():
+			w += GAP * 2.0 + syn.size() * (PIP * 2.0 + 4.0)
+		custom_minimum_size = Vector2(w, MAIN + 4.0)
+		size = custom_minimum_size
+		queue_redraw()
+
+	func _process(delta: float) -> void:
+		if glow_t < 1.0:
+			glow_t += delta
+			queue_redraw()
+
+	func _draw() -> void:
+		if forms_shown.is_empty():
+			return
+		var cy := MAIN / 2.0 + 2.0
+		var x := 0.0
+		for i in forms_shown.size():
+			var d := MAIN if i == 0 else ECHO
+			if i > 0:
+				# Un lien fin : l'écho tire avec la forme principale.
+				draw_line(Vector2(x - GAP - 1.0, cy), Vector2(x + 1.0, cy), Color(Art.c("or"), 0.55), 2.0, true)
+			Art.icon_badge(self, "attaque_" + str(forms_shown[i]), Rect2(Vector2(x, cy - d / 2.0), Vector2(d, d)))
+			x += d + GAP
+		if synergies_shown.is_empty():
+			return
+		x += GAP
+		var gold := Art.c("or")
+		for i in synergies_shown.size():
+			var c := Vector2(x + PIP, cy)
+			var k := 1.0 + (0.35 * (1.0 - glow_t) if glow_t < 1.0 and i == synergies_shown.size() - 1 else 0.0)
+			var r := PIP * k
+			var pts := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r * 0.8, 0), c + Vector2(0, r), c + Vector2(-r * 0.8, 0)])
+			draw_colored_polygon(pts, Art.c("contour"))
+			var inner := PackedVector2Array()
+			for p in pts:
+				inner.append(c + (p - c) * 0.72)
+			draw_colored_polygon(inner, gold)
+			draw_colored_polygon(PackedVector2Array([inner[0], inner[1], c]), gold.lerp(Color.WHITE, 0.45))
+			if glow_t < 1.0 and i == synergies_shown.size() - 1:
+				draw_arc(c, r + 6.0 * glow_t, 0.0, TAU, 24, Color(gold, 1.0 - glow_t), 2.0, true)
+			x += PIP * 2.0 + 4.0

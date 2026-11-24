@@ -23,6 +23,7 @@ const SOUNDS := {
 	"niveau": {"wave": SQUARE, "f0": 392.0, "f1": 392.0, "dur": 0.7, "att": 0.005, "lp": 4500.0, "vol": 0.24, "duty": 0.5, "arp": [0, 4, 7, 12]},
 	"esquive": {"wave": NOISE, "f0": 1800.0, "f1": 4200.0, "dur": 0.16, "att": 0.03, "lp": 5200.0, "vol": 0.22},
 	"degats": {"wave": SAW, "f0": 190.0, "f1": 70.0, "dur": 0.22, "att": 0.002, "lp": 1500.0, "vol": 0.36},
+	"etourdi": {"wave": SQUARE, "f0": 300.0, "f1": 110.0, "dur": 0.26, "att": 0.002, "lp": 1800.0, "vol": 0.3, "duty": 0.25, "body": 60.0},
 	"nova": {"wave": SINE, "f0": 140.0, "f1": 55.0, "dur": 0.5, "att": 0.004, "lp": 1200.0, "vol": 0.5, "body": 70.0, "voice2": 7.0},
 	"nuage": {"wave": NOISE, "f0": 1200.0, "f1": 500.0, "dur": 0.55, "att": 0.12, "lp": 1500.0, "vol": 0.24, "vib": [0.15, 9.0]},
 	"floraison": {"wave": SINE, "f0": 330.0, "f1": 330.0, "dur": 0.9, "att": 0.05, "lp": 0.0, "vol": 0.28, "arp": [0, 4, 7, 11, 16], "voice2": 12.0},

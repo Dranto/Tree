@@ -7,6 +7,7 @@ const WORLD_HALF := Regions.WORLD_HALF
 const TREE_TO_WORLD := 2.1
 
 const Ground = preload("res://scripts/ground.gd")
+const WorldEdge = preload("res://scripts/world_edge.gd")
 const Flora = preload("res://scripts/flora.gd")
 const Fx = preload("res://scripts/fx.gd")
 const ScreenFx = preload("res://scripts/screen_fx.gd")
@@ -48,6 +49,7 @@ const BuildBot = preload("res://scripts/build_bot.gd")
 
 var world_half := WORLD_HALF
 var ground
+var world_edge
 var flora
 var fx
 var screen_fx
@@ -84,9 +86,13 @@ var big_enemies: Array = []
 ## Cœur de flétrissure et arène de la Mère-Ronce (région de Ronce).
 var heart
 var arena
-## Cœur et arène de chaque région (identifiant -> nœud), dans l'ordre des régions.
+## Grand Cœur (celui du centre, au pied de l'arène) et arène de chaque région (identifiant -> nœud),
+## dans l'ordre des régions.
 var hearts: Dictionary = {}
 var arenas: Dictionary = {}
+## Tous les Cœurs de chaque région (identifiant -> liste, trois depuis le jalon 10), et tous ensemble.
+var region_hearts: Dictionary = {}
+var all_hearts: Array = []
 ## Arène de la finale, sous la graine (finale_arena.gd) : ouverte quand toutes les régions sont purifiées.
 var finale
 ## Sanctuaires (sanctuary.gd), points de renaissance ; et sève perdue au sol (lost_sap.gd, ou null).
@@ -168,6 +174,10 @@ func _ready() -> void:
 
 	ground = Ground.new()
 	add_child(ground)
+	# Le décor du bord du monde, juste au-dessus du sol (voir world_edge.gd).
+	world_edge = WorldEdge.new()
+	world_edge.main = self
+	add_child(world_edge)
 	# Les arbres du décor, les Flétris et le joueur partagent un calque trié en profondeur :
 	# un personnage plus haut à l'écran qu'un arbre passe derrière lui.
 	actors_layer = Node2D.new()
@@ -254,21 +264,32 @@ func _ready() -> void:
 	pause_menu.main = self
 	pause_layer.add_child(pause_menu)
 
-	# Un Cœur et une arène par région (data/regions/<id>.json) : leurs marques au sol se dessinent
-	# sous les personnages. heart et arena restent ceux de la première région.
+	# Les Cœurs et l'arène de chaque région (data/regions/<id>.json) : leurs marques au sol se
+	# dessinent sous les personnages. heart et arena restent ceux de la région suivie (la première).
 	for id in Regions.ids():
-		var h = Heart.new()
-		h.main = self
-		h.region = id
+		var list: Array = []
+		var h = null
+		for i in Regions.heart_count(id):
+			var hi = Heart.new()
+			hi.main = self
+			hi.region = id
+			hi.index = i
+			list.append(hi)
+			all_hearts.append(hi)
+			add_child(hi)
+			move_child(hi, actors_layer.get_index())
+		for hi in list:
+			if h == null or hi.great:
+				h = hi
 		var a = BossArena.new()
 		a.main = self
 		a.heart = h
 		a.region = id
 		hearts[id] = h
+		region_hearts[id] = list
 		arenas[id] = a
-		for n in [h, a]:
-			add_child(n)
-			move_child(n, actors_layer.get_index())
+		add_child(a)
+		move_child(a, actors_layer.get_index())
 		if heart == null or id == focus_region():
 			heart = h
 			arena = a
@@ -524,13 +545,19 @@ func _push_out_of_bushes() -> void:
 	player.position = flora.push_out(player.position, player.radius)
 
 
-## Suit les drapeaux d'aventure posés par les Cœurs de flétrissure : chaque région change d'état.
+## Suit les drapeaux d'aventure posés par les Cœurs de flétrissure : la terre de chaque région
+## s'apaise d'un cran par Cœur purifié.
 func _watch_region_state() -> void:
 	for id in Regions.ids():
-		var purified := bool(Game.flags.get(Regions.heart_flag(id), false))
-		if purified != bool(regions_purified.get(id, false)):
-			regions_purified[id] = purified
-			ground.set_purified(id, 1.0 if purified else 0.0)
+		var done := Regions.hearts_done(id, Game.flags)
+		# Tous les Cœurs purifiés sans le drapeau de la région (drapeaux posés un à un par un test ou
+		# une sauvegarde bricolée) : il est posé, l'arène s'ouvre.
+		if done >= Regions.heart_count(id) and not Game.flags.get(Regions.heart_flag(id), false):
+			Game.flags[Regions.heart_flag(id)] = true
+		var k := float(done) / float(maxi(1, Regions.heart_count(id)))
+		if k != float(regions_purified.get(id, 0.0)):
+			regions_purified[id] = k
+			ground.set_purified(id, k)
 
 
 # --- Régions du monde (voir regions.gd) ---
@@ -578,10 +605,24 @@ func in_boss_fight() -> bool:
 
 ## Cœur assiégé en ce moment, ou null.
 func siege_heart():
-	for h in hearts.values():
+	for h in all_hearts:
 		if h.state == "siege":
 			return h
 	return null
+
+
+## Cœur de la région à purifier le plus proche de « from » (le Grand Cœur quand tous le sont), ou null.
+func next_heart(region: String, from: Vector2):
+	var best = null
+	var best_d := INF
+	for h in region_hearts.get(region, []):
+		if h.state == "purifie" or h.flag_set():
+			continue
+		var d: float = h.center.distance_squared_to(from)
+		if d < best_d:
+			best_d = d
+			best = h
+	return best if best != null else hearts.get(region)
 
 
 ## Apparitions de chaque région (« spawn » de data/regions/<id>.json).
@@ -633,7 +674,7 @@ func power() -> float:
 	return threat()
 
 
-## Nombre de Cœurs de flétrissure purifiés (un par région).
+## Nombre de régions dont tous les Cœurs de flétrissure sont purifiés (la menace en tient compte).
 func hearts_purified() -> int:
 	var n := 0
 	for id in Regions.ids():
@@ -1004,7 +1045,7 @@ func player_died() -> void:
 	if fight != null:
 		reset = "boss"
 	else:
-		for h in hearts.values():
+		for h in all_hearts:
 			if h.reset_siege():
 				reset = "coeur"
 	for e in enemies:
@@ -1152,7 +1193,7 @@ func _on_level_up(lvl: int) -> void:
 	fx.pickup(player.position, "seve", 12)
 	hud.banner("Niveau %d : un point à placer dans l'Arbre de vie (%s)" % [lvl, hud.key_label("toggle_tree")])
 	request_autosave()
-	player.heal(Game.stats["max_hp"] * 0.25)
+	player.heal(Game.stats["max_hp"] * 0.25, true)
 
 
 # --- Mode de test automatique ---

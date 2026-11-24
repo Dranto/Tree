@@ -4,7 +4,7 @@ extends RefCounted
 
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
-const CONDITION_TYPES := ["nodes", "flag", "flag_count", "keystone", "counter"]
+const CONDITION_TYPES := ["nodes", "flag", "flag_count", "keystone", "counter", "hearts"]
 const TARGET_TYPES := ["none", "group", "heart", "arena", "seed", "finale"]
 ## Listes du générique remplies par le jeu (data/finale.json › credits › auto).
 const CREDIT_AUTO := ["regions", "bosses"]
@@ -40,6 +40,8 @@ static func validate() -> Array:
 			errors.append("objectif %s : « count » doit valoir au moins 1" % id)
 		elif ct == "flag_count" and str(c.get("prefix", "")) == "":
 			errors.append("objectif %s : « prefix » manque" % id)
+		elif ct == "hearts" and reg == "":
+			errors.append("objectif %s : la condition « hearts » demande une « region »" % id)
 		elif ct == "flag_count" and c.get("region_only", false) and reg == "":
 			errors.append("objectif %s : « region_only » demande une « region »" % id)
 		var tt := str(o.get("target", {}).get("type", "none"))

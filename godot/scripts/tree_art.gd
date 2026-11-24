@@ -361,6 +361,94 @@ static func background(c: CanvasItem, extent: float, colors: Array, rings: Array
 		c.draw_polyline(line, root_col, maxf(1.5, 1.6 / z))
 
 
+## Marges de l'arbre (jalon 10, F) : au-delà du disque des nœuds, l'écran de l'arbre ne reste pas noir.
+## Brume teintée par branche qui s'éteint avec la distance, cernes de croissance qui continuent,
+## radicelles qui s'effilent vers l'extérieur et spores de loin en loin. Tout est déterministe
+## (aucun hasard) et dessiné seulement dans `area` (zone enregistrée, coordonnées de l'arbre).
+const MARGIN_FROM := 1.15
+const MARGIN_TO := 3.6
+
+static func margin(c: CanvasItem, extent: float, colors: Array, area: Rect2, z: float) -> void:
+	var count := colors.size()
+	if count == 0:
+		return
+	var far := maxf(maxf(absf(area.position.x), absf(area.end.x)), maxf(absf(area.position.y), absf(area.end.y))) * 1.42
+	if far < extent * MARGIN_FROM:
+		return
+	var sector := TAU / count
+	# Brume : bandes radiales par secteur, teinte de la branche mêlée à celle de sa voisine.
+	var radii := [MARGIN_FROM, 1.6, 2.3, MARGIN_TO]
+	var alphas := [0.0, 0.075, 0.04, 0.0]
+	var steps := 10
+	var b := batch()
+	for bi in count:
+		var a0 := bi * sector - PI / 2.0
+		for ri in radii.size() - 1:
+			if extent * radii[ri] > far:
+				break
+			var start: int = b["p"].size()
+			for i in steps + 1:
+				var f := float(i) / steps
+				var other: Color = colors[(bi - 1 + count) % count] if f < 0.5 else colors[(bi + 1) % count]
+				var col: Color = (colors[bi] as Color).lerp(other, absf(f - 0.5))
+				var d := Vector2.from_angle(a0 + sector * f)
+				b["p"].append(d * extent * radii[ri])
+				b["c"].append(Color(col, alphas[ri]))
+				b["p"].append(d * extent * radii[ri + 1])
+				b["c"].append(Color(col, alphas[ri + 1]))
+			for i in steps:
+				var q := start + i * 2
+				b["i"].append_array(PackedInt32Array([q, q + 1, q + 2, q + 1, q + 3, q + 2]))
+	flush(c, b)
+	# Cernes qui continuent, de plus en plus pâles.
+	var lw := maxf(1.0, 1.0 / z)
+	for j in 9:
+		var rr := extent * (1.2 + j * 0.27)
+		if rr > far:
+			break
+		c.draw_arc(Vector2.ZERO, rr, 0.0, TAU, 96, Color(Art.c("brume"), 0.09 * (1.0 - j / 9.0)), lw, true)
+	# Radicelles : deux par branche, le long de la direction du secteur, qui s'effilent et pâlissent.
+	var tb := batch()
+	for bi in count:
+		var col: Color = colors[bi]
+		for side in 2:
+			var a := (bi + 0.5 + (side - 0.5) * 0.5) * sector - PI / 2.0
+			var d := Vector2.from_angle(a)
+			var o := d.orthogonal()
+			var pts := PackedVector2Array()
+			var n := 24
+			for i in n + 1:
+				var k := float(i) / n
+				var rr := extent * lerpf(0.98, 3.1, k)
+				pts.append(d * rr + o * extent * (0.045 * sin(k * 7.0 + bi * 1.7 + side * 2.1) + 0.02 * sin(k * 17.0 + bi)))
+			# Naît en s'épaississant (le bout ne finit pas en bloc carré), puis s'effile et pâlit.
+			var grow_to := 5
+			var rise := pts.slice(0, grow_to + 1)
+			strip(tb, rise, extent * 0.002, extent * 0.012, Color(bark(col), 0.0), Color(bark(col), 0.5))
+			strip(tb, pts.slice(grow_to), extent * 0.012, extent * 0.002, Color(bark(col), 0.5), Color(bark(col), 0.0))
+			# Bourgeons le long de la radicelle.
+			for i in range(3, n, 3):
+				var k := float(i) / n
+				if pts[i].length() > far:
+					break
+				disc(tb, pts[i], extent * lerpf(0.008, 0.003, k), Color(col.lightened(0.15), 0.34 * (1.0 - k)), 12)
+	flush(c, tb)
+	# Spores : points fixes, plus rares et plus pâles vers l'extérieur.
+	var sb := batch()
+	for i in 220:
+		var h1 := fposmod(sin(i * 12.9898) * 43758.5453, 1.0)
+		var h2 := fposmod(sin(i * 78.233) * 12543.1234, 1.0)
+		var h3 := fposmod(sin(i * 39.425) * 24634.6345, 1.0)
+		var rr := extent * lerpf(MARGIN_FROM, 3.2, h1 * h1)
+		if rr > far:
+			continue
+		var ang := h2 * TAU
+		var bi := int(fposmod(ang + PI / 2.0, TAU) / sector) % count
+		var fade := 1.0 - (rr / extent - MARGIN_FROM) / (3.2 - MARGIN_FROM)
+		disc(sb, Vector2.from_angle(ang) * rr, extent * (0.003 + 0.004 * h3), Color((colors[bi] as Color).lightened(0.3), 0.1 + 0.3 * fade * h3), 6)
+	flush(c, sb)
+
+
 ## Teinte du fond au cercle ri du dégradé (voir background).
 static func _bg_tint(ri: int, col: Color, glow: Color) -> Color:
 	match ri:

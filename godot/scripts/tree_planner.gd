@@ -274,6 +274,9 @@ func simulate(add: Array = [], remove: Array = [], grafts_override = null) -> Di
 	# Choix des maîtrises, greffes, grappes complètes et résonance comptent aussi.
 	if game.has_method("effect_sources"):
 		nodes = game.effect_sources(set) if grafts_override == null else game.effect_sources(set, grafts_override)
+	# Attaque imposée pour l'essai (« --attack= ») : comptée comme dans Game.recompute.
+	if "test_attack" in game and not game.test_attack.is_empty():
+		nodes = nodes + [{"id": "test_attack", "ring": 99, "effects": game.test_attack}]
 	var engine = Effects.new()
 	engine.states = game.effects.states.duplicate()
 	engine.rebuild(nodes)

@@ -232,7 +232,7 @@ func report(game, elapsed: float, deaths: int) -> String:
 ## Point autour duquel le robot se bat : il quitte la graine et s'enfonce dans la région de son build
 ## à mesure qu'il monte de niveau, comme un joueur qui avance dans l'aventure.
 func run_anchor(main) -> Vector2:
-	var heart = main.hearts.get(region, main.heart) if "hearts" in main else main.heart
+	var heart = main.next_heart(region, main.player.position) if main.has_method("next_heart") else main.heart
 	if Game.level >= HEART_LEVEL and Game.level < HEART_LEVEL + 3 and heart != null and heart.state != "purifie" \
 			and not Game.flags.get(Regions.heart_flag(region), false):
 		return heart.center

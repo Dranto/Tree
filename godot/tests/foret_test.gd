@@ -199,6 +199,10 @@ func _run() -> void:
 	print("Cœur des cernes")
 	p.fire_cd = 0.0
 	var heart = main.hearts["racine"]
+	# Les deux autres Cœurs de la région sont déjà purifiés : le Grand Cœur ouvre l'arène.
+	for h in main.region_hearts["racine"]:
+		if h != heart:
+			game.flags[h.flag] = true
 	var arena = main.arenas["racine"]
 	check(heart.state == "fletri" and arena.state == "fermee", "Cœur flétri, arène fermée")
 	_place(heart.center + Vector2(heart.zone * 0.6, 0))
@@ -234,7 +238,8 @@ func _run() -> void:
 	var between: Vector2 = boss.anchor + Vector2.from_angle(boss.aim.angle() + boss.ROOTS["spread"] * 0.5) * 300.0
 	check(boss.danger_time(between, 0.0) == INF, "entre deux couloirs, rien ne menace")
 	check(await _until(func(): return boss.attack == "", 200) and p.hp < 100.0, "les racines jaillissent et blessent le joueur")
-	# Éboulis : des cercles autour du joueur, le premier sous lui.
+	# Éboulis : des cercles autour du joueur, le premier sous lui (le coup des racines l'a fait reculer).
+	_place(spot2)
 	p.hp = 100.0
 	p.invuln = 0.0
 	boss._begin("eboulis")

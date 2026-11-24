@@ -190,6 +190,13 @@ static func validate(keystones_per_branch := -1) -> PackedStringArray:
 			errors.append("%s.json est absent, vide ou illisible" % name)
 	# Chargé à l'exécution : attack.gd lit lui-même ce fichier (pas de dépendance circulaire).
 	errors.append_array(load("res://scripts/attack.gd").validate())
+	var syn = _load("synergies").get("synergies", {})
+	if syn is Dictionary:
+		for sid in syn:
+			if syn[sid] is Dictionary and syn[sid].get("effects") is Array:
+				_check_effects(syn[sid]["effects"], "synergies.json, synergie « %s »" % sid, errors)
+	else:
+		errors.append("synergies.json : « synergies » doit être un objet")
 	var t := tree()
 	_check_effects(t.get("root", {}).get("effects", []), "tree.json, graine", errors)
 	for gid in grafts():

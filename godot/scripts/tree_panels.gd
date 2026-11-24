@@ -16,7 +16,7 @@ const PATH_OK := Color("7fd36b")
 const PATH_SHORT := Color("e0675e")
 const PLAN := Color("f2d06b")
 const MATCH := Color("8fd8ff")
-const DIM := Color(0.65, 0.72, 0.68)
+const DIM := Color(0.731, 0.683, 0.574)
 
 ## Écran de l'arbre (tree_ui.gd) : on lit hover, zoom, cam et t, et on dessine sur sa couche animée.
 var ui
@@ -131,8 +131,8 @@ func _ready() -> void:
 func _theme() -> Theme:
 	var t: Theme = UiTheme.make()
 	t.default_font_size = 15
-	var normal: StyleBoxFlat = UiTheme.box(Color(0.1, 0.13, 0.11, 0.95), Color(0.6, 0.8, 0.6, 0.25))
-	var focus: StyleBoxFlat = UiTheme.box(Color(0.1, 0.13, 0.11, 0.95), UiTheme.GOLD)
+	var normal: StyleBoxFlat = UiTheme.box(Color(UiTheme.PAPER.lightened(0.04), 0.95), Color(UiTheme.GOLD, 0.25))
+	var focus: StyleBoxFlat = UiTheme.box(Color(UiTheme.PAPER.lightened(0.04), 0.95), UiTheme.GOLD)
 	for sb in [normal, focus]:
 		sb.content_margin_left = 12
 		sb.content_margin_right = 12
@@ -141,7 +141,7 @@ func _theme() -> Theme:
 	t.set_stylebox("normal", "LineEdit", normal)
 	t.set_stylebox("focus", "LineEdit", focus)
 	t.set_color("font_color", "LineEdit", UiTheme.INK)
-	t.set_color("font_placeholder_color", "LineEdit", Color(0.6, 0.66, 0.62, 0.8))
+	t.set_color("font_placeholder_color", "LineEdit", Color(0.671, 0.627, 0.526, 0.8))
 	t.set_color("caret_color", "LineEdit", UiTheme.GOLD)
 	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
 		var sb: StyleBoxFlat = t.get_stylebox(state, "Button").duplicate()
@@ -150,7 +150,7 @@ func _theme() -> Theme:
 		sb.content_margin_top = 7
 		sb.content_margin_bottom = 7
 		t.set_stylebox(state, "Button", sb)
-	var panel: StyleBoxFlat = UiTheme.box(Color(0.06, 0.08, 0.07, 0.96), Color(0.6, 0.8, 0.6, 0.3), 1, 8)
+	var panel: StyleBoxFlat = UiTheme.box(Color(UiTheme.PAPER, 0.96), Color(UiTheme.GOLD, 0.3), 1, 8)
 	panel.content_margin_left = 12
 	panel.content_margin_right = 12
 	panel.content_margin_top = 8
@@ -377,7 +377,7 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 	var id: int = n["id"]
 	if st == "owned":
 		var ok: bool = Game.can_refund(id)
-		lines.append(["Appris" + ("  ·  clic droit pour l'oublier" if ok else ""), 13, UiTheme.LEAF])
+		lines.append(["Appris" + ("  ·  clic droit pour l'oublier" if ok else ""), 15, UiTheme.LEAF])
 		return lines
 	var p := _preview_for(id)
 	var count: int = p["path"].size()
@@ -390,22 +390,22 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 			title = "Après le plan et ce chemin (%d nœuds) :" % (planner.plan_cost() + count)
 		elif count > 1:
 			title = "Après ce chemin (%d nœuds) :" % count
-		lines.append([title, 13, DIM])
+		lines.append([title, 15, DIM])
 		for c in p["changes"]:
 			lines.append(["   " + c["text"], 14, PLAN])
 	if planned:
-		lines.append(["Dans le plan  ·  clic pour l'en retirer", 13, PLAN])
+		lines.append(["Dans le plan  ·  clic pour l'en retirer", 15, PLAN])
 	elif plan_mode:
-		lines.append(["Clic pour ajouter au plan (%d nœud(s), %d point(s))" % [count, count], 13, PLAN])
+		lines.append(["Clic pour ajouter au plan (%d nœud(s), %d point(s))" % [count, count], 15, PLAN])
 	elif count <= Game.points:
 		if count == 1:
-			lines.append(["Clic pour apprendre (1 point)", 13, UiTheme.GOLD])
+			lines.append(["Clic pour apprendre (1 point)", 15, UiTheme.GOLD])
 		else:
-			lines.append(["Chemin de %d nœuds, %d points  ·  clic pour tout apprendre" % [count, count], 13, UiTheme.GOLD])
+			lines.append(["Chemin de %d nœuds, %d points  ·  clic pour tout apprendre" % [count, count], 15, UiTheme.GOLD])
 	elif Game.points <= 0 and count == 1:
-		lines.append(["Pas de point disponible : monte de niveau", 13, PATH_SHORT])
+		lines.append(["Pas de point disponible : monte de niveau", 15, PATH_SHORT])
 	else:
-		lines.append(["Chemin de %d nœuds : il te manque %d point(s)" % [count, count - Game.points], 13, PATH_SHORT])
+		lines.append(["Chemin de %d nœuds : il te manque %d point(s)" % [count, count - Game.points], 15, PATH_SHORT])
 	return lines
 
 
@@ -440,8 +440,10 @@ func draw_overlay(c: CanvasItem) -> void:
 				_link(nodes[route[i - 1]], nodes[route[i]], col, w, false)
 				_ring(nodes[route[i]], 5.0, col, w)
 	# Résultats de la recherche.
+	# Résultats : anneau fin (2 px à l'écran), pour ne pas recouvrir les icônes ni les libellés.
+	var mw := maxf(2.0, 2.0 / z)
 	for id in matches:
-		_ring(nodes[id], 9.0, MATCH, w)
+		_ring(nodes[id], 6.0, MATCH, mw)
 	if match_index >= 0 and match_index < matches.size():
 		var pulse: float = 0.5 + 0.5 * sin(ui.t * 5.0)
 		_ring(nodes[matches[match_index]], 16.0 + 6.0 * pulse, Color.WHITE, w)
@@ -508,9 +510,9 @@ func _fill_summary() -> void:
 
 	_text("Résumé du build", 20, UiTheme.GOLD)
 	var head := "%d nœuds appris sur %d  ·  %d point(s) à placer" % [now["nodes"], now["total"], now["points"]]
-	_text(head, 13, DIM)
+	_text(head, 15, DIM)
 	if with_plan:
-		_text("Les valeurs après « → » tiennent compte du plan (%d nœuds)." % planner.plan_cost(), 13, PLAN)
+		_text("Les valeurs après « → » tiennent compte du plan (%d nœuds)." % planner.plan_cost(), 15, PLAN)
 
 	_section("Branches")
 	var grid := GridContainer.new()
@@ -533,7 +535,7 @@ func _fill_summary() -> void:
 		gauge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		gauge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var bg := StyleBoxFlat.new()
-		bg.bg_color = Color(0.12, 0.15, 0.13)
+		bg.bg_color = Color(0.143, 0.133, 0.112)
 		var fill := StyleBoxFlat.new()
 		fill.bg_color = b["color"]
 		gauge.add_theme_stylebox_override("background", bg)

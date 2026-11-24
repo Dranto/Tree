@@ -1,6 +1,6 @@
 ## Scénario « finale » du banc visuel (runner.gd) : la brèche ouverte au pied de la graine, le creux
-## sous la graine et la Flétrissure endormie, chacune de ses attaques dans ses trois phases, le
-## colosse entier en phase 3, sa mort
+## sous la graine et la Flétrissure endormie, chacune de ses attaques dans ses trois phases, sa
+## transformation (le creux qui s'effondre), ses attaques combinées, sa seconde forme entière, sa mort
 ## et le creux refleuri, puis l'épilogue (textes et statistiques), le générique et sa fin.
 ## Tout est figé à un instant précis.
 extends RefCounted
@@ -82,29 +82,68 @@ func run(runner) -> void:
 	await _shot_at("finale_rafale", pos, finale.center)
 	boss._end_attack()
 
-	# Phase 3 : rayons de lumière annoncés, le mur qui va se resserrer ; puis la ligne de racines.
+	# Phase 3 : la transformation, à mi-chemin : le manteau et la couronne tombent, le creux s'effondre.
 	boss.phase = 3
+	boss.hp = boss.max_hp * 0.33
+	boss.unbound = true
+	boss.morph_time = boss.TRANSFORM["time"] * 0.22
+	finale.collapse_t = finale.collapse_time * 0.6
+	finale._collapse_step(0.0)
+	main.fx.rings = []
+	await _shot_at("finale_effondrement", pos, finale.center)
+
+	# La seconde forme : l'île au-dessus du gouffre.
+	boss.morph_time = -1.0
+	finale.collapse_t = -1.0
+	finale.collapse_k = 1.0
+	finale.radius = finale.collapse_radius
 	boss.hp = boss.max_hp * 0.25
-	finale.shrinking = true
-	finale.shrink_warn = 0.8
+	pos = finale.center + Vector2(130, 140)
+	# Tempête (Vent + Ronce) : la rafale et l'éventail d'épines annoncés ensemble.
+	boss._begin("tempete")
+	boss.timer = 0.3
+	await _shot_at("finale_tempete", pos, finale.center)
+	boss._end_attack()
+	# Floraison (Spore + Sève) : des nuages qui boivent déjà posés, d'autres annoncés.
+	boss.clouds = [{"pos": finale.center + Vector2(-180, 110), "time": 2.0, "drain": true}, {"pos": finale.center + Vector2(-60, 230), "time": 2.0, "drain": true}]
+	boss._begin("floraison")
+	boss.spore_marks = [pos + Vector2(10, 0), pos + Vector2(-140, 60), pos + Vector2(60, -150)]
+	boss.timer = 0.4
+	await _shot_at("finale_floraison", pos, finale.center)
+	boss._end_attack()
+	boss.clouds = []
+	boss.spore_marks = []
+	# Rayons de lumière annoncés.
 	boss._begin("lumiere")
 	boss.timer = 0.3
 	await _shot_at("finale_lumiere", pos, finale.center)
 	boss._end_attack()
 	boss.rays = []
+	# Aurore (Aube + Racine) : l'éclair des rayons, puis les racines qui jaillissent le long de chacun.
+	boss._begin("aurore")
+	# (sans _strike : le rayon qui vise le joueur le toucherait.)
+	boss.stage = "frappe"
+	boss.flash_kind = "lumiere"
+	for r in boss.roots:
+		r["fuse"] = maxf(0.0, float(r["fuse"]) - boss.LIGHT["annonce"] - 0.4)
+		if r["fuse"] <= 0.0:
+			r["burst"] = 0.1
+	boss.strike_flash = 0.1
+	await _shot_at("finale_aurore", pos, finale.center)
+	boss._clear_attacks()
+	boss.strike_flash = -1.0
 	boss._begin("racines")
 	boss._strike()
 	for i in boss.roots.size():
 		boss.roots[i]["fuse"] = -1.0 if i < 2 else 0.15 * (i - 1)
 		boss.roots[i]["burst"] = 0.12 if i < 2 else -1.0
 	await _shot_at("finale_racines", pos, finale.center)
-	# Le colosse en entier, en phase 3, entre deux coups : ses six bras éveillés.
+	# Le colosse en entier, en seconde forme, entre deux coups : les éclats des six gardiens.
 	boss._clear_attacks()
 	await _shot_at("finale_colosse", finale.center + Vector2(250, 30), finale.center)
 
 	# Sa mort, à mi-chemin : les bras retombent en cendre, la sève jaillit des fentes.
 	boss._clear_attacks()
-	finale.shrinking = false
 	boss.take_damage(boss.max_hp * 2.0, false)
 	boss.dying = boss.death_time * 0.5
 	main.fx.rings = []
@@ -113,6 +152,9 @@ func run(runner) -> void:
 	boss.queue_free()
 	finale.life_wave = -1.0
 	finale.bloom = 1.0
+	# La floraison a refermé le gouffre.
+	finale.collapse_k = 0.0
+	finale.radius = finale.max_radius
 	main.fx.rings = []
 	await _shot_at("finale_vaincue", pos, finale.center)
 
