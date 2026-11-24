@@ -1,0 +1,36 @@
+name: Arbre de vie
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, develop, "claude/project-thread-9liy48"]
+  workflow_dispatch:
+
+jobs:
+  calage:
+    # Le fond, les nœuds et la couche de vie restent calés à 1 px pendant les déplacements dans l'arbre
+    # (tests/tree_align_test.gd), à 144 images/s pour 30 pas physiques par seconde : le cas d'une vraie
+    # carte graphique, où l'interpolation physique décalait l'image en cache (jalon 11, tâche A).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer l'écran virtuel et le rendu logiciel
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1
+
+      - name: Cache de Godot
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/godot
+          key: godot-4.7-stable
+
+      - name: Importer le projet
+        run: tools/godot.sh --headless --import
+
+      - name: Calage de l'arbre pendant les déplacements (1280x720 et 3440x1440)
+        run: |
+          tools/godot.sh --xvfb --fixed-fps 144 --resolution 1280x720 -s res://tests/tree_align_test.gd
+          tools/godot.sh --xvfb --fixed-fps 144 --resolution 3440x1440 -s res://tests/tree_align_test.gd
