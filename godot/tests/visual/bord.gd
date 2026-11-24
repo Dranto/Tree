@@ -15,7 +15,7 @@ func run(runner) -> void:
 	main.autotest = false
 	main.spawn_timer = 1.0e9
 	main.player.set_physics_process(false)
-	main.hud.hint_time = 0.0
+	main.hud.glyphs.hide()
 	for id in Regions.ids():
 		await _look("bord_" + id, _edge_point(Regions.angle_of(id)))
 	# Frontière entre deux régions (le bord se mêle) et un coin du monde.
