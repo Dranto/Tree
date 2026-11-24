@@ -55,6 +55,10 @@ const MOVE_MODES := ["clavier", "curseur", "moba"]
 const MOVE_MODE_NAMES := {"clavier": "Clavier (Z Q S D)", "curseur": "Suivre le curseur", "moba": "Clic droit (MOBA)"}
 const MOVE_MODE_DEFAULT := "clavier"
 var move_mode := MOVE_MODE_DEFAULT
+## Intensité des flashs (éclair d'un coup, voile d'une mort d'élite) et durée des arrêts sur
+## image, de 0 à 1. Noms convenus avec la tâche K (accessibilité), qui les règle dans les options.
+var flash_scale := 1.0
+var hitstop_scale := 1.0
 ## Réduit les effets de jeu : plus de secousse ni de micro-pause, très peu de particules, ambiance coupée.
 var reduce_effects := false
 
@@ -363,3 +367,13 @@ func move_mode_text(id: String) -> String:
 ## Force réellement appliquée de la secousse d'écran (0 si les effets sont réduits).
 func shake_strength() -> float:
 	return 0.0 if reduce_effects else shake
+
+
+## Intensité réellement appliquée des flashs (0 si les effets sont réduits).
+func flash_strength() -> float:
+	return 0.0 if reduce_effects else flash_scale
+
+
+## Part réellement appliquée de la durée des arrêts sur image (0 si les effets sont réduits).
+func hitstop_strength() -> float:
+	return 0.0 if reduce_effects else hitstop_scale

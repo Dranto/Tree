@@ -59,6 +59,11 @@ static func attack() -> Dictionary:
 	return _load("attack")
 
 
+## Ressenti du combat : arrêt sur image, secousse, recul, éclats (scripts/fx.gd). Réglages d'image seulement.
+static func feel() -> Dictionary:
+	return _load("feel")
+
+
 ## Greffes : objets à insérer dans un emplacement de greffe de l'arbre.
 ## Les clés qui commencent par « _ » (commentaires) sont écartées.
 static func grafts() -> Dictionary:
@@ -185,7 +190,7 @@ static func _load(name: String) -> Dictionary:
 static func validate(keystones_per_branch := -1) -> PackedStringArray:
 	_cache = {}
 	var errors := PackedStringArray()
-	for name in ["tree", "stats", "skills", "conditions", "grafts", "attack"]:
+	for name in ["tree", "stats", "skills", "conditions", "grafts", "attack", "feel"]:
 		if _load(name).is_empty():
 			errors.append("%s.json est absent, vide ou illisible" % name)
 	# Chargé à l'exécution : attack.gd lit lui-même ce fichier (pas de dépendance circulaire).

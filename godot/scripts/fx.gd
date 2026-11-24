@@ -1,6 +1,8 @@
 ## Effets visuels éphémères (ondes, textes flottants, particules) et nuages de spores,
-## et ressenti des coups : secousse d'écran et micro-pause (« hit stop »).
-## « Réduire les effets » (options) coupe la secousse et la micro-pause et allège les particules.
+## et ressenti des coups : secousse d'écran, arrêt sur image (« hit stop »), éclats, étoile des
+## critiques, morts marquées. Dosage dans res://data/feel.json (réglages d'image seulement).
+## Options (tâche K) : Settings.shake_strength(), flash_strength(), hitstop_strength() multiplient
+## la secousse, les flashs et la durée des arrêts ; « Réduire les effets » coupe tout et allège les particules.
 extends Node2D
 
 ## Nombre maximal de particules et de textes en même temps (garde le dessin léger dans la foule).
@@ -9,17 +11,21 @@ const MAX_TEXTS := 28
 ## Secousse maximale (pixels) à pleine puissance, et vitesse à laquelle elle retombe.
 const SHAKE_MAX := 16.0
 const SHAKE_DECAY := 2.2
-## Vitesse du jeu pendant une micro-pause, et délai minimal entre deux micro-pauses (secondes réelles).
+## Vitesse du jeu pendant une micro-pause, et délai minimal entre deux micro-pauses (secondes réelles),
+## si data/feel.json ne les donne pas.
 const HITSTOP_SCALE := 0.05
 const HITSTOP_COOLDOWN := 0.2
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const Content = preload("res://scripts/content.gd")
 
 var main
 var rings: Array = []
 var texts: Array = []
 var clouds: Array = []
 var particles: Array = []
+## Étoiles des coups critiques : rayons qui jaillissent puis s'éteignent (une forme, pas seulement une couleur).
+var stars: Array = []
 var font: Font
 ## Élément du coup en cours de résolution (posé par main.player_hit_enemy, lu par impact()).
 var hit_element := ""
@@ -28,6 +34,9 @@ var _trauma := 0.0
 var _shake_t := 0.0
 var _hitstop_left := 0.0
 var _hitstop_cd := 0.0
+## Nombre d'arrêts sur image réellement lancés et durée du dernier (lus par les tests).
+var hitstops := 0
+var last_hitstop := 0.0
 ## Vrai si la dernière image dessinait quelque chose (pour l'effacer une fois tout fini).
 var drawn_something := false
 
@@ -54,43 +63,75 @@ func text(pos: Vector2, s: String, color: Color, size := 18, dur := 1.0, style :
 
 # --- Ressenti des coups ---
 
-## Un coup touche un Flétri : étincelles, chiffre de dégâts, et (critique) secousse et micro-pause.
-## element : élément du coup (charte) : il donne leur couleur aux étincelles ; vide, elles sont blanches.
-func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0, element := "") -> void:
+## Réglage de data/feel.json (section, clé), ou la valeur par défaut.
+func feel(section: String, key: String, default := 0.0) -> float:
+	return float(Content.feel().get(section, {}).get(key, default))
+
+
+## Un coup touche un Flétri (ou un boss) : éclats, chiffre de dégâts, et selon le coup, secousse et
+## arrêt sur image. element : élément du coup (charte) : il donne leur couleur aux éclats ; vide,
+## ils sont blancs. heavy : coup lourd (grosse part de la vie, voir feel.json › heavy). boss : la
+## cible est un boss (moins d'éclats sur un coup normal, critique plus appuyé).
+func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0, element := "", heavy := false, boss := false) -> void:
 	var reduce: bool = Settings.reduce_effects
 	if element == "":
 		element = hit_element
-	# Hiérarchie des chiffres : le coup normal reste discret, le critique est gras, doré et plus grand.
-	if Settings.show_damage_numbers and texts.size() < MAX_TEXTS and (crit or texts.size() < MAX_TEXTS * 2 / 3):
-		var spot := pos + Vector2(_rng.randf_range(-10.0, 10.0), -radius - 8.0)
-		if crit:
-			var size := 26 + mini(int(amount / 12.0), 8)
-			text(spot, "%d !" % roundi(amount), Art.c("butin"), size, 1.05, 1)
-			texts[-1]["pop"] = 0.16
-		else:
-			var size := 13 + mini(int(amount / 25.0), 4)
-			text(spot, str(roundi(amount)), Color(Art.c("texte"), 0.78), size, 0.6, 0)
-	var n := 0 if reduce else (9 if crit else 4)
+	_damage_number(pos, amount, crit, radius)
+	var key := "crit" if crit else ("heavy" if heavy else "hit")
+	if boss:
+		key = "boss_crit" if crit else "boss_hit"
+	var n := 0 if reduce else int(feel("sparks", key, 4.0))
 	var spark: Color = Art.ec(element, "clair") if element != "" else Art.c("or")
 	if not crit and element == "":
 		spark = Art.c("texte")
+	var strong := crit or heavy
 	for i in n:
 		var a := _rng.randf() * TAU
-		var v := _rng.randf_range(90.0, 260.0 if crit else 190.0)
+		var v := _rng.randf_range(90.0, 260.0 if strong else 190.0)
 		_particle(0, pos + Vector2.from_angle(a) * radius * 0.6, Vector2.from_angle(a) * v,
-			_rng.randf_range(0.18, 0.34), 2.0 if crit else 1.5,
-			spark if crit else spark.lerp(Art.c("texte"), 0.5), 0.0, 6.0)
+			_rng.randf_range(0.18, 0.34), 2.0 if strong else 1.5,
+			spark if strong else spark.lerp(Art.c("texte"), 0.5), 0.0, 6.0)
 	if crit:
-		# L'impact marque le coup : une onde courte à la couleur de l'élément (anticipation : aucune).
+		# Le critique se reconnaît à sa forme : une étoile de rayons, plus une onde courte.
 		if not reduce:
 			ring(pos, radius * 0.6, radius * 2.6, Anim.DUREE["eclair"] * 3.0, Color(spark, 0.85), 3.0)
-		shake(0.32)
-		hitstop(0.055)
+			star(pos, radius * feel("sparks", "crit_star", 2.4), int(feel("sparks", "crit_rays", 8.0)), Color(Art.c("butin"), 1.0))
+		shake(feel("shake", "boss_crit" if boss else "crit", 0.32))
+		hitstop(feel("hitstop", "boss_crit" if boss else "crit", 0.055))
+	elif heavy:
+		shake(feel("shake", "heavy", 0.16))
+		hitstop(feel("hitstop", "heavy", 0.035))
+	elif boss:
+		shake(feel("shake", "boss_hit", 0.05))
 
 
-## Un Flétri meurt : il part en cendres qui s'envolent, ou en pétales sur une terre vivante.
-func death(pos: Vector2, radius: float, color: Color, on_living_land: bool) -> void:
-	var n := 3 if Settings.reduce_effects else clampi(int(radius * 0.9), 8, 24)
+## Chiffre de dégâts : le coup normal reste discret, le critique est gras, doré et plus grand.
+func _damage_number(pos: Vector2, amount: float, crit: bool, radius: float) -> void:
+	if not Settings.show_damage_numbers or texts.size() >= MAX_TEXTS or not (crit or texts.size() < MAX_TEXTS * 2 / 3):
+		return
+	var spot := pos + Vector2(_rng.randf_range(-10.0, 10.0), -radius - 8.0)
+	if crit:
+		var size := 26 + mini(int(amount / 12.0), 8)
+		text(spot, "%d !" % roundi(amount), Art.c("butin"), size, 1.05, 1)
+		texts[-1]["pop"] = 0.16
+	else:
+		var size := 13 + mini(int(amount / 25.0), 4)
+		text(spot, str(roundi(amount)), Color(Art.c("texte"), 0.78), size, 0.6, 0)
+
+
+## Étoile d'un critique : n rayons qui jaillissent jusqu'à r puis se rétractent.
+func star(pos: Vector2, r: float, n: int, color: Color, dur := 0.22) -> void:
+	if stars.size() >= 12:
+		return
+	stars.append({"pos": pos, "r": r, "n": maxi(n, 4), "t": 0.0, "dur": dur, "color": color, "rot": _rng.randf() * TAU})
+
+
+## Un Flétri meurt : des traits jaillissent, une onde claire, puis il part en cendres qui
+## s'envolent, ou en pétales sur une terre vivante. Une élite meurt plus fort : plus de traits,
+## arrêt plus long, secousse et voile bref sur l'écran.
+func death(pos: Vector2, radius: float, color: Color, on_living_land: bool, elite := false) -> void:
+	var reduce: bool = Settings.reduce_effects
+	var n := 3 if reduce else clampi(int(radius * 0.9), 8, 24)
 	for i in n:
 		var a := _rng.randf() * TAU
 		var from := pos + Vector2.from_angle(a) * _rng.randf() * radius * 0.7
@@ -104,8 +145,48 @@ func death(pos: Vector2, radius: float, color: Color, on_living_land: bool) -> v
 				ash = Color("ff9a4a")
 			_particle(1, from, Vector2.from_angle(a) * _rng.randf_range(20.0, 90.0) + Vector2(0, -60.0),
 				_rng.randf_range(1.0, 1.8), _rng.randf_range(1.6, 3.2), ash, 0.0, 1.8)
-	shake(0.1 + radius * 0.006)
-	hitstop(0.04 if radius < 20.0 else 0.06)
+	if not reduce:
+		# Traits qui jaillissent du corps : la mort se lit même dans la foule.
+		var streaks := int(feel("death", "elite_streaks" if elite else "streaks", 6.0))
+		var light := Art.c("danger_eclair")
+		for i in streaks:
+			var a := TAU * (i + _rng.randf_range(-0.3, 0.3)) / streaks
+			_particle(0, pos + Vector2.from_angle(a) * radius * 0.5, Vector2.from_angle(a) * _rng.randf_range(240.0, 420.0),
+				_rng.randf_range(0.16, 0.26), 2.6 if elite else 2.0, Color(light, 0.95), 0.0, 7.0)
+		ring(pos, radius * 0.4, radius * (2.0 if elite else 1.5), 0.18, Color(light, 0.9 * Settings.flash_strength()), 3.0 if elite else 2.0)
+	if elite:
+		shake(feel("shake", "elite_kill", 0.45))
+		hitstop(feel("hitstop", "elite_kill", 0.11))
+		screen_flash(Art.c("elite"), feel("death", "elite_flash", 0.22), 0.3)
+		return
+	shake(feel("shake", "kill_base", 0.1) + radius * feel("shake", "kill_per_radius", 0.006))
+	hitstop(feel("hitstop", "kill_small", 0.035) if radius < 20.0 else feel("hitstop", "kill_big", 0.06))
+
+
+## Un boss change de phase : onde, secousse et arrêt marqué (le combat change de rythme).
+func boss_phase(pos: Vector2, radius: float) -> void:
+	if not Settings.reduce_effects:
+		ring(pos, radius * 0.8, radius * 3.0, 0.5, Color(Art.c("danger_eclair"), 0.9), 6.0)
+	shake(feel("shake", "boss_phase", 0.6))
+	hitstop(feel("hitstop", "boss_phase", 0.14))
+
+
+## Un boss meurt : long arrêt sur image, pleine secousse, voile clair sur l'écran.
+func boss_kill(pos: Vector2, radius: float) -> void:
+	if not Settings.reduce_effects:
+		star(pos, radius * 2.6, 12, Art.c("danger_eclair"), 0.5)
+		ring(pos, radius * 0.6, radius * 4.0, 0.7, Color(Art.c("danger_eclair"), 0.9), 8.0)
+	shake(feel("shake", "boss_kill", 1.0))
+	hitstop(feel("hitstop", "boss_kill", 0.32))
+	screen_flash(Art.c("danger_eclair"), feel("death", "boss_flash", 0.4), 0.5)
+
+
+## Voile bref sur l'écran (screen_fx.gd), dosé par l'option des flashs.
+func screen_flash(color: Color, alpha: float, dur: float) -> void:
+	var a := alpha * Settings.flash_strength()
+	if a <= 0.01 or main == null or main.get("screen_fx") == null:
+		return
+	main.screen_fx.glow(color, a, dur)
 
 
 ## Le Porte-Graine encaisse un coup. frac : part de sa vie maximale perdue (0 à 1).
@@ -172,15 +253,27 @@ func shake(amount: float) -> void:
 	_trauma = minf(1.0, _trauma + amount)
 
 
-## Fige le jeu un instant (en secondes réelles). Espacé par un délai pour ne pas saccader la foule.
+## Fige le jeu un instant (en secondes réelles). Espacé par un délai pour ne pas saccader la foule ;
+## un arrêt fort (mort d'élite, boss) passe outre le délai et prolonge l'arrêt en cours.
 func hitstop(dur: float) -> void:
-	if Settings.reduce_effects or _hitstop_cd > 0.0 or _hitstop_left > 0.0:
+	dur *= Settings.hitstop_strength()
+	if dur <= 0.0:
 		return
 	if main != null and "benchmark" in main and main.benchmark:
 		return
+	var strong := dur >= feel("hitstop", "strong", 0.08)
+	if _hitstop_left > 0.0:
+		if strong and dur > _hitstop_left:
+			_hitstop_left = dur
+			last_hitstop = dur
+		return
+	if _hitstop_cd > 0.0 and not strong:
+		return
 	_hitstop_left = dur
-	_hitstop_cd = HITSTOP_COOLDOWN
-	Engine.time_scale = HITSTOP_SCALE
+	_hitstop_cd = feel("hitstop", "cooldown", HITSTOP_COOLDOWN)
+	Engine.time_scale = feel("hitstop", "scale", HITSTOP_SCALE)
+	hitstops += 1
+	last_hitstop = dur
 
 
 ## kind : 0 étincelle (trait), 1 cendre, 2 pétale, 3 lueur qui file vers le joueur. drag : freinage par seconde.
@@ -205,10 +298,11 @@ func _process(delta: float) -> void:
 		if _hitstop_left <= 0.0:
 			Engine.time_scale = 1.0
 	_update_shake(real)
-	for list in [rings, texts, particles]:
+	for list in [rings, texts, particles, stars]:
 		for e in list:
 			e["t"] += delta
 	rings = rings.filter(func(e): return e["t"] < e["dur"])
+	stars = stars.filter(func(e): return e["t"] < e["dur"])
 	texts = texts.filter(func(e): return e["t"] < e["dur"])
 	particles = particles.filter(func(e): return e["t"] < e["dur"])
 	for p in particles:
@@ -226,7 +320,7 @@ func _process(delta: float) -> void:
 			p["rot"] += p["spin"] * delta
 		p["pos"] += p["vel"] * delta
 	# Redessiné tant qu'il y a un effet, puis une dernière fois pour effacer le dernier.
-	var busy := not (rings.is_empty() and texts.is_empty() and clouds.is_empty() and particles.is_empty())
+	var busy := not (rings.is_empty() and texts.is_empty() and clouds.is_empty() and particles.is_empty() and stars.is_empty())
 	if busy or drawn_something:
 		queue_redraw()
 	drawn_something = busy
@@ -279,6 +373,8 @@ func _draw() -> void:
 		draw_arc(e["pos"], lerpf(e["r0"], e["r1"], k), 0.0, TAU, 56, col, e["width"])
 	for p in particles:
 		_draw_particle(p)
+	for e in stars:
+		_draw_star(e)
 	for e in texts:
 		var k: float = e["t"] / e["dur"]
 		var col: Color = e["color"]
@@ -319,3 +415,19 @@ func _draw_particle(p: Dictionary) -> void:
 			var d := Vector2.from_angle(a)
 			var n := d.orthogonal()
 			draw_colored_polygon(PackedVector2Array([pos + d * sz, pos + n * w * 0.6, pos - d * sz * 0.6, pos - n * w * 0.6]), col)
+
+
+## Étoile d'un critique : les rayons jaillissent vite (premier tiers), puis se rétractent en
+## s'amincissant ; un rayon sur deux est plus court.
+func _draw_star(e: Dictionary) -> void:
+	var k: float = e["t"] / e["dur"]
+	var out := Anim.ease_out(clampf(k * 3.0, 0.0, 1.0))
+	var back := clampf((k - 0.33) / 0.67, 0.0, 1.0)
+	var col: Color = e["color"]
+	col.a *= 1.0 - back * back
+	var n: int = e["n"]
+	for i in n:
+		var d := Vector2.from_angle(e["rot"] + TAU * i / n)
+		var r: float = e["r"] * (1.0 if i % 2 == 0 else 0.55) * out
+		var from: Vector2 = e["pos"] + d * r * back
+		draw_line(from, e["pos"] + d * r, col, 3.0 * (1.0 - 0.6 * back), true)
