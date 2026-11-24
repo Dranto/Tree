@@ -7,7 +7,7 @@
 ##   {"on": "kill", "do": "reduce_cooldown", ...}           réagit à un évènement
 ##   {"skill_mod": "nova", "param": "radius", "op": "more", "value": 1.5, "text": "…"}
 ##                                                          transforme un réglage d'une compétence
-##   {"attack_form": "fouet"}                              change la forme de l'attaque de base
+##   {"attack_form": "fouet"}                              ajoute une forme à l'attaque de base
 ##   {"attack_mod": "fourche", "value": 1}                 ajoute un modificateur à l'attaque de base
 ##                                                          (voir attack.gd et data/attack.json)
 ## Un effet peut porter une condition : "if": {"state": "immobile", "min": 0.5}, ou une liste de
@@ -68,6 +68,19 @@ func rebuild(nodes: Array) -> void:
 				if not _triggers.has(e["on"]):
 					_triggers[e["on"]] = []
 				_triggers[e["on"]].append({"uid": "%s:%d" % [str(n["id"]), i], "effect": e})
+	# Synergies de l'attaque (data/synergies.json) : leurs statistiques et réactions s'ajoutent à
+	# celles des nœuds ; leurs modificateurs d'attaque sont déjà dans attack_state().
+	var syn: Array = attack_state().get("synergies", [])
+	if not syn.is_empty():
+		var list: Array = AttackScript.synergy_effects(syn)
+		for i in list.size():
+			var e: Dictionary = list[i]
+			if e.has("stat"):
+				_mods.append(e)
+			elif e.has("on"):
+				if not _triggers.has(e["on"]):
+					_triggers[e["on"]] = []
+				_triggers[e["on"]].append({"uid": "synergie:%d" % i, "effect": e})
 	compute()
 
 

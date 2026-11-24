@@ -1,6 +1,17 @@
 {
   "_": "Attaque de base du Porte-Graine (scripts/attack.gd). Format décrit dans data/README.md, « L'attaque de base ».",
   "start": "graine",
+  "melee_arc_per_projectile": 0.25,
+  "first_hit": {
+    "_": "Versions communes des modificateurs au premier ennemi touché (attack.gd › first_hit) : factor multiplie leurs dégâts (fourche en éclats, chaînes de ricochet et de saut, touffe de traînée, rayons de réfraction, secousse hors corps à corps).",
+    "factor": 1.0
+  },
+  "echo": {
+    "_": "Formes en écho : chaque forme acquise en plus de la principale tire aussi, à sa propre cadence. damage : part de ses dégâts (1 = plein bonus) ; offset : décalage de son premier tir (part de sa recharge) ; retry : sans ennemi à sa portée, délai avant de chercher de nouveau (s). Une forme peut écrire « echo_damage ».",
+    "damage": 1.0,
+    "offset": 0.5,
+    "retry": 0.1
+  },
   "forms": {
     "graine": {
       "name": "Graines",
@@ -204,17 +215,15 @@
   "mods": {
     "fourche": {
       "name": "Fourche",
-      "text": "Au premier coup, le projectile se divise : +{v} branche(s).",
+      "text": "Au premier coup, l'attaque se divise : +{v} branche(s) (60 % des dégâts ; éclats pour un coup au corps à corps ou une spore, rayons obliques pour un rayon).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive", "dard", "lame", "perle"],
       "angle": 0.42,
       "factor": 0.6
     },
     "ricochet": {
       "name": "Ricochet",
-      "text": "Le projectile rebondit vers un autre ennemi : +{v} rebond(s).",
+      "text": "L'attaque rebondit vers un autre ennemi : +{v} rebond(s).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive", "dard", "perle"],
       "reach": 240,
       "factor": 0.8
     },
@@ -241,9 +250,8 @@
     },
     "trainee": {
       "name": "Traînée d'épines",
-      "text": "Le projectile sème des épines au sol ({p} % des dégâts par seconde).",
+      "text": "L'attaque sème des épines au sol ({p} % des dégâts par seconde) : le long d'un projectile, au point d'impact sinon.",
       "stack": "sum",
-      "forms": ["graine", "echarde", "ronce_vive", "dard", "perle"],
       "every": 56,
       "radius": 18,
       "duration": 1.6,
@@ -288,9 +296,8 @@
     },
     "saut": {
       "name": "Saut",
-      "text": "Le projectile saute d'ennemi empoisonné en ennemi empoisonné : +{v} saut(s).",
+      "text": "L'attaque saute d'ennemi empoisonné en ennemi empoisonné : +{v} saut(s).",
       "stack": "sum",
-      "forms": ["graine", "echarde", "dard"],
       "reach": 260,
       "factor": 0.9
     },
@@ -334,9 +341,8 @@
     },
     "refraction": {
       "name": "Réfraction",
-      "text": "Au premier ennemi touché, le rayon se brise en {v} rayon(s) obliques (60 % des dégâts).",
+      "text": "Au premier ennemi touché, l'attaque se brise en {v} rayon(s) obliques (60 % des dégâts).",
       "stack": "sum",
-      "forms": ["rayon"],
       "angle": 0.55,
       "factor": 0.6,
       "length": 0.5
@@ -348,9 +354,8 @@
     },
     "secousse": {
       "name": "Secousse",
-      "text": "Chaque coup au corps à corps secoue le sol devant toi : {p} % des dégâts aux ennemis autour du point d'impact.",
+      "text": "Chaque coup secoue le sol au point d'impact (devant toi au corps à corps) : {p} % des dégâts aux ennemis autour.",
       "stack": "sum",
-      "forms": ["massue", "fouet", "bourrasque"],
       "radius": 80
     },
     "aubier": {
