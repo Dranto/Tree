@@ -8,7 +8,7 @@ extends Skill
 func cast(p, s := {}) -> void:
 	if s.is_empty():
 		s = Game.stats
-	Sfx.play("saignee")
+	Sfx.play("spore_toxine")
 	var k: Dictionary = p.skill("eclosion")
 	var r: float = float(k["radius"]) * s["area"]
 	var hit: float = p.skill_damage("eclosion")

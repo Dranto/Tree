@@ -21,7 +21,7 @@ func cast(p, s := {}) -> void:
 		if d < best:
 			best = d
 			first = e
-	Sfx.play("volee")
+	Sfx.play("spore_propage")
 	if first == null:
 		_sig(p.position + (aim - p.position).limit_length(120.0), p.position)
 		return

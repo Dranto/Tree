@@ -422,6 +422,8 @@ func _physics_process(delta: float) -> void:
 		Music.set_mood(1.0, "generique")
 	else:
 		Music.set_mood(ground.life_at(player.position), Regions.region_at(player.position))
+	if Music.enabled and Engine.get_physics_frames() % 6 == 0:
+		_music_state()
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
 		save_game()
@@ -633,6 +635,18 @@ func clamp_to_world(pos: Vector2) -> Vector2:
 ## Position à montrer sur la carte du monde : sous la graine, la brèche à son pied.
 func map_position(pos: Vector2) -> Vector2:
 	return finale.descent_point() if finale != null and finale.holds(pos) else pos
+
+
+## Couches de la musique (music.gd) : combat selon les Flétris proches (une élite compte triple), siège
+## d'un Cœur où se tient le joueur, combat de boss.
+func _music_state() -> void:
+	var n := 0.0
+	for e in enemies_near(player.position, 560.0, false):
+		n += 3.0 if e.get("elite") == true else 1.0
+	Music.set_combat(clampf(n / 6.0, 0.0, 1.0))
+	var h = siege_heart()
+	Music.set_heart(1.0 if h != null and h.center.distance_to(player.position) < h.zone * 1.3 else 0.0)
+	Music.set_boss(in_boss_fight())
 
 
 ## Vrai pendant un combat de boss, dans n'importe quelle région.

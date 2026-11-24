@@ -1,52 +1,51 @@
 {
-  "_doc": "Son et ambiance des régions (tâche F du jalon 7). Une entrée par région, rangée sous son identifiant ; la région peut aussi porter une section « audio » dans son fichier, qui prime. Format dans data/README.md, « Son et ambiance ». Une région sans entrée garde la musique et les particules de Ronce.",
+  "_doc": "Son et ambiance des régions. Une entrée par région, rangée sous son identifiant ; la région peut aussi porter une section « audio » dans son fichier, qui prime. Format dans data/README.md, « Son et ambiance ». Une région sans entrée garde la musique, l'ambiance sonore et les particules de Ronce.",
   "regions": {
-    "finale": {
-      "_doc": "Finale sous la graine : musique grave et tendue (accords diminués qui descendent, vent lourd, cloche sourde) ; après la victoire, la couche lumineuse monte, large et chaude (accords majeurs ouverts, arpège qui s'élève). Le creux est sans particules de papillons.",
-      "music": {
-        "seed": 67,
-        "roots": [-5, -6, -10, -12],
-        "dark": {"chord": [0, 3, 6, 10], "vol": 0.1, "vol2": 0.06, "detune": 1.009, "wind": 0.7, "wind_lp": 0.015, "wind_period": 3.0, "wind_fade": 0.35, "bell": 0.13},
-        "bright": {"chord": [0, 7, 12, 16], "octave": 1, "pattern": [0, 7, 12, 16, 19, 16, 12, 7, 0, 7, 12, 19], "pad": 0.09, "pluck": 0.1, "sparkle": 0.07, "sparkle_note": 24}
-      },
-      "ambience": {
-        "butterflies": 0,
-        "dead": {"shape": "glow", "color": "#5a3a4a", "alpha": 0.45, "vel": [2.0, -10.0], "sway": [8.0, 3.0], "size": [1.4, 3.2]},
-        "alive": {"shape": "glow", "color": "#ffe6a8", "alpha": 0.85, "vel": [3.0, -18.0], "sway": [12.0, 4.0], "size": [1.4, 3.4]}
-      },
-      "boss": {"eveil": "finale_boss_eveil", "phase": "finale_boss_phase", "mort": "finale_boss_mort"}
-    },
-    "generique": {
-      "_doc": "Fin et générique joués dans le monde (world_ending.gd) : seule la couche lumineuse est jouée, un thème qui reprend les accords des régions (do, la, fa, sol) en arpège lent, ample et clair. La couche sombre n'est écrite que pour que la paire existe.",
-      "music": {
-        "seed": 71,
-        "roots": [3, 0, -4, -2],
-        "dark": {"chord": [0, 7, 12, 16], "vol": 0.06, "detune": 1.004, "wind": 0.2, "wind_lp": 0.03, "wind_period": 6.0, "bell": 0.08},
-        "bright": {"chord": [0, 4, 7, 14], "octave": 1, "pattern": [0, 7, 14, 12, 16, 12, 7, 4, 0, 7, 12, 19], "pad": 0.1, "pluck": 0.11, "sparkle": 0.07, "sparkle_note": 19}
-      }
-    },
-    "racine": {
-      "_doc": "Forêt pétrifiée (Racine) : bois creux et pierre, accords bas et ouverts (quintes, secondes), vent sourd ; en terre vivante, un arpège de bois chaud qui revient en écho. Des cendres de bois et des poussières de mousse flottent.",
-      "music": {
-        "seed": 83,
-        "roots": [-4, -9, -2, -7],
-        "dark": {"chord": [0, 7, 12, 14], "vol": 0.085, "detune": 1.006, "wind": 0.45, "wind_lp": 0.014, "wind_period": 6.0, "wind_fade": 0.3, "bell": 0.09},
-        "bright": {"chord": [0, 7, 10, 14], "octave": 1, "pattern": [0, 7, 14, 10, 12, 7, 5, 10], "pad": 0.07, "pluck": 0.12, "sparkle": 0.05, "sparkle_note": 17}
-      },
-      "ambience": {
-        "butterflies": 0,
-        "dead": {"shape": "dot", "color": "#6a5a48", "alpha": 0.5, "vel": [3.0, 6.0], "sway": [8.0, 2.0], "size": [1.0, 2.4]},
-        "alive": {"shape": "glow", "color": "#d8c890", "alpha": 0.8, "vel": [3.0, -12.0], "sway": [9.0, 3.0], "size": [1.2, 2.8]}
-      },
-      "boss": {"eveil": "racine_boss_eveil", "phase": "racine_boss_phase", "mort": "racine_boss_mort"}
+    "ronce": {
+      "_doc": "Ronce (le monde) : musique et ambiance de base (music_synth.gd › DEFAULTS, BED_DEFAULTS) ; ici seulement les sons de son boss.",
+      "boss": {"eveil": "ronce_boss_eveil", "phase": "ronce_boss_phase", "mort": "ronce_boss_mort"}
     },
     "spore": {
-      "_doc": "Marais de spores : accords bas et suspendus, vent mouillé et lent ; en terre vivante, un arpège de bois. Les spores montent comme des bulles.",
+      "_doc": "Marais de spores : accords bas et suspendus ; en terre vivante, un arpège de bois mou et une flûte paresseuse. Combat aux percussions d'eau ; boss (Amanite-Mère) qui rampe par demi-tons. Ambiance : bulles, gouttes, grenouilles. Les spores montent comme des bulles.",
       "music": {
         "seed": 23,
         "roots": [-2, -7, -4, -9],
-        "dark": {"chord": [0, 3, 6, 10], "vol": 0.085, "detune": 1.007, "wind": 0.5, "wind_lp": 0.012, "wind_period": 4.0, "bell": 0.07},
-        "bright": {"chord": [0, 3, 7, 10], "octave": 1, "pattern": [0, 3, 7, 10, 14, 10, 7, 3], "pad": 0.08, "pluck": 0.11, "sparkle": 0.05, "sparkle_note": 14}
+        "dark": {"chord": [0, 3, 6, 10], "pad": 0.45, "pad_lp": 520.0, "drone": 0.3, "bell": 0.18, "bell_ratio": 1.41, "texture": 0.2},
+        "bright": {
+          "chord": [0, 3, 7, 10],
+          "pattern": [0, 3, 7, 10, 14, 10, 7, 3],
+          "pluck_tone": 0.3,
+          "sparkle_note": 14,
+          "lead": 0.3,
+          "motif": [[0, 1, 3], [3, 2, 1], [4, 3, 4], [9, 2, 1], [10, 1, 2], [12, 0, 4], [16, 1, 3], [19, 2, 1], [20, 3, 2], [22, 4, 2], [24, 3, 3], [27, 2, 1], [28, 1, 4]]
+        },
+        "combat": {"kit": "water", "kick": "x.....x...x.....", "snare": "....x..o....x...", "hat": ".x.x.x.x.x.x.x.x", "bass": [0, null, 0, 3, null, 7, 10, 7]},
+        "heart": {"vowel": "u"},
+        "boss": {
+          "chord": [0, 3, 6, 10],
+          "kit": "water",
+          "kick": "x..x...x..x..x..",
+          "snare": "....x.......x.o.",
+          "hat": "x.xxx.xxx.xxx.xx",
+          "tom": "..............xx",
+          "bass": [0, 0, 3, 0, 6, 0, 3, 10],
+          "motif": [[0, 0, 2], [2, 0, 1, 1], [3, 1, 1], [4, 2, 4], [8, 0, 2], [10, 0, 1, 1], [11, 1, 1], [12, 3, 4], [16, 0, 2], [18, 0, 1, 1], [19, 1, 1], [20, 2, 2], [22, 1, 2], [24, 2, 3], [27, 1, 1], [28, 0, 4, 1]]
+        }
+      },
+      "bed": {
+        "seed": 29,
+        "dead": {
+          "wind": 0.3,
+          "wind_lp": 350.0,
+          "gust": 0.4,
+          "rumble": 0.15,
+          "events": [{"kind": "bubble", "rate": 0.5, "vol": 0.35}, {"kind": "drip", "rate": 0.2, "vol": 0.25}]
+        },
+        "alive": {
+          "wind": 0.15,
+          "wind_lp": 600.0,
+          "events": [{"kind": "frog", "rate": 0.3, "vol": 0.35}, {"kind": "bubble", "rate": 0.4, "vol": 0.3}, {"kind": "cricket", "rate": 0.2, "vol": 0.2}, {"kind": "bird", "rate": 0.1, "vol": 0.3}]
+        }
       },
       "ambience": {
         "butterflies": 0,
@@ -56,12 +55,37 @@
       "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort"}
     },
     "vent": {
-      "_doc": "Hauts plateaux : quintes ouvertes et grand vent ; en terre vivante, un arpège vif et aérien. Des brins d'herbe et des rafales filent vers la droite.",
+      "_doc": "Hauts plateaux : quintes ouvertes ; en terre vivante, un arpège vif et une mélodie qui saute haut. Combat au tambour sur cadre ; boss (Harfang) en doubles croches. Ambiance : grand vent, herbes, oiseaux. Des brins d'herbe et des rafales filent vers la droite.",
       "music": {
         "seed": 37,
         "roots": [0, -5, -2, -7],
-        "dark": {"chord": [0, 7, 14, 19], "vol": 0.07, "detune": 1.003, "wind": 1.5, "wind_lp": 0.08, "wind_period": 3.0, "wind_fade": 0.35, "bell": 0.05},
-        "bright": {"chord": [0, 5, 7, 12], "octave": 1, "pattern": [0, 7, 12, 19, 12, 7, 12, 19, 24, 19, 12, 7, 12, 7, 5, 7], "pad": 0.06, "pluck": 0.085, "sparkle": 0.07, "sparkle_note": 24}
+        "dark": {"chord": [0, 7, 14, 19], "pad": 0.4, "pad_lp": 900.0, "drone": 0.25, "bell": 0.2, "bell_ratio": 2.0, "texture": 0.25},
+        "bright": {
+          "chord": [0, 5, 7, 12],
+          "pattern": [0, 7, 12, 19, 12, 7, 12, 19, 24, 19, 12, 7, 12, 7, 5, 7],
+          "pluck": 0.42,
+          "pluck_tone": 0.75,
+          "sparkle": 0.28,
+          "sparkle_note": 24,
+          "lead": 0.34,
+          "motif": [[0, 0, 1], [1, 2, 1], [2, 3, 2], [4, 4, 4], [8, 3, 2], [10, 2, 1], [11, 3, 1], [12, 1, 4], [16, 0, 1], [17, 2, 1], [18, 3, 2], [20, 4, 2], [22, 5, 2], [24, 4, 3], [27, 3, 1], [28, 2, 4]]
+        },
+        "combat": {"kit": "frame", "kick": "x.....x.x.....x.", "hat": "x.xxx.xxx.xxx.xx", "bass": [0, 0, 7, 0, 12, 0, 7, 5], "pulse": 0.35},
+        "heart": {"vowel": "a"},
+        "boss": {
+          "chord": [0, 3, 7, 12],
+          "kit": "frame",
+          "kick": "x..x..x...x..x..",
+          "hat": "xxxxxxxxxxxxxxxx",
+          "tom": ".........x.x.xxx",
+          "bass": [0, 12, 0, 12, 0, 12, 10, 7],
+          "motif": [[0, 2, 1], [1, 3, 1], [2, 4, 1], [3, 3, 1], [4, 2, 2], [6, 1, 2], [8, 2, 1], [9, 3, 1], [10, 4, 1], [11, 5, 1], [12, 4, 4], [16, 2, 1], [17, 3, 1], [18, 4, 1], [19, 3, 1], [20, 2, 2], [22, 4, 2], [24, 5, 3], [27, 4, 1], [28, 3, 4]]
+        }
+      },
+      "bed": {
+        "seed": 31,
+        "dead": {"wind": 1.0, "wind_lp": 900.0, "gust": 0.8, "events": [{"kind": "rustle", "rate": 0.3, "vol": 0.3}]},
+        "alive": {"wind": 0.6, "wind_lp": 1300.0, "gust": 0.6, "events": [{"kind": "bird", "rate": 0.5, "vol": 0.35}, {"kind": "rustle", "rate": 0.5, "vol": 0.3}]}
       },
       "ambience": {
         "butterflies": 0,
@@ -71,12 +95,39 @@
       "boss": {"eveil": "vent_boss_eveil", "phase": "vent_boss_phase", "mort": "vent_boss_mort"}
     },
     "seve": {
-      "_doc": "Vallée de Sève : accords majeurs amples et eau vive ; en terre vivante, un arpège de gouttes et de clochettes. Des gouttes de rosée montent doucement.",
+      "_doc": "Vallée de Sève : accords majeurs amples ; en terre vivante, un arpège de gouttes et une mélodie qui coule par degrés. Combat aux percussions d'eau ; boss (Saule exsangue) en complainte mineure. Ambiance : ruisseau, gouttes, oiseaux. Des gouttes de rosée montent doucement.",
       "music": {
         "seed": 41,
         "roots": [0, -3, -5, -8],
-        "dark": {"chord": [0, 4, 7, 11], "vol": 0.075, "detune": 1.005, "wind": 0.35, "wind_lp": 0.02, "wind_period": 6.0, "bell": 0.06},
-        "bright": {"chord": [0, 4, 7, 11], "octave": 1, "pattern": [0, 4, 7, 11, 14, 11, 7, 4], "pad": 0.08, "pluck": 0.1, "sparkle": 0.06, "sparkle_note": 16}
+        "dark": {"chord": [0, 4, 7, 11], "pad": 0.45, "pad_lp": 700.0, "drone": 0.25, "bell": 0.25, "bell_ratio": 3.0, "texture": 0.1},
+        "bright": {
+          "chord": [0, 4, 7, 11],
+          "pattern": [0, 4, 7, 11, 14, 11, 7, 4],
+          "pluck_tone": 0.7,
+          "sparkle_note": 16,
+          "lead": 0.32,
+          "motif": [[0, 0, 2], [2, 1, 2], [4, 2, 2], [6, 3, 2], [8, 2, 3], [11, 1, 1], [12, 0, 4], [16, 1, 2], [18, 2, 2], [20, 3, 4], [24, 4, 2], [26, 3, 2], [28, 2, 4]]
+        },
+        "combat": {"kit": "water", "kick": "x.......x.......", "snare": "....o.......x...", "hat": "..x...x...x...xx", "bass": [0, null, 7, null, 11, null, 7, 4]},
+        "heart": {"vowel": "o"},
+        "boss": {
+          "chord": [0, 3, 7, 10],
+          "kit": "water",
+          "kick": "x...x...x..x.x..",
+          "hat": "x.x.x.x.x.x.x.x.",
+          "tom": "",
+          "bass": [0, 0, 7, 0, 3, 0, 7, 10],
+          "motif": [[0, 3, 3], [3, 2, 1], [4, 1, 4], [8, 2, 3], [11, 1, 1], [12, 0, 4], [16, 3, 2], [18, 4, 2], [20, 3, 2], [22, 2, 2], [24, 1, 3], [27, 0, 1], [28, 0, 4, -1]]
+        }
+      },
+      "bed": {
+        "seed": 43,
+        "dead": {"wind": 0.2, "wind_lp": 400.0, "stream": 0.3, "events": [{"kind": "drip", "rate": 0.3, "vol": 0.3}]},
+        "alive": {
+          "wind": 0.1,
+          "stream": 0.8,
+          "events": [{"kind": "drip", "rate": 0.5, "vol": 0.3}, {"kind": "bird", "rate": 0.4, "vol": 0.35}, {"kind": "frog", "rate": 0.1, "vol": 0.25}]
+        }
       },
       "ambience": {
         "butterflies": 0,
@@ -86,12 +137,38 @@
       "boss": {"eveil": "seve_boss_eveil", "phase": "seve_boss_phase", "mort": "seve_boss_mort"}
     },
     "aube": {
-      "_doc": "Rivage de l'Aube : quartes et quintes claires, cloches lointaines ; en terre vivante, un arpège lumineux. Des éclats de lumière flottent et montent.",
+      "_doc": "Rivage de l'Aube : quartes et quintes claires, cloches ; en terre vivante, un arpège lumineux. Combat aux percussions de métal ; boss (Phalène de verre) cristallin. Ambiance : vagues, carillons. Des éclats de lumière flottent et montent.",
       "music": {
         "seed": 53,
         "roots": [2, -3, 0, -5],
-        "dark": {"chord": [0, 5, 7, 12], "vol": 0.07, "detune": 1.004, "wind": 0.25, "wind_lp": 0.05, "wind_period": 4.0, "wind_fade": 0.35, "bell": 0.09},
-        "bright": {"chord": [0, 5, 7, 14], "octave": 1, "pattern": [0, 7, 12, 14, 19, 14, 12, 7, 5, 7, 12, 17], "pad": 0.06, "pluck": 0.09, "sparkle": 0.08, "sparkle_note": 24}
+        "dark": {"chord": [0, 5, 7, 12], "pad": 0.4, "pad_lp": 800.0, "drone": 0.22, "bell": 0.35, "bell_ratio": 3.5, "texture": 0.08},
+        "bright": {
+          "chord": [0, 5, 7, 14],
+          "pattern": [0, 7, 12, 14, 19, 14, 12, 7, 5, 7, 12, 17],
+          "pluck": 0.42,
+          "pluck_tone": 0.8,
+          "sparkle": 0.32,
+          "sparkle_note": 24,
+          "lead": 0.3,
+          "motif": [[0, 3, 2], [2, 2, 1], [3, 1, 1], [4, 0, 4], [8, 1, 2], [10, 2, 2], [12, 3, 4], [16, 3, 2], [18, 4, 1], [19, 3, 1], [20, 2, 4], [24, 1, 2], [26, 2, 2], [28, 0, 4]]
+        },
+        "combat": {"kit": "metal", "kick": "x.......x.......", "hat": "x.x.x.x.x.x.x.x.", "bass": [0, null, 7, null, 0, null, 5, 7]},
+        "heart": {"vowel": "e"},
+        "boss": {
+          "chord": [0, 3, 7, 14],
+          "kit": "metal",
+          "kick": "x..x..x.x.......",
+          "snare": "....x.......x..x",
+          "hat": "xxxxxxxxxxxxxxxx",
+          "tom": "",
+          "bass": [0, 0, 7, 0, 0, 3, 7, 12],
+          "motif": [[0, 4, 1], [1, 3, 1], [2, 2, 1], [3, 1, 1], [4, 0, 4], [8, 4, 1], [9, 3, 1], [10, 2, 1], [11, 3, 1], [12, 4, 4], [16, 5, 2], [18, 4, 2], [20, 3, 2], [22, 2, 2], [24, 1, 3], [27, 2, 1], [28, 0, 4]]
+        }
+      },
+      "bed": {
+        "seed": 59,
+        "dead": {"wind": 0.3, "wind_lp": 500.0, "waves": 0.5, "events": [{"kind": "chime", "rate": 0.05, "vol": 0.2}]},
+        "alive": {"wind": 0.2, "waves": 0.8, "events": [{"kind": "chime", "rate": 0.2, "vol": 0.25}, {"kind": "bird", "rate": 0.3, "vol": 0.3}]}
       },
       "ambience": {
         "butterflies": 0,
@@ -99,6 +176,97 @@
         "alive": {"shape": "glow", "color": "#fff0b8", "alpha": 0.9, "vel": [4.0, -16.0], "sway": [10.0, 3.0], "size": [1.2, 3.0]}
       },
       "boss": {"eveil": "aube_boss_eveil", "phase": "aube_boss_phase", "mort": "aube_boss_mort"}
+    },
+    "racine": {
+      "_doc": "Forêt pétrifiée (Racine) : accords bas et ouverts ; en terre vivante, un arpège de bois sourd. Combat aux blocs de bois ; boss aux taïkos et toms, mode phrygien. Ambiance : bois qui grince, coups de pic, oiseaux. Des cendres de bois et des poussières de mousse flottent.",
+      "music": {
+        "seed": 83,
+        "roots": [-4, -9, -2, -7],
+        "dark": {"chord": [0, 7, 12, 14], "pad": 0.45, "pad_lp": 520.0, "drone": 0.32, "bell": 0.2, "bell_ratio": 1.5, "texture": 0.15},
+        "bright": {
+          "chord": [0, 7, 10, 14],
+          "pattern": [0, 7, 14, 10, 12, 7, 5, 10],
+          "pluck": 0.55,
+          "pluck_tone": 0.25,
+          "sparkle": 0.15,
+          "sparkle_note": 17,
+          "lead": 0.3,
+          "motif": [[0, 0, 2], [2, 1, 2], [4, 2, 1], [5, 1, 1], [6, 0, 2], [8, 3, 3], [11, 2, 1], [12, 1, 4], [16, 0, 2], [18, 2, 2], [20, 3, 2], [22, 2, 2], [24, 1, 4], [28, 0, 4]]
+        },
+        "combat": {"kit": "wood", "kick": "x..x....x..x....", "bass": [0, 0, 7, 0, 0, 0, 10, 7]},
+        "heart": {"vowel": "o"},
+        "boss": {
+          "chord": [0, 7, 12, 15],
+          "kit": "taiko",
+          "hat": "..x...x...x...x.",
+          "tom": "x.....x....x.xxx",
+          "bass": [0, 0, 0, 1, 0, 0, 7, 1],
+          "motif": [[0, 0, 2], [2, 0, 1, 1], [3, 0, 1], [4, 2, 4], [8, 1, 2], [10, 1, 1, 1], [11, 1, 1], [12, 3, 4], [16, 0, 2], [18, 0, 1, 1], [19, 0, 1], [20, 2, 2], [22, 3, 2], [24, 4, 3], [27, 3, 1], [28, 2, 4]]
+        }
+      },
+      "bed": {
+        "seed": 89,
+        "dead": {
+          "wind": 0.4,
+          "wind_lp": 300.0,
+          "gust": 0.5,
+          "rumble": 0.1,
+          "events": [{"kind": "creak", "rate": 0.4, "vol": 0.35}, {"kind": "knock", "rate": 0.15, "vol": 0.25}]
+        },
+        "alive": {
+          "wind": 0.2,
+          "wind_lp": 600.0,
+          "events": [{"kind": "knock", "rate": 0.2, "vol": 0.25}, {"kind": "bird", "rate": 0.3, "vol": 0.35}, {"kind": "rustle", "rate": 0.3, "vol": 0.25}, {"kind": "creak", "rate": 0.1, "vol": 0.25}]
+        }
+      },
+      "ambience": {
+        "butterflies": 0,
+        "dead": {"shape": "dot", "color": "#6a5a48", "alpha": 0.5, "vel": [3.0, 6.0], "sway": [8.0, 2.0], "size": [1.0, 2.4]},
+        "alive": {"shape": "glow", "color": "#d8c890", "alpha": 0.8, "vel": [3.0, -12.0], "sway": [9.0, 3.0], "size": [1.2, 2.8]}
+      },
+      "boss": {"eveil": "racine_boss_eveil", "phase": "racine_boss_phase", "mort": "racine_boss_mort"}
+    },
+    "finale": {
+      "_doc": "Finale sous la graine : accords diminués qui descendent, bourdon grave ; boss (la Flétrissure) aux taïkos et au chœur, sur une version sombre du thème du monde ; après la victoire, la couche lumineuse reprend le thème du monde en grand. Le creux résonne (grondement, gouttes). Sans particules de papillons.",
+      "music": {
+        "seed": 67,
+        "roots": [-5, -6, -10, -12],
+        "dark": {"chord": [0, 3, 6, 10], "pad": 0.5, "pad_lp": 450.0, "drone": 0.35, "bell": 0.3, "bell_ratio": 1.41, "texture": 0.22},
+        "bright": {"chord": [0, 4, 7, 12], "pattern": [0, 7, 12, 16, 19, 16, 12, 7, 0, 7, 12, 19], "sparkle": 0.3, "sparkle_note": 24, "lead": 0.42},
+        "combat": {"kit": "taiko", "kick": "x..x..x.x..x..x.", "hat": "x.x.x.x.x.x.x.x.", "bass": [0, 0, 3, 0, 6, 0, 3, 1]},
+        "heart": {"vowel": "o"},
+        "boss": {
+          "chord": [0, 3, 6, 10],
+          "kit": "taiko",
+          "kick": "x..x..x.x..x.xx.",
+          "snare": "....x.......x.xx",
+          "hat": "xxxxxxxxxxxxxxxx",
+          "tom": "x.......x...xxxx",
+          "bass": [0, 0, 12, 0, 1, 0, 12, 6],
+          "choir": 0.45,
+          "motif": [[0, 3, 2], [2, 2, 1], [3, 3, 1], [4, 4, 4], [8, 4, 2], [10, 3, 2], [12, 2, 4], [16, 3, 2], [18, 4, 1], [19, 3, 1], [20, 1, 4], [24, 2, 3], [27, 1, 1], [28, 0, 4]]
+        }
+      },
+      "bed": {
+        "seed": 61,
+        "dead": {"wind": 0.2, "wind_lp": 250.0, "rumble": 0.4, "events": [{"kind": "drip", "rate": 0.3, "vol": 0.3}, {"kind": "creak", "rate": 0.1, "vol": 0.25}]},
+        "alive": {"wind": 0.15, "wind_lp": 500.0, "rumble": 0.1, "events": [{"kind": "chime", "rate": 0.2, "vol": 0.25}, {"kind": "drip", "rate": 0.2, "vol": 0.25}]}
+      },
+      "ambience": {
+        "butterflies": 0,
+        "dead": {"shape": "glow", "color": "#5a3a4a", "alpha": 0.45, "vel": [2.0, -10.0], "sway": [8.0, 3.0], "size": [1.4, 3.2]},
+        "alive": {"shape": "glow", "color": "#ffe6a8", "alpha": 0.85, "vel": [3.0, -18.0], "sway": [12.0, 4.0], "size": [1.4, 3.4]}
+      },
+      "boss": {"eveil": "finale_boss_eveil", "phase": "finale_boss_phase", "mort": "finale_boss_mort"}
+    },
+    "generique": {
+      "_doc": "Fin et générique joués dans le monde (world_ending.gd) : seule la couche lumineuse, qui reprend le thème du monde (flûte) sur des accords clairs.",
+      "music": {
+        "seed": 71,
+        "roots": [3, 0, -4, -2],
+        "layers": ["lumineux"],
+        "bright": {"chord": [0, 4, 7, 14], "pattern": [0, 7, 14, 12, 16, 12, 7, 4, 0, 7, 12, 19], "pad": 0.45, "sparkle": 0.3, "lead": 0.45}
+      }
     }
   }
 }
