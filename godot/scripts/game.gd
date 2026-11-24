@@ -14,6 +14,7 @@ const SkillTree = preload("res://scripts/skill_tree.gd")
 const Content = preload("res://scripts/content.gd")
 const Effects = preload("res://scripts/effects.gd")
 const Difficulty = preload("res://scripts/difficulty.gd")
+const Regions = preload("res://scripts/regions.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 var tree = null
@@ -26,10 +27,12 @@ var stats: Dictionary = {}
 var keys: Dictionary = {}
 ## Choix faits sur les maîtrises et les mutations : uid du nœud -> identifiant du choix.
 var choices: Dictionary = {}
-## Greffes posées : uid de l'emplacement -> identifiant de la greffe (data/grafts.json).
-var grafts: Dictionary = {}
+## Couronne de greffes, indépendante de l'arbre : une case par emplacement ouvert, l'identifiant de
+## la greffe posée (data/grafts.json) ou "" si l'emplacement est vide. Une greffe posée agit tout de
+## suite. Le nombre d'emplacements grandit avec l'aventure (crown_size, data/crown.json).
+var crown: Array = []
 ## Inventaire des greffes possédées (identifiants de data/grafts.json, chacune en un exemplaire),
-## qu'elles soient posées dans un emplacement ou non. Sauvegardé depuis la version 3.
+## qu'elles soient posées dans la couronne ou non. Sauvegardé depuis la version 3.
 var graft_inventory: Array = []
 ## Greffes tombées au sol et pas encore ramassées (identifiant -> true) : elles ne sont plus tirées.
 var grafts_on_ground: Dictionary = {}
@@ -89,7 +92,7 @@ func reset() -> void:
 	kills = 0
 	flags = {}
 	choices = {}
-	grafts = {}
+	crown = []
 	graft_inventory = []
 	grafts_on_ground = {}
 	recompute()
@@ -135,20 +138,65 @@ func has_graft(id: String) -> bool:
 	return graft_inventory.has(id)
 
 
-## Greffes possédées qui ne sont posées dans aucun emplacement, dans l'ordre où elles ont été trouvées.
+## Greffes possédées qui ne sont pas posées dans la couronne, dans l'ordre où elles ont été trouvées.
 func free_grafts() -> Array:
-	var placed := {}
-	for uid in grafts:
-		placed[grafts[uid]] = true
-	return graft_inventory.filter(func(g): return not placed.has(g))
+	return graft_inventory.filter(func(g): return not crown.has(g))
 
 
-## Emplacement où une greffe est posée (-1 si elle n'est posée nulle part).
+## Greffes posées dans la couronne, dans l'ordre des emplacements.
+func placed_grafts() -> Array:
+	return crown.filter(func(g): return g != "")
+
+
+## Emplacement de la couronne où une greffe est posée (-1 si elle n'est posée nulle part).
 func graft_slot(graft_id: String) -> int:
-	for uid in grafts:
-		if grafts[uid] == graft_id:
-			return tree.id_for_uid(str(uid))
-	return -1
+	return crown.find(graft_id) if graft_id != "" else -1
+
+
+## Nombre d'emplacements ouverts de la couronne : ceux du départ, plus un par région dont tous les
+## Cœurs sont purifiés, un par boss vaincu et un pour la finale (réglages : data/crown.json).
+## Se lit dans les drapeaux de l'aventure : rien de plus à sauvegarder.
+func crown_size(f = null) -> int:
+	var fl: Dictionary = flags if f == null else f
+	var c := Content.crown()
+	var n := int(c.get("start", 2))
+	for id in Regions.ids():
+		if fl.get(Regions.heart_flag(id), false):
+			n += int(c.get("per_region_hearts", 1))
+		if fl.get(Regions.boss_flag(id), false):
+			n += int(c.get("per_boss", 1))
+	if fl.get("finale_vaincue", false):
+		n += int(c.get("finale", 0))
+	return clampi(n, 0, int(c.get("max", 16)))
+
+
+## Nombre d'emplacements que la couronne peut avoir en fin d'aventure (les autres sont encore fermés).
+func crown_max() -> int:
+	var c := Content.crown()
+	var n := int(c.get("start", 2)) + Regions.ids().size() * (int(c.get("per_region_hearts", 1)) + int(c.get("per_boss", 1))) + int(c.get("finale", 0))
+	return clampi(n, 0, int(c.get("max", 16)))
+
+
+## Ajuste la couronne au nombre d'emplacements ouverts (elle ne fait que grandir en jeu).
+func _fit_crown() -> void:
+	var n := crown_size()
+	while crown.size() < n:
+		crown.append("")
+	# Moins d'emplacements que de cases (outils de test) : les greffes en trop reviennent dans l'inventaire.
+	if crown.size() > n:
+		crown.resize(n)
+
+
+## Premier emplacement ouvert et vide de la couronne (-1 s'il n'y en a pas).
+func first_free_slot() -> int:
+	_fit_crown()
+	return crown.find("")
+
+
+## Identifiant de la greffe posée dans un emplacement de la couronne ("" s'il est vide ou fermé).
+func graft_of(slot: int) -> String:
+	_fit_crown()
+	return str(crown[slot]) if slot >= 0 and slot < crown.size() else ""
 
 
 ## Tire une greffe à donner pour une source (« elite », « autel »…) : une greffe dont « sources »
@@ -166,19 +214,19 @@ func roll_graft(source: String) -> String:
 	return pool[graft_rng.randi() % pool.size()]
 
 
-## Pose une greffe possédée dans un emplacement (appris ou non). Si elle était déjà posée ailleurs,
-## elle y est retirée ; si l'emplacement portait une autre greffe, celle-ci revient dans l'inventaire.
-func place_graft(node_id: int, graft_id: String) -> bool:
+## Pose une greffe possédée dans un emplacement ouvert de la couronne. Si elle était déjà posée
+## ailleurs, elle change de place ; si l'emplacement portait une autre greffe, celle-ci revient dans
+## l'inventaire. Renvoie false si la greffe n'est pas possédée ou si l'emplacement n'est pas ouvert.
+func place_graft(slot: int, graft_id: String) -> bool:
 	if not graft_inventory.has(graft_id):
 		return false
-	var from := graft_slot(graft_id)
-	if from == node_id:
-		return true
-	if node_id < 0 or node_id >= tree.nodes.size() or tree.nodes[node_id]["type"] != "graft":
-		return false
-	if from >= 0:
-		grafts.erase(tree.nodes[from]["uid"])
-	return set_graft(node_id, graft_id)
+	return set_graft(slot, graft_id)
+
+
+## Retire une greffe de la couronne (elle reste dans l'inventaire). Renvoie false si elle n'était pas posée.
+func unplace_graft(graft_id: String) -> bool:
+	var slot := graft_slot(graft_id)
+	return slot >= 0 and set_graft(slot, "")
 
 
 ## Recharge les nœuds appris à partir de leurs identifiants stables.
@@ -358,42 +406,35 @@ func set_choice(id: int, index: int) -> bool:
 	return true
 
 
-## Pose une greffe dans un emplacement de greffe ("" pour la retirer). La greffe n'agit que si
-## l'emplacement est appris. Renvoie false si le nœud n'est pas un emplacement ou si la greffe n'existe pas.
-func set_graft(node_id: int, graft_id: String) -> bool:
-	if node_id < 0 or node_id >= tree.nodes.size():
+## Pose une greffe dans un emplacement ouvert de la couronne ("" pour le vider). Outil bas niveau
+## (tests, galerie) : une greffe posée entre dans l'inventaire si besoin, et n'est jamais posée à
+## deux endroits. Renvoie false si l'emplacement n'est pas ouvert ou si la greffe n'existe pas.
+func set_graft(slot: int, graft_id: String) -> bool:
+	_fit_crown()
+	if slot < 0 or slot >= crown.size():
 		return false
-	var n: Dictionary = tree.nodes[node_id]
-	if n["type"] != "graft":
+	if graft_id != "" and not Content.grafts().has(graft_id):
 		return false
-	if graft_id == "":
-		grafts.erase(n["uid"])
-	elif Content.grafts().has(graft_id):
-		# Outil bas niveau (tests, galerie) : poser une greffe la fait entrer dans l'inventaire,
-		# et une greffe n'est jamais posée à deux endroits.
-		for uid in grafts.keys():
-			if grafts[uid] == graft_id:
-				grafts.erase(uid)
-		grafts[n["uid"]] = graft_id
+	if graft_id != "":
+		var from := crown.find(graft_id)
+		if from == slot:
+			return true
+		if from >= 0:
+			crown[from] = ""
 		if not graft_inventory.has(graft_id):
 			graft_inventory.append(graft_id)
-	else:
-		return false
+	crown[slot] = graft_id
 	recompute()
 	tree_changed.emit()
 	return true
 
 
-## Identifiant de la greffe posée dans un emplacement ("" s'il est vide).
-func graft_of(id: int) -> String:
-	return str(grafts.get(tree.nodes[id]["uid"], ""))
-
-
-## Recharge les choix, les greffes posées et l'inventaire d'une sauvegarde ; ce qui ne correspond
-## plus à l'arbre ou aux données est ignoré (une greffe posée reste toujours dans l'inventaire).
-func restore_extras(saved_choices, saved_grafts, saved_inventory = []) -> void:
+## Recharge les choix, la couronne et l'inventaire d'une sauvegarde ; ce qui ne correspond plus à
+## l'arbre ou aux données est ignoré (une greffe posée reste toujours dans l'inventaire). Les drapeaux
+## doivent être déjà rechargés : ils disent combien d'emplacements la couronne a.
+func restore_extras(saved_choices, saved_crown, saved_inventory = []) -> void:
 	choices = {}
-	grafts = {}
+	crown = []
 	graft_inventory = []
 	if saved_inventory is Array:
 		for g in saved_inventory:
@@ -407,12 +448,12 @@ func restore_extras(saved_choices, saved_grafts, saved_inventory = []) -> void:
 			for i in tree.nodes[id]["choices"].size():
 				if str(tree.nodes[id]["choices"][i].get("id", i)) == str(saved_choices[uid]):
 					choices[str(uid)] = str(saved_choices[uid])
-	if saved_grafts is Dictionary:
-		for uid in saved_grafts:
-			var id: int = tree.id_for_uid(str(uid))
-			var gid := str(saved_grafts[uid])
-			if id >= 0 and tree.nodes[id]["type"] == "graft" and Content.grafts().has(gid) and not grafts.values().has(gid):
-				grafts[str(uid)] = gid
+	_fit_crown()
+	if saved_crown is Array:
+		for i in mini(saved_crown.size(), crown.size()):
+			var gid := str(saved_crown[i])
+			if Content.grafts().has(gid) and not crown.has(gid):
+				crown[i] = gid
 				if not graft_inventory.has(gid):
 					graft_inventory.append(gid)
 	recompute()
@@ -442,12 +483,16 @@ func branch_count(bi: int, owned = null) -> int:
 
 
 ## Tout ce qui donne des effets pour un ensemble de nœuds appris : les nœuds eux-mêmes, le choix
-## fait sur chaque maîtrise ou mutation, les greffes posées, les bonus de grappe complète et les
-## paliers de résonance de branche. Chaque entrée a la forme {"id", "effects"} attendue par le moteur.
-## « graft_override » (uid de l'emplacement -> greffe) remplace les greffes posées, pour un aperçu.
-func effect_sources(owned: Dictionary, graft_override = null) -> Array:
-	var placed: Dictionary = grafts if graft_override == null else graft_override
+## fait sur chaque maîtrise ou mutation, les greffes de la couronne, les bonus de grappe complète et
+## les paliers de résonance de branche. Chaque entrée a la forme {"id", "effects"} attendue par le moteur.
+## « crown_override » (liste de greffes) remplace la couronne, pour un aperçu.
+func effect_sources(owned: Dictionary, crown_override = null) -> Array:
+	var placed: Array = crown if crown_override == null else crown_override
 	var out: Array = []
+	for i in placed.size():
+		var g = Content.grafts().get(str(placed[i]))
+		if g is Dictionary:
+			out.append({"id": "greffe:%d:%s" % [i, placed[i]], "ring": 0, "effects": g.get("effects", [])})
 	var per_branch := {}
 	for id in owned:
 		var n: Dictionary = tree.nodes[id]
@@ -460,10 +505,6 @@ func effect_sources(owned: Dictionary, graft_override = null) -> Array:
 		var i := choice_index(id)
 		if i >= 0:
 			out.append({"id": "%d:choix" % id, "ring": n["ring"], "effects": n["choices"][i].get("effects", [])})
-		if n["type"] == "graft":
-			var g = Content.grafts().get(placed.get(n["uid"], ""))
-			if g is Dictionary:
-				out.append({"id": "%d:greffe:%s" % [id, placed.get(n["uid"], "")], "ring": n["ring"], "effects": g.get("effects", [])})
 	for key in tree.clusters:
 		var c: Dictionary = tree.clusters[key]
 		if c["effects"].is_empty():

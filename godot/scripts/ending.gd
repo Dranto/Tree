@@ -121,7 +121,7 @@ static func collect_stats(m) -> Array:
 		["Morts", str(Objectives.deaths_total())],
 		["Niveau atteint", str(Game.level)],
 		["Nœuds appris", str(Game.allocated.size() - 1)],
-		["Greffes posées", str(Game.grafts.size())],
+		["Greffes posées", str(Game.placed_grafts().size())],
 		["Flétris purifiés", str(Game.kills)],
 		["Monde ravivé", "%d %%" % roundi(minf(1.0, m.ground.ratio() / 0.67) * 100.0)],
 	]

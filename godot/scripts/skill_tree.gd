@@ -29,9 +29,9 @@ const SEED := 20261109
 
 ## Types de nœuds qu'une grappe peut contenir.
 ## « attack » : nœud qui change la forme ou le comportement de l'attaque de base (attack.gd).
-const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "graft", "withered", "attack"]
+const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "withered", "attack"]
 ## Nom par défaut d'un nœud de grappe sans « name ».
-const DEFAULT_NAME := {"graft": "Emplacement de greffe", "withered": "Nœud flétri", "mastery": "Maîtrise", "small": "Nœud", "attack": "Attaque"}
+const DEFAULT_NAME := {"withered": "Nœud flétri", "mastery": "Maîtrise", "small": "Nœud", "attack": "Attaque"}
 ## Distances de dégagement autour d'une grappe, en unités d'anneau : un nœud généré plus proche
 ## que CLEAR_NODE d'un nœud de grappe (ou que CLEAR_LINK d'un de ses liens) est écarté ; un lien
 ## généré qui passe à moins de CLEAR_EDGE d'un nœud de grappe est retiré.
@@ -44,7 +44,7 @@ const CLEAR_EDGE := 0.34
 ## de CLEAR_NODE ; les liens, les identifiants et les anneaux ne changent pas.
 const SPREAD_RADIUS := {
 	"small": 11.0, "notable": 18.0, "keystone": 30.0, "skill": 25.0, "mutation": 25.0,
-	"mastery": 19.0, "graft": 18.0, "withered": 19.0, "attack": 22.0,
+	"mastery": 19.0, "withered": 19.0, "attack": 22.0,
 }
 const SPREAD_GAP := 30.0
 const SPREAD_MAX := 1.5
@@ -822,8 +822,6 @@ static func describe(n: Dictionary) -> PackedStringArray:
 		out.append("%s : %s" % [ch.get("name", ""), describe_effects(ch.get("effects", []))])
 	if n["desc"] != "":
 		out.append(n["desc"])
-	if out.is_empty() and n["type"] == "graft":
-		out.append("Reçoit une greffe trouvée dans le monde.")
 	return out
 
 

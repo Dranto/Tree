@@ -8,6 +8,8 @@
 ## Ne lit ni n'écrit la sauvegarde par défaut.
 extends SceneTree
 
+const Regions = preload("res://scripts/regions.gd")
+
 const Content = preload("res://scripts/content.gd")
 const PATH := "user://tests/greffes_test.json"
 
@@ -50,15 +52,6 @@ func _pickups() -> Array:
 	return main.orbs_layer.get_children().filter(func(g): return "graft_id" in g and not g.is_queued_for_deletion())
 
 
-## Un emplacement de greffe de Ronce, et le chemin pour l'apprendre (nœuds ajoutés directement).
-func _own_slot(local: String) -> int:
-	var id: int = game.tree.id_for_uid("c:ronce:" + local)
-	for step in main.tree_ui.panels.planner.path_to(id):
-		game.allocated[step] = true
-	game.recompute()
-	return id
-
-
 func _run() -> void:
 	game = root.get_node("Game")
 	var save = root.get_node("SaveGame")
@@ -97,9 +90,10 @@ func _run() -> void:
 	check(int(r["boss"]["ronce"]["points"]) == 2 and int(r["coeur"]["ronce"]["points"]) == 1, "boss : 2 points, Cœur : 1 point")
 	var slots := 0
 	for n in game.tree.nodes:
-		if n["type"] == "graft" and SkillTree_branch_id(n) == "ronce":
+		if str(n["type"]) == "graft":
 			slots += 1
-	check(slots >= 4, "%d emplacements de greffe dans Ronce" % slots)
+	check(slots == 0, "plus aucun emplacement de greffe dans l'arbre")
+	check(game.crown_max() >= 12 and game.crown_max() <= 16, "la couronne compte %d emplacements en fin d'aventure" % game.crown_max())
 
 	print("Points hors niveau")
 	var got: Array = []
@@ -130,28 +124,41 @@ func _run() -> void:
 	for g in elite:
 		game.graft_inventory.erase(g)
 
-	print("Pose dans l'arbre")
-	var slot := _own_slot("fouet:f8")
-	var other: int = game.tree.id_for_uid("c:ronce:souche:o5")
+	print("Couronne")
+	check(game.crown_size() == int(Content.crown()["start"]), "nouvelle partie : %d emplacements ouverts" % game.crown_size())
+	var slot := 0
 	var shots: int = game.stats["projectiles"]
 	check(not game.place_graft(slot, "greffe_ecorce"), "une greffe non possédée ne se pose pas")
-	check(game.place_graft(slot, "greffe_soeurs") and game.stats["projectiles"] == shots + 2, "greffe posée dans un emplacement appris : +2 projectiles")
-	check(game.place_graft(other, "greffe_soeurs") and game.graft_of(slot) == "" and game.stats["projectiles"] == shots, "déplacée vers un emplacement pas appris : elle n'agit plus")
+	check(not game.place_graft(game.crown_size(), "greffe_soeurs"), "pas de pose dans un emplacement encore fermé")
+	check(game.place_graft(slot, "greffe_soeurs") and game.stats["projectiles"] == shots + 2, "greffe posée dans la couronne : +2 projectiles tout de suite")
+	check(game.place_graft(1, "greffe_soeurs") and game.graft_of(slot) == "" and game.graft_of(1) == "greffe_soeurs" and game.stats["projectiles"] == shots + 2, "déplacée d'un emplacement à l'autre : elle agit toujours")
+	check(game.unplace_graft("greffe_soeurs") and game.stats["projectiles"] == shots and game.free_grafts() == ["greffe_soeurs"], "retirée : elle revient dans l'inventaire et n'agit plus")
 	game.give_graft("greffe_ecorce")
 	game.place_graft(slot, "greffe_soeurs")
 	check(game.place_graft(slot, "greffe_ecorce") and game.free_grafts() == ["greffe_soeurs"], "une greffe remplacée revient dans l'inventaire")
+	var open0: int = game.crown_size()
+	game.flags[Regions.boss_flag("ronce")] = true
+	game.flags[Regions.heart_flag("ronce")] = true
+	check(game.crown_size() == open0 + 2, "boss vaincu et Cœurs purifiés : deux emplacements de plus")
+	check(game.place_graft(open0 + 1, "greffe_soeurs"), "le nouvel emplacement reçoit une greffe")
+	game.unplace_graft("greffe_soeurs")
+	game.flags.erase(Regions.boss_flag("ronce"))
+	game.flags.erase(Regions.heart_flag("ronce"))
 
 	print("Écran de l'arbre")
 	var gp = main.tree_ui.grafts_panel
 	gp.refresh()
-	check(gp.visible and gp._list.get_child_count() == 2, "l'inventaire montre les deux greffes")
+	check(gp.visible and gp._grid.get_child_count() == 2, "la grille montre les deux greffes")
+	check(gp.crown_view.slot_points().size() == game.crown_max(), "la couronne dessine tous ses emplacements (ouverts et fermés)")
 	gp.held = "greffe_soeurs"
-	var tip: Array = gp.tooltip_lines(game.tree.nodes[slot])
-	var tip_text := " ".join(tip.map(func(l): return l[0]))
-	check("Projectiles" in tip_text and "Écorce de mûrier" in tip_text, "aperçu de la greffe tenue (statistiques et greffe remplacée)")
+	gp.set_hover_slot(slot)
+	var tip_text := " ".join(gp._detail.get_children().map(func(l): return l.text))
+	check("Projectiles" in tip_text and "Écorce de mûrier" in tip_text, "fiche : aperçu de la greffe tenue (statistiques et greffe remplacée)")
 	check(gp.drop_on(slot, "greffe_soeurs") and game.graft_of(slot) == "greffe_soeurs", "glisser-déposer : greffe posée")
-	check(not gp.drop_on(game.tree.id_for_uid("c:ronce:fouet:f6"), "greffe_ecorce") and game.graft_of(slot) == "greffe_soeurs", "déposée hors d'un emplacement : rien ne change")
+	check(not gp.drop_on(game.crown_size(), "greffe_ecorce") and game.graft_of(slot) == "greffe_soeurs", "déposée sur un emplacement fermé : rien ne change")
 	check(gp.click_slot(slot) and game.graft_of(slot) == "" and game.free_grafts().size() == 2, "clic sur un emplacement occupé : greffe retirée")
+	check(gp.quick_place("greffe_ecorce") and game.graft_of(0) == "greffe_ecorce", "double-clic : posée au premier emplacement libre")
+	gp.set_hover_slot(-1)
 	game.place_graft(slot, "greffe_ecorce")
 
 	print("Effets des greffes")
@@ -180,7 +187,7 @@ func _run() -> void:
 	_clear_enemies()
 	# Les autels donnent leurs propres greffes : on repart d'un inventaire vide.
 	game.graft_inventory.clear()
-	game.grafts.clear()
+	game.crown.clear()
 	game.recompute()
 
 	print("Autels et secret")
@@ -243,7 +250,7 @@ func _run() -> void:
 	check(ground.size() == 2, "deux greffes au sol à sauvegarder")
 	check(save.save_now(main, PATH), "sauvegarde écrite")
 	var data = JSON.parse_string(FileAccess.get_file_as_string(PATH))
-	check(int(data["version"]) == 6 and data["tree"]["inventory"].size() == inv.size() and data["world"]["ground_grafts"].size() == 2, "format 6 : inventaire et greffes au sol")
+	check(int(data["version"]) == 7 and data["tree"]["inventory"].size() == inv.size() and data["tree"]["crown"][slot] == "greffe_soeurs" and data["world"]["ground_grafts"].size() == 2, "format 7 : inventaire, couronne et greffes au sol")
 	game.reset()
 	main.import_ground_grafts([])
 	await _steps(2)
@@ -262,10 +269,33 @@ func _run() -> void:
 	f.store_string(JSON.stringify(v2))
 	f.close()
 	check(save.load_into(null, PATH), "une sauvegarde de la version 2 se charge")
-	check(game.graft_inventory == ["greffe_soeurs"] and game.graft_of(game.tree.id_for_uid("c:ronce:coeur:h4")) == "greffe_soeurs", "la greffe posée entre dans l'inventaire ; la greffe d'essai disparue est ignorée")
+	check(game.graft_inventory == ["greffe_soeurs"] and game.graft_of(0) == "greffe_soeurs", "la greffe posée entre dans l'inventaire et la couronne ; la greffe d'essai disparue est ignorée")
 	check(game.flags.get("points_ronce_boss", false) and game.flags.get("points_ronce_coeur", false), "boss et Cœur déjà vaincus : leurs points ne seront pas redonnés")
 	var mig: int = game.points
 	check(not game.grant_points(2, "boss", "ronce_boss") and game.points == mig, "pas de second don pour le boss")
+
+	print("Migration d'une sauvegarde du jalon 10 (version 6)")
+	var learned: Array = []
+	var f8: int = -1
+	for n in game.tree.nodes:
+		if n["uid"] == "c:ronce:fouet:f8n":
+			f8 = n["id"]
+	for step in main.tree_ui.panels.planner.path_to(f8):
+		if step != f8:
+			learned.append(game.tree.nodes[step]["uid"])
+	var v6 := {"format": "seve-save", "version": 6, "game": {"level": 12, "points": 0, "flags": {}},
+		"tree": {"allocated": learned + ["c:ronce:fouet:f8", "c:ronce:souche:o5"], "choices": {},
+			"grafts": {"c:ronce:venin:p5": "greffe_tracante", "c:ronce:fouet:f8": "greffe_soeurs", "c:ronce:souche:o5": "greffe_ecorce"},
+			"inventory": ["greffe_soeurs", "greffe_ecorce", "greffe_tracante", "greffe_couronne"]},
+		"world": {}}
+	var mf := FileAccess.open(PATH, FileAccess.WRITE)
+	mf.store_string(JSON.stringify(v6))
+	mf.close()
+	check(save.load_into(null, PATH), "une sauvegarde de la version 6 se charge")
+	check(game.crown == ["greffe_soeurs", "greffe_ecorce"], "les greffes des emplacements appris passent dans la couronne (%s)" % [game.crown])
+	check(game.free_grafts() == ["greffe_tracante", "greffe_couronne"], "la couronne pleine, les autres restent dans l'inventaire")
+	check(game.points == 2 and game.allocated.size() == learned.size() + 1, "les points des deux emplacements appris sont rendus")
+	check(game.tree.id_for_uid("c:ronce:fouet:f8") < 0 and f8 >= 0 and game.tree.nodes[f8]["type"] == "small", "l'emplacement est devenu un nœud ordinaire")
 
 	save.delete_save(PATH)
 	print("ÉCHECS : %d" % failures if failures > 0 else "Tous les tests des greffes passent.")

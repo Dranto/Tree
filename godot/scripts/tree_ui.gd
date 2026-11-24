@@ -31,11 +31,11 @@ const AttackScript = preload("res://scripts/attack.gd")
 
 const RADIUS := {
 	"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0,
-	"skill": 23.0, "mutation": 20.0, "mastery": 19.0, "graft": 17.0, "withered": 18.0, "attack": 21.0,
+	"skill": 23.0, "mutation": 20.0, "mastery": 19.0, "withered": 18.0, "attack": 21.0,
 }
 const KIND_LABEL := {
 	"root": "Origine", "small": "Nœud", "notable": "Nœud notable", "keystone": "Nœud clé",
-	"skill": "Compétence", "mutation": "Mutation", "mastery": "Maîtrise", "graft": "Emplacement de greffe", "withered": "Nœud flétri",
+	"skill": "Compétence", "mutation": "Mutation", "mastery": "Maîtrise", "withered": "Nœud flétri",
 	"attack": "Attaque de base",
 }
 ## Couleurs de la cendre qui couvre un nœud flétri tant qu'il n'est pas libéré.
@@ -66,7 +66,7 @@ const LOD_NEAR := 0.8
 ## Taille minimale à l'écran (en pixels) des nœuds importants, pour qu'ils restent visibles dézoomés.
 const MIN_SCREEN_RADIUS := {
 	"root": 9.0, "keystone": 8.0, "notable": 5.0, "small": 0.0,
-	"skill": 7.0, "mutation": 6.0, "mastery": 6.0, "graft": 5.0, "withered": 5.0, "attack": 6.0,
+	"skill": 7.0, "mutation": 6.0, "mastery": 6.0, "withered": 5.0, "attack": 6.0,
 }
 
 ## Taille des textes (pixels à l'écran, quel que soit le zoom).
@@ -107,7 +107,7 @@ var font: Font
 var t := 0.0
 ## Outils de planification (recherche, chemins, plan, résumé) : voir tree_panels.gd.
 var panels
-## Inventaire des greffes (tree_grafts.gd), en bas à gauche.
+## Couronne de greffes (tree_grafts.gd), en bas à gauche : indépendante des nœuds de l'arbre.
 var grafts_panel
 
 ## Rectangles (à l'écran) des textes dessinés par la couche des libellés, pour les contrôles automatiques.
@@ -624,19 +624,6 @@ func _gui_input(event: InputEvent) -> void:
 		hover = pick(mouse)
 
 
-## Glisser-déposer d'une greffe de l'inventaire : le nœud survolé montre l'aperçu de la greffe.
-func _can_drop_data(at: Vector2, data) -> bool:
-	if not (data is Dictionary and data.has("graft")):
-		return false
-	mouse = at
-	hover = pick(at)
-	return true
-
-
-func _drop_data(at: Vector2, data) -> void:
-	grafts_panel.drop_on(pick(at), str(data["graft"]))
-
-
 # --- États ---
 
 func _state(id: int) -> String:
@@ -710,12 +697,6 @@ func click(id: int) -> void:
 				panels.say("Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre.")
 			else:
 				open_choice(id)
-		elif n["type"] == "graft":
-			grafts_panel.click_slot(id)
-		return
-	# Une greffe tenue se pose aussi dans un emplacement pas encore appris.
-	if n["type"] == "graft" and grafts_panel.held != "":
-		grafts_panel.click_slot(id)
 		return
 	if not panels.plan_mode:
 		# Un nœud à règle (flétri, mutation sans sa compétence, incompatible) dit pourquoi il résiste.
@@ -1066,7 +1047,7 @@ func _link_batches(level: int, z: float) -> Array:
 
 
 ## Dessine un nœud (tout sauf les petits et la graine) : son médaillon à la forme de son type,
-## puis ce qui le distingue (icône, rameau, points de choix, greffe, cendre). Sert à la couche fixe
+## puis ce qui le distingue (icône, rameau, points de choix, cendre). Sert à la couche fixe
 ## et au médaillon de l'infobulle.
 func draw_node(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w: float, level: int) -> void:
 	var col: Color = Game.tree.node_color(n)
@@ -1078,9 +1059,6 @@ func draw_node(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w
 	if ashen:
 		# Cendre : médaillon gris, quel que soit l'état.
 		TreeArt.medallion(c, shape, p, r, "locked", Art.c("brume").lightened(0.25), w, detail, ring_w)
-	elif kind == "graft" and st == "owned":
-		# Un emplacement reste creux : c'est la greffe qui le remplit.
-		TreeArt.medallion(c, shape, p, r, "available", col, w, detail, ring_w)
 	else:
 		TreeArt.medallion(c, shape, p, r, st, col, w, detail, ring_w)
 	if kind == "keystone" and detail:
@@ -1101,8 +1079,6 @@ func draw_node(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, w
 		"mastery":
 			if level != LOD_OVERVIEW:
 				_draw_mastery_dots(c, n, p, r, st, ic, w)
-		"graft":
-			_draw_graft(c, n, p, r, st, col, w, level)
 		"withered":
 			if ashen:
 				_draw_ash(c, n, p, r, w)
@@ -1119,8 +1095,8 @@ func _edge_color(e: Vector2i) -> Color:
 
 
 ## Contour d'un nœud selon son type (vide = cercle, pour un notable) : losange pour un nœud clé,
-## hexagone pour une compétence, triangle pour une mutation, carré pour une maîtrise, octogone pour
-## un emplacement de greffe, disque fendu pour un nœud flétri, étoile à quatre épines pour un nœud
+## hexagone pour une compétence, triangle pour une mutation, carré pour une maîtrise,
+## disque fendu pour un nœud flétri, étoile à quatre épines pour un nœud
 ## qui change l'attaque de base.
 func shape_points(kind: String, p: Vector2, r: float) -> PackedVector2Array:
 	var pts := PackedVector2Array()
@@ -1136,10 +1112,6 @@ func shape_points(kind: String, p: Vector2, r: float) -> PackedVector2Array:
 		"mastery":
 			var h := r * 0.9
 			pts = PackedVector2Array([p + Vector2(-h, -h), p + Vector2(h, -h), p + Vector2(h, h), p + Vector2(-h, h)])
-		"graft":
-			# Octogone : un écusson où se pose la greffe.
-			for i in 8:
-				pts.append(p + Vector2.from_angle(i * TAU / 8.0 + TAU / 16.0) * r * 1.04)
 		"withered":
 			# Disque fendu : un contour irrégulier, toujours le même.
 			for i in 11:
@@ -1171,23 +1143,6 @@ func _draw_mastery_dots(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: 
 			c.draw_circle(q, r * 0.2, col)
 		else:
 			c.draw_arc(q, r * 0.15, 0.0, TAU, 12, col, maxf(r * 0.07, w))
-
-
-## Emplacement de greffe : un anneau creux marqué d'une croix, ou une feuille dorée quand une greffe est posée.
-func _draw_graft(c: CanvasItem, n: Dictionary, p: Vector2, r: float, st: String, col: Color, w: float, level: int) -> void:
-	var a := 0.9 if st == "owned" else (0.75 if st == "available" else 0.4)
-	c.draw_arc(p, r * 0.68, 0.0, TAU, 24, Color(col.r, col.g, col.b, a * 0.6), maxf(r * 0.08, w))
-	var gid := Game.graft_of(n["id"])
-	if gid != "":
-		# La greffe posée, avec sa forme et sa couleur (les mêmes qu'au sol et dans l'inventaire).
-		var g: Dictionary = Content.grafts().get(gid, {})
-		c.draw_circle(p, r * 0.56, Color(0.23, 0.16, 0.1, a))
-		TreeGrafts.GraftPickup.draw_shape(c, str(g.get("shape", "feuille")), p, r * 0.42, Color(Color(str(g.get("color", "#f2d06b"))), a))
-	elif level != LOD_OVERVIEW:
-		var s := r * 0.32
-		var lw := maxf(r * 0.12, 1.2 * w)
-		c.draw_line(p + Vector2(-s, 0), p + Vector2(s, 0), Color(col.r, col.g, col.b, a), lw)
-		c.draw_line(p + Vector2(0, -s), p + Vector2(0, s), Color(col.r, col.g, col.b, a), lw)
 
 
 ## Nœud flétri : fissures et flocons de cendre, toujours aux mêmes endroits pour un nœud donné.
@@ -1742,19 +1697,6 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 			raw.append(["Clic pour faire ton choix", 15, UiTheme.GOLD])
 		elif st == "owned" and n["type"] == "mastery":
 			raw.append(["Clic pour changer de bonus", 15, UiTheme.GOLD])
-	if n["type"] == "graft":
-		var g = Content.grafts().get(Game.graft_of(id))
-		if g is Dictionary:
-			raw.append(["Greffe : " + str(g.get("name", "")), 14, UiTheme.GOLD])
-			for e in g.get("effects", []):
-				var line := Effects.describe(e)
-				if line != "":
-					raw.append(["• " + line, 14, ink])
-		else:
-			raw.append(["• Emplacement vide : reçoit une greffe trouvée dans le monde.", 14, ink])
-		raw.append_array(grafts_panel.tooltip_lines(n))
-		if grafts_panel.held == "" and g is Dictionary and st == "owned":
-			raw.append(["Clic pour retirer la greffe", 15, UiTheme.GOLD])
 	# Grappe écrite à la main : avancement et bonus de grappe complète.
 	if n["cluster"] != "" and tree.clusters.has(n["cluster"]):
 		var cl: Dictionary = tree.clusters[n["cluster"]]

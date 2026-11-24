@@ -335,7 +335,7 @@ func _test_tree() -> void:
 			for id in t.clusters[c]["nodes"]:
 				if t.nodes[id]["type"] == "graft":
 					graft_slots += 1
-	check(graft_slots >= 4, "au moins quatre emplacements de greffe dans les grappes de Racine (%d)" % graft_slots)
+	check(graft_slots == 0, "plus d'emplacement de greffe dans les grappes de Racine : les greffes vont dans la couronne")
 	var builds: Dictionary = Content._load("builds")
 	var racine := 0
 	for b in builds:
@@ -354,7 +354,7 @@ func _test_save() -> void:
 	# Chemin du jalon 9 : graine → racine:1:0 → racine:2:1 → racine:3:1, puis racine:3:3 et racine:5:1
 	# (nœuds génériques de Racine qui n'existent plus).
 	var data := {"format": "seve-save", "version": 5, "game": {"level": 6, "xp": 0, "points": 1, "kills": 0, "flags": {}},
-		"tree": {"allocated": ["racine:1:0", "racine:2:1", "racine:3:1", "racine:3:3", "racine:5:1"], "choices": {}, "grafts": {}, "inventory": []}}
+		"tree": {"allocated": ["racine:1:0", "racine:2:1", "racine:3:1", "racine:3:3", "racine:5:1"], "choices": {}, "crown": [], "inventory": []}}
 	save_game.apply(data, null)
 	check(not game.tree.by_uid.has("racine:3:3") and not game.tree.by_uid.has("racine:5:1"), "les nœuds génériques écartés ont disparu")
 	check(game.allocated.size() - 1 == 3, "les nœuds encore là restent appris (%d)" % (game.allocated.size() - 1))
