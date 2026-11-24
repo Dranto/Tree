@@ -107,7 +107,7 @@ func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0, element := 
 
 ## Chiffre de dégâts : le coup normal reste discret, le critique est gras, doré et plus grand.
 func _damage_number(pos: Vector2, amount: float, crit: bool, radius: float) -> void:
-	if not Settings.show_damage_numbers or texts.size() >= MAX_TEXTS or not (crit or texts.size() < MAX_TEXTS * 2 / 3):
+	if not Settings.shows_number(crit) or texts.size() >= MAX_TEXTS or not (crit or texts.size() < MAX_TEXTS * 2 / 3):
 		return
 	var spot := pos + Vector2(_rng.randf_range(-10.0, 10.0), -radius - 8.0)
 	if crit:
@@ -197,7 +197,7 @@ func player_hurt(frac := 0.1, amount := 0.0, pos := Vector2.ZERO) -> void:
 	shake(clampf(0.4 + frac * 1.6, 0.4, 0.9))
 	if main != null and main.get("screen_fx") != null:
 		main.screen_fx.hurt(frac)
-	if amount > 0.0 and Settings.show_damage_numbers and texts.size() < MAX_TEXTS:
+	if amount > 0.0 and Settings.shows_number(true) and texts.size() < MAX_TEXTS:
 		text(pos + Vector2(0, -34.0), "-%d" % roundi(amount), Color("ff6b5e"), 22 + mini(int(amount / 10.0), 8), 1.0, 2)
 		texts[-1]["pop"] = 0.14
 	if Settings.reduce_effects or main == null or main.player == null:
@@ -217,7 +217,7 @@ func player_punished(pos: Vector2, stunned: bool, sap_lost: float, heal_blocked:
 		if main != null and main.get("screen_fx") != null:
 			main.screen_fx.glow(Color(Art.c("or"), 0.5), 0.35, 0.3)
 		Sfx.play("etourdi")
-	if Settings.show_damage_numbers and texts.size() < MAX_TEXTS - 2:
+	if Settings.shows_number(true) and texts.size() < MAX_TEXTS - 2:
 		if sap_lost >= 1.0:
 			text(pos + Vector2(26.0, -52.0), "Sève −%d" % roundi(sap_lost), Art.ec("seve"), 17, 1.1, 2)
 		if heal_blocked and stunned:

@@ -12,7 +12,7 @@ var music_slider: HSlider
 var sfx_slider: HSlider
 var fullscreen_box: CheckBox
 var hints_box: CheckBox
-var numbers_box: CheckBox
+var numbers_select: OptionButton
 var shake_slider: HSlider
 var shake_label: Label
 var wind_slider: HSlider
@@ -106,11 +106,11 @@ func _ready() -> void:
 	hints_box.button_pressed = Settings.show_hints
 	hints_box.toggled.connect(func(on): Settings.set_show_hints(on); Settings.save_settings())
 	p_aff.add_child(hints_box)
-	numbers_box = CheckBox.new()
-	numbers_box.text = "Afficher les chiffres de dégâts"
-	numbers_box.button_pressed = Settings.show_damage_numbers
-	numbers_box.toggled.connect(func(on): Settings.show_damage_numbers = on; Settings.save_settings())
-	p_aff.add_child(numbers_box)
+	numbers_select = _select_row(p_aff, "Chiffres de dégâts")
+	for id in Settings.DAMAGE_NUMBERS:
+		numbers_select.add_item(Settings.DAMAGE_NUMBERS_NAMES[id])
+	numbers_select.select(Settings.DAMAGE_NUMBERS.find(Settings.damage_numbers))
+	numbers_select.item_selected.connect(func(i): Settings.set_damage_numbers(Settings.DAMAGE_NUMBERS[i]); Settings.save_settings())
 	reduce_box = CheckBox.new()
 	reduce_box.text = "Réduire les effets (secousse, micro-pause, particules)"
 	reduce_box.button_pressed = Settings.reduce_effects
@@ -419,7 +419,7 @@ func open() -> void:
 	sfx_slider.value = Settings.sfx_volume
 	fullscreen_box.button_pressed = Settings.fullscreen
 	hints_box.button_pressed = Settings.show_hints
-	numbers_box.button_pressed = Settings.show_damage_numbers
+	numbers_select.select(Settings.DAMAGE_NUMBERS.find(Settings.damage_numbers))
 	shake_slider.value = Settings.shake
 	wind_slider.value = Settings.wind
 	reduce_box.button_pressed = Settings.reduce_effects

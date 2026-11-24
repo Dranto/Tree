@@ -12,8 +12,12 @@ var music_volume := 0.7
 var sfx_volume := 0.9
 var fullscreen := false
 var show_hints := true
-## Chiffres de dégâts flottants (infligés et reçus).
-var show_damage_numbers := true
+## Chiffres de dégâts flottants : « aucun » (par défaut, choix d'Antoine au jalon 11 : le coup se
+## lit à l'impact), « critiques » (coups critiques et dégâts reçus) ou « tous ».
+## Clé à part (« gameplay/damage_numbers ») : l'ancien réglage, toujours enregistré à vrai, n'est pas repris.
+const DAMAGE_NUMBERS := ["aucun", "critiques", "tous"]
+const DAMAGE_NUMBERS_NAMES := {"aucun": "Aucun", "critiques": "Critiques et dégâts reçus", "tous": "Tous"}
+var damage_numbers := "aucun"
 ## Commandes de la barre de compétences : six emplacements, alignés sur player.bar.
 ## - 0 et 1 : les deux compétences principales, sur les clics gauche et droit (actions
 ##   « skill_main_1 » et « skill_main_2 ») ;
@@ -78,7 +82,8 @@ func load_settings() -> void:
 	sfx_volume = clampf(float(cfg.get_value("audio", "sfx_volume", sfx_volume)), 0.0, 1.0)
 	fullscreen = bool(cfg.get_value("video", "fullscreen", fullscreen))
 	show_hints = bool(cfg.get_value("gameplay", "show_hints", show_hints))
-	show_damage_numbers = bool(cfg.get_value("gameplay", "show_damage_numbers", show_damage_numbers))
+	var dn := str(cfg.get_value("gameplay", "damage_numbers", damage_numbers))
+	damage_numbers = dn if dn in DAMAGE_NUMBERS else "aucun"
 	# Section « bindings » (jalon 6) : les anciennes touches « controls/slot_N » visaient une autre
 	# disposition de la barre et ne sont plus lues.
 	for i in SLOT_COUNT:
@@ -105,7 +110,7 @@ func save_settings() -> void:
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
 	cfg.set_value("video", "fullscreen", fullscreen)
 	cfg.set_value("gameplay", "show_hints", show_hints)
-	cfg.set_value("gameplay", "show_damage_numbers", show_damage_numbers)
+	cfg.set_value("gameplay", "damage_numbers", damage_numbers)
 	for i in SLOT_COUNT:
 		cfg.set_value("bindings", SLOT_ACTIONS[i], bindings[i])
 	cfg.set_value("bindings", "moba_main_2", moba_main_2_key)
@@ -310,6 +315,16 @@ func set_fullscreen(on: bool) -> void:
 func set_show_hints(on: bool) -> void:
 	show_hints = on
 	apply()
+
+
+func set_damage_numbers(id: String) -> void:
+	damage_numbers = id if id in DAMAGE_NUMBERS else "aucun"
+	changed.emit()
+
+
+## Vrai si un chiffre doit s'afficher : crit (ou dégât reçu) vaut pour « critiques ».
+func shows_number(crit: bool) -> bool:
+	return damage_numbers == "tous" or (crit and damage_numbers == "critiques")
 
 
 func set_shake(v: float) -> void:

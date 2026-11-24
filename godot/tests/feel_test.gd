@@ -39,7 +39,7 @@ func _settle(fx) -> void:
 
 func _run() -> void:
 	settings = root.get_node("Settings")
-	var saved := [settings.reduce_effects, settings.hitstop_scale, settings.flash_scale, settings.show_damage_numbers]
+	var saved := [settings.reduce_effects, settings.hitstop_scale, settings.flash_scale, settings.damage_numbers]
 	settings.reduce_effects = false
 	settings.hitstop_scale = 1.0
 	settings.flash_scale = 1.0
@@ -126,6 +126,26 @@ func _run() -> void:
 	settings.reduce_effects = false
 	_settle(fx)
 
+	print("Chiffres de dégâts")
+	check(settings.damage_numbers == "aucun" or saved[3] != "aucun", "masqués par défaut")
+	fx.texts.clear()
+	settings.damage_numbers = "aucun"
+	fx.impact(at, 10.0, true, 14.0)
+	fx.player_hurt(0.1, 12.0, at)
+	check(fx.texts.is_empty(), "« aucun » : ni coup infligé ni dégât reçu chiffré")
+	settings.damage_numbers = "critiques"
+	fx.impact(at, 10.0, false, 14.0)
+	check(fx.texts.is_empty(), "« critiques » : un coup ordinaire n'a pas de chiffre")
+	fx.impact(at, 10.0, true, 14.0)
+	fx.player_hurt(0.1, 12.0, at)
+	check(fx.texts.size() == 2, "« critiques » : le critique et le dégât reçu sont chiffrés")
+	settings.damage_numbers = "tous"
+	fx.impact(at, 10.0, false, 14.0)
+	check(fx.texts.size() == 3, "« tous » : le coup ordinaire aussi")
+	settings.damage_numbers = "aucun"
+	fx.texts.clear()
+	_settle(fx)
+
 	print("Critique visible")
 	fx.stars.clear()
 	fx.impact(at, 10.0, false, 14.0)
@@ -180,7 +200,7 @@ func _run() -> void:
 	settings.reduce_effects = saved[0]
 	settings.hitstop_scale = saved[1]
 	settings.flash_scale = saved[2]
-	settings.show_damage_numbers = saved[3]
+	settings.damage_numbers = saved[3]
 	Engine.time_scale = 1.0
 	print("Résultat : %s" % ("OK" if failures == 0 else "%d échec(s)" % failures))
 	quit(1 if failures > 0 else 0)
