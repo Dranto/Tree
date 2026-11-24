@@ -34,6 +34,10 @@ const FOLLOW_FULL := 70.0
 ## « moba » : distance d'arrivée, et abandon de la destination quand le héros bute (buisson, arène).
 const ARRIVE := 1.0
 const STUCK_TIME := 0.35
+## Manette : le stick droit pousse le point visé entre PAD_AIM_NEAR et PAD_AIM_FAR pixels du héros
+## (là où tombent les compétences posées au sol) ; lâché, la visée se pose sur la cible automatique.
+const PAD_AIM_NEAR := 200.0
+const PAD_AIM_FAR := 440.0
 
 var main
 var radius := 14.0
@@ -90,6 +94,10 @@ var _step_start := Vector2.ZERO
 var mouse_live := false
 ## Bancs de test sans écran : position de souris imposée (dans le monde), à la place de la vraie.
 var test_mouse = null
+## Manette : stick droit poussé ce pas (la cible automatique se cherche alors près du point visé), et
+## dernière direction visée ou marchée (visée par défaut quand rien n'est à portée).
+var pad_aiming := false
+var _pad_dir := Vector2.RIGHT
 ## Réglages des compétences actives, lus dans res://data/skills.json.
 var skills: Dictionary = Content.skills()
 var skill_cd: Dictionary = {}
@@ -301,7 +309,7 @@ func mouse_move(keys: Vector2, delta: float) -> Vector2:
 		return keys
 	match Settings.move_mode:
 		"curseur":
-			if not mouse_live:
+			if not mouse_live or Settings.pad_active():
 				return Vector2.ZERO
 			var off := aim_point - global_position
 			var d := off.length()
@@ -391,6 +399,9 @@ func _physics_process(delta: float) -> void:
 	_watch_stuck(delta)
 	var mv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	aim_point = mouse_world()
+	pad_aiming = false
+	if Settings.pad_active() and test_mouse == null and not main.autotest:
+		aim_point = pad_aim_point(mv)
 	var want_dash := Input.is_action_just_pressed("dash")
 	var want := _wanted_skills()
 	if not main.autotest:
@@ -418,7 +429,7 @@ func _physics_process(delta: float) -> void:
 
 	if want_dash and dash_cd <= 0.0:
 		# Au clavier, l'esquive suit la direction de marche ; à la souris, elle part vers le curseur.
-		var keyboard: bool = main.autotest or Settings.move_mode == "clavier" or Input.get_vector("move_left", "move_right", "move_up", "move_down").length() > 0.1
+		var keyboard: bool = main.autotest or Settings.move_mode == "clavier" or Settings.pad_active() or Input.get_vector("move_left", "move_right", "move_up", "move_down").length() > 0.1
 		dash_dir = mv.normalized() if keyboard and mv.length() > 0.1 else aim
 		if has_dest:
 			clear_destination()
@@ -569,7 +580,7 @@ func attack_range() -> float:
 func auto_target():
 	if main == null:
 		return null
-	var cursor_known: bool = main.autotest or mouse_live or test_mouse != null
+	var cursor_known: bool = main.autotest or test_mouse != null or (pad_aiming if Settings.pad_active() else mouse_live)
 	var from: Vector2 = aim_point if cursor_known else global_position
 	var best = null
 	var best_d := INF
@@ -586,6 +597,21 @@ func auto_target():
 	if keep < INF and best_d >= keep * TARGET_STICK * TARGET_STICK:
 		return target
 	return best
+
+
+## Point visé à la manette (mv : stick gauche) : le stick droit le pousse autour du héros ; lâché, il
+## se pose sur la cible automatique, à défaut devant le héros (dernière direction visée ou marchée).
+func pad_aim_point(mv: Vector2) -> Vector2:
+	var r := Settings.stick("aim")
+	if r.length() > 0.0:
+		pad_aiming = true
+		_pad_dir = r.normalized()
+		return global_position + _pad_dir * lerpf(PAD_AIM_NEAR, PAD_AIM_FAR, clampf(r.length(), 0.0, 1.0))
+	if target != null and is_instance_valid(target) and not target.dead:
+		return target.position
+	if mv.length() > 0.1:
+		_pad_dir = mv.normalized()
+	return global_position + _pad_dir * PAD_AIM_NEAR
 
 
 ## Ébloui « dur » secondes : il marche moins vite (DAZZLE_SLOW) et l'écran blanchit, puis revient.
@@ -779,6 +805,14 @@ func _draw() -> void:
 			var q := -dash_dir * (i + 1) * 13.0
 			draw_circle(q, radius * (0.85 - i * 0.18), Color(Art.ec("seve"), 0.22 - i * 0.06))
 	HeroArt.draw(self, Vector2.ZERO, radius, facing().angle(), pose())
+	if pad_aiming:
+		# Visée au stick droit : un petit chevron d'or au point visé, sans masquer le jeu.
+		var q := aim_point - position
+		var d := q.normalized()
+		var side := d.orthogonal() * 7.0
+		var ink := Color(Art.c("or"), 0.8)
+		draw_polyline(PackedVector2Array([q - d * 6.0 + side, q, q - d * 6.0 - side]), ink, 2.0, true)
+		draw_arc(q, 11.0, 0.0, TAU, 20, Color(ink, 0.35), 1.2, true)
 	if dazzle > 0.0:
 		# Ébloui : des rais de lumière tournent autour de sa tête.
 		var head := Vector2(0, -radius * 1.6)

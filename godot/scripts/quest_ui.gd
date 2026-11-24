@@ -91,6 +91,10 @@ func key_name(action: String) -> String:
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_map"):
+		# Pas de carte par-dessus la pause ou l'arbre : la commande passe alors aux autres (LB change
+		# d'onglet dans les options à la manette).
+		if current == "" and _blocked():
+			return
 		toggle("carte")
 		get_viewport().set_input_as_handled()
 	elif current != "" and event.is_action_pressed("ui_cancel"):

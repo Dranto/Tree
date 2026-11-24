@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -143,6 +143,8 @@ func _ready() -> void:
 			await BordScript.new().run(self)
 		"menus":
 			await _scenario_menus()
+		"manette":
+			await _scenario_manette()
 		"cumul":
 			await _scenario_cumul()
 	_finish_audit()
@@ -239,6 +241,64 @@ func _scenario_menus() -> void:
 	await _frames(30)
 	UiAudit.scan_controls("titre", title)
 	await _shot("menu_titre_" + tag, "titre")
+
+
+## Manette (jalon 11), à la taille de l'écran du Steam Deck (1280 x 800) : la barre et le coin avec
+## les glyphes Xbox puis PlayStation, la pause (focus sur « Options »), l'onglet Commandes des
+## options, l'arbre (nœud visé au pad, aide de l'en-tête) et la couronne parcourue au pad.
+func _scenario_manette() -> void:
+	var tag := _res_tag()
+	Settings.set_pad_style("xbox")
+	Settings.set_device("manette")
+	Game.test_skills = {"nova": true, "fouet": true, "racines": true, "volee": true}
+	Game.recompute()
+	Game.tree_changed.emit()
+	main.player.bar = ["nova", "fouet", "racines", "volee", "", ""]
+	Game.points = 3
+	await _frames(60)
+	main.hud.banner_time = 0.0
+	# Trois points à placer (le robot de la partie automatique, arrêté, ne les dépense pas) : le coin
+	# montre le glyphe du bouton de l'arbre.
+	main.set_physics_process(false)
+	Game.points = 3
+	await _frames(2)
+	await _shot("manette_jeu_" + tag, "jeu")
+	Settings.set_pad_style("playstation")
+	await _frames(4)
+	await _shot("manette_jeu_ps_" + tag, "jeu")
+	Settings.set_pad_style("xbox")
+	main.pause_menu.open()
+	await _frames(4)
+	main.pause_menu.resume_button.find_valid_focus_neighbor(SIDE_BOTTOM).grab_focus()
+	await _frames(6)
+	UiAudit.scan_controls("pause", main.pause_menu)
+	await _shot("manette_pause_" + tag)
+	main.pause_menu._open_options()
+	main.pause_menu.options.show_tab(3)
+	await _frames(6)
+	main.pause_menu.options.pad_slot_buttons[0].grab_focus()
+	await _frames(6)
+	UiAudit.scan_controls("options", main.pause_menu.options)
+	await _shot("manette_options_" + tag)
+	main.pause_menu.close()
+	var ids: Array = Content.grafts().keys()
+	ids.sort()
+	for g in ids.slice(0, 6):
+		Game.give_graft(g)
+	Game.place_graft(0, ids[0])
+	main.tree_ui.toggle()
+	await _frames(4)
+	main.tree_ui.pad.select(_first_neighbor_of_root(), false)
+	await _frames(6)
+	await _shot("manette_arbre_" + tag, "arbre")
+	main.tree_ui.pad.set_zone("couronne")
+	main.tree_ui.pad.crown_index = Game.crown_size() + 2
+	main.tree_ui.pad._crown_show()
+	await _frames(6)
+	await _shot("manette_couronne_" + tag, "arbre")
+	main.tree_ui.toggle()
+	main.set_physics_process(true)
+	Settings.set_device("clavier")
 
 
 ## Planche de la charte graphique (tests/visual/charte.gd) : palette, éléments, icônes, annonces,

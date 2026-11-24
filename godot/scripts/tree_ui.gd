@@ -22,6 +22,7 @@ signal toggled(open: bool)
 const SkillTree = preload("res://scripts/skill_tree.gd")
 const TreePanels = preload("res://scripts/tree_panels.gd")
 const TreeGrafts = preload("res://scripts/tree_grafts.gd")
+const TreePad = preload("res://scripts/tree_pad.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const TreeArt = preload("res://scripts/tree_art.gd")
 
@@ -109,6 +110,8 @@ var t := 0.0
 var panels
 ## Couronne de greffes (tree_grafts.gd), en bas à gauche : indépendante des nœuds de l'arbre.
 var grafts_panel
+## Manette (tree_pad.gd) : saut de nœud en nœud, curseur libre, zoom aux gâchettes, zones des panneaux.
+var pad
 
 ## Rectangles (à l'écran) des textes dessinés par la couche des libellés, pour les contrôles automatiques.
 var label_rects: Array[Rect2] = []
@@ -328,6 +331,9 @@ func _ready() -> void:
 	grafts_panel = TreeGrafts.new()
 	grafts_panel.ui = self
 	add_child(grafts_panel)
+	pad = TreePad.new()
+	pad.ui = self
+	add_child(pad)
 	Game.tree_changed.connect(_on_tree_changed)
 	Game.node_allocated.connect(_on_node_allocated)
 	resized.connect(_on_resized)
@@ -354,6 +360,9 @@ func _input(event: InputEvent) -> void:
 	if panels.captures_keys():
 		return
 	if event.is_action_pressed("toggle_tree"):
+		# Fermé, l'arbre ne s'ouvre pas par-dessus un jeu déjà figé (pause, options, carte).
+		if not visible and get_tree().paused:
+			return
 		toggle()
 		get_viewport().set_input_as_handled()
 	elif visible and event.is_action_pressed("ui_cancel"):
@@ -1711,11 +1720,23 @@ func _draw_overlay(c: CanvasItem) -> void:
 	c.draw_string(font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.INK)
 	var pts_col := UiTheme.GOLD if Game.points > 0 else UiTheme.SOFT
 	c.draw_string(font, Vector2(24, 57), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col)
-	c.draw_string(font, Vector2(0, 30), "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.785, 0.733, 0.616))
+	c.draw_string(font, Vector2(0, 30), help_text(), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.785, 0.733, 0.616))
 	c.draw_string(font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, UiTheme.GOLD)
 	if hover >= 0:
 		_draw_tooltip(c, tree.nodes[hover], _states.get(hover, _state(hover)))
 	_audit_texts()
+
+
+## Aide de l'en-tête : souris, ou manette quand la dernière entrée en vient (tree_pad.gd).
+func help_text() -> String:
+	if pad != null and Settings.pad_active():
+		return pad.help_text()
+	return "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer"
+
+
+func queue_redraw_header() -> void:
+	if is_node_ready():
+		_overlay.queue_redraw()
 
 
 ## Déclare au registre d'audit des tests visuels (UiAudit) tous les textes de l'écran :
@@ -1733,7 +1754,7 @@ func _audit_texts() -> void:
 	var tree = Game.tree
 	UiAudit.text_at("arbre", font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Transform2D.IDENTITY, "entete", true)
 	UiAudit.text_at("arbre", font, Vector2(24, 57), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Transform2D.IDENTITY, "entete", true)
-	UiAudit.text_at("arbre", font, Vector2(0, 30), "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
+	UiAudit.text_at("arbre", font, Vector2(0, 30), help_text(), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
 	UiAudit.text_at("arbre", font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
 	if hover >= 0:
 		var lines := tooltip_lines(tree.nodes[hover], _states.get(hover, _state(hover)))

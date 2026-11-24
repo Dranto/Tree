@@ -38,6 +38,7 @@ TESTS=(
   "marais|--headless --fixed-fps 60|"
   "move|--xvfb --fixed-fps 60 --audio-driver Dummy|"
   "node_types|--headless|"
+  "pad|--xvfb --fixed-fps 60 --audio-driver Dummy|"
   "objectives|--headless --fixed-fps 60|"
   "planner|--headless|"
   "plateaux|--headless --fixed-fps 60|"

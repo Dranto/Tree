@@ -10,11 +10,12 @@
 ## Chaque étape réussie pose « tuto_<étape> » dans Game.flags (sauvegarde) : elle ne revient jamais.
 ## Une étape montrée trop longtemps sans être réussie s'efface aussi (MAX_SHOW) : on ne harcèle pas.
 ## Réglage « Afficher les aides » (Settings.show_hints) : coupe tout.
-## Glyphes clavier et souris ; les glyphes manette s'ajouteront dans glyph_for (vague 2).
+## Glyphes clavier et souris, ou manette (pad_glyphs.gd) quand la dernière entrée vient d'une manette.
 extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const Controls = preload("res://scripts/controls_text.gd")
+const PadGlyphs = preload("res://scripts/pad_glyphs.gd")
 
 const STEPS := ["bouger", "esquive", "competence", "arbre"]
 ## Durée maximale d'affichage d'une étape (s) ; « arbre » attend l'ouverture de l'Arbre.
@@ -131,7 +132,19 @@ func _can_show() -> bool:
 
 ## Ce qu'il faut dessiner pour une étape : [« keys », [touches…]] ou [« mouse », bouton] où bouton vaut
 ## « left », « right » ou « move » (la souris seule, qui guide).
+## À la manette : [« pad », [codes…]] (voir pad_glyphs.gd).
 static func glyph_for(id: String) -> Array:
+	if Settings.pad_active():
+		match id:
+			"bouger":
+				return ["pad", [Settings.PAD_STICK_L]]
+			"esquive":
+				return ["pad", [Settings.pad_code("dash")]]
+			"competence":
+				return ["pad", [Settings.pad_code("skill_main_1")]]
+			"arbre":
+				return ["pad", [Settings.pad_code("toggle_tree")]]
+		return []
 	match id:
 		"bouger":
 			match Settings.move_mode:
@@ -186,6 +199,8 @@ func _draw() -> void:
 				_key(at + Vector2(34, 18), str(keys[3]), a)
 		"mouse":
 			_mouse(at, str(g[1]), a)
+		"pad":
+			PadGlyphs.draw_row(self, at, g[1], a, 32.0)
 
 
 func _key_width(label: String) -> float:
