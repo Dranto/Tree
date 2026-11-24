@@ -10,6 +10,7 @@ const Difficulty = preload("res://scripts/difficulty.gd")
 var volume_slider: HSlider
 var music_slider: HSlider
 var sfx_slider: HSlider
+var ambience_slider: HSlider
 var fullscreen_box: CheckBox
 var hints_box: CheckBox
 var numbers_box: CheckBox
@@ -94,6 +95,7 @@ func _ready() -> void:
 	volume_slider = _slider_row(p_son, "Volume général", Settings.volume, _on_volume)
 	music_slider = _slider_row(p_son, "Musique", Settings.music_volume, func(v): Settings.set_music_volume(v); Settings.save_settings(); _update_labels())
 	sfx_slider = _slider_row(p_son, "Effets", Settings.sfx_volume, func(v): Settings.set_sfx_volume(v); Settings.save_settings(); _update_labels())
+	ambience_slider = _slider_row(p_son, "Ambiance", Settings.ambience_volume, func(v): Settings.set_ambience_volume(v); Settings.save_settings(); _update_labels())
 	_update_labels()
 
 	fullscreen_box = CheckBox.new()
@@ -277,7 +279,7 @@ func _on_volume(v: float) -> void:
 
 
 func _update_labels() -> void:
-	for sl in [volume_slider, music_slider, sfx_slider]:
+	for sl in [volume_slider, music_slider, sfx_slider, ambience_slider]:
 		if sl != null:
 			sl.get_meta("label").text = "%d %%" % roundi(sl.value * 100.0)
 
@@ -417,6 +419,7 @@ func open() -> void:
 	volume_slider.value = Settings.volume
 	music_slider.value = Settings.music_volume
 	sfx_slider.value = Settings.sfx_volume
+	ambience_slider.value = Settings.ambience_volume
 	fullscreen_box.button_pressed = Settings.fullscreen
 	hints_box.button_pressed = Settings.show_hints
 	numbers_box.button_pressed = Settings.show_damage_numbers

@@ -50,7 +50,7 @@
     "music": {
       "seed": 5,
       "roots": [0, -5, -2, -7],
-      "dark": {"chord": [0, 5, 10], "wind_period": 2.0},
+      "dark": {"chord": [0, 5, 10]},
       "bright": {"chord": [0, 5, 9], "pattern": [0, 5, 9, 5]}
     },
     "ambience": {

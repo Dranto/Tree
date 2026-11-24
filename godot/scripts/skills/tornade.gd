@@ -15,7 +15,7 @@ var live: Array = []
 func cast(p, s := {}) -> void:
 	if s.is_empty():
 		s = Game.stats
-	Sfx.play("tornade")
+	Sfx.play("vent_tornade")
 	var k: Dictionary = p.skill("tornade")
 	var n: int = maxi(1, int(k["count"]))
 	for i in n:

@@ -10,6 +10,8 @@ var volume := 0.8
 ## Réglages séparés de la musique et des bruitages, en plus du volume général.
 var music_volume := 0.7
 var sfx_volume := 0.9
+## Ambiance sonore (vent, eau, oiseaux…), bus « Ambiance ».
+var ambience_volume := 0.8
 var fullscreen := false
 var show_hints := true
 ## Chiffres de dégâts flottants (infligés et reçus).
@@ -72,6 +74,7 @@ func load_settings() -> void:
 	volume = clampf(float(cfg.get_value("audio", "volume", volume)), 0.0, 1.0)
 	music_volume = clampf(float(cfg.get_value("audio", "music_volume", music_volume)), 0.0, 1.0)
 	sfx_volume = clampf(float(cfg.get_value("audio", "sfx_volume", sfx_volume)), 0.0, 1.0)
+	ambience_volume = clampf(float(cfg.get_value("audio", "ambience_volume", ambience_volume)), 0.0, 1.0)
 	fullscreen = bool(cfg.get_value("video", "fullscreen", fullscreen))
 	show_hints = bool(cfg.get_value("gameplay", "show_hints", show_hints))
 	show_damage_numbers = bool(cfg.get_value("gameplay", "show_damage_numbers", show_damage_numbers))
@@ -99,6 +102,7 @@ func save_settings() -> void:
 	cfg.set_value("audio", "volume", volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
+	cfg.set_value("audio", "ambience_volume", ambience_volume)
 	cfg.set_value("video", "fullscreen", fullscreen)
 	cfg.set_value("gameplay", "show_hints", show_hints)
 	cfg.set_value("gameplay", "show_damage_numbers", show_damage_numbers)
@@ -268,6 +272,7 @@ func apply() -> void:
 	AudioServer.set_bus_mute(0, volume <= 0.001)
 	_set_bus("Musique", music_volume)
 	_set_bus("Effets", sfx_volume)
+	_set_bus("Ambiance", ambience_volume)
 	if DisplayServer.get_name() != "headless":
 		var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 		if DisplayServer.window_get_mode() != mode:
@@ -290,6 +295,11 @@ func set_music_volume(v: float) -> void:
 
 func set_sfx_volume(v: float) -> void:
 	sfx_volume = clampf(v, 0.0, 1.0)
+	apply()
+
+
+func set_ambience_volume(v: float) -> void:
+	ambience_volume = clampf(v, 0.0, 1.0)
 	apply()
 
 

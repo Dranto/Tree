@@ -356,30 +356,42 @@ Une région est décrite tout entière par `regions/<id>.json`. `scripts/regions
 
 ## Son et ambiance
 
-`data/audio.json` (clé `regions`, une entrée par identifiant de région) règle ce qu'on entend et voit d'une région. La région peut aussi porter une section `audio` dans son propre fichier, qui prime. Une région sans réglage garde la musique et les particules de Ronce. `check_data.gd` vérifie tout (sons connus, boucle de musique, formes et couleurs).
+Tout le son est synthétisé par le code : bruitages dans `scripts/synth.gd` (`SOUNDS`), musique et nappes d'ambiance dans `scripts/music_synth.gd`, réglages des régions dans `data/audio.json` (clé `regions`, une entrée par identifiant). La région peut aussi porter une section `audio` dans son propre fichier, qui prime. Une région sans réglage garde la musique, l'ambiance sonore et les particules de Ronce. `tools/gen-sounds.sh` écrit tous les `.wav` (en parallèle, ~1,5 min) et `assets/music/empreintes.json` ; commiter le tout (`sound_test.gd` échoue si une piste est périmée). `check_data.gd` vérifie les réglages.
+
+**Musique dynamique.** Chaque région a cinq couches de 12 s (4 accords de 3 s) qui tournent toujours en phase ; `music.gd` ne règle que leurs volumes, donc rien ne coupe :
+- `sombre` / `lumineux` : exploration, mélangées selon la vie du sol sous le joueur ;
+- `combat` : percussions, basse et cordes, ajoutées par-dessus quand des Flétris sont proches (une élite compte triple ; tient 4 s après le dernier) ;
+- `coeur` : chœur et battement pendant le siège d'un Cœur ;
+- `boss` : le thème du boss, seul, pendant le combat.
+Les grands bruitages (`duck` dans `SOUNDS`) baissent un instant la musique. Le jeu appelle `Music.set_mood(vie, région)`, `set_combat`, `set_heart`, `set_boss` (main.gd).
 
 ```json
 "spore": {
   "music": {
     "seed": 23, "roots": [-2, -7, -4, -9],
-    "dark":   {"chord": [0, 3, 6, 10], "wind": 0.5, "wind_lp": 0.012, "wind_period": 4.0},
-    "bright": {"chord": [0, 3, 7, 10], "pattern": [0, 3, 7, 10, 14, 10, 7, 3]}
+    "dark":   {"chord": [0, 3, 6, 10], "pad_lp": 520},
+    "bright": {"chord": [0, 3, 7, 10], "motif": [[0, 1, 3], [3, 2, 1], [4, 3, 4]]},
+    "combat": {"kit": "water", "kick": "x.....x...x.....", "bass": [0, null, 0, 3, null, 7, 10, 7]},
+    "heart":  {"vowel": "u"},
+    "boss":   {"chord": [0, 3, 6, 10], "motif": [[0, 0, 2], [2, 0, 1, 1]]}
   },
-  "ambience": {
-    "butterflies": 0,
-    "dead":  {"shape": "glow", "color": "poison/sombre", "alpha": 0.5, "vel": [4, -14], "sway": [10, 3], "size": [1.6, 3.4]},
-    "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.7, "vel": [170, 8], "sway": [24, 8], "size": [1, 1.8], "length": 26}
-  },
+  "bed": {"dead": {"wind": 0.3, "events": [{"kind": "bubble", "rate": 0.5, "vol": 0.35}]}, "alive": {"...": "..."}},
+  "ambience": {"...": "particules, voir plus bas"},
   "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort"}
 }
 ```
 
-- **`music`** : `roots` (quatre fondamentales en demi-tons depuis le ré, une par accord de 3 s), `seed` (hasard du vent), puis `dark` (terre morte) et `bright` (terre vivante), dont chaque réglage est facultatif (valeurs de Ronce par défaut, `Synth.DEFAULT_DARK` et `DEFAULT_BRIGHT`). `dark` : `chord` (demi-tons), `vol`, `vol2`, `detune`, `wind` (niveau du vent), `wind_lp` (clarté du vent), `wind_period` (**doit diviser 12 s**, pour que la boucle ne claque pas), `wind_fade` (estompe du vent aux bouts, pour un vent fort), `bell`. `bright` : `chord`, `octave`, `pattern` (1 à 24 notes réparties sur 3 s), `pad`, `pluck`, `sparkle`, `sparkle_note`. `tools/gen-sounds.sh` écrit `assets/music/<id>_sombre.wav` et `<id>_lumineux.wav` ; commiter les `.wav` (`sound_test.gd` échoue s'ils sont périmés).
-- **`ambience`** : `dead` et `alive` (terre morte ou vivante là où naît la particule), chacun avec `shape` (`dot`, `glow` halo qui scintille, `streak` brin qui file), `color` (couleur de région : `"#rrggbb"`, `"élément/variante"`…), `alpha`, `vel` (vitesse en pixels par seconde), `sway` (ondulation), `size` (min, max) et `length` (pour `streak`). `butterflies` à 0 supprime les papillons dans la région. « Réduire les effets » coupe toutes les particules.
-- **Sons choisis par les données** : `"sound"` dans une compétence (`skills.json`, joué après son lancement) ou dans une forme d'attaque (`attack.json`, remplace `tir`), `"sound_hit"`, `"sound_crit"` et `"sound_death"` dans une sorte d'ennemi (`enemies.json`). Le nom doit exister dans `Synth.SOUNDS` (`check_data.gd` le vérifie).
-- **Sons prêts pour Sève et Aube** (jalon 8, provisoires) : Sève `seve_goutte`, `seve_pousse`, `seve_soin`, `seve_source`, `seve_eclosion`, `seve_lien` ; Aube `aube_rayon`, `aube_eclat`, `aube_halo`, `aube_levant`, `aube_cloche`, `aube_nova` ; chaque région a aussi `<id>_boss_eveil`, `_phase` et `_mort`. Les compétences des branches s'y branchent par `"sound"` ; musique et ambiance de `seve` et `aube` sont dans `data/audio.json`.
-- **`boss`** : sons d'éveil (le combat commence), de phase (le boss change de phase) et de mort, joués par le socle `BossBase`. Un boss peut en jouer d'autres lui-même (`Sfx.play`).
-- **Finale et générique** (crochets pour la musique de la fin) : deux entrées qui ne sont pas des régions. `finale` : sous la graine, le jeu demande la musique de `finale` (`Music.set_mood(vie, "finale")`, couche lumineuse après la victoire) et ses sons `boss` ; `generique` : pendant l'épilogue et le générique, `Music.set_mood(1.0, "generique")`. Il suffit d'y écrire une section `music` et de lancer `tools/gen-sounds.sh` (pistes `finale_sombre.wav`, `finale_lumineux.wav`, `generique_*.wav`) ; sans pistes, la musique du monde.
+- **`music`** : `roots` (quatre fondamentales en demi-tons depuis le ré), `seed`, `layers` (facultatif : couches à écrire, toutes par défaut ; le générique n'a que `lumineux`), puis une section par couche, chaque réglage facultatif (valeurs de Ronce : `MusicSynth.DEFAULTS`).
+  - `dark` : `chord` (demi-tons), `pad` (nappe), `pad_lp` (clarté, Hz), `drone` (bourdon), `bell` et `bell_ratio` (cloche FM), `texture` (souffle), `verb`.
+  - `bright` : `chord`, `octave`, `pattern` (arpège de corde pincée, 1 à 24 notes sur 3 s), `pad`, `pad_lp`, `pluck`, `pluck_tone` (0 sourd à 1 clair), `sparkle`, `sparkle_note`, `bass`, `lead` et `lead_tone` (`flute` ou `brass`), `motif` (la mélodie du thème), `verb`.
+  - `combat` et `boss` : `kit` (`frame`, `taiko`, `wood`, `metal`, `water`), `kick`, `snare`, `hat`, `tom` (16 cases par accord : `x` frappe, `o` douce, `.` rien), `bass` (notes par accord, en demi-tons, `null` pour un silence), `bass_vol`, `pulse` (cordes en doubles croches), `drums`, `verb` ; `boss` ajoute `chord`, `pad`, `brass`, `choir`, `lead`, `lead_tone`, `motif`.
+  - `heart` : `vowel` (`a`, `o`, `u`, `e`), `choir`, `beat` (battement), `shimmer`, `verb`.
+  - **`motif`** : liste de notes `[croche, note de l'accord, durée en croches, altération]` ; la croche va de 0 à 31 (8 par accord), la note de l'accord compte depuis la fondamentale (0, 1, 2… puis l'octave au-dessus), l'altération (facultative) ajoute des demi-tons. La mélodie suit donc toujours les accords. La finale reprend en grand le thème du monde après la victoire.
+- **`bed`** (ambiance sonore, bus « Ambiance ») : `seed`, `dead` et `alive`, chacun avec `wind`, `wind_lp`, `gust`, `rumble`, `stream` (ruisseau), `waves` et `events` (`{"kind", "rate" par seconde, "vol"}`, sortes `bird`, `cricket`, `drip`, `bubble`, `creak`, `chime`, `rustle`, `knock`, `frog`). Fichiers `assets/ambience/<id>_mort.wav` et `_vif.wav`.
+- **`ambience`** (particules) : `dead` et `alive` (terre morte ou vivante là où naît la particule), chacun avec `shape` (`dot`, `glow` halo qui scintille, `streak` brin qui file), `color` (couleur de région : `"#rrggbb"`, `"élément/variante"`…), `alpha`, `vel` (vitesse en pixels par seconde), `sway` (ondulation), `size` (min, max) et `length` (pour `streak`). `butterflies` à 0 supprime les papillons dans la région. « Réduire les effets » coupe toutes les particules.
+- **`boss`** : sons d'éveil, de phase et de mort, joués par le socle `BossBase`. Un boss peut en jouer d'autres lui-même (`Sfx.play`).
+- **Bruitages** : couches superposées (oscillateur ou bruit, glissé de hauteur, filtre, saturation), petite réverbération, crête (`peak`, qui fixe le volume relatif), `variants` (variantes tirées au hasard), `duck`. Format en tête de `synth.gd`. **Sons choisis par les données** : `"sound"` dans une compétence (`skills.json`) ou une forme d'attaque (`attack.json`), `"sound_hit"`, `"sound_crit"` et `"sound_death"` dans une sorte d'ennemi (`enemies.json`) ; le nom doit exister dans `Synth.SOUNDS`. Sons de combat prêts à brancher : `impact`, `impact_lourd`, `critique`, `mort`, `mort_elite`, `annonce`, `annonce_boss`.
+- **Finale et générique** : `finale` (sous la graine, `Music.set_mood(vie, "finale")`) et `generique` (épilogue, `Music.set_mood(1.0, "generique")`) ne sont pas des régions.
 
 ## Points et greffes du monde
 

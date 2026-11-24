@@ -10,9 +10,14 @@ const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 const Synth = preload("res://scripts/synth.gd")
 
-## Une couche musicale (dark / bright) d'une région : « <région>_sombre » et « <région>_lumineux ».
-const LAYERS := {"sombre": "dark", "lumineux": "bright"}
+const MusicSynth = preload("res://scripts/music_synth.gd")
+
+## Couches musicales d'une région : fichier « <région>_<couche>.wav » → section de réglages.
+const LAYERS := MusicSynth.LAYERS
 const MUSIC_DIR := "res://assets/music/"
+## Nappes d'ambiance sonore : « <région>_mort.wav » (terre morte) et « <région>_vif.wav » (terre vivante).
+const BED_STATES := {"mort": "dead", "vif": "alive"}
+const BED_DIR := "res://assets/ambience/"
 ## Sons du boss reconnus (clé de « boss » → moment du combat).
 const BOSS_KEYS := ["eveil", "phase", "mort"]
 const SHAPES := ["dot", "glow", "streak"]
@@ -38,9 +43,15 @@ static func music_style(id: String) -> Dictionary:
 	return m if m is Dictionary else {}
 
 
-## Fichier d'une couche de la musique d'une région ("sombre" ou "lumineux").
+## Couches que la musique d'une région écrit (toutes par défaut ; « layers » pour n'en garder que certaines).
+static func music_layers(style: Dictionary) -> Array:
+	var l = style.get("layers", null)
+	return l if l is Array else LAYERS.keys()
+
+
+## Fichier d'une couche de la musique d'une région ("" : le monde).
 static func music_path(id: String, layer: String) -> String:
-	return MUSIC_DIR + ("%s_%s.wav" % [id, layer])
+	return MUSIC_DIR + (layer if id == "" else "%s_%s" % [id, layer]) + ".wav"
 
 
 ## Réglages de musique de toutes les régions de data/audio.json et des fichiers de régions : id -> réglages.
@@ -57,6 +68,27 @@ static func all_music_styles() -> Dictionary:
 	return out
 
 
+## Nappes d'ambiance sonore d'une région ({} : celles du monde).
+static func bed(id: String) -> Dictionary:
+	var b = of(id).get("bed", {})
+	return b if b is Dictionary else {}
+
+
+static func bed_path(id: String, state: String) -> String:
+	return BED_DIR + (state if id == "" else "%s_%s" % [id, state]) + ".wav"
+
+
+static func all_beds() -> Dictionary:
+	var out := {}
+	for id in Content._load("audio").get("regions", {}):
+		if bed(str(id)).size() > 0:
+			out[str(id)] = bed(str(id))
+	for id in Regions.ids():
+		if bed(id).size() > 0:
+			out[id] = bed(id)
+	return out
+
+
 ## Particules d'ambiance de la région ({} : celles du monde).
 static func ambience(id: String) -> Dictionary:
 	var a = of(id).get("ambience", {})
@@ -69,8 +101,8 @@ static func boss_sound(id: String, key: String) -> String:
 	return str(b.get(key, "")) if b is Dictionary else ""
 
 
-## Erreurs dans les réglages de son et d'ambiance (liste vide si tout va bien) : sons connus, musique
-## qui boucle, formes et couleurs des particules.
+## Erreurs dans les réglages de son et d'ambiance (liste vide si tout va bien) : réglages connus, motifs,
+## percussions, sons des boss, formes et couleurs des particules.
 static func validate() -> PackedStringArray:
 	var errors := PackedStringArray()
 	var entries := {}
@@ -83,29 +115,15 @@ static func validate() -> PackedStringArray:
 		var w: String = entries[id]
 		var a := of(id)
 		var m = a.get("music", {})
-		for layer in ["dark", "bright"]:
-			var st = m.get(layer, {}) if m is Dictionary else {}
-			if not st is Dictionary:
-				errors.append("%s, music › %s : doit être un objet" % [w, layer])
-				continue
-			var base: Dictionary = Synth.DEFAULT_DARK if layer == "dark" else Synth.DEFAULT_BRIGHT
-			for k in st:
-				if not base.has(k):
-					errors.append("%s, music › %s : réglage inconnu « %s »" % [w, layer, k])
-			var chord = st.get("chord", base["chord"])
-			if not chord is Array or chord.is_empty():
-				errors.append("%s, music › %s : « chord » doit être une liste de demi-tons" % [w, layer])
-			if layer == "dark":
-				# La boucle dure 12 s : le vent doit y faire un nombre entier de cycles, sinon elle claque.
-				var period := float(st.get("wind_period", base["wind_period"]))
-				if period <= 0.0 or absf(12.0 / period - roundf(12.0 / period)) > 0.001:
-					errors.append("%s, music › dark : « wind_period » (%s) doit diviser 12 s" % [w, period])
-			else:
-				var pat = st.get("pattern", base["pattern"])
-				if not pat is Array or pat.is_empty() or pat.size() > 24:
-					errors.append("%s, music › bright : « pattern » doit avoir de 1 à 24 notes (réparties sur 3 s)" % w)
-		if m is Dictionary and m.has("roots") and (not m["roots"] is Array or m["roots"].size() != 4):
-			errors.append("%s, music : « roots » doit avoir quatre fondamentales" % w)
+		if not m is Dictionary:
+			errors.append("%s, music : doit être un objet" % w)
+			m = {}
+		_check_music(errors, w, m)
+		var b = a.get("bed", {})
+		if not b is Dictionary:
+			errors.append("%s, bed : doit être un objet" % w)
+		else:
+			_check_bed(errors, w, b)
 		var amb: Dictionary = a.get("ambience", {}) if a.get("ambience", {}) is Dictionary else {}
 		for state in ["dead", "alive"]:
 			if not amb.has(state):
@@ -118,12 +136,90 @@ static func validate() -> PackedStringArray:
 				errors.append("%s, ambience › %s : forme inconnue « %s » (%s)" % [w, state, p.get("shape"), ", ".join(SHAPES)])
 			if p.has("color") and not Regions.color_ok(p["color"]):
 				errors.append("%s, ambience › %s : « color » mal écrite" % [w, state])
-		var b = a.get("boss", {})
-		if b is Dictionary:
-			for k in b:
+		var bs = a.get("boss", {})
+		if bs is Dictionary:
+			for k in bs:
 				if not k in BOSS_KEYS:
 					errors.append("%s, boss : moment inconnu « %s » (%s)" % [w, k, ", ".join(BOSS_KEYS)])
-				elif not Synth.SOUNDS.has(str(b[k])):
-					errors.append("%s, boss › %s : son inconnu « %s » (synth.gd › SOUNDS)" % [w, k, b[k]])
+				elif not Synth.SOUNDS.has(str(bs[k])):
+					errors.append("%s, boss › %s : son inconnu « %s » (synth.gd › SOUNDS)" % [w, k, bs[k]])
 	return errors
 
+
+static func _check_music(errors: PackedStringArray, w: String, m: Dictionary) -> void:
+	for k in m:
+		if not k in ["seed", "roots", "layers"] and not k in MusicSynth.DEFAULTS:
+			errors.append("%s, music : réglage inconnu « %s »" % [w, k])
+	if m.has("roots") and (not m["roots"] is Array or m["roots"].size() != 4):
+		errors.append("%s, music : « roots » doit avoir quatre fondamentales" % w)
+	if m.has("layers"):
+		if not m["layers"] is Array or m["layers"].is_empty():
+			errors.append("%s, music › layers : une liste de couches" % w)
+		else:
+			for l in m["layers"]:
+				if not LAYERS.has(str(l)):
+					errors.append("%s, music › layers : couche inconnue « %s » (%s)" % [w, l, ", ".join(LAYERS.keys())])
+	for sec in MusicSynth.DEFAULTS:
+		if sec in ["seed", "roots"] or not m.has(sec):
+			continue
+		var st = m[sec]
+		if not st is Dictionary:
+			errors.append("%s, music › %s : doit être un objet" % [w, sec])
+			continue
+		var base: Dictionary = MusicSynth.DEFAULTS[sec]
+		var where := "%s, music › %s" % [w, sec]
+		for k in st:
+			if not base.has(k):
+				errors.append("%s : réglage inconnu « %s »" % [where, k])
+			elif base[k] is float and not (st[k] is float or st[k] is int):
+				errors.append("%s : « %s » doit être un nombre" % [where, k])
+		if st.has("chord") and (not st["chord"] is Array or st["chord"].is_empty()):
+			errors.append("%s : « chord » doit être une liste de demi-tons" % where)
+		if st.has("pattern") and (not st["pattern"] is Array or st["pattern"].is_empty() or st["pattern"].size() > 24):
+			errors.append("%s : « pattern » doit avoir de 1 à 24 notes (réparties sur 3 s)" % where)
+		if st.has("kit") and not str(st["kit"]) in MusicSynth.KITS:
+			errors.append("%s : percussions inconnues « %s » (%s)" % [where, st["kit"], ", ".join(MusicSynth.KITS)])
+		if st.has("vowel") and not MusicSynth.VOWELS.has(str(st["vowel"])):
+			errors.append("%s : voyelle inconnue « %s »" % [where, st["vowel"]])
+		if st.has("lead_tone") and not str(st["lead_tone"]) in ["flute", "brass"]:
+			errors.append("%s : « lead_tone » vaut flute ou brass" % where)
+		for part in ["kick", "snare", "hat", "tom"]:
+			if st.has(part):
+				var pat := str(st[part])
+				var ok := pat.is_empty() or (16 % pat.length() == 0 if pat.length() <= 16 else false)
+				for ch in pat:
+					ok = ok and ch in ["x", "o", "."]
+				if not ok:
+					errors.append("%s › %s : 1, 2, 4, 8 ou 16 cases parmi « x », « o », « . »" % [where, part])
+		if st.has("bass"):
+			var bass = st["bass"]
+			if not bass is Array or bass.is_empty() or bass.size() > 16:
+				errors.append("%s › bass : de 1 à 16 notes (demi-tons, ou null pour un silence)" % where)
+		if st.has("motif"):
+			var mo = st["motif"]
+			if not mo is Array:
+				errors.append("%s › motif : une liste de notes [croche, note de l'accord, durée]" % where)
+			else:
+				for note in mo:
+					if not note is Array or note.size() < 3 or note.size() > 4 or int(note[0]) < 0 or int(note[0]) > 31 or float(note[2]) <= 0.0:
+						errors.append("%s › motif : note mal écrite %s ([croche 0 à 31, note de l'accord, durée en croches, altération])" % [where, note])
+						break
+
+
+static func _check_bed(errors: PackedStringArray, w: String, b: Dictionary) -> void:
+	for k in b:
+		if not k in ["seed", "dead", "alive"]:
+			errors.append("%s, bed : réglage inconnu « %s » (seed, dead, alive)" % [w, k])
+	for state in ["dead", "alive"]:
+		if not b.has(state):
+			continue
+		var st = b[state]
+		if not st is Dictionary:
+			errors.append("%s, bed › %s : doit être un objet" % [w, state])
+			continue
+		for k in st:
+			if not MusicSynth.BED_DEFAULTS[state].has(k):
+				errors.append("%s, bed › %s : réglage inconnu « %s »" % [w, state, k])
+		for ev in st.get("events", []):
+			if not ev is Dictionary or not str(ev.get("kind", "")) in MusicSynth.BED_EVENTS:
+				errors.append("%s, bed › %s › events : sorte inconnue %s (%s)" % [w, state, ev, ", ".join(MusicSynth.BED_EVENTS)])

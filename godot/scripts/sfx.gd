@@ -1,5 +1,7 @@
 ## Bruitages : un petit parc de lecteurs, des sons générés par le code (tools/gen-sounds.sh),
-## au plus 3 sons identiques par fenêtre de 50 ms et une légère variation de hauteur.
+## au plus 3 sons identiques par fenêtre de 50 ms, une variante tirée au hasard (« variants » dans
+## synth.gd) et une légère variation de hauteur. Les grands sons (« duck ») baissent un instant la musique.
+## Un limiteur sur la sortie générale évite la saturation quand tout s'additionne.
 ## Usage : Sfx.play("impact", position_du_monde). Sans position, le son est joué à plein volume.
 extends Node
 
@@ -31,11 +33,17 @@ func _ready() -> void:
 	ensure_bus(BUS)
 	if not enabled:
 		return
-	# Tous les sons de synth.gd (Ronce, Spore, Vent…) : un son ajouté là est chargé sans autre changement.
+	_ensure_limiter()
+	# Tous les sons de synth.gd (Ronce, Spore, Vent…) et leurs variantes : un son ajouté là est chargé
+	# sans autre changement.
 	for name in Synth.SOUNDS:
-		var s := load_wav("res://assets/sounds/%s.wav" % name)
-		if s != null:
-			streams[name] = s
+		var list: Array = []
+		for file in Synth.variant_names(name):
+			var s := load_wav("res://assets/sounds/%s.wav" % file)
+			if s != null:
+				list.append(s)
+		if not list.is_empty():
+			streams[name] = list
 	for i in POOL:
 		var p := AudioStreamPlayer.new()
 		p.bus = BUS
@@ -60,6 +68,17 @@ static func ensure_bus(bus: String) -> int:
 		AudioServer.set_bus_send(i, "Master")
 		Settings.apply()
 	return i
+
+
+## Limiteur sur le bus général : les sons et la musique additionnés ne saturent jamais.
+static func _ensure_limiter() -> void:
+	for i in AudioServer.get_bus_effect_count(0):
+		if AudioServer.get_bus_effect(0, i) is AudioEffectHardLimiter:
+			return
+	var lim := AudioEffectHardLimiter.new()
+	lim.ceiling_db = -0.5
+	lim.pre_gain_db = 0.0
+	AudioServer.add_bus_effect(0, lim)
 
 
 ## Charge un .wav : par l'import de Godot, ou à défaut en lisant le fichier (projet jamais ouvert dans l'éditeur).
@@ -107,11 +126,17 @@ func play(name: String, pos := Vector2.INF, pitch := 1.0) -> void:
 		return
 	list.append(now)
 	recent[name] = list
-	p.stream = streams[name]
+	var st = streams[name]
+	p.stream = st[rng.randi() % st.size()] if st is Array else st
 	p.volume_db = gain
 	p.pitch_scale = pitch * rng.randf_range(0.97, 1.03) if pitch != 1.0 else rng.randf_range(0.94, 1.06)
 	p.play()
 	played += 1
+	var duck := float(Synth.SOUNDS.get(name, {}).get("duck", 0.0))
+	if duck > 0.0:
+		var music = get_node_or_null("/root/Music")
+		if music != null:
+			music.duck(duck * (1.0 if gain > -6.0 else 0.5))
 
 
 func _free_player() -> AudioStreamPlayer:
