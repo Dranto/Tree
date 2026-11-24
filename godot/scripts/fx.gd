@@ -174,7 +174,8 @@ func shake(amount: float) -> void:
 
 ## Fige le jeu un instant (en secondes réelles). Espacé par un délai pour ne pas saccader la foule.
 func hitstop(dur: float) -> void:
-	if Settings.reduce_effects or _hitstop_cd > 0.0 or _hitstop_left > 0.0:
+	dur *= Settings.hitstop_strength()
+	if dur <= 0.0 or _hitstop_cd > 0.0 or _hitstop_left > 0.0:
 		return
 	if main != null and "benchmark" in main and main.benchmark:
 		return

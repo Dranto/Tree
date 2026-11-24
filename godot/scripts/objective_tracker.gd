@@ -62,7 +62,7 @@ func _ready() -> void:
 
 func _label(parent: Node, size_px: int, color: Color) -> Label:
 	var l := Label.new()
-	l.add_theme_font_size_override("font_size", size_px)
+	l.add_theme_font_size_override("font_size", UiTheme.fs(size_px))
 	l.add_theme_color_override("font_color", color)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(l)

@@ -52,8 +52,47 @@ const PALETTE := {
 	"ombre": Color(0.0, 0.0, 0.0, 0.35),
 }
 
+# --- Accessibilité (jalon 11) ---
+#
+# Modes daltoniens : seuls les rôles qui portent un signal (danger, élite, butin) changent, vers
+# des teintes que chaque forme de daltonisme distingue du sol, du héros et entre elles (palette
+# d'Okabe et Ito). Vérifié par tests/access_test.gd (simulation de Machado et al., 2009).
+const PALETTES_DALTONIENNES := {
+	"protanopie": {
+		"danger": Color("ff8a1f"), "danger_annonce": Color(1.0, 0.54, 0.12, 0.32), "danger_eclair": Color("fff4e6"),
+		"elite": Color("4fb4ff"), "butin": Color("fff04a"),
+	},
+	"deuteranopie": {
+		"danger": Color("ff7a14"), "danger_annonce": Color(1.0, 0.48, 0.08, 0.32), "danger_eclair": Color("fff4e6"),
+		"elite": Color("4fa0ff"), "butin": Color("fff04a"),
+	},
+	"tritanopie": {
+		"danger": Color("ff2e4a"), "danger_annonce": Color(1.0, 0.18, 0.29, 0.32), "danger_eclair": Color("ffffff"),
+		"elite": Color("2fe0d0"), "butin": Color("ffb0d8"),
+	},
+}
+## Contraste renforcé : voile d'annonce plus opaque.
+const ANNONCE_CONTRASTE := 0.46
+
+static var _access := {}
+## Vrai quand un mode d'accessibilité est actif : les annonces de danger gagnent des hachures
+## (la forme porte le signal, pas seulement la couleur).
+static var motifs := false
+
+
+## Applique le mode daltonien (Settings.COLORBLIND_MODES) et le contraste renforcé à c().
+static func set_access(mode: String, contraste := false) -> void:
+	_access = PALETTES_DALTONIENNES.get(mode, {}).duplicate()
+	if contraste:
+		var a: Color = _access.get("danger_annonce", PALETTE["danger_annonce"])
+		_access["danger_annonce"] = Color(a, ANNONCE_CONTRASTE)
+	motifs = mode != "aucun" or contraste
+
+
 ## Couleur de rôle par nom. Un nom inconnu est une erreur (magenta à l'écran, message en console).
 static func c(role: String) -> Color:
+	if _access.has(role):
+		return _access[role]
 	if PALETTE.has(role):
 		return PALETTE[role]
 	push_error("Art.c : rôle de couleur inconnu « %s »" % role)
@@ -394,10 +433,40 @@ static func telegraph(ci: CanvasItem, forme: Dictionary, progression: float, fra
 	ci.draw_colored_polygon(telegraph_polygon(forme, 1.0), Color(danger, 0.10))
 	if p > 0.0:
 		ci.draw_colored_polygon(telegraph_polygon(forme, p), c("danger_annonce"))
+	if motifs:
+		hatch(ci, telegraph_polygon(forme, 1.0), Color(danger, 0.35 + 0.4 * p))
 	var a := 0.55 + 0.45 * p
 	if p >= ANNONCE_CLIGNOTE:
 		a = 0.6 + 0.4 * (0.5 + 0.5 * cos(t * TAU * 6.0))
 	outline(ci, telegraph_polygon(forme, 1.0), Color(danger, a), TRAIT)
+
+
+## Hachures diagonales dans un polygone (zones de danger en mode daltonien ou contraste renforcé).
+const HACHURE_PAS := 14.0
+static func hatch(ci: CanvasItem, poly: PackedVector2Array, col: Color, pas := HACHURE_PAS) -> void:
+	var segs := hatch_segments(poly, pas)
+	if not segs.is_empty():
+		ci.draw_multiline(segs, col, 1.5, true)
+
+
+## Segments des hachures (paires de points), à 45°, découpés dans le polygone.
+static func hatch_segments(poly: PackedVector2Array, pas := HACHURE_PAS) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if poly.size() < 3:
+		return out
+	var r := Rect2(poly[0], Vector2.ZERO)
+	for q in poly:
+		r = r.expand(q)
+	var d := r.size.x + r.size.y
+	var x := r.position.x - r.size.y
+	while x < r.position.x + r.size.x:
+		var line := PackedVector2Array([Vector2(x, r.end.y), Vector2(x + d, r.end.y - d)])
+		for seg in Geometry2D.intersect_polyline_with_polygon(line, poly):
+			if seg.size() >= 2:
+				out.append(seg[0])
+				out.append(seg[seg.size() - 1])
+		x += pas
+	return out
 
 
 ## Polygone d'une forme d'annonce remplie à k (0 → 1) depuis l'origine de l'attaque.

@@ -70,7 +70,7 @@ func _label(size_px: int, color: Color, bold := false) -> Label:
 	var l := Label.new()
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	l.add_theme_font_size_override("font_size", size_px)
+	l.add_theme_font_size_override("font_size", UiTheme.fs(size_px))
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color(0.02, 0.03, 0.02, 0.85))
 	l.add_theme_constant_override("outline_size", 6)
@@ -88,9 +88,9 @@ func _scale() -> float:
 ## Les textes sous le médaillon, centrés ; le texte long ne dépasse pas 46 % de la largeur.
 func _layout() -> void:
 	var s := _scale()
-	_sub.add_theme_font_size_override("font_size", int(16 * s))
-	_title.add_theme_font_size_override("font_size", int(38 * s))
-	_body.add_theme_font_size_override("font_size", int(16 * s))
+	_sub.add_theme_font_size_override("font_size", UiTheme.fs(int(16 * s)))
+	_title.add_theme_font_size_override("font_size", UiTheme.fs(int(38 * s)))
+	_body.add_theme_font_size_override("font_size", UiTheme.fs(int(16 * s)))
 	var w := minf(size.x * 0.46, 760.0 * s)
 	_body.custom_minimum_size.x = w
 	_box.size = Vector2(w, 0)

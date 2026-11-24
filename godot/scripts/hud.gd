@@ -200,7 +200,7 @@ func key_label(action: String) -> String:
 
 func _label(parent: Node, size_px: int, color: Color) -> Label:
 	var l := Label.new()
-	l.add_theme_font_size_override("font_size", size_px)
+	l.add_theme_font_size_override("font_size", UiTheme.fs(size_px))
 	l.add_theme_color_override("font_color", color)
 	parent.add_child(l)
 	return l
@@ -313,7 +313,7 @@ func _on_slot_swap(from: int, to: int) -> void:
 func _build_banner() -> void:
 	_banner = Label.new()
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_banner.add_theme_font_size_override("font_size", 24)
+	_banner.add_theme_font_size_override("font_size", UiTheme.fs(24))
 	_banner.add_theme_color_override("font_color", Color(0.95, 0.92, 0.75))
 	# Le cadre épouse le texte, centré : un cadre pleine largeur passait sous le suivi des
 	# objectifs (en haut à droite) et l'audit d'interface y voyait un chevauchement.

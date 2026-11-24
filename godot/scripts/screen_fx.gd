@@ -43,14 +43,25 @@ func hurt(amount := 0.1) -> void:
 	_canvas.queue_redraw()
 
 
+## Atténuation des éclats lumineux (Settings.flash_scale, divisée par deux si les effets sont
+## réduits). Les voiles sombres de transition ne sont pas concernés.
+static func flash_k() -> float:
+	return Settings.flash_scale * (0.5 if Settings.reduce_effects else 1.0)
+
+
 ## Voile qui passe d'une opacité à l'autre (ex. noir 0,6 → 0 : un écran qui « s'ouvre »).
+## Un voile clair est un éclat : il suit le réglage des éclats lumineux.
 func fade(color: Color, from_alpha: float, to_alpha: float, dur: float) -> void:
+	if color.get_luminance() > 0.5:
+		from_alpha *= flash_k()
+		to_alpha *= flash_k()
 	_veil = {"color": color, "from": from_alpha, "to": to_alpha, "dur": maxf(dur, 0.01), "t": 0.0}
 	_canvas.queue_redraw()
 
 
 ## Éclat sur le bord de l'écran (arène qui se referme, sanctuaire ravivé…).
 func glow(color: Color, alpha: float, dur: float) -> void:
+	alpha *= flash_k()
 	_glow = {"color": color, "t": 0.0, "dur": maxf(dur, 0.01), "a": alpha}
 	_canvas.queue_redraw()
 
@@ -86,8 +97,8 @@ func _draw_fx() -> void:
 		_canvas.draw_rect(Rect2(Vector2.ZERO, size), col)
 	if _hurt > 0.0:
 		var a: float = VIGNETTE_ALPHA * Anim.ease_out(_hurt)
-		if Settings.reduce_effects:
-			a *= 0.5
+		# La vignette porte une information (coup reçu) : jamais sous 40 %.
+		a *= lerpf(0.4, 1.0, flash_k())
 		_edge(size, Art.c("danger"), a)
 	if _glow["t"] < _glow["dur"]:
 		var k: float = 1.0 - Anim.ease_out(_glow["t"] / _glow["dur"])

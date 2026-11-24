@@ -42,7 +42,7 @@ func refresh() -> void:
 func _cell(text: String, key: bool) -> void:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_font_size_override("font_size", UiTheme.fs(font_size))
 	l.add_theme_color_override("font_color", Color(UiTheme.GOLD, 0.9) if key else UiTheme.SOFT)
 	if key:
 		l.add_theme_font_override("font", UiTheme.font(true))

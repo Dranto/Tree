@@ -371,6 +371,19 @@ func save_game() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		save_game()
+	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_pause_on_focus_loss()
+
+
+## La fenêtre perd le focus (Alt-Tab…) : le menu pause s'ouvre, si le réglage le demande et si
+## rien n'a déjà figé le jeu (arbre, carte, autre menu). Jamais pendant un test ou un banc.
+func _pause_on_focus_loss() -> bool:
+	if not Settings.pause_on_focus_loss or autotest or benchmark or pause_menu == null:
+		return false
+	if get_tree().paused or pause_menu.visible:
+		return false
+	pause_menu.open()
+	return true
 
 
 ## Quitter la scène (« Retour au titre » ou « Quitter » du menu pause) sauvegarde la partie.
@@ -381,24 +394,9 @@ func _exit_tree() -> void:
 
 
 func _setup_input() -> void:
-	_keys("move_up", [KEY_W, KEY_UP])
-	_keys("move_down", [KEY_S, KEY_DOWN])
-	_keys("move_left", [KEY_A, KEY_LEFT])
-	_keys("move_right", [KEY_D, KEY_RIGHT])
-	# Esquive et barre de compétences (clics gauche et droit, A E R F et 1 à 4, réassignables) :
-	# settings.gd, qui les adapte au mode de déplacement. L'attaque de base part toute seule.
+	# Toutes les commandes (déplacement, esquive, arbre, carte, journal, barre de compétences) sont
+	# réassignables : settings.gd les crée et les adapte au mode de déplacement.
 	Settings.apply_bindings()
-	_keys("toggle_tree", [KEY_TAB, KEY_T])
-
-
-## Les touches sont des positions physiques (QWERTY) : W A S D devient Z Q S D sur un clavier AZERTY.
-func _keys(action: String, list: Array) -> void:
-	if not InputMap.has_action(action):
-		InputMap.add_action(action)
-	for k in list:
-		var ev := InputEventKey.new()
-		ev.physical_keycode = k
-		InputMap.action_add_event(action, ev)
 
 
 ## Mesure du banc de performance : une fois par image affichée.
