@@ -13,7 +13,7 @@ on:
 jobs:
   visual:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -43,8 +43,8 @@ jobs:
         run: |
           total=$(awk '{s+=$3} END{print s}' godot/tests/visual/out/durees.txt)
           echo "Durée des scénarios : ${total} s"
-          # 8 minutes : le jalon 8 ajoute les régions de Sève et d'Aube (scénarios vallee, falaises, carte5 ; ~410 s en tout en local).
-          [ "$total" -le 480 ] || { echo "Plus de 8 minutes : alléger les scénarios"; exit 1; }
+          # 10 minutes : le jalon 10 ajoute les scénarios bord, menus et cumul (~520 s en tout en local, 24/11).
+          [ "$total" -le 600 ] || { echo "Plus de 10 minutes : alléger les scénarios"; exit 1; }
 
       - name: Publier les captures et le rapport
         if: always()
