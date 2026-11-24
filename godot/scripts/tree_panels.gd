@@ -85,7 +85,7 @@ func _ready() -> void:
 	summary_button.toggle_mode = true
 	summary_button.toggled.connect(set_summary_visible)
 	# Avec près de 900 nœuds, on se perd vite en zoomant : un bouton (et la touche Origine) recadre l'arbre entier.
-	_button(bar, "Vue d'ensemble", func(): ui.fit_view())
+	_button(bar, "Vue d'ensemble", func(): ui.glide_fit())
 
 	plan_bar = PanelContainer.new()
 	plan_bar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -196,7 +196,7 @@ func _input(event: InputEvent) -> void:
 		search.select_all()
 		get_viewport().set_input_as_handled()
 	elif key.keycode == KEY_HOME:
-		ui.fit_view()
+		ui.glide_fit()
 		get_viewport().set_input_as_handled()
 	elif key.is_command_or_control_pressed() and key.keycode == KEY_Z:
 		undo()
@@ -266,9 +266,7 @@ func next_match(step := 1) -> void:
 				best = d
 				match_index = i
 	var n: Dictionary = Game.tree.nodes[matches[match_index]]
-	ui.cam = n["pos"]
-	if ui.zoom < 0.5:
-		ui.zoom = 0.8
+	ui.glide_to(n["pos"], 0.8 if ui.zoom < 0.5 else ui.zoom)
 	_refresh()
 	_redraw()
 
