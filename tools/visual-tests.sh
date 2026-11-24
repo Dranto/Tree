@@ -4,6 +4,8 @@
 #
 #   tools/visual-tests.sh            # compare ; code de sortie 1 si une capture a changé
 #   tools/visual-tests.sh --update   # remplace les références par les captures actuelles
+#   SHARD=1/2 tools/visual-tests.sh  # seulement la 1re des 2 parts (jobs parallèles de la CI)
+#   tools/visual-tests.sh --report   # refait rapport.html et resume.md depuis out/ (parts réunies)
 #
 # Résultats dans godot/tests/visual/out/ : captures, images des écarts (*.diff.png)
 # et rapport.html (référence, capture et écarts côte à côte).
@@ -15,11 +17,53 @@ SEED=1234
 # Seul le premier est joué si TEST_ONLY est défini (ex. TEST_ONLY=galerie tools/visual-tests.sh).
 SCENARIOS=(depart combat galerie competences boss roncier resolution:1280x720 resolution:1920x1080 resolution:2560x1440 resolution:3440x1440 quetes:1280x720 quetes:1920x1080 quetes:2560x1440 quetes:3440x1440 charte:2560x1440 interactions heros:2560x1440 monde attaque regions marais plateaux carte5:1280x720 carte5:1920x1080 falaises vallee finale foret bord menus:1280x720 menus:3440x1440 cumul)
 
-EXTRA=()
-if [ "${1:-}" = "--update" ]; then
-  EXTRA=(--update)
+# Durée approximative de chaque scénario (s, machine des tests du 24/11 : 444 s en tout), pour répartir les parts : chaque scénario
+# va à la part la moins chargée, du plus long au plus court. Un scénario absent compte 20 s.
+declare -A WEIGHT=(
+  [depart]=7 [combat]=68 [galerie]=9 [competences]=8 [boss]=10 [roncier]=37 [resolution:1280x720]=8
+  [resolution:1920x1080]=9 [resolution:2560x1440]=12 [resolution:3440x1440]=14 [quetes:1280x720]=6
+  [quetes:1920x1080]=11 [quetes:2560x1440]=7 [quetes:3440x1440]=9 [charte:2560x1440]=5
+  [interactions]=18 [heros:2560x1440]=7 [monde]=4 [attaque]=3 [regions]=17 [marais]=21
+  [plateaux]=18 [carte5:1280x720]=5 [carte5:1920x1080]=5 [falaises]=19 [vallee]=22 [finale]=10
+  [foret]=21 [bord]=19 [menus:1280x720]=9 [menus:3440x1440]=20 [cumul]=6
+)
+
+# SHARD=k/n : garde les scénarios de la part k sur n.
+if [ -n "${SHARD:-}" ]; then
+  k="${SHARD%/*}"; n="${SHARD#*/}"
+  declare -a load
+  for ((i = 1; i <= n; i++)); do load[$i]=0; done
+  mine=()
+  while read -r w entry; do
+    best=1
+    for ((i = 2; i <= n; i++)); do [ "${load[$i]}" -lt "${load[$best]}" ] && best=$i; done
+    load[$best]=$((load[$best] + w))
+    [ "$best" = "$k" ] && mine+=("$entry")
+  done < <(for e in "${SCENARIOS[@]}"; do echo "${WEIGHT[$e]:-20} $e"; done | sort -k1,1nr -k2,2 -s)
+  # Ordre d'origine gardé.
+  keep=()
+  for e in "${SCENARIOS[@]}"; do
+    for m in "${mine[@]}"; do [ "$m" = "$e" ] && keep+=("$e"); done
+  done
+  SCENARIOS=("${keep[@]}")
+  echo "Part $SHARD : ${SCENARIOS[*]} (~${load[$k]} s prévues)"
 fi
 
+EXTRA=()
+REPORT_ONLY=0
+if [ "${1:-}" = "--update" ]; then
+  EXTRA=(--update)
+elif [ "${1:-}" = "--report" ]; then
+  REPORT_ONLY=1
+fi
+
+if [ "$REPORT_ONLY" = 1 ]; then
+  [ -f "$OUT/results.txt" ] || { echo "Rien à réunir : $OUT/results.txt absent"; exit 1; }
+  TOTAL=$(awk '{s+=$3} END{print s+0}' "$OUT/durees.txt" 2>/dev/null)
+  status=$(awk '$2 != "ok" && $2 != "maj" {bad=1} END{print bad+0}' "$OUT/results.txt")
+fi
+
+if [ "$REPORT_ONLY" = 0 ]; then
 rm -rf "$OUT"
 mkdir -p "$OUT"
 touch "$OUT/.gdignore"   # Godot n'importe pas les captures comme ressources
@@ -55,6 +99,7 @@ for entry in "${SCENARIOS[@]}"; do
 done
 TOTAL=$((SECONDS - START))
 echo "Durée totale : ${TOTAL} s"
+fi
 
 # Rapport HTML : une ligne par capture, avec la référence, la capture et les écarts.
 {

@@ -5,7 +5,7 @@ name: Banc de performance
 on:
   pull_request:
   push:
-    branches: [main, master, "claude/project-thread-9liy48"]
+    branches: [main, master, develop, "claude/project-thread-9liy48"]
   workflow_dispatch:
 
 # Budgets du banc des pics sur la machine de la CI (docs/performances.md).
