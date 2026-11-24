@@ -182,12 +182,20 @@ func _scenario_combat() -> void:
 	await _shot("arbre_progression")
 
 
-## Le jeu, l'arbre et l'écran titre à la résolution de la fenêtre (fixée par tools/visual-tests.sh).
+## Le jeu, l'arbre (avec la couronne de greffes : quatorze greffes trouvées, deux posées, la fiche
+## de l'une d'elles) et l'écran titre à la résolution de la fenêtre (fixée par tools/visual-tests.sh).
 func _scenario_resolution() -> void:
 	var tag := _res_tag()
 	await _frames(60)
 	await _shot("jeu_" + tag, "jeu")
+	var ids: Array = Content.grafts().keys()
+	ids.sort()
+	for g in ids.slice(0, 14):
+		Game.give_graft(g)
+	Game.place_graft(0, ids[0])
+	Game.place_graft(1, ids[3])
 	main.tree_ui.toggle()
+	main.tree_ui.grafts_panel.set_hover_graft(ids[5])
 	await _frames(10)
 	await _shot("arbre_" + tag, "arbre")
 	main.tree_ui.toggle()
@@ -550,7 +558,7 @@ func _scenario_galerie() -> void:
 ## Planche des formes de nœuds : chaque type (dont le nœud « attack » qui change l'attaque de base)
 ## dans ses trois états, tel que l'arbre le dessine de près.
 func _galerie_formes(ui) -> void:
-	var kinds := ["notable", "keystone", "skill", "mutation", "mastery", "graft", "withered", "attack"]
+	var kinds := ["notable", "keystone", "skill", "mutation", "mastery", "withered", "attack"]
 	var ronce := 0
 	for bi in Game.tree.BRANCHES.size():
 		if Game.tree.BRANCHES[bi]["id"] == "ronce":
@@ -593,27 +601,26 @@ func _galerie_types(ui, cw: int, ch: int) -> void:
 	var mutation := _first_of_type("mutation")
 	var mastery := _first_of_type("mastery")
 	var withered := _first_of_type("withered")
-	var graft := _first_of_type("graft")
+	var attack := _first_of_type("attack")
 	var sheet := Image.create(cw * 4, ch * 2, false, Image.FORMAT_RGB8)
-	var cells := [["compétence", skill], ["mutation verrouillée", mutation], ["flétri", withered], ["greffe vide", graft]]
+	var cells := [["compétence", skill], ["mutation verrouillée", mutation], ["flétri", withered], ["attaque", attack]]
 	for i in cells.size():
 		await _cell(ui, sheet, cells[i][0], cells[i][1], i, cw, ch)
 	# Tout apprendre : la maîtrise reçoit un choix, la mutation attend le sien, le drapeau libère le nœud flétri.
 	# Juste les points qu'il faut à chaque fois, pour que le robot n'ait rien à dépenser entre deux images.
 	var planner = ui.panels.planner
 	Game.flags[Game.tree.nodes[withered]["requires_flag"]] = true
-	for id in [skill, mastery, mutation, withered, graft]:
+	for id in [skill, mastery, mutation, withered, attack]:
 		if not Game.allocated.has(id):
 			var path: Array = planner.path_to(id)
 			Game.points = path.size()
 			planner.learn_path(path)
 	Game.points = 0
 	Game.set_choice(mastery, 1)
-	Game.set_graft(graft, "greffe_soeurs")
 	await _frames(2)
 	ui._choice_queue.clear()
 	ui.close_choice(false)
-	cells = [["maîtrise choisie", mastery], ["mutation à choisir", mutation], ["flétri libéré", withered], ["greffe posée", graft]]
+	cells = [["maîtrise choisie", mastery], ["mutation à choisir", mutation], ["flétri libéré", withered], ["attaque apprise", attack]]
 	for i in cells.size():
 		await _cell(ui, sheet, cells[i][0], cells[i][1], 4 + i, cw, ch)
 	await _shot_image("galerie_types", sheet)

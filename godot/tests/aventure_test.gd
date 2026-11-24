@@ -443,7 +443,7 @@ func _snapshot() -> Dictionary:
 	return {
 		"level": game.level, "xp": game.xp, "points": game.points, "kills": game.kills,
 		"uids": game.allocated_uids(), "inventory": game.graft_inventory.duplicate(),
-		"grafts": game.grafts.duplicate(), "flags": game.flags.duplicate(true),
+		"crown": game.placed_grafts(), "flags": game.flags.duplicate(true),
 		"ground": main.export_ground_grafts(),
 	}
 

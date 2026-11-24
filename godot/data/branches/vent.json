@@ -129,7 +129,7 @@
           "links": ["l4"],
           "effects": [{"attack_mod": "repetition", "value": 1}]
         },
-        {"id": "l6", "type": "graft", "name": "Greffon des lames", "at": [1.5, 0.35], "links": ["l4"]},
+        {"id": "l6n", "type": "small", "name": "Fil tranchant", "at": [1.5, 0.35], "links": ["l4"], "effects": [{"stat": "projectile_damage", "op": "inc", "value": 0.04}, {"stat": "fire_rate", "op": "inc", "value": 0.025}]},
         {
           "id": "l7",
           "type": "attack",
@@ -328,7 +328,7 @@
           "links": ["t3"],
           "effects": [{"attack_mod": "repousse", "value": 24}]
         },
-        {"id": "t7", "type": "graft", "name": "Greffon du cyclone", "at": [1.95, 0.05], "links": ["t5"]}
+        {"id": "t7n", "type": "small", "name": "Remous", "at": [1.95, 0.05], "links": ["t5"], "effects": [{"stat": "area_damage", "op": "inc", "value": 0.04}, {"stat": "area", "op": "inc", "value": 0.03}]}
       ],
       "complete": {"name": "Cyclone complet", "effects": [{"stat": "area_damage", "op": "more", "value": 1.1}]}
     },
@@ -413,7 +413,7 @@
           "links": ["v2"],
           "effects": [{"attack_mod": "renforcee", "value": 4, "factor": 2.2}]
         },
-        {"id": "v7", "type": "graft", "name": "Greffon du vif-argent", "at": [1.5, 0.6], "links": ["v3"]}
+        {"id": "v7n", "type": "small", "name": "Pas léger", "at": [1.5, 0.6], "links": ["v3"], "effects": [{"stat": "move_speed", "op": "inc", "value": 0.015}, {"stat": "crit", "op": "add", "value": 0.01}]}
       ],
       "complete": {"name": "Vif-argent complet", "effects": [{"stat": "crit", "op": "add", "value": 0.05}, {"stat": "fire_rate", "op": "more", "value": 1.06}]}
     },
@@ -615,7 +615,7 @@
             }
           ]
         },
-        {"id": "h4", "type": "graft", "name": "Greffon des rafales", "at": [1.0, 0], "links": ["h1", "h2", "h3"]}
+        {"id": "h4n", "type": "small", "name": "Brise", "at": [1.0, 0], "links": ["h1", "h2", "h3"], "effects": [{"stat": "move_speed", "op": "inc", "value": 0.015}, {"stat": "dash_cd", "op": "inc", "value": -0.02}]}
       ],
       "complete": {"name": "Cœur complet", "effects": [{"stat": "damage", "op": "more", "value": 1.08}, {"stat": "move_speed", "op": "inc", "value": 0.05}]}
     }

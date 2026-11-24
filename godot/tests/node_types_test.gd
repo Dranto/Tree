@@ -1,6 +1,6 @@
 ## Test des grappes écrites à la main et des nouveaux types de nœuds : grappe insérée dans l'arbre,
 ## compétence, maîtrise choisie puis changée, mutation verrouillée puis disponible, nœud flétri libéré
-## par son drapeau, greffe, exclusion, bonus de grappe complète, résonance de branche, sauvegarde
+## par son drapeau, greffe dans la couronne, exclusion, bonus de grappe complète, résonance de branche, sauvegarde
 ## aller-retour et migration d'une sauvegarde de la version 1.
 ## Le test pose sa propre grappe dans la première branche : il ne dépend pas du contenu de data/.
 ## Lancer : tools/godot.sh --headless -s res://tests/node_types_test.gd
@@ -45,7 +45,7 @@ func _cluster() -> Dictionary:
 			]},
 			{"id": "d", "type": "withered", "name": "Flétri de test", "requires_flag": "drapeau_test", "at": [1.4, -0.4], "links": ["b"],
 				"effects": [{"stat": "max_hp", "op": "add", "value": 100}]},
-			{"id": "e", "type": "graft", "at": [1.4, 0.4], "links": ["c"]},
+			{"id": "e", "type": "small", "name": "Petit de test", "at": [1.4, 0.4], "links": ["c"], "effects": [{"stat": "regen", "op": "add", "value": 0.1}]},
 			{"id": "k1", "type": "keystone", "key": "test_k1", "name": "Clé un", "at": [2.1, -0.4], "links": ["d"], "excludes": ["k2"],
 				"effects": [{"stat": "max_hp", "op": "add", "value": 1}]},
 			{"id": "k2", "type": "keystone", "key": "test_k2", "name": "Clé deux", "at": [2.1, 0.4], "links": ["e", "k1"],
@@ -89,7 +89,7 @@ func _run() -> void:
 	var a := _id("a")
 	check(a > 0 and _id("b") > 0 and _id("c") > 0 and _id("d") > 0 and _id("e") > 0 and _id("k1") > 0 and _id("k2") > 0, "les 7 nœuds de la grappe sont dans l'arbre, par identifiant stable")
 	check(tree.nodes[a]["type"] == "skill" and tree.nodes[_id("b")]["type"] == "mastery" and tree.nodes[_id("c")]["type"] == "mutation"
-		and tree.nodes[_id("d")]["type"] == "withered" and tree.nodes[_id("e")]["type"] == "graft", "chaque nœud garde son type")
+		and tree.nodes[_id("d")]["type"] == "withered" and tree.nodes[_id("e")]["type"] == "small", "chaque nœud garde son type")
 	var anchor: Vector2 = SkillTree.cluster_layout(0, b["clusters"][0])["a"]
 	check(tree.nodes[a]["pos"].is_equal_approx(anchor) and absf(anchor.length() - 5 * SkillTree.RING_GAP) < 0.01, "le nœud d'entrée est à l'anneau et à l'angle demandés")
 	check(tree.nodes.size() < plain.nodes.size() + 7, "des petits nœuds générés ont été écartés (%d)" % (plain.nodes.size() + 7 - tree.nodes.size()))
@@ -174,15 +174,16 @@ func _run() -> void:
 	check(game.lock_reason(w) == "" and game.allocate(w), "déverrouillé par le drapeau, puis appris")
 	check(is_equal_approx(game.stats["max_hp"], hp + 130.0), "le nœud flétri donne son effet (+100)")
 
-	print("Greffe")
+	print("Greffe dans la couronne")
 	var g := _id("e")
-	check(not game.set_graft(m, "greffe_soeurs") and not game.set_graft(g, "inconnue"), "greffe refusée ailleurs que dans un emplacement, ou si elle n'existe pas")
-	var shots: int = game.stats["projectiles"]
-	check(game.set_graft(g, "greffe_soeurs") and game.stats["projectiles"] == shots, "une greffe posée dans un emplacement non appris n'agit pas")
 	game.allocate(g)
-	check(game.stats["projectiles"] == shots + 2, "la greffe agit une fois l'emplacement appris (+2 projectiles)")
-	check(game.set_graft(g, "") and game.stats["projectiles"] == shots, "greffe retirée")
-	game.set_graft(g, "greffe_soeurs")
+	var open: int = game.crown_size()
+	check(open == int(Content.crown()["start"]), "la couronne a %d emplacements au départ" % open)
+	check(not game.set_graft(open, "greffe_soeurs") and not game.set_graft(0, "inconnue"), "greffe refusée hors d'un emplacement ouvert, ou si elle n'existe pas")
+	var shots: int = game.stats["projectiles"]
+	check(game.set_graft(0, "greffe_soeurs") and game.stats["projectiles"] == shots + 2, "une greffe posée dans la couronne agit tout de suite (+2 projectiles)")
+	check(game.set_graft(0, "") and game.stats["projectiles"] == shots, "greffe retirée")
+	game.set_graft(1, "greffe_soeurs")
 
 	print("Exclusion, grappe complète, résonance")
 	var k1 := _id("k1")
@@ -219,12 +220,12 @@ func _run() -> void:
 	var want_stats: Dictionary = game.stats.duplicate()
 	var want_uids: Array = game.allocated_uids()
 	var data: Dictionary = save.capture(null)
-	check(data["version"] == save.VERSION and data["tree"]["choices"].size() == 2 and data["tree"]["grafts"].size() == 1, "format courant : choix et greffes enregistrés")
+	check(data["version"] == save.VERSION and data["tree"]["choices"].size() == 2 and data["tree"]["crown"] == ["", "greffe_soeurs"] and not data["tree"].has("grafts"), "format courant : choix et couronne enregistrés")
 	_write(data)
 	game.reset()
-	check(game.choices.is_empty() and game.grafts.is_empty(), "une nouvelle partie n'a ni choix ni greffe")
+	check(game.choices.is_empty() and game.placed_grafts().is_empty(), "une nouvelle partie n'a ni choix ni greffe")
 	check(save.load_into(null, PATH), "chargement")
-	check(game.allocated_uids() == want_uids and game.choice_index(m) == 2 and game.choice_index(c) == 1 and game.graft_of(g) == "greffe_soeurs", "nœuds, choix et greffe retrouvés")
+	check(game.allocated_uids() == want_uids and game.choice_index(m) == 2 and game.choice_index(c) == 1 and game.graft_of(1) == "greffe_soeurs", "nœuds, choix et greffe retrouvés")
 	var same_stats := true
 	for k in want_stats:
 		if not is_equal_approx(float(want_stats[k]), float(game.stats[k])):
@@ -232,9 +233,9 @@ func _run() -> void:
 	check(same_stats and is_equal_approx(game.skill("nova")["cooldown"], Content.skills()["nova"]["cooldown"] * 0.5), "statistiques et mutation recalculées")
 	data["tree"]["choices"]["c:%s:t:b" % bid] = "disparu"
 	data["tree"]["choices"]["c:%s:t:zz" % bid] = "un"
-	data["tree"]["grafts"]["c:%s:t:e" % bid] = "greffe_disparue"
+	data["tree"]["crown"] = ["greffe_disparue", ""]
 	_write(data)
-	check(save.load_into(null, PATH) and game.choice_index(m) < 0 and game.needs_choice(m) and game.graft_of(g) == "", "un choix ou une greffe qui n'existe plus est ignoré, le nœud reste appris")
+	check(save.load_into(null, PATH) and game.choice_index(m) < 0 and game.needs_choice(m) and game.graft_of(0) == "" and game.graft_of(1) == "", "un choix ou une greffe qui n'existe plus est ignoré, le nœud reste appris")
 
 	print("Migration de la version 1")
 	var old_uid: String = ""
@@ -246,7 +247,7 @@ func _run() -> void:
 		"tree": {"allocated": [tree.nodes[path[0]]["uid"], old_uid]}}
 	_write(v1)
 	check(save.load_into(null, PATH), "une sauvegarde de la version 1 se charge")
-	check(game.level == 4 and game.allocated.has(path[0]) and game.choices.is_empty() and game.grafts.is_empty(), "niveau et nœuds repris, sans choix ni greffe")
+	check(game.level == 4 and game.allocated.has(path[0]) and game.choices.is_empty() and game.placed_grafts().is_empty(), "niveau et nœuds repris, sans choix ni greffe")
 	check(game.points == 3, "le point d'un nœud remplacé par la grappe est rendu")
 	check(save._migrate({"format": "seve-save", "version": 1})["tree"].has("choices"), "la migration crée les champs manquants")
 

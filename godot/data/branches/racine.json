@@ -104,7 +104,7 @@
           "links": ["m4"],
           "effects": [{"attack_mod": "secousse", "value": 0.2}]
         },
-        {"id": "m6", "type": "graft", "name": "Greffon de la massue", "at": [1.5, 0.35], "links": ["m4"]},
+        {"id": "m6n", "type": "small", "name": "Nœud du bois", "at": [1.5, 0.35], "links": ["m4"], "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.04}, {"stat": "armor", "op": "add", "value": 0.012}]},
         {
           "id": "m7",
           "type": "attack",
@@ -197,7 +197,7 @@
           ]
         },
         {"id": "e6", "type": "attack", "name": "Coups d'écorce", "at": [1.0, 0.8], "links": ["e3"], "effects": [{"attack_mod": "aubier", "value": 0.1}]},
-        {"id": "e7", "type": "graft", "name": "Greffon de l'écorce", "at": [1.95, 0.05], "links": ["e5"]}
+        {"id": "e7n", "type": "small", "name": "Écorce fine", "at": [1.95, 0.05], "links": ["e5"], "effects": [{"stat": "armor", "op": "add", "value": 0.015}, {"stat": "area_damage", "op": "inc", "value": 0.03}]}
       ],
       "complete": {
         "name": "Écorce complète",
@@ -372,7 +372,7 @@
             {"stat": "fire_rate", "op": "more", "value": 0.9}
           ]
         },
-        {"id": "c6", "type": "graft", "name": "Greffon du bois", "at": [1.0, -0.8], "links": ["c3"]}
+        {"id": "c6n", "type": "small", "name": "Aubier tendre", "at": [1.0, -0.8], "links": ["c3"], "effects": [{"stat": "max_hp", "op": "add", "value": 10}, {"stat": "armor", "op": "add", "value": 0.01}]}
       ],
       "complete": {"name": "Cœur de bois complet", "effects": [{"stat": "max_hp", "op": "more", "value": 1.1}, {"stat": "armor", "op": "add", "value": 0.03}]}
     },
@@ -568,7 +568,7 @@
             {"on": "kill", "do": "reduce_cooldown", "target": "pieux", "value": 0.2, "text": "Chaque ennemi vaincu réduit la recharge des pieux de 0,2 s."}
           ]
         },
-        {"id": "h4", "type": "graft", "name": "Greffon des cernes", "at": [1.0, 0], "links": ["h1", "h2", "h3"]}
+        {"id": "h4n", "type": "small", "name": "Cerne léger", "at": [1.0, 0], "links": ["h1", "h2", "h3"], "effects": [{"stat": "armor", "op": "add", "value": 0.012}, {"stat": "damage", "op": "inc", "value": 0.03}]}
       ],
       "complete": {"name": "Cœur complet", "effects": [{"stat": "damage", "op": "more", "value": 1.08}, {"stat": "armor", "op": "add", "value": 0.03}]}
     }

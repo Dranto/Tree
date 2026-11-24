@@ -2,11 +2,11 @@
 ##
 ## Format : un fichier JSON lisible dans user://saves/, versionné.
 ## {
-##   "format": "seve-save", "version": 6, "saved_at": <unix>,
+##   "format": "seve-save", "version": 7, "saved_at": <unix>,
 ##   "game":  {"level", "xp", "points", "kills", "flags"},
 ##   "tree":  {"allocated": [uid, …],            # identifiants stables, pas des index
 ##             "choices": {uid: choix},          # maîtrises et mutations (depuis la version 2)
-##             "grafts": {uid: greffe},          # greffes posées (depuis la version 2)
+##             "crown": [greffe ou "", …],       # couronne de greffes, un élément par emplacement (version 7)
 ##             "inventory": [greffe, …]},        # greffes possédées, posées ou non (depuis la version 3)
 ##   "world": {"elapsed", "player": {"x", "y", "hp"},
 ##             "ground_grafts": [[x, y, greffe], …],   # greffes tombées, pas encore ramassées (version 3)
@@ -14,7 +14,7 @@
 ## }
 ##
 ## L'attaque de base (forme et modificateurs, attack.gd) n'est pas sauvegardée : elle se recalcule
-## depuis les nœuds appris, les choix et les greffes.
+## depuis les nœuds appris, les choix et la couronne de greffes.
 ##
 ## Tolérance à l'évolution du jeu :
 ## - les nœuds sont enregistrés par uid ; un uid disparu ou un nœud qui n'est plus relié
@@ -28,7 +28,7 @@ extends Node
 const Regions = preload("res://scripts/regions.gd")
 
 const FORMAT := "seve-save"
-const VERSION := 6
+const VERSION := 7
 const DEFAULT_PATH := "user://saves/partie.json"
 
 ## Dernière erreur de chargement, lisible (vide si tout va bien).
@@ -85,7 +85,7 @@ func capture(main) -> Dictionary:
 			"kills": Game.kills,
 			"flags": Game.flags.duplicate(true),
 		},
-		"tree": {"allocated": Game.allocated_uids(), "choices": Game.choices.duplicate(), "grafts": Game.grafts.duplicate(), "inventory": Game.graft_inventory.duplicate()},
+		"tree": {"allocated": Game.allocated_uids(), "choices": Game.choices.duplicate(), "crown": Game.crown.duplicate(), "inventory": Game.graft_inventory.duplicate()},
 		"world": world,
 	}
 
@@ -149,7 +149,7 @@ func apply(data: Dictionary, main) -> void:
 	var t: Dictionary = data.get("tree", {})
 	var uids = t.get("allocated", [])
 	var refunded := Game.restore_allocation(uids if uids is Array else [])
-	Game.restore_extras(t.get("choices", {}), t.get("grafts", {}), t.get("inventory", []))
+	Game.restore_extras(t.get("choices", {}), t.get("crown", []), t.get("inventory", []))
 	if refunded > 0:
 		print("Sauvegarde : %d nœud(s) absent(s) de l'arbre actuel, point(s) rendu(s)." % refunded)
 
@@ -272,6 +272,41 @@ func _migrate(data: Dictionary) -> Dictionary:
 				for i in n:
 					f[Regions.heart_part_flag(reg, i)] = true
 		data["version"] = 6
+	# Version 7 (jalon 11, greffes indépendantes de l'arbre) : les emplacements de greffe de l'arbre
+	# deviennent des nœuds ordinaires (d'autres uid) ; les greffes posées passent dans la couronne,
+	# celles des emplacements appris d'abord, tant qu'elle a des emplacements ouverts (les autres
+	# restent dans l'inventaire). Les points des emplacements appris sont rendus au chargement
+	# (uid disparus : Game.restore_allocation).
+	if int(data["version"]) == 6:
+		if not data.get("tree") is Dictionary:
+			data["tree"] = {}
+		var tr: Dictionary = data["tree"]
+		var placed = tr.get("grafts", {})
+		var learned := {}
+		if tr.get("allocated") is Array:
+			for uid in tr["allocated"]:
+				learned[str(uid)] = true
+		var first: Array = []
+		var later: Array = []
+		if placed is Dictionary:
+			var uids: Array = placed.keys()
+			uids.sort()
+			for uid in uids:
+				var gid := str(placed[uid])
+				if first.has(gid) or later.has(gid):
+					continue
+				(first if learned.has(str(uid)) else later).append(gid)
+		var flags = data.get("game", {}).get("flags", {}) if data.get("game") is Dictionary else {}
+		var open: int = Game.crown_size(flags if flags is Dictionary else {})
+		var crown: Array = (first + later).slice(0, open)
+		var inv: Array = tr.get("inventory", []) if tr.get("inventory") is Array else []
+		for gid in first + later:
+			if not inv.has(gid):
+				inv.append(gid)
+		tr["inventory"] = inv
+		tr["crown"] = crown
+		tr.erase("grafts")
+		data["version"] = 7
 	return data
 
 

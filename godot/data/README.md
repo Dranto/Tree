@@ -18,7 +18,8 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `stats.json` | Les statistiques du personnage : libellé, valeur de base, bornes, arrondi. |
 | `branches/<id>.json` | Une branche : nom, couleur, effets des petits nœuds, bonus et noms des nœuds notables, nœuds clés, résonance, grappes écrites à la main. |
 | `borders/<a>-<b>.json` | Une frontière hybride entre deux branches voisines : grappes à cheval sur la limite des deux secteurs. Voir « Frontières hybrides ». |
-| `grafts.json` | Les greffes : objets à poser dans un emplacement de greffe de l'arbre (nom, effets, d'où elles viennent, dessin). |
+| `grafts.json` | Les greffes : objets à poser dans la couronne de greffes (nom, effets, d'où elles viennent, dessin). |
+| `crown.json` | La couronne de greffes : emplacements au départ, gagnés par région purifiée, par boss et à la finale, plafond. Voir « Greffes ». |
 | `regions/<id>.json` | Une région du monde, tout entière : sol, décor, apparitions, sanctuaires, autels, secret, Cœur, boss, fin. Voir « Régions ». |
 | `skills.json` | Réglages des compétences actives (recharge, rayon, dégâts, texte). |
 | `builds.json` | Builds types joués par le robot d'équilibrage (`tools/balance.sh`), chacun avec sa branche (`branch`). |
@@ -153,7 +154,7 @@ Une branche peut déclarer des `clusters` : des groupes de nœuds écrits à la 
      "choices": [{"name": "...", "effects": [...]}, {"name": "...", "effects": [...]}]},
     {"id": "s4", "type": "withered", "name": "...", "requires_flag": "ronce_boss_vaincu",
      "requires_text": "vaincs la Mère-Ronce.", "at": [2.1, -0.4], "links": ["s3"], "effects": [...]},
-    {"id": "s5", "type": "graft", "at": [2.1, 0.4], "links": ["s3"]}
+    {"id": "s5", "type": "small", "at": [2.1, 0.4], "links": ["s3"], "effects": [...]}
   ],
   "complete": {"effects": [...]}
 }]
@@ -176,7 +177,6 @@ Chaque nœud a un `id` local, un `type`, une position `at: [x, y]` en unités d'
 | `skill` | `skill` (ou un effet `{"skill": …}`) | Donne une compétence. Le nom par défaut est celui de la compétence. | Hexagone |
 | `mutation` | `mutates` (compétence), 2 ou 3 `choices` | Verrouillé tant que la compétence n'est pas acquise. Un seul choix, définitif tant que le nœud reste appris (l'oublier permet de rechoisir). | Triangle |
 | `mastery` | `name`, exactement 3 `choices` | Un bonus à choisir, modifiable ensuite sans rien dépenser. | Carré à trois points |
-| `graft` | aucun effet | Emplacement qui reçoit une greffe de `grafts.json` (`Game.set_graft(id, greffe)`). La greffe n'agit que si l'emplacement est appris. | Anneau creux |
 | `withered` | `name`, `effects`, `requires_flag`, `requires_text` facultatif | Verrouillé et couvert de cendre tant que `Game.flags[requires_flag]` n'est pas vrai. `requires_text` complète la phrase « Couvert de cendre : … ». | Cercle fissuré |
 | `attack` | `name`, `effects` avec au moins un `attack_form` ou `attack_mod` | Change la forme ou le comportement de l'attaque de base. Icône `Art.icon("attaque_<forme>")`, ou `attaque_mod` s'il n'ajoute que des modificateurs. | Pointe de flèche (provisoire) |
 
@@ -322,10 +322,12 @@ Chaque palier donne ses effets dès que `count` nœuds de la branche sont appris
 | Champ | Rôle |
 | --- | --- |
 | `sources` | D'où la greffe peut venir : `autel`, `boss`, `secret`, `elite`, `quete`. `Game.roll_graft(source)` tire une greffe de cette source, ni possédée ni déjà au sol (les élites en font tomber une avec `main.drop_graft(pos)`). |
-| `shape`, `color` | Dessin au sol, dans l'inventaire et dans l'emplacement : `feuille`, `epine`, `racine`, `fleur` ou `coeur`. |
-| `effects` | Mêmes effets qu'un nœud. Une greffe n'agit que posée dans un emplacement appris. |
+| `shape`, `color` | Dessin au sol et dans la couronne : `feuille`, `epine`, `racine`, `fleur` ou `coeur`. |
+| `effects` | Mêmes effets qu'un nœud. Une greffe agit dès qu'elle est posée dans la couronne. |
 
-Chaque greffe existe en un exemplaire. On la trouve au sol (`graft_pickup.gd`), elle entre dans l'inventaire (`Game.give_graft(id)`, signal `Game.graft_found`), puis on la pose dans l'écran de l'arbre : glisser depuis l'inventaire (en bas à gauche) jusqu'à un emplacement, ou clic sur la greffe puis sur l'emplacement. Un clic sur un emplacement appris et occupé retire la greffe. L'infobulle de l'emplacement montre l'effet de la greffe tenue (statistiques avant → après). En code : `Game.place_graft(emplacement, greffe)` (greffe possédée, déplacée si elle était ailleurs), `Game.set_graft` (outil bas niveau des tests).
+Chaque greffe existe en un exemplaire. On la trouve au sol (`graft_pickup.gd`), elle entre dans l'inventaire (`Game.give_graft(id)`, signal `Game.graft_found`), puis on la pose dans la **couronne de greffes**, indépendante des nœuds de l'arbre : un panneau en bas à gauche de l'écran de l'arbre (`tree_grafts.gd`). Glisser une greffe de la grille sur un emplacement, ou clic sur la greffe puis sur l'emplacement, ou double-clic pour la poser au premier emplacement libre. Un clic (ou clic droit) sur un emplacement occupé la retire ; on peut aussi la glisser d'un emplacement à l'autre ou la ramener dans la grille. La fiche du panneau montre la greffe survolée et l'aperçu des statistiques avant → après. En code : `Game.place_graft(emplacement, greffe)` (greffe possédée, déplacée si elle était ailleurs), `Game.unplace_graft(greffe)`, `Game.set_graft` (outil bas niveau des tests), `Game.crown` (liste, "" pour un emplacement vide).
+
+`crown.json` règle le nombre d'emplacements (`Game.crown_size()`, lu dans les drapeaux de l'aventure) : `start` au départ, `per_region_hearts` de plus quand tous les Cœurs d'une région sont purifiés, `per_boss` par boss vaincu, `finale` à la fin, plafonné à `max`. Avec les réglages actuels : 2 au départ, 15 en fin d'aventure. Les emplacements fermés sont dessinés en bourgeons ; ceux gagnés depuis la dernière visite de l'arbre luisent (drapeau `couronne_vue`).
 
 ## Régions
 

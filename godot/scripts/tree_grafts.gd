@@ -1,10 +1,18 @@
-## Inventaire des greffes sur l'écran de l'Arbre de vie (en bas à gauche) : les greffes trouvées
-## dans le monde, posées ou non. On en glisse une sur un emplacement de greffe de l'arbre (anneau
-## creux) pour l'y poser, ou on la choisit d'un clic puis on clique l'emplacement. Un clic sur un
-## emplacement occupé retire la greffe, qui revient dans l'inventaire. L'infobulle de l'emplacement
-## montre l'effet de la greffe tenue avant de la poser (aperçu du planificateur, statistiques avant → après).
+## Couronne de greffes, sur l'écran de l'Arbre de vie (en bas à gauche) : indépendante des nœuds.
 ##
-## Le panneau n'apparaît qu'une fois une greffe trouvée.
+## En haut, la couronne : une vrille en anneau qui porte les emplacements. Les emplacements ouverts
+## sont des médaillons (creux s'ils sont vides) ; ceux qui restent à gagner sont des bourgeons fermés
+## (un de plus par région dont les Cœurs sont purifiés, par boss vaincu, et à la finale :
+## Game.crown_size, data/crown.json). Un emplacement qui vient de s'ouvrir luit jusqu'à ce qu'on le voie.
+## En dessous, les greffes trouvées, en grille d'icônes (celles qui sont posées sont estompées), et une
+## fiche : la greffe survolée ou tenue, ses effets et l'aperçu des statistiques avant → après.
+##
+## Pose et retrait libres : glisser une greffe sur un emplacement (ou clic sur la greffe puis sur
+## l'emplacement, ou double-clic pour la poser au premier emplacement libre) ; un clic (ou clic droit)
+## sur un emplacement occupé retire sa greffe, et on peut la glisser d'un emplacement à l'autre ou
+## la ramener dans la grille. Une greffe posée agit tout de suite.
+##
+## Le panneau n'apparaît qu'une fois une greffe trouvée. Un clic sur le titre replie la grille.
 extends PanelContainer
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
@@ -14,75 +22,239 @@ const GraftPickup = preload("res://scripts/graft_pickup.gd")
 
 const DIM := Color(0.731, 0.683, 0.574)
 const PLAN := Color("f2d06b")
+const SLOT_BG := Color("3a2a1a")
+## Largeur utile du panneau (la couronne, la grille et la fiche s'y tiennent).
+const WIDTH := 316.0
+const COLUMNS := 8
+const CELL := 36.0
+## Rangées de la grille visibles sans défiler.
+const ROWS_VISIBLE := 4
+## Drapeau de Game.flags : nombre d'emplacements déjà vus (les suivants luisent).
+const SEEN_FLAG := "couronne_vue"
 
 var ui
-## Greffe tenue : choisie d'un clic dans l'inventaire, ou en train d'être glissée.
+## Greffe tenue : choisie d'un clic dans la grille, ou en train d'être glissée.
 var held := ""
 var dragging := false
-var _title: Label
+## Ce que le pointeur survole : une greffe (grille ou emplacement occupé) et l'emplacement survolé (-1 sinon).
+var hover_graft := ""
+var hover_slot := -1
+var folded := false
+var t := 0.0
+var crown_view: Control
+var _title: Button
+var _count: Label
+var _scroll: ScrollContainer
+var _grid: GridContainer
+var _detail: VBoxContainer
 var _hint: Label
-var _list: VBoxContainer
+var _seen := 0
 
 
-## Une ligne de l'inventaire : la forme de la greffe, son nom et où elle est posée. Se glisse.
-class Item extends PanelContainer:
+## La couronne : anneau de vrille et emplacements, dessinés par le code.
+class CrownView extends Control:
 	var panel
-	var graft_id := ""
-	var icon: Control
-	var name_label: Label
-	var place_label: Label
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_STOP
-		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(row)
-		icon = Control.new()
-		icon.custom_minimum_size = Vector2(28, 28)
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		icon.draw.connect(_draw_icon)
-		row.add_child(icon)
-		var col := VBoxContainer.new()
-		col.add_theme_constant_override("separation", 0)
-		col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(col)
-		name_label = Label.new()
-		name_label.add_theme_font_size_override("font_size", 15)
-		col.add_child(name_label)
-		place_label = Label.new()
-		place_label.add_theme_font_size_override("font_size", 14)
-		place_label.add_theme_color_override("font_color", DIM)
-		col.add_child(place_label)
+		custom_minimum_size = Vector2(WIDTH, 150)
 
-	func _draw_icon() -> void:
+	## Centre de chaque emplacement (ouverts puis fermés), répartis à intervalles égaux le long de
+	## l'ellipse (pas d'angles égaux : ils se serreraient aux deux bouts), le premier en bas.
+	func slot_points() -> Array:
+		var out: Array = []
+		var n: int = maxi(Game.crown_max(), 1)
+		var c := size / 2.0
+		var rx := size.x / 2.0 - 22.0
+		var ry := size.y / 2.0 - 20.0
+		const STEPS := 360
+		var pts: Array = []
+		var acc: Array = [0.0]
+		for k in STEPS + 1:
+			var a := PI / 2.0 + TAU * float(k) / STEPS
+			pts.append(c + Vector2(cos(a) * rx, sin(a) * ry))
+			if k > 0:
+				acc.append(acc[k - 1] + pts[k].distance_to(pts[k - 1]))
+		var total: float = acc[STEPS]
+		var k := 0
+		for i in n:
+			var want := total * float(i) / float(n)
+			while k < STEPS and acc[k + 1] < want:
+				k += 1
+			out.append(pts[k])
+		return out
+
+	func slot_at(p: Vector2) -> int:
+		var pts := slot_points()
+		var best := -1
+		var best_d := 19.0
+		for i in pts.size():
+			var d: float = p.distance_to(pts[i])
+			if d < best_d:
+				best_d = d
+				best = i
+		return best
+
+	func _draw() -> void:
+		var pts := slot_points()
+		var open: int = Game.crown_size()
+		var c := size / 2.0
+		var rx := size.x / 2.0 - 22.0
+		var ry := size.y / 2.0 - 20.0
+		# La vrille : deux brins qui s'enroulent autour de l'anneau.
+		for k in 2:
+			var line := PackedVector2Array()
+			for s in 97:
+				var a := TAU * s / 96.0
+				var wob := 3.0 * sin(a * 9.0 + k * PI)
+				line.append(c + Vector2(cos(a) * (rx + wob), sin(a) * (ry + wob)))
+			draw_polyline(line, Color(UiTheme.LEAF.darkened(0.35 + 0.15 * k), 0.9), 2.2 - 0.6 * k, true)
+		# Petites feuilles entre les emplacements.
+		for i in pts.size():
+			var a := PI / 2.0 + TAU * (float(i) + 0.5) / float(pts.size())
+			var q := c + Vector2(cos(a) * rx, sin(a) * ry)
+			UiTheme.draw_leaf(self, q, a + PI / 2.0 + (0.5 if i % 2 == 0 else -0.5), 10.0, 3.2, Color(UiTheme.LEAF.darkened(0.2), 0.9), Color(UiTheme.LEAF.darkened(0.45), 0.8), 1.0)
+		for i in pts.size():
+			var p: Vector2 = pts[i]
+			if i >= open:
+				_draw_bud(p)
+				continue
+			var gid := Game.graft_of(i)
+			var target: bool = panel.held != "" and panel.hover_slot == i
+			var fresh: bool = i >= panel._seen
+			var glow := 0.0
+			if fresh:
+				glow = 0.5 + 0.5 * sin(panel.t * 4.0)
+				draw_circle(p, 19.0 + 3.0 * glow, Color(PLAN, 0.12 + 0.18 * glow))
+			draw_circle(p, 14.5, SLOT_BG if gid != "" else Color(SLOT_BG, 0.75))
+			var ring := PLAN if target else (UiTheme.GOLD if gid != "" else Color(UiTheme.GOLD, 0.55 + 0.4 * glow))
+			draw_arc(p, 14.5, 0.0, TAU, 28, ring, 2.5 if target else 1.6, true)
+			if gid != "":
+				var g: Dictionary = Content.grafts().get(gid, {})
+				GraftPickup.draw_shape(self, str(g.get("shape", "feuille")), p, 9.0, Color(str(g.get("color", "#f2d06b"))))
+			else:
+				# Emplacement ouvert et vide : une petite croix d'or, comme un écusson qui attend.
+				var s := 4.0
+				var col := Color(UiTheme.GOLD, 0.6)
+				draw_line(p + Vector2(-s, 0), p + Vector2(s, 0), col, 1.5, true)
+				draw_line(p + Vector2(0, -s), p + Vector2(0, s), col, 1.5, true)
+			if panel.hover_slot == i and panel.held == "":
+				draw_arc(p, 17.5, 0.0, TAU, 28, Color(PLAN, 0.7), 1.2, true)
+		# Au centre : emplacements occupés sur emplacements ouverts.
+		var f := UiTheme.font(true)
+		var txt := "%d / %d" % [Game.placed_grafts().size(), open]
+		UiTheme.draw_text(self, f, c + Vector2(-60, 7), txt, HORIZONTAL_ALIGNMENT_CENTER, 120, 20, UiTheme.GOLD, 4)
+
+	## Emplacement encore fermé : un bourgeon clos, cerclé d'un filet pointillé.
+	func _draw_bud(p: Vector2) -> void:
+		draw_circle(p, 10.5, Color(SLOT_BG, 0.85))
+		for k in 10:
+			var a := TAU * k / 10.0
+			draw_arc(p, 10.5, a, a + TAU / 20.0, 3, Color(DIM, 0.75), 1.2, true)
+		var bud := Color("b58a5a")
+		UiTheme.draw_leaf(self, p + Vector2(0, 5), -PI / 2.0 - 0.3, 11.0, 3.6, bud.lightened(0.2), bud, 1.0)
+		UiTheme.draw_leaf(self, p + Vector2(0, 5), -PI / 2.0 + 0.3, 11.0, 3.6, bud.lightened(0.2), bud.darkened(0.15), 1.0)
+
+	func _gui_input(event: InputEvent) -> void:
+		var mm := event as InputEventMouseMotion
+		if mm:
+			panel.set_hover_slot(slot_at(mm.position))
+		var mb := event as InputEventMouseButton
+		if mb and mb.pressed and (mb.button_index == MOUSE_BUTTON_LEFT or mb.button_index == MOUSE_BUTTON_RIGHT):
+			var i := slot_at(mb.position)
+			if i >= 0:
+				panel.click_slot(i, mb.button_index == MOUSE_BUTTON_RIGHT)
+				accept_event()
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_MOUSE_EXIT:
+			panel.set_hover_slot(-1)
+
+	func _get_drag_data(at: Vector2):
+		var i := slot_at(at)
+		if i < 0 or Game.graft_of(i) == "":
+			return null
+		var gid := Game.graft_of(i)
+		set_drag_preview(panel.drag_preview(gid))
+		panel.begin_drag(gid)
+		return {"graft": gid, "from_slot": i}
+
+	func _can_drop_data(at: Vector2, data) -> bool:
+		if not (data is Dictionary and data.has("graft")):
+			return false
+		panel.set_hover_slot(slot_at(at))
+		return true
+
+	func _drop_data(at: Vector2, data) -> void:
+		panel.drop_on(slot_at(at), str(data["graft"]))
+
+
+## Une greffe de la grille : son médaillon. Se glisse, se choisit d'un clic.
+class Item extends Control:
+	var panel
+	var graft_id := ""
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(CELL, CELL)
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
+	func _draw() -> void:
 		var g: Dictionary = Content.grafts().get(graft_id, {})
-		var c := icon.size / 2.0
-		icon.draw_circle(c, 13.0, Color("3a2a1a"))
-		icon.draw_arc(c, 13.0, 0.0, TAU, 24, Color("f2d06b"), 1.5, true)
-		GraftPickup.draw_shape(icon, str(g.get("shape", "feuille")), c, 8.0, Color(str(g.get("color", "#f2d06b"))))
+		var c := size / 2.0
+		var placed: bool = Game.graft_slot(graft_id) >= 0
+		var selected: bool = panel.held == graft_id
+		var a := 0.45 if placed else 1.0
+		if selected or panel.hover_graft == graft_id:
+			draw_circle(c, 17.0, Color(PLAN, 0.22 if selected else 0.12))
+		draw_circle(c, 14.0, Color(SLOT_BG, a))
+		draw_arc(c, 14.0, 0.0, TAU, 24, PLAN if selected else Color(UiTheme.GOLD, 0.9 * a), 2.0 if selected else 1.4, true)
+		GraftPickup.draw_shape(self, str(g.get("shape", "feuille")), c, 8.5, Color(Color(str(g.get("color", "#f2d06b"))), a))
+		if placed:
+			# Posée dans la couronne : une perle d'or en bas à droite.
+			draw_circle(c + Vector2(10, 10), 3.6, UiTheme.GOLD)
+			draw_arc(c + Vector2(10, 10), 3.6, 0.0, TAU, 12, SLOT_BG, 1.0, true)
 
 	func _gui_input(event: InputEvent) -> void:
 		var mb := event as InputEventMouseButton
 		if mb and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
-			panel.select(graft_id)
+			if mb.double_click:
+				panel.quick_place(graft_id)
+			else:
+				panel.select(graft_id)
+			accept_event()
+		elif mb and mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
+			panel.unplace(graft_id)
 			accept_event()
 
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_MOUSE_ENTER:
+			panel.set_hover_graft(graft_id)
+		elif what == NOTIFICATION_MOUSE_EXIT and panel.hover_graft == graft_id:
+			panel.set_hover_graft("")
+
 	func _get_drag_data(_at: Vector2):
-		var preview := Control.new()
-		var copy := Control.new()
-		copy.size = Vector2(28, 28)
-		copy.position = Vector2(-14, -14)
-		copy.draw.connect(func():
-			var g: Dictionary = Content.grafts().get(graft_id, {})
-			copy.draw_circle(Vector2(14, 14), 13.0, Color("3a2a1a"))
-			copy.draw_arc(Vector2(14, 14), 13.0, 0.0, TAU, 24, Color("f2d06b"), 1.5, true)
-			GraftPickup.draw_shape(copy, str(g.get("shape", "feuille")), Vector2(14, 14), 8.0, Color(str(g.get("color", "#f2d06b")))))
-		preview.add_child(copy)
-		set_drag_preview(preview)
+		set_drag_preview(panel.drag_preview(graft_id))
 		panel.begin_drag(graft_id)
 		return {"graft": graft_id}
+
+	## Une greffe ramenée d'un emplacement sur la grille est retirée de la couronne.
+	func _can_drop_data(_at: Vector2, data) -> bool:
+		return data is Dictionary and data.has("from_slot")
+
+	func _drop_data(_at: Vector2, data) -> void:
+		panel.unplace(str(data["graft"]))
+
+
+## Fond de la grille : reçoit aussi une greffe ramenée d'un emplacement.
+class Grid extends GridContainer:
+	var panel
+
+	func _can_drop_data(_at: Vector2, data) -> bool:
+		return data is Dictionary and data.has("from_slot")
+
+	func _drop_data(_at: Vector2, data) -> void:
+		panel.unplace(str(data["graft"]))
 
 
 func _ready() -> void:
@@ -93,29 +265,90 @@ func _ready() -> void:
 	offset_left = 16.0
 	offset_bottom = -16.0
 	grow_vertical = Control.GROW_DIRECTION_BEGIN
-	var sb := UiTheme.box(Color(UiTheme.PAPER, 0.94), Color(UiTheme.GOLD, 0.3), 1, 8)
-	for side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
-		sb.set_content_margin(side, 10)
-	add_theme_stylebox_override("panel", sb)
+	add_theme_stylebox_override("panel", UiTheme.cadre(false, Color(UiTheme.PAPER, 0.95), UiTheme.GOLD, 14.0))
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)
-	_title = Label.new()
+	var head := HBoxContainer.new()
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(head)
+	_title = Button.new()
+	_title.flat = true
+	_title.focus_mode = Control.FOCUS_NONE
+	_title.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_title.add_theme_font_override("font", UiTheme.font(true))
-	_title.add_theme_font_size_override("font_size", 17)
-	_title.add_theme_color_override("font_color", UiTheme.GOLD)
-	box.add_child(_title)
-	_list = VBoxContainer.new()
-	_list.add_theme_constant_override("separation", 4)
-	_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(_list)
+	_title.add_theme_font_size_override("font_size", 19)
+	for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		_title.add_theme_color_override(k, UiTheme.GOLD)
+	var flat := StyleBoxEmpty.new()
+	for k in ["normal", "hover", "pressed", "focus"]:
+		_title.add_theme_stylebox_override(k, flat)
+	_title.pressed.connect(func(): set_folded(not folded))
+	head.add_child(_title)
+	_count = Label.new()
+	_count.add_theme_font_size_override("font_size", 15)
+	_count.add_theme_color_override("font_color", DIM)
+	head.add_child(_count)
+	crown_view = CrownView.new()
+	crown_view.panel = self
+	box.add_child(crown_view)
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	box.add_child(_scroll)
+	_grid = Grid.new()
+	_grid.panel = self
+	_grid.columns = COLUMNS
+	_grid.add_theme_constant_override("h_separation", 2)
+	_grid.add_theme_constant_override("v_separation", 2)
+	_grid.mouse_filter = Control.MOUSE_FILTER_PASS
+	_scroll.add_child(_grid)
+	_detail = VBoxContainer.new()
+	_detail.add_theme_constant_override("separation", 1)
+	_detail.custom_minimum_size = Vector2(WIDTH, 0)
+	_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(_detail)
 	_hint = Label.new()
-	_hint.add_theme_font_size_override("font_size", 14)
+	_hint.add_theme_font_size_override("font_size", 15)
 	_hint.add_theme_color_override("font_color", DIM)
+	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hint.custom_minimum_size = Vector2(WIDTH, 0)
 	box.add_child(_hint)
 	Game.tree_changed.connect(refresh)
+	if ui != null and ui.has_signal("toggled"):
+		ui.toggled.connect(_on_tree_toggled)
+	_seen = _seen_slots()
 	refresh()
+
+
+func _process(delta: float) -> void:
+	if not is_visible_in_tree():
+		return
+	t += delta
+	# Seul un emplacement neuf (qui luit) demande un dessin à chaque image.
+	if _seen < Game.crown_size():
+		crown_view.queue_redraw()
+
+
+## Ouverture de l'arbre : les emplacements gagnés depuis la dernière visite luisent ;
+## à la fermeture, ils sont notés comme vus.
+func _on_tree_toggled(open: bool) -> void:
+	if open:
+		_seen = _seen_slots()
+		refresh()
+	else:
+		Game.flags[SEEN_FLAG] = Game.crown_size()
+		_seen = Game.crown_size()
+		held = ""
+		hover_slot = -1
+		hover_graft = ""
+
+
+## Emplacements déjà vus : ceux du départ tant que l'arbre n'a jamais été refermé.
+func _seen_slots() -> int:
+	return int(Game.flags.get(SEEN_FLAG, int(Content.crown().get("start", 2))))
 
 
 func _notification(what: int) -> void:
@@ -125,11 +358,31 @@ func _notification(what: int) -> void:
 		refresh()
 
 
+func set_folded(on: bool) -> void:
+	folded = on
+	refresh()
+
+
+func set_hover_slot(i: int) -> void:
+	if i == hover_slot:
+		return
+	hover_slot = i
+	_refresh_detail()
+	crown_view.queue_redraw()
+
+
+func set_hover_graft(id: String) -> void:
+	if id == hover_graft:
+		return
+	hover_graft = id
+	_refresh_detail()
+	for it in _grid.get_children():
+		it.queue_redraw()
+
+
 func select(id: String) -> void:
 	held = "" if held == id else id
 	refresh()
-	if held != "" and ui != null:
-		ui.panels.say("« %s » : clique un emplacement de greffe de l'arbre (anneau creux) pour l'y poser." % Content.grafts()[held]["name"])
 
 
 func begin_drag(id: String) -> void:
@@ -138,119 +391,182 @@ func begin_drag(id: String) -> void:
 	refresh()
 
 
-## Reconstruit la liste : une ligne par greffe possédée, dans l'ordre où elles ont été trouvées.
+## Aperçu glissé : le médaillon de la greffe.
+func drag_preview(id: String) -> Control:
+	var preview := Control.new()
+	var copy := Control.new()
+	copy.size = Vector2(32, 32)
+	copy.position = Vector2(-16, -16)
+	copy.draw.connect(func():
+		var g: Dictionary = Content.grafts().get(id, {})
+		copy.draw_circle(Vector2(16, 16), 15.0, SLOT_BG)
+		copy.draw_arc(Vector2(16, 16), 15.0, 0.0, TAU, 24, PLAN, 2.0, true)
+		GraftPickup.draw_shape(copy, str(g.get("shape", "feuille")), Vector2(16, 16), 9.0, Color(str(g.get("color", "#f2d06b")))))
+	preview.add_child(copy)
+	return preview
+
+
+## Reconstruit la grille (une case par greffe possédée, dans l'ordre où elles ont été trouvées),
+## la couronne et la fiche.
 func refresh() -> void:
-	if _list == null:
+	if _grid == null:
 		return
 	visible = not Game.graft_inventory.is_empty()
 	if held != "" and not Game.has_graft(held):
 		held = ""
+	var open: int = Game.crown_size()
+	_title.text = ("▸ " if folded else "▾ ") + "Couronne de greffes"
 	var free: int = Game.free_grafts().size()
-	_title.text = "Greffes : %d trouvée%s, %d à poser" % [Game.graft_inventory.size(), "s" if Game.graft_inventory.size() > 1 else "", free]
-	_hint.text = "Glisse une greffe sur un emplacement (anneau creux)." if held == "" else "Clique un emplacement pour poser la greffe choisie."
-	while _list.get_child_count() > Game.graft_inventory.size():
-		var last := _list.get_child(_list.get_child_count() - 1)
-		_list.remove_child(last)
+	_count.text = "%d trouvée%s" % [Game.graft_inventory.size(), "s" if Game.graft_inventory.size() > 1 else ""]
+	var count: int = Game.graft_inventory.size()
+	while _grid.get_child_count() > count:
+		var last := _grid.get_child(_grid.get_child_count() - 1)
+		_grid.remove_child(last)
 		last.queue_free()
-	while _list.get_child_count() < Game.graft_inventory.size():
+	while _grid.get_child_count() < count:
 		var it := Item.new()
 		it.panel = self
-		_list.add_child(it)
-	for i in Game.graft_inventory.size():
-		var it: Item = _list.get_child(i)
-		var id: String = Game.graft_inventory[i]
-		it.graft_id = id
-		var g: Dictionary = Content.grafts().get(id, {})
-		it.name_label.text = str(g.get("name", id))
-		var slot: int = Game.graft_slot(id)
-		if slot < 0:
-			it.place_label.text = "à poser"
-		elif Game.allocated.has(slot):
-			it.place_label.text = "posée : " + str(Game.tree.nodes[slot]["name"])
-		else:
-			it.place_label.text = "posée (emplacement pas encore appris)"
-		var selected := id == held
-		var box := UiTheme.box(Color(0.16, 0.14, 0.08, 0.95) if selected else Color(UiTheme.PAPER.lightened(0.04), 0.9), UiTheme.GOLD if selected else Color(UiTheme.GOLD, 0.18), 1, 6)
-		box.content_margin_left = 6
-		box.content_margin_right = 10
-		box.content_margin_top = 3
-		box.content_margin_bottom = 3
-		it.add_theme_stylebox_override("panel", box)
-		it.name_label.add_theme_color_override("font_color", UiTheme.GOLD if slot < 0 else UiTheme.INK)
-		it.icon.queue_redraw()
-	if ui != null:
-		ui._redraw_all()
-
-
-## Clic sur un emplacement de greffe de l'arbre : pose la greffe tenue, sinon retire celle qui y est.
-## Renvoie true si le clic a été pris en charge.
-func click_slot(id: int) -> bool:
-	var n: Dictionary = Game.tree.nodes[id]
-	if n["type"] != "graft":
-		return false
+		_grid.add_child(it)
+	for i in count:
+		var it: Item = _grid.get_child(i)
+		it.graft_id = Game.graft_inventory[i]
+		it.queue_redraw()
+	var rows := ceili(float(count) / COLUMNS)
+	_scroll.custom_minimum_size = Vector2(COLUMNS * (CELL + 2.0), minf(rows, ROWS_VISIBLE) * (CELL + 2.0))
+	_scroll.visible = not folded
+	_detail.visible = not folded
 	if held != "":
-		return drop_on(id, held)
-	var current := Game.graft_of(id)
+		_hint.text = "Clique un emplacement de la couronne pour y poser la greffe."
+	elif Game.placed_grafts().size() < open and free > 0:
+		_hint.text = "Glisse une greffe dans un emplacement libre de la couronne."
+	else:
+		_hint.text = "Clic sur un emplacement : retire sa greffe."
+	crown_view.queue_redraw()
+	_refresh_detail()
+
+
+## Fiche du bas : la greffe tenue, survolée ou posée dans l'emplacement survolé, ses effets, et
+## l'aperçu des statistiques si on la posait (ou la retirait).
+func _refresh_detail() -> void:
+	if _detail == null:
+		return
+	for c in _detail.get_children():
+		_detail.remove_child(c)
+		c.queue_free()
+	_hint.visible = false
+	if folded:
+		return
+	# La consigne n'apparaît que quand la fiche est vide (rien de survolé ni de tenu).
+	_hint.visible = true
+	var open: int = Game.crown_size()
+	if hover_slot >= open:
+		_hint.visible = false
+		_line("Emplacement fermé", 16, DIM, true)
+		_line("Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien.", 15, DIM)
+		return
+	var id := held if held != "" else hover_graft
+	if id == "" and hover_slot >= 0:
+		id = Game.graft_of(hover_slot)
+	var g: Dictionary = Content.grafts().get(id, {})
+	if g.is_empty():
+		return
+	if held == "":
+		_hint.visible = false
+	_line(str(g.get("name", id)), 17, UiTheme.GOLD, true)
+	for e in g.get("effects", []):
+		var text := Effects.describe(e)
+		if text != "":
+			_line("• " + text, 15, UiTheme.INK)
+	var planner = ui.panels.planner if ui != null and ui.panels != null else null
+	if planner == null:
+		return
+	var slot := Game.graft_slot(id)
+	var changes: Array = []
+	var title := ""
+	if held != "" and hover_slot >= 0 and hover_slot < open and hover_slot != slot:
+		changes = planner.preview_graft(hover_slot, id)
+		title = "Posée ici :"
+		var current := Game.graft_of(hover_slot)
+		if current != "":
+			_line("Remplace « %s »." % Content.grafts()[current]["name"], 15, DIM)
+	elif slot < 0 and Game.first_free_slot() >= 0:
+		changes = planner.preview_graft(Game.first_free_slot(), id)
+		title = "Posée :"
+	elif slot >= 0 and held == "":
+		changes = planner.preview_graft(-1, id)
+		title = "Retirée :"
+	if not changes.is_empty():
+		_line(title, 15, DIM)
+		for c in changes.slice(0, 4):
+			_line("   " + str(c["text"]), 15, PLAN)
+
+
+func _line(text: String, fs: int, col: Color, bold := false) -> void:
+	var l := Label.new()
+	l.text = text
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(WIDTH, 0)
+	l.add_theme_font_size_override("font_size", fs)
+	l.add_theme_color_override("font_color", col)
+	if bold:
+		l.add_theme_font_override("font", UiTheme.font(true))
+	_detail.add_child(l)
+
+
+## Clic sur un emplacement de la couronne : pose la greffe tenue ; sinon (ou clic droit) retire
+## celle qui y est. Renvoie true si le clic a été pris en charge.
+func click_slot(i: int, remove := false) -> bool:
+	if i < 0 or i >= Game.crown_size():
+		return false
+	if held != "" and not remove:
+		return drop_on(i, held)
+	var current := Game.graft_of(i)
 	if current == "":
-		if Game.free_grafts().is_empty():
-			ui.panels.say("Emplacement vide : les greffes se trouvent dans le monde (autels, élites, boss).")
-		else:
-			ui.panels.say("Emplacement vide : glisse une greffe de l'inventaire (en bas à gauche) jusqu'ici.")
 		return true
-	Game.set_graft(id, "")
-	ui.panels.say("« %s » retirée : elle revient dans l'inventaire." % Content.grafts()[current]["name"])
-	_saved()
+	Game.set_graft(i, "")
+	_changed()
 	return true
 
 
-## Pose la greffe sur le nœud visé (glisser-déposer ou clic). Hors d'un emplacement, rien ne change.
-func drop_on(id: int, graft: String) -> bool:
+## Pose la greffe dans l'emplacement visé (glisser-déposer ou clic). Hors d'un emplacement ouvert,
+## rien ne change.
+func drop_on(i: int, graft: String) -> bool:
 	held = ""
-	if id < 0 or Game.tree.nodes[id]["type"] != "graft":
-		ui.panels.say("Dépose la greffe sur un emplacement de greffe (anneau creux).")
+	if i < 0 or i >= Game.crown_size():
 		refresh()
 		return false
-	var ok: bool = Game.place_graft(id, graft)
+	var ok: bool = Game.place_graft(i, graft)
 	if ok:
-		var where: String = Game.tree.nodes[id]["name"]
-		var name_of: String = Content.grafts()[graft]["name"]
-		if Game.allocated.has(id):
-			ui.panels.say("« %s » posée dans « %s »." % [name_of, where])
-		else:
-			ui.panels.say("« %s » posée : elle agira quand « %s » sera appris." % [name_of, where])
 		Sfx.play("noeud")
-		_saved()
+		_changed()
 	refresh()
 	return ok
 
 
-func _saved() -> void:
+## Double-clic sur une greffe : posée au premier emplacement libre (rien s'il n'y en a pas).
+func quick_place(graft: String) -> bool:
+	held = ""
+	if Game.graft_slot(graft) >= 0:
+		refresh()
+		return false
+	var i := Game.first_free_slot()
+	if i < 0:
+		refresh()
+		return false
+	return drop_on(i, graft)
+
+
+## Retire une greffe de la couronne (clic droit sur la grille, ou ramenée d'un emplacement).
+func unplace(graft: String) -> bool:
+	held = ""
+	var ok: bool = Game.unplace_graft(graft)
+	if ok:
+		_changed()
+	refresh()
+	return ok
+
+
+func _changed() -> void:
 	var scene := get_tree().current_scene if is_inside_tree() else null
 	if scene != null and scene.has_method("request_autosave"):
 		scene.request_autosave()
-
-
-## Lignes ajoutées à l'infobulle d'un emplacement de greffe quand une greffe est tenue :
-## ses effets et l'aperçu des statistiques avant → après.
-func tooltip_lines(n: Dictionary) -> Array:
-	var lines: Array = []
-	if held == "" or n["type"] != "graft":
-		return lines
-	var g: Dictionary = Content.grafts().get(held, {})
-	lines.append(["Poser « %s » ici :" % g.get("name", held), 14, PLAN])
-	for e in g.get("effects", []):
-		var line := Effects.describe(e)
-		if line != "":
-			lines.append(["   " + line, 15, PLAN])
-	var owned: bool = Game.allocated.has(n["id"])
-	var changes: Array = ui.panels.planner.preview_graft(n["id"], held)
-	if not changes.is_empty():
-		lines.append(["Statistiques" + ("" if owned else ", une fois l'emplacement appris") + " :", 15, DIM])
-		for c in changes:
-			lines.append(["   " + c["text"], 14, PLAN])
-	elif not owned:
-		lines.append(["Elle agira quand l'emplacement sera appris.", 15, DIM])
-	var current := Game.graft_of(n["id"])
-	if current != "" and current != held:
-		lines.append(["Remplace « %s », qui revient dans l'inventaire." % Content.grafts()[current]["name"], 15, DIM])
-	return lines

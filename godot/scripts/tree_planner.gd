@@ -24,7 +24,7 @@ const FLAG := "plan_arbre"
 const UNDO_MAX := 50
 const KIND_WORDS := {
 	"root": "origine graine", "small": "noeud", "notable": "notable", "keystone": "cle",
-	"skill": "competence", "mutation": "mutation", "mastery": "maitrise", "graft": "greffe emplacement", "withered": "fletri cendre",
+	"skill": "competence", "mutation": "mutation", "mastery": "maitrise", "withered": "fletri cendre",
 	"attack": "attaque",
 }
 const ACCENTS := {
@@ -257,8 +257,8 @@ func _touches(id: int, set: Dictionary) -> bool:
 ## Statistiques, compétences et nœuds clés qu'aurait le personnage en ajoutant les nœuds « add »
 ## et en retirant « remove ». Le calcul passe par un moteur d'effets à part : la partie
 ## (Game.allocated, Game.stats, Game.points…) n'est pas touchée.
-## « grafts_override » (uid -> greffe) remplace les greffes posées (aperçu d'une greffe).
-func simulate(add: Array = [], remove: Array = [], grafts_override = null) -> Dictionary:
+## « crown_override » (liste de greffes) remplace la couronne de greffes (aperçu d'une greffe).
+func simulate(add: Array = [], remove: Array = [], crown_override = null) -> Dictionary:
 	var set: Dictionary = game.allocated.duplicate()
 	for id in add:
 		set[id] = true
@@ -273,7 +273,7 @@ func simulate(add: Array = [], remove: Array = [], grafts_override = null) -> Di
 			keys[n["key"]] = true
 	# Choix des maîtrises, greffes, grappes complètes et résonance comptent aussi.
 	if game.has_method("effect_sources"):
-		nodes = game.effect_sources(set) if grafts_override == null else game.effect_sources(set, grafts_override)
+		nodes = game.effect_sources(set) if crown_override == null else game.effect_sources(set, crown_override)
 	# Attaque imposée pour l'essai (« --attack= ») : comptée comme dans Game.recompute.
 	if "test_attack" in game and not game.test_attack.is_empty():
 		nodes = nodes + [{"id": "test_attack", "ring": 99, "effects": game.test_attack}]
@@ -292,19 +292,20 @@ func preview(add: Array = [], remove: Array = []) -> Array:
 	return diff(game.effects.stats, sim["stats"]) + AttackScript.diff(game.effects.attack_state(), sim["attack"])
 
 
-## Différences de statistiques si la greffe « graft » était posée dans l'emplacement « slot »
-## (retirée d'un autre emplacement si besoin). Un emplacement pas encore appris est compté comme appris.
+## Différences de statistiques (et de l'attaque de base) si la greffe « graft » était posée dans
+## l'emplacement « slot » de la couronne (retirée de son emplacement si besoin). slot = -1 : si elle
+## était retirée de la couronne.
 func preview_graft(slot: int, graft: String) -> Array:
-	var placed: Dictionary = game.grafts.duplicate()
-	for uid in placed.keys():
-		if placed[uid] == graft:
-			placed.erase(uid)
-	placed[game.tree.nodes[slot]["uid"]] = graft
-	var add: Array = [] if game.allocated.has(slot) else [slot]
-	var before: Dictionary = game.effects.stats if add.is_empty() else simulate(add)["stats"]
-	var attack_before: Dictionary = game.effects.attack_state() if add.is_empty() else simulate(add)["attack"]
-	var after := simulate(add, [], placed)
-	return diff(before, after["stats"]) + AttackScript.diff(attack_before, after["attack"])
+	var placed: Array = game.crown.duplicate()
+	var from := placed.find(graft)
+	if from >= 0:
+		placed[from] = ""
+	if slot >= 0:
+		while placed.size() <= slot:
+			placed.append("")
+		placed[slot] = graft
+	var after := simulate([], [], placed)
+	return diff(game.effects.stats, after["stats"]) + AttackScript.diff(game.effects.attack_state(), after["attack"])
 
 
 ## Liste des statistiques qui changent entre deux jeux de valeurs, dans l'ordre de stats.json :
