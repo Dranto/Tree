@@ -9,6 +9,8 @@ signal node_allocated(node: Dictionary)
 signal points_granted(n: int, source: String)
 ## Une greffe vient d'entrer dans l'inventaire (voir give_graft).
 signal graft_found(id: String)
+## Le build actif vient de changer (switch_build) : index de l'emplacement chargé.
+signal build_switched(index: int)
 
 const SkillTree = preload("res://scripts/skill_tree.gd")
 const Content = preload("res://scripts/content.gd")
@@ -36,6 +38,16 @@ var crown: Array = []
 var graft_inventory: Array = []
 ## Greffes tombées au sol et pas encore ramassées (identifiant -> true) : elles ne sont plus tirées.
 var grafts_on_ground: Dictionary = {}
+## Builds enregistrés (jalon 11 I) : Content.respec()["slots"] emplacements. Chacun est vide ({})
+## ou {"name", "allocated": [uid], "choices": {uid: choix}, "crown": [greffe ou ""], "plan": "uid,uid"}.
+## Le build actif est l'état vivant (allocated, choices, crown, plan) : son emplacement n'est mis à
+## jour qu'au moment de basculer ou de sauvegarder (store_active_build). Les points, l'inventaire de
+## greffes et les drapeaux sont communs à tous les builds.
+var builds: Array = []
+var active_build := 0
+## Le joueur se tient dans le cercle d'un sanctuaire ravivé (posé par sanctuary.gd) : oublier et
+## changer de build y sont gratuits (data/respec.json, « free_at_sanctuary »).
+var at_sanctuary := false
 ## Libellés des sources de points hors niveau (annonce du HUD).
 const POINT_SOURCES := {
 	"boss": "Boss vaincu", "coeur": "Cœur purifié", "autel": "Autel ravivé",
@@ -95,6 +107,9 @@ func reset() -> void:
 	crown = []
 	graft_inventory = []
 	grafts_on_ground = {}
+	builds = []
+	active_build = 0
+	at_sanctuary = false
 	recompute()
 	tree_changed.emit()
 
@@ -229,6 +244,192 @@ func unplace_graft(graft_id: String) -> bool:
 	return slot >= 0 and set_graft(slot, "")
 
 
+# --- Builds enregistrés ---
+
+## Nombre d'emplacements de build (3 à 5, data/respec.json).
+func build_slots() -> int:
+	return clampi(int(Content.respec().get("slots", 4)), 1, 8)
+
+
+func _fit_builds() -> void:
+	while builds.size() < build_slots():
+		builds.append({})
+	if builds.size() > build_slots():
+		builds.resize(build_slots())
+	active_build = clampi(active_build, 0, builds.size() - 1)
+
+
+## Nom affiché d'un emplacement (« Build 2 » tant qu'on ne l'a pas renommé).
+func build_name(i: int) -> String:
+	_fit_builds()
+	if i < 0 or i >= builds.size():
+		return ""
+	var nm := str(builds[i].get("name", "")).strip_edges()
+	return nm if nm != "" else "Build %d" % (i + 1)
+
+
+## L'état vivant, sous la forme d'un emplacement de build.
+func capture_build() -> Dictionary:
+	_fit_builds()
+	var out := {
+		"allocated": allocated_uids(), "choices": choices.duplicate(), "crown": crown.duplicate(),
+		"plan": str(flags.get("plan_arbre", "")),
+	}
+	var nm := str(builds[active_build].get("name", ""))
+	if nm != "":
+		out["name"] = nm
+	return out
+
+
+## Recopie l'état vivant dans l'emplacement du build actif (avant de basculer ou de sauvegarder).
+func store_active_build() -> void:
+	_fit_builds()
+	builds[active_build] = capture_build()
+
+
+## Vrai si l'emplacement n'a jamais reçu de build.
+func build_empty(i: int) -> bool:
+	_fit_builds()
+	return i != active_build and (i < 0 or i >= builds.size() or not builds[i].has("allocated"))
+
+
+## Résumé d'un emplacement pour le panneau : {"name", "active", "empty", "nodes", "planned", "grafts"}.
+func build_info(i: int) -> Dictionary:
+	_fit_builds()
+	var b: Dictionary = capture_build() if i == active_build else builds[i]
+	var planned: int = str(b.get("plan", "")).split(",", false).size()
+	return {
+		"name": build_name(i), "active": i == active_build, "empty": build_empty(i),
+		"nodes": (b.get("allocated", []) as Array).size(), "planned": planned,
+		"grafts": (b.get("crown", []) as Array).filter(func(g): return str(g) != "").size(),
+	}
+
+
+func rename_build(i: int, nm: String) -> void:
+	_fit_builds()
+	if i < 0 or i >= builds.size():
+		return
+	nm = nm.strip_edges().left(24)
+	if i == active_build and not builds[i].has("allocated"):
+		builds[i] = capture_build()
+	if nm == "" or nm == "Build %d" % (i + 1):
+		builds[i].erase("name")
+	else:
+		builds[i]["name"] = nm
+	tree_changed.emit()
+
+
+## Enregistre le build actif (avec son plan) dans un autre emplacement, sous le nom de celui-ci.
+func copy_build_to(i: int) -> bool:
+	_fit_builds()
+	if i < 0 or i >= builds.size() or i == active_build:
+		return false
+	var b := capture_build()
+	b.erase("name")
+	if builds[i].has("name"):
+		b["name"] = builds[i]["name"]
+	builds[i] = b
+	tree_changed.emit()
+	return true
+
+
+## Vide un emplacement qui n'est pas le build actif.
+func clear_build(i: int) -> bool:
+	_fit_builds()
+	if i < 0 or i >= builds.size() or i == active_build:
+		return false
+	builds[i] = {"name": builds[i]["name"]} if builds[i].has("name") else {}
+	tree_changed.emit()
+	return true
+
+
+## Essence que coûte la bascule vers l'emplacement i : rien au sanctuaire ; ailleurs, ce que
+## coûterait l'oubli des nœuds appris qui ne sont pas dans ce build.
+func switch_cost(i: int) -> int:
+	_fit_builds()
+	if i == active_build or i < 0 or i >= builds.size():
+		return 0
+	var keep := {}
+	for uid in builds[i].get("allocated", []):
+		keep[str(uid)] = true
+	var cost := 0
+	for id in allocated:
+		if id != 0 and not keep.has(tree.nodes[id]["uid"]):
+			cost += refund_cost(id)
+	return cost
+
+
+## Bascule vers le build de l'emplacement i (un emplacement vide : un build neuf, sans nœud appris,
+## qui garde la couronne). Les points sont communs : si le build en demande plus que la partie n'en a,
+## les nœuds en trop (les plus loin de la graine) passent dans son plan. Renvoie false si l'essence
+## ne suffit pas (switch_cost).
+func switch_build(i: int) -> bool:
+	_fit_builds()
+	if i < 0 or i >= builds.size() or i == active_build:
+		return false
+	var cost := switch_cost(i)
+	if cost > essence():
+		return false
+	store_active_build()
+	xp = maxf(0.0, xp - cost)
+	var total := points + allocated.size() - 1
+	var target: Dictionary = builds[i]
+	var fresh := not target.has("allocated")
+	var wanted := {}
+	for uid in target.get("allocated", []):
+		var id: int = tree.id_for_uid(str(uid))
+		if id > 0:
+			wanted[id] = true
+	var planned: Array = []
+	for uid in str(target.get("plan", "")).split(",", false):
+		var id: int = tree.id_for_uid(uid)
+		if id > 0 and not wanted.has(id):
+			planned.append(id)
+	# Parcours depuis la graine, limité au build : les nœuds proches d'abord, tant qu'il reste des points.
+	var kept := {0: true}
+	var over: Array = []
+	var queue: Array = [0]
+	var head := 0
+	while head < queue.size():
+		var u: int = queue[head]
+		head += 1
+		var next: Array = tree.nodes[u]["neighbors"].duplicate()
+		next.sort()
+		for v in next:
+			if wanted.has(v) and not kept.has(v) and not over.has(v):
+				if kept.size() - 1 < total:
+					kept[v] = true
+				else:
+					over.append(v)
+				queue.append(v)
+	allocated = kept
+	points = total - (kept.size() - 1)
+	active_build = i
+	var plan_uids := PackedStringArray()
+	for id in over + planned:
+		plan_uids.append(tree.nodes[id]["uid"])
+	if plan_uids.is_empty():
+		flags.erase("plan_arbre")
+	else:
+		flags["plan_arbre"] = ",".join(plan_uids)
+	var keep_crown: Array = crown.duplicate()
+	restore_extras(target.get("choices", {}), keep_crown if fresh else target.get("crown", []), graft_inventory.duplicate())
+	builds[i] = capture_build()
+	build_switched.emit(i)
+	return true
+
+
+## Recharge les builds d'une sauvegarde (après les nœuds, les choix et la couronne du build actif).
+func restore_builds(saved, active) -> void:
+	builds = []
+	if saved is Array:
+		for b in saved:
+			builds.append(b.duplicate(true) if b is Dictionary else {})
+	active_build = int(active) if (active is int or active is float) else 0
+	_fit_builds()
+	builds[active_build] = capture_build()
+
+
 ## Recharge les nœuds appris à partir de leurs identifiants stables.
 ## Les nœuds disparus de l'arbre ou qui ne sont plus reliés à la graine sont
 ## ignorés et leur point est rendu. Renvoie le nombre de points rendus.
@@ -329,9 +530,36 @@ func can_refund(id: int) -> bool:
 	return seen.size() == allocated.size() - 1
 
 
-func refund(id: int) -> bool:
+## Essence (expérience du niveau en cours) que coûte l'oubli d'un nœud : 0 près de la graine
+## (anneaux 0 à « free_rings ») et au sanctuaire, puis une part de la barre du niveau qui grandit
+## avec l'anneau (data/respec.json). « anywhere » : le coût hors sanctuaire, même au sanctuaire.
+func refund_cost(id: int, anywhere := false) -> int:
+	if id <= 0 or id >= tree.nodes.size():
+		return 0
+	var r := Content.respec()
+	if not anywhere and at_sanctuary and bool(r.get("free_at_sanctuary", true)):
+		return 0
+	var beyond := int(tree.nodes[id]["ring"]) - int(r.get("free_rings", 3))
+	if beyond <= 0:
+		return 0
+	var part := minf(float(r.get("cost_per_ring", 0.04)) * beyond, float(r.get("cost_max", 0.5)))
+	return ceili(part * xp_to_next())
+
+
+## Essence disponible pour oublier : l'expérience du niveau en cours (on ne perd jamais un niveau).
+func essence() -> int:
+	return int(floor(xp))
+
+
+## Oublie un nœud et rend son point. Hors de la graine et du sanctuaire, il faut payer refund_cost en
+## essence (refusé s'il n'y en a pas assez). « free » : sans payer (annulation d'un apprentissage).
+func refund(id: int, free := false) -> bool:
 	if not can_refund(id):
 		return false
+	var cost := 0 if free else refund_cost(id)
+	if cost > essence():
+		return false
+	xp = maxf(0.0, xp - cost)
 	allocated.erase(id)
 	points += 1
 	# Une mutation oubliée se rechoisit ; une maîtrise garde son dernier choix.

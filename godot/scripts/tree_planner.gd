@@ -206,7 +206,8 @@ func undo() -> bool:
 			ids.reverse()
 			var done: Array = []
 			for id in ids:
-				if game.refund(id):
+				# Défaire un apprentissage ne coûte pas d'essence (voir clear_undo).
+				if game.refund(id, true):
 					done.append(id)
 				else:
 					break
@@ -230,6 +231,13 @@ func undo() -> bool:
 	_expected = game.allocated.size()
 	sync()
 	return true
+
+
+## Vide la pile d'annulation (fermeture de l'arbre, changement de build) : défaire un apprentissage
+## est gratuit, mais seulement tant que l'arbre reste ouvert.
+func clear_undo() -> void:
+	_undo.clear()
+	_expected = game.allocated.size()
 
 
 func _push(entry: Dictionary) -> void:

@@ -69,6 +69,11 @@ static func crown() -> Dictionary:
 	return _load("crown")
 
 
+## Oubli de nœuds et builds enregistrés (data/respec.json, voir Game.refund_cost).
+static func respec() -> Dictionary:
+	return _load("respec")
+
+
 ## Greffes : objets trouvés dans le monde, à poser dans la couronne de greffes (Game.crown).
 ## Les clés qui commencent par « _ » (commentaires) sont écartées.
 static func grafts() -> Dictionary:
@@ -195,9 +200,15 @@ static func _load(name: String) -> Dictionary:
 static func validate(keystones_per_branch := -1) -> PackedStringArray:
 	_cache = {}
 	var errors := PackedStringArray()
-	for name in ["tree", "stats", "skills", "conditions", "grafts", "attack", "feel", "crown"]:
+	for name in ["tree", "stats", "skills", "conditions", "grafts", "attack", "feel", "crown", "respec"]:
 		if _load(name).is_empty():
 			errors.append("%s.json est absent, vide ou illisible" % name)
+	var rs := _load("respec")
+	if not rs.is_empty():
+		if int(rs.get("slots", 0)) < 3 or int(rs.get("slots", 0)) > 5:
+			errors.append("respec.json : « slots » doit valoir de 3 à 5")
+		if float(rs.get("cost_per_ring", 0.0)) < 0.0 or float(rs.get("cost_max", 0.0)) < 0.0 or int(rs.get("free_rings", 0)) < 0:
+			errors.append("respec.json : coûts et anneaux gratuits positifs")
 	# Chargé à l'exécution : attack.gd lit lui-même ce fichier (pas de dépendance circulaire).
 	errors.append_array(load("res://scripts/attack.gd").validate())
 	var syn = _load("synergies").get("synergies", {})
