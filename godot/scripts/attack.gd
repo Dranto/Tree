@@ -829,6 +829,8 @@ static func first_hit(main, m: Dictionary, e, dmg: float, at: Vector2, dir: Vect
 	var defs := mods()
 	if dir.length() < 0.1:
 		dir = Vector2.RIGHT
+	# Part des dégâts des versions communes (réglage de l'équilibre : attack.json › first_hit.factor).
+	dmg *= float(data().get("first_hit", {}).get("factor", 1.0))
 	if m.has("fourche") and kind in ["lob", "melee"]:
 		_spray(main, m, at, dir, int(round(float(m["fourche"]))), dmg * float(defs.get("fourche", {}).get("factor", 0.6)), branch, e)
 	if m.has("fourche") and kind == "beam":

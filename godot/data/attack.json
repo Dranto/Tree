@@ -2,6 +2,10 @@
   "_": "Attaque de base du Porte-Graine (scripts/attack.gd). Format décrit dans data/README.md, « L'attaque de base ».",
   "start": "graine",
   "melee_arc_per_projectile": 0.25,
+  "first_hit": {
+    "_": "Versions communes des modificateurs au premier ennemi touché (attack.gd › first_hit) : factor multiplie leurs dégâts (fourche en éclats, chaînes de ricochet et de saut, touffe de traînée, rayons de réfraction, secousse hors corps à corps).",
+    "factor": 1.0
+  },
   "echo": {
     "_": "Formes en écho : chaque forme acquise en plus de la principale tire aussi, à sa propre cadence. damage : part de ses dégâts (1 = plein bonus) ; offset : décalage de son premier tir (part de sa recharge) ; retry : sans ennemi à sa portée, délai avant de chercher de nouveau (s). Une forme peut écrire « echo_damage ».",
     "damage": 1.0,
