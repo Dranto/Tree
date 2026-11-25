@@ -74,16 +74,16 @@ func attach(steam) -> bool:
 
 func _start(steam) -> bool:
 	# Lu par l'API Steam au démarrage, comme steam_appid.txt (lancement hors du client Steam).
-	OS.set_environment("SteamAppId", str(APP_ID))
-	OS.set_environment("SteamGameId", str(APP_ID))
-	var res = steam.steamInitEx() if steam.has_method("steamInitEx") else steam.steamInit()
+	OS.set_environment("SteamAppId", str(APP_ID))  # i18n: non
+	OS.set_environment("SteamGameId", str(APP_ID))  # i18n: non
+	var res = steam.steamInitEx() if steam.has_method("steamInitEx") else steam.steamInit()  # i18n: non
 	var ok := false
 	if res is Dictionary:
 		ok = int(res.get("status", 1)) == 0
-		status = "actif" if ok else "refusé : %s" % str(res.get("verbal", res))
+		status = "actif" if ok else "refusé : %s" % str(res.get("verbal", res))  # i18n: non
 	else:
 		ok = bool(res)
-		status = "actif" if ok else "refusé"
+		status = "actif" if ok else "refusé"  # i18n: non
 	if not ok:
 		print("Steam : %s (le jeu continue sans Steam)." % status)
 		set_process(false)
@@ -146,7 +146,7 @@ func set_region(region: String) -> void:
 		return
 	# Jetons de steam/rich_presence.vdf : « #Explore » affiche « {#Region_%region%} ».
 	_steam.setRichPresence("region", region)
-	_steam.setRichPresence("steam_display", "#Explore")
+	_steam.setRichPresence("steam_display", "#Explore")  # i18n: non
 
 
 # --- Steam Cloud ---
@@ -236,7 +236,7 @@ static func detect_deck(steam = null) -> bool:
 		return true
 	if steam == null and Engine.has_singleton("Steam"):
 		steam = Engine.get_singleton("Steam")
-	return steam != null and steam.has_method("isSteamRunningOnSteamDeck") and bool(steam.isSteamRunningOnSteamDeck())
+	return steam != null and steam.has_method("isSteamRunningOnSteamDeck") and bool(steam.isSteamRunningOnSteamDeck())  # i18n: non
 
 
 func is_deck() -> bool:
@@ -278,7 +278,7 @@ func _on_text_dismissed(submitted = false, text = null, _app_id = null) -> void:
 	_text_callback = Callable()
 	if not bool(submitted) or not cb.is_valid():
 		return
-	if text == null and _steam != null and _steam.has_method("getEnteredGamepadTextInput"):
+	if text == null and _steam != null and _steam.has_method("getEnteredGamepadTextInput"):  # i18n: non
 		text = _steam.getEnteredGamepadTextInput()
 	if text is Dictionary:
 		text = text.get("text", "")

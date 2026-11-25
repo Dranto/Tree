@@ -136,7 +136,7 @@ func _row(i: int) -> Control:
 	_names.append(name_edit)
 	head.add_child(name_edit)
 	if SteamBridge.text_input_available():
-		_button(head, "Renommer", func(): ask_name(i))
+		_button(head, Loc.key("Renommer"), func(): ask_name(i))
 	if info["active"]:
 		var tag := Label.new()
 		tag.text = "actif"
@@ -178,7 +178,7 @@ func _button(parent: Node, text: String, action: Callable) -> Button:
 
 ## Renommer à la manette : clavier virtuel plein écran de Steam, le nom est pris à la validation.
 func ask_name(i: int) -> bool:
-	return SteamBridge.ask_text("Nom du build", Game.build_name(i), 24, func(t: String):
+	return SteamBridge.ask_text(tr("Nom du build"), Game.build_name(i), 24, func(t: String):
 		_rename(i, t, null)
 		refresh())
 
