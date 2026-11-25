@@ -22,6 +22,11 @@ const OUTLINE := 5
 const HALO := Color(0.055, 0.04, 0.025, 0.88)
 ## Taille minimale des textes du HUD (pixels de la vue de base 1600 x 900 ; 12 px à 1280 x 720).
 const MIN_HUD_SIZE := 15
+## Taille minimale lisible d'un texte, en pixels de l'écran réel : 12 px (9 pt, le minimum demandé par Valve sur le
+## Steam Deck, 1280 x 800). Voir legible().
+const MIN_TEXT_PX := 12.0
+## Taille de la vue de base (project.godot) : le jeu est réduit ou agrandi à la fenêtre (mode « canvas_items »).
+const BASE_VIEW := Vector2(1600.0, 900.0)
 const FONT_SERIF := "res://assets/fonts/CormorantGaramond-Herbier.ttf"
 ## Graisses : texte courant en demi-gras (plus lisible en petit), « gras » franc, titres plus fins.
 const WEIGHT_REGULAR := 600
@@ -263,13 +268,32 @@ static func refresh_access(on: bool) -> void:
 	FILET = FILET_CONTRASTE if on else FILET_NORMAL
 
 
-## Taille de texte mise à l'échelle choisie dans les options (Settings.text_scale).
+## Réduction de la vue de base à la fenêtre (1 à 1600 x 900 et au-delà de 1600 x 900, 0,8 à 1280 x 720 ou 1280 x 800).
+static func window_scale() -> float:
+	var w := DisplayServer.window_get_size()
+	if w.x <= 0 or w.y <= 0:
+		return 1.0
+	return minf(1.0, minf(w.x / BASE_VIEW.x, w.y / BASE_VIEW.y))
+
+
+## Taille de police (vue de base) relevée au besoin pour que le texte garde MIN_TEXT_PX pixels à l'écran : sans
+## effet à 1600 x 900 et plus, 15 au lieu de 13 ou 14 sur un petit écran (Steam Deck, 1280 x 720).
+static func legible(size: int) -> int:
+	return legible_at(size, window_scale())
+
+
+## legible() pour une réduction `k` donnée de la vue de base à la fenêtre.
+static func legible_at(size: int, k: float) -> int:
+	return maxi(size, ceili(MIN_TEXT_PX / k - 0.001))
+
+
+## Taille de texte mise à l'échelle choisie dans les options (Settings.text_scale), jamais sous la taille lisible.
 static func fs(size: int) -> int:
 	var k := 1.0
 	var settings = Engine.get_main_loop().root.get_node_or_null("Settings") if Engine.get_main_loop() is SceneTree else null
 	if settings != null:
 		k = settings.text_scale
-	return roundi(size * k)
+	return legible(roundi(size * k))
 
 
 static func make() -> Theme:

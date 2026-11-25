@@ -23,12 +23,13 @@ func begin(screen: String) -> void:
 ## un texte non requis qui est entièrement hors de l'écran n'est pas un défaut (nœud lointain).
 ## `color` : couleur du texte, pour le contrôle du contraste (alpha 0 : inconnue, pas de contrôle) ;
 ## `halo` : le texte a un halo sombre (contour), lisible sur tout fond.
-func text(screen: String, rect: Rect2, label: String, layer := "", required := false, color := Color(0, 0, 0, 0), halo := false) -> void:
+## `fs` : taille de la police (repère de l'écran, 0 : inconnue), pour le contrôle de la taille minimale lisible.
+func text(screen: String, rect: Rect2, label: String, layer := "", required := false, color := Color(0, 0, 0, 0), halo := false, fs := 0) -> void:
 	if not enabled:
 		return
 	if not screens.has(screen):
 		screens[screen] = []
-	screens[screen].append({"rect": rect, "label": label, "layer": layer, "required": required, "color": color, "halo": halo})
+	screens[screen].append({"rect": rect, "label": label, "layer": layer, "required": required, "color": color, "halo": halo, "fs": fs})
 
 
 ## Rectangle réel d'un draw_string (selon l'alignement), transformé par `xform` si l'écran
@@ -44,7 +45,7 @@ func text_at(screen: String, font: Font, pos: Vector2, s: String, align: int, wi
 		elif align == HORIZONTAL_ALIGNMENT_RIGHT:
 			x += width - sz.x
 	var r := Rect2(x, pos.y - font.get_ascent(fs), sz.x, sz.y)
-	text(screen, xform * r, s, layer, required)
+	text(screen, xform * r, s, layer, required, Color(0, 0, 0, 0), false, roundi(fs * xform.get_scale().y))
 
 
 ## draw_string + déclaration, pour les écrans dessinés à la main.
@@ -67,19 +68,23 @@ func scan_controls(screen: String, root: Node) -> void:
 		var s := ""
 		var col := Color(0, 0, 0, 0)
 		var halo := false
+		var fs := 0
 		if ctl is Label:
 			s = ctl.atr((ctl as Label).text)
+			fs = ctl.get_theme_font_size("font_size", "Label")
 			col = ctl.get_theme_color("font_color", "Label")
 			halo = ctl.get_theme_constant("outline_size", "Label") >= 3 and ctl.get_theme_color("font_outline_color", "Label").a > 0.5
 		elif ctl is Button:
 			s = ctl.atr((ctl as Button).text)
 			var b := ctl as Button
+			fs = ctl.get_theme_font_size("font_size", ctl.get_class())
 			var state := "font_disabled_color" if b.disabled else ("font_focus_color" if b.has_focus() else "font_color")
 			col = ctl.get_theme_color(state, ctl.get_class())
 			if b.disabled:
 				col = Color(0, 0, 0, 0)   # un bouton grisé est volontairement terne
 		elif ctl is RichTextLabel:
 			s = (ctl as RichTextLabel).get_parsed_text()
+			fs = ctl.get_theme_font_size("normal_font_size", "RichTextLabel")
 		if s != "":
 			# Un texte dans une zone qui défile n'est audité que pour sa partie visible.
 			var r := ctl.get_global_rect()
@@ -91,7 +96,7 @@ func scan_controls(screen: String, root: Node) -> void:
 			if r.size.x < 1.0 or r.size.y < 1.0:
 				continue
 			col.a *= _alpha(ctl)
-			text(screen, r, s, "controles", false, col, halo)
+			text(screen, r, s, "controles", false, col, halo, fs)
 
 
 ## Renvoie les défauts de l'écran : liste de {"key", "msg"}. La clé est stable d'une exécution
@@ -123,6 +128,27 @@ func check(screen: String, bounds: Rect2, strict := true) -> Array:
 				names.sort()
 				issues.append({"key": "%s|chevauchement|%s|%s" % [screen, names[0], names[1]],
 					"msg": "« %s » recouvre « %s » (%d×%d px)" % [a["label"], b["label"], inter.size.x, inter.size.y]})
+	return issues
+
+
+## Taille minimale lisible d'un texte, en pixels de l'écran réel (Steam Deck : 1280 x 800, ~216 ppp).
+## Valve demande des textes d'au moins 9 pt sur le Deck, soit 12 px.
+const MIN_TEXT_PX := 12.0
+
+
+## Textes plus petits que MIN_TEXT_PX une fois l'écran réduit à la fenêtre : `view` est la taille de
+## la vue (repère des rectangles), `window` celle de la fenêtre. Les textes de taille inconnue passent.
+func check_size(screen: String, view: Vector2, window: Vector2) -> Array:
+	var issues: Array = []
+	var k := minf(window.x / view.x, window.y / view.y)
+	var seen := {}
+	for it in screens.get(screen, []):
+		var fs: int = it["fs"]
+		if fs <= 0 or fs * k >= MIN_TEXT_PX - 0.01 or seen.has(it["label"]):
+			continue
+		seen[it["label"]] = true
+		issues.append({"key": "%s|petit|%s" % [screen, it["label"]],
+			"msg": "« %s » est trop petit : %.1f px à l'écran (minimum %.0f px ; police %d, échelle %.2f)" % [it["label"], fs * k, MIN_TEXT_PX, fs, k]})
 	return issues
 
 

@@ -149,7 +149,13 @@ func _draw() -> void:
 	_engraved_tree(base, h * 0.7)
 	var cap_font := UiTheme.serif(600, 3)
 	var cap := tr("PLANCHE I  ·  L'ARBRE DE VIE")
-	draw_string(cap_font, Vector2(base.x - cap_font.get_string_size(cap, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2.0, base.y + 66), cap, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(UiTheme.GOLD, 0.6))
+	var cap_size := UiTheme.legible(13)
+	var cap_w := cap_font.get_string_size(cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cap_size).x
+	var cap_pos := Vector2(base.x - cap_w / 2.0, base.y + 66)
+	# La légende cède la place au rappel des commandes quand celui-ci, plus long dans une autre langue, arrive jusqu'à elle.
+	var cap_rect := Rect2(cap_pos + Vector2(0, -cap_font.get_ascent(cap_size)), Vector2(cap_w, cap_font.get_height(cap_size)))
+	if not (controls_card != null and controls_card.visible and controls_card.get_rect().intersects(cap_rect)):
+		draw_string(cap_font, cap_pos, cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cap_size, Color(UiTheme.GOLD, 0.6))
 	# Pollen d'or qui monte lentement.
 	for m in motes:
 		var y := fmod(m["y"] - t * m["s"] + 10.0, 1.0)

@@ -238,13 +238,14 @@ func draw_map(v: Control) -> void:
 	var wr := world_rect(s)
 	v.draw_texture_rect(_tex, wr, false)
 	# Chaque région : un secteur teinté, borné par ses deux bords et le cercle intérieur.
+	_name_rects.clear()
 	for reg in Regions.ids():
 		_draw_region(v, reg, s, font)
 
 	# La graine.
 	var seed_at := to_map(Vector2.ZERO, s)
 	draw_glyph(v, "seed", seed_at, UiTheme.GOLD, true, 1.0)
-	_text(v, font, seed_at + Vector2(14, 5), Loc.t("Graine"), Color(UiTheme.GOLD, 0.9))
+	_seed_label(v, font, seed_at, Loc.t("Graine"))
 	# La brèche à son pied (la finale) : un anneau qui s'allume quand toutes les régions sont purifiées.
 	draw_glyph(v, "breach", seed_at, _breach_color(), true, 1.0)
 	if bool(Game.flags.get("finale_ouverte", false)) and not bool(Game.flags.get("finale_vaincue", false)):
@@ -280,7 +281,10 @@ func draw_map(v: Control) -> void:
 			draw_glyph(v, "arena", ac, RegionUi.tint(reg).lightened(0.15), true, 1.0)
 		else:
 			draw_seal(v, ac, RegionUi.tint(reg).lightened(0.15), 0.0)
-		_text(v, font, ac + Vector2(-70, 4), Loc.t("Arène"), UiTheme.INK)
+		# À gauche de l'icône ; un nom plus long (autre langue) recule pour ne pas la recouvrir.
+		var arena_label := Loc.t("Arène")
+		var arena_w := font.get_string_size(arena_label, HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_PX).x
+		_text(v, font, ac + Vector2(minf(-70.0, -16.0 - arena_w), 4), arena_label, UiTheme.INK)
 		var n := Regions.hearts_done(reg, Game.flags)
 		var total := list.size()
 		var label := Loc.t("Cœurs %d / %d") % [n, total] if total > 1 else Loc.t("Cœur")
@@ -358,10 +362,35 @@ func _draw_region(v: Control, reg: String, s: Vector2, font: Font) -> void:
 	var label := RegionUi.short_name(reg)
 	var name_at := to_map(Vector2.from_angle(a) * 1000.0, s)
 	var name_w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, 15).x
+	_name_rects.append(Rect2(name_at + Vector2(-name_w / 2.0, -font.get_ascent(15)), Vector2(name_w, font.get_height(15))))
 	UiAudit.draw_text(v, "carte", font, name_at + Vector2(-name_w / 2.0, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(tint.lightened(0.25), 0.95), v.get_global_transform())
 
 
+## « Graine » : à droite de l'icône ; si ce texte (plus long dans une autre langue) recouvre le nom d'une région,
+## au-dessus, puis en dessous, centré.
+func _seed_label(v: Control, font: Font, seed_at: Vector2, label: String) -> void:
+	var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_PX).x
+	var h := font.get_height(TEXT_PX)
+	var asc := font.get_ascent(TEXT_PX)
+	var spots := [Vector2(14, 5), Vector2(-w / 2.0, -22), Vector2(-w / 2.0, 34)]
+	var pos: Vector2 = seed_at + spots[0]
+	for sp in spots:
+		var r := Rect2(seed_at + sp + Vector2(0, -asc), Vector2(w, h))
+		var clear := true
+		for nr in _name_rects:
+			if r.intersects(nr):
+				clear = false
+		if clear:
+			pos = seed_at + sp
+			break
+	_text(v, font, pos, label, Color(UiTheme.GOLD, 0.9))
+
+
 ## Texte posé sur la carte, avec un liseré sombre pour rester lisible sur toutes les teintes.
+var _name_rects: Array = []
+const TEXT_PX := 15
+
+
 func _text(v: Control, font: Font, pos: Vector2, s: String, color: Color) -> void:
 	v.draw_string_outline(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 4, Color(0, 0, 0, 0.8))
 	UiAudit.draw_text(v, "carte", font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, color, v.get_global_transform())

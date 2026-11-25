@@ -8752,15 +8752,15 @@ msgstr ""
 msgid "PLANCHE I  ·  L'ARBRE DE VIE"
 msgstr ""
 
-#. scripts/title.gd:166
+#. scripts/title.gd:172
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
 msgstr ""
 
-#. scripts/title.gd:171
+#. scripts/title.gd:177
 msgid "Un monde désolé reprend vie"
 msgstr ""
 
-#. scripts/title.gd:172
+#. scripts/title.gd:178
 msgid "au rythme de ton arbre"
 msgstr ""
 
@@ -9275,23 +9275,23 @@ msgstr ""
 msgid "Toi"
 msgstr ""
 
-#. scripts/world_map.gd:247
+#. scripts/world_map.gd:248
 msgid "Graine"
 msgstr ""
 
-#. scripts/world_map.gd:251
+#. scripts/world_map.gd:252
 msgid "Brèche"
 msgstr ""
 
-#. scripts/world_map.gd:283
+#. scripts/world_map.gd:285
 msgid "Arène"
 msgstr ""
 
-#. scripts/world_map.gd:286
+#. scripts/world_map.gd:290
 msgid "Cœur"
 msgstr ""
 
-#. scripts/world_map.gd:286
+#. scripts/world_map.gd:290
 msgid "Cœurs %d / %d"
 msgstr ""
 
