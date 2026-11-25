@@ -133,6 +133,19 @@ const SHOOT_ANIM := 0.12
 const HURT_ANIM := 0.4
 const REBIRTH_TIME := 1.1
 const LOW_HP := 0.3
+## Apparence de l'Esprit masqué selon le build (hero_look.gd), cuite en sprites (hero_bake.gd).
+const HeroLook = preload("res://scripts/hero_look.gd")
+const HeroBake = preload("res://scripts/hero_bake.gd")
+const FLASH_SHADER = preload("res://shaders/hero_flash.gdshader")
+## Durée de la transition quand la tenue ou l'arme change.
+const MORPH_TIME := 0.7
+var look: Dictionary = {}
+var _look_key := ""
+var morph := 0.0
+var _side := 1.0
+## Le héros (matériau de l'éclair du coup reçu) et ce qui se dessine par-dessus (visée, barre de vie).
+var _hero_node: Node2D
+var _over_node: Node2D
 
 
 func _ready() -> void:
@@ -143,6 +156,61 @@ func _ready() -> void:
 	Game.stats_changed.connect(func(): hp = minf(hp, Game.stats["max_hp"]))
 	Game.tree_changed.connect(sync_bar)
 	sync_bar()
+	_hero_node = _Layer.new()
+	_hero_node.drawer = _draw_hero
+	var mat := ShaderMaterial.new()
+	mat.shader = FLASH_SHADER
+	mat.set_shader_parameter("flash_col", Art.c("danger_eclair"))
+	_hero_node.material = mat
+	add_child(_hero_node)
+	_over_node = _Layer.new()
+	_over_node.drawer = _draw_over
+	add_child(_over_node)
+	Game.tree_changed.connect(refresh_look)
+	Game.build_switched.connect(func(_i): refresh_look())
+	get_tree().root.size_changed.connect(_on_window_resized)
+	refresh_look()
+
+
+## Fenêtre agrandie ou réduite : l'atlas est recuit à la nouvelle échelle (il reste net).
+func _on_window_resized() -> void:
+	if not HeroArt.sprites.is_empty() and absf(HeroArt.sprites["corps"].k - HeroBake.auto_scale()) > 0.01:
+		_look_key = ""
+		refresh_look()
+
+
+## Calque de dessin du héros (un nœud enfant, pour son matériau ou pour passer par-dessus).
+class _Layer extends Node2D:
+	var drawer: Callable
+
+	func _draw() -> void:
+		drawer.call(self)
+
+
+## Relit l'apparence (achat d'un nœud, oubli, bascule de build, nouvelle attaque) ; si elle change,
+## la cuit puis lance la transition. Sans écran (tests sans rendu), rien n'est cuit.
+func refresh_look() -> void:
+	var lk := HeroLook.current()
+	var key := HeroLook.key(lk)
+	if key == _look_key:
+		return
+	_look_key = key
+	look = lk
+	if DisplayServer.get_name() == "headless":
+		return
+	var sp := HeroBake.cached(lk)
+	if sp.is_empty():
+		# Une image plus tard : la racine peut être occupée à monter la scène (Game.reset au chargement).
+		await get_tree().process_frame
+		if key != _look_key or not is_inside_tree():
+			return
+		sp = await HeroBake.bake(self, lk)
+	if key != _look_key or sp.is_empty() or not is_inside_tree():
+		return
+	if not HeroArt.sprites.is_empty() and HeroLook.key(HeroArt.sprites["bras"].look) != key:
+		HeroArt.prev_sprites = HeroArt.sprites
+		morph = MORPH_TIME
+	HeroArt.sprites = sp
 
 
 ## Réglages d'une compétence au moment du lancer, mutations de l'arbre comprises
@@ -343,6 +411,10 @@ func _process(delta: float) -> void:
 	shoot_anim = maxf(0.0, shoot_anim - delta)
 	hurt_anim = maxf(0.0, hurt_anim - delta)
 	reborn = minf(1.0, reborn + delta / REBIRTH_TIME)
+	if morph > 0.0:
+		morph = maxf(0.0, morph - delta)
+		if morph == 0.0:
+			HeroArt.prev_sprites = {}
 	# Marche : la vitesse réelle (esquive comprise) fait avancer le pas.
 	var moved := position - _last_pos
 	_last_pos = position
@@ -361,7 +433,7 @@ func _process(delta: float) -> void:
 		_progress_states()
 	# Feuilles : tombent en tournoyant, s'effacent.
 	if dash_time > 0.0 and fposmod(t, 0.03) < delta:
-		_leaf(position - dash_dir * radius * 0.6, -dash_dir * 60.0, 0.6, Art.c("joueur_accent").darkened(0.3))
+		_leaf(position - dash_dir * radius * 0.6, -dash_dir * 60.0, 0.6, leaf_color())
 	for l in leaves:
 		l["t"] += delta
 		l["pos"] += l["vel"] * delta
@@ -369,6 +441,27 @@ func _process(delta: float) -> void:
 		l["rot"] += l["spin"] * delta
 	leaves = leaves.filter(func(l): return l["t"] < l["dur"])
 	queue_redraw()
+	if _hero_node != null:
+		_hero_node.queue_redraw()
+		_over_node.queue_redraw()
+
+
+## Couleur des feuilles semées (esquive, coups) : la tenue de la branche dominante.
+func leaf_color() -> Color:
+	return HeroArt.Esprit.K.leaves(HeroArt._dominant(look))["clair"]
+
+
+## Phase de l'attaque de base pour le geste de l'arme (HeroArt « a ») : préparation pendant la fin
+## de la recharge quand une cible attend, coup au tir, retour ensuite ; -1 au repos.
+func attack_phase() -> float:
+	var iv: float = AttackScript.interval(Game.stats)
+	var rec := minf(0.55 * iv, 0.35)
+	if since_shot < rec:
+		return 0.47 + 0.53 * since_shot / rec
+	var wind := minf(0.45 * iv, 0.25)
+	if fire_cd > 0.0 and fire_cd < wind and (target != null or Settings.aim_mode == "curseur"):
+		return 0.45 * (1.0 - fire_cd / wind)
+	return -1.0
 
 
 func _leaf(pos: Vector2, vel: Vector2, dur: float, col: Color) -> void:
@@ -804,6 +897,8 @@ func pose() -> Dictionary:
 		"invuln": clampf((invuln - 0.45) * 2.0, 0.0, 1.0),
 		"home": home, "appear": reborn,
 		"dash": clampf(dash_time / DASH_TIME, 0.0, 1.0),
+		"a": attack_phase() if reborn >= 1.0 else -1.0,
+		"morph": morph / MORPH_TIME,
 	}
 
 
@@ -818,6 +913,10 @@ func _draw() -> void:
 		for i in pts.size():
 			pts[i] = q + (pts[i] - q) * Vector2(1.0, w).rotated(0.0)
 		draw_colored_polygon(pts, Color(l["col"], 1.0 - k * k))
+
+
+## Le héros (calque enfant : son matériau porte l'éclair du coup reçu).
+func _draw_hero(ci: Node2D) -> void:
 	# L'élan de l'esquive (traînée, images rémanentes) est dessiné par sa signature (skill_fx.gd).
 	# Au repos (world_fx.gd) : le héros respire, se penche pour semer, regarde une fleur. Dessin seulement.
 	var wfx = main.get("world_fx") if main != null else null
@@ -825,31 +924,44 @@ func _draw() -> void:
 	if wfx != null and (wfx.breath > 0.0 or wfx.crouch > 0.0):
 		var br: float = wfx.breath * sin(t * 2.1) * 0.022 - wfx.crouch * 0.1
 		# Échelle autour des pieds : le sol ne bouge pas.
-		draw_set_transform(Vector2(0.0, -radius * br), 0.0, Vector2(1.0 - br * 0.5, 1.0 + br))
+		HeroArt.base = Transform2D(0.0, Vector2(1.0 - br * 0.5, 1.0 + br), 0.0, Vector2(0.0, -radius * br))
 	if wfx != null:
 		face = wfx.facing_angle(face)
-	HeroArt.draw(self, Vector2.ZERO, radius, face, pose())
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var st := pose()
+	# Retournement gauche/droite avec un peu d'hystérésis : visée presque verticale, il ne clignote pas.
+	if cos(face) > 0.2:
+		_side = 1.0
+	elif cos(face) < -0.2:
+		_side = -1.0
+	st["side"] = _side
+	(ci.material as ShaderMaterial).set_shader_parameter("flash", 0.75 * float(st["hurt"]))
+	HeroArt.draw(ci, Vector2.ZERO, radius, face, st)
+	HeroArt.base = Transform2D.IDENTITY
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Par-dessus le héros : visée au stick, éblouissement, barre de vie.
+func _draw_over(ci: Node2D) -> void:
 	if pad_aiming:
 		# Visée au stick droit : un petit chevron d'or au point visé, sans masquer le jeu.
 		var q := aim_point - position
 		var d := q.normalized()
 		var side := d.orthogonal() * 7.0
 		var ink := Color(Art.c("or"), 0.8)
-		draw_polyline(PackedVector2Array([q - d * 6.0 + side, q, q - d * 6.0 - side]), ink, 2.0, true)
-		draw_arc(q, 11.0, 0.0, TAU, 20, Color(ink, 0.35), 1.2, true)
+		ci.draw_polyline(PackedVector2Array([q - d * 6.0 + side, q, q - d * 6.0 - side]), ink, 2.0, true)
+		ci.draw_arc(q, 11.0, 0.0, TAU, 20, Color(ink, 0.35), 1.2, true)
 	if dazzle > 0.0:
 		# Ébloui : des rais de lumière tournent autour de sa tête.
-		var head := Vector2(0, -radius * 1.6)
+		var head := HeroArt.head_at(Vector2.ZERO, radius, facing().angle())
 		for i in 4:
 			var a := t * 3.0 + i * TAU / 4.0
 			var d := Vector2.from_angle(a)
-			draw_line(head + d * radius * 0.35, head + d * radius * 0.8, Color(1.0, 0.95, 0.7, minf(1.0, dazzle * 2.0)), Art.TRAIT_FIN, true)
+			ci.draw_line(head + d * radius * 0.35, head + d * radius * 0.8, Color(1.0, 0.95, 0.7, minf(1.0, dazzle * 2.0)), Art.TRAIT_FIN, true)
 	# Barre de vie : fine, sous les pieds, cachée quand la vie est pleine.
 	var ratio: float = clampf(hp / Game.stats["max_hp"], 0.0, 1.0)
 	if ratio < 0.999 and reborn >= 1.0:
 		var w := 36.0
 		var y := radius + 14.0
-		draw_rect(Rect2(-w / 2.0 - 1.0, y - 1.0, w + 2.0, 6.0), Art.c("contour"))
-		draw_rect(Rect2(-w / 2.0, y, w * ratio, 4.0), Art.c("danger") if ratio < LOW_HP else Art.c("accent"))
-		draw_rect(Rect2(-w / 2.0, y, w * ratio, 1.5), Color(1, 1, 1, 0.25))
+		ci.draw_rect(Rect2(-w / 2.0 - 1.0, y - 1.0, w + 2.0, 6.0), Art.c("contour"))
+		ci.draw_rect(Rect2(-w / 2.0, y, w * ratio, 4.0), Art.c("danger") if ratio < LOW_HP else Art.c("accent"))
+		ci.draw_rect(Rect2(-w / 2.0, y, w * ratio, 1.5), Color(1, 1, 1, 0.25))
