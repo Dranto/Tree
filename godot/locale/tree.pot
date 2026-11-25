@@ -7776,7 +7776,7 @@ msgstr ""
 
 #. scripts/attack.gd:1144
 #. scripts/attack.gd:1305
-#. scripts/skill_tree.gd:1028
+#. scripts/skill_tree.gd:1042
 #. scripts/tree_ui.gd:957
 msgid "%s : %s"
 msgstr ""
@@ -8719,45 +8719,45 @@ msgstr ""
 msgid "Reculer"
 msgstr ""
 
-#. scripts/skill_tree.gd:1015
+#. scripts/skill_tree.gd:1029
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgctxt "nœud notable : nom puis qualificatif"
 msgid "{0} {1}"
 msgstr ""
 
-#. scripts/skill_tree.gd:1041
+#. scripts/skill_tree.gd:1055
 msgid " ; "
 msgstr ""
 
-#. scripts/skill_tree.gd:36
+#. scripts/skill_tree.gd:38
 msgid "Mutation : %s"
 msgstr ""
 
-#. scripts/skill_tree.gd:38
+#. scripts/skill_tree.gd:40
 msgid "Attaque"
 msgstr ""
 
-#. scripts/skill_tree.gd:38
+#. scripts/skill_tree.gd:40
 #. scripts/tree_ui.gd:40
 msgid "Maîtrise"
 msgstr ""
 
-#. scripts/skill_tree.gd:38
+#. scripts/skill_tree.gd:40
 #. scripts/tree_ui.gd:39
 msgid "Nœud"
 msgstr ""
 
-#. scripts/skill_tree.gd:38
+#. scripts/skill_tree.gd:40
 #. scripts/tree_ui.gd:40
 msgid "Nœud flétri"
 msgstr ""
 
-#. scripts/skill_tree.gd:566
+#. scripts/skill_tree.gd:568
 #. scripts/tree_ui.gd:40
 msgid "Compétence"
 msgstr ""
 
-#. scripts/skill_tree.gd:570
+#. scripts/skill_tree.gd:572
 #. scripts/tree_ui.gd:39
 msgid "Nœud notable"
 msgstr ""
