@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue", "eclat"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -152,6 +152,8 @@ func _ready() -> void:
 			await _scenario_langue()
 		"cumul":
 			await _scenario_cumul()
+		"eclat":
+			await _scenario_eclat()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -567,6 +569,36 @@ func _scenario_cumul() -> void:
 	await _frames(2)
 	await _shot("arbre_synergies")
 	Game.test_attack = []
+
+
+## Moments forts (jalon Éclat A, moments.gd) : une impact frame de chaque style, figée. « encre » :
+## fond papier, héros et Flétris proches à l'encre ; « region » (Ronce) : silhouettes rouge sang sur
+## la couleur complémentaire. Le reste du jeu est arrêté, la pose est exacte.
+func _scenario_eclat() -> void:
+	var p = main.player
+	main.hud.glyphs.hide()
+	main.autotest = false
+	p.set_physics_process(false)
+	main.spawn_timer = 1e9
+	await _frames(2)
+	var spots := [Vector2(150, -40), Vector2(190, 50), Vector2(-120, 80), Vector2(60, -150), Vector2(-170, -60)]
+	for i in spots.size():
+		_frozen_enemy(p.position + spots[i], [0, 1, 0, 2, 1][i])
+	await _frames(3)
+	var m = main.moments
+	m.frozen = true
+	m.impact_frame(0.5, [main.enemies[0]], "encre")
+	await _frames(2)
+	await _shot("eclat_encre", "jeu")
+	m.frozen = false
+	m._end_frame()
+	await _frames(2)
+	m.frozen = true
+	m.impact_frame(0.95, [main.enemies[1]], "region", "ronce")
+	await _frames(2)
+	await _shot("eclat_region", "jeu")
+	m.frozen = false
+	m._end_frame()
 
 
 ## Galerie : ennemis et effets, puis les six états d'un nœud de l'arbre sur une planche.
