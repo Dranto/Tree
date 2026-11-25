@@ -29,6 +29,7 @@ const TreeArt = preload("res://scripts/tree_art.gd")
 const Effects = preload("res://scripts/effects.gd")
 const Content = preload("res://scripts/content.gd")
 const AttackScript = preload("res://scripts/attack.gd")
+const Demo = preload("res://scripts/demo.gd")
 
 const RADIUS := {
 	"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0,
@@ -136,6 +137,8 @@ var _rings: Array = []
 ## Nœuds appris et nœuds flétris couverts de cendre : ceux que la couche de vie anime.
 var _owned_ids: Array = []
 var _ashen_ids: Array = []
+## Démo : nœuds que seul le jeu complet ouvre (demo.gd › node_closed), cerclés d'une ronce.
+var _demo_ids: Array = []
 var _extent_cache := -1.0
 ## true tant que le joueur n'a ni zoomé ni bougé : la vue se recadre si la fenêtre change de taille.
 var _fitted := false
@@ -742,6 +745,7 @@ func _refresh_states() -> void:
 	_locks = {}
 	_owned_ids = []
 	_ashen_ids = []
+	_demo_ids = []
 	for n in Game.tree.nodes:
 		var id: int = n["id"]
 		var st := _state(id)
@@ -750,6 +754,8 @@ func _refresh_states() -> void:
 			_owned_ids.append(id)
 		if _ashen(n):
 			_ashen_ids.append(id)
+		if st != "owned" and Demo.node_closed(n):
+			_demo_ids.append(id)
 		if st == "available":
 			_available.append(id)
 		elif st == "owned":
@@ -1257,6 +1263,23 @@ func _draw_ash(c: CanvasItem, n: Dictionary, p: Vector2, r: float, w: float) -> 
 		c.draw_circle(p + Vector2.from_angle(a) * d, r * (0.07 + 0.05 * ((h >> (i * 2)) & 3) / 3.0), Color(ASH, 0.55))
 
 
+## Démo : un nœud que seul le jeu complet ouvre est cerclé d'une ronce sombre à épines (sans texte ;
+## l'infobulle dit seulement « Dans le jeu complet. »).
+func _draw_demo_mark(c: CanvasItem, p: Vector2, r: float, level: int) -> void:
+	var w := maxf(1.4 / zoom, r * 0.12)
+	var rr := r * 1.32 + w
+	c.draw_arc(p, rr, 0.0, TAU, 24, Color(0.05, 0.02, 0.03, 0.8), w * 2.2)
+	c.draw_arc(p, rr, 0.0, TAU, 24, Color(LOCK_COLOR.darkened(0.35), 0.9), w)
+	if level == LOD_OVERVIEW:
+		return
+	for i in 6:
+		var a := TAU * i / 6.0 + 0.4
+		var dir := Vector2.from_angle(a)
+		var base := p + dir * rr
+		var tip := base + (dir + dir.orthogonal() * 0.6).normalized() * r * 0.42
+		c.draw_colored_polygon(PackedVector2Array([base - dir.orthogonal() * w * 1.3, base + dir.orthogonal() * w * 1.3, tip]), Color(LOCK_COLOR.darkened(0.2), 0.95))
+
+
 # --- Couche animée ---
 
 func _draw_anim(c: CanvasItem) -> void:
@@ -1543,6 +1566,10 @@ func _draw_life(c: CanvasItem) -> void:
 			var n: Dictionary = tree.nodes[id]
 			if view.has_point(n["pos"]):
 				TreeArt.embers(c, n["pos"], _radius(n, zoom), t, id)
+	for id in _demo_ids:
+		var n: Dictionary = tree.nodes[id]
+		if view.has_point(n["pos"]):
+			_draw_demo_mark(c, n["pos"], _radius(n, zoom), level)
 	_draw_sap(c)
 	_draw_blooms(c)
 	_draw_test_marks(c, "life", 3.0 / zoom)

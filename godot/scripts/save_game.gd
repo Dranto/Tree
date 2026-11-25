@@ -27,6 +27,8 @@
 ## L'écriture passe par un fichier temporaire, et la sauvegarde précédente est gardée en .bak.
 extends Node
 
+const Demo = preload("res://scripts/demo.gd")
+
 const Regions = preload("res://scripts/regions.gd")
 
 const FORMAT := "seve-save"
@@ -174,6 +176,11 @@ func apply(data: Dictionary, main) -> void:
 	var p: Dictionary = w.get("player", {})
 	var h: float = main.world_half
 	main.player.position = Vector2(float(p.get("x", 0.0)), float(p.get("y", 0.0))).clamp(Vector2(-h, -h), Vector2(h, h))
+	# Démo (demo.gd) : une partie du jeu complet reprise dans la démo, le héros au-delà de la ronce qui
+	# ferme les autres régions, repart de la graine. Le format ne change pas : la démo lit et écrit la
+	# même sauvegarde que le jeu complet.
+	if main.get("demo_wall") != null and not Demo.allowed(main.player.position, main.player.radius):
+		main.player.position = Vector2.ZERO
 	main.player.hp = clampf(float(p.get("hp", Game.stats["max_hp"])), 1.0, Game.stats["max_hp"])
 
 

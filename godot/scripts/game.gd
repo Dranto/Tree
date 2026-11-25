@@ -18,6 +18,7 @@ const Effects = preload("res://scripts/effects.gd")
 const Difficulty = preload("res://scripts/difficulty.gd")
 const Regions = preload("res://scripts/regions.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const Demo = preload("res://scripts/demo.gd")
 
 var tree = null
 var allocated: Dictionary = {}
@@ -93,6 +94,12 @@ func _ready() -> void:
 	tree.build()
 	seed_rng(graft_rng, 3)
 	reset()
+
+
+## Vrai quand le jeu tourne en démo (nom convenu au jalon 12) : fonctionnalité d'export « demo »,
+## ou « -- --demo » pour les tests. Voir demo.gd.
+func is_demo() -> bool:
+	return Demo.active()
 
 
 ## Remet la progression à zéro (nouvelle partie).
@@ -579,11 +586,16 @@ func refund(id: int, free := false) -> bool:
 
 # --- Nœuds à règles : flétris, mutations, exclusions, maîtrises, greffes ---
 
+## Raison donnée en démo pour un nœud que seul le jeu complet ouvre (une ligne, voir demo.gd).
+const DEMO_LOCK := "Dans le jeu complet."
+
 ## Raison pour laquelle un nœud ne peut pas être appris, même voisin d'un nœud appris ("" s'il est libre) :
 ## nœud flétri dont le drapeau n'est pas levé, mutation d'une compétence pas encore acquise,
 ## nœud incompatible avec un nœud appris. « owned » permet de tester un autre ensemble que la partie.
 func lock_reason(id: int, owned = null) -> String:
 	var n: Dictionary = tree.nodes[id]
+	if Demo.node_closed(n) and not allocated.has(id):
+		return DEMO_LOCK
 	var flag: String = n["requires_flag"]
 	if flag != "" and not flags.get(flag, false):
 		var why: String = n["requires_text"]

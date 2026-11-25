@@ -47,6 +47,16 @@
       "reward": {"text": "2 points d'arbre et une greffe"}
     },
     {
+      "id": "demo_sceau",
+      "demo_only": true,
+      "main": true,
+      "title": "Retourner au sceau de la graine",
+      "text": "Démo : le roncier est libre. Au pied de la graine, la brèche reste scellée ; la suite pousse dans le jeu complet.",
+      "needs_flag": "ronce_boss_vaincu",
+      "condition": {"type": "flag", "flag": "demo_sceau_vu"},
+      "target": {"type": "demo_seal"}
+    },
+    {
       "id": "spore_sanctuaire", "region": "spore", "main": true,
       "title": "Raviver un sanctuaire du marais",
       "text": "À l'est de la graine, le marais de Spore attend. Tiens-toi dans un de ses sanctuaires pour y renaître.",

@@ -14,6 +14,8 @@
 #   tools/aventure.sh --jusqua=spore        # s'arrête après une région (essai rapide)
 #   tools/aventure.sh --continue-on-block   # force une région bloquée pour voir la suite
 #   tools/aventure.sh --ordre=ronce,vent,spore --autotest=aventure:epines   # ordre et build de départ
+#   tools/aventure.sh --demo --niveau-max=22   # la démo (Ronce seule, jusqu'au sceau de la graine) ; le
+#                                              # build Épines atteint son premier nœud clé au niveau 22
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SEEDS=${SEEDS:-"1"}

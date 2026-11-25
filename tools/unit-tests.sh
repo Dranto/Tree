@@ -27,6 +27,7 @@ TESTS=(
   "boss|--headless --fixed-fps 60|"
   "death|--headless --fixed-fps 60|"
   "difficulty|--headless|"
+  "demo|--headless --fixed-fps 60|"
   "direct_screen|--xvfb --fixed-fps 60 --resolution 1600x900 --position 0,0|"
   "draw_batch|--xvfb|"
   "enemies|--headless|"

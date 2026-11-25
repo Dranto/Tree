@@ -35,6 +35,9 @@ const Sanctuary = preload("res://scripts/sanctuary.gd")
 const LostSap = preload("res://scripts/lost_sap.gd")
 const Altar = preload("res://scripts/altar.gd")
 const GraftPickup = preload("res://scripts/graft_pickup.gd")
+## Démo (jalon 12 E) : régions hors démo fermées par une ronce épaisse (demo.gd, demo_wall.gd).
+const Demo = preload("res://scripts/demo.gd")
+const DemoWall = preload("res://scripts/demo_wall.gd")
 
 ## Apparitions par région (sortes du roncier, part selon la distance) : res://data/enemies.json.
 var region_spawn: Dictionary = _region_spawns()
@@ -50,6 +53,8 @@ const BuildBot = preload("res://scripts/build_bot.gd")
 var world_half := WORLD_HALF
 var ground
 var world_edge
+## Haie de la démo (demo_wall.gd), null hors démo.
+var demo_wall = null
 var flora
 var fx
 var screen_fx
@@ -306,6 +311,13 @@ func _ready() -> void:
 	add_child(rewards_layer)
 	move_child(rewards_layer, actors_layer.get_index())
 	altars = Altar.spawn_all(self, rewards_layer)
+	# Démo : la ronce épaisse qui ferme les autres régions, au-dessus des acteurs (le héros passe
+	# dessous sans jamais la traverser) ; le sceau de la graine pulse après la fin de la démo.
+	if Demo.active():
+		demo_wall = DemoWall.new()
+		demo_wall.main = self
+		add_child(demo_wall)
+		move_child(demo_wall, actors_layer.get_index() + 1)
 
 	Sfx.listener = player
 	Music.start()
@@ -582,6 +594,12 @@ func _push_out_of_bushes() -> void:
 		if not e.anchored:
 			e.position = flora.push_out(e.position, e.radius)
 	player.position = flora.push_out(player.position, player.radius)
+	# Démo : personne ne franchit la ronce qui ferme les autres régions.
+	if demo_wall != null:
+		for e in enemies:
+			if not e.anchored:
+				e.position = Demo.keep_inside(e.position, e.radius)
+		player.position = clamp_to_world(player.position)
 
 
 ## Suit les drapeaux d'aventure posés par les Cœurs de flétrissure : la terre de chaque région
@@ -629,6 +647,8 @@ func underground() -> bool:
 func clamp_to_world(pos: Vector2) -> Vector2:
 	if finale != null and finale.holds(pos):
 		return pos
+	if demo_wall != null:
+		pos = Demo.keep_inside(pos, player.radius if player != null else 0.0)
 	return pos.clamp(Vector2(-world_half, -world_half), Vector2(world_half, world_half))
 
 
@@ -741,6 +761,10 @@ func _spawn_enemy() -> void:
 		var a := rng.randf() * TAU
 		pos = player.position + Vector2.from_angle(a) * rng.randf_range(760.0, 980.0)
 		pos = pos.clamp(Vector2(-WORLD_HALF, -WORLD_HALF), Vector2(WORLD_HALF, WORLD_HALF))
+		if demo_wall != null and not Demo.allowed(pos, 30.0):
+			# Démo : derrière la ronce, on tire un autre endroit (au dernier essai, contre la haie).
+			pos = Demo.keep_inside(pos, 30.0)
+			continue
 		if ground.life_at(pos) < 0.5:
 			break
 	var e = spawn_enemy_kind(_pick_kind(pos), pos, threat(pos))
