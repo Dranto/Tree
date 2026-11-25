@@ -24,6 +24,8 @@
 ## - chaque champ manquant prend sa valeur par défaut ;
 ## - quand le format change, on incrémente VERSION et on ajoute une étape dans _migrate().
 ##   Un fichier venant d'une version plus récente du jeu est refusé et mis de côté.
+## - chaque version a un fichier d'exemple (tests/fixtures/saves/, tools/fixtures-sauvegardes.py) que
+##   tests/migration_test.gd charge sans perte : en ajouter un avec chaque nouvelle version.
 ## L'écriture passe par un fichier temporaire, et la sauvegarde précédente est gardée en .bak.
 extends Node
 

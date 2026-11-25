@@ -50,6 +50,14 @@ for s in $SEEDS; do
       grep -A1 'SCRIPT ERROR' "$log" | head -20 | sed 's/^/    /'
       fail=1
     fi
+    # Toute autre erreur ou tout avertissement de Godot (la sortie du robot doit rester propre ;
+    # les fuites « at exit » d'une sortie par quit() ne comptent pas).
+    noise=$(grep -E '^(ERROR|WARNING|USER ERROR|USER WARNING):' "$log" | grep -vE 'leaked|still in use at exit' | sort | uniq -c | head -10 || true)
+    if [[ -n "$noise" ]]; then
+      echo "    avertissements ou erreurs de Godot :"
+      echo "$noise" | sed 's/^/    /'
+      fail=1
+    fi
     [[ "$res" == *"tout est bon"* ]] || fail=1
   done
 done

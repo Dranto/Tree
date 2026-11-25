@@ -372,7 +372,8 @@ static func _fouet(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 			var pts := PackedVector2Array([p])
 			for i in 17:
 				pts.append(p + Vector2.from_angle(a0 + (cur - a0) * i / 16.0) * reach)
-			ci.draw_colored_polygon(pts, Color(col, 0.13 * fade))
+			# Au tout début du balayage (cur == a0) tous les points sont alignés : rien à dessiner.
+			Art.safe_polygon(ci, pts, Color(col, 0.13 * fade))
 			ci.draw_arc(p, reach, a0, cur, 24, Color(clair, 0.5 * fade), 2.0, true)
 		return
 	if k < wind:
@@ -725,7 +726,7 @@ static func _bloom(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 				continue   # onde pas encore partie : une feuille de taille nulle ne se triangule pas
 			ci.draw_line(q, q + Vector2(0, -h * 1.4), gc, 1.5, true)
 			for sgn: int in [-1, 1]:
-				ci.draw_colored_polygon(HeroArt.leaf_pts(q + Vector2(sgn * h * 0.6, -h), h * 0.6, -PI / 2.0 + sgn * 0.9), gc)
+				Art.safe_polygon(ci, HeroArt.leaf_pts(q + Vector2(sgn * h * 0.6, -h), h * 0.6, -PI / 2.0 + sgn * 0.9), gc)
 		return
 	# La fleur : huit pétales qui s'ouvrent, puis se détachent et s'envolent.
 	var petals := 8

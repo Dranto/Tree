@@ -195,6 +195,14 @@ const COUCHE := {
 	"projectiles": 10, "effets": 20, "decor_haut": 40, "interface": 100,
 }
 
+## Polygone plein qui se dessine seulement si Godot sait le trianguler. Un polygone aplati ou minuscule
+## (effets qui naissent ou s'éteignent : surface nulle) ne se verrait pas, et Godot écrit alors
+## « Invalid polygon data, triangulation failed » à chaque image : la sortie du jeu reste propre.
+static func safe_polygon(ci: CanvasItem, points: PackedVector2Array, col: Color) -> void:
+	if not Geometry2D.triangulate_polygon(points).is_empty():
+		ci.draw_colored_polygon(points, col)
+
+
 ## Contour fermé d'un polygone, au trait de la charte.
 static func outline(ci: CanvasItem, points: PackedVector2Array, col := Color(0, 0, 0, 0), width := TRAIT) -> void:
 	if points.size() < 2:

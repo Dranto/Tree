@@ -130,7 +130,7 @@ static func _ruee(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> v
 	var tail := from.lerp(to, Anim.ease_in(k))
 	if on_ground:
 		var pts := PackedVector2Array([tail, to + n * w * 0.6 * a, to + dir * w * 0.4, to - n * w * 0.6 * a])
-		ci.draw_colored_polygon(pts, Color(col, 0.2 * a))
+		Art.safe_polygon(ci, pts, Color(col, 0.2 * a))
 		return
 	for i in 5:
 		var off := (i - 2) / 2.0
