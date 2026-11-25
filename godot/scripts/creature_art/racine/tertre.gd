@@ -11,8 +11,8 @@ extends RefCounted
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const R = preload("res://scripts/creature_art/racine/outils.gd")
 
-## 100 unités en px du jeu (1600×900) : ~72 px de haut et ~92 px de large à l'écran en 1080p.
-const HEIGHT := 58.0
+## 100 unités en px du jeu (1600×900) : ~74 px de haut et ~98 px de large à l'écran en 1080p.
+const HEIGHT := 62.0
 const DRAWS_ELITE := true
 ## La tête ne suit pas la cible (un lourd fait front tout entier) : un seul regard à cuire.
 const LOOKS := false
