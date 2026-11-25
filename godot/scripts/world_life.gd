@@ -622,23 +622,26 @@ func _enemies(p) -> void:
 		var last: Vector2 = _last_pos.get(id, e.position)
 		_last_pos[id] = e.position
 		var spd: float = last.distance_to(e.position) / dt
-		var feet: Vector2 = e.position + Vector2(0.0, e.radius * 0.6)
+		# Boss et Flétris : seules la position et le rayon sont sûrs (les boss n'ont ni état ni pas).
+		var er := float(e.get("radius") if e.get("radius") != null else 20.0)
+		var feet: Vector2 = e.position + Vector2(0.0, er * 0.6)
 		# Cendre sous les pas, sur la terre vivante.
 		if spd > 20.0 and ash_left > 0 and main.ground.life_at(feet) > 0.45:
 			_ash_n += 1
 		if spd > 20.0 and ash_left > 0 and main.ground.life_at(feet) > 0.45 and _ash_n % 2 == 0:
 			ash_left -= 1
-			add_mark("cendre", feet + Vector2(rng.randf_range(-4, 4), 0), _num("enemies", "ash_time", 2.6), col(_region_of(feet), "cendre"), clampf(e.radius / 16.0, 0.6, 1.6), 0.0)
+			add_mark("cendre", feet + Vector2(rng.randf_range(-4, 4), 0), _num("enemies", "ash_time", 2.6), col(_region_of(feet), "cendre"), clampf(er / 16.0, 0.6, 1.6), 0.0)
 		# Charge : bien plus vite que son pas, ou un état de charge.
-		var st := str(e.state)
-		if (spd > maxf(e.speed * 1.7, 160.0) or st.contains("charge") or st.contains("dash")) and _ready_again(e, 0.25):
+		var st := str(e.get("state") if e.get("state") != null else "")
+		var pace := float(e.get("speed") if e.get("speed") != null else 100.0)
+		if (spd > maxf(pace * 1.7, 160.0) or st.contains("charge") or st.contains("dash")) and _ready_again(e, 0.25):
 			var dir: Vector2 = (e.position - last).normalized() if spd > 1.0 else Vector2.RIGHT
-			world_fx.disturb(feet, 40.0 + e.radius, dir, 1.3)
+			world_fx.disturb(feet, 40.0 + er, dir, 1.3)
 			react("charge", feet, 1.0)
 		# Élite : les plantes se tordent autour.
-		if e.elite and elites < 2:
+		if e.get("elite") == true and elites < 2:
 			elites += 1
-			push(e.position, 70.0 + e.radius * 2.0, -0.55)
+			push(e.position, 70.0 + er * 2.0, -0.55)
 		# La faune fuit.
 		for a in fauna:
 			if a["pos"].distance_squared_to(e.position) < pow(_scare_r(a["sp"]) * 0.8, 2):
