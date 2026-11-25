@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "demo"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "demo", "bestiaire"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -35,6 +35,7 @@ const ForetScript = preload("res://tests/visual/foret.gd")
 const FinaleScript = preload("res://tests/visual/finale.gd")
 const BordScript = preload("res://tests/visual/bord.gd")
 const DemoScript = preload("res://tests/visual/demo.gd")
+const BestiaireScript = preload("res://tests/visual/bestiaire.gd")
 const Demo = preload("res://scripts/demo.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Orb = preload("res://scripts/orb.gd")
@@ -168,6 +169,8 @@ func _ready() -> void:
 			await _scenario_eclat()
 		"demo":
 			await DemoScript.new().run(self)
+		"bestiaire":
+			await _scenario_bestiaire()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -556,6 +559,18 @@ func _scenario_heros() -> void:
 			var img := get_viewport().get_texture().get_image()
 			img.convert(Image.FORMAT_RGB8)
 			img.save_png("%s/%03d.png" % [dir, i])
+
+
+## Banc de lisibilité (tests/visual/bestiaire.gd) : toutes les sortes de Flétris, en grand et à la taille réelle, sur le sol de leur région.
+func _scenario_bestiaire() -> void:
+	main.set_process(false)
+	var layer := _pixel_layer()
+	var sheet = BestiaireScript.new()
+	sheet.view = Vector2(DisplayServer.window_get_size())
+	layer.add_child(sheet)
+	add_child(layer)
+	await _frames(3)
+	await _shot("bestiaire")
 
 
 ## Calque dessiné en pixels de la fenêtre (la galerie du héros se met en page en vrais pixels).
