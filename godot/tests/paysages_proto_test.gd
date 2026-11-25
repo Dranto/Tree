@@ -78,6 +78,11 @@ func _run() -> void:
 	_check(GroundLayers.stats()["draws"] > d0, "calque pas redessiné après la vie")
 	GroundLayers.enabled = false
 	# Décor cuit : un atlas pour toutes les sortes, vivantes et mortes.
+	# Atlas réduit (×1, 2 variantes) : le test reste léger pour les tests lancés en parallèle (la
+	# musique des boss, boss_track_test, est mesurée en temps réel).
+	DecorBake.scale = 1.0
+	DecorBake.ss = 1
+	DecorBake.variants = 2
 	await DecorBake.bake(root)
 	_check(DecorBake.tex != null, "pas d'atlas du décor")
 	var expected := 0
