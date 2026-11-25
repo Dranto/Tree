@@ -408,6 +408,7 @@ static func _try(flora, reg: String, pick: Array, p: Vector2, r: RandomNumberGen
 		t.shade = FG_SHADE
 		t.self_modulate = Color(FG_SHADE, FG_SHADE, FG_SHADE)
 	t.set_meta("foot", foot)
+	t.set_meta("centre", fg > 0.0)
 	flora.add_decor(t)
 	placed.append(t)
 	return t
@@ -508,8 +509,10 @@ static func _thin(flora, placed: Array) -> Dictionary:
 							inside.append(t)
 			if inside.size() <= MAX_SCREEN:
 				continue
-			var extra := inside.filter(func(t): return mine.has(t) and t.tall <= 0.0)
-			extra.sort_custom(func(a, b): return a.get_meta("foot") < b.get_meta("foot"))
+			# Les centres des grappes restent ; le reste s'éclaircit au hasard (tiré du germe), pour garder
+			# le mélange de petits et de grands autour de chaque centre.
+			var extra := inside.filter(func(t): return mine.has(t) and not t.get_meta("centre", false))
+			extra.sort_custom(func(a, b): return hash(a.tree_seed) < hash(b.tree_seed))
 			for i in mini(inside.size() - MAX_SCREEN, extra.size()):
 				placed.erase(extra[i])
 				mine.erase(extra[i])

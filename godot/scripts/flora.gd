@@ -620,6 +620,16 @@ func decor_near(center: Vector2, radius: float) -> Array:
 	return out
 
 
+## Éléments de décor debout dans le rectangle (densité à l'écran) : les éléments posés à plat au sol
+## (enfants directs de flora) ne comptent pas.
+func decor_on_screen(rect: Rect2) -> int:
+	var n := 0
+	for t in decor_near(rect.get_center(), rect.size.length() * 0.5):
+		if t.visible and not t.is_queued_for_deletion() and t.get_parent() != self and rect.has_point(t.position):
+			n += 1
+	return n
+
+
 ## Décor de la région (une instance par région, null si elle n'en a pas ou s'il est inconnu).
 func decor_of(reg: String):
 	if not _decors.has(reg):
