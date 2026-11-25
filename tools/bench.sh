@@ -51,7 +51,7 @@ export LIBGL_ALWAYS_SOFTWARE=1
 "$ROOT/tools/import.sh" "$OUT/import.log"
 if [ -n "$BASE_DIR" ]; then
   BASE_DIR="$(cd "$BASE_DIR" && pwd)"
-  "$BASE_DIR/tools/import.sh" "$OUT/import_base.log" || true
+  "$ROOT/tools/import.sh" "$OUT/import_base.log" "$BASE_DIR" || true
 fi
 # Dépassement de budget : échec, sauf en mode information (INFO_ONLY=1).
 overrun() {
