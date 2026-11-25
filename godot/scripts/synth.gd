@@ -36,53 +36,61 @@ const VERSION := 3
 
 const SOUNDS := {
 	# --- Combat : coups, critiques, morts ------------------------------------------------------------------
-	# Un coup = un claquement bref (bruit filtré qui descend) + un coup sourd (sinus qui chute) + un clic.
+	# Tir de base : un « tock » de bois et un souffle bref.
 	"tir": {"peak": 0.34, "verb": 0.06, "room": 0.3, "layers": [
-		{"wave": NOISE, "dur": 0.07, "att": 0.002, "filter": "bp", "cut": [3800.0, 1500.0], "res": 0.5, "vol": 0.8, "decay": 2.2},
-		{"wave": TRI, "f0": 820.0, "f1": 360.0, "dur": 0.08, "att": 0.002, "vol": 0.5, "decay": 2.0}]},
+		{"wave": NOISE, "dur": 0.06, "att": 0.002, "filter": "bp", "cut": [1800.0, 800.0], "vol": 0.6, "res": 0.45, "decay": 2.2},
+		{"inst": "drum", "f0": 260.0, "f1": 140.0, "dur": 0.07, "vol": 0.36, "noise": 0.3, "cut": 1500.0}]},
+	# Un coup (Ronce et l'oasis) : un claquement de bois, des échardes et un coup sourd.
+	# Chaque région a sa version (impact@spore…).
 	"impact": {"peak": 0.6, "verb": 0.08, "room": 0.35, "variants": 3, "layers": [
-		{"wave": NOISE, "dur": 0.014, "att": 0.0005, "filter": "hp", "cut": 2500.0, "vol": 0.6},
-		{"wave": NOISE, "dur": 0.075, "att": 0.001, "filter": "bp", "cut": [2600.0, 800.0], "res": 0.45, "vol": 0.9, "decay": 2.4},
-		{"wave": SINE, "f0": 190.0, "f1": 70.0, "dur": 0.1, "att": 0.001, "vol": 0.6, "drive": 0.35, "decay": 1.8}]},
+		{"wave": NOISE, "dur": 0.06, "att": 0.002, "filter": "bp", "cut": [1900.0, 650.0], "vol": 0.8, "res": 0.4, "decay": 2.4},
+		{"wave": "grain", "dur": 0.05, "att": 0.001, "density": 700.0, "grain": 0.003, "cut": 1500.0, "res": 0.4, "vol": 0.5, "decay": 2.5},
+		{"inst": "drum", "f0": 170.0, "f1": 70.0, "dur": 0.12, "vol": 0.54, "noise": 0.3, "cut": 1100.0}]},
+	# Coup lourd : une grosse caisse de bois, la terre qui tremble, des graviers.
 	"impact_lourd": {"peak": 0.8, "verb": 0.16, "room": 0.5, "duck": 0.15, "variants": 2, "layers": [
-		{"wave": NOISE, "dur": 0.02, "att": 0.0005, "filter": "hp", "cut": 2000.0, "vol": 0.7},
-		{"wave": NOISE, "dur": 0.2, "att": 0.001, "filter": "lp", "cut": [2200.0, 260.0], "res": 0.3, "vol": 0.9, "crush": 2400.0, "decay": 2.0},
-		{"wave": SINE, "f0": 130.0, "f1": 42.0, "dur": 0.26, "att": 0.001, "vol": 1.0, "drive": 0.6, "decay": 1.5},
-		{"wave": SINE, "f0": 58.0, "f1": 50.0, "dur": 0.32, "att": 0.01, "vol": 0.6, "decay": 1.3}]},
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "lp", "cut": [1600.0, 220.0], "vol": 0.7, "res": 0.3, "decay": 2.0},
+		{"inst": "drum", "f0": 120.0, "f1": 40.0, "dur": 0.36, "vol": 0.6, "noise": 0.5, "cut": 700.0},
+		{"wave": SINE, "f0": 58.0, "f1": 48.0, "dur": 0.32, "att": 0.01, "vol": 0.5, "decay": 1.3},
+		{"wave": "grain", "dur": 0.25, "att": 0.01, "density": 120.0, "grain": 0.008, "cut": [1200.0, 500.0], "res": 0.4, "vol": 0.35, "decay": 2.0}]},
+	# Critique : le coup, plus fort, et un accord de pizz (ré, la) qui sonne la réussite.
 	"critique": {"peak": 0.75, "verb": 0.22, "room": 0.45, "variants": 2, "layers": [
-		{"wave": NOISE, "dur": 0.016, "att": 0.0005, "filter": "hp", "cut": 3000.0, "vol": 0.7},
-		{"wave": NOISE, "dur": 0.09, "att": 0.001, "filter": "bp", "cut": [3400.0, 1200.0], "res": 0.55, "vol": 0.8, "decay": 2.2},
-		{"wave": SINE, "f0": 230.0, "f1": 75.0, "dur": 0.12, "att": 0.001, "vol": 0.55, "drive": 0.4},
-		{"wave": METAL, "f0": 1480.0, "f1": 1440.0, "dur": 0.42, "att": 0.001, "vol": 0.42, "decay": 2.4},
-		{"wave": SAW, "f0": 900.0, "f1": 2300.0, "dur": 0.13, "att": 0.004, "delay": 0.01, "filter": "bp", "cut": [1600.0, 4200.0], "res": 0.4, "vol": 0.35}]},
+		{"wave": NOISE, "dur": 0.07, "att": 0.002, "filter": "bp", "cut": [2400.0, 900.0], "vol": 0.8, "res": 0.5, "decay": 2.2},
+		{"inst": "drum", "f0": 200.0, "f1": 70.0, "dur": 0.14, "vol": 0.54, "noise": 0.3, "cut": 1300.0},
+		{"inst": "pluck", "f0": 146.8, "notes": [0, 7, 12], "step": 0.0, "dur": 0.5, "tone": 0.6, "vol": 0.6},
+		{"inst": "mallet", "kind": "marimba", "f0": 293.7, "notes": [0, 7], "step": 0.03, "dur": 0.5, "vol": 0.3}]},
+	# Un ennemi flétri s'effrite : il craque, tombe en miettes, une note de pizz qui retombe.
 	"mort": {"peak": 0.62, "verb": 0.18, "room": 0.45, "variants": 3, "layers": [
-		{"wave": NOISE, "dur": 0.3, "att": 0.002, "filter": "bp", "cut": [1800.0, 280.0], "res": 0.35, "vol": 0.9, "crush": 3000.0, "decay": 1.8},
-		{"wave": SINE, "f0": 150.0, "f1": 46.0, "dur": 0.26, "att": 0.001, "vol": 0.6, "drive": 0.4},
-		{"wave": TRI, "f0": 460.0, "f1": 120.0, "dur": 0.3, "att": 0.01, "delay": 0.03, "vol": 0.35, "vib": [0.04, 18.0]},
-		{"wave": NOISE, "dur": 0.32, "att": 0.05, "delay": 0.08, "filter": "lp", "cut": [900.0, 200.0], "vol": 0.45, "crush": 700.0, "trem": [0.7, 23.0]}]},
+		{"wave": NOISE, "dur": 0.25, "att": 0.002, "filter": "bp", "cut": [1400.0, 260.0], "vol": 0.7, "res": 0.35, "decay": 1.8},
+		{"wave": "grain", "dur": 0.35, "att": 0.005, "density": 160.0, "grain": 0.01, "cut": [900.0, 300.0], "res": 0.5, "vol": 0.55},
+		{"inst": "drum", "f0": 140.0, "f1": 45.0, "dur": 0.25, "vol": 0.42, "noise": 0.2, "cut": 800.0},
+		{"inst": "pluck", "f0": 73.4, "notes": [5, 0], "step": 0.06, "dur": 0.4, "tone": 0.3, "vol": 0.4}]},
+	# Une élite tombe : grosse caisse, accord mineur des cordes, cloche grave, éboulis.
 	"mort_elite": {"peak": 0.85, "verb": 0.34, "room": 0.7, "duck": 0.3, "layers": [
-		{"wave": NOISE, "dur": 0.03, "att": 0.0005, "filter": "hp", "cut": 2200.0, "vol": 0.7},
-		{"wave": NOISE, "dur": 0.55, "att": 0.002, "filter": "lp", "cut": [2600.0, 160.0], "res": 0.3, "vol": 0.9, "crush": 2600.0, "decay": 1.6},
-		{"wave": SINE, "f0": 100.0, "f1": 30.0, "dur": 0.7, "att": 0.002, "vol": 1.0, "drive": 0.55, "decay": 1.3},
-		{"wave": METAL, "f0": 340.0, "f1": 300.0, "dur": 0.9, "att": 0.002, "vol": 0.35, "decay": 1.8},
-		{"wave": NOISE, "dur": 0.45, "att": 0.01, "delay": 0.05, "filter": "hp", "cut": [5000.0, 2500.0], "vol": 0.3, "trem": [0.8, 31.0]},
-		{"wave": TRI, "f0": 620.0, "f1": 110.0, "dur": 0.6, "att": 0.02, "delay": 0.06, "vol": 0.3, "vib": [0.05, 9.0], "voice2": -5.0}]},
+		{"inst": "drum", "f0": 100.0, "f1": 32.0, "dur": 0.7, "vol": 0.6, "noise": 0.4, "cut": 500.0},
+		{"wave": NOISE, "dur": 0.55, "att": 0.002, "filter": "lp", "cut": [2000.0, 160.0], "vol": 0.6, "res": 0.3, "decay": 1.6},
+		{"inst": "bow", "f0": 73.4, "notes": [0, 3, 7], "dur": 0.8, "att": 0.02, "cut": 900.0, "vol": 0.4},
+		{"inst": "mallet", "kind": "bell", "f0": 146.8, "notes": [0], "step": 0.0, "dur": 1.2, "vol": 0.35},
+		{"wave": "grain", "dur": 0.6, "att": 0.01, "density": 90.0, "grain": 0.012, "cut": [1000.0, 300.0], "res": 0.5, "vol": 0.35}]},
+	# Le héros est touché : un choc sourd et une seconde mineure de pizz, qui grince.
 	"degats": {"peak": 0.7, "verb": 0.1, "room": 0.35, "layers": [
-		{"wave": NOISE, "dur": 0.05, "att": 0.001, "filter": "bp", "cut": [1800.0, 600.0], "res": 0.4, "vol": 0.7},
-		{"wave": SAW, "f0": 210.0, "f1": 70.0, "dur": 0.24, "att": 0.002, "filter": "lp", "cut": [1600.0, 400.0], "vol": 0.7, "drive": 0.5},
-		{"wave": SINE, "f0": 160.0, "f1": 55.0, "dur": 0.22, "att": 0.001, "vol": 0.9, "drive": 0.3}]},
+		{"wave": NOISE, "dur": 0.05, "att": 0.002, "filter": "bp", "cut": [1500.0, 500.0], "vol": 0.6, "res": 0.4},
+		{"inst": "drum", "f0": 160.0, "f1": 55.0, "dur": 0.22, "vol": 0.54, "noise": 0.2, "cut": 900.0},
+		{"inst": "pluck", "f0": 146.8, "notes": [0, 1], "step": 0.0, "dur": 0.3, "tone": 0.5, "vol": 0.45}]},
+	# Étourdi : un coup sourd et des étoiles de kalimba qui tournent (tierce mineure).
 	"etourdi": {"peak": 0.5, "verb": 0.25, "room": 0.4, "layers": [
-		{"wave": SQUARE, "f0": 300.0, "f1": 110.0, "dur": 0.26, "att": 0.002, "duty": 0.25, "filter": "lp", "cut": 1800.0, "vol": 0.6},
-		{"wave": SINE, "f0": 70.0, "f1": 60.0, "dur": 0.2, "att": 0.002, "vol": 0.6},
-		{"wave": METAL, "f0": 2100.0, "f1": 2300.0, "dur": 0.5, "att": 0.01, "delay": 0.06, "vol": 0.3, "vib": [0.04, 7.0], "arp": [0, 4, 0, 4]}]},
+		{"inst": "drum", "f0": 90.0, "f1": 60.0, "dur": 0.2, "vol": 0.42},
+		{"inst": "mallet", "kind": "kalimba", "f0": 587.3, "notes": [0, 3, 0, 3], "step": 0.09, "dur": 0.35, "vol": 0.35}]},
+	# Le héros tombe : les violoncelles descendent, une cloche grave, un souffle qui s'éteint.
 	"chute": {"peak": 0.6, "verb": 0.5, "room": 0.85, "duck": 0.5, "layers": [
-		{"wave": SINE, "f0": 330.0, "f1": 98.0, "dur": 1.5, "att": 0.02, "vol": 0.7, "voice2": -5.0, "vib": [0.015, 5.0]},
-		{"wave": SAW, "f0": 165.0, "f1": 49.0, "dur": 1.5, "att": 0.1, "filter": "lp", "cut": [900.0, 160.0], "vol": 0.4},
-		{"wave": NOISE, "dur": 1.2, "att": 0.3, "filter": "bp", "cut": [900.0, 250.0], "res": 0.5, "vol": 0.25},
-		{"wave": SINE, "f0": 60.0, "f1": 38.0, "dur": 1.0, "att": 0.005, "vol": 0.6}]},
+		{"inst": "tone", "tone": "cello", "f0": 146.8, "notes": [7, 3, 0, -5], "step": 0.3, "dur": 0.6, "vol": 0.45},
+		{"inst": "bow", "f0": 73.4, "notes": [0, 3, 7], "dur": 1.4, "att": 0.1, "cut": 700.0, "vol": 0.3},
+		{"wave": NOISE, "dur": 1.2, "att": 0.3, "filter": "bp", "cut": [900.0, 250.0], "vol": 0.25, "res": 0.5},
+		{"inst": "mallet", "kind": "bell", "f0": 73.4, "notes": [0], "step": 0.0, "dur": 1.5, "vol": 0.35},
+		{"wave": SINE, "f0": 60.0, "f1": 38.0, "dur": 1.0, "att": 0.005, "vol": 0.5}]},
+	# Esquive : un souffle bref qui passe, quelques feuilles.
 	"esquive": {"peak": 0.42, "verb": 0.08, "room": 0.3, "layers": [
-		{"wave": NOISE, "dur": 0.2, "att": 0.05, "filter": "bp", "cut": [700.0, 3600.0], "res": 0.6, "vol": 0.9, "decay": 1.2},
-		{"wave": NOISE, "dur": 0.12, "att": 0.03, "delay": 0.04, "filter": "hp", "cut": 4000.0, "vol": 0.25}]},
+		{"wave": NOISE, "dur": 0.2, "att": 0.05, "filter": "bp", "cut": [500.0, 1400.0], "vol": 0.9, "res": 0.5, "decay": 1.2},
+		{"wave": "grain", "dur": 0.12, "att": 0.01, "density": 60.0, "grain": 0.012, "cut": 1200.0, "res": 0.3, "vol": 0.3, "delay": 0.04}]},
 	# Couronne d'épines : une couronne d'épines qui jaillit en cercle (crépitement d'épines qui s'ouvre), un
 	# coup de violoncelles graves et un pizz de contrebasse.
 	"nova": {"peak": 0.8, "verb": 0.35, "room": 0.6, "duck": 0.15, "layers": [
@@ -91,10 +99,11 @@ const SOUNDS := {
 		{"wave": "grain", "dur": 0.55, "att": 0.02, "density": 220.0, "grain": 0.008, "cut": [900.0, 2600.0], "res": 0.55, "vol": 0.55, "decay": 2.0},
 		{"inst": "bow", "f0": 73.4, "notes": [0, 7, 12, 15], "dur": 0.6, "att": 0.04, "cut": 900.0, "vol": 0.45},
 		{"inst": "pluck", "f0": 73.4, "notes": [0, 12], "step": 0.0, "dur": 0.9, "tone": 0.3, "vol": 0.6}]},
+	# Nuage (attaque de Spore) : un pouf mou, des bulles, deux notes de marimba (fa#, sol).
 	"nuage": {"peak": 0.45, "verb": 0.3, "room": 0.5, "layers": [
-		{"wave": NOISE, "dur": 0.6, "att": 0.14, "filter": "bp", "cut": [1300.0, 450.0], "res": 0.45, "vol": 0.8, "trem": [0.35, 9.0], "decay": 1.2},
-		{"wave": SINE, "f0": 240.0, "f1": 520.0, "dur": 0.16, "att": 0.01, "delay": 0.1, "vol": 0.25},
-		{"wave": SINE, "f0": 300.0, "f1": 640.0, "dur": 0.14, "att": 0.01, "delay": 0.28, "vol": 0.2}]},
+		{"wave": NOISE, "dur": 0.5, "att": 0.05, "filter": "lp", "cut": [700.0, 250.0], "vol": 0.6, "decay": 1.4},
+		{"wave": "grain", "dur": 0.5, "att": 0.01, "density": 20.0, "grain": 0.04, "cut": [350.0, 600.0], "res": 0.85, "vol": 0.45},
+		{"inst": "mallet", "kind": "marimba", "f0": 185.0, "notes": [0, 1], "step": 0.08, "dur": 0.4, "vol": 0.3}]},
 	# Floraison : la fleur s'ouvre en arpège de kalimba, un souffle de chœur et un froissement de pétales.
 	"floraison": {"peak": 0.5, "verb": 0.5, "room": 0.7, "layers": [
 		{"inst": "mallet", "kind": "kalimba", "f0": 311.1, "notes": [0, 4, 7, 11, 14], "step": 0.07, "dur": 1.1, "vol": 0.55},
@@ -133,36 +142,44 @@ const SOUNDS := {
 		{"wave": SINE, "f0": 55.0, "f1": 55.0, "dur": 0.9, "att": 0.2, "vol": 0.5},
 		{"wave": NOISE, "dur": 0.8, "att": 0.6, "filter": "hp", "cut": [600.0, 5000.0], "vol": 0.25}]},
 	# --- Progression, Cœurs, ramassage --------------------------------------------------------------------
+	# Un nœud de l'arbre pris : marimba et pizz, une quinte qui s'ouvre.
 	"noeud": {"peak": 0.45, "verb": 0.4, "room": 0.6, "layers": [
-		{"wave": SINE, "f0": 587.0, "dur": 0.4, "att": 0.004, "vol": 0.6, "arp": [0, 7, 12], "fm": [2.0, 1.2], "decay": 1.4},
-		{"wave": METAL, "f0": 1760.0, "dur": 0.5, "att": 0.002, "delay": 0.02, "vol": 0.25}]},
+		{"inst": "mallet", "kind": "marimba", "f0": 293.7, "notes": [0, 7, 12], "step": 0.05, "dur": 0.6, "vol": 0.45},
+		{"inst": "pluck", "f0": 146.8, "notes": [0], "step": 0.0, "dur": 0.5, "tone": 0.5, "vol": 0.35}]},
+	# Niveau : un arpège de pizz qui monte, le cor qui répond, un souffle de chœur.
 	"niveau": {"peak": 0.55, "verb": 0.45, "room": 0.7, "duck": 0.2, "layers": [
-		{"wave": TRI, "f0": 392.0, "dur": 0.75, "att": 0.005, "vol": 0.6, "arp": [0, 4, 7, 12, 16], "voice2": 12.0, "decay": 1.1},
-		{"wave": SQUARE, "f0": 196.0, "dur": 0.75, "att": 0.005, "duty": 0.5, "filter": "lp", "cut": 1800.0, "vol": 0.25, "arp": [0, 4, 7, 12, 16]},
-		{"wave": NOISE, "dur": 0.5, "att": 0.4, "filter": "bp", "cut": [1200.0, 6000.0], "res": 0.4, "vol": 0.2},
-		{"wave": METAL, "f0": 2349.0, "dur": 0.7, "att": 0.002, "delay": 0.45, "vol": 0.25}]},
+		{"inst": "pluck", "f0": 146.8, "notes": [0, 3, 7, 12, 15], "step": 0.08, "dur": 0.8, "tone": 0.6, "vol": 0.5},
+		{"inst": "tone", "tone": "horn", "f0": 146.8, "notes": [0, 7], "step": 0.0, "dur": 0.9, "vol": 0.3, "delay": 0.3},
+		{"inst": "choir", "vowel": "a", "f0": 146.8, "notes": [0], "step": 0.0, "dur": 1.0, "vol": 0.25, "delay": 0.2}]},
+	# Un Cœur purifié (Ronce) : le chœur et les cordes passent en majeur, cloche, marimba qui s'envole.
+	# Chaque région a sa version (coeur@spore…).
 	"coeur": {"peak": 0.72, "verb": 0.6, "room": 0.95, "duck": 0.6, "layers": [
-		{"wave": SINE, "f0": 261.6, "dur": 2.2, "att": 0.02, "vol": 0.5, "arp": [0, 4, 7, 12, 16, 19], "voice2": 12.0, "decay": 1.0},
-		{"wave": SAW, "f0": 130.8, "dur": 2.4, "att": 0.6, "filter": "bp", "cut": [600.0, 1100.0], "res": 0.5, "vol": 0.35, "voice2": 7.0, "vib": [0.008, 5.0], "decay": 1.0},
-		{"wave": SINE, "f0": 65.4, "f1": 65.4, "dur": 2.2, "att": 0.05, "vol": 0.4, "decay": 1.2},
-		{"wave": METAL, "f0": 1046.0, "dur": 1.6, "att": 0.002, "vol": 0.25},
-		{"wave": NOISE, "dur": 1.6, "att": 0.8, "filter": "hp", "cut": [3000.0, 7000.0], "vol": 0.1}]},
+		{"inst": "choir", "vowel": "a", "f0": 146.8, "notes": [0, 4, 7], "step": 0.0, "dur": 2.2, "vol": 0.3},
+		{"inst": "bow", "f0": 73.4, "notes": [0, 7, 12, 16], "dur": 2.4, "att": 0.6, "cut": 1200.0, "vol": 0.4},
+		{"inst": "mallet", "kind": "bell", "f0": 293.7, "notes": [0], "step": 0.0, "dur": 2.0, "vol": 0.35},
+		{"inst": "mallet", "kind": "marimba", "f0": 293.7, "notes": [0, 4, 7, 12, 16, 19], "step": 0.12, "dur": 0.8, "vol": 0.35},
+		{"wave": SINE, "f0": 73.4, "f1": 73.4, "dur": 2.2, "att": 0.05, "vol": 0.35, "decay": 1.2}]},
+	# Une essence ramassée : une goutte de kalimba (la hauteur monte quand on enchaîne).
 	"ramasse": {"peak": 0.24, "verb": 0.12, "room": 0.3, "layers": [
-		{"wave": SINE, "f0": 880.0, "f1": 1320.0, "dur": 0.09, "att": 0.002, "vol": 0.8, "voice2": 12.0},
-		{"wave": SINE, "f0": 1760.0, "dur": 0.06, "att": 0.001, "delay": 0.02, "vol": 0.3, "fm": [3.5, 0.6]}]},
+		{"inst": "mallet", "kind": "kalimba", "f0": 587.3, "notes": [0], "step": 0.0, "dur": 0.15, "vol": 0.6},
+		{"wave": SINE, "f0": 587.3, "f1": 880.0, "dur": 0.05, "att": 0.002, "vol": 0.25}]},
+	# Une greffe ramassée : marimba qui monte, un souffle de chœur, un froissement de feuilles.
 	"greffe": {"peak": 0.52, "verb": 0.45, "room": 0.7, "layers": [
-		{"wave": TRI, "f0": 523.0, "dur": 0.6, "att": 0.004, "vol": 0.6, "arp": [0, 7, 12, 16], "voice2": 12.0},
-		{"wave": METAL, "f0": 2093.0, "dur": 0.8, "att": 0.002, "delay": 0.1, "vol": 0.3},
-		{"wave": NOISE, "dur": 0.5, "att": 0.2, "filter": "hp", "cut": 6000.0, "vol": 0.12}]},
+		{"inst": "mallet", "kind": "marimba", "f0": 392.0, "notes": [0, 7, 12, 16], "step": 0.07, "dur": 0.6, "vol": 0.45},
+		{"inst": "choir", "vowel": "o", "f0": 196.0, "notes": [0], "step": 0.0, "dur": 0.6, "vol": 0.2},
+		{"wave": "grain", "dur": 0.5, "att": 0.1, "density": 60.0, "grain": 0.02, "cut": [900.0, 1600.0], "res": 0.3, "vol": 0.2}]},
+	# De la sève recueillie : quatre gouttes de kalimba et un ploc.
 	"seve": {"peak": 0.45, "verb": 0.45, "room": 0.6, "layers": [
-		{"wave": SINE, "f0": 392.0, "dur": 0.75, "att": 0.01, "vol": 0.6, "arp": [0, 5, 9, 12], "vib": [0.01, 6.0]},
-		{"wave": SINE, "f0": 1200.0, "f1": 600.0, "dur": 0.1, "att": 0.002, "vol": 0.3}]},
+		{"inst": "mallet", "kind": "kalimba", "f0": 392.0, "notes": [0, 5, 9, 12], "step": 0.08, "dur": 0.6, "vol": 0.45},
+		{"wave": SINE, "f0": 900.0, "f1": 420.0, "dur": 0.08, "att": 0.002, "vol": 0.3}]},
 	# --- Interface ----------------------------------------------------------------------------------------
+	# Clic : un petit bloc de bois.
 	"clic": {"peak": 0.2, "layers": [
-		{"wave": SQUARE, "f0": 900.0, "f1": 700.0, "dur": 0.035, "att": 0.001, "duty": 0.5, "filter": "lp", "cut": 3200.0, "vol": 0.7},
-		{"wave": NOISE, "dur": 0.008, "att": 0.0005, "filter": "hp", "cut": 3000.0, "vol": 0.3}]},
+		{"wave": TRI, "f0": 700.0, "f1": 560.0, "dur": 0.04, "att": 0.001, "filter": "lp", "cut": 2400.0, "vol": 0.7},
+		{"wave": NOISE, "dur": 0.012, "att": 0.0005, "filter": "bp", "cut": 1800.0, "vol": 0.3, "res": 0.4}]},
+	# Survol : un effleurement.
 	"survol": {"peak": 0.1, "layers": [
-		{"wave": SINE, "f0": 1200.0, "f1": 1400.0, "dur": 0.03, "att": 0.002, "vol": 1.0}]},
+		{"wave": SINE, "f0": 880.0, "f1": 990.0, "dur": 0.03, "att": 0.002, "vol": 1.0}]},
 	# Vesse-de-loup (éclatement) : la vesse crève (pouf mou), un nuage qui s'étale, des bulles.
 	"spore_eclat": {"peak": 0.6, "verb": 0.25, "room": 0.5, "layers": [
 		{"wave": NOISE, "dur": 0.08, "att": 0.002, "filter": "lp", "cut": [1600.0, 300.0], "vol": 1.0},
@@ -191,33 +208,47 @@ const SOUNDS := {
 		{"wave": "grain", "dur": 0.7, "att": 0.02, "density": 45.0, "grain": 0.04, "cut": [500.0, 250.0], "res": 0.85, "vol": 0.55},
 		{"inst": "mallet", "kind": "marimba", "f0": 185.0, "notes": [7, 3, 1, 0], "step": 0.08, "dur": 0.7, "vol": 0.45},
 		{"inst": "tone", "tone": "clarinet", "f0": 92.5, "dur": 0.5, "delay": 0.05, "vol": 0.25}]},
+	# Flaque de spores : la boue qui clapote, un glouglou, des bulles.
 	"spore_flaque": {"peak": 0.5, "verb": 0.2, "room": 0.4, "layers": [
-		{"wave": NOISE, "dur": 0.28, "att": 0.02, "filter": "bp", "cut": [600.0, 220.0], "res": 0.65, "vol": 0.8, "trem": [0.5, 13.0]},
-		{"wave": SINE, "f0": 90.0, "f1": 60.0, "dur": 0.2, "att": 0.004, "vol": 0.6}]},
+		{"wave": NOISE, "dur": 0.28, "att": 0.02, "filter": "bp", "cut": [600.0, 220.0], "vol": 0.7, "res": 0.65, "trem": [0.5, 13.0]},
+		{"wave": SINE, "f0": 170.0, "f1": 100.0, "dur": 0.2, "att": 0.004, "vol": 0.5, "vib": [0.08, 16.0]},
+		{"wave": "grain", "dur": 0.4, "att": 0.01, "density": 25.0, "grain": 0.04, "cut": [400.0, 250.0], "res": 0.85, "vol": 0.35, "delay": 0.05}]},
+	# Un champignon se divise : un pop mou et deux notes de marimba (demi-ton).
 	"spore_division": {"peak": 0.45, "verb": 0.2, "room": 0.4, "layers": [
-		{"wave": TRI, "f0": 420.0, "f1": 210.0, "dur": 0.24, "att": 0.004, "vol": 0.6, "voice2": -12.0, "vib": [0.1, 20.0]},
-		{"wave": SINE, "f0": 500.0, "f1": 1200.0, "dur": 0.08, "att": 0.004, "delay": 0.12, "vol": 0.3}]},
+		{"wave": SINE, "f0": 200.0, "f1": 520.0, "dur": 0.07, "att": 0.004, "vol": 0.5},
+		{"wave": NOISE, "dur": 0.06, "att": 0.002, "filter": "lp", "cut": [1200.0, 300.0], "vol": 0.4},
+		{"inst": "mallet", "kind": "marimba", "f0": 370.0, "notes": [0, 1], "step": 0.06, "dur": 0.35, "vol": 0.4, "delay": 0.05}]},
+	# Réveil de l'Amanite-Mère : la clarinette grave en fa# phrygien, des bulles, un marimba sourd.
 	"spore_boss_eveil": {"peak": 0.82, "verb": 0.5, "room": 0.85, "duck": 0.6, "layers": [
-		{"wave": SAW, "f0": 70.0, "f1": 190.0, "dur": 1.2, "att": 0.45, "filter": "lp", "cut": [250.0, 1200.0], "res": 0.5, "vol": 0.7, "voice2": -3.0, "vib": [0.05, 6.0], "drive": 0.3},
-		{"wave": NOISE, "dur": 1.1, "att": 0.5, "filter": "bp", "cut": [300.0, 900.0], "res": 0.6, "vol": 0.4, "trem": [0.5, 5.0]},
-		{"wave": SINE, "f0": 45.0, "f1": 55.0, "dur": 1.2, "att": 0.3, "vol": 0.6}]},
+		{"inst": "bow", "f0": 92.5, "notes": [0, 1, 7], "dur": 1.2, "att": 0.5, "cut": 700.0, "vol": 0.4},
+		{"inst": "tone", "tone": "clarinet", "f0": 92.5, "notes": [0, 1], "step": 0.5, "dur": 0.8, "vol": 0.4},
+		{"wave": "grain", "dur": 1.2, "att": 0.3, "density": 25.0, "grain": 0.05, "cut": [300.0, 600.0], "res": 0.85, "vol": 0.4},
+		{"inst": "mallet", "kind": "marimba", "f0": 185.0, "notes": [0, 1, 0], "step": 0.2, "dur": 0.5, "vol": 0.4, "delay": 0.8},
+		{"inst": "drum", "f0": 70.0, "f1": 45.0, "dur": 0.6, "vol": 0.48, "delay": 1.0}]},
+	# L'Amanite change de phase : bulles qui éclatent, marimba qui dégringole, tambour.
 	"spore_boss_phase": {"peak": 0.8, "verb": 0.4, "room": 0.75, "duck": 0.4, "layers": [
-		{"wave": SAW, "f0": 240.0, "f1": 90.0, "dur": 0.9, "att": 0.02, "filter": "lp", "cut": [1600.0, 300.0], "res": 0.5, "vol": 0.7, "voice2": 1.0, "vib": [0.08, 9.0]},
-		{"wave": NOISE, "dur": 0.7, "att": 0.01, "filter": "lp", "cut": [1400.0, 200.0], "vol": 0.5, "crush": 1200.0},
-		{"wave": SINE, "f0": 90.0, "f1": 35.0, "dur": 0.7, "att": 0.002, "vol": 0.8, "drive": 0.4}]},
+		{"wave": NOISE, "dur": 0.15, "att": 0.002, "filter": "lp", "cut": [1400.0, 300.0], "vol": 0.6},
+		{"wave": "grain", "dur": 0.6, "att": 0.01, "density": 40.0, "grain": 0.04, "cut": [600.0, 250.0], "res": 0.85, "vol": 0.5},
+		{"inst": "mallet", "kind": "marimba", "f0": 185.0, "notes": [12, 7, 1, 0], "step": 0.07, "dur": 0.5, "vol": 0.45},
+		{"inst": "drum", "f0": 90.0, "f1": 35.0, "dur": 0.6, "vol": 0.54, "noise": 0.3, "cut": 600.0}]},
+	# L'Amanite meurt : elle se vide en bulles, puis le marimba passe en fa# majeur.
 	"spore_boss_mort": {"peak": 0.85, "verb": 0.6, "room": 0.95, "duck": 0.7, "layers": [
-		{"wave": SINE, "f0": 220.0, "f1": 60.0, "dur": 2.0, "att": 0.02, "vol": 0.7, "voice2": -5.0, "vib": [0.04, 4.0]},
-		{"wave": NOISE, "dur": 1.6, "att": 0.005, "filter": "lp", "cut": [2400.0, 120.0], "vol": 0.6, "crush": 2000.0},
-		{"wave": SINE, "f0": 70.0, "f1": 28.0, "dur": 1.4, "att": 0.002, "vol": 0.8, "drive": 0.5},
-		{"wave": SINE, "f0": 330.0, "f1": 990.0, "dur": 0.2, "att": 0.01, "delay": 0.5, "vol": 0.2},
-		{"wave": SINE, "f0": 280.0, "f1": 840.0, "dur": 0.2, "att": 0.01, "delay": 0.8, "vol": 0.18}]},
+		{"wave": NOISE, "dur": 1.4, "att": 0.002, "filter": "lp", "cut": [1600.0, 120.0], "vol": 0.5, "res": 0.3},
+		{"wave": "grain", "dur": 1.4, "att": 0.01, "density": 30.0, "grain": 0.05, "cut": [500.0, 250.0], "res": 0.85, "vol": 0.45},
+		{"inst": "drum", "f0": 70.0, "f1": 28.0, "dur": 1.2, "vol": 0.6, "noise": 0.3, "cut": 500.0},
+		{"inst": "tone", "tone": "cello", "f0": 92.5, "notes": [7, 1, 0], "step": 0.3, "dur": 0.6, "vol": 0.35},
+		{"inst": "mallet", "kind": "marimba", "f0": 185.0, "notes": [0, 4, 7, 12, 16], "step": 0.12, "dur": 0.8, "vol": 0.4, "delay": 0.9},
+		{"inst": "bow", "f0": 92.5, "notes": [0, 4, 7], "dur": 1.4, "att": 0.4, "cut": 1000.0, "vol": 0.3, "delay": 0.9}]},
 	# --- Vent (vitesse, projectiles, mobilité) : souffles et sifflements clairs. -----------------------------
+	# Lame de vent : un souffle tranchant et une corde de harpe pincée.
 	"vent_lame": {"peak": 0.45, "verb": 0.1, "room": 0.4, "layers": [
-		{"wave": NOISE, "dur": 0.13, "att": 0.03, "filter": "bp", "cut": [2400.0, 6500.0], "res": 0.7, "vol": 0.7},
-		{"wave": SAW, "f0": 2600.0, "f1": 1800.0, "dur": 0.08, "att": 0.002, "filter": "bp", "cut": 3000.0, "res": 0.5, "vol": 0.3, "click": true}]},
+		{"wave": NOISE, "dur": 0.13, "att": 0.03, "filter": "bp", "cut": [1000.0, 2000.0], "vol": 0.8, "res": 0.5},
+		{"inst": "pluck", "f0": 392.0, "notes": [0], "step": 0.0, "dur": 0.3, "tone": 0.7, "vol": 0.35}]},
+	# Rafale : deux souffles qui se croisent, un fil de flûte.
 	"vent_rafale": {"peak": 0.5, "verb": 0.2, "room": 0.5, "layers": [
-		{"wave": NOISE, "dur": 0.42, "att": 0.1, "filter": "bp", "cut": [900.0, 4200.0], "res": 0.65, "vol": 0.8, "decay": 1.2},
-		{"wave": NOISE, "dur": 0.3, "att": 0.1, "delay": 0.08, "filter": "bp", "cut": [1800.0, 5600.0], "res": 0.7, "vol": 0.35}]},
+		{"wave": NOISE, "dur": 0.42, "att": 0.1, "filter": "bp", "cut": [500.0, 1600.0], "vol": 0.8, "res": 0.6, "decay": 1.2},
+		{"wave": NOISE, "dur": 0.3, "att": 0.1, "filter": "bp", "cut": [900.0, 2000.0], "vol": 0.35, "res": 0.6, "delay": 0.08},
+		{"inst": "tone", "tone": "flute", "f0": 392.0, "notes": [0], "step": 0.0, "dur": 0.25, "vol": 0.15, "delay": 0.05}]},
 	# Tornade : un tourbillon (souffle qui tourne), la flûte qui monte et retombe, des herbes arrachées.
 	"vent_tornade": {"peak": 0.6, "verb": 0.3, "room": 0.6, "layers": [
 		{"wave": NOISE, "dur": 1.0, "att": 0.3, "filter": "bp", "cut": [400.0, 1400.0], "res": 0.65, "vol": 0.8, "trem": [0.55, 7.0], "decay": 1.3},
@@ -236,34 +267,44 @@ const SOUNDS := {
 		{"wave": NOISE, "dur": 0.7, "att": 0.55, "filter": "lp", "cut": 400.0, "vol": 0.5, "decay": 4.0},
 		{"inst": "tone", "tone": "flute", "f0": 293.7, "notes": [0, 7], "step": 0.0, "dur": 0.6, "vol": 0.25},
 		{"inst": "drum", "f0": 90.0, "f1": 50.0, "dur": 0.3, "delay": 0.68, "vol": 0.5}]},
+	# Plongeon : le souffle qui tombe en piqué, l'impact, la harpe qui retombe.
 	"vent_plongeon": {"peak": 0.55, "verb": 0.15, "room": 0.4, "layers": [
-		{"wave": NOISE, "dur": 0.28, "att": 0.15, "filter": "bp", "cut": [5000.0, 900.0], "res": 0.7, "vol": 0.8, "decay": 0.9},
-		{"wave": SINE, "f0": 120.0, "f1": 50.0, "dur": 0.15, "att": 0.002, "delay": 0.24, "vol": 0.8, "drive": 0.4}]},
+		{"wave": NOISE, "dur": 0.28, "att": 0.15, "filter": "bp", "cut": [2200.0, 500.0], "vol": 0.8, "res": 0.6, "decay": 0.9},
+		{"inst": "drum", "f0": 110.0, "f1": 45.0, "dur": 0.18, "vol": 0.48, "noise": 0.3, "cut": 900.0, "delay": 0.24},
+		{"inst": "pluck", "f0": 196.0, "notes": [7, 0], "step": 0.05, "dur": 0.35, "tone": 0.7, "vol": 0.3, "delay": 0.24}]},
+	# Repousse : une bourrasque qui part du héros, un coup, la flûte en quinte.
 	"vent_repousse": {"peak": 0.6, "verb": 0.2, "room": 0.5, "layers": [
-		{"wave": NOISE, "dur": 0.32, "att": 0.004, "filter": "lp", "cut": [2400.0, 400.0], "vol": 0.8},
-		{"wave": SINE, "f0": 110.0, "f1": 40.0, "dur": 0.28, "att": 0.002, "vol": 0.9, "drive": 0.4},
-		{"wave": NOISE, "dur": 0.3, "att": 0.05, "filter": "bp", "cut": [1500.0, 4000.0], "res": 0.6, "vol": 0.35}]},
+		{"wave": NOISE, "dur": 0.32, "att": 0.002, "filter": "lp", "cut": [1800.0, 400.0], "vol": 0.8},
+		{"inst": "drum", "f0": 110.0, "f1": 40.0, "dur": 0.28, "vol": 0.54, "noise": 0.3, "cut": 800.0},
+		{"wave": NOISE, "dur": 0.3, "att": 0.05, "filter": "bp", "cut": [800.0, 1800.0], "vol": 0.35, "res": 0.6},
+		{"inst": "tone", "tone": "flute", "f0": 293.7, "notes": [0, 7], "step": 0.0, "dur": 0.3, "vol": 0.2}]},
+	# Réveil du Harfang : une bourrasque qui enfle, la flûte qui appelle en sol, la harpe qui s'envole.
 	"vent_boss_eveil": {"peak": 0.82, "verb": 0.5, "room": 0.9, "duck": 0.6, "layers": [
-		{"wave": NOISE, "dur": 1.3, "att": 0.55, "filter": "bp", "cut": [400.0, 3400.0], "res": 0.75, "vol": 0.8, "trem": [0.3, 4.0]},
-		{"wave": SAW, "f0": 110.0, "f1": 220.0, "dur": 1.2, "att": 0.5, "filter": "lp", "cut": [400.0, 2000.0], "vol": 0.4, "voice2": 7.0},
-		{"wave": METAL, "f0": 880.0, "dur": 1.0, "att": 0.002, "delay": 1.0, "vol": 0.3},
-		{"wave": SINE, "f0": 55.0, "f1": 50.0, "dur": 1.2, "att": 0.4, "vol": 0.5}]},
+		{"wave": NOISE, "dur": 1.3, "att": 0.55, "filter": "bp", "cut": [400.0, 1800.0], "vol": 0.7, "res": 0.65, "trem": [0.3, 4.0]},
+		{"inst": "tone", "tone": "flute", "f0": 392.0, "notes": [0, 5, 10], "step": 0.3, "dur": 0.5, "vol": 0.3},
+		{"inst": "pluck", "f0": 196.0, "notes": [0, 7, 12, 17, 19], "step": 0.07, "dur": 0.6, "tone": 0.7, "vol": 0.45, "delay": 1.0},
+		{"inst": "drum", "f0": 65.0, "f1": 40.0, "dur": 0.6, "vol": 0.48, "delay": 1.0},
+		{"wave": SINE, "f0": 49.0, "f1": 49.0, "dur": 1.2, "att": 0.4, "vol": 0.4}]},
+	# Le Harfang change de phase : une rafale en piqué, la harpe qui dégringole, un tambour.
 	"vent_boss_phase": {"peak": 0.8, "verb": 0.4, "room": 0.8, "duck": 0.4, "layers": [
-		{"wave": NOISE, "dur": 0.85, "att": 0.02, "filter": "bp", "cut": [4200.0, 600.0], "res": 0.7, "vol": 0.8},
-		{"wave": SINE, "f0": 100.0, "f1": 35.0, "dur": 0.6, "att": 0.002, "vol": 0.8, "drive": 0.4},
-		{"wave": METAL, "f0": 660.0, "dur": 0.8, "att": 0.002, "vol": 0.25}]},
+		{"wave": NOISE, "dur": 0.85, "att": 0.02, "filter": "bp", "cut": [2000.0, 500.0], "vol": 0.7, "res": 0.65},
+		{"inst": "pluck", "f0": 196.0, "notes": [19, 17, 12, 7, 0], "step": 0.04, "dur": 0.5, "tone": 0.7, "vol": 0.45},
+		{"inst": "drum", "f0": 100.0, "f1": 35.0, "dur": 0.6, "vol": 0.54, "noise": 0.3, "cut": 700.0}]},
+	# Le Harfang tombe : la flûte descend, le vent retombe, la harpe en sol majeur.
 	"vent_boss_mort": {"peak": 0.85, "verb": 0.6, "room": 0.95, "duck": 0.7, "layers": [
-		{"wave": SINE, "f0": 520.0, "f1": 90.0, "dur": 1.9, "att": 0.02, "vol": 0.6, "voice2": 7.0, "vib": [0.05, 7.0]},
-		{"wave": NOISE, "dur": 1.8, "att": 0.01, "filter": "bp", "cut": [3000.0, 300.0], "res": 0.6, "vol": 0.6},
-		{"wave": SINE, "f0": 80.0, "f1": 28.0, "dur": 1.2, "att": 0.002, "vol": 0.8, "drive": 0.5},
-		{"wave": METAL, "f0": 1320.0, "dur": 1.4, "att": 0.002, "delay": 0.6, "vol": 0.25}]},
+		{"inst": "tone", "tone": "flute", "f0": 392.0, "notes": [12, 10, 7, 5, 0], "step": 0.3, "dur": 0.6, "vol": 0.35},
+		{"wave": NOISE, "dur": 1.8, "att": 0.01, "filter": "bp", "cut": [1600.0, 300.0], "vol": 0.5, "res": 0.6},
+		{"inst": "drum", "f0": 80.0, "f1": 28.0, "dur": 1.0, "vol": 0.6, "noise": 0.3, "cut": 600.0},
+		{"inst": "pluck", "f0": 196.0, "notes": [0, 4, 7, 12, 16], "step": 0.1, "dur": 0.9, "tone": 0.7, "vol": 0.4, "delay": 1.0}]},
 	# --- Sève (vie, eau, régénération) : gouttes, clochettes, eau vive. -------------------------------------
+	# Goutte de sève (attaque) : un ploc et une note de kalimba.
 	"seve_goutte": {"peak": 0.45, "verb": 0.3, "room": 0.5, "layers": [
-		{"wave": SINE, "f0": 1400.0, "f1": 520.0, "dur": 0.14, "att": 0.002, "vol": 0.8, "decay": 2.0},
-		{"wave": SINE, "f0": 900.0, "f1": 1300.0, "dur": 0.06, "att": 0.002, "delay": 0.05, "vol": 0.3}]},
+		{"wave": SINE, "f0": 900.0, "f1": 420.0, "dur": 0.12, "att": 0.002, "vol": 0.7, "decay": 2.0},
+		{"inst": "mallet", "kind": "kalimba", "f0": 622.3, "notes": [0], "step": 0.0, "dur": 0.25, "vol": 0.3}]},
+	# Une pousse : arpège de kalimba (mib lydien) et feuilles qui se déplient.
 	"seve_pousse": {"peak": 0.48, "verb": 0.35, "room": 0.55, "layers": [
-		{"wave": TRI, "f0": 260.0, "dur": 0.5, "att": 0.05, "vol": 0.6, "arp": [0, 4, 7, 12], "vib": [0.03, 7.0]},
-		{"wave": NOISE, "dur": 0.35, "att": 0.1, "filter": "lp", "cut": [400.0, 1500.0], "vol": 0.3, "crush": 1200.0}]},
+		{"inst": "mallet", "kind": "kalimba", "f0": 311.1, "notes": [0, 4, 7, 11], "step": 0.06, "dur": 0.5, "vol": 0.45},
+		{"wave": "grain", "dur": 0.35, "att": 0.1, "density": 70.0, "grain": 0.02, "cut": [600.0, 1300.0], "res": 0.3, "vol": 0.3}]},
 	# Cocon de sève : la sève s'enroule autour du héros (cor chaud), des gouttes de kalimba, un glouglou.
 	"seve_soin": {"peak": 0.48, "verb": 0.5, "room": 0.7, "layers": [
 		{"inst": "tone", "tone": "horn", "f0": 155.6, "notes": [0, 4, 7], "step": 0.0, "dur": 0.9, "vol": 0.3},
@@ -286,19 +327,26 @@ const SOUNDS := {
 		{"wave": "grain", "dur": 0.35, "att": 0.05, "density": 60.0, "grain": 0.03, "cut": [400.0, 700.0], "res": 0.8, "vol": 0.4},
 		{"inst": "tone", "tone": "cello", "f0": 155.6, "notes": [0, 4], "step": 0.15, "dur": 0.3, "vol": 0.3},
 		{"wave": SINE, "f0": 280.0, "f1": 160.0, "dur": 0.08, "att": 0.005, "delay": 0.3, "vol": 0.25}]},
+	# Réveil du Saule exsangue : le cor en mib lydien, la sève qui coule, kalimba.
 	"seve_boss_eveil": {"peak": 0.8, "verb": 0.55, "room": 0.9, "duck": 0.6, "layers": [
-		{"wave": SINE, "f0": 90.0, "f1": 260.0, "dur": 1.3, "att": 0.45, "vol": 0.6, "voice2": 7.0, "vib": [0.04, 5.0]},
-		{"wave": NOISE, "dur": 1.2, "att": 0.5, "filter": "bp", "cut": [600.0, 1600.0], "res": 0.5, "vol": 0.4, "trem": [0.5, 9.0]},
-		{"wave": SINE, "f0": 45.0, "f1": 55.0, "dur": 1.2, "att": 0.3, "vol": 0.5}]},
+		{"inst": "tone", "tone": "horn", "f0": 155.6, "notes": [0, 7], "step": 0.0, "dur": 1.2, "vol": 0.35},
+		{"inst": "bow", "f0": 77.8, "notes": [0, 7, 12], "dur": 1.2, "att": 0.5, "cut": 900.0, "vol": 0.35},
+		{"wave": NOISE, "dur": 1.2, "att": 0.5, "filter": "bp", "cut": [600.0, 1300.0], "vol": 0.3, "res": 0.4, "trem": [0.4, 9.0]},
+		{"inst": "mallet", "kind": "kalimba", "f0": 311.1, "notes": [0, 4, 6, 11], "step": 0.15, "dur": 0.5, "vol": 0.4, "delay": 0.6},
+		{"inst": "drum", "f0": 65.0, "f1": 42.0, "dur": 0.6, "vol": 0.42, "delay": 1.0}]},
+	# Le Saule change de phase : un glouglou, kalimba qui redescend, tambour.
 	"seve_boss_phase": {"peak": 0.78, "verb": 0.4, "room": 0.8, "duck": 0.4, "layers": [
-		{"wave": TRI, "f0": 340.0, "f1": 110.0, "dur": 0.9, "att": 0.02, "vol": 0.6, "voice2": 4.0, "vib": [0.07, 8.0]},
-		{"wave": NOISE, "dur": 0.6, "att": 0.01, "filter": "lp", "cut": [1800.0, 300.0], "vol": 0.4},
-		{"wave": SINE, "f0": 90.0, "f1": 35.0, "dur": 0.6, "att": 0.002, "vol": 0.7, "drive": 0.3}]},
+		{"wave": SINE, "f0": 300.0, "f1": 140.0, "dur": 0.2, "att": 0.002, "vol": 0.5, "vib": [0.1, 14.0]},
+		{"inst": "mallet", "kind": "kalimba", "f0": 311.1, "notes": [11, 6, 4, 0], "step": 0.07, "dur": 0.5, "vol": 0.45},
+		{"inst": "drum", "f0": 90.0, "f1": 35.0, "dur": 0.6, "vol": 0.54, "noise": 0.3, "cut": 600.0}]},
+	# Le Saule meurt : la sève s'écoule, le cor et la kalimba en mib majeur.
 	"seve_boss_mort": {"peak": 0.85, "verb": 0.6, "room": 0.95, "duck": 0.7, "layers": [
-		{"wave": SINE, "f0": 330.0, "f1": 70.0, "dur": 2.0, "att": 0.03, "vol": 0.6, "voice2": 12.0, "vib": [0.03, 4.0]},
-		{"wave": NOISE, "dur": 1.5, "att": 0.01, "filter": "bp", "cut": [1800.0, 400.0], "res": 0.5, "vol": 0.5, "trem": [0.5, 11.0]},
-		{"wave": SINE, "f0": 70.0, "f1": 30.0, "dur": 1.2, "att": 0.002, "vol": 0.7, "drive": 0.4},
-		{"wave": SINE, "f0": 880.0, "dur": 1.0, "att": 0.01, "delay": 0.7, "vol": 0.2, "arp": [0, 4, 7, 12]}]},
+		{"wave": NOISE, "dur": 1.5, "att": 0.01, "filter": "bp", "cut": [1300.0, 400.0], "vol": 0.4, "res": 0.5, "trem": [0.5, 11.0]},
+		{"inst": "drum", "f0": 70.0, "f1": 30.0, "dur": 1.0, "vol": 0.6, "noise": 0.3, "cut": 500.0},
+		{"inst": "tone", "tone": "horn", "f0": 155.6, "notes": [0, 4, 7], "step": 0.25, "dur": 1.0, "vol": 0.35, "delay": 0.6},
+		{"inst": "mallet", "kind": "kalimba", "f0": 311.1, "notes": [0, 4, 7, 11, 12, 16], "step": 0.1, "dur": 0.8, "vol": 0.4, "delay": 0.9},
+		{"inst": "bow", "f0": 77.8, "notes": [0, 4, 7, 12], "dur": 1.4, "att": 0.4, "cut": 1000.0, "vol": 0.3, "delay": 0.7}]},
+	# --- Racine (bois, pierre) : bois qui craque, coups sourds. ---------------------------------------------
 	# Bouclier d'écorce : l'écorce se referme autour du héros : craquements de bois, un coup sourd, un violoncelle.
 	"racine_ecorce": {"peak": 0.6, "verb": 0.2, "room": 0.45, "layers": [
 		{"wave": "grain", "dur": 0.4, "att": 0.02, "density": 90.0, "grain": 0.025, "cut": [500.0, 900.0], "res": 0.8, "vol": 0.6},
@@ -315,85 +363,115 @@ const SOUNDS := {
 		{"inst": "drum", "f0": 170.0, "f1": 110.0, "notes": [0, -2, -5], "step": 0.09, "dur": 0.16, "noise": 0.5, "cut": 1100.0, "vol": 0.65},
 		{"wave": "grain", "dur": 0.35, "att": 0.005, "density": 140.0, "grain": 0.008, "cut": [1600.0, 700.0], "res": 0.4, "vol": 0.4},
 		{"inst": "mallet", "kind": "marimba", "f0": 130.8, "notes": [0, -2, -5], "step": 0.09, "dur": 0.4, "vol": 0.35}]},
+	# Massue de bois (attaque de Racine) : un coup de tambour, du gravier.
 	"racine_massue": {"peak": 0.75, "verb": 0.2, "room": 0.5, "layers": [
-		{"wave": SINE, "f0": 160.0, "f1": 45.0, "dur": 0.38, "att": 0.003, "vol": 1.0, "voice2": -5.0, "drive": 0.5},
-		{"wave": NOISE, "dur": 0.25, "att": 0.002, "filter": "lp", "cut": [1600.0, 200.0], "vol": 0.6, "crush": 1400.0}]},
+		{"inst": "drum", "f0": 150.0, "f1": 45.0, "dur": 0.38, "vol": 0.6, "noise": 0.4, "cut": 800.0},
+		{"wave": NOISE, "dur": 0.22, "att": 0.002, "filter": "lp", "cut": [1400.0, 220.0], "vol": 0.5},
+		{"wave": "grain", "dur": 0.22, "att": 0.01, "density": 140.0, "grain": 0.008, "cut": [1200.0, 500.0], "res": 0.4, "vol": 0.35, "decay": 2.0}]},
+	# Réveil du boss de Racine : trois coups de taiko, les violoncelles en do dorien, le bois qui craque.
 	"racine_boss_eveil": {"peak": 0.85, "verb": 0.5, "room": 0.9, "duck": 0.6, "layers": [
-		{"wave": SAW, "f0": 60.0, "f1": 140.0, "dur": 1.4, "att": 0.5, "filter": "lp", "cut": [200.0, 800.0], "res": 0.55, "vol": 0.7, "voice2": -5.0, "vib": [0.07, 7.0], "drive": 0.4},
-		{"wave": SQUARE, "f0": 90.0, "f1": 70.0, "dur": 1.2, "att": 0.3, "duty": 0.1, "filter": "bp", "cut": 500.0, "res": 0.7, "vol": 0.3, "trem": [0.9, 13.0]},
-		{"wave": SINE, "f0": 40.0, "f1": 50.0, "dur": 1.3, "att": 0.4, "vol": 0.6}]},
+		{"inst": "bow", "f0": 65.4, "notes": [0, 7], "dur": 1.4, "att": 0.5, "cut": 500.0, "vol": 0.4},
+		{"inst": "drum", "f0": 60.0, "f1": 35.0, "dur": 0.5, "vol": 0.6, "noise": 0.3, "cut": 400.0, "notes": [0, 0, 0], "step": 0.35},
+		{"wave": "grain", "dur": 1.2, "att": 0.3, "density": 50.0, "grain": 0.03, "cut": [300.0, 800.0], "res": 0.8, "vol": 0.4},
+		{"inst": "tone", "tone": "cello", "f0": 65.4, "notes": [0, 3], "step": 0.4, "dur": 0.6, "vol": 0.35, "delay": 0.3}]},
+	# Le boss de Racine change de phase : tambours qui descendent, gravier, marimba grave.
 	"racine_boss_phase": {"peak": 0.82, "verb": 0.4, "room": 0.8, "duck": 0.4, "layers": [
-		{"wave": SQUARE, "f0": 200.0, "f1": 70.0, "dur": 0.9, "att": 0.01, "duty": 0.25, "filter": "lp", "cut": [1400.0, 300.0], "res": 0.4, "vol": 0.5, "voice2": 3.0, "vib": [0.08, 12.0]},
-		{"wave": SINE, "f0": 100.0, "f1": 32.0, "dur": 0.7, "att": 0.002, "vol": 0.9, "drive": 0.5},
-		{"wave": NOISE, "dur": 0.6, "att": 0.002, "filter": "lp", "cut": [2000.0, 200.0], "vol": 0.5, "crush": 1200.0}]},
+		{"inst": "drum", "f0": 100.0, "f1": 32.0, "dur": 0.4, "vol": 0.6, "noise": 0.4, "cut": 500.0, "notes": [0, -2, -5], "step": 0.12},
+		{"wave": "grain", "dur": 0.5, "att": 0.01, "density": 140.0, "grain": 0.01, "cut": [1200.0, 400.0], "res": 0.4, "vol": 0.4},
+		{"inst": "mallet", "kind": "marimba", "f0": 130.8, "notes": [3, 0], "step": 0.12, "dur": 0.5, "vol": 0.4}]},
+	# Le boss de Racine s'effondre : la pierre gronde, puis le marimba et les cordes en do majeur.
 	"racine_boss_mort": {"peak": 0.88, "verb": 0.6, "room": 0.95, "duck": 0.7, "layers": [
-		{"wave": NOISE, "dur": 2.0, "att": 0.03, "filter": "lp", "cut": [1600.0, 80.0], "vol": 0.7, "crush": 1600.0, "trem": [0.4, 5.0]},
-		{"wave": SINE, "f0": 90.0, "f1": 26.0, "dur": 1.6, "att": 0.002, "vol": 0.9, "drive": 0.5, "voice2": -7.0},
-		{"wave": SQUARE, "f0": 140.0, "f1": 60.0, "dur": 1.2, "att": 0.05, "duty": 0.12, "filter": "bp", "cut": 400.0, "res": 0.7, "vol": 0.3, "trem": [0.9, 9.0]}]},
-	# Ennemis de Racine : chitine sèche (termite, scarabée), cri étouffé (mandragore), pierre lourde (tertre).
+		{"wave": NOISE, "dur": 2.0, "att": 0.03, "filter": "lp", "cut": [1400.0, 80.0], "vol": 0.6, "trem": [0.4, 5.0]},
+		{"inst": "drum", "f0": 90.0, "f1": 26.0, "dur": 1.4, "vol": 0.6, "noise": 0.4, "cut": 400.0},
+		{"wave": "grain", "dur": 1.0, "att": 0.01, "density": 90.0, "grain": 0.015, "cut": [1000.0, 300.0], "res": 0.4, "vol": 0.4},
+		{"inst": "tone", "tone": "cello", "f0": 65.4, "notes": [7, 3, 0], "step": 0.3, "dur": 0.6, "vol": 0.35},
+		{"inst": "mallet", "kind": "marimba", "f0": 130.8, "notes": [0, 4, 7, 12, 16], "step": 0.12, "dur": 0.8, "vol": 0.4, "delay": 0.9},
+		{"inst": "bow", "f0": 65.4, "notes": [0, 4, 7, 12], "dur": 1.4, "att": 0.4, "cut": 1000.0, "vol": 0.3, "delay": 0.9}]},
+	# Termite touché : un clic de chitine sèche.
 	"racine_termite_hit": {"peak": 0.4, "verb": 0.05, "room": 0.3, "layers": [
-		{"wave": SQUARE, "f0": 1500.0, "f1": 900.0, "dur": 0.05, "att": 0.001, "duty": 0.2, "filter": "bp", "cut": 2200.0, "res": 0.5, "vol": 0.6, "click": true},
-		{"wave": NOISE, "dur": 0.04, "att": 0.001, "filter": "hp", "cut": 3000.0, "vol": 0.4}]},
+		{"inst": "drum", "f0": 900.0, "f1": 600.0, "dur": 0.04, "vol": 0.42, "noise": 0.6, "cut": 1800.0},
+		{"wave": "grain", "dur": 0.03, "att": 0.001, "density": 400.0, "grain": 0.003, "cut": 1600.0, "res": 0.4, "vol": 0.4}]},
+	# Termite écrasé : une carapace qui craque.
 	"racine_termite_death": {"peak": 0.5, "verb": 0.12, "room": 0.35, "layers": [
-		{"wave": NOISE, "dur": 0.18, "att": 0.001, "filter": "bp", "cut": [3200.0, 800.0], "res": 0.5, "vol": 0.8, "click": true, "trem": [0.8, 37.0]},
-		{"wave": SINE, "f0": 200.0, "f1": 80.0, "dur": 0.1, "att": 0.001, "vol": 0.5}]},
+		{"wave": "grain", "dur": 0.18, "att": 0.001, "density": 260.0, "grain": 0.006, "cut": [1500.0, 600.0], "res": 0.45, "vol": 0.7},
+		{"inst": "drum", "f0": 200.0, "f1": 80.0, "dur": 0.1, "vol": 0.3, "noise": 0.3, "cut": 1200.0}]},
+	# Mandragore touchée : un petit cri étouffé de chœur.
 	"racine_mandragore_hit": {"peak": 0.5, "verb": 0.12, "room": 0.4, "layers": [
-		{"wave": SAW, "f0": 700.0, "f1": 420.0, "dur": 0.13, "att": 0.004, "filter": "bp", "cut": 1100.0, "res": 0.6, "vol": 0.7, "voice2": 6.0, "vib": [0.05, 22.0]},
-		{"wave": NOISE, "dur": 0.05, "att": 0.001, "filter": "bp", "cut": 1800.0, "res": 0.4, "vol": 0.4}]},
+		{"inst": "choir", "vowel": "i", "f0": 392.0, "notes": [0], "step": 0.0, "dur": 0.13, "vol": 0.6},
+		{"wave": NOISE, "dur": 0.05, "att": 0.002, "filter": "bp", "cut": 1500.0, "vol": 0.3, "res": 0.4}]},
+	# Mandragore arrachée : son cri qui retombe, la terre qui s'effrite.
 	"racine_mandragore_death": {"peak": 0.62, "verb": 0.3, "room": 0.55, "layers": [
-		{"wave": SAW, "f0": 900.0, "f1": 180.0, "dur": 0.55, "att": 0.005, "filter": "bp", "cut": [1600.0, 500.0], "res": 0.65, "vol": 0.7, "voice2": 6.0, "vib": [0.1, 16.0]},
-		{"wave": NOISE, "dur": 0.3, "att": 0.002, "filter": "lp", "cut": [1200.0, 300.0], "vol": 0.5, "crush": 1500.0},
-		{"wave": SINE, "f0": 120.0, "f1": 45.0, "dur": 0.25, "att": 0.002, "vol": 0.6}]},
+		{"inst": "choir", "vowel": "o", "f0": 329.6, "notes": [0, -5, -10], "step": 0.12, "dur": 0.25, "vol": 0.5},
+		{"wave": "grain", "dur": 0.3, "att": 0.01, "density": 120.0, "grain": 0.012, "cut": [900.0, 300.0], "res": 0.4, "vol": 0.4},
+		{"inst": "drum", "f0": 120.0, "f1": 45.0, "dur": 0.25, "vol": 0.36}]},
+	# Une mandragore jaillit du sol : la terre éclate et elle crie en montant.
 	"racine_mandragore_jaillit": {"peak": 0.6, "verb": 0.25, "room": 0.5, "layers": [
-		{"wave": SAW, "f0": 300.0, "f1": 1100.0, "dur": 0.42, "att": 0.04, "filter": "bp", "cut": [700.0, 2200.0], "res": 0.6, "vol": 0.7, "voice2": 6.0, "vib": [0.12, 18.0]},
-		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "lp", "cut": [1500.0, 300.0], "vol": 0.6, "crush": 900.0},
-		{"wave": SINE, "f0": 110.0, "f1": 50.0, "dur": 0.2, "att": 0.002, "vol": 0.7}]},
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "lp", "cut": [1400.0, 300.0], "vol": 0.6},
+		{"inst": "drum", "f0": 110.0, "f1": 50.0, "dur": 0.2, "vol": 0.42, "noise": 0.3, "cut": 700.0},
+		{"inst": "choir", "vowel": "a", "f0": 220.0, "notes": [0, 5, 12], "step": 0.08, "dur": 0.2, "vol": 0.5}]},
+	# Scarabée touché : un toc sur la carapace.
 	"racine_scarabee_hit": {"peak": 0.55, "verb": 0.08, "room": 0.3, "layers": [
-		{"wave": SQUARE, "f0": 520.0, "f1": 300.0, "dur": 0.07, "att": 0.001, "duty": 0.35, "filter": "bp", "cut": 1200.0, "res": 0.6, "vol": 0.6},
-		{"wave": NOISE, "dur": 0.05, "att": 0.001, "filter": "bp", "cut": [3000.0, 1500.0], "res": 0.4, "vol": 0.6, "click": true},
-		{"wave": SINE, "f0": 150.0, "f1": 70.0, "dur": 0.08, "att": 0.001, "vol": 0.7}]},
+		{"inst": "drum", "f0": 520.0, "f1": 300.0, "dur": 0.07, "vol": 0.48, "noise": 0.5, "cut": 1400.0},
+		{"wave": SINE, "f0": 150.0, "f1": 70.0, "dur": 0.08, "att": 0.002, "vol": 0.5}]},
+	# Critique sur un scarabée : la carapace se fend, marimba grave.
 	"racine_scarabee_crit": {"peak": 0.72, "verb": 0.2, "room": 0.45, "layers": [
-		{"wave": SAW, "f0": 400.0, "f1": 1100.0, "dur": 0.14, "att": 0.002, "filter": "bp", "cut": [1000.0, 3000.0], "res": 0.5, "vol": 0.5, "voice2": 7.0, "click": true},
-		{"wave": METAL, "f0": 1180.0, "dur": 0.35, "att": 0.001, "vol": 0.4},
-		{"wave": SINE, "f0": 180.0, "f1": 70.0, "dur": 0.12, "att": 0.001, "vol": 0.8, "drive": 0.4}]},
+		{"inst": "drum", "f0": 520.0, "f1": 300.0, "dur": 0.08, "vol": 0.48, "noise": 0.6, "cut": 1500.0},
+		{"wave": "grain", "dur": 0.12, "att": 0.001, "density": 300.0, "grain": 0.005, "cut": [1600.0, 800.0], "res": 0.4, "vol": 0.45},
+		{"inst": "mallet", "kind": "marimba", "f0": 261.6, "notes": [0, 7], "step": 0.03, "dur": 0.4, "vol": 0.4},
+		{"wave": SINE, "f0": 180.0, "f1": 70.0, "dur": 0.12, "att": 0.002, "vol": 0.6}]},
+	# Scarabée brisé : carapace en morceaux.
 	"racine_scarabee_death": {"peak": 0.62, "verb": 0.15, "room": 0.4, "layers": [
-		{"wave": NOISE, "dur": 0.32, "att": 0.002, "filter": "bp", "cut": [1500.0, 300.0], "res": 0.4, "vol": 0.8, "click": true, "crush": 2400.0},
-		{"wave": SINE, "f0": 140.0, "f1": 45.0, "dur": 0.25, "att": 0.002, "vol": 0.8, "drive": 0.4}]},
+		{"wave": "grain", "dur": 0.3, "att": 0.001, "density": 200.0, "grain": 0.01, "cut": [1400.0, 400.0], "res": 0.45, "vol": 0.7},
+		{"inst": "drum", "f0": 140.0, "f1": 45.0, "dur": 0.25, "vol": 0.48, "noise": 0.3, "cut": 900.0}]},
+	# Tertre touché : un coup sourd dans la pierre, du gravier.
 	"racine_tertre_hit": {"peak": 0.6, "verb": 0.1, "room": 0.4, "layers": [
-		{"wave": NOISE, "dur": 0.1, "att": 0.002, "filter": "lp", "cut": [1200.0, 300.0], "vol": 0.8, "crush": 1300.0},
-		{"wave": SINE, "f0": 100.0, "f1": 50.0, "dur": 0.12, "att": 0.001, "vol": 0.9, "drive": 0.3}]},
+		{"inst": "drum", "f0": 100.0, "f1": 50.0, "dur": 0.12, "vol": 0.54, "noise": 0.5, "cut": 700.0},
+		{"wave": "grain", "dur": 0.12, "att": 0.001, "density": 160.0, "grain": 0.008, "cut": [1000.0, 500.0], "res": 0.4, "vol": 0.4}]},
+	# Tertre effondré : un éboulis, un grondement.
 	"racine_tertre_death": {"peak": 0.75, "verb": 0.3, "room": 0.6, "layers": [
-		{"wave": NOISE, "dur": 0.75, "att": 0.02, "filter": "lp", "cut": [1000.0, 90.0], "vol": 0.8, "crush": 900.0, "trem": [0.5, 9.0]},
-		{"wave": SINE, "f0": 80.0, "f1": 30.0, "dur": 0.6, "att": 0.002, "vol": 0.9, "drive": 0.5}]},
+		{"wave": NOISE, "dur": 0.75, "att": 0.02, "filter": "lp", "cut": [900.0, 90.0], "vol": 0.7, "trem": [0.5, 9.0]},
+		{"inst": "drum", "f0": 80.0, "f1": 30.0, "dur": 0.6, "vol": 0.6, "noise": 0.3, "cut": 500.0},
+		{"wave": "grain", "dur": 0.6, "att": 0.01, "density": 110.0, "grain": 0.012, "cut": [1100.0, 300.0], "res": 0.4, "vol": 0.45}]},
+	# Le tertre frappe le sol : la terre tremble, des pierres roulent.
 	"racine_tertre_frappe": {"peak": 0.8, "verb": 0.2, "room": 0.5, "layers": [
-		{"wave": SINE, "f0": 120.0, "f1": 36.0, "dur": 0.45, "att": 0.003, "vol": 1.0, "voice2": -7.0, "drive": 0.6},
-		{"wave": NOISE, "dur": 0.3, "att": 0.002, "filter": "lp", "cut": [2000.0, 150.0], "vol": 0.6, "crush": 1600.0}]},
+		{"inst": "drum", "f0": 120.0, "f1": 36.0, "dur": 0.45, "vol": 0.6, "noise": 0.5, "cut": 600.0},
+		{"wave": NOISE, "dur": 0.3, "att": 0.002, "filter": "lp", "cut": [1600.0, 150.0], "vol": 0.5},
+		{"wave": "grain", "dur": 0.35, "att": 0.01, "density": 140.0, "grain": 0.01, "cut": [1200.0, 400.0], "res": 0.4, "vol": 0.4, "decay": 2.0}]},
 	# --- Finale (la Flétrissure, sous la graine) : plus graves et plus lourds ; le creux résonne. -----------
+	# Réveil de la Flétrissure : cordes et cors en sib, triton qui grince, cloche grave, tambour.
 	"finale_boss_eveil": {"peak": 0.88, "verb": 0.65, "room": 1.0, "duck": 0.7, "layers": [
-		{"wave": SAW, "f0": 55.0, "f1": 160.0, "dur": 1.7, "att": 0.6, "filter": "lp", "cut": [180.0, 1000.0], "res": 0.6, "vol": 0.7, "voice2": -7.0, "vib": [0.05, 5.0], "drive": 0.4},
-		{"wave": METAL, "f0": 110.0, "dur": 1.6, "att": 0.002, "delay": 1.3, "vol": 0.35},
-		{"wave": NOISE, "dur": 1.5, "att": 0.7, "filter": "bp", "cut": [200.0, 1200.0], "res": 0.6, "vol": 0.4},
-		{"wave": SINE, "f0": 36.0, "f1": 41.0, "dur": 1.7, "att": 0.4, "vol": 0.6}]},
+		{"inst": "bow", "f0": 58.3, "notes": [0, 6, 12], "dur": 1.7, "att": 0.6, "cut": 700.0, "vol": 0.45},
+		{"inst": "tone", "tone": "horns", "f0": 58.3, "notes": [0, 1], "step": 0.6, "dur": 0.9, "vol": 0.35, "delay": 0.2},
+		{"inst": "mallet", "kind": "bell", "f0": 116.5, "notes": [0], "step": 0.0, "dur": 1.6, "vol": 0.4, "delay": 1.3},
+		{"inst": "drum", "f0": 55.0, "f1": 32.0, "dur": 0.8, "vol": 0.6, "noise": 0.3, "cut": 400.0, "delay": 1.3},
+		{"wave": SINE, "f0": 36.0, "f1": 41.0, "dur": 1.7, "att": 0.4, "vol": 0.5}]},
+	# La Flétrissure change de phase : les cors tombent d'un triton, coup de tambour, cordes diminuées.
 	"finale_boss_phase": {"peak": 0.86, "verb": 0.55, "room": 1.0, "duck": 0.5, "layers": [
-		{"wave": SAW, "f0": 300.0, "f1": 60.0, "dur": 1.1, "att": 0.02, "filter": "lp", "cut": [2000.0, 200.0], "res": 0.55, "vol": 0.6, "voice2": 6.0, "vib": [0.1, 8.0]},
-		{"wave": SINE, "f0": 90.0, "f1": 28.0, "dur": 0.9, "att": 0.002, "vol": 0.9, "drive": 0.5},
-		{"wave": METAL, "f0": 220.0, "dur": 1.2, "att": 0.002, "vol": 0.3}]},
+		{"inst": "tone", "tone": "horns", "f0": 58.3, "notes": [6, 0], "step": 0.3, "dur": 0.6, "vol": 0.4},
+		{"inst": "drum", "f0": 90.0, "f1": 28.0, "dur": 0.9, "vol": 0.6, "noise": 0.4, "cut": 500.0},
+		{"inst": "bow", "f0": 58.3, "notes": [0, 3, 6], "dur": 1.0, "att": 0.05, "cut": 800.0, "vol": 0.35}]},
+	# La Flétrissure meurt : tout s'effondre, puis chœur, cordes et cloche en sib majeur.
 	"finale_boss_mort": {"peak": 0.9, "verb": 0.7, "room": 1.0, "duck": 0.85, "layers": [
-		{"wave": SINE, "f0": 440.0, "dur": 2.8, "att": 0.03, "vol": 0.5, "voice2": 12.0, "arp": [0, -5, -12], "vib": [0.04, 4.0]},
-		{"wave": NOISE, "dur": 2.2, "att": 0.005, "filter": "lp", "cut": [3000.0, 80.0], "vol": 0.6, "crush": 2200.0},
-		{"wave": SINE, "f0": 70.0, "f1": 24.0, "dur": 2.0, "att": 0.002, "vol": 0.9, "drive": 0.5},
-		{"wave": METAL, "f0": 523.0, "dur": 2.4, "att": 0.002, "delay": 1.2, "vol": 0.3},
-		{"wave": SINE, "f0": 261.6, "dur": 1.6, "att": 0.4, "delay": 1.3, "vol": 0.35, "arp": [0, 4, 7, 12]}]},
+		{"wave": NOISE, "dur": 2.2, "att": 0.002, "filter": "lp", "cut": [2000.0, 80.0], "vol": 0.6},
+		{"inst": "drum", "f0": 70.0, "f1": 24.0, "dur": 2.0, "vol": 0.6, "noise": 0.4, "cut": 400.0},
+		{"inst": "tone", "tone": "horns", "f0": 116.5, "notes": [0, -5, -12], "step": 0.4, "dur": 0.8, "vol": 0.35},
+		{"inst": "choir", "vowel": "a", "f0": 116.5, "notes": [0, 4, 7], "step": 0.0, "dur": 1.8, "vol": 0.35, "delay": 1.2},
+		{"inst": "bow", "f0": 58.3, "notes": [0, 7, 12, 16], "dur": 1.8, "att": 0.5, "cut": 1000.0, "vol": 0.35, "delay": 1.2},
+		{"inst": "mallet", "kind": "bell", "f0": 233.1, "notes": [0], "step": 0.0, "dur": 2.2, "vol": 0.35, "delay": 1.3}]},
 	# --- Aube (lumière, éclat, cloches) : clair, cristallin. -------------------------------------------------
+	# Rayon (attaque d'Aube) : un verre qui chante bref, une lueur qui passe.
 	"aube_rayon": {"peak": 0.42, "verb": 0.2, "room": 0.5, "layers": [
-		{"wave": SAW, "f0": 1200.0, "f1": 2400.0, "dur": 0.16, "att": 0.004, "filter": "bp", "cut": [1800.0, 4000.0], "res": 0.5, "vol": 0.5, "voice2": 12.0},
-		{"wave": SINE, "f0": 2400.0, "dur": 0.2, "att": 0.002, "vol": 0.3, "fm": [3.5, 0.8]}]},
+		{"inst": "tone", "tone": "glass", "f0": 440.0, "notes": [0], "step": 0.0, "dur": 0.18, "vol": 0.4},
+		{"wave": NOISE, "dur": 0.1, "att": 0.02, "filter": "bp", "cut": [900.0, 1800.0], "vol": 0.3, "res": 0.4},
+		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [7], "step": 0.0, "dur": 0.25, "vol": 0.2}]},
+	# Éclat de lumière : glockenspiel en quinte sur un verre.
 	"aube_eclat": {"peak": 0.45, "verb": 0.4, "room": 0.6, "layers": [
-		{"wave": METAL, "f0": 1568.0, "dur": 0.45, "att": 0.002, "vol": 0.6},
-		{"wave": SINE, "f0": 1568.0, "dur": 0.4, "att": 0.002, "vol": 0.4, "arp": [0, 7, 12], "voice2": 19.0}]},
+		{"inst": "mallet", "kind": "glock", "f0": 659.3, "notes": [0, 7], "step": 0.04, "dur": 0.45, "vol": 0.4},
+		{"inst": "tone", "tone": "glass", "f0": 329.6, "notes": [0], "step": 0.0, "dur": 0.4, "vol": 0.25}]},
+	# Halo : les verres montent en accord (la lydien), un souffle de chœur.
 	"aube_halo": {"peak": 0.48, "verb": 0.55, "room": 0.75, "layers": [
-		{"wave": SINE, "f0": 392.0, "dur": 0.95, "att": 0.12, "vol": 0.6, "arp": [0, 4, 7, 12, 16], "voice2": 12.0, "vib": [0.01, 6.0]},
-		{"wave": SINE, "f0": 784.0, "dur": 0.9, "att": 0.3, "vol": 0.25, "fm": [2.0, 0.4], "trem": [0.3, 6.0]}]},
+		{"inst": "tone", "tone": "glass", "f0": 220.0, "notes": [0, 4, 7, 11], "step": 0.1, "dur": 0.8, "vol": 0.3},
+		{"inst": "choir", "vowel": "i", "f0": 220.0, "notes": [0], "step": 0.0, "dur": 0.9, "vol": 0.2}]},
 	# Lance d'aube : la lumière se charge (verre qui monte), la lance part (souffle) et frappe (cloche).
 	"aube_levant": {"peak": 0.5, "verb": 0.35, "room": 0.6, "layers": [
 		{"inst": "tone", "tone": "glass", "f0": 220.0, "notes": [0, 7, 12], "step": 0.06, "dur": 0.35, "vol": 0.3},
@@ -411,32 +489,245 @@ const SOUNDS := {
 		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [0, 4, 7, 11, 14], "step": 0.05, "dur": 1.0, "vol": 0.35},
 		{"inst": "mallet", "kind": "bell", "f0": 220.0, "dur": 1.6, "vol": 0.4},
 		{"wave": NOISE, "dur": 0.5, "att": 0.01, "filter": "bp", "cut": [600.0, 1800.0], "res": 0.3, "vol": 0.35}]},
+	# Réveil de la Phalène de verre : les verres montent en la, cloche, glockenspiel.
 	"aube_boss_eveil": {"peak": 0.82, "verb": 0.6, "room": 0.95, "duck": 0.6, "layers": [
-		{"wave": SAW, "f0": 110.0, "f1": 880.0, "dur": 1.4, "att": 0.6, "filter": "lp", "cut": [400.0, 3000.0], "res": 0.4, "vol": 0.6, "voice2": 12.0, "vib": [0.03, 5.0]},
-		{"wave": METAL, "f0": 1046.0, "dur": 1.2, "att": 0.002, "delay": 1.1, "vol": 0.35},
-		{"wave": SINE, "f0": 55.0, "f1": 55.0, "dur": 1.3, "att": 0.4, "vol": 0.5}]},
+		{"inst": "tone", "tone": "glass", "f0": 220.0, "notes": [0, 7, 12], "step": 0.3, "dur": 1.0, "vol": 0.35},
+		{"inst": "bow", "f0": 110.0, "notes": [0, 7], "dur": 1.3, "att": 0.5, "cut": 900.0, "vol": 0.3},
+		{"inst": "mallet", "kind": "bell", "f0": 110.0, "notes": [0], "step": 0.0, "dur": 1.4, "vol": 0.4, "delay": 1.1},
+		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [0, 4, 6, 11], "step": 0.08, "dur": 0.6, "vol": 0.25, "delay": 1.1},
+		{"wave": SINE, "f0": 55.0, "f1": 55.0, "dur": 1.3, "att": 0.4, "vol": 0.4}]},
+	# La Phalène change de phase : le glockenspiel dégringole, le verre vibre, un tambour.
 	"aube_boss_phase": {"peak": 0.78, "verb": 0.5, "room": 0.85, "duck": 0.4, "layers": [
-		{"wave": SQUARE, "f0": 1320.0, "f1": 330.0, "dur": 0.85, "att": 0.01, "duty": 0.3, "filter": "lp", "cut": [5000.0, 800.0], "vol": 0.45, "voice2": 7.0},
-		{"wave": METAL, "f0": 880.0, "dur": 1.0, "att": 0.002, "vol": 0.4},
-		{"wave": SINE, "f0": 100.0, "f1": 40.0, "dur": 0.5, "att": 0.002, "vol": 0.7}]},
+		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [16, 11, 7, 4, 0], "step": 0.05, "dur": 0.5, "vol": 0.35},
+		{"inst": "tone", "tone": "glass", "f0": 220.0, "notes": [6], "step": 0.0, "dur": 0.8, "vol": 0.3},
+		{"inst": "drum", "f0": 100.0, "f1": 40.0, "dur": 0.5, "vol": 0.54, "noise": 0.2, "cut": 700.0}]},
+	# La Phalène se brise : éclats de verre, puis un accord de verres et une cloche en la majeur.
 	"aube_boss_mort": {"peak": 0.85, "verb": 0.65, "room": 1.0, "duck": 0.7, "layers": [
-		{"wave": SINE, "f0": 1100.0, "f1": 110.0, "dur": 2.1, "att": 0.01, "vol": 0.5, "voice2": 12.0, "vib": [0.04, 6.0]},
-		{"wave": METAL, "f0": 1568.0, "dur": 2.0, "att": 0.002, "vol": 0.35},
-		{"wave": SINE, "f0": 392.0, "dur": 1.6, "att": 0.3, "delay": 0.6, "vol": 0.4, "arp": [0, 4, 7, 12]},
-		{"wave": NOISE, "dur": 1.4, "att": 0.01, "filter": "hp", "cut": [2000.0, 6000.0], "vol": 0.25}]},
+		{"wave": "grain", "dur": 0.8, "att": 0.005, "density": 120.0, "grain": 0.01, "cut": [1800.0, 700.0], "res": 0.5, "vol": 0.4},
+		{"inst": "drum", "f0": 90.0, "f1": 32.0, "dur": 0.9, "vol": 0.54, "noise": 0.2, "cut": 600.0},
+		{"inst": "tone", "tone": "glass", "f0": 220.0, "notes": [0, 4, 7, 11], "step": 0.0, "dur": 1.6, "vol": 0.3, "delay": 0.6},
+		{"inst": "mallet", "kind": "bell", "f0": 220.0, "notes": [0], "step": 0.0, "dur": 1.6, "vol": 0.35, "delay": 0.6},
+		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [0, 4, 7, 11, 12], "step": 0.1, "dur": 0.8, "vol": 0.25, "delay": 0.9}]},
 	# --- Ronce : sons de son boss (Ronce n'avait que l'annonce commune). --------------------------------------
+	# Réveil du boss de Ronce : les cordes montent en ré mineur, les épines crépitent, les cors, un tambour.
 	"ronce_boss_eveil": {"peak": 0.82, "verb": 0.5, "room": 0.85, "duck": 0.6, "layers": [
-		{"wave": SAW, "f0": 73.4, "f1": 110.0, "dur": 1.3, "att": 0.4, "filter": "lp", "cut": [200.0, 1400.0], "res": 0.55, "vol": 0.6, "voice2": 3.0, "drive": 0.4},
-		{"wave": NOISE, "dur": 1.0, "att": 0.6, "filter": "bp", "cut": [800.0, 3000.0], "res": 0.6, "vol": 0.3, "trem": [0.7, 15.0]},
-		{"wave": SINE, "f0": 120.0, "f1": 36.0, "dur": 0.6, "att": 0.002, "delay": 1.0, "vol": 0.9, "drive": 0.5}]},
+		{"inst": "bow", "f0": 73.4, "notes": [0, 3, 7], "dur": 1.3, "att": 0.5, "cut": 800.0, "vol": 0.45},
+		{"wave": "grain", "dur": 1.0, "att": 0.6, "density": 90.0, "grain": 0.008, "cut": [700.0, 1500.0], "res": 0.55, "vol": 0.35},
+		{"inst": "tone", "tone": "horns", "f0": 73.4, "notes": [0, 7], "step": 0.0, "dur": 1.0, "vol": 0.35, "delay": 0.3},
+		{"inst": "drum", "f0": 70.0, "f1": 40.0, "dur": 0.6, "vol": 0.6, "noise": 0.3, "cut": 500.0, "delay": 1.0}]},
+	# Le boss de Ronce change de phase : épines qui crépitent, coup de tambour, pizz dissonant.
 	"ronce_boss_phase": {"peak": 0.8, "verb": 0.4, "room": 0.8, "duck": 0.4, "layers": [
-		{"wave": NOISE, "dur": 0.6, "att": 0.03, "filter": "bp", "cut": [1500.0, 5000.0], "res": 0.6, "vol": 0.5},
-		{"wave": NOISE, "dur": 0.05, "att": 0.0005, "delay": 0.5, "filter": "hp", "cut": 2200.0, "vol": 0.9, "click": true},
-		{"wave": SINE, "f0": 110.0, "f1": 35.0, "dur": 0.6, "att": 0.002, "delay": 0.5, "vol": 0.9, "drive": 0.5}]},
+		{"wave": "grain", "dur": 0.5, "att": 0.3, "density": 160.0, "grain": 0.006, "cut": [900.0, 2000.0], "res": 0.5, "vol": 0.4},
+		{"inst": "drum", "f0": 110.0, "f1": 35.0, "dur": 0.6, "vol": 0.6, "noise": 0.4, "cut": 600.0, "delay": 0.45},
+		{"inst": "pluck", "f0": 73.4, "notes": [0, 1], "step": 0.0, "dur": 0.6, "tone": 0.4, "vol": 0.6, "delay": 0.45}]},
+	# Le boss de Ronce meurt : la ronce s'effondre, puis les cordes passent en ré majeur.
 	"ronce_boss_mort": {"peak": 0.85, "verb": 0.6, "room": 0.95, "duck": 0.7, "layers": [
-		{"wave": NOISE, "dur": 1.7, "att": 0.01, "filter": "bp", "cut": [2200.0, 200.0], "res": 0.4, "vol": 0.6, "crush": 2400.0, "trem": [0.4, 7.0]},
-		{"wave": SINE, "f0": 90.0, "f1": 26.0, "dur": 1.4, "att": 0.002, "vol": 0.9, "drive": 0.5},
-		{"wave": SINE, "f0": 293.7, "dur": 1.5, "att": 0.4, "delay": 0.8, "vol": 0.35, "arp": [0, 4, 7, 12]}]},
+		{"wave": NOISE, "dur": 1.6, "att": 0.002, "filter": "lp", "cut": [1800.0, 150.0], "vol": 0.6, "res": 0.3, "trem": [0.4, 7.0]},
+		{"inst": "drum", "f0": 90.0, "f1": 26.0, "dur": 1.2, "vol": 0.6, "noise": 0.3, "cut": 500.0},
+		{"inst": "bow", "f0": 73.4, "notes": [0, 4, 7, 12], "dur": 1.6, "att": 0.4, "cut": 1100.0, "vol": 0.4, "delay": 0.6},
+		{"inst": "mallet", "kind": "bell", "f0": 146.8, "notes": [0], "step": 0.0, "dur": 1.6, "vol": 0.3, "delay": 0.8},
+		{"inst": "pluck", "f0": 146.8, "notes": [12, 7, 4, 0], "step": 0.15, "dur": 0.6, "tone": 0.5, "vol": 0.35, "delay": 0.8}]},
+	# --- Variantes régionales : <son>@<région>, jouées à la place de <son> dans cette région (Sfx.play). ---
+	# Coup — Spore (marais) : chair molle et bulles, marimba en fa# phrygien.
+	"impact@spore": {"peak": 0.6, "verb": 0.1, "room": 0.35, "variants": 3, "layers": [
+		{"wave": NOISE, "dur": 0.06, "att": 0.002, "filter": "bp", "cut": [1700.0, 600.0], "vol": 0.7, "res": 0.4, "decay": 2.4},
+		{"inst": "drum", "f0": 170.0, "f1": 70.0, "dur": 0.12, "vol": 0.48, "noise": 0.25, "cut": 1000.0},
+		{"wave": SINE, "f0": 200.0, "f1": 110.0, "dur": 0.07, "att": 0.002, "vol": 0.5, "vib": [0.1, 30.0]},
+		{"wave": "grain", "dur": 0.12, "att": 0.01, "density": 40.0, "grain": 0.03, "cut": [500.0, 300.0], "res": 0.85, "vol": 0.4}]},
+	# Critique — Spore (marais) : chair molle et bulles, marimba en fa# phrygien.
+	"critique@spore": {"peak": 0.75, "verb": 0.22, "room": 0.45, "variants": 2, "layers": [
+		{"wave": NOISE, "dur": 0.07, "att": 0.002, "filter": "bp", "cut": [2200.0, 800.0], "vol": 0.7, "res": 0.5, "decay": 2.2},
+		{"inst": "drum", "f0": 200.0, "f1": 70.0, "dur": 0.14, "vol": 0.54, "noise": 0.3, "cut": 1200.0},
+		{"inst": "mallet", "kind": "marimba", "f0": 370.0, "notes": [0, 1, 7], "step": 0.03, "dur": 0.5, "vol": 0.4}]},
+	# Coup lourd — Spore (marais) : chair molle et bulles, marimba en fa# phrygien.
+	"impact_lourd@spore": {"peak": 0.8, "verb": 0.16, "room": 0.5, "duck": 0.15, "variants": 2, "layers": [
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "lp", "cut": [1500.0, 220.0], "vol": 0.6, "res": 0.3, "decay": 2.0},
+		{"inst": "drum", "f0": 120.0, "f1": 40.0, "dur": 0.36, "vol": 0.6, "noise": 0.5, "cut": 700.0},
+		{"wave": SINE, "f0": 69.375, "f1": 55.5, "dur": 0.3, "att": 0.01, "vol": 0.3},
+		{"wave": SINE, "f0": 200.0, "f1": 110.0, "dur": 0.07, "att": 0.002, "vol": 0.8, "vib": [0.1, 30.0]},
+		{"wave": "grain", "dur": 0.12, "att": 0.01, "density": 40.0, "grain": 0.03, "cut": [500.0, 300.0], "res": 0.85, "vol": 0.64}]},
+	# Un ennemi meurt — Spore (marais) : chair molle et bulles, marimba en fa# phrygien.
+	"mort@spore": {"peak": 0.62, "verb": 0.2, "room": 0.45, "variants": 3, "layers": [
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "bp", "cut": [1300.0, 260.0], "vol": 0.5, "res": 0.35, "decay": 1.8},
+		{"inst": "drum", "f0": 140.0, "f1": 45.0, "dur": 0.25, "vol": 0.42, "noise": 0.2, "cut": 800.0},
+		{"wave": "grain", "dur": 0.45, "att": 0.01, "density": 30.0, "grain": 0.04, "cut": [450.0, 250.0], "res": 0.85, "vol": 0.5},
+		{"inst": "mallet", "kind": "marimba", "f0": 185.0, "notes": [1, 0], "step": 0.08, "dur": 0.5, "vol": 0.35}]},
+	# Une élite tombe — Spore (marais) : chair molle et bulles, marimba en fa# phrygien.
+	"mort_elite@spore": {"peak": 0.85, "verb": 0.34, "room": 0.7, "duck": 0.3, "layers": [
+		{"inst": "drum", "f0": 100.0, "f1": 32.0, "dur": 0.7, "vol": 0.6, "noise": 0.4, "cut": 500.0},
+		{"wave": NOISE, "dur": 0.5, "att": 0.002, "filter": "lp", "cut": [1800.0, 160.0], "vol": 0.5, "res": 0.3, "decay": 1.6},
+		{"inst": "bow", "f0": 92.5, "notes": [0, 3, 7], "dur": 0.8, "att": 0.02, "cut": 900.0, "vol": 0.35},
+		{"inst": "tone", "tone": "clarinet", "f0": 92.5, "notes": [1, 0], "step": 0.25, "dur": 0.5, "vol": 0.3},
+		{"inst": "mallet", "kind": "marimba", "f0": 185.0, "notes": [7, 1, 0], "step": 0.1, "dur": 0.6, "vol": 0.35}]},
+	# Un Cœur purifié — Spore (marais) : chair molle et bulles, marimba en fa# phrygien.
+	"coeur@spore": {"peak": 0.72, "verb": 0.6, "room": 0.95, "duck": 0.6, "layers": [
+		{"inst": "bow", "f0": 92.5, "notes": [0, 7, 12, 16], "dur": 2.4, "att": 0.6, "cut": 1200.0, "vol": 0.4},
+		{"inst": "mallet", "kind": "bell", "f0": 185.0, "notes": [0], "step": 0.0, "dur": 2.0, "vol": 0.3},
+		{"wave": SINE, "f0": 92.5, "f1": 92.5, "dur": 2.2, "att": 0.05, "vol": 0.35, "decay": 1.2},
+		{"inst": "mallet", "kind": "marimba", "f0": 370.0, "notes": [0, 4, 7, 12, 16, 19], "step": 0.12, "dur": 0.8, "vol": 0.35},
+		{"inst": "tone", "tone": "clarinet", "f0": 185.0, "notes": [0, 4, 7], "step": 0.35, "dur": 0.8, "vol": 0.25},
+		{"inst": "choir", "vowel": "o", "f0": 185.0, "notes": [0, 4, 7], "step": 0.0, "dur": 2.2, "vol": 0.3}]},
+	# Coup — Vent (plateaux) : souffles et plumes, harpe et flûte en sol mixolydien.
+	"impact@vent": {"peak": 0.6, "verb": 0.1, "room": 0.35, "variants": 3, "layers": [
+		{"wave": NOISE, "dur": 0.06, "att": 0.002, "filter": "bp", "cut": [1700.0, 600.0], "vol": 0.7, "res": 0.4, "decay": 2.4},
+		{"inst": "drum", "f0": 170.0, "f1": 70.0, "dur": 0.12, "vol": 0.48, "noise": 0.25, "cut": 1000.0},
+		{"wave": NOISE, "dur": 0.09, "att": 0.002, "filter": "bp", "cut": [1400.0, 600.0], "vol": 0.4, "res": 0.5},
+		{"inst": "pluck", "f0": 196.0, "notes": [0], "step": 0.0, "dur": 0.25, "tone": 0.7, "vol": 0.3}]},
+	# Critique — Vent (plateaux) : souffles et plumes, harpe et flûte en sol mixolydien.
+	"critique@vent": {"peak": 0.75, "verb": 0.22, "room": 0.45, "variants": 2, "layers": [
+		{"wave": NOISE, "dur": 0.07, "att": 0.002, "filter": "bp", "cut": [2200.0, 800.0], "vol": 0.7, "res": 0.5, "decay": 2.2},
+		{"inst": "drum", "f0": 200.0, "f1": 70.0, "dur": 0.14, "vol": 0.54, "noise": 0.3, "cut": 1200.0},
+		{"inst": "pluck", "f0": 196.0, "notes": [0, 7, 12, 16], "step": 0.025, "dur": 0.5, "tone": 0.7, "vol": 0.5},
+		{"inst": "tone", "tone": "flute", "f0": 392.0, "notes": [0], "step": 0.0, "dur": 0.25, "vol": 0.2}]},
+	# Coup lourd — Vent (plateaux) : souffles et plumes, harpe et flûte en sol mixolydien.
+	"impact_lourd@vent": {"peak": 0.8, "verb": 0.16, "room": 0.5, "duck": 0.15, "variants": 2, "layers": [
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "lp", "cut": [1500.0, 220.0], "vol": 0.6, "res": 0.3, "decay": 2.0},
+		{"inst": "drum", "f0": 120.0, "f1": 40.0, "dur": 0.36, "vol": 0.6, "noise": 0.5, "cut": 700.0},
+		{"wave": SINE, "f0": 73.5, "f1": 58.8, "dur": 0.3, "att": 0.01, "vol": 0.3},
+		{"wave": NOISE, "dur": 0.09, "att": 0.002, "filter": "bp", "cut": [1400.0, 600.0], "vol": 0.64, "res": 0.5},
+		{"inst": "pluck", "f0": 196.0, "notes": [0], "step": 0.0, "dur": 0.25, "tone": 0.7, "vol": 0.48}]},
+	# Un ennemi meurt — Vent (plateaux) : souffles et plumes, harpe et flûte en sol mixolydien.
+	"mort@vent": {"peak": 0.62, "verb": 0.2, "room": 0.45, "variants": 3, "layers": [
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "bp", "cut": [1300.0, 260.0], "vol": 0.5, "res": 0.35, "decay": 1.8},
+		{"inst": "drum", "f0": 140.0, "f1": 45.0, "dur": 0.25, "vol": 0.42, "noise": 0.2, "cut": 800.0},
+		{"wave": "grain", "dur": 0.35, "att": 0.01, "density": 120.0, "grain": 0.01, "cut": [1400.0, 700.0], "res": 0.35, "vol": 0.4},
+		{"inst": "pluck", "f0": 196.0, "notes": [7, 0], "step": 0.07, "dur": 0.4, "tone": 0.7, "vol": 0.35}]},
+	# Une élite tombe — Vent (plateaux) : souffles et plumes, harpe et flûte en sol mixolydien.
+	"mort_elite@vent": {"peak": 0.85, "verb": 0.34, "room": 0.7, "duck": 0.3, "layers": [
+		{"inst": "drum", "f0": 100.0, "f1": 32.0, "dur": 0.7, "vol": 0.6, "noise": 0.4, "cut": 500.0},
+		{"wave": NOISE, "dur": 0.5, "att": 0.002, "filter": "lp", "cut": [1800.0, 160.0], "vol": 0.5, "res": 0.3, "decay": 1.6},
+		{"inst": "bow", "f0": 98.0, "notes": [0, 7, 12], "dur": 0.8, "att": 0.02, "cut": 900.0, "vol": 0.35},
+		{"inst": "tone", "tone": "flute", "f0": 392.0, "notes": [7, 5, 0], "step": 0.15, "dur": 0.4, "vol": 0.3},
+		{"wave": NOISE, "dur": 0.7, "att": 0.05, "filter": "bp", "cut": [1600.0, 300.0], "vol": 0.4, "res": 0.6}]},
+	# Un Cœur purifié — Vent (plateaux) : souffles et plumes, harpe et flûte en sol mixolydien.
+	"coeur@vent": {"peak": 0.72, "verb": 0.6, "room": 0.95, "duck": 0.6, "layers": [
+		{"inst": "bow", "f0": 98.0, "notes": [0, 7, 12, 16], "dur": 2.4, "att": 0.6, "cut": 1200.0, "vol": 0.4},
+		{"inst": "mallet", "kind": "bell", "f0": 196.0, "notes": [0], "step": 0.0, "dur": 2.0, "vol": 0.3},
+		{"wave": SINE, "f0": 98.0, "f1": 98.0, "dur": 2.2, "att": 0.05, "vol": 0.35, "decay": 1.2},
+		{"inst": "pluck", "f0": 196.0, "notes": [0, 4, 7, 10, 12, 16, 19], "step": 0.09, "dur": 0.9, "tone": 0.7, "vol": 0.4},
+		{"inst": "tone", "tone": "flute", "f0": 392.0, "notes": [0, 4, 7], "step": 0.35, "dur": 0.8, "vol": 0.25},
+		{"inst": "choir", "vowel": "a", "f0": 196.0, "notes": [0, 4, 7], "step": 0.0, "dur": 2.2, "vol": 0.3}]},
+	# Coup — Sève (vallée) : gouttes et glouglous, kalimba et cor en mib lydien.
+	"impact@seve": {"peak": 0.6, "verb": 0.1, "room": 0.35, "variants": 3, "layers": [
+		{"wave": NOISE, "dur": 0.06, "att": 0.002, "filter": "bp", "cut": [1700.0, 600.0], "vol": 0.7, "res": 0.4, "decay": 2.4},
+		{"inst": "drum", "f0": 170.0, "f1": 70.0, "dur": 0.12, "vol": 0.48, "noise": 0.25, "cut": 1000.0},
+		{"wave": SINE, "f0": 700.0, "f1": 300.0, "dur": 0.07, "att": 0.002, "vol": 0.4},
+		{"inst": "mallet", "kind": "kalimba", "f0": 311.1, "notes": [0], "step": 0.0, "dur": 0.25, "vol": 0.25}]},
+	# Critique — Sève (vallée) : gouttes et glouglous, kalimba et cor en mib lydien.
+	"critique@seve": {"peak": 0.75, "verb": 0.22, "room": 0.45, "variants": 2, "layers": [
+		{"wave": NOISE, "dur": 0.07, "att": 0.002, "filter": "bp", "cut": [2200.0, 800.0], "vol": 0.7, "res": 0.5, "decay": 2.2},
+		{"inst": "drum", "f0": 200.0, "f1": 70.0, "dur": 0.14, "vol": 0.54, "noise": 0.3, "cut": 1200.0},
+		{"inst": "mallet", "kind": "kalimba", "f0": 311.1, "notes": [0, 4, 11], "step": 0.03, "dur": 0.5, "vol": 0.45},
+		{"wave": SINE, "f0": 900.0, "f1": 400.0, "dur": 0.08, "att": 0.002, "vol": 0.2}]},
+	# Coup lourd — Sève (vallée) : gouttes et glouglous, kalimba et cor en mib lydien.
+	"impact_lourd@seve": {"peak": 0.8, "verb": 0.16, "room": 0.5, "duck": 0.15, "variants": 2, "layers": [
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "lp", "cut": [1500.0, 220.0], "vol": 0.6, "res": 0.3, "decay": 2.0},
+		{"inst": "drum", "f0": 120.0, "f1": 40.0, "dur": 0.36, "vol": 0.6, "noise": 0.5, "cut": 700.0},
+		{"wave": SINE, "f0": 58.35, "f1": 46.68, "dur": 0.3, "att": 0.01, "vol": 0.3},
+		{"wave": SINE, "f0": 700.0, "f1": 300.0, "dur": 0.07, "att": 0.002, "vol": 0.64},
+		{"inst": "mallet", "kind": "kalimba", "f0": 311.1, "notes": [0], "step": 0.0, "dur": 0.25, "vol": 0.4}]},
+	# Un ennemi meurt — Sève (vallée) : gouttes et glouglous, kalimba et cor en mib lydien.
+	"mort@seve": {"peak": 0.62, "verb": 0.2, "room": 0.45, "variants": 3, "layers": [
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "bp", "cut": [1300.0, 260.0], "vol": 0.5, "res": 0.35, "decay": 1.8},
+		{"inst": "drum", "f0": 140.0, "f1": 45.0, "dur": 0.25, "vol": 0.42, "noise": 0.2, "cut": 800.0},
+		{"wave": SINE, "f0": 300.0, "f1": 150.0, "dur": 0.12, "att": 0.002, "vol": 0.4, "vib": [0.1, 18.0]},
+		{"inst": "mallet", "kind": "kalimba", "f0": 311.1, "notes": [7, 0], "step": 0.08, "dur": 0.5, "vol": 0.35}]},
+	# Une élite tombe — Sève (vallée) : gouttes et glouglous, kalimba et cor en mib lydien.
+	"mort_elite@seve": {"peak": 0.85, "verb": 0.34, "room": 0.7, "duck": 0.3, "layers": [
+		{"inst": "drum", "f0": 100.0, "f1": 32.0, "dur": 0.7, "vol": 0.6, "noise": 0.4, "cut": 500.0},
+		{"wave": NOISE, "dur": 0.5, "att": 0.002, "filter": "lp", "cut": [1800.0, 160.0], "vol": 0.5, "res": 0.3, "decay": 1.6},
+		{"inst": "bow", "f0": 77.8, "notes": [0, 7, 12], "dur": 0.8, "att": 0.02, "cut": 900.0, "vol": 0.35},
+		{"inst": "tone", "tone": "horn", "f0": 155.6, "notes": [6, 0], "step": 0.25, "dur": 0.5, "vol": 0.3},
+		{"wave": "grain", "dur": 0.6, "att": 0.01, "density": 30.0, "grain": 0.035, "cut": [700.0, 400.0], "res": 0.85, "vol": 0.4}]},
+	# Un Cœur purifié — Sève (vallée) : gouttes et glouglous, kalimba et cor en mib lydien.
+	"coeur@seve": {"peak": 0.72, "verb": 0.6, "room": 0.95, "duck": 0.6, "layers": [
+		{"inst": "bow", "f0": 77.8, "notes": [0, 7, 12, 16], "dur": 2.4, "att": 0.6, "cut": 1200.0, "vol": 0.4},
+		{"inst": "mallet", "kind": "bell", "f0": 311.2, "notes": [0], "step": 0.0, "dur": 2.0, "vol": 0.3},
+		{"wave": SINE, "f0": 77.8, "f1": 77.8, "dur": 2.2, "att": 0.05, "vol": 0.35, "decay": 1.2},
+		{"inst": "mallet", "kind": "kalimba", "f0": 311.1, "notes": [0, 4, 6, 11, 12, 16], "step": 0.12, "dur": 0.8, "vol": 0.4},
+		{"inst": "tone", "tone": "horn", "f0": 155.6, "notes": [0, 4, 7], "step": 0.35, "dur": 0.9, "vol": 0.25},
+		{"inst": "choir", "vowel": "a", "f0": 155.6, "notes": [0, 4, 7], "step": 0.0, "dur": 2.2, "vol": 0.3}]},
+	# Coup — Aube (rivage) : verre qui tinte, glockenspiel et verres en la lydien.
+	"impact@aube": {"peak": 0.6, "verb": 0.1, "room": 0.35, "variants": 3, "layers": [
+		{"wave": NOISE, "dur": 0.06, "att": 0.002, "filter": "bp", "cut": [1700.0, 600.0], "vol": 0.7, "res": 0.4, "decay": 2.4},
+		{"inst": "drum", "f0": 170.0, "f1": 70.0, "dur": 0.12, "vol": 0.48, "noise": 0.25, "cut": 1000.0},
+		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [0], "step": 0.0, "dur": 0.25, "vol": 0.2},
+		{"wave": NOISE, "dur": 0.05, "att": 0.002, "filter": "bp", "cut": 1500.0, "vol": 0.3, "res": 0.5}]},
+	# Critique — Aube (rivage) : verre qui tinte, glockenspiel et verres en la lydien.
+	"critique@aube": {"peak": 0.75, "verb": 0.22, "room": 0.45, "variants": 2, "layers": [
+		{"wave": NOISE, "dur": 0.07, "att": 0.002, "filter": "bp", "cut": [2200.0, 800.0], "vol": 0.7, "res": 0.5, "decay": 2.2},
+		{"inst": "drum", "f0": 200.0, "f1": 70.0, "dur": 0.14, "vol": 0.54, "noise": 0.3, "cut": 1200.0},
+		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [0, 4, 11], "step": 0.025, "dur": 0.6, "vol": 0.35},
+		{"inst": "tone", "tone": "glass", "f0": 220.0, "notes": [0], "step": 0.0, "dur": 0.4, "vol": 0.2}]},
+	# Coup lourd — Aube (rivage) : verre qui tinte, glockenspiel et verres en la lydien.
+	"impact_lourd@aube": {"peak": 0.8, "verb": 0.16, "room": 0.5, "duck": 0.15, "variants": 2, "layers": [
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "lp", "cut": [1500.0, 220.0], "vol": 0.6, "res": 0.3, "decay": 2.0},
+		{"inst": "drum", "f0": 120.0, "f1": 40.0, "dur": 0.36, "vol": 0.6, "noise": 0.5, "cut": 700.0},
+		{"wave": SINE, "f0": 82.5, "f1": 66.0, "dur": 0.3, "att": 0.01, "vol": 0.3},
+		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [0], "step": 0.0, "dur": 0.25, "vol": 0.32},
+		{"wave": NOISE, "dur": 0.05, "att": 0.002, "filter": "bp", "cut": 1500.0, "vol": 0.48, "res": 0.5}]},
+	# Un ennemi meurt — Aube (rivage) : verre qui tinte, glockenspiel et verres en la lydien.
+	"mort@aube": {"peak": 0.62, "verb": 0.2, "room": 0.45, "variants": 3, "layers": [
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "bp", "cut": [1300.0, 260.0], "vol": 0.5, "res": 0.35, "decay": 1.8},
+		{"inst": "drum", "f0": 140.0, "f1": 45.0, "dur": 0.25, "vol": 0.42, "noise": 0.2, "cut": 800.0},
+		{"wave": "grain", "dur": 0.3, "att": 0.01, "density": 140.0, "grain": 0.008, "cut": [1600.0, 800.0], "res": 0.5, "vol": 0.35},
+		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [7, 0], "step": 0.07, "dur": 0.5, "vol": 0.25}]},
+	# Une élite tombe — Aube (rivage) : verre qui tinte, glockenspiel et verres en la lydien.
+	"mort_elite@aube": {"peak": 0.85, "verb": 0.34, "room": 0.7, "duck": 0.3, "layers": [
+		{"inst": "drum", "f0": 100.0, "f1": 32.0, "dur": 0.7, "vol": 0.6, "noise": 0.4, "cut": 500.0},
+		{"wave": NOISE, "dur": 0.5, "att": 0.002, "filter": "lp", "cut": [1800.0, 160.0], "vol": 0.5, "res": 0.3, "decay": 1.6},
+		{"inst": "bow", "f0": 110.0, "notes": [0, 7, 12], "dur": 0.8, "att": 0.02, "cut": 900.0, "vol": 0.35},
+		{"inst": "tone", "tone": "glass", "f0": 220.0, "notes": [6, 0], "step": 0.25, "dur": 0.6, "vol": 0.3},
+		{"inst": "mallet", "kind": "bell", "f0": 220.0, "notes": [0], "step": 0.0, "dur": 1.2, "vol": 0.3}]},
+	# Un Cœur purifié — Aube (rivage) : verre qui tinte, glockenspiel et verres en la lydien.
+	"coeur@aube": {"peak": 0.72, "verb": 0.6, "room": 0.95, "duck": 0.6, "layers": [
+		{"inst": "bow", "f0": 110.0, "notes": [0, 7, 12, 16], "dur": 2.4, "att": 0.6, "cut": 1200.0, "vol": 0.4},
+		{"inst": "mallet", "kind": "bell", "f0": 220.0, "notes": [0], "step": 0.0, "dur": 2.0, "vol": 0.3},
+		{"wave": SINE, "f0": 110.0, "f1": 110.0, "dur": 2.2, "att": 0.05, "vol": 0.35, "decay": 1.2},
+		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [0, 4, 6, 11, 12, 16], "step": 0.12, "dur": 0.8, "vol": 0.3},
+		{"inst": "tone", "tone": "glass", "f0": 220.0, "notes": [0, 4, 7], "step": 0.0, "dur": 1.6, "vol": 0.3},
+		{"inst": "choir", "vowel": "i", "f0": 220.0, "notes": [0, 4, 7], "step": 0.0, "dur": 2.2, "vol": 0.25}]},
+	# Coup — Racine (forêt pétrifiée) : bois et pierre, tambours et marimba grave en do dorien.
+	"impact@racine": {"peak": 0.6, "verb": 0.1, "room": 0.35, "variants": 3, "layers": [
+		{"wave": NOISE, "dur": 0.06, "att": 0.002, "filter": "bp", "cut": [1700.0, 600.0], "vol": 0.7, "res": 0.4, "decay": 2.4},
+		{"inst": "drum", "f0": 170.0, "f1": 70.0, "dur": 0.12, "vol": 0.48, "noise": 0.25, "cut": 1000.0},
+		{"inst": "drum", "f0": 320.0, "f1": 220.0, "dur": 0.05, "vol": 0.3, "noise": 0.4, "cut": 1400.0},
+		{"wave": "grain", "dur": 0.08, "att": 0.01, "density": 200.0, "grain": 0.006, "cut": 900.0, "res": 0.4, "vol": 0.3}]},
+	# Critique — Racine (forêt pétrifiée) : bois et pierre, tambours et marimba grave en do dorien.
+	"critique@racine": {"peak": 0.75, "verb": 0.22, "room": 0.45, "variants": 2, "layers": [
+		{"wave": NOISE, "dur": 0.07, "att": 0.002, "filter": "bp", "cut": [2200.0, 800.0], "vol": 0.7, "res": 0.5, "decay": 2.2},
+		{"inst": "drum", "f0": 200.0, "f1": 70.0, "dur": 0.14, "vol": 0.54, "noise": 0.3, "cut": 1200.0},
+		{"inst": "drum", "f0": 320.0, "f1": 220.0, "dur": 0.06, "vol": 0.3, "noise": 0.4, "cut": 1400.0},
+		{"inst": "mallet", "kind": "marimba", "f0": 261.6, "notes": [0, 7, 9], "step": 0.03, "dur": 0.5, "vol": 0.4}]},
+	# Coup lourd — Racine (forêt pétrifiée) : bois et pierre, tambours et marimba grave en do dorien.
+	"impact_lourd@racine": {"peak": 0.8, "verb": 0.16, "room": 0.5, "duck": 0.15, "variants": 2, "layers": [
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "lp", "cut": [1500.0, 220.0], "vol": 0.6, "res": 0.3, "decay": 2.0},
+		{"inst": "drum", "f0": 120.0, "f1": 40.0, "dur": 0.36, "vol": 0.6, "noise": 0.5, "cut": 700.0},
+		{"wave": SINE, "f0": 65.4, "f1": 52.32, "dur": 0.3, "att": 0.01, "vol": 0.3},
+		{"inst": "drum", "f0": 320.0, "f1": 220.0, "dur": 0.05, "vol": 0.48, "noise": 0.4, "cut": 1400.0},
+		{"wave": "grain", "dur": 0.08, "att": 0.01, "density": 200.0, "grain": 0.006, "cut": 900.0, "res": 0.4, "vol": 0.48}]},
+	# Un ennemi meurt — Racine (forêt pétrifiée) : bois et pierre, tambours et marimba grave en do dorien.
+	"mort@racine": {"peak": 0.62, "verb": 0.2, "room": 0.45, "variants": 3, "layers": [
+		{"wave": NOISE, "dur": 0.2, "att": 0.002, "filter": "bp", "cut": [1300.0, 260.0], "vol": 0.5, "res": 0.35, "decay": 1.8},
+		{"inst": "drum", "f0": 140.0, "f1": 45.0, "dur": 0.25, "vol": 0.42, "noise": 0.2, "cut": 800.0},
+		{"wave": "grain", "dur": 0.4, "att": 0.01, "density": 140.0, "grain": 0.012, "cut": [900.0, 300.0], "res": 0.4, "vol": 0.5},
+		{"inst": "mallet", "kind": "marimba", "f0": 130.8, "notes": [7, 0], "step": 0.08, "dur": 0.5, "vol": 0.35}]},
+	# Une élite tombe — Racine (forêt pétrifiée) : bois et pierre, tambours et marimba grave en do dorien.
+	"mort_elite@racine": {"peak": 0.85, "verb": 0.34, "room": 0.7, "duck": 0.3, "layers": [
+		{"inst": "drum", "f0": 100.0, "f1": 32.0, "dur": 0.7, "vol": 0.6, "noise": 0.4, "cut": 500.0},
+		{"wave": NOISE, "dur": 0.5, "att": 0.002, "filter": "lp", "cut": [1800.0, 160.0], "vol": 0.5, "res": 0.3, "decay": 1.6},
+		{"inst": "bow", "f0": 65.4, "notes": [0, 3, 7], "dur": 0.8, "att": 0.02, "cut": 900.0, "vol": 0.35},
+		{"inst": "tone", "tone": "cello", "f0": 65.4, "notes": [3, 0], "step": 0.25, "dur": 0.5, "vol": 0.35},
+		{"inst": "drum", "f0": 70.0, "f1": 40.0, "dur": 0.5, "vol": 0.36, "delay": 0.2}]},
+	# Un Cœur purifié — Racine (forêt pétrifiée) : bois et pierre, tambours et marimba grave en do dorien.
+	"coeur@racine": {"peak": 0.72, "verb": 0.6, "room": 0.95, "duck": 0.6, "layers": [
+		{"inst": "bow", "f0": 65.4, "notes": [0, 7, 12, 16], "dur": 2.4, "att": 0.6, "cut": 1200.0, "vol": 0.4},
+		{"inst": "mallet", "kind": "bell", "f0": 261.6, "notes": [0], "step": 0.0, "dur": 2.0, "vol": 0.3},
+		{"wave": SINE, "f0": 65.4, "f1": 65.4, "dur": 2.2, "att": 0.05, "vol": 0.35, "decay": 1.2},
+		{"inst": "mallet", "kind": "marimba", "f0": 261.6, "notes": [0, 4, 7, 9, 12, 16], "step": 0.12, "dur": 0.8, "vol": 0.4},
+		{"inst": "tone", "tone": "cello", "f0": 130.8, "notes": [0, 4, 7], "step": 0.35, "dur": 0.9, "vol": 0.25},
+		{"inst": "drum", "f0": 60.0, "f1": 40.0, "dur": 0.8, "vol": 0.3},
+		{"inst": "choir", "vowel": "o", "f0": 130.8, "notes": [0, 4, 7], "step": 0.0, "dur": 2.2, "vol": 0.3}]},
 }
 
 

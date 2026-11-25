@@ -34,7 +34,7 @@ const EIGHTH := CHORD_TIME / 8.0
 const SIXTEENTH := CHORD_TIME / 16.0
 ## Version des formules (empreinte des pistes) : à changer quand le rendu change.
 const VERSION := 6
-const BED_VERSION := 2
+const BED_VERSION := 3
 
 ## Fichier (couche) → section de réglages.
 const LAYERS := {"sombre": "dark", "lumineux": "bright", "combat": "combat", "coeur": "heart", "boss": "boss"}
@@ -88,9 +88,12 @@ const BED_DEFAULTS := {
 	"seed": 3,
 	"dead": {"wind": 0.6, "wind_lp": 480.0, "gust": 0.6, "rumble": 0.0, "stream": 0.0, "waves": 0.0, "events": [{"kind": "creak", "rate": 0.15, "vol": 0.35}]},
 	"alive": {"wind": 0.25, "wind_lp": 900.0, "gust": 0.4, "rumble": 0.0, "stream": 0.0, "waves": 0.0,
-		"events": [{"kind": "bird", "rate": 0.45, "vol": 0.4}, {"kind": "cricket", "rate": 0.15, "vol": 0.2}, {"kind": "rustle", "rate": 0.25, "vol": 0.25}]},
+		"events": [{"kind": "bird", "rate": 0.45, "vol": 0.4}, {"kind": "cricket", "rate": 0.15, "vol": 0.2}, {"kind": "rustle", "rate": 0.25, "vol": 0.25},
+			{"kind": "note", "rate": 0.15, "vol": 0.3, "inst": "pizz", "f0": 146.8, "notes": [0, 3, 5, 7, 10]}]},
 }
-const BED_EVENTS := ["bird", "cricket", "drip", "bubble", "creak", "chime", "rustle", "knock", "frog"]
+## « note » : une à trois notes lointaines de l'instrument de la région (inst : marimba, kalimba, glock, bell,
+## pizz, harp, ou un timbre de TONES), tirées de « notes » (demi-tons au-dessus de f0, dans la gamme de la région).
+const BED_EVENTS := ["bird", "cricket", "drip", "bubble", "creak", "chime", "rustle", "knock", "frog", "note"]
 
 
 ## Réglages complets d'une section (« dark », « bright »…) : ceux de la région par-dessus ceux de Ronce.
@@ -1014,13 +1017,25 @@ static func render_bed(state: String, bed := {}) -> PackedFloat32Array:
 		var kind := str(ev.get("kind", "bird"))
 		var count := int(round(float(ev.get("rate", 0.2)) * BED_LOOP))
 		for e in count:
-			_event(out, kind, rng.randf() * BED_LOOP, float(ev.get("vol", 0.3)), rng)
+			_event(out, kind, rng.randf() * BED_LOOP, float(ev.get("vol", 0.3)), rng, ev)
 	Dsp.reverb(out, 0.3, 0.8, 0.5, true)
 	return Dsp.normalize(out, 0.5)
 
 
-static func _event(out: PackedFloat32Array, kind: String, t0: float, vol: float, rng: RandomNumberGenerator) -> void:
+static func _event(out: PackedFloat32Array, kind: String, t0: float, vol: float, rng: RandomNumberGenerator, ev := {}) -> void:
 	match kind:
+		"note":
+			var notes: Array = ev.get("notes", [0])
+			var inst := str(ev.get("inst", "kalimba"))
+			for k in rng.randi_range(1, 3):
+				var f := float(ev.get("f0", 220.0)) * pow(2.0, float(notes[rng.randi() % notes.size()]) / 12.0)
+				var t := t0 + k * rng.randf_range(0.3, 0.5)
+				if MODES.has(inst):
+					_mallet(out, t, f, vol * 2.0, inst, 1.6)
+				elif inst == "pizz" or inst == "harp":
+					_pluck(out, t, f, vol * 1.5, 1.4, 0.6 if inst == "harp" else 0.35, 0.45, rng)
+				else:
+					_tone(out, inst, t, 1.0, f, vol * 2.0, rng)
 		"bird":
 			# Deux à cinq gazouillis : glissés rapides en FM, aigus.
 			var f := rng.randf_range(2200.0, 3600.0)

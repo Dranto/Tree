@@ -44,7 +44,7 @@
         "alive": {
           "wind": 0.15,
           "wind_lp": 600.0,
-          "events": [{"kind": "frog", "rate": 0.3, "vol": 0.35}, {"kind": "bubble", "rate": 0.4, "vol": 0.3}, {"kind": "cricket", "rate": 0.2, "vol": 0.2}, {"kind": "bird", "rate": 0.1, "vol": 0.3}]
+          "events": [{"kind": "frog", "rate": 0.3, "vol": 0.35}, {"kind": "bubble", "rate": 0.4, "vol": 0.3}, {"kind": "cricket", "rate": 0.2, "vol": 0.2}, {"kind": "bird", "rate": 0.1, "vol": 0.3}, {"kind": "note", "rate": 0.15, "vol": 0.3, "inst": "marimba", "f0": 185.0, "notes": [0, 1, 3, 7, 10]}]
         }
       },
       "ambience": {
@@ -85,7 +85,7 @@
       "bed": {
         "seed": 31,
         "dead": {"wind": 1.0, "wind_lp": 900.0, "gust": 0.8, "events": [{"kind": "rustle", "rate": 0.3, "vol": 0.3}]},
-        "alive": {"wind": 0.6, "wind_lp": 1300.0, "gust": 0.6, "events": [{"kind": "bird", "rate": 0.5, "vol": 0.35}, {"kind": "rustle", "rate": 0.5, "vol": 0.3}]}
+        "alive": {"wind": 0.6, "wind_lp": 1300.0, "gust": 0.6, "events": [{"kind": "bird", "rate": 0.5, "vol": 0.35}, {"kind": "rustle", "rate": 0.5, "vol": 0.3}, {"kind": "note", "rate": 0.15, "vol": 0.3, "inst": "harp", "f0": 196.0, "notes": [0, 2, 4, 7, 9, 10]}]}
       },
       "ambience": {
         "butterflies": 0,
@@ -126,7 +126,7 @@
         "alive": {
           "wind": 0.1,
           "stream": 0.8,
-          "events": [{"kind": "drip", "rate": 0.5, "vol": 0.3}, {"kind": "bird", "rate": 0.4, "vol": 0.35}, {"kind": "frog", "rate": 0.1, "vol": 0.25}]
+          "events": [{"kind": "drip", "rate": 0.5, "vol": 0.3}, {"kind": "bird", "rate": 0.4, "vol": 0.35}, {"kind": "frog", "rate": 0.1, "vol": 0.25}, {"kind": "note", "rate": 0.15, "vol": 0.3, "inst": "kalimba", "f0": 311.1, "notes": [0, 2, 4, 6, 7, 11]}]
         }
       },
       "ambience": {
@@ -168,7 +168,7 @@
       "bed": {
         "seed": 59,
         "dead": {"wind": 0.3, "wind_lp": 500.0, "waves": 0.5, "events": [{"kind": "chime", "rate": 0.05, "vol": 0.2}]},
-        "alive": {"wind": 0.2, "waves": 0.8, "events": [{"kind": "chime", "rate": 0.2, "vol": 0.25}, {"kind": "bird", "rate": 0.3, "vol": 0.3}]}
+        "alive": {"wind": 0.2, "waves": 0.8, "events": [{"kind": "chime", "rate": 0.2, "vol": 0.25}, {"kind": "bird", "rate": 0.3, "vol": 0.3}, {"kind": "note", "rate": 0.15, "vol": 0.3, "inst": "glock", "f0": 440.0, "notes": [0, 4, 6, 7, 11]}]}
       },
       "ambience": {
         "butterflies": 0,
@@ -216,7 +216,7 @@
         "alive": {
           "wind": 0.2,
           "wind_lp": 600.0,
-          "events": [{"kind": "knock", "rate": 0.2, "vol": 0.25}, {"kind": "bird", "rate": 0.3, "vol": 0.35}, {"kind": "rustle", "rate": 0.3, "vol": 0.25}, {"kind": "creak", "rate": 0.1, "vol": 0.25}]
+          "events": [{"kind": "knock", "rate": 0.2, "vol": 0.25}, {"kind": "bird", "rate": 0.3, "vol": 0.35}, {"kind": "rustle", "rate": 0.3, "vol": 0.25}, {"kind": "creak", "rate": 0.1, "vol": 0.25}, {"kind": "note", "rate": 0.15, "vol": 0.3, "inst": "marimba", "f0": 130.8, "notes": [0, 2, 3, 7, 9]}]
         }
       },
       "ambience": {
@@ -250,7 +250,7 @@
       "bed": {
         "seed": 61,
         "dead": {"wind": 0.2, "wind_lp": 250.0, "rumble": 0.4, "events": [{"kind": "drip", "rate": 0.3, "vol": 0.3}, {"kind": "creak", "rate": 0.1, "vol": 0.25}]},
-        "alive": {"wind": 0.15, "wind_lp": 500.0, "rumble": 0.1, "events": [{"kind": "chime", "rate": 0.2, "vol": 0.25}, {"kind": "drip", "rate": 0.2, "vol": 0.25}]}
+        "alive": {"wind": 0.15, "wind_lp": 500.0, "rumble": 0.1, "events": [{"kind": "chime", "rate": 0.2, "vol": 0.25}, {"kind": "drip", "rate": 0.2, "vol": 0.25}, {"kind": "note", "rate": 0.15, "vol": 0.3, "inst": "harp", "f0": 233.1, "notes": [0, 4, 7, 10]}]}
       },
       "ambience": {
         "butterflies": 0,

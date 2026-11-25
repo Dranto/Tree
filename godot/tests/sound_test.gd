@@ -156,6 +156,15 @@ func _run() -> void:
 	check(sfx.played == 4, "son trop lointain non joué")
 	sfx.play("impact", Vector2(100, 0))
 	check(sfx.played == 5, "son proche joué")
+	# Versions régionales : un coup dans le marais prend la voix du marais, dans l'oasis la voix commune.
+	sfx.streams["impact@spore"] = sfx.streams["impact"]
+	var Regions = load("res://scripts/regions.gd")
+	check(sfx.regional("impact", Regions.center("spore")) == "impact@spore", "un coup dans Spore prend sa version régionale")
+	check(sfx.regional("impact", Vector2.ZERO) == "impact", "dans l'oasis, la version commune")
+	check(sfx.regional("mort", Regions.center("spore")) == "mort", "sans version régionale, le son commun")
+	for reg in ["spore", "vent", "seve", "aube", "racine"]:
+		for base in ["impact", "critique", "impact_lourd", "mort", "mort_elite", "coeur"]:
+			check(Synth.SOUNDS.has(base + "@" + reg), "%s : une version régionale de « %s »" % [reg, base])
 	var all_loaded := true
 	for name in Synth.SOUNDS:
 		for file in Synth.variant_names(name):
