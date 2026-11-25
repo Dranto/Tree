@@ -15,9 +15,12 @@ const NOISE_PERIOD := 3000.0
 ## Vague de vie : durée de l'avancée de l'herbe depuis le point ravivé (en secondes).
 const WAVE_TIME := 1.75
 const WAVE_TICK := 0.05
+## Vie du bord de vie : la terre est ravivée au-delà (front net du shader, éléments du calque).
+const FRONT := 0.45
 
 const Regions = preload("res://scripts/regions.gd")
-## Prototype du sol en trois couches (refonte du monde, vague 0 P), éteint par défaut.
+## Sol en trois couches (refonte du monde « Paysages d'herbier », vague 1 S) : matière, détails et
+## pousses du bord de vie dessinés une fois par carré de sol en cache.
 const GroundLayers = preload("res://scripts/world_bake/ground_layers.gd")
 
 static var _noise_tex: ImageTexture
@@ -73,13 +76,10 @@ var _frame := 0
 var _tile_mat: ShaderMaterial
 ## Taille des carrés (pixels d'écran) : TILE_PX, ou « --sol-tile=N » (mesures du prototype P).
 var tile_px := TILE_PX
-## Prototype P (« --paysage-sol ») : chaque carré reçoit un calque dessiné (world_bake/ground_layers.gd).
-var layered := false
-## Prototype P : carrés préparés à l'avance dans le sens du déplacement de la vue (vue décalée de
-## ahead_frames fois le pas de la dernière image), au plus ahead_budget par image. 0 : comme avant.
-var ahead_frames := 0
-var ahead_budget := 1
-var _last_view_center := Vector2.INF
+## Chaque carré reçoit un calque dessiné (world_bake/ground_layers.gd) : toujours vrai en jeu.
+var layered := true
+## Matériau des calques (shaders/ground_layer.gdshader), partagé par tous les carrés.
+var layer_mat: ShaderMaterial
 ## Mesures : carrés construits (nouveaux) et refaits (vie changée) depuis le début.
 var tiles_built := 0
 var tiles_redrawn := 0
@@ -100,6 +100,7 @@ func _ready() -> void:
 	mat.set_shader_parameter("noise_period", NOISE_PERIOD)
 	mat.set_shader_parameter("region_inner", Regions.INNER)
 	mat.set_shader_parameter("region_edge", Regions.EDGE)
+	mat.set_shader_parameter("front", FRONT)
 	var pal := palette()
 	for k in PALETTE_SOL:
 		var col: Color = pal[k]
@@ -110,12 +111,13 @@ func _ready() -> void:
 	if "--sol-direct" in OS.get_cmdline_user_args():
 		cached = false
 	GroundLayers.configure()
+	GroundLayers.clear_cache()
 	if GroundLayers.tile_px > 0:
 		tile_px = GroundLayers.tile_px
-	if GroundLayers.ahead_frames >= 0:
-		ahead_frames = GroundLayers.ahead_frames
-	if GroundLayers.enabled:
-		GroundLayers.setup(self)
+	if "--sol-sans-calque" in OS.get_cmdline_user_args():
+		layered = false
+	layer_mat = GroundLayers.material(self)
+	layer_mat.set_shader_parameter("region_purified", _purified)
 
 
 ## Le monde entier, couvert par le shader du sol.
@@ -127,25 +129,16 @@ static func _make_rect() -> ColorRect:
 	return rect
 
 
-## Couleurs du sol passées au shader, toutes tirées de la charte (Art) : le fond reste sourd.
-## Celles de chaque région viennent de son fichier (data/regions/<id>.json, « ground »).
-const PALETTE_SOL := ["dead_dark", "dead_light", "crack_col", "pebble_col", "alive_dark", "alive_light",
-	"moss_col", "bloom_col"]
+## Couleurs du sol de l'oasis (et hors des régions) passées au shader, tirées de la charte (Art) :
+## trois tons de terre morte, trois d'herbe, et la sève du liseré du bord de vie.
+const PALETTE_SOL := ["dead_dark", "dead_mid", "dead_light", "alive_dark", "alive_mid", "alive_light", "seve_col"]
 
 static func palette() -> Dictionary:
-	var mort := Art.c("sol_mort")
-	var vivant := Art.c("sol_vivant")
+	var p := GroundLayers.world_palette("")
 	return {
-		# Terre morte : deux tons proches (le sol bouge sans faire de bruit).
-		"dead_dark": mort.darkened(0.14),
-		"dead_light": mort.lightened(0.02),
-		"crack_col": Art.c("decor").darkened(0.35),
-		"pebble_col": mort.lightened(0.16),
-		# Terre vivante : herbe, et liseré de mousse à la frontière de la vie.
-		"alive_dark": vivant.lightened(0.02),
-		"alive_light": vivant.lerp(Art.c("decor_vivant"), 0.7).lightened(0.2),
-		"moss_col": Art.c("decor_vivant").lerp(Art.ec("racine", "clair"), 0.45),
-		"bloom_col": Art.c("interactif"),
+		"dead_dark": p["fletri"]["sol_sombre"], "dead_mid": p["fletri"]["sol"], "dead_light": p["fletri"]["sol_clair"],
+		"alive_dark": p["ravive"]["sol_sombre"], "alive_mid": p["ravive"]["sol"], "alive_light": p["ravive"]["sol_clair"],
+		"seve_col": Art.mc("commun", "", "seve"),
 	}
 
 
@@ -171,42 +164,49 @@ const REGION_UNIFORMS := {"dead_dark": "region_dead_dark", "dead_light": "region
 	"alive_light": "region_alive_light", "dot": "region_dot_col"}
 
 
-## Passe au shader le secteur, la palette et l'état purifié de chaque région.
+## Tons du lavis (sombre, moyen, clair) dans le shader, dans l'ordre de ses tableaux.
+const LAVIS_TONS := ["sol_sombre", "sol", "sol_clair"]
+const LAVIS_DEAD := ["region_dead_dark", "region_dead_mid", "region_dead_light"]
+const LAVIS_ALIVE := ["region_alive_dark", "region_alive_mid", "region_alive_light"]
+## Palette du monde de chaque région (GroundLayers.world_palette), dans l'ordre du shader.
+var _region_pals: Array = []
+
+
+## Passe au shader le secteur et les tons de chaque région.
 func _set_regions() -> void:
 	var ids := Regions.ids().slice(0, Regions.MAX_REGIONS)
 	_region_ids = ids
+	_region_pals = []
 	var n1 := PackedVector2Array()
 	var n2 := PackedVector2Array()
-	var cols := {}
-	for k in REGION_UNIFORMS:
-		cols[k] = PackedVector3Array()
-	# vec4 en tableau : passé comme couleurs (quatre nombres).
-	var dots := PackedColorArray()
-	var salts := PackedVector2Array()
-	var mixes := PackedVector2Array()
 	for id in ids:
 		var normals := Regions.edge_normals(id)
 		n1.append(normals[0])
 		n2.append(normals[1])
-		var pal := region_palette(id)
-		for k in REGION_UNIFORMS:
-			var c: Color = pal[k]
-			cols[k].append(Vector3(c.r, c.g, c.b))
-		var d: Vector4 = pal["dot_params"]
-		dots.append(Color(d.x, d.y, d.z, d.w))
-		salts.append(pal["dot_salt"])
-		mixes.append(pal["alive_mix"])
+		_region_pals.append(GroundLayers.world_palette(id))
 	mat.set_shader_parameter("region_count", ids.size())
 	mat.set_shader_parameter("region_n1", n1)
 	mat.set_shader_parameter("region_n2", n2)
-	for k in REGION_UNIFORMS:
-		mat.set_shader_parameter(REGION_UNIFORMS[k], cols[k])
-	mat.set_shader_parameter("region_dot", dots)
-	mat.set_shader_parameter("region_dot_salt", salts)
-	mat.set_shader_parameter("region_alive_mix", mixes)
+	for t in 3:
+		var alive := PackedVector3Array()
+		for pal in _region_pals:
+			var c: Color = pal["ravive"][LAVIS_TONS[t]]
+			alive.append(Vector3(c.r, c.g, c.b))
+		mat.set_shader_parameter(LAVIS_ALIVE[t], alive)
 	_purified.resize(ids.size())
 	_purified.fill(0.0)
-	mat.set_shader_parameter("region_purified", _purified)
+	_set_dead_tones()
+
+
+## Tons de la terre morte de chaque région : flétri, apaisé d'un cran par Cœur purifié.
+func _set_dead_tones() -> void:
+	for t in 3:
+		var dead := PackedVector3Array()
+		for i in _region_pals.size():
+			var pal: Dictionary = _region_pals[i]
+			var c: Color = (pal["fletri"][LAVIS_TONS[t]] as Color).lerp(pal["apaise"][LAVIS_TONS[t]], _purified[i])
+			dead.append(Vector3(c.r, c.g, c.b))
+		mat.set_shader_parameter(LAVIS_DEAD[t], dead)
 
 
 ## Bruit du sol, une couche par canal, qui se répète sans couture :
@@ -287,45 +287,13 @@ func _update_tiles() -> void:
 			if not _tiles.has(key):
 				_tiles[key] = _make_tile(key, world)
 			_tiles[key]["used"] = _frame
-	var extra := 0
-	if ahead_frames > 0:
-		extra = _prepare_ahead(view, world, lo, hi)
 	_refresh_dirty(view.get_center())
-	var keep := (hi.x - lo.x + 1) * (hi.y - lo.y + 1) + TILE_SPARE + extra
+	var keep := (hi.x - lo.x + 1) * (hi.y - lo.y + 1) + TILE_SPARE
 	if _tiles.size() > keep:
 		var old := _tiles.keys()
 		old.sort_custom(func(a, b): return _tiles[a]["used"] < _tiles[b]["used"])
 		for i in _tiles.size() - keep:
 			_free_tile(old[i])
-
-
-## Carrés devant la vue (prototype P) : ceux que la vue atteindra bientôt sont construits à l'avance,
-## quelques-uns par image, les plus proches d'abord. Rend le nombre de carrés gardés en plus.
-func _prepare_ahead(view: Rect2, world: float, lo: Vector2i, hi: Vector2i) -> int:
-	var c := view.get_center()
-	var step := Vector2.ZERO if _last_view_center == Vector2.INF else c - _last_view_center
-	_last_view_center = c
-	if step.length() > world:
-		step = Vector2.ZERO
-	var far := view.merge(Rect2(view.position + step * ahead_frames, view.size))
-	var lo2 := Vector2i(floori(far.position.x / world), floori(far.position.y / world))
-	var hi2 := Vector2i(floori(far.end.x / world), floori(far.end.y / world))
-	var missing: Array = []
-	var extra := 0
-	for ty in range(lo2.y, hi2.y + 1):
-		for tx in range(lo2.x, hi2.x + 1):
-			if tx >= lo.x and tx <= hi.x and ty >= lo.y and ty <= hi.y:
-				continue
-			extra += 1
-			var key := Vector2i(tx, ty)
-			if _tiles.has(key):
-				_tiles[key]["used"] = _frame
-			else:
-				missing.append(key)
-	missing.sort_custom(func(a, b): return (Vector2(a) + Vector2(0.5, 0.5)).distance_squared_to(c / world) < (Vector2(b) + Vector2(0.5, 0.5)).distance_squared_to(c / world))
-	for i in mini(ahead_budget, missing.size()):
-		_tiles[missing[i]] = _make_tile(missing[i], world)
-	return extra
 
 
 ## Un carré : le shader du sol dessiné une fois dans une texture, montrée par un sprite posé au même
@@ -342,7 +310,7 @@ func _make_tile(key: Vector2i, world: float) -> Dictionary:
 	vp.add_child(rect)
 	var layer: Node2D = null
 	if layered:
-		layer = GroundLayers.make(self, Rect2(origin, Vector2(world, world)))
+		layer = GroundLayers.make(self, Rect2(origin, Vector2(world, world)), layer_mat)
 		vp.add_child(layer)
 	add_child(vp)
 	tiles_built += 1
@@ -392,11 +360,17 @@ func _render_once(vp: SubViewport) -> void:
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
-## Refait un carré (la vie a changé sous lui) : son calque dessiné aussi, s'il en a un.
+## Refait le rendu d'un carré (la vie a changé sous lui). Son calque n'est pas redessiné : le shader
+## du calque relit la vie. Seule exception : un carré tout mort reçoit pour la première fois de la vie,
+## il tire alors aussi les éléments ravivés et les pousses du front (une fois).
 func _rerender(t: Dictionary) -> void:
 	tiles_redrawn += 1
-	if t["layer"] != null:
-		t["layer"].queue_redraw()
+	var layer = t["layer"]
+	if layer != null:
+		var m: int = GroundLayers.needs(self, t["rect"])
+		if m & ~layer.mask:
+			layer.mask |= m
+			layer.queue_redraw()
 	_render_once(t["vp"])
 
 
@@ -445,7 +419,8 @@ func set_purified(region: String, value: float) -> void:
 	if i < 0 or _purified[i] == value:
 		return
 	_purified[i] = value
-	mat.set_shader_parameter("region_purified", _purified)
+	_set_dead_tones()
+	layer_mat.set_shader_parameter("region_purified", _purified)
 	_invalidate(Rect2(-Vector2.INF, Vector2.INF))
 
 
@@ -543,5 +518,10 @@ func import_map(png: PackedByteArray) -> bool:
 	for v in data:
 		total_bytes += v
 	dirty = true
+	# La vie peut baisser (autre sauvegarde) : chaque calque refait son masque et son dessin.
+	for t in _tiles.values():
+		if t["layer"] != null:
+			t["layer"].mask = GroundLayers.needs(self, t["rect"])
+			t["layer"].queue_redraw()
 	painted.emit(Vector2.ZERO, INF)
 	return true
