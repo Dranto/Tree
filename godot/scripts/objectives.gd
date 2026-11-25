@@ -22,6 +22,7 @@ signal changed
 
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
+const Demo = preload("res://scripts/demo.gd")
 
 const CHECK_EVERY := 0.25
 const FLAG_PREFIX := "obj_"
@@ -110,15 +111,25 @@ func _process(delta: float) -> void:
 var _list: Array = []
 var _list_regions: Array = []
 var _list_src = null
+var _list_demo := false
 
 
+## Démo (demo.gd) : seulement les objectifs des régions ouvertes et les communs, plus ceux marqués
+## « demo_only » (retour au sceau de la graine), qui n'existent pas dans le jeu complet.
 func list() -> Array:
 	var all: Array = Content._load("objectives").get("objectives", [])
 	var ids: Array = Regions.ids()
-	if not is_same(_list_src, all) or _list_regions != ids:
+	var demo := Demo.active()
+	if demo:
+		ids = ids.filter(func(id): return Demo.region_open(id))
+	if not is_same(_list_src, all) or _list_regions != ids or _list_demo != demo:
 		_list_src = all
 		_list_regions = ids.duplicate()
-		_list = all.filter(func(o): return str(o.get("region", "")) == "" or str(o["region"]) in ids)
+		_list_demo = demo
+		_list = all.filter(func(o):
+			if bool(o.get("demo_only", false)) and not demo:
+				return false
+			return str(o.get("region", "")) == "" or str(o["region"]) in ids)
 	return _list
 
 
@@ -362,6 +373,10 @@ func target_pos(o: Dictionary):
 	match t.get("type", "none"):
 		"seed":
 			return Vector2.ZERO
+		"demo_seal":
+			# Démo : le sceau de ronce sur la brèche, au pied de la graine (demo_wall.gd).
+			var f = main.get("finale")
+			return f.descent_point() if f != null else Vector2(0.0, 150.0)
 		"finale":
 			# La brèche au pied de la graine ; une fois descendu, le boss au centre de l'arène.
 			var f = main.get("finale")
