@@ -8087,8 +8087,8 @@ msgstr "Sève −%d"
 msgid "étourdi"
 msgstr "étourdi"
 
-#. scripts/game.gd:281
-#. scripts/game.gd:328
+#. scripts/game.gd:276
+#. scripts/game.gd:323
 msgid "Build %d"
 msgstr "Build %d"
 
@@ -8113,23 +8113,23 @@ msgstr "Objectif accompli"
 msgid "Secret découvert"
 msgstr "Secret découvert"
 
-#. scripts/game.gd:596
+#. scripts/game.gd:591
 msgid "Dans le jeu complet."
 msgstr "Dans le jeu complet."
 
-#. scripts/game.gd:608
+#. scripts/game.gd:603
 msgid "Couvert de cendre : %s"
 msgstr "Couvert de cendre : %s"
 
-#. scripts/game.gd:608
+#. scripts/game.gd:603
 msgid "un évènement du monde doit le libérer."
 msgstr "un évènement du monde doit le libérer."
 
-#. scripts/game.gd:619
+#. scripts/game.gd:614
 msgid "Demande la compétence « %s »."
 msgstr "Demande la compétence « %s »."
 
-#. scripts/game.gd:622
+#. scripts/game.gd:617
 msgid "Incompatible avec « %s »."
 msgstr "Incompatible avec « %s »."
 
