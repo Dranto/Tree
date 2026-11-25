@@ -46,6 +46,12 @@ static func rect(frame: String) -> Rect2:
 	return _rects.get(frame, Rect2())
 
 
+## Rend l'atlas (sortie du jeu : aucune ressource gardée à la fermeture).
+static func clear() -> void:
+	tex = null
+	bytes = 0
+
+
 static func ready() -> bool:
 	return tex != null
 

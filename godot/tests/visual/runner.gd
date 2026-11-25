@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "vivant", "demo", "bestiaire"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "paysages", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "vivant", "demo", "bestiaire"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -34,6 +34,7 @@ const ValleeScript = preload("res://tests/visual/vallee.gd")
 const ForetScript = preload("res://tests/visual/foret.gd")
 const FinaleScript = preload("res://tests/visual/finale.gd")
 const BordScript = preload("res://tests/visual/bord.gd")
+const PaysagesScript = preload("res://tests/visual/paysages.gd")
 const DemoScript = preload("res://tests/visual/demo.gd")
 const BestiaireScript = preload("res://tests/visual/bestiaire.gd")
 const Demo = preload("res://scripts/demo.gd")
@@ -159,6 +160,8 @@ func _ready() -> void:
 			await FinaleScript.new().run(self)
 		"bord":
 			await BordScript.new().run(self)
+		"paysages":
+			await PaysagesScript.new().run(self)
 		"menus":
 			await _scenario_menus()
 		"manette":

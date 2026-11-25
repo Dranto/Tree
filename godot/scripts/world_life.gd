@@ -120,6 +120,10 @@ func _ready() -> void:
 		Atlas.bake(self)
 
 
+func _exit_tree() -> void:
+	Atlas.clear()
+
+
 func _less() -> bool:
 	return Settings.reduce_effects
 
