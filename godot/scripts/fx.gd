@@ -29,6 +29,17 @@ var stars: Array = []
 var font: Font
 ## Élément du coup en cours de résolution (posé par main.player_hit_enemy, lu par impact()).
 var hit_element := ""
+## Branche et forme du coup en cours (posées par main.player_hit_enemy et Attack.hit), et vrai pendant
+## un coup du héros : elles choisissent la mort du Flétri (enemy_remains.gd, jalon Éclat B).
+var hit_branch := ""
+var hit_form := ""
+var player_hit := false
+## Série de tués rapprochés : de 0 à 1, la sève du héros brille d'autant (feel.json › deaths › streak).
+var streak := 0.0
+var _streak_hold := 0.0
+var _streak_t := 0.0
+## Morts comptées dans la série depuis le départ (lu par les tests).
+var streak_kills := 0
 var _rng := RandomNumberGenerator.new()
 var _trauma := 0.0
 var _shake_t := 0.0
@@ -62,7 +73,7 @@ func ring(pos: Vector2, r0: float, r1: float, dur: float, color: Color, width :=
 
 ## style : 0 discret (coup normal), 1 marqué (critique : gras, contour), 2 reçu (gras, contour, plus lent).
 func text(pos: Vector2, s: String, color: Color, size := 18, dur := 1.0, style := 0) -> void:
-	texts.append({"pos": pos, "s": s, "t": 0.0, "dur": dur, "color": color, "size": size, "pop": 0.0, "style": style})
+	texts.append({"pos": pos, "s": s, "t": 0.0, "dur": dur, "color": color, "size": UiTheme.legible(size), "pop": 0.0, "style": style})
 
 
 # --- Ressenti des coups ---
@@ -168,6 +179,63 @@ func death(pos: Vector2, radius: float, color: Color, on_living_land: bool, elit
 		return
 	shake(feel("shake", "kill_base", 0.1) + radius * feel("shake", "kill_per_radius", 0.006))
 	hitstop(feel("hitstop", "kill_small", 0.035) if radius < 20.0 else feel("hitstop", "kill_big", 0.06))
+
+
+## Surpuissance d'une mort, de 0 à 1 : 0 tant que les dégâts en trop (au-delà de la vie restante)
+## restent sous « overkill » (part de la vie max, feel.json › deaths), 1 au double du seuil.
+func overkill_power(excess: float, max_hp: float) -> float:
+	var thr := feel("deaths", "overkill", 0.75)
+	var x := excess / maxf(max_hp, 1.0)
+	if x < thr:
+		return 0.0
+	return clampf(0.5 + 0.5 * (x - thr) / thr, 0.5, 1.0)
+
+
+## Un Flétri tombe sous les coups du héros : la série monte (la sève du héros brille plus fort).
+func note_kill() -> void:
+	var sec: Dictionary = Content.feel().get("deaths", {}).get("streak", {})
+	streak = minf(1.0, streak + float(sec.get("step", 0.12)))
+	_streak_hold = float(sec.get("hold", 0.9))
+	streak_kills += 1
+
+
+func _update_streak(real: float) -> void:
+	if streak <= 0.0:
+		return
+	_streak_t += real
+	if _streak_hold > 0.0:
+		_streak_hold -= real
+		return
+	var sec: Dictionary = Content.feel().get("deaths", {}).get("streak", {})
+	streak = maxf(0.0, streak - float(sec.get("decay", 0.45)) * real)
+
+
+## Sève du héros pendant une série : un halo qui grandit et des lueurs de sève qui montent autour
+## de lui, sans chiffre ni texte. Rien en dessous du seuil « show ».
+func _draw_streak() -> void:
+	if streak <= 0.0 or main == null or main.player == null:
+		return
+	var sec: Dictionary = Content.feel().get("deaths", {}).get("streak", {})
+	var k := clampf((streak - float(sec.get("show", 0.2))) / (1.0 - float(sec.get("show", 0.2))), 0.0, 1.0)
+	if k <= 0.0:
+		return
+	var p: Vector2 = main.player.position
+	var sap := Art.ec("seve")
+	var pulse := 0.85 + 0.15 * sin(_streak_t * (5.0 + 5.0 * k))
+	var r := float(sec.get("radius", 30.0)) * (0.8 + 0.6 * k)
+	draw_circle(p, r * 1.5 * pulse, Color(sap, 0.07 * k))
+	draw_circle(p, r * pulse, Color(sap, 0.12 * k))
+	draw_arc(p, r * pulse, 0.0, TAU, 40, Color(Art.ec("seve", "clair"), 0.5 * k), 1.5 + 1.5 * k)
+	var n := int(round(float(sec.get("motes", 9.0)) * k))
+	if Settings.reduce_effects:
+		n = ceili(n / 3.0)
+	for i in n:
+		var u := fposmod(_streak_t * 0.9 + i * 0.618, 1.0)
+		var a := i * 2.4 + _streak_t * 0.7
+		var q := p + Vector2(cos(a) * r * 0.75, sin(a) * r * 0.3 + r * 0.3 - r * 1.6 * u)
+		var s := (1.6 + 1.6 * k) * (1.0 - u * 0.5)
+		draw_circle(q, s * 1.8, Color(sap, 0.2 * (1.0 - u) * k))
+		draw_circle(q, s, Color(Art.ec("seve", "clair"), (1.0 - u) * k))
 
 
 ## Un boss change de phase : onde, secousse et arrêt marqué (le combat change de rythme).
@@ -335,6 +403,7 @@ func _process(delta: float) -> void:
 		if _hitstop_left <= 0.0:
 			_apply_time()
 	_update_shake(real)
+	_update_streak(real)
 	for list in [rings, texts, particles, stars]:
 		for e in list:
 			e["t"] += delta
@@ -357,7 +426,7 @@ func _process(delta: float) -> void:
 			p["rot"] += p["spin"] * delta
 		p["pos"] += p["vel"] * delta
 	# Redessiné tant qu'il y a un effet, puis une dernière fois pour effacer le dernier.
-	var busy := not (rings.is_empty() and texts.is_empty() and clouds.is_empty() and particles.is_empty() and stars.is_empty())
+	var busy := not (rings.is_empty() and texts.is_empty() and clouds.is_empty() and particles.is_empty() and stars.is_empty()) or streak > 0.0
 	if busy or drawn_something:
 		queue_redraw()
 	drawn_something = busy
@@ -395,7 +464,10 @@ func _physics_process(delta: float) -> void:
 			c["pos"] = f.position
 		for e in main.enemies_near(c["pos"], c["radius"]):
 			if not e.dead:
+				# Un Flétri dissous par le nuage meurt en fumée (enemy_remains.gd).
+				hit_branch = "spore"
 				e.take_damage(c["dps"] * delta, false, true)
+				hit_branch = ""
 				e.apply_poison(c["dps"] * 0.3, 1.0)
 
 
@@ -416,6 +488,7 @@ func _draw() -> void:
 		_draw_particle(p)
 	for e in stars:
 		_draw_star(e)
+	_draw_streak()
 	for e in texts:
 		var k: float = e["t"] / e["dur"]
 		var col: Color = e["color"]

@@ -1,0 +1,10 @@
+{
+  "_doc": "Démo Steam (jalon 12 E) : ce que la démo ouvre. Lu par scripts/demo.gd quand le jeu tourne en démo (fonctionnalité d'export « demo », ou « -- --demo » pour les tests). Format décrit dans data/README.md, « Démo ».",
+  "regions": ["ronce"],
+  "wall": {
+    "_doc": "Ronce épaisse qui ferme les régions hors démo : « reach » = profondeur de la haie du côté fermé (px), « margin » = place laissée entre la haie et le héros (px), « seal_reach » = distance (px) du sceau de la graine à laquelle la fin de démo se lit.",
+    "reach": 150.0,
+    "margin": 14.0,
+    "seal_reach": 260.0
+  }
+}

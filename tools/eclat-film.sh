@@ -13,7 +13,7 @@ export LIBGL_ALWAYS_SOFTWARE=1
 ARGS=(--out="$DEST")
 [ -n "$CLIPS" ] && ARGS+=(--clips="$CLIPS")
 "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0 \
-  res://tests/visual/film.tscn -- --seed=1234 "${ARGS[@]}" 2>&1 | grep -E "ERROR|FILM|SCRIPT" || true
+  res://tests/visual/film.tscn -- --seed=1234 ${FILM_ARGS:-} "${ARGS[@]}" 2>&1 | grep -E "ERROR|FILM|SCRIPT" || true
 for d in "$DEST"/*/; do
   n="$(basename "$d")"
   [ -f "$d/000.png" ] || continue

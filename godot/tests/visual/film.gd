@@ -4,6 +4,8 @@
 ## Arguments (après « -- ») :
 ##   --clips=a,b,c   scènes à filmer (voir CLIPS), toutes par défaut
 ##   --out=DOSSIER   dossier des images (une sous-dossier par scène), res://tests/visual/out/film par défaut
+##   --mortel        les Flétris ne sont plus soignés : la compétence les tue (morts du jalon Éclat B) ;
+##                   l'un d'eux est une élite dans la scène « pieux »
 extends Node
 
 const MainScene = preload("res://scenes/main.tscn")
@@ -21,6 +23,7 @@ const ORIGIN := Vector2(0, 320)
 
 var main
 var out_dir := "res://tests/visual/out/film"
+var mortel := false
 
 
 func _ready() -> void:
@@ -31,6 +34,8 @@ func _ready() -> void:
 			clips = Array(arg.get_slice("=", 1).split(","))
 		elif arg.begins_with("--out="):
 			out_dir = arg.get_slice("=", 1)
+		elif arg == "--mortel":
+			mortel = true
 	Settings.set_move_mode(Settings.MOVE_MODE_DEFAULT)
 	Settings.aim_mode = "auto"
 	Settings.bindings = Settings.BINDING_DEFAULTS.duplicate()
@@ -86,7 +91,11 @@ func _clip(id: String) -> void:
 	_spawn(ORIGIN + Vector2(60, 150), 1)
 	_spawn(ORIGIN + Vector2(-160, -40), 0)
 	await _frames(2)
+	if mortel and id == "pieux":
+		main.enemies[1].make_elite([])
 	for e in main.enemies:
+		if mortel:
+			continue
 		e.apply_status("saignement", 1.0, 6.0)
 		e.apply_status("poison", 1.0, 6.0)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("%s/%s" % [out_dir, id]))
@@ -103,6 +112,10 @@ func _clip(id: String) -> void:
 			p.fire_cd = 1.0   # pas d'attaque de base : seule la compétence filmée
 		p.hp = Game.stats["max_hp"]
 		for e in main.enemies:
+			if mortel:
+				if is_instance_valid(e) and not e.dead and f == 7:
+					e.hp = minf(e.hp, 1.0)   # le premier coup les tue
+				continue
 			e.hp = maxf(e.hp, e.max_hp * 0.5)   # ils restent debout : on voit tout l'effet
 		if f == 8:
 			match id:
@@ -119,7 +132,7 @@ func _clip(id: String) -> void:
 					p.cast(id, s)
 		if f == 10 and id == "esquive":
 			Input.action_release("dash")
-		if id == "cumul" and f >= 8:
+		if id == "cumul" and f >= 8 and not main.enemies.is_empty() and is_instance_valid(main.enemies[0]):
 			p.target = main.enemies[0]
 		await _frames(1)
 		if f % 2 == 0:

@@ -1506,7 +1506,7 @@ msgid "Mutation : prisme vif"
 msgstr ""
 
 #. data/branches/aube.json › aube › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Aube"
 msgstr ""
 
@@ -2319,7 +2319,7 @@ msgid "Mutation : écorce prompte"
 msgstr ""
 
 #. data/branches/racine.json › racine › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Racine"
 msgstr ""
 
@@ -3349,7 +3349,7 @@ msgid "Mutation : volée resserrée"
 msgstr ""
 
 #. data/branches/ronce.json › ronce › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Ronce"
 msgstr ""
 
@@ -4161,7 +4161,7 @@ msgstr ""
 #. data/branches/seve.json › seve › name
 #. data/branches/seve.json › seve › notable › names
 #. data/finale.json › credits › title
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Sève"
 msgstr ""
 
@@ -5131,7 +5131,7 @@ msgstr ""
 
 #. data/branches/spore.json › spore › name
 #. data/branches/spore.json › spore › notable › names
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Spore"
 msgstr ""
 
@@ -5967,7 +5967,7 @@ msgid "Mutation : tornade rapide"
 msgstr ""
 
 #. data/branches/vent.json › vent › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Vent"
 msgstr ""
 
@@ -5996,6 +5996,7 @@ msgid "frais"
 msgstr ""
 
 #. data/branches/vent.json › vent › notable › names
+#. scripts/hud.gd:305
 msgid "libre"
 msgstr ""
 
@@ -7197,7 +7198,7 @@ msgid "Autel de la couronne"
 msgstr ""
 
 #. data/regions/ronce.json › ronce › boss › name
-#. scripts/boss_arena.gd:34
+#. scripts/boss_arena.gd:35
 msgid "La Mère-Ronce"
 msgstr ""
 
@@ -7214,7 +7215,7 @@ msgstr ""
 #. data/regions/ronce.json › ronce › heart › name
 #. scripts/heart.gd:48
 #. scripts/regions.gd:223
-#. scripts/world_map.gd:114
+#. scripts/world_map.gd:115
 msgid "Cœur de flétrissure"
 msgstr ""
 
@@ -7762,117 +7763,117 @@ msgstr ""
 
 #. project.godot › application/config/name
 msgctxt "nom du jeu"
-msgid "Sève"
+msgid "Arborescence"
 msgstr ""
 
-#. scripts/attack.gd:1118
+#. scripts/attack.gd:1124
 msgid "Attaque de base : %s. %s"
 msgstr ""
 
-#. scripts/attack.gd:1122
+#. scripts/attack.gd:1128
 msgid "Attaque : %s"
 msgstr ""
 
-#. scripts/attack.gd:1138
-#. scripts/attack.gd:1299
-#. scripts/skill_tree.gd:1025
-#. scripts/tree_ui.gd:951
+#. scripts/attack.gd:1144
+#. scripts/attack.gd:1305
+#. scripts/skill_tree.gd:1028
+#. scripts/tree_ui.gd:957
 msgid "%s : %s"
 msgstr ""
 
-#. scripts/attack.gd:1141
+#. scripts/attack.gd:1147
 msgid "En écho, %s : %s"
 msgstr ""
 
-#. scripts/attack.gd:1147
+#. scripts/attack.gd:1153
 msgid " (sans effet sur : %s)"
 msgstr ""
 
-#. scripts/attack.gd:1147
+#. scripts/attack.gd:1153
 #. scripts/options_panel.gd:423
 msgid ", "
 msgstr ""
 
-#. scripts/attack.gd:1150
-#. scripts/attack.gd:1330
+#. scripts/attack.gd:1156
+#. scripts/attack.gd:1336
 msgid "Synergie « %s » : %s"
 msgstr ""
 
-#. scripts/attack.gd:1177
+#. scripts/attack.gd:1183
 msgid "Attaque : %s → %s"
 msgstr ""
 
-#. scripts/attack.gd:1179
+#. scripts/attack.gd:1185
 msgid " (%s continue en écho)"
 msgstr ""
 
-#. scripts/attack.gd:1183
+#. scripts/attack.gd:1189
 msgid "Attaque : + %s, en écho (tire en plus, à sa cadence)"
 msgstr ""
 
-#. scripts/attack.gd:1186
-#. scripts/attack.gd:1204
+#. scripts/attack.gd:1192
+#. scripts/attack.gd:1210
 msgid "Attaque : − %s"
 msgstr ""
 
-#. scripts/attack.gd:1202
+#. scripts/attack.gd:1208
 msgid "Attaque : + %s (%s)"
 msgstr ""
 
-#. scripts/attack.gd:1206
+#. scripts/attack.gd:1212
 msgid "Attaque, %s : %s → %s"
 msgstr ""
 
-#. scripts/attack.gd:1208
+#. scripts/attack.gd:1214
 msgid " (sans effet sur cette forme)"
 msgstr ""
 
-#. scripts/attack.gd:1212
+#. scripts/attack.gd:1218
 msgid "Synergie : + %s (%s)"
 msgstr ""
 
-#. scripts/attack.gd:1215
+#. scripts/attack.gd:1221
 msgid "Synergie : − %s"
 msgstr ""
 
-#. scripts/attack.gd:1272
+#. scripts/attack.gd:1278
 msgid "une attaque au corps à corps"
 msgstr ""
 
-#. scripts/attack.gd:1272
+#. scripts/attack.gd:1278
 msgid "une attaque de zone"
 msgstr ""
 
-#. scripts/attack.gd:1272
+#. scripts/attack.gd:1278
 msgid "une attaque à projectiles"
 msgstr ""
 
-#. scripts/attack.gd:1283
+#. scripts/attack.gd:1289
 msgid "une forme de %s"
 msgstr ""
 
-#. scripts/attack.gd:1285
+#. scripts/attack.gd:1291
 msgid "%d formes d'attaque"
 msgstr ""
 
-#. scripts/attack.gd:1332
+#. scripts/attack.gd:1338
 msgid "Synergie possible « %s » : %s"
 msgstr ""
 
-#. scripts/boss_arena.gd:36
+#. scripts/boss_arena.gd:37
 #. scripts/finale_arena.gd:67
 msgid "Phase 1 sur 3"
 msgstr ""
 
-#. scripts/boss_arena.gd:36
+#. scripts/boss_arena.gd:37
 msgid "Phase 2 sur 3 : les bourgeons éclosent"
 msgstr ""
 
-#. scripts/boss_arena.gd:36
+#. scripts/boss_arena.gd:37
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr ""
 
-#. scripts/boss_base.gd:284
+#. scripts/boss_base.gd:285
 msgid "Entravée"
 msgstr ""
 
@@ -7948,8 +7949,8 @@ msgstr ""
 #. scripts/controls_text.gd:131
 #. scripts/controls_text.gd:147
 #. scripts/settings.gd:83
-#. scripts/tree_ui.gd:1951
-#. scripts/tree_ui.gd:1990
+#. scripts/tree_ui.gd:2030
+#. scripts/tree_ui.gd:2069
 msgid "Arbre de vie"
 msgstr ""
 
@@ -7959,8 +7960,8 @@ msgstr ""
 
 #. scripts/controls_text.gd:148
 #. scripts/settings.gd:83
-#. scripts/world_map.gd:169
-#. scripts/world_map.gd:235
+#. scripts/world_map.gd:170
+#. scripts/world_map.gd:236
 msgid "Carte"
 msgstr ""
 
@@ -8027,6 +8028,10 @@ msgstr ""
 msgid "%s : se déplacer   ·   %s   ·   %s : esquive"
 msgstr ""
 
+#. scripts/demo_wall.gd:33
+msgid "La suite pousse dans le jeu complet."
+msgstr ""
+
 #. scripts/effects.gd:259
 msgid "Nouvelle compétence"
 msgstr ""
@@ -8057,7 +8062,7 @@ msgctxt "élite : nom puis modificateurs"
 msgid "%s %s"
 msgstr ""
 
-#. scripts/enemy.gd:415
+#. scripts/enemy.gd:417
 msgid "Enragé !"
 msgstr ""
 
@@ -8073,53 +8078,57 @@ msgstr ""
 msgid "Phase 3 sur 3"
 msgstr ""
 
-#. scripts/fx.gd:238
+#. scripts/fx.gd:306
 msgid "Sève −%d"
 msgstr ""
 
-#. scripts/fx.gd:240
+#. scripts/fx.gd:308
 msgid "étourdi"
 msgstr ""
 
-#. scripts/game.gd:274
-#. scripts/game.gd:321
+#. scripts/game.gd:276
+#. scripts/game.gd:323
 msgid "Build %d"
 msgstr ""
 
-#. scripts/game.gd:53
+#. scripts/game.gd:54
 msgid "Autel ravivé"
 msgstr ""
 
-#. scripts/game.gd:53
+#. scripts/game.gd:54
 msgid "Boss vaincu"
 msgstr ""
 
-#. scripts/game.gd:53
+#. scripts/game.gd:54
 #. scripts/region_ui.gd:61
 msgid "Cœur purifié"
 msgstr ""
 
-#. scripts/game.gd:54
+#. scripts/game.gd:55
 msgid "Objectif accompli"
 msgstr ""
 
-#. scripts/game.gd:54
+#. scripts/game.gd:55
 msgid "Secret découvert"
 msgstr ""
 
-#. scripts/game.gd:596
+#. scripts/game.gd:591
+msgid "Dans le jeu complet."
+msgstr ""
+
+#. scripts/game.gd:603
 msgid "Couvert de cendre : %s"
 msgstr ""
 
-#. scripts/game.gd:596
+#. scripts/game.gd:603
 msgid "un évènement du monde doit le libérer."
 msgstr ""
 
-#. scripts/game.gd:607
+#. scripts/game.gd:614
 msgid "Demande la compétence « %s »."
 msgstr ""
 
-#. scripts/game.gd:610
+#. scripts/game.gd:617
 msgid "Incompatible avec « %s »."
 msgstr ""
 
@@ -8156,17 +8165,17 @@ msgid ""
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 msgstr ""
 
-#. scripts/main.gd:1100
+#. scripts/main.gd:1128
 msgid "%s vaincu"
 msgstr ""
 
-#. scripts/main.gd:346
-#. scripts/save_game.gd:138
-#. scripts/save_game.gd:190
+#. scripts/main.gd:358
+#. scripts/save_game.gd:140
+#. scripts/save_game.gd:197
 msgid "aucune sauvegarde"
 msgstr ""
 
-#. scripts/main.gd:347
+#. scripts/main.gd:359
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr ""
 
@@ -8466,11 +8475,11 @@ msgstr ""
 msgid "sanctuaire %s"
 msgstr ""
 
-#. scripts/save_game.gd:194
+#. scripts/save_game.gd:201
 msgid "fichier illisible ou d'un autre format"
 msgstr ""
 
-#. scripts/save_game.gd:198
+#. scripts/save_game.gd:205
 msgid "sauvegarde créée par une version plus récente du jeu (format %d > %d)"
 msgstr ""
 
@@ -8703,7 +8712,13 @@ msgstr ""
 msgid "Bouton %d"
 msgstr ""
 
-#. scripts/skill_tree.gd:1038
+#. scripts/skill_tree.gd:1015
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgctxt "nœud notable : nom puis qualificatif"
+msgid "{0} {1}"
+msgstr ""
+
+#. scripts/skill_tree.gd:1041
 msgid " ; "
 msgstr ""
 
@@ -8716,27 +8731,27 @@ msgid "Attaque"
 msgstr ""
 
 #. scripts/skill_tree.gd:38
-#. scripts/tree_ui.gd:39
+#. scripts/tree_ui.gd:40
 msgid "Maîtrise"
 msgstr ""
 
 #. scripts/skill_tree.gd:38
-#. scripts/tree_ui.gd:38
+#. scripts/tree_ui.gd:39
 msgid "Nœud"
 msgstr ""
 
 #. scripts/skill_tree.gd:38
-#. scripts/tree_ui.gd:39
+#. scripts/tree_ui.gd:40
 msgid "Nœud flétri"
 msgstr ""
 
 #. scripts/skill_tree.gd:566
-#. scripts/tree_ui.gd:39
+#. scripts/tree_ui.gd:40
 msgid "Compétence"
 msgstr ""
 
 #. scripts/skill_tree.gd:570
-#. scripts/tree_ui.gd:38
+#. scripts/tree_ui.gd:39
 msgid "Nœud notable"
 msgstr ""
 
@@ -8752,15 +8767,15 @@ msgstr ""
 msgid "PLANCHE I  ·  L'ARBRE DE VIE"
 msgstr ""
 
-#. scripts/title.gd:166
+#. scripts/title.gd:172
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
 msgstr ""
 
-#. scripts/title.gd:171
+#. scripts/title.gd:184
 msgid "Un monde désolé reprend vie"
 msgstr ""
 
-#. scripts/title.gd:172
+#. scripts/title.gd:185
 msgid "au rythme de ton arbre"
 msgstr ""
 
@@ -8774,6 +8789,10 @@ msgstr ""
 
 #. scripts/tree_builds.gd:139
 msgid "Renommer"
+msgstr ""
+
+#. scripts/tree_builds.gd:142
+msgid "actif"
 msgstr ""
 
 #. scripts/tree_builds.gd:147
@@ -8801,7 +8820,7 @@ msgid "Vide"
 msgstr ""
 
 #. scripts/tree_builds.gd:161
-#. scripts/tree_planner.gd:214
+#. scripts/tree_planner.gd:216
 msgid "%d nœud(s) appris"
 msgstr ""
 
@@ -8842,7 +8861,7 @@ msgid "« %s » vidé"
 msgstr ""
 
 #. scripts/tree_builds.gd:47
-#. scripts/tree_panels.gd:97
+#. scripts/tree_panels.gd:98
 msgid "Builds"
 msgstr ""
 
@@ -8928,378 +8947,382 @@ msgstr ""
 msgid "%s : apprendre   ·   %s : oublier   ·   Stick G : de nœud en nœud   ·   Stick D : curseur   ·   %s / %s : zoom   ·   %s : rechercher   ·   %s / %s : panneaux   ·   %s : fermer"
 msgstr ""
 
-#. scripts/tree_panels.gd:102
+#. scripts/tree_panels.gd:103
 msgid "Vue d'ensemble"
 msgstr ""
 
-#. scripts/tree_panels.gd:112
+#. scripts/tree_panels.gd:113
 msgid "Valider le plan"
 msgstr ""
 
-#. scripts/tree_panels.gd:113
+#. scripts/tree_panels.gd:114
 msgid "Effacer"
 msgstr ""
 
-#. scripts/tree_panels.gd:320
+#. scripts/tree_panels.gd:322
 msgid "%d nœud(s) retiré(s) du plan"
 msgstr ""
 
-#. scripts/tree_panels.gd:323
+#. scripts/tree_panels.gd:325
 msgid "%d nœud(s) ajouté(s) au plan"
 msgstr ""
 
-#. scripts/tree_panels.gd:330
+#. scripts/tree_panels.gd:332
 msgid "Il manque %d point(s) pour ce chemin de %d nœud(s). Le mode plan permet de le préparer."
 msgstr ""
 
-#. scripts/tree_panels.gd:332
+#. scripts/tree_panels.gd:334
 msgid "%d nœuds appris d'un coup"
 msgstr ""
 
-#. scripts/tree_panels.gd:342
+#. scripts/tree_panels.gd:344
 msgid "Nœud oublié : %d essence"
 msgstr ""
 
-#. scripts/tree_panels.gd:345
+#. scripts/tree_panels.gd:347
 msgid "Ce nœud en relie d'autres à la graine : oublie d'abord ceux-là."
 msgstr ""
 
-#. scripts/tree_panels.gd:347
+#. scripts/tree_panels.gd:349
 msgid "Oublier ce nœud coûte %d essence : il t'en manque %d. Au sanctuaire, c'est gratuit."
 msgstr ""
 
-#. scripts/tree_panels.gd:353
+#. scripts/tree_panels.gd:355
 msgid "Annulé : %s"
 msgstr ""
 
-#. scripts/tree_panels.gd:367
+#. scripts/tree_panels.gd:369
 msgid "Plan validé : %d nœuds appris"
 msgstr ""
 
-#. scripts/tree_panels.gd:447
+#. scripts/tree_panels.gd:449
 msgid "  ·  clic droit pour l'oublier (%d essence)"
 msgstr ""
 
-#. scripts/tree_panels.gd:447
+#. scripts/tree_panels.gd:449
 msgid "  ·  clic droit pour l'oublier (gratuit)"
 msgstr ""
 
-#. scripts/tree_panels.gd:448
+#. scripts/tree_panels.gd:450
 msgid "Appris%s"
 msgstr ""
 
-#. scripts/tree_panels.gd:454
+#. scripts/tree_panels.gd:456
 msgid "Après ce nœud :"
 msgstr ""
 
-#. scripts/tree_panels.gd:456
+#. scripts/tree_panels.gd:458
 msgid "Après tout le plan (%d nœuds) :"
 msgstr ""
 
-#. scripts/tree_panels.gd:458
+#. scripts/tree_panels.gd:460
 msgid "Après le plan et ce chemin (%d nœuds) :"
 msgstr ""
 
-#. scripts/tree_panels.gd:460
+#. scripts/tree_panels.gd:462
 msgid "Après ce chemin (%d nœuds) :"
 msgstr ""
 
-#. scripts/tree_panels.gd:465
+#. scripts/tree_panels.gd:467
 msgid "Dans le plan  ·  clic pour l'en retirer"
 msgstr ""
 
-#. scripts/tree_panels.gd:467
+#. scripts/tree_panels.gd:469
 msgid "Clic pour ajouter au plan (%d nœud(s), %d point(s))"
 msgstr ""
 
-#. scripts/tree_panels.gd:470
+#. scripts/tree_panels.gd:472
 msgid "Clic pour apprendre (1 point)"
 msgstr ""
 
-#. scripts/tree_panels.gd:472
+#. scripts/tree_panels.gd:474
 msgid "Chemin de %d nœuds, %d points  ·  clic pour tout apprendre"
 msgstr ""
 
-#. scripts/tree_panels.gd:474
+#. scripts/tree_panels.gd:476
 msgid "Pas de point disponible : monte de niveau"
 msgstr ""
 
-#. scripts/tree_panels.gd:476
+#. scripts/tree_panels.gd:478
 msgid "Chemin de %d nœuds : il te manque %d point(s)"
 msgstr ""
 
-#. scripts/tree_panels.gd:556
+#. scripts/tree_panels.gd:554
+msgid "aucun"
+msgstr ""
+
+#. scripts/tree_panels.gd:558
 msgid "%d trouvé(s)"
 msgstr ""
 
-#. scripts/tree_panels.gd:562
+#. scripts/tree_panels.gd:564
 msgid "Mode plan : clique des nœuds pour tracer un chemin sans dépenser de points."
 msgstr ""
 
-#. scripts/tree_panels.gd:564
+#. scripts/tree_panels.gd:566
 msgid "Plan : %d nœuds, %d points. Il t'en manque %d."
 msgstr ""
 
-#. scripts/tree_panels.gd:566
+#. scripts/tree_panels.gd:568
 msgid "Plan : %d nœuds, %d points. Tu as de quoi le valider."
 msgstr ""
 
-#. scripts/tree_panels.gd:579
+#. scripts/tree_panels.gd:581
 msgid "Résumé du build"
 msgstr ""
 
-#. scripts/tree_panels.gd:580
+#. scripts/tree_panels.gd:582
 msgid "%d nœuds appris sur %d  ·  %d point(s) à placer"
 msgstr ""
 
-#. scripts/tree_panels.gd:583
+#. scripts/tree_panels.gd:585
 msgid "Les valeurs après « → » tiennent compte du plan (%d nœuds)."
 msgstr ""
 
-#. scripts/tree_panels.gd:585
+#. scripts/tree_panels.gd:587
 msgid "Branches"
 msgstr ""
 
-#. scripts/tree_panels.gd:617
+#. scripts/tree_panels.gd:619
 msgid "Compétences"
 msgstr ""
 
-#. scripts/tree_panels.gd:619
+#. scripts/tree_panels.gd:621
 msgid "Aucune pour l'instant : elles viennent des nœuds clés."
 msgstr ""
 
-#. scripts/tree_panels.gd:621
-#. scripts/tree_panels.gd:629
+#. scripts/tree_panels.gd:623
+#. scripts/tree_panels.gd:631
 msgid "  (plan)"
 msgstr ""
 
-#. scripts/tree_panels.gd:623
+#. scripts/tree_panels.gd:625
 msgid "Nœuds clés"
 msgstr ""
 
-#. scripts/tree_panels.gd:625
+#. scripts/tree_panels.gd:627
 msgid "Aucun pour l'instant."
 msgstr ""
 
-#. scripts/tree_panels.gd:631
+#. scripts/tree_panels.gd:633
 msgid "Statistiques"
 msgstr ""
 
-#. scripts/tree_panels.gd:74
+#. scripts/tree_panels.gd:75
 msgid "Rechercher : nom, statistique, effet…"
 msgstr ""
 
-#. scripts/tree_panels.gd:85
+#. scripts/tree_panels.gd:86
 msgid "Précédent"
 msgstr ""
 
-#. scripts/tree_panels.gd:86
+#. scripts/tree_panels.gd:87
 msgid "Suivant"
 msgstr ""
 
-#. scripts/tree_panels.gd:87
+#. scripts/tree_panels.gd:88
 msgid "Mode plan"
 msgstr ""
 
-#. scripts/tree_panels.gd:91
+#. scripts/tree_panels.gd:92
 msgid "Annuler"
 msgstr ""
 
-#. scripts/tree_panels.gd:93
+#. scripts/tree_panels.gd:94
 msgid "Résumé"
 msgstr ""
 
-#. scripts/tree_planner.gd:216
+#. scripts/tree_planner.gd:218
 msgid "nœud oublié"
 msgstr ""
 
-#. scripts/tree_planner.gd:217
+#. scripts/tree_planner.gd:219
 msgid "modification du plan"
 msgstr ""
 
-#. scripts/tree_planner.gd:27
+#. scripts/tree_planner.gd:28
 msgid "origine graine"
 msgstr ""
 
-#. scripts/tree_planner.gd:28
+#. scripts/tree_planner.gd:29
 msgid "fletri cendre"
 msgstr ""
 
-#. scripts/tree_planner.gd:356
+#. scripts/tree_planner.gd:358
 msgid "%s : %s → %s"
 msgstr ""
 
-#. scripts/tree_planner.gd:365
+#. scripts/tree_planner.gd:367
 msgid "%s %%"
 msgstr ""
 
-#. scripts/tree_planner.gd:413
+#. scripts/tree_planner.gd:415
 msgid "frontière %s"
 msgstr ""
 
-#. scripts/tree_ui.gd:1953
-#. scripts/tree_ui.gd:1991
+#. scripts/tree_ui.gd:2032
+#. scripts/tree_ui.gd:2070
 msgid "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds"
 msgstr ""
 
-#. scripts/tree_ui.gd:1955
-#. scripts/tree_ui.gd:1993
+#. scripts/tree_ui.gd:2034
+#. scripts/tree_ui.gd:2072
 msgid "Chaque nœud appris ravive la région du monde située dans sa direction."
 msgstr ""
 
-#. scripts/tree_ui.gd:1969
+#. scripts/tree_ui.gd:2048
 msgid "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer"
 msgstr ""
 
-#. scripts/tree_ui.gd:2016
+#. scripts/tree_ui.gd:2098
 msgid " · frontière %s et %s · anneau %d"
 msgstr ""
 
-#. scripts/tree_ui.gd:2018
+#. scripts/tree_ui.gd:2100
 msgid " · %s · anneau %d"
 msgstr ""
 
-#. scripts/tree_ui.gd:2040
+#. scripts/tree_ui.gd:2122
 msgid "Transforme « %s » : un seul choix"
 msgstr ""
 
-#. scripts/tree_ui.gd:2042
+#. scripts/tree_ui.gd:2124
 msgid "Un bonus à choisir, modifiable à tout moment"
 msgstr ""
 
-#. scripts/tree_ui.gd:2045
+#. scripts/tree_ui.gd:2127
 msgid "› %s : %s"
 msgstr ""
 
-#. scripts/tree_ui.gd:2046
+#. scripts/tree_ui.gd:2128
 msgid "  (choisi)"
 msgstr ""
 
-#. scripts/tree_ui.gd:2048
+#. scripts/tree_ui.gd:2130
 msgid "Clic pour faire ton choix"
 msgstr ""
 
-#. scripts/tree_ui.gd:2050
+#. scripts/tree_ui.gd:2132
 msgid "Clic pour changer de bonus"
 msgstr ""
 
-#. scripts/tree_ui.gd:2055
+#. scripts/tree_ui.gd:2137
 msgid "Grappe « %s » : %d / %d nœuds"
 msgstr ""
 
-#. scripts/tree_ui.gd:2057
+#. scripts/tree_ui.gd:2139
 msgid "Grappe complète : %s"
 msgstr ""
 
-#. scripts/tree_ui.gd:2072
+#. scripts/tree_ui.gd:2154
 msgid "Résonance de %s : tous les paliers atteints (%d nœuds)"
 msgstr ""
 
-#. scripts/tree_ui.gd:2074
+#. scripts/tree_ui.gd:2156
 msgid "Résonance de %s : %d / %d nœuds, puis %s"
 msgstr ""
 
-#. scripts/tree_ui.gd:38
+#. scripts/tree_ui.gd:39
 msgid "Nœud clé"
 msgstr ""
 
-#. scripts/tree_ui.gd:38
+#. scripts/tree_ui.gd:39
 msgid "Origine"
 msgstr ""
 
-#. scripts/tree_ui.gd:39
+#. scripts/tree_ui.gd:40
 msgid "Mutation"
 msgstr ""
 
-#. scripts/tree_ui.gd:40
+#. scripts/tree_ui.gd:41
 msgid "Attaque de base"
 msgstr ""
 
-#. scripts/tree_ui.gd:819
+#. scripts/tree_ui.gd:825
 msgid "Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre."
 msgstr ""
 
-#. scripts/tree_ui.gd:829
+#. scripts/tree_ui.gd:835
 msgid "Ce chemin passe par « %s ». %s"
 msgstr ""
 
-#. scripts/tree_ui.gd:900
+#. scripts/tree_ui.gd:906
 msgid "Choisis comment « %s » se transforme. Le choix tient tant que ce nœud reste appris."
 msgstr ""
 
-#. scripts/tree_ui.gd:902
+#. scripts/tree_ui.gd:908
 msgid "Choisis un bonus. Tu pourras en changer quand tu veux, sans rien dépenser."
 msgstr ""
 
-#. scripts/tree_ui.gd:912
+#. scripts/tree_ui.gd:918
 msgid "   (choix actuel)"
 msgstr ""
 
-#. scripts/tree_ui.gd:930
+#. scripts/tree_ui.gd:936
 msgid "Fermer"
 msgstr ""
 
-#. scripts/tree_ui.gd:930
+#. scripts/tree_ui.gd:936
 msgid "Plus tard"
 msgstr ""
 
-#. scripts/world_map.gd:104
+#. scripts/world_map.gd:105
 msgid "Terre ravivée"
 msgstr ""
 
-#. scripts/world_map.gd:110
+#. scripts/world_map.gd:111
 msgid "La graine"
 msgstr ""
 
-#. scripts/world_map.gd:112
+#. scripts/world_map.gd:113
 msgid "Sanctuaire"
 msgstr ""
 
-#. scripts/world_map.gd:113
+#. scripts/world_map.gd:114
 msgid "Autel découvert"
 msgstr ""
 
-#. scripts/world_map.gd:114
+#. scripts/world_map.gd:115
 msgid "trois par région"
 msgstr ""
 
-#. scripts/world_map.gd:115
+#. scripts/world_map.gd:116
 msgid "Arène du boss"
 msgstr ""
 
-#. scripts/world_map.gd:115
+#. scripts/world_map.gd:116
 msgid "scellée tant qu'un Cœur vit"
 msgstr ""
 
-#. scripts/world_map.gd:116
+#. scripts/world_map.gd:117
 msgid "Toi"
 msgstr ""
 
-#. scripts/world_map.gd:247
+#. scripts/world_map.gd:251
 msgid "Graine"
 msgstr ""
 
-#. scripts/world_map.gd:251
+#. scripts/world_map.gd:255
 msgid "Brèche"
 msgstr ""
 
-#. scripts/world_map.gd:283
+#. scripts/world_map.gd:295
 msgid "Arène"
 msgstr ""
 
-#. scripts/world_map.gd:286
+#. scripts/world_map.gd:300
 msgid "Cœur"
 msgstr ""
 
-#. scripts/world_map.gd:286
+#. scripts/world_map.gd:300
 msgid "Cœurs %d / %d"
 msgstr ""
 
-#. scripts/world_map.gd:90
+#. scripts/world_map.gd:91
 msgid "LÉGENDE"
 msgstr ""
 
-#. scripts/world_map.gd:94
+#. scripts/world_map.gd:95
 msgid "M ou Échap : fermer"
 msgstr ""
 

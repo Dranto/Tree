@@ -27,7 +27,8 @@ func cast(p, s := {}) -> void:
 	p.invuln = maxf(p.invuln, left / float(k["speed"]) + 0.12)
 	if p.has_dest:
 		p.clear_destination()
-	_fx = TornadeScript.fx(p, "ruee", {"pos": p.position, "from": p.position, "dir": dir, "w": float(k["width"]), "dur": left / float(k["speed"]) + 0.3})
+	_fx = TornadeScript.fx(p, "ruee", {"pos": p.position, "from": p.position, "dir": dir, "w": float(k["width"]), "dur": left / float(k["speed"]) + 0.3,
+		"travel": left / float(k["speed"])})
 	if bool(k.get("dash", false)):
 		Game.fire("dash", {"main": p.main})
 
