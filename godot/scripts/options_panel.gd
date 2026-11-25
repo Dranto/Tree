@@ -43,6 +43,9 @@ var aim_hint: Label
 var slot_buttons: Array = []
 var listening := -1
 var keys_hint: Label
+## Le texte d'aide des commandes demande une touche (à effacer quand l'attente finit).
+var _asking := false
+var language_select: OptionButton
 var _scroll: ScrollContainer
 var _content: VBoxContainer
 const MOBA_ROW := 6
@@ -53,13 +56,15 @@ const PAD_ACTION_ROW0 := 300
 var pad_slot_buttons: Array = []
 var pad_action_buttons: Array = []
 var pad_style_select: OptionButton
-const TAB_NAMES := ["Son", "Affichage", "Jeu", "Commandes"]
+const TAB_NAMES := ["Son", "Affichage", "Jeu", "Commandes"] # i18n
 ## Largeur des libellés devant les curseurs et les listes.
 const LABEL_W := 170.0
 var pages: Array = []
 var tab_buttons: Array = []
 var tab := 0
+# i18n (début)
 const SLOT_LABELS := ["Compétence principale 1", "Compétence principale 2", "Compétence secondaire 1", "Compétence secondaire 2", "Compétence secondaire 3", "Compétence secondaire 4"]
+# i18n (fin)
 
 
 func _ready() -> void:
@@ -111,10 +116,10 @@ func _ready() -> void:
 	var p_jeu: VBoxContainer = pages[2]
 	var p_cmd: VBoxContainer = pages[3]
 
-	volume_slider = _slider_row(p_son, "Volume général", Settings.volume, _on_volume)
-	music_slider = _slider_row(p_son, "Musique", Settings.music_volume, func(v): Settings.set_music_volume(v); Settings.save_settings(); _update_labels())
-	sfx_slider = _slider_row(p_son, "Effets", Settings.sfx_volume, func(v): Settings.set_sfx_volume(v); Settings.save_settings(); _update_labels())
-	ambience_slider = _slider_row(p_son, "Ambiance", Settings.ambience_volume, func(v): Settings.set_ambience_volume(v); Settings.save_settings(); _update_labels())
+	volume_slider = _slider_row(p_son, Loc.key("Volume général"), Settings.volume, _on_volume)
+	music_slider = _slider_row(p_son, Loc.key("Musique"), Settings.music_volume, func(v): Settings.set_music_volume(v); Settings.save_settings(); _update_labels())
+	sfx_slider = _slider_row(p_son, Loc.key("Effets"), Settings.sfx_volume, func(v): Settings.set_sfx_volume(v); Settings.save_settings(); _update_labels())
+	ambience_slider = _slider_row(p_son, Loc.key("Ambiance"), Settings.ambience_volume, func(v): Settings.set_ambience_volume(v); Settings.save_settings(); _update_labels())
 	_update_labels()
 
 	fullscreen_box = CheckBox.new()
@@ -127,7 +132,7 @@ func _ready() -> void:
 	hints_box.button_pressed = Settings.show_hints
 	hints_box.toggled.connect(func(on): Settings.set_show_hints(on); Settings.save_settings())
 	p_aff.add_child(hints_box)
-	numbers_select = _select_row(p_aff, "Chiffres de dégâts")
+	numbers_select = _select_row(p_aff, Loc.key("Chiffres de dégâts"))
 	for id in Settings.DAMAGE_NUMBERS:
 		numbers_select.add_item(Settings.DAMAGE_NUMBERS_NAMES[id])
 	numbers_select.select(Settings.DAMAGE_NUMBERS.find(Settings.damage_numbers))
@@ -137,53 +142,61 @@ func _ready() -> void:
 	reduce_box.button_pressed = Settings.reduce_effects
 	reduce_box.toggled.connect(func(on): Settings.set_reduce_effects(on); Settings.save_settings())
 	p_aff.add_child(reduce_box)
-	shake_slider = _slider_row(p_aff, "Secousse", Settings.shake_scale, _on_shake, 0.1)
+	shake_slider = _slider_row(p_aff, Loc.key("Secousse"), Settings.shake_scale, _on_shake, 0.1)
 	shake_label = shake_slider.get_meta("label")
 	_update_shake_label()
-	flash_slider = _slider_row(p_aff, "Éclats lumineux", Settings.flash_scale, func(v): Settings.set_flash(v); Settings.save_settings(); _update_pct(flash_slider, "Aucun"), 0.1)
-	hitstop_slider = _slider_row(p_aff, "Micro-pauses", Settings.hitstop_scale, func(v): Settings.hitstop_scale = v; Settings.save_settings(); _update_pct(hitstop_slider, "Aucune"), 0.1)
-	_update_pct(flash_slider, "Aucun")
-	_update_pct(hitstop_slider, "Aucune")
+	flash_slider = _slider_row(p_aff, Loc.key("Éclats lumineux"), Settings.flash_scale, func(v): Settings.set_flash(v); Settings.save_settings(); _update_pct(flash_slider, Loc.key("Aucun")), 0.1)
+	hitstop_slider = _slider_row(p_aff, Loc.key("Micro-pauses"), Settings.hitstop_scale, func(v): Settings.hitstop_scale = v; Settings.save_settings(); _update_pct(hitstop_slider, Loc.key("Aucune")), 0.1)
+	_update_pct(flash_slider, Loc.key("Aucun"))
+	_update_pct(hitstop_slider, Loc.key("Aucune"))
 	# Accessibilité : contraste, taille du texte, mode daltonien.
 	contrast_box = CheckBox.new()
 	contrast_box.text = "Contraste renforcé"
 	contrast_box.button_pressed = Settings.high_contrast
 	contrast_box.toggled.connect(func(on): Settings.set_high_contrast(on); Settings.save_settings(); _update_access())
 	p_aff.add_child(contrast_box)
-	text_select = _select_row(p_aff, "Taille du texte")
+	text_select = _select_row(p_aff, Loc.key("Taille du texte"))
 	for n in Settings.TEXT_SCALE_NAMES:
 		text_select.add_item(n)
 	text_select.item_selected.connect(func(i): Settings.set_text_scale(Settings.TEXT_SCALES[i]); Settings.save_settings(); _update_access())
-	colorblind_select = _select_row(p_aff, "Mode daltonien")
+	colorblind_select = _select_row(p_aff, Loc.key("Mode daltonien"))
 	for id in Settings.COLORBLIND_MODES:
 		colorblind_select.add_item(Settings.COLORBLIND_NAMES[id])
 	colorblind_select.item_selected.connect(func(i): Settings.set_colorblind_mode(Settings.COLORBLIND_MODES[i]); Settings.save_settings(); _update_access())
 	access_hint = _hint(p_aff)
 	_update_access()
 
+	# Langue (jalon 12 A) : celle du système par défaut ; chaque langue écrite dans sa langue.
+	language_select = _select_row(p_jeu, Loc.key("Langue"))
+	language_select.add_item(Loc.key("Langue du système"))
+	for id in Loc.LOCALES:
+		language_select.add_item(Loc.NAMES[id])
+		language_select.set_item_auto_translate_mode(language_select.item_count - 1, Node.AUTO_TRANSLATE_MODE_DISABLED)
+	language_select.item_selected.connect(_on_language)
+	_update_language()
 	# Difficulté : vie et dégâts des ennemis (Normal par défaut).
-	difficulty_select = _select_row(p_jeu, "Difficulté")
+	difficulty_select = _select_row(p_jeu, Loc.key("Difficulté"))
 	for id in Settings.DIFFICULTIES:
 		difficulty_select.add_item(Difficulty.mode_name(id))
 	difficulty_select.item_selected.connect(_on_difficulty)
 	difficulty_hint = _hint(p_jeu)
 	_update_difficulty()
 	# Déplacement : suivre le curseur (par défaut), clic droit façon MOBA, ou clavier.
-	move_select = _select_row(p_jeu, "Déplacement")
+	move_select = _select_row(p_jeu, Loc.key("Déplacement"))
 	for id in Settings.MOVE_MODES:
 		move_select.add_item(Settings.MOVE_MODE_NAMES[id])
 	move_select.item_selected.connect(_on_move_mode)
 	move_hint = _hint(p_jeu)
 	_update_move_mode()
 	# Visée de l'attaque automatique : l'ennemi le plus proche du curseur, ou toujours le curseur.
-	aim_select = _select_row(p_jeu, "Visée")
+	aim_select = _select_row(p_jeu, Loc.key("Visée"))
 	for id in Settings.AIM_MODES:
 		aim_select.add_item(Settings.AIM_MODE_NAMES[id])
 	aim_select.item_selected.connect(_on_aim_mode)
 	aim_hint = _hint(p_jeu)
 	_update_aim_mode()
 	# Rafales de la région de Vent (wind.gd) : elles poussent le joueur et dévient les projectiles.
-	wind_slider = _slider_row(p_jeu, "Rafales", Settings.wind, _on_wind, 0.1)
+	wind_slider = _slider_row(p_jeu, Loc.key("Rafales"), Settings.wind, _on_wind, 0.1)
 	wind_label = wind_slider.get_meta("label")
 	_update_wind_label()
 	focus_box = CheckBox.new()
@@ -203,7 +216,7 @@ func _ready() -> void:
 	p_cmd.add_child(grid)
 	for i in Settings.SLOT_COUNT + 1:
 		var l := Label.new()
-		l.text = "Principale 2, mode MOBA" if i == MOBA_ROW else SLOT_LABELS[i]
+		l.text = Loc.key("Principale 2, mode MOBA") if i == MOBA_ROW else SLOT_LABELS[i]
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(l)
 		var b := Button.new()
@@ -238,7 +251,7 @@ func _ready() -> void:
 	pad_title.text = "Manette"
 	pad_title.add_theme_color_override("font_color", UiTheme.GOLD)
 	p_cmd.add_child(pad_title)
-	pad_style_select = _select_row(p_cmd, "Glyphes")
+	pad_style_select = _select_row(p_cmd, Loc.key("Glyphes"))
 	for id in Settings.PAD_STYLES:
 		pad_style_select.add_item(Settings.PAD_STYLE_NAMES[id])
 	pad_style_select.item_selected.connect(func(i): Settings.set_pad_style(Settings.PAD_STYLES[i]); Settings.save_settings(); _update_keys())
@@ -273,7 +286,7 @@ func _ready() -> void:
 	p_cmd.add_child(reset)
 	_update_keys()
 
-	back_button = UiTheme.menu_item("Retour", 28, HORIZONTAL_ALIGNMENT_CENTER, 240)
+	back_button = UiTheme.menu_item(Loc.key("Retour"), 28, HORIZONTAL_ALIGNMENT_CENTER, 240)
 	back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	back_button.pressed.connect(close)
 	outer.add_child(back_button)
@@ -299,7 +312,7 @@ func _tab_button(text: String, group: ButtonGroup) -> Button:
 	b.add_theme_color_override("font_pressed_color", UiTheme.GOLD)
 	b.add_theme_color_override("font_hover_pressed_color", UiTheme.GOLD)
 	b.draw.connect(func():
-		var w := b.get_theme_font("font").get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.fs(25)).x
+		var w := b.get_theme_font("font").get_string_size(b.atr(b.text), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.fs(25)).x
 		var y := b.size.y - 2.0
 		if b.button_pressed:
 			b.draw_line(Vector2((b.size.x - w) / 2.0 - 6, y), Vector2((b.size.x + w) / 2.0 + 6, y), UiTheme.GOLD, 1.5, true)
@@ -383,7 +396,7 @@ func _on_volume(v: float) -> void:
 func _update_labels() -> void:
 	for sl in [volume_slider, music_slider, sfx_slider, ambience_slider]:
 		if sl != null:
-			sl.get_meta("label").text = "%d %%" % roundi(sl.value * 100.0)
+			sl.get_meta("label").text = Loc.pct(roundi(sl.value * 100.0))
 
 
 func _listen(i: int) -> void:
@@ -401,13 +414,13 @@ func _update_keys() -> void:
 		else:
 			var digit: int = Settings.SLOT_DIGITS[i]
 			var name := Settings.code_name(Settings.bindings[i])
-			b.text = name if digit == KEY_NONE else "%s (ou %s)" % [name, Settings.key_name(digit)]
+			b.text = name if digit == KEY_NONE else tr("%s (ou %s)") % [name, Settings.key_name(digit)]
 	for i in action_buttons.size():
 		var a: String = Settings.GAME_ACTIONS[i]
 		var extra: Array = Settings.ACTION_EXTRAS.get(a, [])
 		var txt := Settings.action_key_name(a)
 		if not extra.is_empty():
-			txt += " (ou %s)" % ", ".join(extra.map(func(k): return Settings.key_name(k)))
+			txt += tr(" (ou %s)") % tr(", ").join(extra.map(func(k): return Settings.key_name(k)))
 		action_buttons[i].text = "…" if listening == ACTION_ROW0 + i else txt
 	for i in pad_slot_buttons.size():
 		pad_slot_buttons[i].text = "…" if listening == PAD_ROW0 + i else Settings.pad_name_of(Settings.pad_bindings[i])
@@ -416,17 +429,18 @@ func _update_keys() -> void:
 	if pad_style_select != null:
 		pad_style_select.select(maxi(0, Settings.PAD_STYLES.find(Settings.pad_style)))
 	if listening >= PAD_ACTION_ROW0:
-		keys_hint.text = "Appuie sur un bouton de la manette pour : %s (Start ou Échap : annuler)." % Settings.GAME_ACTION_NAMES[Settings.PAD_ACTIONS[listening - PAD_ACTION_ROW0]].to_lower()
+		keys_hint.text = tr("Appuie sur un bouton de la manette pour : %s (Start ou Échap : annuler).") % tr(Settings.GAME_ACTION_NAMES[Settings.PAD_ACTIONS[listening - PAD_ACTION_ROW0]]).to_lower()
 	elif listening >= PAD_ROW0:
-		keys_hint.text = "Appuie sur un bouton ou une gâchette de la manette pour : %s (Start ou Échap : annuler, %s : aucun)." % [SLOT_LABELS[listening - PAD_ROW0].to_lower(), Settings.pad_name_of(JOY_BUTTON_BACK)]
+		keys_hint.text = tr("Appuie sur un bouton ou une gâchette de la manette pour : %s (Start ou Échap : annuler, %s : aucun).") % [tr(SLOT_LABELS[listening - PAD_ROW0]).to_lower(), Settings.pad_name_of(JOY_BUTTON_BACK)]
 	elif listening >= ACTION_ROW0:
-		keys_hint.text = "Appuie sur une touche pour : %s (Échap : annuler)." % Settings.GAME_ACTION_NAMES[Settings.GAME_ACTIONS[listening - ACTION_ROW0]].to_lower()
+		keys_hint.text = tr("Appuie sur une touche pour : %s (Échap : annuler).") % tr(Settings.GAME_ACTION_NAMES[Settings.GAME_ACTIONS[listening - ACTION_ROW0]]).to_lower()
 	elif listening == MOBA_ROW:
 		keys_hint.text = "Appuie sur une touche pour la compétence principale 2 en mode MOBA (Échap : annuler)."
 	elif listening >= 0:
-		keys_hint.text = "Appuie sur une touche ou un bouton de la souris pour : %s (Échap : annuler, Retour arrière : aucune)." % SLOT_LABELS[listening].to_lower()
-	elif keys_hint.text.begins_with("Appuie"):
+		keys_hint.text = tr("Appuie sur une touche ou un bouton de la souris pour : %s (Échap : annuler, Retour arrière : aucune).") % tr(SLOT_LABELS[listening]).to_lower()
+	elif _asking:
 		keys_hint.text = ""
+	_asking = listening >= 0
 
 
 ## Pendant l'attente d'une commande : la touche ou le bouton de souris pressé est assigné à
@@ -468,12 +482,12 @@ func _input(event: InputEvent) -> void:
 			Settings.save_settings()
 			keys_hint.text = ""
 		else:
-			keys_hint.text = "%s est déjà utilisée : %s." % [Settings.code_name(code), taken]
+			keys_hint.text = tr("%s est déjà utilisée : %s.") % [Settings.code_name(code), taken]
 	elif code == KEY_BACKSPACE and i != MOBA_ROW:
 		Settings.set_binding(i, KEY_NONE)
 		Settings.save_settings()
 	elif code > 0 and Settings.key_owner(code) != "":
-		keys_hint.text = "%s est déjà utilisée par une autre commande." % Settings.code_name(code)
+		keys_hint.text = tr("%s est déjà utilisée par une autre commande.") % Settings.code_name(code)
 	elif i == MOBA_ROW:
 		Settings.set_moba_main_2_key(code)
 		Settings.save_settings()
@@ -511,9 +525,36 @@ func _listen_pad(event: InputEvent) -> void:
 		Settings.save_settings()
 		keys_hint.text = ""
 	else:
-		keys_hint.text = "%s est déjà utilisé : %s." % [Settings.pad_name_of(code), taken]
+		keys_hint.text = tr("%s est déjà utilisé : %s.") % [Settings.pad_name_of(code), taken]
 	_update_keys()
 	# Le bouton relâché ne doit pas relancer l'écoute : le focus reste sur la ligne.
+
+
+func _on_language(index: int) -> void:
+	Settings.set_locale("" if index == 0 else Loc.LOCALES[index - 1])
+	Settings.save_settings()
+
+
+func _update_language() -> void:
+	language_select.select(0 if Settings.locale == "" else Loc.LOCALES.find(Settings.locale) + 1)
+
+
+## Changement de langue à chaud : les Control se retraduisent seuls ; les textes composés ici sont
+## refaits.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_update_labels()
+		_update_shake_label()
+		_update_pct(flash_slider, Loc.key("Aucun"))
+		_update_pct(hitstop_slider, Loc.key("Aucune"))
+		_update_wind_label()
+		_update_access()
+		_update_difficulty()
+		_update_move_mode()
+		_update_aim_mode()
+		_update_language()
+		_update_keys()
+		_fit.call_deferred()
 
 
 func _on_difficulty(index: int) -> void:
@@ -524,7 +565,7 @@ func _on_difficulty(index: int) -> void:
 
 func _update_difficulty() -> void:
 	difficulty_select.select(maxi(0, Settings.DIFFICULTIES.find(Settings.difficulty)))
-	difficulty_hint.text = str(Difficulty.mode(Settings.difficulty).get("text", ""))
+	difficulty_hint.text = Loc.data(str(Difficulty.mode(Settings.difficulty).get("text", "")))
 
 
 func _on_move_mode(index: int) -> void:
@@ -556,13 +597,13 @@ func _on_shake(v: float) -> void:
 
 
 func _update_shake_label() -> void:
-	shake_label.text = "Aucune" if shake_slider.value <= 0.001 else "%d %%" % roundi(shake_slider.value * 100.0)
+	shake_label.text = Loc.key("Aucune") if shake_slider.value <= 0.001 else Loc.pct(roundi(shake_slider.value * 100.0))
 
 
 ## Pourcentage d'un curseur, ou « zero » à 0.
 func _update_pct(sl: HSlider, zero: String) -> void:
 	if sl != null:
-		sl.get_meta("label").text = zero if sl.value <= 0.001 else "%d %%" % roundi(sl.value * 100.0)
+		sl.get_meta("label").text = zero if sl.value <= 0.001 else Loc.pct(roundi(sl.value * 100.0))
 
 
 func _update_access() -> void:
@@ -571,11 +612,11 @@ func _update_access() -> void:
 	colorblind_select.select(maxi(0, Settings.COLORBLIND_MODES.find(Settings.colorblind_mode)))
 	var parts: Array = []
 	if Settings.colorblind_mode != "aucun":
-		parts.append("Les dangers, les élites et le butin changent de teinte ; les zones d'attaque annoncées sont hachurées.")
+		parts.append(tr("Les dangers, les élites et le butin changent de teinte ; les zones d'attaque annoncées sont hachurées."))
 	if Settings.high_contrast:
-		parts.append("Textes secondaires et filets plus marqués, zones de danger plus opaques.")
+		parts.append(tr("Textes secondaires et filets plus marqués, zones de danger plus opaques."))
 	if Settings.text_scale != 1.0:
-		parts.append("La taille du texte s'applique aux écrans ouverts ensuite.")
+		parts.append(tr("La taille du texte s'applique aux écrans ouverts ensuite."))
 	access_hint.text = " ".join(parts)
 
 
@@ -586,7 +627,7 @@ func _on_wind(v: float) -> void:
 
 
 func _update_wind_label() -> void:
-	wind_label.text = "Coupées" if wind_slider.value <= 0.001 else "%d %%" % roundi(wind_slider.value * 100.0)
+	wind_label.text = Loc.key("Coupées") if wind_slider.value <= 0.001 else Loc.pct(roundi(wind_slider.value * 100.0))
 
 
 ## Hauteur du panneau : tout le contenu s'il tient, sinon 90 % de la fenêtre (le reste défile).

@@ -62,9 +62,9 @@ func configure(_id: String) -> void:
 	var data: Dictionary = Content._load("finale")
 	var b: Dictionary = data.get("boss", {})
 	boss_script = load(str(b.get("script", "res://scripts/boss_finale.gd")))
-	boss_name = str(b.get("name", "La Flétrissure"))
+	boss_name = str(b.get("name", "La Flétrissure")) # i18n
 	bar_color = Regions.color(b.get("bar_color", "cendre"))
-	phase_names = b.get("phases", ["Phase 1 sur 3", "Phase 2 sur 3", "Phase 3 sur 3"])
+	phase_names = b.get("phases", ["Phase 1 sur 3", "Phase 2 sur 3", "Phase 3 sur 3"]) # i18n
 	reward_points = int(b.get("reward", {}).get("points", 3))
 	var ar: Dictionary = b.get("arena", {})
 	max_radius = float(ar.get("radius", 520.0))

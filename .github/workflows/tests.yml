@@ -27,6 +27,9 @@ jobs:
           path: ~/.cache/godot
           key: godot-4.7-stable
 
+      - name: Catalogues de traduction à jour, aucun texte hors traduction
+        run: tools/i18n.sh --check
+
       - name: Lancer les tests
         run: tools/unit-tests.sh
 

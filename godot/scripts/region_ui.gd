@@ -15,11 +15,12 @@ static func tint(id: String) -> Color:
 
 ## Nom court (« map_name » : Roncier) et nom complet (« name » : Région de Ronce).
 static func short_name(id: String) -> String:
-	return str(Regions.def(id).get("map_name", id.capitalize()))
+	return Loc.data(str(Regions.def(id).get("map_name", id.capitalize())))
 
 
 static func full_name(id: String) -> String:
-	return str(Regions.def(id).get("name", short_name(id)))
+	var d := Regions.def(id)
+	return Loc.data(str(d["name"])) if d.has("name") else short_name(id)
 
 
 ## Avancement : {sanctuaires: [ravivés, total], autels: [trouvés, total], secrets: [trouvés, total],
@@ -47,7 +48,7 @@ static func summary(id: String, flags: Dictionary = Game.flags) -> String:
 	var parts: Array = []
 	for k in ["sanctuaires", "autels"]:
 		if p[k][1] > 0:
-			parts.append("%d / %d %s" % [p[k][0], p[k][1], k])
+			parts.append((Loc.t("%d / %d sanctuaires") if k == "sanctuaires" else Loc.t("%d / %d autels")) % [p[k][0], p[k][1]])
 	return " · ".join(parts)
 
 
@@ -55,41 +56,40 @@ static func summary(id: String, flags: Dictionary = Game.flags) -> String:
 static func state(id: String, flags: Dictionary = Game.flags) -> String:
 	var p := progress(id, flags)
 	if p["boss"]:
-		return "région purifiée"
+		return Loc.t("région purifiée")
 	if p["coeur"]:
-		return "Cœurs purifiés" if p["coeurs"][1] > 1 else "Cœur purifié"
+		return Loc.t("Cœurs purifiés") if p["coeurs"][1] > 1 else Loc.t("Cœur purifié")
 	if p["coeurs"][0] > 0:
-		return "%d / %d Cœurs" % p["coeurs"]
+		return Loc.t("%d / %d Cœurs") % p["coeurs"]
 	return ""
 
 
 ## « Sous la graine » : le lieu de la finale (brèche au pied de la graine, creux où attend la Flétrissure).
 ## Ce n'est pas une région : la carte et le journal lui font une place à part.
-const UNDER_SEED_ID := "@graine"
-const UNDER_SEED_NAME := "Sous la graine"
+const UNDER_SEED_ID := "@graine" # i18n: non
+const UNDER_SEED_NAME := "Sous la graine" # i18n
 const UNDER_SEED_TINT := Color("d9a24c")
 
 
 ## Où en est la finale : « scellée » (une région reste à purifier), « brèche ouverte » ou « Flétrissure vaincue ».
 static func finale_state(flags: Dictionary = Game.flags) -> String:
 	if bool(flags.get("finale_vaincue", false)):
-		return "Flétrissure vaincue"
+		return Loc.t("Flétrissure vaincue")
 	if bool(flags.get("finale_ouverte", false)):
-		return "brèche ouverte"
-	return "scellée"
+		return Loc.t("brèche ouverte")
+	return Loc.t("scellée")
 
 
 ## Une ligne d'avancement de la finale pour la légende de la carte : les régions purifiées sur le total
 ## tant que la brèche est scellée.
 static func finale_summary(flags: Dictionary = Game.flags) -> String:
-	var st := finale_state(flags)
-	if st != "scellée":
-		return st
+	if bool(flags.get("finale_vaincue", false)) or bool(flags.get("finale_ouverte", false)):
+		return finale_state(flags)
 	var done := 0
 	for id in Regions.ids():
 		if bool(flags.get(Regions.boss_flag(id), false)):
 			done += 1
-	return "scellée  ·  %d / %d régions purifiées" % [done, Regions.ids().size()]
+	return Loc.t("scellée  ·  %d / %d régions purifiées") % [done, Regions.ids().size()]
 
 
 ## Section du journal d'un objectif : « @graine » pour ceux qui se jouent sous la graine (cible « finale »),
