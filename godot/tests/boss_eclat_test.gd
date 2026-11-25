@@ -94,7 +94,8 @@ func _run() -> void:
 			if d["pos"].distance_to(arena.center) > arena.radius:
 				inside = false
 		check(eclat.decor.size() >= 3 and inside, "une partie de l'arène se transforme (%d décors, tous dans l'arène)" % eclat.decor.size())
-		# Mort.
+		# Mort (un boss calé sur son morceau ne prend pas de coups pendant le drop : on attend la reprise).
+		await _until(func(): return not boss.music_waiting(), 900)
 		var stores: int = fake.stores
 		boss.take_damage(boss.hp + 1.0, false)
 		check(boss.dead and eclat.death_t >= 0.0, "le boss meurt : mort signature")

@@ -220,6 +220,14 @@
 		"boss_kill": 1.6,
 		"boss_kill_speed": 0.25
 	},
+	"final_blow": {
+		"_doc": "Dernier coup du boss final (moments.gd › _final_blow, final_blow.gd) : chaque variante de l'impact frame tient « hold » s réelles (papier puis encre), ralenti à « speed » pendant « slowmo » s réelles, zoom et cadrage ; l'écran entier se distord (aspiration, onde de choc, torsion, aberration chromatique) pendant 3 s réelles.",
+		"hold": 0.42,
+		"slowmo": 3.4,
+		"speed": 0.05,
+		"zoom_time": 2.6,
+		"focus": 3.2
+	},
 	"rumble": {
 		"_doc": "Vibration de la manette (scripts/rumble.gd). Chaque événement : moteur faible (sourd, 0 à 1), moteur fort, durée en secondes réelles ; le tout multiplié par Settings.rumble_scale (0 = rien). Plafond : max_duty secondes de vibration par fenêtre de window secondes, min_gap entre deux impulsions, et une impulsion plus forte d'au moins bypass passe toujours. hurt : de min (petit coup) à max (hurt_full_frac de la vie perdue ou plus).",
 		"window": 1.0,
