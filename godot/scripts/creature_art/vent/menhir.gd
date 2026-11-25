@@ -3,13 +3,18 @@
 ## mise en marche. Large et ancré : deux pieds de roche, deux poings de pierre au bout de racines.
 ## Annonce : il lève les deux poings au-dessus de lui, la rune de braise s'allume, puis il frappe.
 ##
-## Pose : t, walk, moving, k (annonce 0 → 1), strike (0 → 1 après la frappe, -1 : aucune), hit, look.
+## Pose : t, walk, moving, k (annonce 0 → 1), strike (0 → 1 après la frappe, -1 : aucune), hit, look, elite.
+## La pierre ne pivote pas : seuls les yeux et l'arcade suivent la cible (look) vers le haut ou le bas.
 extends RefCounted
 
 const Ink = preload("res://scripts/creature_art/ink.gd")
+const V = preload("res://scripts/creature_art/vent/_commun.gd")
 
 ## 100 unités en px du jeu (1600×900) : ~84 px de haut à l'écran en 1080p.
 const HEIGHT := 64.0
+## Le collier d'élite est dessiné par la sorte (sous le visage taillé, au-dessus des racines).
+const DRAWS_ELITE := true
+const NECK := Vector2(-4, -66)
 
 
 static func pal() -> Dictionary:
@@ -91,15 +96,20 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 		Ink.brush(ci, xf, r, 6.5, Ink.encre(), 1.0, 1.0)
 		Ink.brush(ci, xf, r, 3.6, Art.bc("ronge").lightened(0.12), 1.0, 1.0)
 		Ink.ember(ci, xf, Ink.oval(r[1], 2.2, 1.6, 10), 0.2 + 0.5 * kk)
-	# Visage taillé : arcade gravée, deux yeux de braise ; la rune du vent au milieu.
-	Ink.brush(ci, xf, PackedVector2Array([Vector2(-18, -80), Vector2(-4, -84), Vector2(14, -80)]), 3.4, Ink.encre())
+	# Visage taillé : arcade gravée, deux yeux de braise qui suivent la cible ; la rune du vent au milieu.
+	var la := wrapf(PI - look if flip else look, -PI, PI)
+	var ey := clampf(la, -0.6, 0.6) * 4.0
+	var ex := 1.5 * (1.0 - absf(clampf(la, -0.6, 0.6)))
+	if o.get("elite", false):
+		V.collar(ci, xf, Vector2(-4, -68), 30.0, 7.0, -0.04)
+	Ink.brush(ci, xf, PackedVector2Array([Vector2(-18, -80 + ey * 0.5), Vector2(-4, -84 + ey * 0.5), Vector2(14, -80 + ey * 0.5)]), 3.4, Ink.encre())
 	var glow := 0.3 + 0.7 * kk
 	if hit > 0.4 or (kk == 0.0 and Ink.blink(t, 2.0) > 0.0):
-		Ink.brush(ci, xf, PackedVector2Array([Vector2(-12, -75), Vector2(-4, -74)]), 2.6, Ink.encre())
-		Ink.brush(ci, xf, PackedVector2Array([Vector2(4, -74), Vector2(11, -74)]), 2.2, Ink.encre())
+		Ink.brush(ci, xf, PackedVector2Array([Vector2(-12 + ex, -75 + ey), Vector2(-4 + ex, -74 + ey)]), 2.6, Ink.encre())
+		Ink.brush(ci, xf, PackedVector2Array([Vector2(4 + ex, -74 + ey), Vector2(11 + ex, -74 + ey)]), 2.2, Ink.encre())
 	else:
-		Ink.ember(ci, xf, Ink.leaf(Vector2(-13, -75), -0.12, 10.0, 4.4), glow)
-		Ink.ember(ci, xf, Ink.leaf(Vector2(3, -76), -0.2, 8.0, 3.8), glow)
+		Ink.ember(ci, xf, Ink.leaf(Vector2(-13 + ex, -75 + ey), -0.12, 10.0, 4.4), glow)
+		Ink.ember(ci, xf, Ink.leaf(Vector2(3 + ex, -76 + ey), -0.2, 8.0, 3.8), glow)
 	var rune := PackedVector2Array([Vector2(-14, -44), Vector2(-6, -50), Vector2(2, -46), Vector2(0, -38), Vector2(-8, -38), Vector2(-6, -44)])
 	Ink.brush(ci, xf, rune, 3.6, Ink.encre(), 1.0, 1.0)
 	if not Ink.mono:
