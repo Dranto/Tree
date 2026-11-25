@@ -55,13 +55,13 @@ func draw_attack(e, k: float, hit: float) -> void:
 	var w := float(e.data["beam_width"])
 	var line := {"type": "ligne", "de": e.attack_dir * e.radius, "a": e.attack_dir * ln, "largeur": w}
 	if e.state == "windup":
-		Art.telegraph(e, line, k, -1.0, e.t)
+		Art.telegraph(e.gc, line, k, -1.0, e.t)
 	elif hit >= 0.0:
-		Art.telegraph(e, line, 1.0, hit, e.t)
+		Art.telegraph(e.gc, line, 1.0, hit, e.t)
 	if e.state == "recover":
 		# Le rayon : un trait de lumière blanche cerclé d'or, qui s'amincit.
 		var u := clampf(e.state_t / maxf(0.01, float(e.data.get("beam_time", 0.3))), 0.0, 1.0)
 		var a: Vector2 = e.attack_dir * e.radius
 		var b: Vector2 = e.attack_dir * ln
-		e.draw_line(a, b, Color(0.95, 0.82, 0.42, 0.55 * u), w * (0.6 + 0.4 * u), true)
-		e.draw_line(a, b, Color(1.0, 0.98, 0.9, 0.9 * u), w * 0.3 * u + 1.5, true)
+		e.gc.draw_line(a, b, Color(0.95, 0.82, 0.42, 0.55 * u), w * (0.6 + 0.4 * u), true)
+		e.gc.draw_line(a, b, Color(1.0, 0.98, 0.9, 0.9 * u), w * 0.3 * u + 1.5, true)
