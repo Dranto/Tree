@@ -130,7 +130,7 @@
               "id": "poigne",
               "name": "Poigne",
               "effects": [
-                {"stat": "melee_damage", "op": "inc", "value": 0.2}
+                {"stat": "melee_damage", "op": "inc", "value": 0.1}
               ]
             },
             {
@@ -161,7 +161,7 @@
               "id": "fouet_tournoyant",
               "name": "Fouet tournoyant",
               "effects": [
-                {"skill_mod": "fouet", "param": "arc", "op": "more", "value": 1.4, "text": "+40 % arc du fouet"},
+                {"skill_mod": "fouet", "param": "arc", "op": "more", "value": 1.25, "text": "+25 % arc du fouet"},
                 {"skill_mod": "fouet", "param": "damage", "op": "more", "value": 0.8, "text": "−20 % dégâts du fouet"}
               ]
             },
@@ -190,7 +190,7 @@
           "at": [1.5, 0.35],
           "links": ["f4"],
           "effects": [
-            {"on": "melee_hit", "do": "explode", "radius": 60, "factor": 0.2, "color": "#e0675e", "text": "Un coup de fouet éclabousse les ennemis proches de 20 % de ses dégâts (au plus toutes les 0,4 s).", "cooldown": 0.4}
+            {"on": "melee_hit", "do": "explode", "radius": 60, "factor": 0.08, "color": "#e0675e", "text": "Un coup de fouet éclabousse les ennemis proches de 8 % de ses dégâts (au plus toutes les 0,4 s).", "cooldown": 0.4}
           ]
         },
         {
@@ -230,7 +230,7 @@
           "at": [1.95, 0.6],
           "links": ["f6"],
           "effects": [
-            {"attack_mod": "portee", "value": 0.35},
+            {"attack_mod": "portee", "value": 0.25},
             {"attack_mod": "taille", "value": 0.15}
           ]
         },
@@ -251,14 +251,15 @@
           "at": [2.45, 0.8],
           "links": ["f10"],
           "effects": [
-            {"attack_mod": "repetition", "value": 1}
+            {"attack_mod": "repetition", "value": 1},
+            {"stat": "fire_rate", "op": "more", "value": 0.6}
           ]
         }
       ],
       "complete": {
         "name": "Lanière complète",
         "effects": [
-          {"stat": "melee_damage", "op": "more", "value": 1.1}
+          {"stat": "melee_damage", "op": "more", "value": 1.05}
         ]
       }
     },
@@ -276,7 +277,7 @@
           "name": "Peau de mûrier",
           "at": [0, -0.35],
           "effects": [
-            {"stat": "thorns", "op": "add", "value": 12},
+            {"stat": "thorns", "op": "add", "value": 9},
             {"stat": "armor", "op": "add", "value": 0.05},
             {"stat": "projectile_damage", "op": "inc", "value": 0.35}
           ]
@@ -402,7 +403,7 @@
           "links": ["e3"],
           "excludes": ["e9"],
           "effects": [
-            {"attack_mod": "fourche", "value": 2}
+            {"attack_mod": "fourche", "value": 1}
           ]
         },
         {

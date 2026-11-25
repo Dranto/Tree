@@ -695,7 +695,13 @@ static func hit(main, e, dmg: float, branch: String, m: Dictionary) -> void:
 	if tuned:
 		main.hit_crit_bonus = float(forms().get(str(m.get("form", "")), {}).get("crit", 0.0))
 		main.hit_crit_extra = float(m.get("incandescence", 0.0))
+	# Forme du coup (le fouet tranche, enemy_remains.gd) : apparence de la mort seulement.
+	var fx = main.get("fx")
+	if fx != null and "hit_form" in fx:
+		fx.hit_form = str(m.get("form", ""))
 	main.player_hit_enemy(e, dmg, true, branch)
+	if fx != null and "hit_form" in fx:
+		fx.hit_form = ""
 	if tuned:
 		main.hit_crit_bonus = 0.0
 		main.hit_crit_extra = 0.0

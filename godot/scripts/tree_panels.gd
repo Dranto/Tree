@@ -551,7 +551,7 @@ func _refresh() -> void:
 	if search.text.strip_edges() == "":
 		count_label.text = ""
 	elif matches.is_empty():
-		count_label.text = "aucun"
+		count_label.text = Loc.key("aucun")
 	elif match_index >= 0:
 		count_label.text = "%d / %d" % [match_index + 1, matches.size()]
 	else:
@@ -643,12 +643,12 @@ func _fill_summary() -> void:
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		label.custom_minimum_size = Vector2(200, 0)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		label.add_theme_font_size_override("font_size", 14)
+		label.add_theme_font_size_override("font_size", UiTheme.legible(14))
 		label.add_theme_color_override("font_color", UiTheme.INK if s["changed"] or after != s["value"] else DIM)
 		stats.add_child(label)
 		var value := Label.new()
 		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		value.add_theme_font_size_override("font_size", 14)
+		value.add_theme_font_size_override("font_size", UiTheme.legible(14))
 		if after != s["value"]:
 			value.text = "%s → %s" % [s["value"], after]
 			value.add_theme_color_override("font_color", PLAN)
@@ -669,6 +669,6 @@ func _text(text: String, font_size: int, col: Color) -> void:
 	var l := Label.new()
 	l.text = text
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_font_size_override("font_size", UiTheme.legible(font_size))
 	l.add_theme_color_override("font_color", col)
 	summary_box.add_child(l)

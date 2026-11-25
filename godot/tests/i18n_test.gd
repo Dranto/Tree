@@ -60,7 +60,7 @@ func _numbers_and_data() -> void:
 	t.locale = "en"
 	t.add_message("Toutes les {0} s, ×{1}", "Every {0} s, ×{1}")
 	t.add_message("%d %%", "%d%%")
-	t.add_message("Options", "Settings")
+	t.add_message("Texte d'essai du Label", "Label test text")
 	TranslationServer.add_translation(t)
 	Loc.apply("en")
 	Loc.clear_cache()
@@ -70,9 +70,9 @@ func _numbers_and_data() -> void:
 	check(Loc.data("Toutes les 3 s, ×0,5") == "Every 3 s, ×0.5", "même traduction quand un nombre change dans le JSON")
 	check(Loc.data("Texte sans traduction 4,5") == "Texte sans traduction 4,5", "sans traduction : le texte français d'origine")
 	var label := Label.new()
-	label.text = "Options"
+	label.text = "Texte d'essai du Label"
 	root.add_child(label)
-	check(label.atr(label.text) == "Settings", "un Label traduit son texte lui-même")
+	check(label.atr(label.text) == "Label test text", "un Label traduit son texte lui-même")
 	label.queue_free()
 	TranslationServer.remove_translation(t)
 	Loc.apply("fr")

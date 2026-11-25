@@ -30,6 +30,9 @@ jobs:
       - name: Catalogues de traduction à jour, aucun texte hors traduction
         run: tools/i18n.sh --check
 
+      - name: Anglais complet (100 %, gabarits identiques)
+        run: tools/i18n.sh --complete en
+
       - name: Lancer les tests
         run: tools/unit-tests.sh
 
