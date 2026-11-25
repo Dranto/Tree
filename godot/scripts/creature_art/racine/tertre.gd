@@ -11,9 +11,11 @@ extends RefCounted
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const R = preload("res://scripts/creature_art/racine/outils.gd")
 
-## 100 unités en px du jeu (1600×900) : ~64 px de haut et ~86 px de large à l'écran en 1080p.
-const HEIGHT := 52.0
+## 100 unités en px du jeu (1600×900) : ~72 px de haut et ~92 px de large à l'écran en 1080p.
+const HEIGHT := 58.0
 const DRAWS_ELITE := true
+## La tête ne suit pas la cible (un lourd fait front tout entier) : un seul regard à cuire.
+const LOOKS := false
 
 
 static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
@@ -89,7 +91,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	for q: Vector3 in [Vector3(-48, -50, 3.2), Vector3(-22, -78, 2.6), Vector3(4, -60, 2.2), Vector3(-26, -20, 2.8)]:
 		Ink.flat(ci, xf, Ink.lumpy(Vector2(q.x, q.y), q.z * 1.4, q.z, 10, 0.3, 3.0, q.x), Art.bc("racine", "reflet").lerp(Art.ec("racine", "clair"), 0.45))
 	# Tête enfoncée entre les épaules : arcade de pierre, yeux de braise dessous. Comme le Menhir, elle ne
-	# tourne pas avec le regard (un lourd fait front tout entier) : l'atlas reste sous 10 Mo.
+	# tourne pas avec le regard (un lourd fait front tout entier).
 	var hx := xf
 	Ink.part(ci, hx, Ink.lumpy(Vector2(32, -58), 15.0, 13.0, 22, 0.08, 4.0), {"clair": stone["clair"].darkened(0.08), "ombre": stone["ombre"], "reflet": stone["reflet"]}, 2.6, 1.0, 0.5)
 	Ink.part(ci, hx, PackedVector2Array([Vector2(18, -66), Vector2(30, -74), Vector2(48, -68), Vector2(46, -62), Vector2(30, -64), Vector2(20, -60)]), stone, 2.0, 1.0, 0.8)
