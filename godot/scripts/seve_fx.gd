@@ -11,7 +11,7 @@ extends RefCounted
 
 ## Durée par défaut de chaque signature (secondes) ; la liane, la fontaine et le cocon donnent la leur.
 const DUREE := {
-	"liane": 3.0, "liane_jet": 0.35, "fontaine": 6.0, "fontaine_geyser": 0.6,
+	"liane": 3.0, "liane_jet": 0.5, "fontaine": 6.0, "fontaine_geyser": 0.6,
 	"cocon": 4.0, "cocon_eclat": 0.5, "perle_eclat": 0.3, "rosee": 0.45,
 }
 ## Icônes de Sève : compétences, puis formes de l'attaque.
@@ -39,8 +39,7 @@ static func draw(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 		"liane":
 			_liane(ci, e, k, on_ground)
 		"liane_jet":
-			if on_ground:
-				_liane_jet(ci, e, k)
+			_liane_jet(ci, e, k, on_ground)
 		"fontaine":
 			_fontaine(ci, e, k, on_ground)
 		"fontaine_geyser":
@@ -128,15 +127,51 @@ static func _liane(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 	# Prise : trois petites feuilles serrées sur l'ennemi.
 	for i in 3:
 		Art._leaf(ci, to, 5.0, dir.angle() + PI + (i - 1) * 0.9, Color(col, a))
+	# Au moment où la liane saisit : un anneau se serre sur l'ennemi.
+	var sk := (t - 0.18) / 0.22
+	if sk > 0.0 and sk < 1.0:
+		ci.draw_arc(to, lerpf(30.0, 12.0, Anim.ease_out(sk)), 0.0, TAU, 20, Color(clair, 1.0 - sk), 3.0 * (1.0 - sk) + 1.0, true)
 
 
-## Départ des lianes : un cercle de terre retournée à l'endroit visé, qui pâlit.
-static func _liane_jet(ci: CanvasItem, e: Dictionary, k: float) -> void:
+## Départ des lianes (anticipation, windup › liane) : une bosse de terre file sous le sol du héros
+## jusqu'à l'endroit visé, puis la terre s'y ouvre en cercle et des pousses de liane en jaillissent ;
+## le cercle de terre retournée pâlit.
+static func _liane_jet(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> void:
 	var p: Vector2 = e["pos"]
 	var r: float = e.get("r", 200.0)
-	var a := 1.0 - k
-	ci.draw_arc(p, r * (0.85 + 0.15 * Anim.ease_out(k)), 0.0, TAU, 40, Color(Art.ec("seve"), 0.45 * a), Art.TRAIT_FIN, true)
-	ci.draw_circle(p, r * 0.25 * (1.0 - k), Color(Art.ec("seve", "sombre"), 0.25 * a))
+	var from: Vector2 = e.get("from", p)
+	var t: float = e["t"]
+	var w := SkillFx.windup("liane", 0.12)
+	var u := clampf(t / maxf(w, 0.001), 0.0, 1.0)
+	var ok := clampf((t - w) / maxf(float(e["dur"]) - w, 0.01), 0.0, 1.0)
+	var sombre := Art.ec("seve", "sombre")
+	var head := from.lerp(p, Anim.ease_in_out(u))
+	if on_ground:
+		if u < 1.0:
+			# Sillon de terre soulevée derrière la bosse.
+			ci.draw_line(from, head, Color(Art.ec("racine", "sombre"), 0.5), 4.0, true)
+			ci.draw_colored_polygon(Art.ellipse(head, 12.0, 6.0, 12), Color(Art.ec("racine", "sombre"), 0.8))
+			return
+		var a := 1.0 - ok
+		ci.draw_arc(p, r * (0.85 + 0.15 * Anim.ease_out(ok)), 0.0, TAU, 40, Color(Art.ec("seve"), 0.45 * a), Art.TRAIT_FIN, true)
+		ci.draw_circle(p, r * 0.25 * (1.0 - ok), Color(sombre, 0.25 * a))
+		return
+	if u < 1.0:
+		# Mottes qui sautent sur la bosse.
+		for i in SkillFx._take(SkillFx.amount(3)):
+			ci.draw_circle(head + Vector2((i - 1) * 7.0, -absf(sin(t * 40.0 + i)) * 8.0), 2.2, Color(Art.ec("racine", "sombre").lightened(0.2), 0.9))
+		return
+	# Pousses qui jaillissent du cercle et retombent.
+	if ok < 0.8:
+		var q := ok / 0.8
+		for i in SkillFx._take(SkillFx.amount(6)):
+			var ang := i * TAU / 6.0 + 0.4
+			var base := p + Vector2(cos(ang), sin(ang) * 0.5) * r * 0.35
+			var h := 36.0 * sin(PI * q)
+			var tip := base + Vector2(cos(ang) * 10.0, -h)
+			ci.draw_line(base, tip, Color(sombre, 1.0 - q), 4.0, true)
+			ci.draw_line(base, tip, Color(Art.ec("seve"), 1.0 - q), 2.0, true)
+			Art._leaf(ci, tip, 5.0, -PI / 2.0 + cos(ang) * 0.6, Color(Art.ec("seve", "clair"), 1.0 - q))
 
 
 ## Fontaine de sève : au sol, une flaque claire bordée de mousse, des rides qui s'élargissent ;
@@ -150,11 +185,38 @@ static func _fontaine(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) 
 	var col := Art.ec("seve")
 	var clair := Art.ec("seve", "clair")
 	var sombre := Art.ec("seve", "sombre")
-	var appear := Anim.ease_out(clampf(t / 0.35, 0.0, 1.0))
+	# Anticipation (windup › fontaine) : la terre bombe et se fend, des bulles de sève percent ;
+	# puis la sève jaillit en colonne haute et retombe en flaque.
+	var w := SkillFx.windup("fontaine", 0.28)
 	var a := 1.0 - clampf((t - (dur - 0.5)) / 0.5, 0.0, 1.0)
+	if t < w:
+		var u := t / w
+		if on_ground:
+			ci.draw_colored_polygon(Art.ellipse(p, 10.0 + 26.0 * u, 5.0 + 13.0 * u, 16), Color(Art.ec("racine", "sombre"), 0.6))
+			for i in 5:
+				var ang := i * TAU / 5.0 + 0.3
+				ci.draw_line(p, p + Vector2(cos(ang) * 40.0, sin(ang) * 20.0) * u, Color(sombre, 0.9), 2.0, true)
+			return
+		for i in SkillFx._take(SkillFx.amount(5)):
+			var bk := fposmod(u * 2.0 + i * 0.37, 1.0)
+			var q := p + Vector2(cos(i * 2.4) * 18.0 * u, sin(i * 2.4) * 8.0 * u - bk * 10.0)
+			ci.draw_arc(q, 2.0 + 3.0 * bk, 0.0, TAU, 10, Color(clair, 1.0 - bk), 1.2, true)
+		return
+	var appear := Anim.ease_out(clampf((t - w) / 0.35, 0.0, 1.0))
+	if not on_ground:
+		# Colonne qui jaillit puis retombe en gerbe.
+		var jk := (t - w) / 0.45
+		if jk < 1.0:
+			var hh := 110.0 * sin(PI * minf(jk * 1.3, 1.0))
+			ci.draw_line(p, p + Vector2(0, -hh), Color(col, 0.7 * (1.0 - jk)), 14.0 * (1.0 - jk) + 2.0, true)
+			ci.draw_line(p, p + Vector2(0, -hh), Color(clair, 1.0 - jk), 4.0 * (1.0 - jk) + 1.0, true)
+			for i in SkillFx._take(SkillFx.amount(8)):
+				var side := (i - 3.5) / 3.5
+				var q := p + Vector2(side * 70.0 * jk, -hh * 0.9 + 140.0 * jk * jk * (0.6 + 0.4 * absf(side)))
+				ci.draw_circle(q, 3.0, Color(clair, 1.0 - jk))
 	if on_ground:
-		ci.draw_colored_polygon(Art.ellipse(p, r * appear, r * 0.62 * appear, 32), Color(sombre, 0.3 * a))
-		ci.draw_colored_polygon(Art.ellipse(p, r * 0.82 * appear, r * 0.5 * appear, 28), Color(col, 0.16 * a))
+		ci.draw_colored_polygon(Art.ellipse(p, r * appear + 1.0, r * 0.62 * appear + 1.0, 32), Color(sombre, 0.3 * a))
+		ci.draw_colored_polygon(Art.ellipse(p, r * 0.82 * appear + 1.0, r * 0.5 * appear + 1.0, 28), Color(col, 0.16 * a))
 		# Bord de mousse : des touffes le long de l'ellipse.
 		for i in 14:
 			var ang := i * TAU / 14.0
@@ -199,7 +261,19 @@ static func _cocon(ci: CanvasItem, e: Dictionary, k: float) -> void:
 	var col := Art.ec("seve")
 	var clair := Art.ec("seve", "clair")
 	var sombre := Art.ec("seve", "sombre")
-	var appear := Anim.pop(clampf(t / 0.25, 0.0, 1.0))
+	# Anticipation (windup › cocon) : des feuilles montent du sol en spirale autour du héros et se
+	# referment sur lui ; la coque se scelle dans un éclat clair.
+	var w := SkillFx.windup("cocon", 0.3)
+	if t < w:
+		var u := t / w
+		var cu := Anim.ease_in_out(u)
+		for i in 8:
+			var ang := i * TAU / 8.0 + cu * 4.0
+			var rad := r * lerpf(1.9, 1.0, cu)
+			var q := p + Vector2(0, -r * 0.15) + Vector2(cos(ang) * rad, sin(ang) * rad * 0.5 + r * 0.9 * (1.0 - cu) - r * 0.4 * sin(PI * u))
+			Art._leaf(ci, q, r * 0.32, ang + PI * 0.5 + (1.0 - cu) * 2.0, Color(sombre.lightened(0.25), 0.4 + 0.5 * u))
+		return
+	var appear := Anim.pop(clampf((t - w) / 0.2, 0.0, 1.0))
 	var b := 0.5 + 0.5 * sin(t * 4.0)
 	var rr := r * appear * (1.0 + 0.04 * b)
 	ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, -r * 0.15), rr, rr * 1.15, 28), Color(col, 0.12 + 0.12 * part))
@@ -212,6 +286,11 @@ static func _cocon(ci: CanvasItem, e: Dictionary, k: float) -> void:
 	ci.draw_polyline(Art.ellipse(p + Vector2(0, -r * 0.15), rr, rr * 1.15, 28), Color(clair, 0.5 + 0.4 * part), Art.TRAIT_FIN + part, true)
 	var ga := t * 1.6
 	ci.draw_arc(p + Vector2(0, -r * 0.15), rr * 0.85, ga, ga + 0.7, 8, Color(1, 1, 1, 0.45 * part), 2.0, true)
+	# Sceau : un éclat clair quand la coque se ferme.
+	var sk := (t - w) / 0.25
+	if sk > 0.0 and sk < 1.0:
+		ci.draw_polyline(Art.ellipse(p + Vector2(0, -r * 0.15), rr * (1.0 + 0.5 * sk), rr * 1.15 * (1.0 + 0.5 * sk), 28), Color(clair, 1.0 - sk), 3.0 * (1.0 - sk) + 1.0, true)
+		ci.draw_circle(p + Vector2(0, -r * 1.2), 6.0 * (1.0 - sk) + 1.0, Color(Color.WHITE, 1.0 - sk))
 
 
 ## Éclatement du cocon : les feuilles s'envolent en étoile, un anneau de sève s'élargit.

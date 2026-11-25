@@ -149,7 +149,13 @@ func _draw() -> void:
 	_engraved_tree(base, h * 0.7)
 	var cap_font := UiTheme.serif(600, 3)
 	var cap := tr("PLANCHE I  ·  L'ARBRE DE VIE")
-	draw_string(cap_font, Vector2(base.x - cap_font.get_string_size(cap, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2.0, base.y + 66), cap, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(UiTheme.GOLD, 0.6))
+	var cap_size := UiTheme.legible(13)
+	var cap_w := cap_font.get_string_size(cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cap_size).x
+	var cap_pos := Vector2(base.x - cap_w / 2.0, base.y + 66)
+	# La légende cède la place au rappel des commandes quand celui-ci, plus long dans une autre langue, arrive jusqu'à elle.
+	var cap_rect := Rect2(cap_pos + Vector2(0, -cap_font.get_ascent(cap_size)), Vector2(cap_w, cap_font.get_height(cap_size)))
+	if not (controls_card != null and controls_card.visible and controls_card.get_rect().intersects(cap_rect)):
+		draw_string(cap_font, cap_pos, cap, HORIZONTAL_ALIGNMENT_LEFT, -1, cap_size, Color(UiTheme.GOLD, 0.6))
 	# Pollen d'or qui monte lentement.
 	for m in motes:
 		var y := fmod(m["y"] - t * m["s"] + 10.0, 1.0)
@@ -164,7 +170,14 @@ func _draw() -> void:
 	var x := w * MENU_X
 	var kicker := UiTheme.serif(500, 3)
 	draw_string(kicker, Vector2(x, 140), tr("HERBIER  DES  TERRES  FLÉTRIES"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(UiTheme.GOLD, 0.8))
-	draw_string(UiTheme.display(600, 4), Vector2(x - 5, 290), Loc.game_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, 133, UiTheme.INK)
+	# Le nom du jeu tient entre la marge et l'arbre gravé : la taille baisse si le nom est long.
+	var display := UiTheme.display(600, 4)
+	var title_size := 133
+	var title_room := maxf(base.x - h * 0.26 - x, 320.0)   # jusqu'à la cime de l'arbre gravé
+	var title_w := display.get_string_size(Loc.game_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, title_size).x
+	if title_w > title_room:
+		title_size = int(floor(title_size * title_room / title_w))
+	draw_string(display, Vector2(x - 5, 290), Loc.game_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, UiTheme.INK)
 	draw_line(Vector2(x, 322), Vector2(x + 350, 322), Color(UiTheme.GOLD, 0.6), 1.0, true)
 	UiTheme.draw_diamond(self, Vector2(x + 357, 322), 3.5, UiTheme.GOLD)
 	var sub := UiTheme.serif(500)

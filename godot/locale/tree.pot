@@ -5996,6 +5996,7 @@ msgid "frais"
 msgstr ""
 
 #. data/branches/vent.json › vent › notable › names
+#. scripts/hud.gd:305
 msgid "libre"
 msgstr ""
 
@@ -7762,7 +7763,7 @@ msgstr ""
 
 #. project.godot › application/config/name
 msgctxt "nom du jeu"
-msgid "Sève"
+msgid "Arborescence"
 msgstr ""
 
 #. scripts/attack.gd:1124
@@ -7775,7 +7776,7 @@ msgstr ""
 
 #. scripts/attack.gd:1144
 #. scripts/attack.gd:1305
-#. scripts/skill_tree.gd:1025
+#. scripts/skill_tree.gd:1028
 #. scripts/tree_ui.gd:930
 msgid "%s : %s"
 msgstr ""
@@ -8711,7 +8712,13 @@ msgstr ""
 msgid "Bouton %d"
 msgstr ""
 
-#. scripts/skill_tree.gd:1038
+#. scripts/skill_tree.gd:1015
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgctxt "nœud notable : nom puis qualificatif"
+msgid "{0} {1}"
+msgstr ""
+
+#. scripts/skill_tree.gd:1041
 msgid " ; "
 msgstr ""
 
@@ -8760,15 +8767,15 @@ msgstr ""
 msgid "PLANCHE I  ·  L'ARBRE DE VIE"
 msgstr ""
 
-#. scripts/title.gd:166
+#. scripts/title.gd:172
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
 msgstr ""
 
-#. scripts/title.gd:171
+#. scripts/title.gd:184
 msgid "Un monde désolé reprend vie"
 msgstr ""
 
-#. scripts/title.gd:172
+#. scripts/title.gd:185
 msgid "au rythme de ton arbre"
 msgstr ""
 
@@ -8782,6 +8789,10 @@ msgstr ""
 
 #. scripts/tree_builds.gd:139
 msgid "Renommer"
+msgstr ""
+
+#. scripts/tree_builds.gd:142
+msgid "actif"
 msgstr ""
 
 #. scripts/tree_builds.gd:147
@@ -9036,6 +9047,10 @@ msgstr ""
 msgid "Chemin de %d nœuds : il te manque %d point(s)"
 msgstr ""
 
+#. scripts/tree_panels.gd:554
+msgid "aucun"
+msgstr ""
+
 #. scripts/tree_panels.gd:558
 msgid "%d trouvé(s)"
 msgstr ""
@@ -9283,23 +9298,23 @@ msgstr ""
 msgid "Toi"
 msgstr ""
 
-#. scripts/world_map.gd:250
+#. scripts/world_map.gd:251
 msgid "Graine"
 msgstr ""
 
-#. scripts/world_map.gd:254
+#. scripts/world_map.gd:255
 msgid "Brèche"
 msgstr ""
 
-#. scripts/world_map.gd:293
+#. scripts/world_map.gd:295
 msgid "Arène"
 msgstr ""
 
-#. scripts/world_map.gd:296
+#. scripts/world_map.gd:300
 msgid "Cœur"
 msgstr ""
 
-#. scripts/world_map.gd:296
+#. scripts/world_map.gd:300
 msgid "Cœurs %d / %d"
 msgstr ""
 

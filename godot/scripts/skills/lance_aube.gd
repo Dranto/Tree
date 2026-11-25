@@ -24,7 +24,8 @@ func cast(p, s := {}) -> void:
 	pending.append({"left": wind, "dir": dir, "factor": 1.0})
 	for i in int(k.get("repeat", 0)):
 		pending.append({"left": wind + REPEAT_GAP * (i + 1), "dir": dir, "factor": REPEAT_FACTOR})
-	TornadeScript.fx(p, "lance_charge", {"pos": p.position, "dir": dir, "dur": wind, "follow": p})
+	TornadeScript.fx(p, "lance_charge", {"pos": p.position, "dir": dir, "dur": wind, "follow": p,
+		"len": float(k["length"]), "w": float(k["width"]) * float(Game.stats.get("area", 1.0))})
 
 
 func tick(delta: float) -> void:

@@ -78,12 +78,40 @@ static func _tornade(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 	var col := Art.ec("vent")
 	var clair := Art.ec("vent", "clair")
 	var sombre := Art.ec("vent", "sombre")
-	var appear := Anim.ease_out(clampf(t / 0.3, 0.0, 1.0))
+	# Anticipation (windup › tornade) : la poussière et les feuilles s'enroulent vers l'œil et un fil
+	# d'air monte en se tordant ; puis l'entonnoir se forme du pied vers le sommet.
+	var wu := SkillFx.windup("tornade", 0.35)
+	var spin := t * 7.0 + float(e.get("seed", 0))
+	if t < wu:
+		var u := t / wu
+		if on_ground:
+			for i in 6:
+				var pts := PackedVector2Array()
+				for j in 7:
+					var q := j / 6.0
+					var ang := spin * 0.5 + i * TAU / 6.0 + q * 2.4 + u * 2.0
+					pts.append(p + Vector2(cos(ang), sin(ang) * 0.5) * r * 1.4 * (1.0 - 0.55 * u) * (1.0 - 0.8 * q))
+				ci.draw_polyline(pts, Color(clair, 0.25 + 0.4 * u), Art.TRAIT_FIN, true)
+			return
+		for i in SkillFx._take(SkillFx.amount(9)):
+			var ang := spin * 0.8 + i * 2.39996
+			var rad := r * 1.4 * (1.0 - Anim.ease_in(u)) * (0.5 + 0.5 * fposmod(i * 0.618, 1.0)) + 6.0
+			var q := p + Vector2(cos(ang) * rad, sin(ang) * rad * 0.5 - 8.0 * u)
+			if i % 3 == 0:
+				ci.draw_colored_polygon(HeroArt.leaf_pts(q, 4.0, ang * 2.0), Color(Art.c("joueur_accent").darkened(0.3), 0.9))
+			else:
+				ci.draw_circle(q, 2.2, Color(sombre.lightened(0.2), 0.85))
+		var thread := PackedVector2Array()
+		for j in 8:
+			var q := j / 7.0
+			thread.append(p + Vector2(sin(spin + q * 6.0) * 6.0 * q, -q * r * 1.05 * Anim.ease_out(u)))
+		ci.draw_polyline(thread, Color(clair, 0.4 + 0.5 * u), 2.0, true)
+		return
+	var appear := Anim.ease_out(clampf((t - wu) / 0.3, 0.0, 1.0))
 	var fade := clampf((t - (dur - 0.4)) / 0.4, 0.0, 1.0)
 	var a := 1.0 - fade
-	var spin := t * 7.0 + float(e.get("seed", 0))
 	if on_ground:
-		ci.draw_colored_polygon(Art.ellipse(p, r * appear, r * 0.5 * appear, 24), Color(sombre, 0.22 * a))
+		ci.draw_colored_polygon(Art.ellipse(p, r * appear + 1.0, r * 0.5 * appear + 1.0, 24), Color(sombre, 0.22 * a))
 		for i in 5:
 			var a0 := spin * 0.6 + i * TAU / 5.0
 			var pts := PackedVector2Array()
@@ -100,7 +128,10 @@ static func _tornade(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		var w := r * (0.28 + 0.75 * q) * appear * (1.0 + 0.35 * fade)
 		var h := w * 0.32
 		var c := p + Vector2(sin(spin * 0.5 + q * 2.4) * r * 0.12, -q * r * 1.05 * appear)
-		var al := (0.55 + 0.3 * q) * a
+		# Les anneaux apparaissent l'un après l'autre, du pied vers le sommet.
+		var al := (0.55 + 0.3 * q) * a * clampf(appear * rings * 1.2 - i, 0.0, 1.0)
+		if al <= 0.0:
+			continue
 		ci.draw_colored_polygon(Art.ellipse(c, w, h, 18), Color(col, 0.16 * al))
 		var s0 := spin + q * 1.3
 		ci.draw_arc(c, w, s0, s0 + 2.4, 12, Color(clair, al), Art.TRAIT_FIN + 1.0 - q, true)
@@ -113,18 +144,51 @@ static func _tornade(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		ci.draw_circle(c, 2.0 + 1.5 * (1.0 - q), Color(sombre.lightened(0.2), 0.8 * a))
 
 
-## Ruée : le héros laisse une traînée d'air en fuseau, bordée de rafales, et l'air se referme derrière.
+## Ruée : l'air se tasse sur le héros (anticipation, windup › ruee), il part en laissant au départ
+## un souffle en éventail ; derrière lui, une traînée d'air en fuseau bordée de rafales, que l'air
+## referme ; à l'arrivée (« travel »), l'air qu'il pousse éclate devant lui.
 static func _ruee(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> void:
 	var from: Vector2 = e.get("from", e["pos"])
 	var to: Vector2 = e["pos"]
 	var w: float = e.get("w", 48.0)
+	var t: float = e["t"]
+	var col := Art.ec("vent")
+	var clair := Art.ec("vent", "clair")
+	var d0: Vector2 = e.get("dir", Vector2.RIGHT)
+	# Départ : l'air se tasse puis souffle en éventail derrière le héros.
+	var wu := SkillFx.windup("ruee", 0.06)
+	if not on_ground:
+		if t < wu:
+			var c := Anim.ease_in(t / wu)
+			for i in 6:
+				var dd := Vector2.from_angle(i * TAU / 6.0 + 0.3)
+				ci.draw_line(from + dd * lerpf(46.0, 16.0, c), from + dd * lerpf(60.0, 22.0, c), Color(clair, 0.5 + 0.5 * c), 2.0, true)
+		var bk := (t - wu) / 0.3
+		if bk > 0.0 and bk < 1.0:
+			for i in SkillFx._take(SkillFx.amount(5)):
+				var la := d0.angle() + PI + (i - 2) * 0.45
+				Art._gust(ci, from + Vector2.from_angle(la) * (10.0 + 50.0 * Anim.ease_out(bk)), 20.0 * (1.0 - bk) + 4.0, Color(clair, 1.0 - bk), 2.0)
+	elif t < wu + 0.3:
+		var bk := clampf((t - wu) / 0.3, 0.0, 1.0)
+		var ring := Art.ellipse(from + Vector2(0, 8), 14.0 + 40.0 * Anim.ease_out(bk), (14.0 + 40.0 * Anim.ease_out(bk)) * 0.45, 20)
+		ring.append(ring[0])
+		ci.draw_polyline(ring, Color(clair, 0.6 * (1.0 - bk)), 2.0, true)
+	# Arrivée : l'air poussé éclate devant le héros.
+	var travel: float = e.get("travel", maxf(float(e["dur"]) - 0.3, 0.0))
+	var ak := (t - travel) / 0.3
+	if ak > 0.0 and ak < 1.0:
+		var g := Anim.ease_out(ak)
+		if on_ground:
+			ci.draw_arc(to + d0 * 20.0, 20.0 + 50.0 * g, d0.angle() - 1.2, d0.angle() + 1.2, 14, Color(clair, 0.7 * (1.0 - ak)), 3.0 * (1.0 - ak) + 1.0, true)
+		else:
+			for i in SkillFx._take(SkillFx.amount(4)):
+				var la := d0.angle() + (i - 1.5) * 0.5
+				Art._gust(ci, to + Vector2.from_angle(la) * (24.0 + 46.0 * g), 22.0 * (1.0 - ak) + 4.0, Color(clair, 1.0 - ak), 2.0)
 	var d := to - from
 	if d.length() < 2.0:
 		return
 	var dir := d.normalized()
 	var n := dir.orthogonal()
-	var col := Art.ec("vent")
-	var clair := Art.ec("vent", "clair")
 	var a := 1.0 - Anim.ease_in(k)
 	# La queue rattrape la tête : la traînée se referme depuis le départ.
 	var tail := from.lerp(to, Anim.ease_in(k))
@@ -164,7 +228,21 @@ static func _appel_air(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool)
 				var rad := r * (1.0 - q * 0.7) * (1.0 - 0.8 * s)
 				pts.append(p + Vector2.from_angle(i * TAU / 6.0 + s * 2.2 + q * 3.0) * rad)
 			ci.draw_polyline(pts, Color(clair, 0.35 + 0.5 * q), Art.TRAIT_FIN + 1.0, true)
-		ci.draw_circle(p, 6.0 + 10.0 * q, Color(clair, 0.3 + 0.4 * q))
+		# Débris aspirés : feuilles et poussière tournent vers le centre de plus en plus vite.
+		for i in SkillFx._take(SkillFx.amount(12)):
+			var h := fposmod(i * 0.618, 1.0)
+			var life := fposmod(q * (1.4 + h) + h, 1.0)
+			var ang := i * 2.39996 + life * 4.0
+			var at := p + Vector2.from_angle(ang) * r * (1.0 - Anim.ease_in(life)) * (0.7 + 0.3 * h)
+			if i % 3 == 0:
+				ci.draw_colored_polygon(HeroArt.leaf_pts(at, 4.0, ang * 3.0), Color(Art.c("joueur_accent").darkened(0.3), 0.85))
+			else:
+				ci.draw_circle(at, 2.0, Color(sombre.lightened(0.25), 0.85))
+		# Les derniers instants : l'air se comprime en un point qui blanchit.
+		var cq := clampf((q - 0.8) / 0.2, 0.0, 1.0)
+		ci.draw_circle(p, 6.0 + 10.0 * q - 8.0 * cq, Color(clair.lerp(Color.WHITE, cq), 0.3 + 0.4 * q + 0.3 * cq))
+		if cq > 0.0:
+			ci.draw_arc(p, lerpf(60.0, 10.0, Anim.ease_in(cq)), 0.0, TAU, 24, Color(sombre, 0.7 * cq), 3.0, true)
 		return
 	var q := clampf((t - pull) / maxf(e["dur"] - pull, 0.01), 0.0, 1.0)
 	var a := 1.0 - q

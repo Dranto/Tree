@@ -227,6 +227,11 @@ func report(game, elapsed: float, deaths: int) -> String:
 		name, elapsed, game.level, game.allocated.size(), game.kills, deaths, per_min]
 	if not missing.is_empty():
 		line += "\nBUILD %s : %d cibles absentes de l'arbre (%s)" % [name, missing.size(), ", ".join(missing)]
+	if OS.get_environment("BALANCE_DEBUG") != "":
+		var names := []
+		for id in game.allocated:
+			names.append(game.tree.nodes[id]["uid"])
+		line += "\nDEBUG nodes=%s\nDEBUG stats=%s" % [", ".join(names), str(game.stats)]
 	return line
 
 

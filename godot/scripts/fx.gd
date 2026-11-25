@@ -73,7 +73,7 @@ func ring(pos: Vector2, r0: float, r1: float, dur: float, color: Color, width :=
 
 ## style : 0 discret (coup normal), 1 marqué (critique : gras, contour), 2 reçu (gras, contour, plus lent).
 func text(pos: Vector2, s: String, color: Color, size := 18, dur := 1.0, style := 0) -> void:
-	texts.append({"pos": pos, "s": s, "t": 0.0, "dur": dur, "color": color, "size": size, "pop": 0.0, "style": style})
+	texts.append({"pos": pos, "s": s, "t": 0.0, "dur": dur, "color": color, "size": UiTheme.legible(size), "pop": 0.0, "style": style})
 
 
 # --- Ressenti des coups ---
