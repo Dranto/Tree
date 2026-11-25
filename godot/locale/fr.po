@@ -8163,17 +8163,17 @@ msgstr ""
 "%s\n"
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 
-#. scripts/main.gd:1086
+#. scripts/main.gd:1089
 msgid "%s vaincu"
 msgstr "%s vaincu"
 
-#. scripts/main.gd:333
-#. scripts/save_game.gd:136
-#. scripts/save_game.gd:188
+#. scripts/main.gd:336
+#. scripts/save_game.gd:138
+#. scripts/save_game.gd:190
 msgid "aucune sauvegarde"
 msgstr "aucune sauvegarde"
 
-#. scripts/main.gd:334
+#. scripts/main.gd:337
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr "Sauvegarde illisible (%s) : nouvelle partie."
 
@@ -8473,11 +8473,11 @@ msgstr "de la Graine"
 msgid "sanctuaire %s"
 msgstr "sanctuaire %s"
 
-#. scripts/save_game.gd:192
+#. scripts/save_game.gd:194
 msgid "fichier illisible ou d'un autre format"
 msgstr "fichier illisible ou d'un autre format"
 
-#. scripts/save_game.gd:196
+#. scripts/save_game.gd:198
 msgid "sauvegarde créée par une version plus récente du jeu (format %d > %d)"
 msgstr "sauvegarde créée par une version plus récente du jeu (format %d > %d)"
 
@@ -8759,15 +8759,15 @@ msgstr "niveau %d · fin"
 msgid "PLANCHE I  ·  L'ARBRE DE VIE"
 msgstr "PLANCHE I  ·  L'ARBRE DE VIE"
 
-#. scripts/title.gd:164
+#. scripts/title.gd:166
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
 msgstr "HERBIER  DES  TERRES  FLÉTRIES"
 
-#. scripts/title.gd:169
+#. scripts/title.gd:171
 msgid "Un monde désolé reprend vie"
 msgstr "Un monde désolé reprend vie"
 
-#. scripts/title.gd:170
+#. scripts/title.gd:172
 msgid "au rythme de ton arbre"
 msgstr "au rythme de ton arbre"
 
