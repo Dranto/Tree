@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "reaction"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -147,6 +147,8 @@ func _ready() -> void:
 			await _scenario_manette()
 		"cumul":
 			await _scenario_cumul()
+		"reaction":
+			await _scenario_reaction()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -492,6 +494,54 @@ func _scenario_attaque() -> void:
 	add_child(layer)
 	await _frames(3)
 	await _shot("galerie_attaque")
+
+
+## Un monde qui réagit (jalon Éclat, tâche F), tout figé à un instant : herbe et fleurs couchées dans le
+## sillage du héros, une trace de chaque sorte, la graine qui germe, la spirale de sève de la montée de
+## niveau, une greffe en vol et la colonne d'un sanctuaire ravivé.
+func _scenario_reaction() -> void:
+	var p = main.player
+	main.hud.glyphs.hide()
+	main.autotest = false
+	p.set_physics_process(false)
+	p.invuln = 1.0e9
+	main.spawn_timer = 1e9
+	main.ground.paint(Vector2.ZERO, 500.0, 1.0)
+	main.flora.finish_pending()
+	main.flora.spawn_patch(Vector2.ZERO, 300.0, 110, Color(0, 0, 0, 0))
+	main.flora.finish_pending()
+	p.position = Vector2(0, 40)
+	p.reset_physics_interpolation()
+	main.camera.reset_smoothing()
+	await _frames(3)
+	var w = main.world_fx
+	w.set_process(false)
+	main.flora.set_process(false)
+	w.clock = 3.0
+	# Le sillon du héros : de gauche à droite, jusqu'à lui.
+	for i in 6:
+		w.disturb(Vector2(-110 + i * 22, 58 + 3 * sin(i)), 40.0, Vector2.RIGHT, 1.3)
+	w.disturb(Vector2(110, 60), 60.0, Vector2.ZERO, 1.2)
+	var kinds := ["furrow", "crack", "scorch", "puddle", "splat"]
+	for i in kinds.size():
+		w._trace_clock = 0.0
+		w.add_trace(kinds[i], Vector2(-210 + i * 105, -70 + 14 * (i % 2)), 0.3, 1.0)
+		w.traces[-1]["t"] = 0.25 * w.traces[-1]["dur"]
+	w._start_sprout(p)
+	w.sprout["pos"] = Vector2(-30, 62)
+	w.sprout["t"] = 0.7 * w.sprout["dur"]
+	w.level_up()
+	w.level_ups[0]["t"] = 0.62 * w.level_ups[0]["dur"]
+	w.graft_pickup(Vector2(70, 30), str(Content.grafts().keys()[0]))
+	w.graft_flights[0]["t"] = 0.55
+	w.sanctuary_lit(Vector2(210, -70))
+	w.columns[0]["t"] = 1.7
+	for i in 3:
+		main.flora._process(0.15)
+	w.queue_redraw()
+	w.over.queue_redraw()
+	await _frames(3)
+	await _shot("monde_reagit")
 
 
 ## Attaques cumulées (jalon 10) : rayon d'aube principal, lames de vent et massue en écho, trois

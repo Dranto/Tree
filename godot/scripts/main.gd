@@ -10,6 +10,7 @@ const Ground = preload("res://scripts/ground.gd")
 const WorldEdge = preload("res://scripts/world_edge.gd")
 const Flora = preload("res://scripts/flora.gd")
 const Fx = preload("res://scripts/fx.gd")
+const WorldFx = preload("res://scripts/world_fx.gd")
 const ScreenFx = preload("res://scripts/screen_fx.gd")
 const Ambience = preload("res://scripts/ambience.gd")
 const Player = preload("res://scripts/player.gd")
@@ -52,6 +53,8 @@ var ground
 var world_edge
 var flora
 var fx
+## Un monde qui réagit (world_fx.gd) : herbe couchée, traces, repos, montée de niveau, greffe, sanctuaire.
+var world_fx
 var screen_fx
 ## Signatures visuelles des attaques du héros (skill_fx.gd).
 var skill_fx: SkillFx
@@ -220,6 +223,13 @@ func _ready() -> void:
 	fx = Fx.new()
 	fx.main = self
 	add_child(fx)
+	# Traces, herbe couchée et graine du repos : au niveau du sol, sous les acteurs ; le reste (spirale,
+	# greffe, colonne de lumière) au-dessus (world_fx.gd).
+	world_fx = WorldFx.new()
+	world_fx.setup(self)
+	add_child(world_fx)
+	move_child(world_fx, flora.get_index() + 1)
+	add_child(world_fx.over)
 	var ambience = Ambience.new()
 	ambience.main = self
 	add_child(ambience)
@@ -899,6 +909,7 @@ func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void
 	# Les étincelles du coup prennent la couleur de son élément (charte) : racines, épines de Ronce, lumière d'Aube.
 	fx.hit_element = "racine" if root_hit_base > 0.0 or branch == "racine" else ("epine" if branch == "ronce" else ("lumiere" if branch == "aube" else ""))
 	e.take_damage(dmg, crit)
+	world_fx.on_hit(e.position, branch, fx.hit_element, crit, s["poison"] > 0.0, s["bleed"] > 0.0)
 	fx.hit_element = ""
 	Sfx.play(enemy_sound(e, "sound_crit" if crit else "sound_hit", "critique" if crit else "impact"), e.position)
 	if s["poison"] > 0.0:
@@ -1240,7 +1251,8 @@ func revive(world_pos: Vector2, radius: float, tint: Color, strength := 0.9) -> 
 
 
 func _on_level_up(lvl: int) -> void:
-	fx.ring(player.position, 20.0, 160.0, 0.6, Art.c("or"), 5.0)
+	# Spirale de sève et couronne de feuilles (world_fx.gd), à la place de l'anneau doré d'avant.
+	world_fx.level_up()
 	fx.pickup(player.position, "seve", 12)
 	# Plus d'annonce : la touche de l'Arbre de vie pulse dans le HUD (glyphe, hud.gd) tant qu'un point attend.
 	request_autosave()
