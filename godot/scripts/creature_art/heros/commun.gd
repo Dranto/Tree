@@ -37,22 +37,22 @@ static func aura(ci: CanvasItem, base: Transform2D, t: float, p: float, col: Col
 		Ink._poly(ci, base * Ink.oval(Vector2(0, -1), gr, gr * 0.42, 40), Color(Art.ec("seve"), 0.07 + 0.03 * hb))
 	var ring := Ink.oval(Vector2(0, -1), R * 0.95, R * 0.95 * 0.42, 48)
 	ring.append(ring[0])
-	ci.draw_polyline(base * ring, Color(Art.ec("seve", "clair"), 0.2 + 0.15 * hb), 1.3 * base.get_scale().y, true)
+	ci.draw_polyline(base * ring, Color(Art.ec("seve", "clair"), 0.2 + 0.15 * hb), 1.3 * absf(base.get_scale().y), true)
 	if p > 0.6:
 		# Rune de la branche au sol, à maturité.
 		var r2 := Ink.oval(Vector2(0, -1), R * 0.7, R * 0.7 * 0.42, 40)
 		for k in 6:
 			var a := TAU * k / 6.0 + t * 0.3
 			var q := Vector2(cos(a) * R * 0.7, -1 + sin(a) * R * 0.7 * 0.42)
-			ci.draw_circle(base * q, 1.6 * base.get_scale().y, Color(col, (p - 0.6) * 2.0 * (0.5 + 0.5 * hb)))
+			ci.draw_circle(base * q, 1.6 * absf(base.get_scale().y), Color(col, (p - 0.6) * 2.0 * (0.5 + 0.5 * hb)))
 		r2.append(r2[0])
-		ci.draw_polyline(base * r2, Color(col, 0.35 * (p - 0.6) * 2.5), 1.0 * base.get_scale().y, true)
+		ci.draw_polyline(base * r2, Color(col, 0.35 * (p - 0.6) * 2.5), 1.0 * absf(base.get_scale().y), true)
 	var n := 2 + roundi(6.0 * p)
 	for i in n:
 		var k := fposmod(t * 0.35 + i / float(n), 1.0)
 		var a := i * 2.4 + t * 0.4
 		var q := base * Vector2(cos(a) * R * 0.7, -2 + sin(a) * R * 0.3 - k * 50.0)
-		ci.draw_circle(q, 1.8 * base.get_scale().y * (1.0 - 0.5 * k), Color(Art.ec("seve", "clair").lerp(col, p * 0.7), 0.85 * sin(PI * k)))
+		ci.draw_circle(q, 1.8 * absf(base.get_scale().y) * (1.0 - 0.5 * k), Color(Art.ec("seve", "clair").lerp(col, p * 0.7), 0.85 * sin(PI * k)))
 
 
 ## Œil en amande (celui que préfère Antoine) : blanc, iris, pupille, reflet, paupière appuyée.
