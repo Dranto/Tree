@@ -220,6 +220,38 @@
 		"boss_kill": 1.6,
 		"boss_kill_speed": 0.25
 	},
+	"tree": {
+		"_doc": "Apprendre un nœud devient un plaisir (écran de l'Arbre de vie : scripts/tree_ui.gd, tree_art.gd, tree_grafts.gd). Purement visuel : aucun chiffre de puissance, rien dans skill_tree.gd. Durées en secondes ; distances en rayons de nœud. L'éclair d'écran suit Settings.flash_strength() (à 0 : un contour lumineux seulement) et ne se répète pas plus de « flash_per_second » fois par seconde ; « Réduire les effets » divise les quantités par trois.",
+		"flower": {
+			"_doc": "Nœud clé, maîtrise ou mutation appris : grande fleur, onde et éclair d'écran doux.",
+			"time": 1.5,
+			"petals": 14,
+			"reach": 9.0,
+			"flash_alpha": 0.14,
+			"flash_time": 0.4,
+			"flash_per_second": 3
+		},
+		"wilt": {
+			"_doc": "Nœud oublié : la sève reflue vers son voisin (part « flow » du temps), puis il se fane.",
+			"time": 0.9,
+			"flow": 0.35,
+			"stagger": 0.06,
+			"stagger_max": 0.6
+		},
+		"recompose": {
+			"_doc": "Bascule de build : une vague part de la graine ; les nœuds retirés se fanent et les nouveaux s'allument à son passage. « max » : nombre de nœuds animés ; au-delà d'« wave_min » changements sans bascule, c'est aussi une vague.",
+			"time": 1.2,
+			"glint_time": 0.5,
+			"max": 90,
+			"wave_min": 12
+		},
+		"roots": {
+			"_doc": "Greffe posée dans la couronne : des racines poussent de l'emplacement.",
+			"time": 1.1,
+			"count": 7,
+			"size": 34.0
+		}
+	},
 	"boss": {
 		"_doc": "Moments signatures des boss (boss_eclat.gd) : arrivée, phases, mort. Purement visuel ; l'entrée en scène garde sa durée (BossBase.intro_time) et rien ne change dans le combat. Durées en secondes de jeu (suivent le ralenti). « Réduire les effets » divise les quantités par trois.",
 		"max_particles": 150,

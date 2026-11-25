@@ -62,6 +62,7 @@ TESTS=(
   "steam|--headless --fixed-fps 60|"
   "user_dir|--headless|"
   "spore|--headless --fixed-fps 60|"
+  "tree_anim|--headless --fixed-fps 60|"
   "tree_originals|--headless|"
   "tree_ui|--xvfb --audio-driver Dummy --resolution 1600x900|"
   "vallee|--headless --fixed-fps 60|"

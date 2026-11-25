@@ -7779,7 +7779,7 @@ msgstr "Attack: %s"
 #. scripts/attack.gd:1144
 #. scripts/attack.gd:1305
 #. scripts/skill_tree.gd:1028
-#. scripts/tree_ui.gd:930
+#. scripts/tree_ui.gd:957
 msgid "%s : %s"
 msgstr "%s: %s"
 
@@ -7951,8 +7951,8 @@ msgstr "Dodge"
 #. scripts/controls_text.gd:131
 #. scripts/controls_text.gd:147
 #. scripts/settings.gd:83
-#. scripts/tree_ui.gd:1800
-#. scripts/tree_ui.gd:1835
+#. scripts/tree_ui.gd:2030
+#. scripts/tree_ui.gd:2069
 msgid "Arbre de vie"
 msgstr "Tree of Life"
 
@@ -8888,61 +8888,61 @@ msgstr ""
 "Near the seed (rings 1 to %d), unlearning is free. Farther out, it costs essence, taken from the current level (%d in reserve). At a sanctuary, everything is free.\n"
 "“New” starts again from the seed; “Copy here” saves the active build."
 
-#. scripts/tree_grafts.gd:435
+#. scripts/tree_grafts.gd:458
 msgid "Couronne de greffes"
 msgstr "Graft crown"
 
-#. scripts/tree_grafts.gd:437
+#. scripts/tree_grafts.gd:460
 msgid "%d trouvée"
 msgid_plural "%d trouvées"
 msgstr[0] "%d found"
 msgstr[1] "%d found"
 
-#. scripts/tree_grafts.gd:458
+#. scripts/tree_grafts.gd:481
 msgid "%s sur un emplacement de la couronne : y poser la greffe."
 msgstr "%s on a crown slot: set the graft there."
 
-#. scripts/tree_grafts.gd:458
+#. scripts/tree_grafts.gd:481
 msgid "Clique un emplacement de la couronne pour y poser la greffe."
 msgstr "Click a crown slot to set the graft there."
 
-#. scripts/tree_grafts.gd:460
+#. scripts/tree_grafts.gd:483
 msgid "%s sur une greffe pour la prendre, puis sur un emplacement libre."
 msgstr "%s on a graft to pick it up, then on an empty slot."
 
-#. scripts/tree_grafts.gd:460
+#. scripts/tree_grafts.gd:483
 msgid "Glisse une greffe dans un emplacement libre de la couronne."
 msgstr "Drag a graft into an empty crown slot."
 
-#. scripts/tree_grafts.gd:462
+#. scripts/tree_grafts.gd:485
 msgid "%s sur un emplacement : retire sa greffe."
 msgstr "%s on a slot: removes its graft."
 
-#. scripts/tree_grafts.gd:462
+#. scripts/tree_grafts.gd:485
 msgid "Clic sur un emplacement : retire sa greffe."
 msgstr "Click a slot: removes its graft."
 
-#. scripts/tree_grafts.gd:483
+#. scripts/tree_grafts.gd:515
 msgid "Emplacement fermé"
 msgstr "Closed slot"
 
-#. scripts/tree_grafts.gd:484
+#. scripts/tree_grafts.gd:516
 msgid "Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."
 msgstr "It opens when you cleanse a region's Hearts, or defeat its guardian."
 
-#. scripts/tree_grafts.gd:507
+#. scripts/tree_grafts.gd:539
 msgid "Posée ici :"
 msgstr "Set here:"
 
-#. scripts/tree_grafts.gd:510
+#. scripts/tree_grafts.gd:542
 msgid "Remplace « %s »."
 msgstr "Replaces “%s”."
 
-#. scripts/tree_grafts.gd:513
+#. scripts/tree_grafts.gd:545
 msgid "Posée :"
 msgstr "Set:"
 
-#. scripts/tree_grafts.gd:516
+#. scripts/tree_grafts.gd:548
 msgid "Retirée :"
 msgstr "Removed:"
 
@@ -9171,65 +9171,65 @@ msgstr "%s%%"
 msgid "frontière %s"
 msgstr "%s border"
 
-#. scripts/tree_ui.gd:1802
-#. scripts/tree_ui.gd:1836
+#. scripts/tree_ui.gd:2032
+#. scripts/tree_ui.gd:2070
 msgid "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds"
 msgstr "%d point(s) to spend  ·  Level %d  ·  %d / %d nodes"
 
-#. scripts/tree_ui.gd:1804
-#. scripts/tree_ui.gd:1838
+#. scripts/tree_ui.gd:2034
+#. scripts/tree_ui.gd:2072
 msgid "Chaque nœud appris ravive la région du monde située dans sa direction."
 msgstr "Each node you learn revives the part of the world that lies in its direction."
 
-#. scripts/tree_ui.gd:1814
+#. scripts/tree_ui.gd:2048
 msgid "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer"
 msgstr "Click: learn (one node or a whole path)   ·   Right click: unlearn   ·   Drag: pan   ·   Wheel: zoom   ·   Tab / Esc: close"
 
-#. scripts/tree_ui.gd:1864
+#. scripts/tree_ui.gd:2098
 msgid " · frontière %s et %s · anneau %d"
 msgstr " · %s and %s border · ring %d"
 
-#. scripts/tree_ui.gd:1866
+#. scripts/tree_ui.gd:2100
 msgid " · %s · anneau %d"
 msgstr " · %s · ring %d"
 
-#. scripts/tree_ui.gd:1888
+#. scripts/tree_ui.gd:2122
 msgid "Transforme « %s » : un seul choix"
 msgstr "Transforms “%s”: a single choice"
 
-#. scripts/tree_ui.gd:1890
+#. scripts/tree_ui.gd:2124
 msgid "Un bonus à choisir, modifiable à tout moment"
 msgstr "A bonus to choose, changeable at any time"
 
-#. scripts/tree_ui.gd:1893
+#. scripts/tree_ui.gd:2127
 msgid "› %s : %s"
 msgstr "› %s: %s"
 
-#. scripts/tree_ui.gd:1894
+#. scripts/tree_ui.gd:2128
 msgid "  (choisi)"
 msgstr "  (chosen)"
 
-#. scripts/tree_ui.gd:1896
+#. scripts/tree_ui.gd:2130
 msgid "Clic pour faire ton choix"
 msgstr "Click to make your choice"
 
-#. scripts/tree_ui.gd:1898
+#. scripts/tree_ui.gd:2132
 msgid "Clic pour changer de bonus"
 msgstr "Click to change bonus"
 
-#. scripts/tree_ui.gd:1903
+#. scripts/tree_ui.gd:2137
 msgid "Grappe « %s » : %d / %d nœuds"
 msgstr "Cluster “%s”: %d / %d nodes"
 
-#. scripts/tree_ui.gd:1905
+#. scripts/tree_ui.gd:2139
 msgid "Grappe complète : %s"
 msgstr "Cluster complete: %s"
 
-#. scripts/tree_ui.gd:1920
+#. scripts/tree_ui.gd:2154
 msgid "Résonance de %s : tous les paliers atteints (%d nœuds)"
 msgstr "%s resonance: all tiers reached (%d nodes)"
 
-#. scripts/tree_ui.gd:1922
+#. scripts/tree_ui.gd:2156
 msgid "Résonance de %s : %d / %d nœuds, puis %s"
 msgstr "%s resonance: %d / %d nodes, then %s"
 
@@ -9249,31 +9249,31 @@ msgstr "Mutation"
 msgid "Attaque de base"
 msgstr "Basic attack"
 
-#. scripts/tree_ui.gd:800
+#. scripts/tree_ui.gd:825
 msgid "Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre."
 msgstr "A mutation is final: unlearn this node (right click) to choose another."
 
-#. scripts/tree_ui.gd:810
+#. scripts/tree_ui.gd:835
 msgid "Ce chemin passe par « %s ». %s"
 msgstr "This path goes through “%s”. %s"
 
-#. scripts/tree_ui.gd:879
+#. scripts/tree_ui.gd:906
 msgid "Choisis comment « %s » se transforme. Le choix tient tant que ce nœud reste appris."
 msgstr "Choose how “%s” transforms. The choice holds as long as this node stays learned."
 
-#. scripts/tree_ui.gd:881
+#. scripts/tree_ui.gd:908
 msgid "Choisis un bonus. Tu pourras en changer quand tu veux, sans rien dépenser."
 msgstr "Choose a bonus. You can change it whenever you like, at no cost."
 
-#. scripts/tree_ui.gd:891
+#. scripts/tree_ui.gd:918
 msgid "   (choix actuel)"
 msgstr "   (current choice)"
 
-#. scripts/tree_ui.gd:909
+#. scripts/tree_ui.gd:936
 msgid "Fermer"
 msgstr "Close"
 
-#. scripts/tree_ui.gd:909
+#. scripts/tree_ui.gd:936
 msgid "Plus tard"
 msgstr "Later"
 

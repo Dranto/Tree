@@ -941,6 +941,7 @@ func _galerie_types(ui, cw: int, ch: int) -> void:
 	await _frames(2)
 	ui._choice_queue.clear()
 	ui.close_choice(false)
+	ui._clear_effects()   # la vague, les grandes fleurs et les fanages du jalon Éclat G : la planche montre l'arbre posé
 	cells = [["maîtrise choisie", mastery], ["mutation à choisir", mutation], ["flétri libéré", withered], ["attaque apprise", attack]]
 	for i in cells.size():
 		await _cell(ui, sheet, cells[i][0], cells[i][1], 4 + i, cw, ch)
