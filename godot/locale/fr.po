@@ -7901,7 +7901,7 @@ msgstr "Souris"
 
 #. scripts/controls_text.gd:123
 #. scripts/controls_text.gd:8
-#. scripts/settings.gd:478
+#. scripts/settings.gd:485
 msgid "Clic droit"
 msgstr "Clic droit"
 
@@ -7915,7 +7915,7 @@ msgid "Se déplacer"
 msgstr "Se déplacer"
 
 #. scripts/controls_text.gd:126
-#. scripts/settings.gd:115
+#. scripts/settings.gd:117
 #. scripts/settings.gd:53
 msgid "Automatique"
 msgstr "Automatique"
@@ -7943,13 +7943,13 @@ msgstr "Compétences secondaires"
 
 #. scripts/controls_text.gd:130
 #. scripts/controls_text.gd:146
-#. scripts/settings.gd:81
+#. scripts/settings.gd:83
 msgid "Esquive"
 msgstr "Esquive"
 
 #. scripts/controls_text.gd:131
 #. scripts/controls_text.gd:147
-#. scripts/settings.gd:81
+#. scripts/settings.gd:83
 #. scripts/tree_ui.gd:1721
 #. scripts/tree_ui.gd:1756
 msgid "Arbre de vie"
@@ -7960,34 +7960,34 @@ msgid "Viser (sinon, la cible la plus proche)"
 msgstr "Viser (sinon, la cible la plus proche)"
 
 #. scripts/controls_text.gd:148
-#. scripts/settings.gd:81
+#. scripts/settings.gd:83
 #. scripts/world_map.gd:169
 #. scripts/world_map.gd:235
 msgid "Carte"
 msgstr "Carte"
 
 #. scripts/controls_text.gd:19
-#. scripts/settings.gd:525
+#. scripts/settings.gd:532
 msgid "Ctrl"
 msgstr "Ctrl"
 
 #. scripts/controls_text.gd:19
-#. scripts/settings.gd:525
+#. scripts/settings.gd:532
 msgid "Entrée"
 msgstr "Entrée"
 
 #. scripts/controls_text.gd:19
-#. scripts/settings.gd:525
+#. scripts/settings.gd:532
 msgid "Espace"
 msgstr "Espace"
 
 #. scripts/controls_text.gd:19
-#. scripts/settings.gd:525
+#. scripts/settings.gd:532
 msgid "Maj"
 msgstr "Maj"
 
 #. scripts/controls_text.gd:19
-#. scripts/settings.gd:525
+#. scripts/settings.gd:532
 msgid "Retour arrière"
 msgstr "Retour arrière"
 
@@ -7996,12 +7996,12 @@ msgid "Échap"
 msgstr "Échap"
 
 #. scripts/controls_text.gd:36
-#. scripts/settings.gd:482
+#. scripts/settings.gd:489
 msgid "Souris %d"
 msgstr "Souris %d"
 
 #. scripts/controls_text.gd:7
-#. scripts/settings.gd:477
+#. scripts/settings.gd:484
 msgid "Clic gauche"
 msgstr "Clic gauche"
 
@@ -8083,8 +8083,8 @@ msgstr "Sève −%d"
 msgid "étourdi"
 msgstr "étourdi"
 
-#. scripts/game.gd:268
-#. scripts/game.gd:315
+#. scripts/game.gd:274
+#. scripts/game.gd:321
 msgid "Build %d"
 msgstr "Build %d"
 
@@ -8109,19 +8109,19 @@ msgstr "Objectif accompli"
 msgid "Secret découvert"
 msgstr "Secret découvert"
 
-#. scripts/game.gd:590
+#. scripts/game.gd:596
 msgid "Couvert de cendre : %s"
 msgstr "Couvert de cendre : %s"
 
-#. scripts/game.gd:590
+#. scripts/game.gd:596
 msgid "un évènement du monde doit le libérer."
 msgstr "un évènement du monde doit le libérer."
 
-#. scripts/game.gd:601
+#. scripts/game.gd:607
 msgid "Demande la compétence « %s »."
 msgstr "Demande la compétence « %s »."
 
-#. scripts/game.gd:604
+#. scripts/game.gd:610
 msgid "Incompatible avec « %s »."
 msgstr "Incompatible avec « %s »."
 
@@ -8163,13 +8163,13 @@ msgstr ""
 "%s\n"
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 
-#. scripts/main.gd:1076
+#. scripts/main.gd:1080
 msgid "%s vaincu"
 msgstr "%s vaincu"
 
 #. scripts/main.gd:327
-#. scripts/save_game.gd:133
-#. scripts/save_game.gd:183
+#. scripts/save_game.gd:136
+#. scripts/save_game.gd:188
 msgid "aucune sauvegarde"
 msgstr "aucune sauvegarde"
 
@@ -8345,7 +8345,7 @@ msgid "%s est déjà utilisé : %s."
 msgstr "%s est déjà utilisé : %s."
 
 #. scripts/options_panel.gd:59
-#. scripts/settings.gd:802
+#. scripts/settings.gd:809
 msgid "Affichage"
 msgstr "Affichage"
 
@@ -8395,7 +8395,7 @@ msgstr "Compétence secondaire 4"
 
 #. scripts/options_panel.gd:78
 #. scripts/pause_menu.gd:51
-#. scripts/settings.gd:805
+#. scripts/settings.gd:812
 #. scripts/title.gd:70
 msgid "Options"
 msgstr "Options"
@@ -8473,31 +8473,31 @@ msgstr "de la Graine"
 msgid "sanctuaire %s"
 msgstr "sanctuaire %s"
 
-#. scripts/save_game.gd:187
+#. scripts/save_game.gd:192
 msgid "fichier illisible ou d'un autre format"
 msgstr "fichier illisible ou d'un autre format"
 
-#. scripts/save_game.gd:191
+#. scripts/save_game.gd:196
 msgid "sauvegarde créée par une version plus récente du jeu (format %d > %d)"
 msgstr "sauvegarde créée par une version plus récente du jeu (format %d > %d)"
 
-#. scripts/settings.gd:115
+#. scripts/settings.gd:117
 msgid "PlayStation (croix, rond…)"
 msgstr "PlayStation (croix, rond…)"
 
-#. scripts/settings.gd:115
+#. scripts/settings.gd:117
 msgid "Xbox (A B X Y)"
 msgstr "Xbox (A B X Y)"
 
-#. scripts/settings.gd:136
+#. scripts/settings.gd:138
 msgid "Clavier (Z Q S D)"
 msgstr "Clavier (Z Q S D)"
 
-#. scripts/settings.gd:136
+#. scripts/settings.gd:138
 msgid "Clic droit (MOBA)"
 msgstr "Clic droit (MOBA)"
 
-#. scripts/settings.gd:136
+#. scripts/settings.gd:138
 msgid "Suivre le curseur"
 msgstr "Suivre le curseur"
 
@@ -8509,66 +8509,66 @@ msgstr "Critiques et dégâts reçus"
 msgid "Tous"
 msgstr "Tous"
 
-#. scripts/settings.gd:380
-#. scripts/settings.gd:842
+#. scripts/settings.gd:387
+#. scripts/settings.gd:849
 msgid "compétence %d"
 msgstr "compétence %d"
 
-#. scripts/settings.gd:382
+#. scripts/settings.gd:389
 msgid "compétence principale 2 (MOBA)"
 msgstr "compétence principale 2 (MOBA)"
 
-#. scripts/settings.gd:392
+#. scripts/settings.gd:399
 msgid "le menu"
 msgstr "le menu"
 
-#. scripts/settings.gd:465
+#. scripts/settings.gd:472
 msgid "Clic G"
 msgstr "Clic G"
 
-#. scripts/settings.gd:466
+#. scripts/settings.gd:473
 msgid "Clic D"
 msgstr "Clic D"
 
-#. scripts/settings.gd:467
+#. scripts/settings.gd:474
 msgid "Clic M"
 msgstr "Clic M"
 
-#. scripts/settings.gd:479
+#. scripts/settings.gd:486
 msgid "Clic milieu"
 msgstr "Clic milieu"
 
-#. scripts/settings.gd:480
+#. scripts/settings.gd:487
 msgid "Bouton 4"
 msgstr "Bouton 4"
 
-#. scripts/settings.gd:481
+#. scripts/settings.gd:488
 msgid "Bouton 5"
 msgstr "Bouton 5"
-
-#. scripts/settings.gd:524
-msgid "Flèche bas"
-msgstr "Flèche bas"
-
-#. scripts/settings.gd:524
-msgid "Flèche droite"
-msgstr "Flèche droite"
-
-#. scripts/settings.gd:524
-msgid "Flèche gauche"
-msgstr "Flèche gauche"
-
-#. scripts/settings.gd:524
-msgid "Flèche haut"
-msgstr "Flèche haut"
-
-#. scripts/settings.gd:525
-msgid "Tab"
-msgstr "Tab"
 
 #. scripts/settings.gd:53
 msgid "Vers le curseur"
 msgstr "Vers le curseur"
+
+#. scripts/settings.gd:531
+msgid "Flèche bas"
+msgstr "Flèche bas"
+
+#. scripts/settings.gd:531
+msgid "Flèche droite"
+msgstr "Flèche droite"
+
+#. scripts/settings.gd:531
+msgid "Flèche gauche"
+msgstr "Flèche gauche"
+
+#. scripts/settings.gd:531
+msgid "Flèche haut"
+msgstr "Flèche haut"
+
+#. scripts/settings.gd:532
+msgid "Tab"
+msgstr "Tab"
 
 #. scripts/settings.gd:64
 msgid "Deutéranopie (vert)"
@@ -8594,119 +8594,119 @@ msgstr "Normale"
 msgid "Très grande"
 msgstr "Très grande"
 
-#. scripts/settings.gd:717
+#. scripts/settings.gd:724
 msgid "L'attaque de base part toute seule vers la souris, même sans ennemi."
 msgstr "L'attaque de base part toute seule vers la souris, même sans ennemi."
 
-#. scripts/settings.gd:718
+#. scripts/settings.gd:725
 msgid "L'attaque de base part toute seule sur l'ennemi à portée le plus proche du curseur. Sans ennemi à portée, elle ne part pas."
 msgstr "L'attaque de base part toute seule sur l'ennemi à portée le plus proche du curseur. Sans ennemi à portée, elle ne part pas."
 
-#. scripts/settings.gd:726
+#. scripts/settings.gd:733
 msgid "Clic droit : le héros marche jusqu'à l'endroit cliqué (un repère s'affiche au sol) ; clic droit tenu : il suit le curseur. La compétence du clic droit passe sur %s ; Espace reste l'esquive, vers le curseur."
 msgstr "Clic droit : le héros marche jusqu'à l'endroit cliqué (un repère s'affiche au sol) ; clic droit tenu : il suit le curseur. La compétence du clic droit passe sur %s ; Espace reste l'esquive, vers le curseur."
 
-#. scripts/settings.gd:728
+#. scripts/settings.gd:735
 msgid "Le héros marche vers la souris et s'arrête quand elle est tout près de lui. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur. L'esquive part vers le curseur."
 msgstr "Le héros marche vers la souris et s'arrête quand elle est tout près de lui. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur. L'esquive part vers le curseur."
 
-#. scripts/settings.gd:729
+#. scripts/settings.gd:736
 msgid "Z Q S D (W A S D en QWERTY) ou les flèches. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur."
 msgstr "Z Q S D (W A S D en QWERTY) ou les flèches. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur."
 
-#. scripts/settings.gd:80
-msgid "Aller à droite"
-msgstr "Aller à droite"
-
-#. scripts/settings.gd:80
-msgid "Aller à gauche"
-msgstr "Aller à gauche"
-
-#. scripts/settings.gd:80
-msgid "Avancer"
-msgstr "Avancer"
-
-#. scripts/settings.gd:80
-msgid "Reculer"
-msgstr "Reculer"
-
-#. scripts/settings.gd:802
+#. scripts/settings.gd:809
 msgid "Menu"
 msgstr "Menu"
 
-#. scripts/settings.gd:803
+#. scripts/settings.gd:810
 msgid "Stick D"
 msgstr "Stick D"
 
-#. scripts/settings.gd:803
+#. scripts/settings.gd:810
 msgid "Stick G"
 msgstr "Stick G"
 
-#. scripts/settings.gd:804
+#. scripts/settings.gd:811
 msgid "Carré"
 msgstr "Carré"
 
-#. scripts/settings.gd:804
+#. scripts/settings.gd:811
 msgid "Croix"
 msgstr "Croix"
 
-#. scripts/settings.gd:804
+#. scripts/settings.gd:811
 msgid "Rond"
 msgstr "Rond"
 
-#. scripts/settings.gd:804
+#. scripts/settings.gd:811
 msgid "Triangle"
 msgstr "Triangle"
 
-#. scripts/settings.gd:805
+#. scripts/settings.gd:812
 msgid "Partage"
 msgstr "Partage"
 
-#. scripts/settings.gd:807
+#. scripts/settings.gd:814
 msgid "Croix bas"
 msgstr "Croix bas"
 
-#. scripts/settings.gd:807
+#. scripts/settings.gd:814
 msgid "Croix gauche"
 msgstr "Croix gauche"
 
-#. scripts/settings.gd:807
+#. scripts/settings.gd:814
 msgid "Croix haut"
 msgstr "Croix haut"
 
-#. scripts/settings.gd:808
+#. scripts/settings.gd:815
 msgid "Croix droite"
 msgstr "Croix droite"
 
-#. scripts/settings.gd:808
+#. scripts/settings.gd:815
 msgid "Palette 1"
 msgstr "Palette 1"
 
-#. scripts/settings.gd:808
+#. scripts/settings.gd:815
 msgid "Palette 2"
 msgstr "Palette 2"
 
-#. scripts/settings.gd:809
+#. scripts/settings.gd:816
 msgid "Palette 3"
 msgstr "Palette 3"
 
-#. scripts/settings.gd:809
+#. scripts/settings.gd:816
 msgid "Palette 4"
 msgstr "Palette 4"
 
-#. scripts/settings.gd:809
+#. scripts/settings.gd:816
 msgid "Stick droit"
 msgstr "Stick droit"
 
-#. scripts/settings.gd:809
+#. scripts/settings.gd:816
 msgid "Stick gauche"
 msgstr "Stick gauche"
 
-#. scripts/settings.gd:810
+#. scripts/settings.gd:817
 msgid "Croix directionnelle"
 msgstr "Croix directionnelle"
 
-#. scripts/settings.gd:820
+#. scripts/settings.gd:82
+msgid "Aller à droite"
+msgstr "Aller à droite"
+
+#. scripts/settings.gd:82
+msgid "Aller à gauche"
+msgstr "Aller à gauche"
+
+#. scripts/settings.gd:82
+msgid "Avancer"
+msgstr "Avancer"
+
+#. scripts/settings.gd:82
+msgid "Reculer"
+msgstr "Reculer"
+
+#. scripts/settings.gd:827
 msgid "Bouton %d"
 msgstr "Bouton %d"
 
@@ -8779,64 +8779,72 @@ msgstr "Continuer"
 msgid "Nouvelle partie"
 msgstr "Nouvelle partie"
 
-#. scripts/tree_builds.gd:142
+#. scripts/tree_builds.gd:139
+msgid "Renommer"
+msgstr "Renommer"
+
+#. scripts/tree_builds.gd:147
 msgid "Charger"
 msgstr "Charger"
 
-#. scripts/tree_builds.gd:142
+#. scripts/tree_builds.gd:147
 msgid "Nouveau"
 msgstr "Nouveau"
 
-#. scripts/tree_builds.gd:145
+#. scripts/tree_builds.gd:150
 msgid "Coûte %d essence hors d'un sanctuaire."
 msgstr "Coûte %d essence hors d'un sanctuaire."
 
-#. scripts/tree_builds.gd:147
+#. scripts/tree_builds.gd:152
 msgid "Copier ici"
 msgstr "Copier ici"
 
-#. scripts/tree_builds.gd:149
+#. scripts/tree_builds.gd:154
 msgid "Vider"
 msgstr "Vider"
 
-#. scripts/tree_builds.gd:154
+#. scripts/tree_builds.gd:159
 msgid "Vide"
 msgstr "Vide"
 
-#. scripts/tree_builds.gd:156
+#. scripts/tree_builds.gd:161
 #. scripts/tree_planner.gd:214
 msgid "%d nœud(s) appris"
 msgstr "%d nœud(s) appris"
 
-#. scripts/tree_builds.gd:158
+#. scripts/tree_builds.gd:163
 msgid "%d prévu(s)"
 msgstr "%d prévu(s)"
 
-#. scripts/tree_builds.gd:159
+#. scripts/tree_builds.gd:164
 msgid "%d greffe(s)"
 msgstr "%d greffe(s)"
 
-#. scripts/tree_builds.gd:186
+#. scripts/tree_builds.gd:181
+msgid "Nom du build"
+msgstr "Nom du build"
+
+#. scripts/tree_builds.gd:198
 msgid "Changer de build ici coûte %d essence : il t'en manque %d. Au sanctuaire, c'est gratuit."
 msgstr "Changer de build ici coûte %d essence : il t'en manque %d. Au sanctuaire, c'est gratuit."
 
-#. scripts/tree_builds.gd:191
+#. scripts/tree_builds.gd:203
 msgid "Build « %s » chargé"
 msgstr "Build « %s » chargé"
 
-#. scripts/tree_builds.gd:193
+#. scripts/tree_builds.gd:205
 msgid " (%d essence)"
 msgstr " (%d essence)"
 
-#. scripts/tree_builds.gd:195
+#. scripts/tree_builds.gd:207
 msgid " : %d nœud(s) attendent dans le plan"
 msgstr " : %d nœud(s) attendent dans le plan"
 
-#. scripts/tree_builds.gd:203
+#. scripts/tree_builds.gd:215
 msgid "Build actif copié dans « %s »"
 msgstr "Build actif copié dans « %s »"
 
-#. scripts/tree_builds.gd:209
+#. scripts/tree_builds.gd:221
 msgid "« %s » vidé"
 msgstr "« %s » vidé"
 
