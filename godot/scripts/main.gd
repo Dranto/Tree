@@ -80,6 +80,10 @@ var orbs_layer: Node2D
 var move_marker: Node2D
 var target_marker: Node2D
 var enemies_layer: Node2D
+## Couche du sol des Flétris (enemy.gd › Part « ground »), sous les acteurs.
+var enemy_ground_layer: Node2D
+## Dernière région dont les sortes ont été demandées à la cuisson.
+var _sprites_region := "?"
 var projectiles_layer: Node2D
 ## Calque trié en profondeur (Y-sort) : arbres du décor, Flétris et joueur.
 var actors_layer: Node2D
@@ -172,10 +176,13 @@ func _ready() -> void:
 	autotest_boss = "--autotest=boss" in OS.get_cmdline_user_args()
 	autotest = autotest or autotest_boss or "--autotest" in OS.get_cmdline_user_args()
 	benchmark = "--benchmark" in OS.get_cmdline_user_args()
-	# Prototype des sprites cuits (refonte des personnages, réglage interne « --sprites »).
+	# Moteur de créatures (sprite_bake.gd) : les Flétris sont des images cuites ; « --no-sprites »
+	# revient au dessin direct. Les sortes communes sont cuites au démarrage, celles d'une région à son
+	# entrée (_sprites_step), toute autre à sa première apparition.
 	Enemy.Sprites.configure()
 	if Enemy.Sprites.enabled:
-		Enemy.Sprites.bake(self, Enemy.Sprites.all_kinds())
+		for kr in Enemy.Sprites.region_kinds(""):
+			Enemy.Sprites.request(kr[0])
 	build_bot = BuildBot.from_cmdline()
 	if build_bot != null:
 		autotest = true
@@ -225,6 +232,9 @@ func _ready() -> void:
 	target_marker = TargetMarker.new()
 	target_marker.main = self
 	add_child(target_marker)
+	# Sol des Flétris (rendu cuit) : ombres, annonces d'attaque, auras, sous tous les acteurs.
+	enemy_ground_layer = Node2D.new()
+	add_child(enemy_ground_layer)
 	add_child(actors_layer)
 	enemies_layer = Node2D.new()
 	enemies_layer.y_sort_enabled = true
@@ -387,7 +397,7 @@ func _ready() -> void:
 	if benchmark and bench_scene == "coeur":
 		_bench_coeur_begin()
 	if benchmark:
-		_benchmark_hide({"sol": ground, "decor": trees_layer, "fleurs": flora, "ennemis": enemies_layer,
+		_benchmark_hide({"sol": ground, "decor": trees_layer, "fleurs": flora, "ennemis": enemies_layer, "sol_ennemis": enemy_ground_layer,
 			"joueur": player, "acteurs": actors_layer, "effets": fx, "ambiance": ambience, "hud": hud_layer, "monde": self})
 
 
@@ -443,6 +453,21 @@ func _setup_input() -> void:
 func _process(delta: float) -> void:
 	if benchmark:
 		_benchmark_frame(delta)
+	_sprites_step()
+
+
+## Moteur de créatures : demande la cuisson des sortes de la région où entre le héros, et cuit ce qui
+## est demandé (une ou deux images de rendu ; dessin direct en attendant). Apparence seulement.
+func _sprites_step() -> void:
+	if not Enemy.Sprites.enabled:
+		return
+	if player != null and Engine.get_process_frames() % 30 == 0:
+		var here := Regions.region_at(player.position)
+		if here != _sprites_region:
+			_sprites_region = here
+			for kr in Enemy.Sprites.region_kinds(here):
+				Enemy.Sprites.request(kr[0])
+	Enemy.Sprites.pump(self)
 
 
 ## Logique de jeu à pas fixe (60 pas par seconde, quelle que soit la machine).
@@ -467,6 +492,13 @@ func _physics_process(delta: float) -> void:
 		SteamBridge.set_region(here if here != "" else "graine")
 	if Music.enabled and Engine.get_physics_frames() % 6 == 0:
 		_music_state()
+	# Morceau de boss fait à la main : suivi à chaque pas, pour que le drop parte à la mesure qui suit
+	# vraiment le changement de phase (boss_track.gd).
+	if Music.enabled:
+		var ma = active_arena()
+		if ma == null and finale != null and finale.music_on():
+			ma = finale
+		Music.follow_boss(ma)
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
 		save_game()
@@ -1462,11 +1494,18 @@ func _finish_benchmark() -> void:
 		if kid != null:
 			kinds[kid] = kinds.get(kid, 0) + 1
 	print("BENCHMARK sortes à l'écran : %s" % str(kinds))
+	# Empreinte de l'état du jeu (graine fixe, --fixed-fps) : le rendu, cuit ou non, ne la change pas
+	# (tools/sprites-determinisme.sh compare « --no-sprites » et le rendu cuit).
+	var dig := [Game.kills, Game.level, player.position.snapped(Vector2(0.01, 0.01)), snappedf(player.hp, 0.01)]
+	for e in enemies:
+		if is_instance_valid(e):
+			dig.append([str(e.get("kind_id")), e.position.snapped(Vector2(0.01, 0.01)), snappedf(float(e.get("hp")), 0.01)])
+	print("BENCHMARK empreinte du jeu : %08x (%d ennemis, %d tués)" % [hash(dig) & 0xffffffff, enemies.size(), Game.kills])
 	if bench_shot != "":
 		get_viewport().get_texture().get_image().save_png(bench_shot)
 	var spr = Enemy.Sprites
 	if spr.enabled:
-		print("BENCHMARK sprites ×%.0f : %d atlas, %.1f Mo, cuisson %.0f ms (calcul %.0f ms), %d images de l'atlas, %d dessins directs" % [spr.scale, spr.atlases.size(), spr.total_bytes() / 1048576.0, spr.bake_usec / 1000.0, spr.build_usec / 1000.0, spr.drawn, spr.fallback])
+		print("BENCHMARK sprites ×%.0f : %d atlas, %.1f Mo, cuisson %.0f ms (calcul %.0f ms), %d du cache, %d images de l'atlas, %d dessins directs" % [spr.scale, spr.atlases.size(), spr.total_bytes() / 1048576.0, spr.bake_usec / 1000.0, spr.build_usec / 1000.0, spr.cache_hits, spr.drawn, spr.fallback])
 	get_tree().quit()
 
 

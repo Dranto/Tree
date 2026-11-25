@@ -6393,8 +6393,8 @@ msgid "Traîne-vase"
 msgstr ""
 
 #. data/finale.json › boss › name
-#. scripts/finale_arena.gd:65
-#. scripts/world_ending.gd:73
+#. scripts/finale_arena.gd:84
+#. scripts/world_ending.gd:79
 msgid "La Flétrissure"
 msgstr ""
 
@@ -7198,7 +7198,7 @@ msgid "Autel de la couronne"
 msgstr ""
 
 #. data/regions/ronce.json › ronce › boss › name
-#. scripts/boss_arena.gd:35
+#. scripts/boss_arena.gd:36
 msgid "La Mère-Ronce"
 msgstr ""
 
@@ -7776,7 +7776,7 @@ msgstr ""
 
 #. scripts/attack.gd:1144
 #. scripts/attack.gd:1305
-#. scripts/skill_tree.gd:1028
+#. scripts/skill_tree.gd:1042
 #. scripts/tree_ui.gd:957
 msgid "%s : %s"
 msgstr ""
@@ -7860,20 +7860,20 @@ msgstr ""
 msgid "Synergie possible « %s » : %s"
 msgstr ""
 
-#. scripts/boss_arena.gd:37
-#. scripts/finale_arena.gd:67
+#. scripts/boss_arena.gd:38
+#. scripts/finale_arena.gd:86
 msgid "Phase 1 sur 3"
 msgstr ""
 
-#. scripts/boss_arena.gd:37
+#. scripts/boss_arena.gd:38
 msgid "Phase 2 sur 3 : les bourgeons éclosent"
 msgstr ""
 
-#. scripts/boss_arena.gd:37
+#. scripts/boss_arena.gd:38
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr ""
 
-#. scripts/boss_base.gd:285
+#. scripts/boss_base.gd:505
 msgid "Entravée"
 msgstr ""
 
@@ -8053,16 +8053,16 @@ msgid " (%s)"
 msgstr ""
 
 #. scripts/effects.gd:279
-#. scripts/enemy.gd:253
+#. scripts/enemy.gd:254
 msgid " et "
 msgstr ""
 
-#. scripts/enemy.gd:253
+#. scripts/enemy.gd:254
 msgctxt "élite : nom puis modificateurs"
 msgid "%s %s"
 msgstr ""
 
-#. scripts/enemy.gd:418
+#. scripts/enemy.gd:420
 msgid "Enragé !"
 msgstr ""
 
@@ -8070,11 +8070,11 @@ msgstr ""
 msgid "Sous terre"
 msgstr ""
 
-#. scripts/finale_arena.gd:67
+#. scripts/finale_arena.gd:86
 msgid "Phase 2 sur 3"
 msgstr ""
 
-#. scripts/finale_arena.gd:67
+#. scripts/finale_arena.gd:86
 msgid "Phase 3 sur 3"
 msgstr ""
 
@@ -8165,17 +8165,17 @@ msgid ""
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 msgstr ""
 
-#. scripts/main.gd:1138
+#. scripts/main.gd:1170
 msgid "%s vaincu"
 msgstr ""
 
-#. scripts/main.gd:366
+#. scripts/main.gd:376
 #. scripts/save_game.gd:140
 #. scripts/save_game.gd:197
 msgid "aucune sauvegarde"
 msgstr ""
 
-#. scripts/main.gd:367
+#. scripts/main.gd:377
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr ""
 
@@ -8719,45 +8719,45 @@ msgstr ""
 msgid "Reculer"
 msgstr ""
 
-#. scripts/skill_tree.gd:1015
+#. scripts/skill_tree.gd:1029
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgctxt "nœud notable : nom puis qualificatif"
 msgid "{0} {1}"
 msgstr ""
 
-#. scripts/skill_tree.gd:1041
+#. scripts/skill_tree.gd:1055
 msgid " ; "
 msgstr ""
 
-#. scripts/skill_tree.gd:36
+#. scripts/skill_tree.gd:38
 msgid "Mutation : %s"
 msgstr ""
 
-#. scripts/skill_tree.gd:38
+#. scripts/skill_tree.gd:40
 msgid "Attaque"
 msgstr ""
 
-#. scripts/skill_tree.gd:38
+#. scripts/skill_tree.gd:40
 #. scripts/tree_ui.gd:40
 msgid "Maîtrise"
 msgstr ""
 
-#. scripts/skill_tree.gd:38
+#. scripts/skill_tree.gd:40
 #. scripts/tree_ui.gd:39
 msgid "Nœud"
 msgstr ""
 
-#. scripts/skill_tree.gd:38
+#. scripts/skill_tree.gd:40
 #. scripts/tree_ui.gd:40
 msgid "Nœud flétri"
 msgstr ""
 
-#. scripts/skill_tree.gd:566
+#. scripts/skill_tree.gd:568
 #. scripts/tree_ui.gd:40
 msgid "Compétence"
 msgstr ""
 
-#. scripts/skill_tree.gd:570
+#. scripts/skill_tree.gd:572
 #. scripts/tree_ui.gd:39
 msgid "Nœud notable"
 msgstr ""
