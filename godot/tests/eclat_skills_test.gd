@@ -83,7 +83,6 @@ func _footprint(id: String) -> Dictionary:
 		foes.append(_spawn(p.position + pos[i], i % 3))
 	for e in foes:
 		e.apply_status("saignement", 2.0, 5.0)
-		e.apply_status("poison", 2.0, 5.0)
 		# Flétris figés (ni marche ni séparation) : qui est touché ne dépend que de la compétence,
 		# pas du rythme des images sur une machine chargée.
 		e.set_physics_process(false)
