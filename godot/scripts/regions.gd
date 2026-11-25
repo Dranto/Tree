@@ -220,7 +220,7 @@ static func _heart_spot(id: String, h: Dictionary, spot: Dictionary) -> Dictiona
 		"hold_time": float(spot.get("hold_time", h.get("hold_time", 30.0))),
 		"life_radius": float(spot.get("life_radius", h.get("life_radius", 820.0))),
 		"size": float(spot.get("size", 1.0)),
-		"name": str(spot.get("name", h.get("name", "Cœur de flétrissure"))),
+		"name": str(spot.get("name", h.get("name", "Cœur de flétrissure"))), # i18n (nom traduit à l'affichage)
 		"great": false,
 	}
 

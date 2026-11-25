@@ -35,6 +35,7 @@ TESTS=(
   "finale|--headless --fixed-fps 60|"
   "flow|--headless|"
   "foret|--headless --fixed-fps 60|"
+  "i18n|--headless --fixed-fps 60|"
   "grafts|--headless --fixed-fps 60|"
   "marais|--headless --fixed-fps 60|"
   "moments|--headless|"
@@ -52,6 +53,7 @@ TESTS=(
   "seve|--headless --fixed-fps 60|"
   "skills|--headless|"
   "sound|--headless|"
+  "steam|--headless --fixed-fps 60|"
   "spore|--headless --fixed-fps 60|"
   "tree_originals|--headless|"
   "tree_ui|--xvfb --resolution 1600x900|"
@@ -65,6 +67,9 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 touch "$OUT/.gdignore"
 export LIBGL_ALWAYS_SOFTWARE=1
+# Langue du jeu forcée (Settings.forced_locale) : les tests vérifient le texte français, quelle que soit
+# la langue de la machine ou celle choisie dans les options du développeur.
+export TREE_LANG="${TREE_LANG:-fr}"
 
 if [ ! -d "$ROOT/godot/.godot" ] || [ "${IMPORT:-1}" = 1 ]; then
   "$GODOT" --headless --import >"$OUT/import.log" 2>&1 || { echo "Import en échec :"; tail -30 "$OUT/import.log"; }

@@ -7,7 +7,7 @@ extends Node
 
 const Synth = preload("res://scripts/synth.gd")
 
-const BUS := "Effets"
+const BUS := "Effets" # i18n: non (bus audio)
 const POOL := 16
 const WINDOW_MSEC := 50
 const MAX_SAME := 3

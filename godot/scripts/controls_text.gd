@@ -4,9 +4,9 @@
 extends RefCounted
 
 const MOUSE_NAMES := {
-	MOUSE_BUTTON_LEFT: "Clic gauche",
-	MOUSE_BUTTON_RIGHT: "Clic droit",
-	MOUSE_BUTTON_MIDDLE: "Clic molette",
+	MOUSE_BUTTON_LEFT: "Clic gauche", # i18n
+	MOUSE_BUTTON_RIGHT: "Clic droit", # i18n
+	MOUSE_BUTTON_MIDDLE: "Clic molette", # i18n
 }
 
 ## Touches par défaut des actions que main.gd crée au lancement de la partie : l'écran titre n'a pas
@@ -16,7 +16,7 @@ const DEFAULT_KEYS := {
 	"toggle_tree": KEY_TAB, "dash": KEY_SPACE,
 }
 ## Noms français des touches que Godot nomme en anglais.
-const KEY_FR := {KEY_SPACE: "Espace", KEY_SHIFT: "Maj", KEY_ESCAPE: "Échap", KEY_ENTER: "Entrée", KEY_BACKSPACE: "Retour arrière", KEY_CTRL: "Ctrl"}
+const KEY_FR := {KEY_SPACE: "Espace", KEY_SHIFT: "Maj", KEY_ESCAPE: "Échap", KEY_ENTER: "Entrée", KEY_BACKSPACE: "Retour arrière", KEY_CTRL: "Ctrl"} # i18n
 
 
 ## Nom d'une touche physique selon la disposition du clavier (A sur AZERTY pour KEY_Q).
@@ -26,14 +26,14 @@ static func key_name(physical_keycode: int) -> String:
 	var kc := physical_keycode
 	if DisplayServer.get_name() != "headless":
 		kc = DisplayServer.keyboard_get_keycode_from_physical(kc)
-	return KEY_FR.get(kc, OS.get_keycode_string(kc))
+	return Loc.t(KEY_FR[kc]) if KEY_FR.has(kc) else OS.get_keycode_string(kc)
 
 
 ## Libellé d'un évènement d'entrée : « Clic gauche », « A », « Espace »…
 static func event_label(ev: InputEvent) -> String:
 	var mb := ev as InputEventMouseButton
 	if mb:
-		return MOUSE_NAMES.get(mb.button_index, "Souris %d" % mb.button_index)
+		return Loc.t(MOUSE_NAMES[mb.button_index]) if MOUSE_NAMES.has(mb.button_index) else Loc.t("Souris %d") % mb.button_index
 	var key_ev := ev as InputEventKey
 	if key_ev:
 		var kc := key_ev.physical_keycode if key_ev.physical_keycode != KEY_NONE else key_ev.keycode
@@ -84,13 +84,13 @@ static func main_label(n: int) -> String:
 
 ## Première ligne de l'aide de départ : se déplacer et attaquer.
 static func move_line() -> String:
-	var attack := "l'attaque part toute seule" if Settings.aim_mode == "auto" else "l'attaque part toute seule vers le curseur"
+	var attack := Loc.t("l'attaque part toute seule") if Settings.aim_mode == "auto" else Loc.t("l'attaque part toute seule vers le curseur")
 	match Settings.move_mode:
 		"curseur":
-			return "La souris guide le héros   ·   %s   ·   %s : esquive" % [attack, action_label("dash")]
+			return Loc.t("La souris guide le héros   ·   %s   ·   %s : esquive") % [attack, action_label("dash")]
 		"moba":
-			return "Clic droit : marcher jusqu'au point   ·   %s   ·   %s : esquive" % [attack, action_label("dash")]
-	return "%s : se déplacer   ·   %s   ·   %s : esquive" % [move_keys(), attack, action_label("dash")]
+			return Loc.t("Clic droit : marcher jusqu'au point   ·   %s   ·   %s : esquive") % [attack, action_label("dash")]
+	return Loc.t("%s : se déplacer   ·   %s   ·   %s : esquive") % [move_keys(), attack, action_label("dash")]
 
 
 ## Deuxième ligne : les compétences. « Clic gauche et clic droit » ou, en mode MOBA, le clic gauche et la touche.
@@ -98,8 +98,8 @@ static func skills_line() -> String:
 	var l := main_label(1)
 	var r := main_label(2)
 	if Settings.move_mode == "moba":
-		return "%s : compétence 1   ·   %s : compétence 2   ·   %s : compétences secondaires" % [l, r, secondary_keys()]
-	return "%s et %s : tes deux compétences principales   ·   %s : compétences secondaires" % [l, r, secondary_keys()]
+		return Loc.t("%s : compétence 1   ·   %s : compétence 2   ·   %s : compétences secondaires") % [l, r, secondary_keys()]
+	return Loc.t("%s et %s : tes deux compétences principales   ·   %s : compétences secondaires") % [l, r, secondary_keys()]
 
 
 ## Touches des compétences secondaires, séparées par des espaces (« A E R F »).
@@ -118,17 +118,17 @@ static func reminder_rows() -> Array:
 	var rows: Array = []
 	match Settings.move_mode:
 		"curseur":
-			rows.append(["Souris", "Le héros marche vers le curseur"])
+			rows.append([Loc.t("Souris"), Loc.t("Le héros marche vers le curseur")])
 		"moba":
-			rows.append(["Clic droit", "Marcher jusqu'au point cliqué"])
+			rows.append([Loc.t("Clic droit"), Loc.t("Marcher jusqu'au point cliqué")])
 		_:
-			rows.append([move_keys(), "Se déplacer"])
-	rows.append(["Automatique", "L'attaque de base part toute seule sur l'ennemi visé"])
-	rows.append([main_label(1), "Compétence principale 1"])
-	rows.append([main_label(2), "Compétence principale 2"])
-	rows.append([secondary_keys(), "Compétences secondaires"])
-	rows.append([action_label("dash"), "Esquive"])
-	rows.append([action_label("toggle_tree"), "Arbre de vie"])
+			rows.append([move_keys(), Loc.t("Se déplacer")])
+	rows.append([Loc.t("Automatique"), Loc.t("L'attaque de base part toute seule sur l'ennemi visé")])
+	rows.append([main_label(1), Loc.t("Compétence principale 1")])
+	rows.append([main_label(2), Loc.t("Compétence principale 2")])
+	rows.append([secondary_keys(), Loc.t("Compétences secondaires")])
+	rows.append([action_label("dash"), Loc.t("Esquive")])
+	rows.append([action_label("toggle_tree"), Loc.t("Arbre de vie")])
 	return rows
 
 
@@ -138,12 +138,12 @@ static func pad_rows() -> Array:
 	for i in range(Settings.MOUSE_SLOTS, Settings.SLOT_COUNT):
 		sec.append(Settings.pad_name_of(Settings.pad_bindings[i]))
 	return [
-		[Settings.pad_name_of(Settings.PAD_STICK_L), "Se déplacer"],
-		[Settings.pad_name_of(Settings.PAD_STICK_R), "Viser (sinon, la cible la plus proche)"],
-		[Settings.pad_name_of(Settings.pad_bindings[0]), "Compétence principale 1"],
-		[Settings.pad_name_of(Settings.pad_bindings[1]), "Compétence principale 2"],
-		[" ".join(sec), "Compétences secondaires"],
-		[Settings.pad_name_of(Settings.pad_actions["dash"]), "Esquive"],
-		[Settings.pad_name_of(Settings.pad_actions["toggle_tree"]), "Arbre de vie"],
-		[Settings.pad_name_of(Settings.pad_actions["toggle_map"]), "Carte"],
+		[Settings.pad_name_of(Settings.PAD_STICK_L), Loc.t("Se déplacer")],
+		[Settings.pad_name_of(Settings.PAD_STICK_R), Loc.t("Viser (sinon, la cible la plus proche)")],
+		[Settings.pad_name_of(Settings.pad_bindings[0]), Loc.t("Compétence principale 1")],
+		[Settings.pad_name_of(Settings.pad_bindings[1]), Loc.t("Compétence principale 2")],
+		[" ".join(sec), Loc.t("Compétences secondaires")],
+		[Settings.pad_name_of(Settings.pad_actions["dash"]), Loc.t("Esquive")],
+		[Settings.pad_name_of(Settings.pad_actions["toggle_tree"]), Loc.t("Arbre de vie")],
+		[Settings.pad_name_of(Settings.pad_actions["toggle_map"]), Loc.t("Carte")],
 	]
