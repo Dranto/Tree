@@ -72,7 +72,7 @@ func _run() -> void:
 		check(pr[0] > 0.03 and pr[0] <= 1.0, "%s : audible et sans saturation (crête %.2f)" % [name, pr[0]])
 		check(absf(a[a.size() - 1]) < 0.02, "%s : s'éteint sans clic" % name)
 		check(a.size() > 400, "%s : durée plausible" % name)
-	for name in ["impact_lourd", "critique", "mort_elite", "annonce_boss"]:
+	for name in ["impact_lourd", "critique", "mort_elite", "annonce"]:
 		check(Synth.SOUNDS.has(name), "son demandé par le ressenti du combat : %s" % name)
 	check(Synth.variant_names("impact").size() == 3 and Synth.render("impact", 1) != Synth.render("impact"), "impact : trois variantes différentes")
 	check(float(Synth.SOUNDS["critique"]["peak"]) > float(Synth.SOUNDS["impact"]["peak"]), "un critique sonne plus fort qu'un coup")
@@ -106,7 +106,7 @@ func _run() -> void:
 				seen_fp.append(fp)
 			var a := _read_wav(path)
 			var pr := _peak_rms(a)
-			check(absi(a.size() - int(MusicSynth.LOOP * Synth.RATE)) <= 1, "%s : 12 s" % path.get_file())
+			check(absi(a.size() - int(MusicSynth.LOOP * Synth.RATE)) <= 1, "%s : 24 s" % path.get_file())
 			check(pr[0] > 0.3 and pr[0] <= 0.81 and pr[1] > 0.03, "%s : niveau correct (crête %.2f, efficace %.3f)" % [path.get_file(), pr[0], pr[1]])
 			check(_seamless(a), "%s : la fin raccorde le début de la boucle" % path.get_file())
 	var beds := {"": {}}
@@ -117,7 +117,7 @@ func _run() -> void:
 			var path := RegionAudio.bed_path(id, file)
 			check(int(manifest["beds"].get(path, 0)) == MusicSynth.bed_fingerprint(RegionAudio.BED_STATES[file], beds[id]), "%s : nappe à jour d'après son empreinte" % path.get_file())
 			var a := _read_wav(path)
-			check(absi(a.size() - int(MusicSynth.LOOP * Synth.RATE)) <= 1 and _peak_rms(a)[1] > 0.01, "%s : 12 s, audible" % path.get_file())
+			check(absi(a.size() - int(MusicSynth.BED_LOOP * Synth.RATE)) <= 1 and _peak_rms(a)[1] > 0.01, "%s : 12 s, audible" % path.get_file())
 	# Un rendu complet sur deux couches, pour vérifier les formules elles-mêmes (le reste par empreintes).
 	var combat := Synth.music_layer("combat", styles.get("vent", {}))
 	check(Synth.to_wav(combat) == FileAccess.get_file_as_bytes(RegionAudio.music_path("vent", "combat")), "vent_combat.wav identique à un nouveau rendu")
@@ -156,6 +156,15 @@ func _run() -> void:
 	check(sfx.played == 4, "son trop lointain non joué")
 	sfx.play("impact", Vector2(100, 0))
 	check(sfx.played == 5, "son proche joué")
+	# Versions régionales : un coup dans le marais prend la voix du marais, dans l'oasis la voix commune.
+	sfx.streams["impact@spore"] = sfx.streams["impact"]
+	var Regions = load("res://scripts/regions.gd")
+	check(sfx.regional("impact", Regions.center("spore")) == "impact@spore", "un coup dans Spore prend sa version régionale")
+	check(sfx.regional("impact", Vector2.ZERO) == "impact", "dans l'oasis, la version commune")
+	check(sfx.regional("mort", Regions.center("spore")) == "mort", "sans version régionale, le son commun")
+	for reg in ["spore", "vent", "seve", "aube", "racine"]:
+		for base in ["impact", "critique", "impact_lourd", "mort", "mort_elite", "coeur"]:
+			check(Synth.SOUNDS.has(base + "@" + reg), "%s : une version régionale de « %s »" % [reg, base])
 	var all_loaded := true
 	for name in Synth.SOUNDS:
 		for file in Synth.variant_names(name):

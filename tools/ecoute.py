@@ -43,80 +43,103 @@ FAMILLES = ["combat", "competences", "heros", "monde", "interface", "boss", "mus
 # --- Textes « quand » des bruitages : (famille, région, quand, précision) -----------------------------------
 QUAND = {
     # Combat
-    "tir": ("combat", "monde", "Un tir de l'attaque automatique, pour les formes à projectile qui n'ont pas de son à elles : Graines, Échardes, Ronces vives, Spores lobées, Dards fongiques, Lames de vent.", "Son le plus entendu du jeu : un tir toutes les fractions de seconde."),
-    "impact": ("combat", "monde", "Un coup touche un ennemi (coup normal). C'est aussi le son de secours d'un son de région qui manquerait.", "Un ennemi qui a son propre son de coup (Termite, Mandragore, Scarabée, Tertre) ne joue pas celui-ci."),
-    "impact_lourd": ("combat", "monde", "", "Prévu pour les gros coups. Aucun code ne l'appelle encore."),
-    "critique": ("combat", "monde", "Un coup critique touche un ennemi.", "Le Scarabée perce-écorce a le sien (racine_scarabee_crit)."),
-    "mort": ("combat", "monde", "Un ennemi ordinaire meurt.", "Termite, Mandragore, Scarabée et Tertre ont leur propre son de mort."),
-    "mort_elite": ("combat", "monde", "Une élite meurt (gerbe d'essences).", "Baisse un instant la musique (duck)."),
-    "degats": ("heros", "monde", "Le héros prend un coup.", ""),
-    "etourdi": ("heros", "monde", "Le héros est étourdi (anneau doré à l'écran) après une punition.", ""),
-    "chute": ("heros", "monde", "Le héros tombe, puis renaît au sanctuaire.", "Long, grave ; baisse la musique."),
-    "esquive": ("heros", "monde", "Le héros fait une esquive (glissade).", "Joué par le héros lui-même, jamais par un ennemi."),
+    "tir": ("combat", "monde", "Un tir de l'attaque automatique, pour les formes à projectile qui n'ont pas de son à elles : Graines, Échardes, Ronces vives, Spores lobées, Dards fongiques, Lames de vent.", "Refait le 25/11 : Un « tock » de bois et un souffle bref. Son le plus entendu du jeu : un tir toutes les fractions de seconde."),
+    "impact": ("combat", "monde", "Un coup touche un ennemi (coup normal). C'est aussi le son de secours d'un son de région qui manquerait.", "Refait le 25/11 : Un claquement de bois, des échardes et un coup sourd. Un ennemi qui a son propre son de coup (Termite, Mandragore, Scarabée, Tertre) ne joue pas celui-ci."),
+    "impact_lourd": ("combat", "monde", "", "Refait le 25/11 : Une grosse caisse de bois, la terre qui tremble, des graviers. Prévu pour les gros coups. Aucun code ne l'appelle encore."),
+    "critique": ("combat", "monde", "Un coup critique touche un ennemi.", "Refait le 25/11 : Le coup, plus fort, et un accord de pizz (ré, la) qui sonne la réussite. Le Scarabée perce-écorce a le sien (racine_scarabee_crit)."),
+    "mort": ("combat", "monde", "Un ennemi ordinaire meurt.", "Refait le 25/11 : Il craque, tombe en miettes, une note de pizz qui retombe. Termite, Mandragore, Scarabée et Tertre ont leur propre son de mort."),
+    "mort_elite": ("combat", "monde", "Une élite meurt (gerbe d'essences).", "Refait le 25/11 : Grosse caisse, accord mineur des cordes, cloche grave, éboulis. Baisse un instant la musique (duck)."),
+    "degats": ("heros", "monde", "Le héros prend un coup.", "Refait le 25/11 : Un choc sourd et une seconde mineure de pizz, qui grince."),
+    "etourdi": ("heros", "monde", "Le héros est étourdi (anneau doré à l'écran) après une punition.", "Refait le 25/11 : Un coup sourd et des étoiles de kalimba qui tournent (tierce mineure)."),
+    "chute": ("heros", "monde", "Le héros tombe, puis renaît au sanctuaire.", "Refait le 25/11 : Les violoncelles descendent, une cloche grave, un souffle qui s'éteint. Long, grave ; baisse la musique."),
+    "esquive": ("heros", "monde", "Le héros fait une esquive (glissade).", "Refait le 25/11 : Un souffle bref qui passe, quelques feuilles. Joué par le héros lui-même, jamais par un ennemi."),
     # Compétences de Ronce et du socle
-    "nova": ("competences", "ronce", "Compétence Couronne d'épines lancée.", "Aussi le son de secours de Bouclier d'écorce (Racine) sur son onde."),
-    "nuage": ("combat", "ronce", "Un nuage de spores éclate : explosion d'un Boursouflé, ou nuage de l'Amanite-Mère.", ""),
-    "floraison": ("competences", "seve", "Compétence Floraison lancée ; aussi quand le héros entre dans un sanctuaire (il s'allume).", "Secours de la Fontaine de sève."),
-    "fouet": ("competences", "ronce", "Compétence Fouet de ronce lancée ; aussi l'attaque de base « Fouet » (corps à corps).", ""),
-    "racines": ("competences", "ronce", "Compétence Racines voraces lancée.", "Secours des sons de Racine (écorce, ancrage, pieux)."),
-    "volee": ("competences", "ronce", "Compétence Volée d'épines lancée.", ""),
-    "saignee": ("competences", "ronce", "Compétence Saignée lancée.", "Secours de Liane buveuse."),
-    "annonce": ("boss", "monde", "Un boss annonce une attaque : le coup va partir (marque au sol).", "Joué par chaque boss à chaque attaque annoncée."),
+    "nova": ("competences", "ronce", "Compétence Couronne d'épines lancée.", "Refait le 25/11 : Une couronne d'épines qui jaillit en cercle (crépitement d'épines qui s'ouvre), un coup de violoncelles graves et un pizz de contrebasse. Aussi le son de secours de Bouclier d'écorce (Racine) sur son onde."),
+    "nuage": ("combat", "ronce", "Un nuage de spores éclate : explosion d'un Boursouflé, ou nuage de l'Amanite-Mère.", "Refait le 25/11 : Un pouf mou, des bulles, deux notes de marimba (fa#, sol)."),
+    "floraison": ("competences", "seve", "Compétence Floraison lancée ; aussi quand le héros entre dans un sanctuaire (il s'allume).", "Refait le 25/11 : La fleur s'ouvre en arpège de kalimba, un souffle de chœur et un froissement de pétales. Secours de la Fontaine de sève."),
+    "fouet": ("competences", "ronce", "Compétence Fouet de ronce lancée ; aussi l'attaque de base « Fouet » (corps à corps).", "Refait le 25/11 : La tige fend l'air (souffle qui monte) puis claque sec au bout, avec un pizz grave."),
+    "racines": ("competences", "ronce", "Compétence Racines voraces lancée.", "Refait le 25/11 : La terre gronde, le bois craque en remontant, des racines grincent. Secours des sons de Racine (écorce, ancrage, pieux)."),
+    "volee": ("competences", "ronce", "Compétence Volée d'épines lancée.", "Refait le 25/11 : Une salve d'épines qui sifflent en partant, l'arc de ronce qui vibre."),
+    "saignee": ("competences", "ronce", "Compétence Saignée lancée.", "Refait le 25/11 : Un violoncelle qui gémit au demi-ton, un battement sourd, la sève aspirée. Secours de Liane buveuse."),
+    "annonce": ("boss", "monde", "Un boss annonce une attaque : le coup va partir (marque au sol).", "Joué par chaque boss à chaque attaque annoncée. Refait le 25/11 : c'est maintenant le son grave de l'ancienne « annonce_boss »."),
     "annonce_boss": ("boss", "monde", "", "Prévu pour une annonce plus grave de boss. Aucun code ne l'appelle encore."),
-    "noeud": ("interface", "monde", "Un nœud de l'arbre est pris (point dépensé), ou une greffe est posée dans l'arbre.", ""),
-    "niveau": ("heros", "monde", "Le héros monte d'un niveau, ou termine un objectif.", ""),
-    "coeur": ("monde", "monde", "Un Cœur est purifié (région libérée) ; à l'autel ; au dernier Cœur, la fin du monde reverdi.", "Baisse la musique."),
-    "ramasse": ("monde", "monde", "Le héros ramasse une essence (sève, expérience).", "Plus aigu à chaque ramassage enchaîné (jusqu'à 10 de suite)."),
-    "greffe": ("monde", "monde", "Le héros ramasse une greffe tombée au sol.", ""),
-    "seve": ("monde", "monde", "Le héros retrouve la sève qu'il avait perdue en tombant.", ""),
-    "clic": ("interface", "monde", "Un bouton est cliqué (menus, options, arbre).", ""),
-    "survol": ("interface", "monde", "Un bouton ou un nœud est survolé, ou le curseur se déplace dans l'arbre à la manette.", ""),
+    "noeud": ("interface", "monde", "Un nœud de l'arbre est pris (point dépensé), ou une greffe est posée dans l'arbre.", "Refait le 25/11 : Marimba et pizz, une quinte qui s'ouvre."),
+    "niveau": ("heros", "monde", "Le héros monte d'un niveau, ou termine un objectif.", "Refait le 25/11 : Un arpège de pizz qui monte, le cor qui répond, un souffle de chœur."),
+    "coeur": ("monde", "monde", "Un Cœur est purifié (région libérée) ; à l'autel ; au dernier Cœur, la fin du monde reverdi.", "Refait le 25/11 : Le chœur et les cordes passent en majeur, cloche, marimba qui s'envole. Baisse la musique."),
+    "ramasse": ("monde", "monde", "Le héros ramasse une essence (sève, expérience).", "Refait le 25/11 : Une goutte de kalimba (la hauteur monte quand on enchaîne). Plus aigu à chaque ramassage enchaîné (jusqu'à 10 de suite)."),
+    "greffe": ("monde", "monde", "Le héros ramasse une greffe tombée au sol.", "Refait le 25/11 : Marimba qui monte, un souffle de chœur, un froissement de feuilles."),
+    "seve": ("monde", "monde", "Le héros retrouve la sève qu'il avait perdue en tombant.", "Refait le 25/11 : Quatre gouttes de kalimba et un ploc."),
+    "clic": ("interface", "monde", "Un bouton est cliqué (menus, options, arbre).", "Refait le 25/11 : Un petit bloc de bois."),
+    "survol": ("interface", "monde", "Un bouton ou un nœud est survolé, ou le curseur se déplace dans l'arbre à la manette.", "Refait le 25/11 : Un effleurement."),
     # Spore
-    "spore_eclat": ("competences", "spore", "Compétence Vesse-de-loup : la vesse éclate.", "Joué à l'endroit de l'éclatement."),
-    "spore_nuage": ("competences", "spore", "Compétence Nuage de spores lancée.", ""),
-    "spore_propage": ("competences", "spore", "Compétence Essaim lancée (le poison se propage).", ""),
-    "spore_piege": ("competences", "spore", "Compétence Vesse-de-loup : la vesse est posée.", ""),
-    "spore_toxine": ("competences", "spore", "Compétence Éclosion lancée.", ""),
-    "spore_flaque": ("competences", "spore", "", "Prévu (flaque toxique). Aucun code ne l'appelle encore."),
-    "spore_division": ("competences", "spore", "", "Prévu (division de spores). Aucun code ne l'appelle encore."),
+    "spore_eclat": ("competences", "spore", "Compétence Vesse-de-loup : la vesse éclate.", "Refait le 25/11 : La vesse crève (pouf mou), un nuage qui s'étale, des bulles. Joué à l'endroit de l'éclatement."),
+    "spore_nuage": ("competences", "spore", "Compétence Nuage de spores lancée.", "Refait le 25/11 : Un souffle mou qui gonfle, des bulles qui montent, un marimba mouillé en écho."),
+    "spore_propage": ("competences", "spore", "Compétence Essaim lancée (le poison se propage).", "Refait le 25/11 : Un bourdonnement grave d'insectes mous qui s'envolent, quelques notes de marimba."),
+    "spore_piege": ("competences", "spore", "Compétence Vesse-de-loup : la vesse est posée.", "Refait le 25/11 : Un champignon mou qui s'enfonce dans la terre, glouglou."),
+    "spore_toxine": ("competences", "spore", "Compétence Éclosion lancée.", "Refait le 25/11 : Une poche de toxine qui fermente et éclate en bulles, marimba qui descend (phrygien)."),
+    "spore_flaque": ("competences", "spore", "", "Refait le 25/11 : La boue qui clapote, un glouglou, des bulles. Prévu (flaque toxique). Aucun code ne l'appelle encore."),
+    "spore_division": ("competences", "spore", "", "Refait le 25/11 : Un pop mou et deux notes de marimba (demi-ton). Prévu (division de spores). Aucun code ne l'appelle encore."),
     # Vent
-    "vent_lame": ("competences", "vent", "", "Prévu (lame de vent). Aucun code ne l'appelle encore."),
-    "vent_rafale": ("competences", "vent", "", "Prévu (rafale). Aucun code ne l'appelle encore."),
-    "vent_tornade": ("competences", "vent", "Compétence Tornade lancée.", ""),
-    "vent_ruee": ("competences", "vent", "Compétence Ruée lancée.", ""),
-    "vent_appel": ("competences", "vent", "Compétence Appel d'air lancée.", ""),
-    "vent_plongeon": ("combat", "vent", "", "Prévu (plongeon du Piqueur). Aucun code ne l'appelle encore."),
-    "vent_repousse": ("combat", "vent", "", "Prévu (repousse). Aucun code ne l'appelle encore."),
+    "vent_lame": ("competences", "vent", "", "Refait le 25/11 : Un souffle tranchant et une corde de harpe pincée. Prévu (lame de vent). Aucun code ne l'appelle encore."),
+    "vent_rafale": ("competences", "vent", "", "Refait le 25/11 : Deux souffles qui se croisent, un fil de flûte. Prévu (rafale). Aucun code ne l'appelle encore."),
+    "vent_tornade": ("competences", "vent", "Compétence Tornade lancée.", "Refait le 25/11 : Un tourbillon (souffle qui tourne), la flûte qui monte et retombe, des herbes arrachées."),
+    "vent_ruee": ("competences", "vent", "Compétence Ruée lancée.", "Refait le 25/11 : Le héros fend l'air (souffle qui passe), un battement de plumes."),
+    "vent_appel": ("competences", "vent", "Compétence Appel d'air lancée.", "Refait le 25/11 : L'air est aspiré vers le héros (souffle qui gonfle à l'envers), la flûte souffle une quinte."),
+    "vent_plongeon": ("combat", "vent", "", "Refait le 25/11 : Le souffle qui tombe en piqué, l'impact, la harpe qui retombe. Prévu (plongeon du Piqueur). Aucun code ne l'appelle encore."),
+    "vent_repousse": ("combat", "vent", "", "Refait le 25/11 : Une bourrasque qui part du héros, un coup, la flûte en quinte. Prévu (repousse). Aucun code ne l'appelle encore."),
     # Sève
-    "seve_goutte": ("combat", "seve", "Un tir de l'attaque de base Perles de sève.", ""),
-    "seve_pousse": ("competences", "seve", "", "Prévu (pousse). Aucun code ne l'appelle encore."),
-    "seve_soin": ("competences", "seve", "Compétence Cocon de sève lancée (le cocon soigne).", ""),
-    "seve_source": ("competences", "seve", "Compétence Fontaine de sève lancée.", ""),
-    "seve_eclosion": ("competences", "seve", "Compétence Cocon de sève : le cocon éclôt.", ""),
-    "seve_lien": ("competences", "seve", "Compétence Liane buveuse lancée.", ""),
+    "seve_goutte": ("combat", "seve", "Un tir de l'attaque de base Perles de sève.", "Refait le 25/11 : Un ploc et une note de kalimba."),
+    "seve_pousse": ("competences", "seve", "", "Refait le 25/11 : Arpège de kalimba (mib lydien) et feuilles qui se déplient. Prévu (pousse). Aucun code ne l'appelle encore."),
+    "seve_soin": ("competences", "seve", "Compétence Cocon de sève lancée (le cocon soigne).", "Refait le 25/11 : La sève s'enroule autour du héros (cor chaud), des gouttes de kalimba, un glouglou."),
+    "seve_source": ("competences", "seve", "Compétence Fontaine de sève lancée.", "Refait le 25/11 : Une source qui jaillit, des gouttes en arpège, un orgue de bois."),
+    "seve_eclosion": ("competences", "seve", "Compétence Cocon de sève : le cocon éclôt.", "Refait le 25/11 : Le cocon s'ouvre comme une fleur : un éclat mou, un accord de kalimba et de cor."),
+    "seve_lien": ("competences", "seve", "Compétence Liane buveuse lancée.", "Refait le 25/11 : Une liane qui se tend comme un élastique, le bois qui grince, la sève qui coule."),
     # Racine
-    "racine_ecorce": ("competences", "racine", "Compétence Bouclier d'écorce lancée.", ""),
-    "racine_ancrage": ("competences", "racine", "Compétence Ancrage lancée.", ""),
-    "racine_pieux": ("competences", "racine", "Compétence Pieux lancée.", ""),
-    "racine_massue": ("combat", "racine", "Un coup de l'attaque de base Massue de bois.", ""),
-    "racine_termite_hit": ("combat", "racine", "Un Termite de cendre est touché.", ""),
-    "racine_termite_death": ("combat", "racine", "Un Termite de cendre meurt.", ""),
-    "racine_mandragore_hit": ("combat", "racine", "Une Mandragore est touchée.", ""),
-    "racine_mandragore_death": ("combat", "racine", "Une Mandragore meurt.", ""),
-    "racine_mandragore_jaillit": ("combat", "racine", "Une Mandragore jaillit du sol sous le héros.", ""),
-    "racine_scarabee_hit": ("combat", "racine", "Un Scarabée perce-écorce est touché.", ""),
-    "racine_scarabee_crit": ("combat", "racine", "Un Scarabée perce-écorce reçoit un coup critique.", ""),
-    "racine_scarabee_death": ("combat", "racine", "Un Scarabée perce-écorce meurt.", ""),
-    "racine_tertre_hit": ("combat", "racine", "Un Tertre de pierre est touché.", ""),
-    "racine_tertre_death": ("combat", "racine", "Un Tertre de pierre meurt.", ""),
-    "racine_tertre_frappe": ("combat", "racine", "Un Tertre de pierre frappe le sol.", ""),
+    "racine_ecorce": ("competences", "racine", "Compétence Bouclier d'écorce lancée.", "Refait le 25/11 : L'écorce se referme autour du héros : craquements de bois, un coup sourd, un violoncelle."),
+    "racine_ancrage": ("competences", "racine", "Compétence Ancrage lancée.", "Refait le 25/11 : Le héros s'ancre : une pierre qui tombe lourdement, la terre qui gronde, du gravier."),
+    "racine_pieux": ("competences", "racine", "Compétence Pieux lancée.", "Refait le 25/11 : Trois pieux de bois qui percent la terre l'un après l'autre."),
+    "racine_massue": ("combat", "racine", "Un coup de l'attaque de base Massue de bois.", "Refait le 25/11 : Un coup de tambour, du gravier."),
+    "racine_termite_hit": ("combat", "racine", "Un Termite de cendre est touché.", "Refait le 25/11 : Un clic de chitine sèche."),
+    "racine_termite_death": ("combat", "racine", "Un Termite de cendre meurt.", "Refait le 25/11 : Une carapace qui craque."),
+    "racine_mandragore_hit": ("combat", "racine", "Une Mandragore est touchée.", "Refait le 25/11 : Un petit cri étouffé de chœur."),
+    "racine_mandragore_death": ("combat", "racine", "Une Mandragore meurt.", "Refait le 25/11 : Son cri qui retombe, la terre qui s'effrite."),
+    "racine_mandragore_jaillit": ("combat", "racine", "Une Mandragore jaillit du sol sous le héros.", "Refait le 25/11 : La terre éclate et elle crie en montant."),
+    "racine_scarabee_hit": ("combat", "racine", "Un Scarabée perce-écorce est touché.", "Refait le 25/11 : Un toc sur la carapace."),
+    "racine_scarabee_crit": ("combat", "racine", "Un Scarabée perce-écorce reçoit un coup critique.", "Refait le 25/11 : La carapace se fend, marimba grave."),
+    "racine_scarabee_death": ("combat", "racine", "Un Scarabée perce-écorce meurt.", "Refait le 25/11 : Carapace en morceaux."),
+    "racine_tertre_hit": ("combat", "racine", "Un Tertre de pierre est touché.", "Refait le 25/11 : Un coup sourd dans la pierre, du gravier."),
+    "racine_tertre_death": ("combat", "racine", "Un Tertre de pierre meurt.", "Refait le 25/11 : Un éboulis, un grondement."),
+    "racine_tertre_frappe": ("combat", "racine", "Un Tertre de pierre frappe le sol.", "Refait le 25/11 : La terre tremble, des pierres roulent."),
     # Aube
-    "aube_rayon": ("combat", "aube", "Un tir de l'attaque de base Rayon d'aube.", ""),
-    "aube_eclat": ("competences", "aube", "", "Prévu (éclat). Aucun code ne l'appelle encore."),
-    "aube_halo": ("competences", "aube", "", "Prévu (halo). Aucun code ne l'appelle encore."),
-    "aube_levant": ("competences", "aube", "Compétence Lance d'aube lancée.", ""),
-    "aube_cloche": ("competences", "aube", "Compétence Prisme lancée.", ""),
-    "aube_nova": ("competences", "aube", "Compétence Aurore lancée.", ""),
+    "aube_rayon": ("combat", "aube", "Un tir de l'attaque de base Rayon d'aube.", "Refait le 25/11 : Un verre qui chante bref, une lueur qui passe."),
+    "aube_eclat": ("competences", "aube", "", "Refait le 25/11 : Glockenspiel en quinte sur un verre. Prévu (éclat). Aucun code ne l'appelle encore."),
+    "aube_halo": ("competences", "aube", "", "Refait le 25/11 : Les verres montent en accord (la lydien), un souffle de chœur. Prévu (halo). Aucun code ne l'appelle encore."),
+    "aube_levant": ("competences", "aube", "Compétence Lance d'aube lancée.", "Refait le 25/11 : La lumière se charge (verre qui monte), la lance part (souffle) et frappe (cloche)."),
+    "aube_cloche": ("competences", "aube", "Compétence Prisme lancée.", "Refait le 25/11 : Un éclat de lumière tiré par le prisme : une lame de verre qui tinte."),
+    "aube_nova": ("competences", "aube", "Compétence Aurore lancée.", "Refait le 25/11 : L'aube éclate autour du héros : un accord de verres qui s'ouvre, des cloches, un grave."),
+}
+BOSS_REFAIT = {
+    "aube_boss_eveil": "Les verres montent en la, cloche, glockenspiel.",
+    "aube_boss_mort": "Éclats de verre, puis un accord de verres et une cloche en la majeur.",
+    "aube_boss_phase": "Le glockenspiel dégringole, le verre vibre, un tambour.",
+    "finale_boss_eveil": "Cordes et cors en sib, triton qui grince, cloche grave, tambour.",
+    "finale_boss_mort": "Tout s'effondre, puis chœur, cordes et cloche en sib majeur.",
+    "finale_boss_phase": "Les cors tombent d'un triton, coup de tambour, cordes diminuées.",
+    "racine_boss_eveil": "Trois coups de taiko, les violoncelles en do dorien, le bois qui craque.",
+    "racine_boss_mort": "La pierre gronde, puis le marimba et les cordes en do majeur.",
+    "racine_boss_phase": "Tambours qui descendent, gravier, marimba grave.",
+    "ronce_boss_eveil": "Les cordes montent en ré mineur, les épines crépitent, les cors, un tambour.",
+    "ronce_boss_mort": "La ronce s'effondre, puis les cordes passent en ré majeur.",
+    "ronce_boss_phase": "Épines qui crépitent, coup de tambour, pizz dissonant.",
+    "seve_boss_eveil": "Le cor en mib lydien, la sève qui coule, kalimba.",
+    "seve_boss_mort": "La sève s'écoule, le cor et la kalimba en mib majeur.",
+    "seve_boss_phase": "Un glouglou, kalimba qui redescend, tambour.",
+    "spore_boss_eveil": "La clarinette grave en fa# phrygien, des bulles, un marimba sourd.",
+    "spore_boss_mort": "Elle se vide en bulles, puis le marimba passe en fa# majeur.",
+    "spore_boss_phase": "Bulles qui éclatent, marimba qui dégringole, tambour.",
+    "vent_boss_eveil": "Une bourrasque qui enfle, la flûte qui appelle en sol, la harpe qui s'envole.",
+    "vent_boss_mort": "La flûte descend, le vent retombe, la harpe en sol majeur.",
+    "vent_boss_phase": "Une rafale en piqué, la harpe qui dégringole, un tambour.",
 }
 BOSS_MOMENT = {
     "eveil": "Le combat contre {b} commence (le boss s'éveille dans son arène).",
@@ -126,6 +149,9 @@ BOSS_MOMENT = {
 for _r, _b in BOSSES.items():
     for _k, _t in BOSS_MOMENT.items():
         QUAND["%s_boss_%s" % (_r, _k)] = ("boss", _r, _t.format(b=_b, B=_b[0].upper() + _b[1:]), "Baisse la musique." if _k != "phase" else "")
+        _n = "%s_boss_%s" % (_r, _k)
+        if _n in BOSS_REFAIT:
+            QUAND[_n] = QUAND[_n][:3] + (("Refait le 25/11 : " + BOSS_REFAIT[_n] + " " + QUAND[_n][3]).strip(),)
 
 LAYER_QUAND = {
     "sombre": "Exploration en terre flétrie : plein volume quand la vie du sol sous le héros est inférieure à 15 %. Entre 15 % et 60 %, fondu vers « lumineux ».",
@@ -147,11 +173,42 @@ EVENT_DESC = {
     "rustle": ("Froissement de feuilles ou d'herbes sèches.", "any"),
     "knock": ("Coup sourd sur du bois.", "any"),
     "frog": ("Coassement : trois coups graves.", "any"),
+    "note": ("Une à trois notes lointaines de l'instrument de la région, dans sa gamme (marimba, harpe, kalimba…).", "alive"),
 }
 ETAT = {"mort": "terre flétrie", "vif": "terre vivante"}
 ADJ = {"mort": "flétrie", "vif": "vivante"}
 
 # --- Lecture du code ------------------------------------------------------------------------------------------
+
+
+TONS = {"flute": "flûte", "clarinet": "clarinette", "horn": "cor", "brass": "cuivres graves", "horns": "pupitre de cors", "cello": "violoncelle", "glass": "harmonica de verre",
+        "pizz": "contrebasse et violoncelles pizzicato", "harp": "harpe", "marimba": "marimba", "kalimba": "kalimba", "glock": "glockenspiel", "piano": "piano feutré"}
+KITS = {"frame": "tambours sur cadre", "taiko": "taikos", "wood": "tambours de bois", "metal": "grosse caisse et petits gongs", "water": "percussions d'eau"}
+
+
+def _instruments(reg, layer):
+    """Nouveaux instruments de la couche (refonte du 25/11), d'après data/audio.json et music_synth.gd › DEFAULTS."""
+    a = json.load(open(os.path.join(GODOT, "data", "audio.json")))["regions"].get(reg, {}).get("music", {})
+    d = {"bright": {"arp": "pizz", "lead_tone": "cello", "counter_tone": "horn"}, "boss": {"lead_tone": "horns", "counter_tone": "cello", "kit": "taiko"}, "combat": {"kit": "frame"}}
+    sec = {"sombre": "dark", "lumineux": "bright", "combat": "combat", "coeur": "heart", "boss": "boss"}[layer]
+    st = dict(d.get(sec, {}))
+    st.update(a.get(sec, {}))
+    br = dict(d["bright"]); br.update(a.get("bright", {}))
+    PADS = {"saw": "nappe de cordes douces", "reed": "nappe d'anches", "air": "nappe de flûtes", "organ": "orgue de bois", "glass": "nappe de verres", "bow": "section de cordes"}
+    pad = PADS[a.get("dark", {}).get("pad_tone", "saw")]
+    arp, lead, cnt = TONS[br["arp"]], TONS[br["lead_tone"]], TONS[br["counter_tone"]]
+    osti = "cordes en spiccato" if br["arp"] == "pizz" else arp
+    if layer == "sombre":
+        t = "%s, bourdon, cloche grave, notes éparses (%s) ; en B, %s" % (pad, arp, "des violoncelles montent" if a.get("dark", {}).get("pad_tone", "saw") in ["saw", "bow"] else "la contre-voix (%s) tient l'accord" % cnt)
+    elif layer == "lumineux":
+        t = "arpège : %s ; mélodie : %s ; en B, la mélodie varie et une contre-voix (%s) l'harmonise, cordes" % (arp, lead, cnt)
+    elif layer == "combat":
+        t = "%s, contrebasse, ostinato (%s) ; en B, toms, accords (%s) et roulement" % (KITS[st["kit"]], osti, cnt)
+    elif layer == "coeur":
+        t = "chœur, battement de cœur, %s ; en B, cordes et la mélodie du thème (%s)" % (lead, arp)
+    else:
+        t = "%s fournis, ostinato (%s), accords de cuivres graves, chœur, gong ; mélodie : %s ; contre-voix en B : %s" % (KITS[st["kit"]], osti, TONS[st["lead_tone"]], TONS[st["counter_tone"]])
+    return "Boucle de 24 s (thème A puis variation B). Instruments : " + t + "."
 
 
 def read(path):
@@ -164,7 +221,7 @@ def parse_sounds():
     src = read("scripts/synth.gd")
     body = src[src.index("const SOUNDS := {"):src.index("## Noms de fichiers d'un son")]
     out = []
-    for m in re.finditer(r'^\t"([a-z_0-9]+)": \{(.*)$', body, re.M):
+    for m in re.finditer(r'^\t"([a-z_0-9@]+)": \{(.*)$', body, re.M):
         head = m.group(2)
         g = lambda k, d: float(re.search(r'"%s": ([0-9.]+)' % k, head).group(1)) if re.search(r'"%s": ([0-9.]+)' % k, head) else d
         out.append({"name": m.group(1), "variants": int(g("variants", 1)), "peak": g("peak", 0.6), "duck": g("duck", 0.0)})
@@ -276,7 +333,14 @@ def build():
     # Bruitages
     for s in sounds:
         n = s["name"]
-        fam, reg, quand, prec = QUAND.get(n, ("monde", "monde", "", "À décrire : ce son n'a pas encore de texte dans tools/ecoute.py."))
+        base, _, at = n.partition("@")
+        if at and n not in QUAND and base in QUAND:
+            # Version régionale (<son>@<région>) : jouée à la place du son commun dans cette région (Sfx.play).
+            fam, _r, quand, _p = QUAND[base]
+            reg, prec = at, "Version de %s de « %s », jouée à sa place quand ça se passe dans cette région." % (REGIONS.get(at, at), base)
+            refs[n] = refs.get(base, [])
+        else:
+            fam, reg, quand, prec = QUAND.get(n, ("monde", "monde", "", "À décrire : ce son n'a pas encore de texte dans tools/ecoute.py."))
         used = bool(refs[n])
         files = [n] + ["%s__%d" % (n, v) for v in range(2, s["variants"] + 1)]
         for vi, fn in enumerate(files):
@@ -307,7 +371,7 @@ def build():
             "titre": "%s · %s" % (REGIONS[reg] if m.group(1) else "Ronce (le monde)", layers[layer]),
             "variante": "", "quand": quand,
             "precision": ("Ronce n'a pas de préfixe : ces cinq couches sont aussi la musique de tout lieu hors région. " if not m.group(1) else "")
-                         + ("Caractère voulu : " + style if style else ""),
+                         + _instruments(reg, layer),
             "utilise": True, "refs": ["scripts/music.gd", "scripts/main.gd:443"], "boucle": True, "couche": layer,
             "fichier": "assets/music/%s.wav" % base, "groupe": reg,
         }, f)
