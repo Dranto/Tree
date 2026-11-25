@@ -1,0 +1,122 @@
+{
+  "bpm": 240.0,
+  "bar_beats": 4,
+  "debut": 0.0,
+  "source": "src.wav",
+  "sections": {
+    "intro": {
+      "mesures": [
+        1,
+        2
+      ]
+    },
+    "boucle_1": {
+      "mesures": [
+        3,
+        4
+      ],
+      "saut_avant": 0.0235,
+      "spectre_avant_db": 0.86,
+      "saut_apres": 0.0157,
+      "spectre_apres_db": 4.34,
+      "saut_naturel": 0.0157,
+      "spectre_naturel_db": 5.37,
+      "saut_ogg": 0.3566
+    },
+    "drop_1": {
+      "mesures": [
+        6,
+        6
+      ],
+      "saut_entree": 0.0
+    },
+    "boucle_2": {
+      "mesures": [
+        7,
+        8
+      ],
+      "saut_avant": 0.0391,
+      "spectre_avant_db": 1.0,
+      "saut_apres": 0.0313,
+      "spectre_apres_db": 4.88,
+      "saut_naturel": 0.0313,
+      "spectre_naturel_db": 7.17,
+      "saut_ogg": 0.3246
+    },
+    "drop_2": {
+      "mesures": [
+        9,
+        9
+      ],
+      "saut_entree": 0.0
+    },
+    "boucle_3": {
+      "mesures": [
+        10,
+        11
+      ],
+      "saut_avant": 0.0547,
+      "spectre_avant_db": 0.46,
+      "saut_apres": 0.0469,
+      "spectre_apres_db": 5.21,
+      "saut_naturel": 0.0469,
+      "spectre_naturel_db": 7.65,
+      "saut_ogg": 0.0443
+    },
+    "fin": {
+      "mesures": [
+        12,
+        12
+      ],
+      "saut_entree": 0.0
+    }
+  },
+  "clips": {
+    "intro": {
+      "fichier": "test/intro.ogg",
+      "sections": [
+        "intro",
+        "boucle_1"
+      ],
+      "mesures": 4,
+      "boucle": true,
+      "echantillons": 176400,
+      "decalage_ech": 0,
+      "boucle_depuis": 2
+    },
+    "drop_1": {
+      "fichier": "test/drop_1.ogg",
+      "sections": [
+        "drop_1",
+        "boucle_2"
+      ],
+      "mesures": 3,
+      "boucle": true,
+      "echantillons": 132300,
+      "decalage_ech": 0,
+      "boucle_depuis": 1
+    },
+    "drop_2": {
+      "fichier": "test/drop_2.ogg",
+      "sections": [
+        "drop_2",
+        "boucle_3"
+      ],
+      "mesures": 3,
+      "boucle": true,
+      "echantillons": 132300,
+      "decalage_ech": 0,
+      "boucle_depuis": 1
+    },
+    "fin": {
+      "fichier": "test/fin.ogg",
+      "sections": [
+        "fin"
+      ],
+      "mesures": 1,
+      "boucle": false,
+      "echantillons": 44100,
+      "decalage_ech": 0
+    }
+  }
+}

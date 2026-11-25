@@ -1,0 +1,15 @@
+# Fiche de repères proposée pour breakcore.mp3 (Flétrissure, boss final)
+# Analyse automatique du 25/11 ; mesures de 1,333 s, la mesure 1 commence à 0,026 s (délai de l'encodeur MP3).
+bpm: 180
+mesure: 4/4
+debut: 0.026        # secondes, premier temps de la mesure 1
+intro: 9-16         # la montée seule (10,7 s) : descente et invocation (25/11 : Antoine retire les
+                    # mesures 1-8, la partie grave qui remonte d'une octave en 9)
+boucle_1: 17-32     # batterie pleine, 16 mesures
+drop_1: 45-48       # 2 mesures sans batterie ni basse, puis 2 mesures de fill (5,3 s)
+boucle_2: 49-72     # batterie pleine, 24 mesures
+drop_2: 77-80       # même drop que drop_1 (5,3 s) : couvre pause 1,5 s + transformation 3,6 s
+boucle_3: 81-120    # batterie pleine, 40 mesures
+fin: 121-128         # même matière que 33-40 ; le fichier s’arrête net après la mesure 128
+# Non utilisé : 1-8 (intro grave), 33-44 et 73-76 (partie plus légère avant chaque drop).
+fin_fondu: 2        # le fichier s'arrête net : fondu de sortie sur les 2 dernières mesures
