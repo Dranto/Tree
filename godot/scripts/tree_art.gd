@@ -731,3 +731,102 @@ static func bloom(c: CanvasItem, p: Vector2, r: float, col: Color, k: float, pet
 		var sf := clampf(1.0 - k * 1.1, 0.0, 1.0)
 		c.draw_line(q - d * r * 0.5 * sf, q, Color(light, 0.5 * sf), maxf(1.5, w))
 		c.draw_circle(q, r * 0.1 * (0.6 + h), Color(light, 0.95 * sf))
+
+
+## Grande fleur d'un nœud clé, d'une maîtrise ou d'une mutation (k de 0 à 1) : deux couronnes de
+## feuilles qui s'ouvrent l'une après l'autre, un cœur qui flambe, une onde qui s'étend dans l'écran.
+## « reduced » : moins de feuilles (Réglages › Réduire les effets).
+static func flower(c: CanvasItem, p: Vector2, r: float, col: Color, k: float, petals: int, w: float, key: int, reach: float, reduced := false) -> void:
+	var light := col.lerp(Color.WHITE, 0.5)
+	var open := Anim.ease_out(minf(k * 1.5, 1.0))
+	var late := Anim.ease_out(clampf((k - 0.12) / 0.6, 0.0, 1.0))
+	var fade := 1.0 - maxf(0.0, k - 0.5) / 0.5
+	var n := maxi(petals / 3, 4) if reduced else petals
+	# Le cœur se gonfle puis flambe.
+	var swell := Anim.pop(minf(k * 2.5, 1.0))
+	c.draw_circle(p, r * (1.1 + 0.6 * swell), Color(light, 0.5 * Anim.flash(k * 1.3)))
+	c.draw_circle(p, r * 0.95, Color(Color.WHITE, 0.8 * Anim.flash(k * 2.4)))
+	# Deux ondes : une courte et vive, une large qui part dans l'arbre.
+	c.draw_arc(p, r * (1.0 + 2.0 * open), 0.0, TAU, 48, Color(light, 0.9 * (1.0 - k)), maxf(3.5, 3.5 * w) * (1.0 - 0.6 * k))
+	c.draw_arc(p, r * (1.0 + reach * Anim.ease_out(k)), 0.0, TAU, 64, Color(col, 0.55 * (1.0 - k) * (1.0 - k)), maxf(2.0, 2.5 * w) * (1.0 - 0.7 * k))
+	# Couronne extérieure (grandes feuilles), puis couronne intérieure (petites, en sens inverse).
+	for j in n:
+		var a := TAU * j / n + k * 0.7
+		var d := Vector2.from_angle(a)
+		Art._leaf(c, p + d * r * (1.0 + 2.1 * open), r * (0.35 + 0.5 * open), a, Color(light, 0.8 * fade))
+	if not reduced:
+		for j in n:
+			var a := TAU * (j + 0.5) / n - k * 0.5
+			var d := Vector2.from_angle(a)
+			Art._leaf(c, p + d * r * (0.8 + 1.2 * late), r * (0.22 + 0.3 * late), a, Color(col.lerp(Color.WHITE, 0.2), 0.85 * fade))
+	# Graines lumineuses projetées.
+	var seeds := 6 if reduced else 16
+	for j in seeds:
+		var h := fposmod(sin((key + j) * 12.9898) * 43758.5453, 1.0)
+		var a := TAU * (j + h * 0.8) / seeds
+		var d := Vector2.from_angle(a)
+		var q := p + d * r * (1.4 + (3.6 + 2.4 * h) * Anim.ease_out(k))
+		var sf := clampf(1.0 - k * 1.05, 0.0, 1.0)
+		c.draw_line(q - d * r * 0.6 * sf, q, Color(light, 0.5 * sf), maxf(1.5, w))
+		c.draw_circle(q, r * 0.12 * (0.6 + h), Color(light, 0.95 * sf))
+
+
+## Contour lumineux d'un nœud (k de 0 à 1) : à la place de l'éclair d'écran quand il est coupé.
+static func contour(c: CanvasItem, p: Vector2, r: float, col: Color, k: float, w: float) -> void:
+	var light := col.lerp(Color.WHITE, 0.5)
+	c.draw_arc(p, r * (1.35 + 0.5 * Anim.ease_out(k)), 0.0, TAU, 40, Color(light, 0.85 * (1.0 - k)), maxf(2.5, 2.5 * w))
+
+
+## Étincelle d'un nœud qui se rallume dans la vague d'une bascule de build (k de 0 à 1) : légère.
+static func glint(c: CanvasItem, p: Vector2, r: float, col: Color, k: float, w: float) -> void:
+	var light := col.lerp(Color.WHITE, 0.5)
+	c.draw_circle(p, r * (1.0 + 0.5 * k), Color(light, 0.5 * Anim.flash(k * 1.4)))
+	c.draw_arc(p, r * (1.0 + 1.6 * Anim.ease_out(k)), 0.0, TAU, 28, Color(light, 0.7 * (1.0 - k)), maxf(2.0, 2.0 * w))
+
+
+## Nœud oublié (k de 0 à 1) : sa lueur se retire, les feuilles tombent et se ternissent, l'anneau
+## se resserre. Rien de brutal : un fanage court, puis plus rien. « reduced » : une seule feuille.
+static func wilt(c: CanvasItem, p: Vector2, r: float, col: Color, k: float, w: float, key: int, reduced := false) -> void:
+	var ash := col.lerp(Color(0.5, 0.48, 0.44), Anim.ease_out(minf(k * 1.6, 1.0)))
+	var fade := 1.0 - Anim.ease_in(k)
+	c.draw_circle(p, r * (1.0 - 0.3 * k), Color(ash, 0.35 * fade))
+	c.draw_arc(p, r * (1.5 - 0.5 * Anim.ease_out(k)), 0.0, TAU, 32, Color(ash, 0.6 * fade), maxf(2.0, 2.0 * w))
+	for j in (1 if reduced else 4):
+		var h := fposmod(sin((key + j) * 78.233) * 43758.5453, 1.0)
+		var a := TAU * (j + h * 0.5) / 4.0
+		var drop := r * 2.2 * k * k
+		var q := p + Vector2.from_angle(a) * r * (0.9 + 0.6 * k) + Vector2(0.0, drop)
+		Art._leaf(c, q, r * 0.32, a + k * 2.0 * (h - 0.5), Color(ash, 0.8 * fade))
+
+
+## Racines qui poussent d'un emplacement de la couronne (k de 0 à 1), en pixels d'écran : des brins
+## qui descendent en serpentant et se divisent, tête lumineuse.
+static func roots(c: CanvasItem, p: Vector2, size: float, col: Color, k: float, count: int, key: int) -> void:
+	var grow := Anim.ease_out(minf(k * 1.25, 1.0))
+	var fade := 1.0 - maxf(0.0, k - 0.7) / 0.3
+	for j in count:
+		var h := fposmod(sin((key * 7 + j) * 12.9898) * 43758.5453, 1.0)
+		var base := PI * (0.12 + 0.76 * (float(j) + 0.5) / float(count)) + (h - 0.5) * 0.25
+		var pts := PackedVector2Array()
+		var steps := 10
+		var len := size * (0.7 + 0.6 * h)
+		var cur := p
+		var dir := base
+		pts.append(cur)
+		for s in steps:
+			if float(s) / steps > grow:
+				break
+			dir += sin(float(s) * 1.3 + h * 6.0) * 0.28
+			cur += Vector2.from_angle(dir) * len / steps
+			pts.append(cur)
+		if pts.size() >= 2:
+			c.draw_polyline(pts, Color(col.darkened(0.25), 0.9 * fade), 2.4, true)
+			c.draw_polyline(pts, Color(col.lightened(0.15), 0.55 * fade), 1.0, true)
+			if grow < 1.0:
+				c.draw_circle(pts[pts.size() - 1], 2.6, Color(col.lerp(Color.WHITE, 0.6), 0.9 * fade))
+			# Une radicelle au milieu.
+			if pts.size() > 5:
+				var m: Vector2 = pts[pts.size() / 2]
+				var side := Vector2.from_angle(base + (1.0 if j % 2 == 0 else -1.0) * 0.9)
+				c.draw_line(m, m + side * size * 0.28 * grow, Color(col.darkened(0.2), 0.8 * fade), 1.4, true)
+	c.draw_arc(p, 15.0 + 8.0 * Anim.ease_out(k), 0.0, TAU, 32, Color(col.lerp(Color.WHITE, 0.4), 0.7 * (1.0 - k)), 2.0)

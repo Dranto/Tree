@@ -19,6 +19,7 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const Content = preload("res://scripts/content.gd")
 const Effects = preload("res://scripts/effects.gd")
 const GraftPickup = preload("res://scripts/graft_pickup.gd")
+const TreeArt = preload("res://scripts/tree_art.gd")
 
 const DIM := Color(0.731, 0.683, 0.574)
 const PLAN := Color("f2d06b")
@@ -51,6 +52,10 @@ var _grid: GridContainer
 var _detail: VBoxContainer
 var _hint: Label
 var _seen := 0
+## Jalon Éclat G : racines qui poussent de l'emplacement où l'on vient de poser une greffe
+## (emplacement → temps écoulé) ; greffes de la couronne à la dernière image.
+var _roots := {}
+var _last_crown: Array = []
 
 
 ## La couronne : anneau de vrille et emplacements, dessinés par le code.
@@ -149,6 +154,15 @@ class CrownView extends Control:
 		var f := UiTheme.font(true)
 		var txt := "%d / %d" % [Game.placed_grafts().size(), open]
 		UiTheme.draw_text(self, f, c + Vector2(-60, 7), txt, HORIZONTAL_ALIGNMENT_CENTER, 120, 20, UiTheme.GOLD, 4)
+		# Une greffe qui vient d'être posée s'enracine : des racines poussent de son emplacement.
+		var rcfg: Dictionary = Content.feel().get("tree", {}).get("roots", {})
+		var dur := float(rcfg.get("time", 1.1))
+		var count := int(rcfg.get("count", 7))
+		if Settings.reduce_effects:
+			count = maxi(count / 3, 2)
+		for slot in panel._roots:
+			if slot < pts.size():
+				TreeArt.roots(self, pts[slot], float(rcfg.get("size", 34.0)), UiTheme.LEAF, panel._roots[slot] / dur, count, slot)
 
 	## Emplacement encore fermé : un bourgeon clos, cerclé d'un filet pointillé.
 	func _draw_bud(p: Vector2) -> void:
@@ -328,6 +342,8 @@ func _ready() -> void:
 	if ui != null and ui.has_signal("toggled"):
 		ui.toggled.connect(_on_tree_toggled)
 	_seen = _seen_slots()
+	for i in Game.crown_size():
+		_last_crown.append(Game.graft_of(i))
 	refresh()
 
 
@@ -335,8 +351,15 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	t += delta
-	# Seul un emplacement neuf (qui luit) demande un dessin à chaque image.
-	if _seen < Game.crown_size():
+	# Seul un emplacement neuf (qui luit) ou une racine qui pousse demande un dessin à chaque image.
+	if not _roots.is_empty():
+		var dur := float(Content.feel().get("tree", {}).get("roots", {}).get("time", 1.1))
+		for slot in _roots.keys():
+			_roots[slot] += delta
+			if _roots[slot] >= dur:
+				_roots.erase(slot)
+		crown_view.queue_redraw()
+	elif _seen < Game.crown_size():
 		crown_view.queue_redraw()
 
 
@@ -460,6 +483,15 @@ func refresh() -> void:
 		_hint.text = (Loc.t("%s sur une greffe pour la prendre, puis sur un emplacement libre.") % a_name) if pad else Loc.t("Glisse une greffe dans un emplacement libre de la couronne.")
 	else:
 		_hint.text = (Loc.t("%s sur un emplacement : retire sa greffe.") % Settings.pad_name_of(JOY_BUTTON_X)) if pad else Loc.t("Clic sur un emplacement : retire sa greffe.")
+	# Une greffe posée dans un emplacement (et pas déjà là à la dernière image) s'y enracine.
+	var now: Array = []
+	for i in open:
+		now.append(Game.graft_of(i))
+	if is_visible_in_tree():
+		for i in now.size():
+			if now[i] != "" and (i >= _last_crown.size() or _last_crown[i] != now[i]):
+				_roots[i] = 0.0
+	_last_crown = now
 	crown_view.queue_redraw()
 	_refresh_detail()
 

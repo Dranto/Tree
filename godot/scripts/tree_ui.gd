@@ -167,6 +167,23 @@ const SAP_FLOW := 0.32
 const SAP_STAGGER := 0.14
 var _bloom_from := {}
 var _bloom_queue := 0.0
+## Jalon Éclat G (data/feel.json › tree). Nœuds clés, maîtrises et mutations qui s'ouvrent en grande
+## fleur ; nœuds oubliés qui se fanent (identifiant → temps écoulé, négatif tant qu'il attend la
+## vague) et voisin vers lequel la sève reflue ; étincelles de la vague d'une bascule de build ;
+## contours lumineux (à la place de l'éclair quand il est coupé) ; éclair d'écran doux.
+var _big := {}
+var _wilts := {}
+var _wilt_to := {}
+var _glints := {}
+var _contours := {}
+var _wave := -1.0
+var _flash_k := 0.0
+var _flash_col := Color.WHITE
+var _flash_times: Array = []
+var _prev_owned := {}
+var _switching := false
+var _diff := {"added": [], "removed": []}
+var _diff_queued := false
 ## Lien entre deux nœuds : Vector2i(petit, grand) → indice du lien.
 var _edge_index := {}
 ## Squelette de l'arbre (TreeArt.skeleton) : quels liens sont des branches, et leur poids.
@@ -336,6 +353,7 @@ func _ready() -> void:
 	add_child(pad)
 	Game.tree_changed.connect(_on_tree_changed)
 	Game.node_allocated.connect(_on_node_allocated)
+	Game.build_switched.connect(func(_i): _switching = true)
 	resized.connect(_on_resized)
 
 
@@ -395,6 +413,7 @@ func toggle() -> void:
 		_open = 0.0 if play_intro and not Settings.reduce_effects else 1.0
 		_world.modulate.a = 1.0
 		_blooms.clear()
+		_clear_effects()
 		_invalidate()
 		_view_changed(true)
 		_redraw_all()
@@ -491,10 +510,15 @@ func _process(delta: float) -> void:
 	_update_cache()
 	_hover_since += delta
 	for id in _blooms.keys():
+		var before: float = _blooms[id]
 		_blooms[id] += delta
-		if _blooms[id] >= BLOOM_DUR:
+		if before < 0.0 and _blooms[id] >= 0.0 and _big.has(id):
+			_flower_burst(id)
+		if _blooms[id] >= _bloom_dur(id):
 			_blooms.erase(id)
 			_bloom_from.erase(id)
+			_big.erase(id)
+	_step_effects(delta)
 	_bloom_queue = maxf(0.0, _bloom_queue - delta)
 	if _intro < TreeArt.INTRO_DUR:
 		_intro += delta
@@ -776,6 +800,7 @@ func _refresh_states() -> void:
 			var na: Dictionary = Game.tree.nodes[e.x]
 			var nb: Dictionary = Game.tree.nodes[e.y]
 			_sap.append([i, na["pos"].length_squared() > nb["pos"].length_squared(), fposmod(float(i) * 0.6180339, 1.0)])
+	_track_changes()
 
 
 ## Vrai si le nœud est un nœud flétri encore couvert de cendre.
@@ -822,6 +847,8 @@ func _on_node_allocated(node: Dictionary) -> void:
 		_bloom_queue += SAP_STAGGER
 	elif visible:
 		_blooms[node["id"]] = 0.0
+	if visible and not Settings.reduce_effects and node["type"] in BIG_TYPES:
+		_big[node["id"]] = true
 	if visible and not node["choices"].is_empty() and Game.choice_index(node["id"]) < 0:
 		_choice_queue.append(node["id"])
 		_next_choice.call_deferred()
@@ -1545,6 +1572,7 @@ func _draw_life(c: CanvasItem) -> void:
 				TreeArt.embers(c, n["pos"], _radius(n, zoom), t, id)
 	_draw_sap(c)
 	_draw_blooms(c)
+	_draw_effects(c, view)
 	_draw_test_marks(c, "life", 3.0 / zoom)
 	# Ouverture : une onde de sève part de la graine et parcourt l'arbre.
 	if _intro < TreeArt.INTRO_DUR:
@@ -1608,8 +1636,210 @@ func _draw_blooms(c: CanvasItem) -> void:
 					var reversed: bool = tree.edges[ei].x == id
 					TreeArt.sap_drop(c, _curve_at(ei, Anim.ease_in_out(u), reversed), _curve_at(ei, maxf(Anim.ease_in_out(u) - 0.2, 0.0), reversed), col, maxf(6.0, 2.5 / zoom))
 			continue
+		if _big.has(id):
+			var cfg := _cfg("flower")
+			TreeArt.flower(c, n["pos"], _radius(n, zoom), col, k / _bloom_dur(id), int(cfg.get("petals", 14)), 1.0 / zoom, id, float(cfg.get("reach", 9.0)), Settings.reduce_effects)
+			continue
 		var petals := 6 if n["type"] == "small" else (8 if n["type"] == "notable" else 10)
 		TreeArt.bloom(c, n["pos"], _radius(n, zoom), col, k / BLOOM_DUR, petals, 1.0 / zoom, id)
+
+
+# --- Apprendre, oublier, recomposer (jalon Éclat G) ---
+
+const BIG_TYPES := ["keystone", "mastery", "mutation"]
+
+
+func _cfg(section: String) -> Dictionary:
+	return Content.feel().get("tree", {}).get(section, {})
+
+
+## Durée de l'éclosion d'un nœud : plus longue pour la grande fleur.
+func _bloom_dur(id: int) -> float:
+	return float(_cfg("flower").get("time", 1.5)) if _big.has(id) else BLOOM_DUR
+
+
+## Vrai s'il reste une animation à jouer (les tests attendent qu'elle finisse).
+func effects_active() -> bool:
+	return not (_blooms.is_empty() and _wilts.is_empty() and _glints.is_empty() and _contours.is_empty()) or _wave >= 0.0 or _flash_k > 0.0 or _diff_queued
+
+
+func _clear_effects() -> void:
+	_big.clear()
+	_wilts.clear()
+	_wilt_to.clear()
+	_glints.clear()
+	_contours.clear()
+	_wave = -1.0
+	_flash_k = 0.0
+	_flash_times.clear()
+	_diff = {"added": [], "removed": []}
+	_switching = false
+
+
+## Début de la grande fleur : éclair d'écran doux (jamais plus de « flash_per_second » par seconde),
+## ou, s'il est coupé (Réglages) ou déjà trop fréquent, un simple contour lumineux autour du nœud.
+func _flower_burst(id: int) -> void:
+	var cfg := _cfg("flower")
+	_flash_times = _flash_times.filter(func(x): return t - x < 1.0)
+	if Settings.flash_strength() > 0.0 and _flash_times.size() < int(cfg.get("flash_per_second", 3)):
+		_flash_times.append(t)
+		_flash_k = 1.0
+		_flash_col = Game.tree.node_color(Game.tree.nodes[id]).lerp(Color.WHITE, 0.6)
+	else:
+		_contours[id] = 0.0
+
+
+func _step_effects(delta: float) -> void:
+	if _flash_k > 0.0:
+		_flash_k = maxf(0.0, _flash_k - delta / maxf(float(_cfg("flower").get("flash_time", 0.4)), 0.05))
+		_overlay.queue_redraw()
+	var wt := float(_cfg("wilt").get("time", 0.9))
+	for id in _wilts.keys():
+		_wilts[id] += delta
+		if _wilts[id] >= wt:
+			_wilts.erase(id)
+			_wilt_to.erase(id)
+	var gt := float(_cfg("recompose").get("glint_time", 0.5))
+	for id in _glints.keys():
+		_glints[id] += delta
+		if _glints[id] >= gt:
+			_glints.erase(id)
+	for id in _contours.keys():
+		_contours[id] += delta
+		if _contours[id] >= 0.6:
+			_contours.erase(id)
+	if _wave >= 0.0:
+		_wave += delta
+		if _wave >= float(_cfg("recompose").get("time", 1.2)) + 0.4:
+			_wave = -1.0
+
+
+## Compare les nœuds appris à ceux d'avant : ce qui a disparu se fane, ce qui est apparu sans passer
+## par node_allocated (bascule de build) s'allume. Le travail se fait une fois par image
+## (call_deferred), quand Game a fini d'émettre (une bascule émet build_switched en dernier).
+func _track_changes() -> void:
+	var now := {}
+	for id in _owned_ids:
+		now[id] = true
+	var added: Array = _diff["added"]
+	var removed: Array = _diff["removed"]
+	for id in now:
+		if not _prev_owned.has(id):
+			added.append(id)
+	for id in _prev_owned:
+		if not now.has(id):
+			removed.append(id)
+	_prev_owned = now
+	if visible and not _diff_queued and not (added.is_empty() and removed.is_empty()):
+		_diff_queued = true
+		_apply_changes.call_deferred()
+	elif not visible:
+		_diff = {"added": [], "removed": []}
+		_switching = false
+
+
+func _apply_changes() -> void:
+	_diff_queued = false
+	var added: Array = _diff["added"]
+	var removed: Array = _diff["removed"]
+	_diff = {"added": [], "removed": []}
+	var switching := _switching
+	_switching = false
+	if not visible:
+		return
+	var tree = Game.tree
+	var rcfg := _cfg("recompose")
+	var wave: bool = switching or added.size() + removed.size() >= int(rcfg.get("wave_min", 12))
+	var reduced := Settings.reduce_effects
+	if wave:
+		var cap := int(rcfg.get("max", 90))
+		if reduced:
+			cap = maxi(cap / 3, 1)
+		var span := float(rcfg.get("time", 1.2))
+		var ext := _extent()
+		var by_dist := func(a, b): return tree.nodes[a]["pos"].length() < tree.nodes[b]["pos"].length()
+		added.sort_custom(by_dist)
+		removed.sort_custom(by_dist)
+		# Une vague part de la graine : chaque nœud réagit quand elle passe, les plus proches d'abord.
+		for pass_i in 2:
+			var list: Array = added if pass_i == 0 else removed
+			var step := maxi(ceili(float(list.size()) / cap), 1)
+			for i in range(0, list.size(), step):
+				var id: int = list[i]
+				var delay := span * clampf(tree.nodes[id]["pos"].length() / ext, 0.0, 1.0)
+				if pass_i == 0:
+					if not _blooms.has(id):
+						_glints[id] = -delay
+				else:
+					_wilts[id] = -delay
+					_wilt_to[id] = -1
+		_wave = 0.0
+		return
+	# Un ou quelques oublis : la sève reflue du nœud vers son voisin le plus proche de la graine, puis il se fane.
+	if reduced:
+		return
+	var wcfg := _cfg("wilt")
+	var order := removed.duplicate()
+	order.sort_custom(func(a, b): return tree.nodes[a]["pos"].length() > tree.nodes[b]["pos"].length())
+	var delay := 0.0
+	for id in order:
+		var to := -1
+		for m in tree.nodes[id]["neighbors"]:
+			if Game.allocated.has(m) and (to < 0 or tree.nodes[m]["pos"].length() < tree.nodes[to]["pos"].length()):
+				to = m
+		_wilts[id] = -delay
+		_wilt_to[id] = to
+		delay = minf(delay + float(wcfg.get("stagger", 0.06)), float(wcfg.get("stagger_max", 0.6)))
+	for id in added:
+		if not _blooms.has(id):
+			_blooms[id] = 0.0
+
+
+func _draw_effects(c: CanvasItem, view: Rect2) -> void:
+	var tree = Game.tree
+	var reduced := Settings.reduce_effects
+	var w := 1.0 / zoom
+	var wcfg := _cfg("wilt")
+	var wt := float(wcfg.get("time", 0.9))
+	var flow := float(wcfg.get("flow", 0.35))
+	for id in _wilts:
+		var e: float = _wilts[id]
+		if e < 0.0:
+			# Le nœud oublié est déjà éteint dans la couche fixe : il garde sa lueur jusqu'à la vague.
+			e = 0.0
+		var n: Dictionary = tree.nodes[id]
+		if not view.has_point(n["pos"]):
+			continue
+		var k := e / wt
+		var col: Color = tree.node_color(n)
+		var to: int = _wilt_to.get(id, -1)
+		if to >= 0 and k < flow:
+			var ei: int = _edge_index.get(Vector2i(mini(id, to), maxi(id, to)), -1)
+			if ei >= 0:
+				var u := Anim.ease_in_out(k / flow)
+				var reversed: bool = tree.edges[ei].y == id
+				TreeArt.sap_drop(c, _curve_at(ei, u, reversed), _curve_at(ei, maxf(u - 0.2, 0.0), reversed), col, maxf(6.0, 2.5 / zoom))
+		TreeArt.wilt(c, n["pos"], _radius(n, zoom), col, k, w, id, reduced)
+	for id in _glints:
+		var e: float = _glints[id]
+		if e < 0.0:
+			continue
+		var n: Dictionary = tree.nodes[id]
+		if view.has_point(n["pos"]):
+			TreeArt.glint(c, n["pos"], _radius(n, zoom), tree.node_color(n), e / float(_cfg("recompose").get("glint_time", 0.5)), w)
+	for id in _contours:
+		var n: Dictionary = tree.nodes[id]
+		if view.has_point(n["pos"]):
+			TreeArt.contour(c, n["pos"], _radius(n, zoom), tree.node_color(n), _contours[id] / 0.6, w)
+	if _wave >= 0.0:
+		var span := float(_cfg("recompose").get("time", 1.2))
+		var k := minf(_wave / span, 1.0)
+		var rr := _extent() * Anim.ease_out(k)
+		var fade := 1.0 - maxf(0.0, _wave - span) / 0.4
+		var col := Art.ec("seve", "clair")
+		c.draw_arc(Vector2.ZERO, rr, 0.0, TAU, 96, Color(col, 0.5 * (1.0 - k * 0.6) * fade), maxf(4.0, 12.0 / zoom))
+		if not reduced:
+			c.draw_arc(Vector2.ZERO, rr * 0.92, 0.0, TAU, 96, Color(col, 0.16 * fade), maxf(8.0, 34.0 / zoom))
 
 
 # --- Libellés ---
@@ -1725,6 +1955,10 @@ func _draw_overlay(c: CanvasItem) -> void:
 	c.draw_string(font, Vector2(0, 52), tr("Chaque nœud appris ravive la région du monde située dans sa direction."), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, UiTheme.GOLD)
 	if hover >= 0:
 		_draw_tooltip(c, tree.nodes[hover], _states.get(hover, _state(hover)))
+	if _flash_k > 0.0:
+		# Éclair doux sur l'arbre (sous le bandeau), qui retombe vite.
+		var top := HEADER_H + TOOLBAR_H
+		c.draw_rect(Rect2(0, top, size.x, size.y - top), Color(_flash_col, _flash_k * float(_cfg("flower").get("flash_alpha", 0.14)) * Settings.flash_strength()))
 	_audit_texts()
 
 

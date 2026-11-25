@@ -7778,7 +7778,7 @@ msgstr "Attaque : %s"
 #. scripts/attack.gd:1138
 #. scripts/attack.gd:1299
 #. scripts/skill_tree.gd:1025
-#. scripts/tree_ui.gd:924
+#. scripts/tree_ui.gd:951
 msgid "%s : %s"
 msgstr "%s : %s"
 
@@ -7950,8 +7950,8 @@ msgstr "Esquive"
 #. scripts/controls_text.gd:131
 #. scripts/controls_text.gd:147
 #. scripts/settings.gd:83
-#. scripts/tree_ui.gd:1721
-#. scripts/tree_ui.gd:1756
+#. scripts/tree_ui.gd:1951
+#. scripts/tree_ui.gd:1990
 msgid "Arbre de vie"
 msgstr "Arbre de vie"
 
@@ -8869,61 +8869,61 @@ msgstr ""
 "Près de la graine (anneaux 1 à %d), oublier est gratuit. Plus loin, cela coûte de l'essence, prise sur le niveau en cours (%d en réserve). Au sanctuaire, tout est gratuit.\n"
 "« Nouveau » repart de la graine, « Copier ici » enregistre le build actif."
 
-#. scripts/tree_grafts.gd:435
+#. scripts/tree_grafts.gd:458
 msgid "Couronne de greffes"
 msgstr "Couronne de greffes"
 
-#. scripts/tree_grafts.gd:437
+#. scripts/tree_grafts.gd:460
 msgid "%d trouvée"
 msgid_plural "%d trouvées"
 msgstr[0] "%d trouvée"
 msgstr[1] "%d trouvées"
 
-#. scripts/tree_grafts.gd:458
+#. scripts/tree_grafts.gd:481
 msgid "%s sur un emplacement de la couronne : y poser la greffe."
 msgstr "%s sur un emplacement de la couronne : y poser la greffe."
 
-#. scripts/tree_grafts.gd:458
+#. scripts/tree_grafts.gd:481
 msgid "Clique un emplacement de la couronne pour y poser la greffe."
 msgstr "Clique un emplacement de la couronne pour y poser la greffe."
 
-#. scripts/tree_grafts.gd:460
+#. scripts/tree_grafts.gd:483
 msgid "%s sur une greffe pour la prendre, puis sur un emplacement libre."
 msgstr "%s sur une greffe pour la prendre, puis sur un emplacement libre."
 
-#. scripts/tree_grafts.gd:460
+#. scripts/tree_grafts.gd:483
 msgid "Glisse une greffe dans un emplacement libre de la couronne."
 msgstr "Glisse une greffe dans un emplacement libre de la couronne."
 
-#. scripts/tree_grafts.gd:462
+#. scripts/tree_grafts.gd:485
 msgid "%s sur un emplacement : retire sa greffe."
 msgstr "%s sur un emplacement : retire sa greffe."
 
-#. scripts/tree_grafts.gd:462
+#. scripts/tree_grafts.gd:485
 msgid "Clic sur un emplacement : retire sa greffe."
 msgstr "Clic sur un emplacement : retire sa greffe."
 
-#. scripts/tree_grafts.gd:483
+#. scripts/tree_grafts.gd:515
 msgid "Emplacement fermé"
 msgstr "Emplacement fermé"
 
-#. scripts/tree_grafts.gd:484
+#. scripts/tree_grafts.gd:516
 msgid "Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."
 msgstr "Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."
 
-#. scripts/tree_grafts.gd:507
+#. scripts/tree_grafts.gd:539
 msgid "Posée ici :"
 msgstr "Posée ici :"
 
-#. scripts/tree_grafts.gd:510
+#. scripts/tree_grafts.gd:542
 msgid "Remplace « %s »."
 msgstr "Remplace « %s »."
 
-#. scripts/tree_grafts.gd:513
+#. scripts/tree_grafts.gd:545
 msgid "Posée :"
 msgstr "Posée :"
 
-#. scripts/tree_grafts.gd:516
+#. scripts/tree_grafts.gd:548
 msgid "Retirée :"
 msgstr "Retirée :"
 
@@ -9148,65 +9148,65 @@ msgstr "%s %%"
 msgid "frontière %s"
 msgstr "frontière %s"
 
-#. scripts/tree_ui.gd:1723
-#. scripts/tree_ui.gd:1757
+#. scripts/tree_ui.gd:1953
+#. scripts/tree_ui.gd:1991
 msgid "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds"
 msgstr "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds"
 
-#. scripts/tree_ui.gd:1725
-#. scripts/tree_ui.gd:1759
+#. scripts/tree_ui.gd:1955
+#. scripts/tree_ui.gd:1993
 msgid "Chaque nœud appris ravive la région du monde située dans sa direction."
 msgstr "Chaque nœud appris ravive la région du monde située dans sa direction."
 
-#. scripts/tree_ui.gd:1735
+#. scripts/tree_ui.gd:1969
 msgid "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer"
 msgstr "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer"
 
-#. scripts/tree_ui.gd:1782
+#. scripts/tree_ui.gd:2016
 msgid " · frontière %s et %s · anneau %d"
 msgstr " · frontière %s et %s · anneau %d"
 
-#. scripts/tree_ui.gd:1784
+#. scripts/tree_ui.gd:2018
 msgid " · %s · anneau %d"
 msgstr " · %s · anneau %d"
 
-#. scripts/tree_ui.gd:1806
+#. scripts/tree_ui.gd:2040
 msgid "Transforme « %s » : un seul choix"
 msgstr "Transforme « %s » : un seul choix"
 
-#. scripts/tree_ui.gd:1808
+#. scripts/tree_ui.gd:2042
 msgid "Un bonus à choisir, modifiable à tout moment"
 msgstr "Un bonus à choisir, modifiable à tout moment"
 
-#. scripts/tree_ui.gd:1811
+#. scripts/tree_ui.gd:2045
 msgid "› %s : %s"
 msgstr "› %s : %s"
 
-#. scripts/tree_ui.gd:1812
+#. scripts/tree_ui.gd:2046
 msgid "  (choisi)"
 msgstr "  (choisi)"
 
-#. scripts/tree_ui.gd:1814
+#. scripts/tree_ui.gd:2048
 msgid "Clic pour faire ton choix"
 msgstr "Clic pour faire ton choix"
 
-#. scripts/tree_ui.gd:1816
+#. scripts/tree_ui.gd:2050
 msgid "Clic pour changer de bonus"
 msgstr "Clic pour changer de bonus"
 
-#. scripts/tree_ui.gd:1821
+#. scripts/tree_ui.gd:2055
 msgid "Grappe « %s » : %d / %d nœuds"
 msgstr "Grappe « %s » : %d / %d nœuds"
 
-#. scripts/tree_ui.gd:1823
+#. scripts/tree_ui.gd:2057
 msgid "Grappe complète : %s"
 msgstr "Grappe complète : %s"
 
-#. scripts/tree_ui.gd:1838
+#. scripts/tree_ui.gd:2072
 msgid "Résonance de %s : tous les paliers atteints (%d nœuds)"
 msgstr "Résonance de %s : tous les paliers atteints (%d nœuds)"
 
-#. scripts/tree_ui.gd:1840
+#. scripts/tree_ui.gd:2074
 msgid "Résonance de %s : %d / %d nœuds, puis %s"
 msgstr "Résonance de %s : %d / %d nœuds, puis %s"
 
@@ -9226,31 +9226,31 @@ msgstr "Mutation"
 msgid "Attaque de base"
 msgstr "Attaque de base"
 
-#. scripts/tree_ui.gd:794
+#. scripts/tree_ui.gd:819
 msgid "Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre."
 msgstr "Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre."
 
-#. scripts/tree_ui.gd:804
+#. scripts/tree_ui.gd:829
 msgid "Ce chemin passe par « %s ». %s"
 msgstr "Ce chemin passe par « %s ». %s"
 
-#. scripts/tree_ui.gd:873
+#. scripts/tree_ui.gd:900
 msgid "Choisis comment « %s » se transforme. Le choix tient tant que ce nœud reste appris."
 msgstr "Choisis comment « %s » se transforme. Le choix tient tant que ce nœud reste appris."
 
-#. scripts/tree_ui.gd:875
+#. scripts/tree_ui.gd:902
 msgid "Choisis un bonus. Tu pourras en changer quand tu veux, sans rien dépenser."
 msgstr "Choisis un bonus. Tu pourras en changer quand tu veux, sans rien dépenser."
 
-#. scripts/tree_ui.gd:885
+#. scripts/tree_ui.gd:912
 msgid "   (choix actuel)"
 msgstr "   (choix actuel)"
 
-#. scripts/tree_ui.gd:903
+#. scripts/tree_ui.gd:930
 msgid "Fermer"
 msgstr "Fermer"
 
-#. scripts/tree_ui.gd:903
+#. scripts/tree_ui.gd:930
 msgid "Plus tard"
 msgstr "Plus tard"
 
