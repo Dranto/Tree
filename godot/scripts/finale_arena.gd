@@ -45,6 +45,16 @@ var hold := 0.0
 var armed := false
 ## Floraison du creux après la victoire (0 → 1).
 var bloom := 0.0
+## La floraison part du point où elle est morte (centre du disque de vie qui grandit dans le creux).
+var bloom_from := Vector2.ZERO
+## Remontée animée après la victoire (la fin commence) : portée par un geyser de sève dans le creux,
+## éclair de sève, puis le héros sort de la brèche ; ASCENT_SWITCH : instant du passage (s).
+var ascending := false
+var ascent_t := 0.0
+var _ascent_from := Vector2.ZERO
+const ASCENT := 3.4
+const ASCENT_SWITCH := 1.5
+const ASCENT_RISE := 300.0
 ## Rayon de l'île qui reste après l'effondrement (« arena › radius_collapse »).
 var collapse_radius := 380.0
 ## Effondrement en cours : temps écoulé (-1 : aucun) sur collapse_time.
@@ -53,6 +63,15 @@ var collapse_time := 3.6
 ## Avancée visible de l'effondrement (0 : creux entier, 1 : île au-dessus du gouffre) ; la
 ## floraison le referme après la victoire.
 var collapse_k := 0.0
+## Descente calée sur le morceau de la Flétrissure (boss_sync.gd) : de la brèche au creux pendant la
+## première moitié de l'intro (plongée dans la brèche, éclair de sève, chute lente dans le puits de
+## lumière), puis l'invocation du boss pendant la seconde moitié. La Flétrissure : 8 mesures
+## (10,7 s) à chaque essai ; une fiche qui donne aussi une intro_court la réserve aux essais suivants.
+var descending := false
+## Hauteur (px) d'où le héros tombe dans le puits de lumière.
+const SHAFT_DROP := 520.0
+var _fell := false
+var _last_bar := -1
 
 
 func configure(_id: String) -> void:
@@ -128,6 +147,16 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	if frozen:
+		return
+	if sync != null:
+		sync.tick(delta)
+	if descending:
+		_descent_step()
+		return
+	if ascending:
+		_ascent_step(delta)
+		_life_wave_step(delta)
+		queue_redraw()
 		return
 	var p = main.player
 	var under := holds(p.position)
@@ -235,7 +264,7 @@ func _breach_step(p, delta: float) -> void:
 	if p.position.distance_to(DESCENT) < DESCENT_RADIUS:
 		hold += delta
 		if hold >= DESCENT_HOLD:
-			descend()
+			begin_descent()
 	else:
 		hold = 0.0
 
@@ -267,6 +296,88 @@ func descend() -> void:
 	main.fx.ring(landing(), 12.0, 140.0, 0.8, Color(Art.ec("seve", "clair"), 0.8), 4.0)
 
 
+## Le morceau joue pendant la descente (boss_track.gd suit l'arène dès la brèche).
+func music_on() -> bool:
+	return descending or in_combat()
+
+
+## Entrée dans la brèche, la Flétrissure à combattre : la descente suit l'intro du morceau, et le combat
+## commence à son premier temps de batterie. Sans morceau : la descente d'avant (un fondu).
+func begin_descent() -> void:
+	if state != "ouverte":
+		descend()
+		return
+	sync = BossSync.for_region(region)
+	if sync == null:
+		descend()
+		return
+	var first := defeats == 0 and int(Game.flags.get("stat_finale_essais", 0)) == 0
+	sync.start("intro" if first else "intro_court")
+	descending = true
+	_fell = false
+	_last_bar = -1
+	hold = 0.0
+	armed = false
+	for e in main.enemies:
+		if is_instance_valid(e) and not e is BossBase:
+			e.dead = true
+			e.queue_free()
+	main.enemies = main.enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
+	var p = main.player
+	if p.has_method("clear_destination"):
+		p.clear_destination()
+	p.set_physics_process(false)
+	main.screen_fx.glow(Art.ec("cendre"), 0.4, 1.2)
+
+
+## Mesures de la plongée (la première moitié de l'intro) : dans la brèche, puis dans le puits.
+func _plunge_bars() -> float:
+	return sync.intro_bars * 0.5
+
+
+## Avancée de la descente (0 → 1) ; -1 hors descente.
+func descent_k() -> float:
+	if not descending or sync == null:
+		return -1.0
+	return clampf(sync.bars_now() / _plunge_bars(), 0.0, 1.0)
+
+
+func _descent_step() -> void:
+	var p = main.player
+	p.invuln = maxf(p.invuln, 0.5)
+	var b: float = sync.bars_now()
+	var u := descent_k()
+	# Sur chaque mesure, une onde de lumière (la brèche, puis le puits) : le monde respire avec l'intro.
+	var bi := int(floor(b))
+	if bi != _last_bar:
+		_last_bar = bi
+		var at: Vector2 = DESCENT if not _fell else landing()
+		main.fx.ring(at, 10.0, 90.0 + 70.0 * u, 0.9, Color(Art.ec("seve" if _fell else "cendre", "clair"), 0.55 + 0.3 * u), 4.0)
+	if u < 0.5:
+		# Il s'enfonce dans la brèche : la lueur monte, il s'efface dans la fente.
+		p.position = DESCENT
+		p.modulate.a = 1.0 - smoothstep(0.25, 0.5, u)
+	else:
+		if not _fell:
+			# Éclair de sève : le héros passe sous la graine, sans écran noir.
+			_fell = true
+			_move_player(landing() + Vector2(0.0, -SHAFT_DROP))
+			main.screen_fx.fade(Art.ec("seve", "clair"), 0.85, 0.0, 1.1)
+			main.fx.shake(4.0)
+		var v := clampf((u - 0.5) / 0.5, 0.0, 1.0)
+		p.position = landing() + Vector2(0.0, -SHAFT_DROP * (1.0 - Anim.ease_out(v)))
+		p.modulate.a = smoothstep(0.0, 0.3, v)
+	queue_redraw()
+	if b >= _plunge_bars():
+		# Il touche le fond du puits : la Flétrissure s'éveille pendant la fin de l'intro.
+		descending = false
+		p.modulate.a = 1.0
+		p.position = landing()
+		p.set_physics_process(true)
+		main.fx.ring(landing(), 12.0, 180.0, 0.7, Color(Art.ec("seve", "clair"), 0.9), 5.0)
+		_start_fight()
+
+
 ## Remonte au pied de la graine.
 func _ascend() -> void:
 	hold = 0.0
@@ -285,12 +396,77 @@ func _move_player(at: Vector2) -> void:
 		main.camera.reset_smoothing()
 
 
-## Remonte le joueur au pied de la graine sans annonce (l'épilogue commence, voir quest_ui.gd).
+## Remonte le joueur au pied de la graine (l'épilogue commence, voir quest_ui.gd) : sans coupure,
+## un geyser de sève le soulève dans le creux, un éclair de sève, et il sort de la brèche.
 func bring_up() -> void:
-	if holds(main.player.position):
-		hold = 0.0
-		armed = false
-		_move_player(entrance())
+	if ascending or not holds(main.player.position):
+		return
+	hold = 0.0
+	armed = false
+	ascending = true
+	ascent_t = 0.0
+	var p = main.player
+	_ascent_from = p.position
+	if p.has_method("clear_destination"):
+		p.clear_destination()
+	p.set_physics_process(false)
+	main.fx.ring(_ascent_from, 10.0, 160.0, 0.8, Color(Art.ec("seve", "clair"), 0.9), 5.0)
+	main.screen_fx.glow(Art.ec("seve"), 0.45, 1.4)
+
+
+## Achève la remontée tout de suite (captures, robots pressés).
+func finish_ascent() -> void:
+	if not ascending:
+		return
+	ascending = false
+	var p = main.player
+	_move_player(entrance())
+	p.modulate.a = 1.0
+	p.set_physics_process(true)
+
+
+## Vrai tant que le héros n'est pas encore sorti de la brèche (la fin dans le monde attend).
+func ascent_waiting() -> bool:
+	return ascending and ascent_t < ASCENT_SWITCH
+
+
+## Avancée de la remontée (0 → 1), -1 hors remontée.
+func ascent_k() -> float:
+	return clampf(ascent_t / ASCENT, 0.0, 1.0) if ascending else -1.0
+
+
+func _ascent_step(delta: float) -> void:
+	var p = main.player
+	p.invuln = maxf(p.invuln, 0.5)
+	var before := ascent_t
+	ascent_t += delta
+	_ascent_particles(before)
+	if ascent_t < ASCENT_SWITCH:
+		# Le geyser le soulève, de plus en plus vite, et il se fond dans la lumière.
+		var u := ascent_t / ASCENT_SWITCH
+		p.position = _ascent_from + Vector2(0.0, -ASCENT_RISE * Anim.ease_in(u))
+		p.modulate.a = 1.0 - smoothstep(0.55, 1.0, u)
+		if int(before * 4.0) != int(ascent_t * 4.0):
+			main.fx.ring(_ascent_from, 8.0, 70.0 + 90.0 * u, 0.6, Color(Art.ec("seve", "clair"), 0.8), 3.0 + 3.0 * u)
+		return
+	if before < ASCENT_SWITCH:
+		# Éclair de sève : il passe de sous la graine à la brèche, sans écran noir.
+		_move_player(DESCENT)
+		main.screen_fx.fade(Art.ec("seve", "clair"), 0.85, 0.0, 1.2)
+		main.fx.shake(0.35)
+		for i in 3:
+			main.fx.ring(DESCENT, 12.0, 160.0 + 110.0 * i, 0.7 + 0.25 * i, Color(Art.ec("seve", "clair"), 0.9), 5.0)
+	# Il sort de la fente, porté par la sève, et se pose à côté.
+	var v := clampf((ascent_t - ASCENT_SWITCH) / (ASCENT - ASCENT_SWITCH), 0.0, 1.0)
+	var hop := sin(PI * minf(1.0, v * 1.4)) * 70.0
+	p.position = DESCENT.lerp(entrance(), Anim.ease_in_out(v)) + Vector2(0.0, -hop)
+	p.modulate.a = smoothstep(0.0, 0.35, v)
+	if ascent_t >= ASCENT:
+		ascending = false
+		p.modulate.a = 1.0
+		p.position = entrance()
+		p.set_physics_process(true)
+		main.fx.ring(entrance(), 10.0, 120.0, 0.6, Color(Art.ec("seve", "clair"), 0.8), 4.0)
 
 
 ## La Flétrissure meurt : drapeau, points (« boss › reward »), le creux refleurit. L'épilogue suit
@@ -309,6 +485,8 @@ func boss_defeated() -> void:
 	for i in 4:
 		main.fx.ring(center, 40.0, max_radius * (0.45 + 0.25 * i), 0.9 + 0.4 * i, Color(Art.ec("seve", "clair"), 0.9), 6.0)
 	main.screen_fx.glow(Art.ec("seve"), 0.6, 2.2)
+	bloom_from = boss.anchor if is_instance_valid(boss) else center
+	_prng.seed = 1717
 	life_wave = 0.0
 	bar.hide_bar()
 	main.request_autosave()
@@ -325,6 +503,7 @@ func _life_wave_step(delta: float) -> void:
 	if life_wave < 0.0:
 		return
 	life_wave += delta
+	_life_particles()
 	bloom = clampf(life_wave / 3.0, 0.0, 1.0)
 	# Le creux effondré se referme à mesure qu'il refleurit.
 	collapse_k = minf(collapse_k, 1.0 - bloom)
@@ -347,6 +526,27 @@ func _draw() -> void:
 	if main != null and main.player != null and not holds(main.player.position) and not frozen:
 		return
 	_draw_cave()
+	_draw_life_front()
+	# Remontée : le geyser de sève qui le soulève.
+	if ascending and ascent_t < ASCENT_SWITCH:
+		var u := ascent_t / ASCENT_SWITCH
+		var base := _ascent_from
+		for j in 5:
+			var w := 70.0 * (1.0 - 0.15 * j) * (0.6 + 0.4 * u)
+			var hgt := 200.0 + (ASCENT_RISE + 500.0) * u * (1.0 - 0.1 * j)
+			draw_rect(Rect2(base.x - w * 0.5, base.y - hgt, w, hgt), Color(Art.ec("seve", "clair"), 0.07 + 0.12 * u), true)
+		for i in 24:
+			var f := fposmod(t * (0.7 + 1.2 * u) + i * 0.137, 1.0)
+			draw_circle(base + Vector2((i - 11.5) * 5.0 + 6.0 * sin(t * 3.0 + i), -f * (300.0 + 600.0 * u)), 2.0 + 2.5 * (1.0 - f), Color(Art.ec("seve", "clair"), 0.9 * (1.0 - f)))
+	# Le puits de lumière pendant la chute : des gouttes de sève qui tombent avec le héros.
+	var dk := descent_k()
+	if dk >= 0.5:
+		var top := landing() + Vector2(0.0, -SHAFT_DROP - 200.0)
+		var v := (dk - 0.5) / 0.5
+		draw_rect(Rect2(top.x - 46.0, top.y, 92.0, SHAFT_DROP + 200.0), Color(Art.ec("seve", "clair"), 0.12 * (1.0 - v) + 0.05), true)
+		for i in 18:
+			var f := fposmod(t * 0.5 + i * 0.173, 1.0)
+			draw_circle(top + Vector2((i - 8.5) * 5.5, f * (SHAFT_DROP + 200.0)), 2.5 * (1.0 - f) + 1.0, Color(Art.ec("seve", "clair"), 0.8 * sin(PI * f)))
 
 
 ## La brèche au pied de la graine : une fente sombre entre des racines, d'où monte une lueur de cendre
@@ -376,12 +576,120 @@ func _draw_breach() -> void:
 		var f := fposmod(t * 0.45 + i * 0.17, 1.0)
 		var x := (i - 2.5) * DESCENT_RADIUS * 0.22 + 5.0 * sin(t * 1.3 + i)
 		draw_circle(c + Vector2(x, -f * 60.0), 2.5 * (1.0 - f) + 1.0, Color(Art.ec("seve" if won else "cendre", "clair"), 0.8 * (1.0 - f)))
+	# Descente : une colonne de lueur monte de la fente, de plus en plus haute et vive.
+	var dk := descent_k()
+	if dk >= 0.0 and dk < 0.5:
+		var k := dk / 0.5
+		for j in 5:
+			var w := DESCENT_RADIUS * (0.9 - 0.15 * j)
+			var hgt := 120.0 + 520.0 * k * (1.0 - 0.12 * j)
+			draw_rect(Rect2(c.x - w * 0.5, c.y - hgt, w, hgt), Color(Art.ec("cendre", "clair"), 0.06 + 0.1 * k), true)
+		for i in 14:
+			var f := fposmod(t * 0.8 + i * 0.137, 1.0)
+			draw_circle(c + Vector2((i - 6.5) * 5.0, -f * (200.0 + 400.0 * k)), 2.0 + 2.0 * (1.0 - f), Color(Art.ec("cendre", "clair"), 0.9 * (1.0 - f) * k))
+	# Remontée : un geyser de sève jaillit de la fente et retombe à mesure que le héros se pose.
+	if ascending and ascent_t >= ASCENT_SWITCH:
+		var v := clampf((ascent_t - ASCENT_SWITCH) / (ASCENT - ASCENT_SWITCH), 0.0, 1.0)
+		var k := 1.0 - v * v
+		for j in 5:
+			var w := DESCENT_RADIUS * (1.0 - 0.15 * j)
+			var hgt := (520.0 + 200.0 * v) * (1.0 - 0.12 * j) * k
+			draw_rect(Rect2(c.x - w * 0.5, c.y - hgt, w, hgt), Color(Art.ec("seve", "clair"), 0.08 + 0.12 * k), true)
+		for i in 20:
+			var f := fposmod(t * 1.1 + i * 0.137, 1.0)
+			var spread := (i - 9.5) * 6.0 * (1.0 + f)
+			draw_circle(c + Vector2(spread, -f * 520.0 * k + f * f * 160.0), 2.0 + 2.5 * (1.0 - f), Color(Art.ec("seve", "clair"), 0.9 * (1.0 - f) * k))
 	# L'anneau d'interaction : il se remplit pendant que le joueur s'y tient.
-	if state == "ouverte":
+	if state == "ouverte" and dk < 0.0:
 		var col := Art.c("interactif")
 		draw_arc(c, DESCENT_RADIUS + 10.0, 0.0, TAU, 40, Color(col, 0.25 + 0.2 * pulse), Art.TRAIT_FIN, true)
 		if hold > 0.0 and not holds(main.player.position):
 			draw_arc(c, DESCENT_RADIUS + 10.0, -PI / 2.0, -PI / 2.0 + TAU * clampf(hold / DESCENT_HOLD, 0.0, 1.0), 40, col, Art.TRAIT, true)
+
+
+var _prng := RandomNumberGenerator.new()
+
+
+## Particules du front de vie dans le creux : des lueurs de sève filent sur le front, des pétales
+## éclosent derrière lui, et quelques lueurs rejoignent le héros.
+func _life_particles() -> void:
+	if Settings.reduce_effects or not holds(main.player.position):
+		return
+	var u := clampf(life_wave / 3.0, 0.0, 1.0)
+	if u >= 1.0:
+		return
+	var r := lerpf(20.0, max_radius * 2.0, Anim.ease_out(u))
+	var fx = main.fx
+	for i in 4:
+		var a := _prng.randf() * TAU
+		var at := bloom_from + Vector2.from_angle(a) * r
+		if at.distance_to(center) > max_radius:
+			continue
+		fx.mote(at, Vector2.from_angle(a) * _prng.randf_range(200.0, 420.0), _prng.randf_range(0.25, 0.5), 2.5, Color(Art.ec("seve", "clair"), 0.95))
+		var b := bloom_from + Vector2.from_angle(a + 0.3) * r * _prng.randf_range(0.5, 0.95)
+		if b.distance_to(center) < max_radius:
+			var tint: Color = [Art.ec("seve", "clair"), Art.ec("lumiere", "clair"), Art.ec("vent", "clair"), Art.ec("poison", "clair")][_prng.randi() % 4]
+			fx.petal(b, Vector2(_prng.randf_range(-40.0, 40.0), -_prng.randf_range(60.0, 140.0)), _prng.randf_range(1.2, 2.0), _prng.randf_range(6.0, 9.5), Color(tint, 0.9))
+	if _prng.randf() < 0.5:
+		var a := _prng.randf() * TAU
+		fx.glow_mote(bloom_from + Vector2.from_angle(a) * r * 0.7, Vector2.from_angle(a) * 60.0, 1.6, 3.0, Color(Art.ec("seve", "clair"), 0.9), true)
+
+
+## Particules de la remontée : le geyser crache des gouttes et des pétales qui tourbillonnent autour
+## du héros ; à la sortie de la brèche, une gerbe ; puis la sève qui retombe en pluie autour de lui.
+func _ascent_particles(before: float) -> void:
+	if Settings.reduce_effects:
+		return
+	var fx = main.fx
+	var sap := Art.ec("seve", "clair")
+	var p = main.player
+	if ascent_t < ASCENT_SWITCH:
+		var u := ascent_t / ASCENT_SWITCH
+		for i in 2 + int(4.0 * u):
+			fx.mote(_ascent_from + Vector2(_prng.randf_range(-30.0, 30.0), 0.0), Vector2(_prng.randf_range(-50.0, 50.0), -_prng.randf_range(500.0, 900.0)), _prng.randf_range(0.4, 0.8), _prng.randf_range(2.0, 3.5), Color(sap, 0.95))
+		var a := ascent_t * 9.0
+		for j in 2:
+			var aa := a + PI * j
+			fx.petal(p.position + Vector2(cos(aa) * 60.0, sin(aa) * 30.0), Vector2(-sin(aa) * 160.0, -120.0), 1.0, 7.5, Color(Art.ec("lumiere" if j == 0 else "seve", "clair"), 0.9))
+		return
+	if before < ASCENT_SWITCH:
+		for i in 70:
+			var a := _prng.randf() * TAU
+			var tint: Color = [sap, Art.ec("lumiere", "clair"), Art.ec("vent", "clair"), Art.ec("poison", "clair"), Art.ec("epine", "clair")][i % 5]
+			if i % 2 == 0:
+				fx.petal(DESCENT, Vector2.from_angle(a) * _prng.randf_range(150.0, 520.0) + Vector2(0, -200.0), _prng.randf_range(1.4, 2.6), _prng.randf_range(6.0, 10.0), Color(tint, 0.95))
+			else:
+				fx.mote(DESCENT, Vector2.from_angle(a) * _prng.randf_range(300.0, 800.0), _prng.randf_range(0.3, 0.7), 3.0, Color(sap, 0.95))
+		return
+	var v := clampf((ascent_t - ASCENT_SWITCH) / (ASCENT - ASCENT_SWITCH), 0.0, 1.0)
+	for i in int(5.0 * (1.0 - v)) + 1:
+		var a := -PI / 2.0 + _prng.randf_range(-0.6, 0.6)
+		fx.mote(DESCENT + Vector2(_prng.randf_range(-20.0, 20.0), 0.0), Vector2.from_angle(a) * _prng.randf_range(400.0, 800.0) * (1.0 - 0.5 * v), _prng.randf_range(0.3, 0.6), 2.5, Color(sap, 0.9))
+	if _prng.randf() < 0.6:
+		fx.petal(p.position + Vector2(_prng.randf_range(-120.0, 120.0), -_prng.randf_range(80.0, 200.0)), Vector2(_prng.randf_range(-50.0, 50.0), 20.0), 2.0, _prng.randf_range(6.0, 9.0), Color([sap, Art.ec("lumiere", "clair"), Art.ec("vent", "clair")][_prng.randi() % 3], 0.9))
+
+
+## La vie qui part de là où elle est morte : un disque de sève qui grandit dans le creux, son front
+## lumineux, et des pousses qui naissent derrière lui.
+func _draw_life_front() -> void:
+	if state != "vaincue" or life_wave < 0.0:
+		return
+	var u := clampf(life_wave / 3.0, 0.0, 1.0)
+	var r := lerpf(20.0, max_radius * 2.0, Anim.ease_out(u))
+	var sap := Art.ec("seve", "clair")
+	draw_circle(bloom_from, r, Color(Art.ec("seve"), 0.10 * (1.0 - u)))
+	draw_arc(bloom_from, r, 0.0, TAU, 96, Color(sap, 0.7 * (1.0 - u)), 10.0 * (1.0 - u) + 2.0, true)
+	draw_arc(bloom_from, r * 0.93, 0.0, TAU, 96, Color(sap, 0.3 * (1.0 - u)), 4.0, true)
+	for i in 60:
+		var a := TAU * i / 60.0 + 0.37 * sin(i * 3.7)
+		var d := r * (0.25 + 0.7 * fposmod(i * 0.618, 1.0))
+		var q := bloom_from + Vector2.from_angle(a) * d
+		if q.distance_to(center) > max_radius - 20.0:
+			continue
+		var g := clampf((r - d) / 120.0, 0.0, 1.0)
+		draw_line(q, q + Vector2(-3.0, -10.0) * g, Color(Art.ec("seve"), 0.85), 2.0, true)
+		draw_line(q, q + Vector2(3.0, -12.0) * g, Color(Art.ec("seve"), 0.85), 2.0, true)
+		draw_circle(q + Vector2(0, -12.0 * g), 2.5 * g, Color(sap if i % 3 else Art.ec("lumiere", "clair"), 0.9))
 
 
 const DrawBatch = preload("res://scripts/draw_batch.gd")

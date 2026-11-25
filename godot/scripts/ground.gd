@@ -368,6 +368,12 @@ func _physics_process(delta: float) -> void:
 
 
 ## Le Cœur d'une région a été purifié : la terre morte de la région s'apaise.
+## Purification affichée d'une région (0 → 1), 0 si elle n'existe pas.
+func purified_of(region: String) -> float:
+	var i := _region_ids.find(region)
+	return _purified[i] if i >= 0 else 0.0
+
+
 func set_purified(region: String, value: float) -> void:
 	var i := _region_ids.find(region)
 	if i < 0 or _purified[i] == value:

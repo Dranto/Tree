@@ -15,6 +15,7 @@
 ## rangé avec les ennemis.
 extends Node2D
 
+const BossSync = preload("res://scripts/boss_sync.gd")
 const BossBar = preload("res://scripts/boss_bar.gd")
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
@@ -143,6 +144,8 @@ func _near_view() -> bool:
 func _physics_process(delta: float) -> void:
 	if frozen:
 		return
+	if sync != null:
+		sync.tick(delta)
 	var p = main.player
 	var to: Vector2 = p.position - center
 	var d := to.length()
@@ -182,6 +185,26 @@ func update_bar() -> void:
 	bar.show_bar(Loc.data(boss_name), boss.hp / boss.max_hp, Loc.data(str(phase_names[mini(boss.phase, phase_names.size()) - 1])), bar_color)
 
 
+## Combat calé sur le morceau du boss (boss_sync.gd), s'il en a un ; null sinon.
+var sync = null
+
+
+## Vrai pendant que le morceau du boss joue hors combat (la finale : la descente). Lu par boss_track.gd.
+func music_on() -> bool:
+	return in_combat()
+
+
+## Grille du morceau pour un nouveau combat : celle déjà lancée (descente de la finale), sinon une
+## nouvelle, avec l'intro courte (l'arrivée dans l'arène ne dure que l'invocation).
+func _music_sync():
+	if sync != null and sync.running:
+		return sync
+	sync = BossSync.for_region(region)
+	if sync != null:
+		sync.start("intro_court")
+	return sync
+
+
 func _start_fight() -> void:
 	state = "combat"
 	radius = max_radius
@@ -198,6 +221,12 @@ func _start_fight() -> void:
 	boss.arena = self
 	boss.region = region
 	boss.position = center
+	# Morceau du boss : il émerge pendant l'intro et frappe au premier temps de la première boucle.
+	var s = _music_sync()
+	if s != null:
+		boss.sync = s
+		boss.intro_time = maxf(boss.intro_time, s.left())
+		boss.intro = boss.intro_time
 	main.enemies_layer.add_child(boss)
 	main.enemies.append(boss)
 	main.big_enemies.append(boss)
@@ -219,6 +248,9 @@ func _fight_lost() -> void:
 	defeats += 1
 	state = "ouverte"
 	boss = null
+	if sync != null:
+		sync.stop()
+		sync = null
 	if eclat != null:
 		eclat.clear()
 	radius = max_radius
@@ -231,6 +263,9 @@ func _fight_lost() -> void:
 ## Appelé par la Mère-Ronce quand elle meurt : drapeau, points d'arbre, l'arène refleurit.
 func boss_defeated() -> void:
 	state = "vaincue"
+	if sync != null:
+		sync.stop()
+		sync = null
 	gap_open = 1.0
 	shrinking = false
 	shrink_warn = 0.0

@@ -43,7 +43,7 @@ func step(e, delta: float, dir: Vector2, dist: float, slow: float) -> void:
 func draw_attack(e, k: float, _hit: float) -> void:
 	var ln := float(e.data["dive_dist"])
 	if e.state == "windup":
-		Art.telegraph(e, {"type": "ligne", "de": Vector2.ZERO, "a": e.attack_dir * ln, "largeur": e.radius * 2.2}, k, -1.0, e.t)
+		Art.telegraph(e.gc, {"type": "ligne", "de": Vector2.ZERO, "a": e.attack_dir * ln, "largeur": e.radius * 2.2}, k, -1.0, e.t)
 	elif e.state == "charge":
 		var from: Vector2 = -e.attack_dir * e.travelled
-		Art.telegraph(e, {"type": "ligne", "de": from, "a": from + e.attack_dir * ln, "largeur": e.radius * 2.2}, 1.0, e.travelled / ln, e.t)
+		Art.telegraph(e.gc, {"type": "ligne", "de": from, "a": from + e.attack_dir * ln, "largeur": e.radius * 2.2}, 1.0, e.travelled / ln, e.t)

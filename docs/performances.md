@@ -273,3 +273,22 @@ Options du banc ajoutées : `--bench-kinds=fletri,tireur` (seules ces sortes nai
 Banc en paires (5 tours, machine lente) : develop 58,4 ms (p99 99,5) ; sprites ×4 48,2 ms (p99 79,0).
 Atlas des 30 sortes : 27 Mo à ×2, 59 Mo à ×3, 103 Mo à ×4 ; cuisson 0,8 / 1,4 / 2-3 s (llvmpipe).
 Mesures et recommandation complètes dans la PR.
+
+## Moteur de créatures : rendu cuit par défaut (refonte des personnages, vague 1 A, 25/11)
+
+`scripts/sprite_bake.gd` est devenu le rendu des Flétris (`-- --no-sprites` revient au dessin direct, pour comparer).
+- Une sorte qui a son script `scripts/creature_art/<région>/<id>.gd` (contrat :
+  /mnt/project-files/plans/refonte-persos-contrat-moteur.md) est cuite depuis ce dessin, vue de trois quarts, pieds à
+  0,45 × rayon sous la position ; les autres gardent l'ancien dessin, cuit lissé.
+- Cuisson ×3, suréchantillonnée ×2, en deux passes : une petite pour la place de chaque image (et les doublons, l'ombre
+  relevée), puis une case ajustée par image, rangées par étagères. Marche 12 images, repos 4 et annonce 4 (chacun en trois
+  regards), charge 2, retour 1, frappe 3, coup reçu 2, poses propres (`const CUSTOM`).
+- Quand : sortes communes au démarrage, celles d'une région à son entrée, toute autre à sa première apparition (dessin
+  direct en attendant, une ou deux images). Cache disque `user://sprites/` (zstd), invalidé par une empreinte des scripts
+  de dessin (texte, ou fichier compilé d'un export), d'`art.gd` et des réglages : 30 sortes relues en ~60 ms.
+- Mémoire : 52 Mo pour les 30 sortes aujourd'hui (3 dessinées, ~4 à 9 Mo chacune). Budget de 64 Mo en jeu : au-delà, les
+  atlas qui n'ont pas servi depuis 3 s sont rendus et relus du cache s'ils reviennent ; une sorte vise 3,5 Mo : au-delà elle est cuite moins fin, de ×3 jusqu'à ×2 (`KIND_TARGET`, `MIN_SCALE`), et le test la plafonne à 5 Mo ; `const LOOKS := false` cuit un seul regard pour un dessin qui ne suit pas la cible.
+- Ombres, annonces d'attaque, auras : couche `enemy_ground_layer` sous tous les acteurs (les comportements dessinent sur
+  `e.gc`). Élite : ×1,15, liseré doré (shader), collier de la région au point `NECK`, ou atlas d'élite (`DRAWS_ELITE`).
+- Banc en paires (4 tours, machine lente) : develop 53,5 ms (p99 92,8) ; rendu cuit 48,1 ms (p99 81,6), soit −10 %.
+- `tools/sprites-determinisme.sh` : même empreinte de l'état du jeu avec et sans rendu cuit (graine et pas fixes).
