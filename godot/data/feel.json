@@ -102,20 +102,21 @@
 			"dur": 1.5,
 			"strands": 3,
 			"dots": 14,
-			"leaves": 8
+			"leaves": 10
 		},
 		"graft": {
-			"_doc": "Greffe ramassée : jaillit, tourne autour du héros, le rejoint.",
+			"_doc": "Greffe ramassée : éclosion, vol en comète autour du héros, arrivée (anneau et étincelles).",
 			"rise": 0.35,
-			"orbit": 0.6,
-			"join": 0.3
+			"orbit": 0.7,
+			"join": 0.3,
+			"land": 0.35
 		},
 		"sanctuary": {
 			"_doc": "Sanctuaire ravivé : colonne de lumière qui s'élève, puis retombe en pluie de lueurs.",
 			"dur": 3.6,
 			"height": 280.0,
 			"rise": 0.9,
-			"glints": 26
+			"glints": 36
 		}
 	}
 }

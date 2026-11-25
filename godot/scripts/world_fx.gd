@@ -238,7 +238,7 @@ func _process(delta: float) -> void:
 	traces = traces.filter(func(e): return e["t"] < e["dur"])
 	level_ups = level_ups.filter(func(e): return e["t"] < e["dur"])
 	columns = columns.filter(func(e): return e["t"] < e["dur"])
-	var join_total := float(_gf.get("rise", 0.35)) + float(_gf.get("orbit", 0.6)) + float(_gf.get("join", 0.3))
+	var join_total := float(_gf.get("rise", 0.35)) + float(_gf.get("orbit", 0.6)) + float(_gf.get("join", 0.3)) + float(_gf.get("land", 0.35))
 	graft_flights = graft_flights.filter(func(e): return e["t"] < join_total)
 	if not sprout.is_empty():
 		sprout["t"] += delta
@@ -418,7 +418,7 @@ func _draw_traces() -> void:
 					for k in 7:
 						var s := k / 6.0 - 0.5
 						pts.append(pos + d * s * len + n * (off + 5.0 * (1.0 - 4.0 * s * s)))
-					_b.draw_polyline(pts, Color(dark, 0.55 * fade), 2.4 * sz)
+					_b.draw_polyline(pts, Color(dark, 0.7 * fade), 3.0 * sz)
 					for k in pts.size():
 						pts[k] += Vector2(0.0, -1.3)
 					_b.draw_polyline(pts, Color(Art.c("sol_mort").lightened(0.25), 0.28 * fade), 1.1)
@@ -437,18 +437,18 @@ func _draw_traces() -> void:
 				_b.draw_polyline(pts, col, 2.0 * sz)
 			"scorch":
 				var warm := 1.0 - smoothstep(0.0, 0.12, u)
-				_b.draw_colored_polygon(Art.ellipse(pos, 19.0 * sz, 19.0 * sz * 0.55, 14), Color(0.1, 0.07, 0.07, 0.34 * fade))
+				_b.draw_colored_polygon(Art.ellipse(pos, 19.0 * sz, 19.0 * sz * 0.55, 14), Color(0.1, 0.07, 0.07, 0.45 * fade))
 				_b.draw_colored_polygon(Art.ellipse(pos, 11.0 * sz, 11.0 * sz * 0.55, 12), Color(0.05, 0.03, 0.04, 0.3 * fade))
 				if warm > 0.0:
 					_b.draw_colored_polygon(Art.ellipse(pos, 14.0 * sz, 14.0 * sz * 0.55, 12), Color(Art.ec("lumiere", "clair"), 0.45 * warm))
 			"puddle":
-				_b.draw_colored_polygon(Art.ellipse(pos, 18.0 * sz, 18.0 * sz * 0.5, 14), Color(Art.ec("poison"), 0.34 * fade))
+				_b.draw_colored_polygon(Art.ellipse(pos, 18.0 * sz, 18.0 * sz * 0.5, 14), Color(Art.ec("poison"), 0.5 * fade))
 				_b.draw_colored_polygon(Art.ellipse(pos + Vector2(2, 0), 11.0 * sz, 11.0 * sz * 0.5, 12), Color(Art.ec("poison", "clair"), 0.22 * fade))
 				var bub := 1.0 + 0.3 * sin(clock * 4.0 + float(tr["seed"] & 255))
 				_b.draw_circle(pos + Vector2(-6, -1), 1.8 * bub, Color(Art.ec("poison", "clair"), 0.6 * fade))
 				_b.draw_circle(pos + Vector2(7, 1), 1.3 * bub, Color(Art.ec("poison", "clair"), 0.5 * fade))
 			"splat":
-				var col := Color(Art.ec("saignement").darkened(0.15), 0.5 * fade)
+				var col := Color(Art.ec("saignement").darkened(0.15), 0.65 * fade)
 				var r2 := RandomNumberGenerator.new()
 				r2.seed = tr["seed"]
 				for k in 4:
@@ -527,6 +527,17 @@ func _draw_level_up(e: Dictionary) -> void:
 	var sap := Art.ec("seve", "clair")
 	var ink := Art.c("contour")
 	var green := Art.c("decor_vivant").lightened(0.3)
+	# Départ : une onde de sève au sol et des feuilles qui jaillissent en cercle.
+	if T < 0.4:
+		var u := T / 0.4
+		var f := 1.0 - u
+		var ring := Art.ellipse(feet, r * (1.2 + 3.6 * Anim.ease_out(u)), r * (1.2 + 3.6 * Anim.ease_out(u)) * 0.4, 28)
+		ring.append(ring[0])
+		_ob.draw_polyline(ring, Color(sap, 0.85 * f), 1.5 + 3.0 * f)
+		for i in _qty(8):
+			var a := TAU * i / 8.0 + 0.4
+			var q := feet + Vector2(cos(a), sin(a) * 0.4) * r * (1.0 + 3.0 * Anim.ease_out(u)) + Vector2(0.0, -16.0 * sin(u * PI))
+			_ob.draw_colored_polygon(Flora.DecorTree.leaf_shape(q, 9.0 * f + 3.0, a + PI / 2.0), Color(green, f))
 	for s in strands:
 		var prev := Vector2.INF
 		for i in dots:
@@ -540,8 +551,8 @@ func _draw_level_up(e: Dictionary) -> void:
 			var col := sap.lerp(Art.c("butin"), 0.25 * u)
 			col.a = minf(1.0, u * 1.4) * fade
 			if prev != Vector2.INF:
-				_ob.draw_line(prev, q, Color(ink, 0.4 * col.a), 1.5 + 3.4 * u + 2.0)
-				_ob.draw_line(prev, q, col, 1.5 + 3.4 * u)
+				_ob.draw_line(prev, q, Color(ink, 0.4 * col.a), 2.5 + 4.6 * u + 2.0)
+				_ob.draw_line(prev, q, col, 2.5 + 4.6 * u)
 			if i % 5 == 3 and u > 0.3:
 				var la := ang + PI / 2.0
 				_ob.draw_colored_polygon(Flora.DecorTree.leaf_shape(q, 8.0, la), Color(green, fade * 0.95))
@@ -587,23 +598,68 @@ func _graft_pos(e: Dictionary, t: float) -> Vector2:
 	return orb.lerp(chest, j)
 
 
-## Greffe qui vole : le médaillon de la greffe (même dessin qu'au sol) et une traînée d'or.
+## Greffe qui vole. Éclosion : un anneau d'or et des rayons là où elle était. Vol : une comète (queue
+## effilée aux couleurs de la greffe, halo, étoile qui tourne) portant son médaillon. Arrivée : un anneau
+## et des étincelles sur le héros, qui s'illumine un instant.
 func _draw_graft(ci: CanvasItem, e: Dictionary) -> void:
 	var g: Dictionary = Content.grafts().get(e["id"], {})
 	var col := Color(str(g.get("color", "#f2d06b")))
-	var total := float(_gf.get("rise", 0.35)) + float(_gf.get("orbit", 0.6)) + float(_gf.get("join", 0.3))
+	var bright := col.lerp(Color.WHITE, 0.5)
+	var gold := Art.c("butin")
+	var rise := float(_gf.get("rise", 0.35))
+	var join := float(_gf.get("join", 0.3))
+	var flight := rise + float(_gf.get("orbit", 0.6)) + join
+	var land := float(_gf.get("land", 0.35))
 	var t: float = e["t"]
-	var k := 1.0 - 0.7 * Anim.ease_in(clampf((t - total + float(_gf.get("join", 0.3))) / float(_gf.get("join", 0.3)), 0.0, 1.0))
-	var trail := _qty(5)
-	for i in trail:
-		var tt := maxf(0.0, t - (i + 1) * 0.04)
-		ci.draw_circle(_graft_pos(e, tt), (4.5 - i * 0.6) * k, Color(1.0, 0.86, 0.45, 0.35 - i * 0.05))
-	var pos := _graft_pos(e, t)
-	var s := 1.7 * k
-	ci.draw_circle(pos, 24.0 * 0.5 * s, Color(1.0, 0.86, 0.45, 0.14))
-	ci.draw_circle(pos, 13.5 * 0.7 * s, Color("3a2a1a"))
-	ci.draw_arc(pos, 13.5 * 0.7 * s, 0.0, TAU, 24, Color("f2d06b"), 1.6, true)
-	GraftPickup.draw_shape(ci, str(g.get("shape", "feuille")), pos, 8.5 * 0.75 * s, col)
+	var p = main.player
+	var chest: Vector2 = p.position + Vector2(0.0, -p.radius * 0.5)
+	var start: Vector2 = e["pos"]
+	# Éclosion.
+	if t < rise + 0.15:
+		var u := t / (rise + 0.15)
+		var f := 1.0 - u
+		ci.draw_arc(start, 8.0 + 38.0 * Anim.ease_out(u), 0.0, TAU, 32, Color(gold, 0.85 * f), 1.0 + 3.0 * f, true)
+		for i in _qty(8):
+			var d := Vector2.from_angle(TAU * i / 8.0 + 0.3)
+			ci.draw_line(start + d * (10.0 + 12.0 * u), start + d * (16.0 + 30.0 * Anim.ease_out(u)), Color(bright, 0.9 * f), 2.0, true)
+	if t < flight:
+		var shrink := 1.0 - 0.65 * Anim.ease_in(clampf((t - (flight - join)) / join, 0.0, 1.0))
+		# Queue de comète : segments de plus en plus fins et pâles.
+		var n := _qty(16)
+		var prev: Vector2 = _graft_pos(e, t)
+		for i in n:
+			var tt := t - (i + 1) * 0.022
+			if tt < 0.0:
+				break
+			var q: Vector2 = _graft_pos(e, tt)
+			var f := 1.0 - float(i + 1) / (n + 1)
+			var c := bright.lerp(gold, 1.0 - f)
+			ci.draw_line(prev, q, Color(Art.c("contour"), 0.25 * f), 9.0 * f * shrink + 2.0, true)
+			ci.draw_line(prev, q, Color(c, 0.9 * f), 7.0 * f * shrink + 1.0, true)
+			prev = q
+		var pos: Vector2 = _graft_pos(e, t)
+		var sc := 1.9 * shrink
+		var pulse := 0.5 + 0.5 * sin(t * 18.0)
+		ci.draw_circle(pos, 19.0 * sc * 0.6, Color(bright, 0.16 + 0.1 * pulse))
+		ci.draw_circle(pos, 13.0 * sc * 0.6, Color(gold, 0.3))
+		ci.draw_circle(pos, 10.5 * sc * 0.6, Color(0.14, 0.09, 0.05, 0.95))
+		ci.draw_arc(pos, 10.5 * sc * 0.6, 0.0, TAU, 24, gold, 1.8, true)
+		GraftPickup.draw_shape(ci, str(g.get("shape", "feuille")), pos, 9.0 * sc * 0.6, col)
+		# Étoile à quatre branches qui tourne.
+		for i in 4:
+			var d := Vector2.from_angle(t * 5.0 + TAU * i / 4.0)
+			var len := (17.0 if i % 2 == 0 else 11.0) * sc * 0.6 * (0.8 + 0.4 * pulse)
+			ci.draw_line(pos + d * 6.0 * sc * 0.6, pos + d * len, Color(1.0, 1.0, 0.9, 0.85), 1.6, true)
+	# Arrivée : anneau, étincelles et lueur sur le héros.
+	var lt := t - (flight - 0.05)
+	if lt > 0.0 and lt < land + 0.05:
+		var u := lt / (land + 0.05)
+		var f := 1.0 - u
+		ci.draw_circle(chest, 24.0 * f, Color(bright, 0.3 * f))
+		ci.draw_arc(chest, 8.0 + 34.0 * Anim.ease_out(u), 0.0, TAU, 32, Color(gold, 0.9 * f), 1.0 + 3.5 * f, true)
+		for i in _qty(8):
+			var d := Vector2.from_angle(TAU * i / 8.0 + 0.5)
+			ci.draw_circle(chest + d * (10.0 + 30.0 * Anim.ease_out(u)), 2.6 * f + 0.6, Color(bright if i % 2 == 0 else gold, f))
 
 
 ## Colonne de lumière du sanctuaire ravivé : elle s'élève, tient un instant, puis retombe en pluie de lueurs.
@@ -619,17 +675,22 @@ func _draw_column(e: Dictionary) -> void:
 	var sap := Art.ec("seve", "clair")
 	var strength := clampf(Settings.flash_strength(), 0.0, 1.0)
 	if top > 2.0:
-		var w := 20.0 * (1.0 - 0.4 * fall)
+		var w := 28.0 * (1.0 - 0.4 * fall) * (1.0 + 0.06 * sin(t * 9.0))
 		var bot := pos
 		var up := pos + Vector2(0.0, -top)
 		var w_top := w * 0.55
-		var a_bot := 0.5 * strength
+		var a_bot := 0.62 * strength
 		var a_top := 0.04 * strength
 		_otri(bot + Vector2(-w, 0), bot + Vector2(w, 0), up + Vector2(w_top, 0), Color(sap, a_bot), Color(sap, a_bot), Color(sap, a_top))
 		_otri(bot + Vector2(-w, 0), up + Vector2(w_top, 0), up + Vector2(-w_top, 0), Color(sap, a_bot), Color(sap, a_top), Color(sap, a_top))
 		var core := w * 0.35
 		var ca := 0.45 * strength
 		_otri(bot + Vector2(-core, 0), bot + Vector2(core, 0), up, Color(1, 1, 0.9, ca), Color(1, 1, 0.9, ca), Color(1, 1, 0.9, 0.0))
+		# Onde au pied de la colonne.
+		var ru := fposmod(t * 0.9, 1.0)
+		var rg := Art.ellipse(bot, 20.0 + 70.0 * ru, (20.0 + 70.0 * ru) * 0.4, 24)
+		rg.append(rg[0])
+		_ob.draw_polyline(rg, Color(sap, 0.6 * (1.0 - ru) * (1.0 - fall)), 2.0)
 		# Contour toujours là, même sans éclat (Settings.flash_strength() à 0) : deux fils de lumière.
 		var edge := Color(sap, 0.55)
 		_ob.draw_line(bot + Vector2(-w, 0), up + Vector2(-w_top, 0), edge, 1.2)

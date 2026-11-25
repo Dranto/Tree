@@ -207,7 +207,7 @@ func _run() -> void:
 	var pe: Vector2 = wfx._graft_pos(g, float(w["graft"]["rise"]) + float(w["graft"]["orbit"]) + float(w["graft"]["join"]))
 	check(p1.y < p0.y - 20.0, "elle jaillit vers le haut")
 	check(pe.distance_to(player.position) < player.radius * 1.5, "elle rejoint le héros (à %.0f px)" % pe.distance_to(player.position))
-	await _steps(90)
+	await _steps(130)
 	check(wfx.graft_flights.is_empty(), "le vol de la greffe se termine")
 	wfx.sanctuary_lit(Vector2(500, 500))
 	check(wfx.columns.size() == 1, "un sanctuaire ravivé lance la colonne de lumière")
