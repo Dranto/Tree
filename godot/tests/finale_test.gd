@@ -106,10 +106,36 @@ func _run() -> void:
 	_place(finale.descent_point())
 	await _steps(30)
 	check(not finale.holds(main.player.position) and finale.hold > 0.0, "se tenir dans la brèche : l'anneau se remplit")
-	check(await _until(func(): return finale.holds(main.player.position), 120), "après une seconde, descente sous la graine")
-	check(main.underground() and main.enemies.is_empty(), "les Flétris du monde ne suivent pas")
-	check(finale.state == "ouverte" and not main.in_boss_fight(), "le combat ne commence pas dès l'arrivée")
+	# Descente calée sur le morceau de la Flétrissure (boss_sync.gd) : sans son, la même grille sur le
+	# temps du jeu. L'intro : 8 mesures (9-16 du morceau), plongée sur la première moitié.
+	check(await _until(func(): return finale.descending, 120), "après une seconde, la descente commence")
+	check(finale.sync != null and finale.sync.intro_clip == "intro", "l'intro du morceau")
+	await _steps(2)
+	check(main.enemies.is_empty(), "les Flétris du monde ne suivent pas")
+	check(not main.in_boss_fight() and main.player.invuln > 0.0, "pendant la plongée : pas de combat, rien ne blesse le héros")
+	var bar: float = finale.sync.bar
+	check(await _until(func(): return finale.holds(main.player.position), int(3.0 * bar * 60.0)), "à mi-plongée (2 mesures), le héros passe sous la graine")
+	check(main.underground(), "sous la graine")
+	check(await _until(func(): return main.in_boss_fight(), int(3.0 * bar * 60.0)), "au fond du puits (4 mesures), la Flétrissure s'éveille")
+	check(absf(finale.sync.bars_now() - 4.0) < 0.05, "l'éveil tombe sur la 5e mesure (%.2f mesures)" % finale.sync.bars_now())
+	check(main.player.position.distance_to(finale.landing()) < 2.0 and main.player.is_physics_processing(), "le héros a pied au fond du puits et reprend la main")
 	check(objectives.target_pos(cur) == finale.center, "sous la graine, la flèche montre la Flétrissure")
+	var wake_boss = finale.boss
+	var hp0: float = wake_boss.hp
+	wake_boss.take_damage(500.0, false)
+	check(wake_boss.hp == hp0 and wake_boss.music_waiting(), "pendant l'invocation, elle ne prend pas de coups")
+	check(await _until(func(): return not wake_boss.music_waiting(), int(5.0 * bar * 60.0)), "puis le combat commence")
+	check(absf(finale.sync.bars_now() - 8.0) < 0.05, "à l'entrée de la batterie, 9e mesure (%.2f mesures)" % finale.sync.bars_now())
+	wake_boss.take_damage(500.0, false)
+	check(wake_boss.hp < hp0, "elle prend des coups dès la batterie")
+	# Fin de ce combat (sans compter d'essai) : la remontée se teste hors combat.
+	wake_boss.queue_free()
+	await _steps(2)
+	game.flags.erase("stat_finale_essais")
+	finale.defeats = 0
+	finale.descend()
+	await _steps(2)
+	check(finale.state == "ouverte" and not main.in_boss_fight(), "descente directe (sans morceau en cours) : pas de combat dès l'arrivée")
 	main.player.hp = 100.0
 	await _steps(200)
 	check(main.enemies.is_empty(), "rien ne naît sous la graine")
@@ -135,15 +161,35 @@ func _run() -> void:
 	check(finale.state == "combat" and is_instance_valid(boss) and main.in_boss_fight(), "s'avancer réveille la Flétrissure")
 	check(boss.has_method("_fight_step") and boss in main.enemies and finale.bar.visible, "un boss BossBase, inscrit dans les ennemis, avec sa barre")
 	check(main.active_arena() == finale, "main.active_arena() renvoie la finale")
+	check(finale.sync.intro_bars == 8, "entrée directe dans l'arène : la même intro (8 mesures)")
+	check(await _until(func(): return not boss.music_waiting(), 900), "l'invocation dure l'intro")
 	check(await _until(func(): return boss.attack != "" and boss.stage == "annonce"), "une attaque est annoncée avant de frapper")
 	var seen := {}
+	# Au rythme du morceau : chaque frappe tombe sur un temps (boss_base.gd › beat_target).
+	var strikes: Array = []
+	var was: String = boss.stage
 	for i in 600:
 		if boss.attack != "":
 			seen[boss.attack] = true
+		if boss.stage == "frappe" and was == "annonce":
+			strikes.append(fposmod(boss.beats_now() + 0.5, 1.0) - 0.5)
+		was = boss.stage
 		await physics_frame
+	check(strikes.size() >= 2 and strikes.all(func(x): return absf(x) < 0.08), "les frappes tombent sur les temps du morceau (%s)" % [strikes.map(func(x): return snappedf(x, 0.01))])
 	check(seen.has("epines") and seen.has("spores"), "phase 1 : épines et spores (%s)" % ", ".join(seen.keys()))
+	var hp_before: float = boss.hp
 	boss.take_damage(boss.max_hp * 0.4, false)
 	check(await _until(func(): return boss.phase == 2), "sous 66 % de vie : phase 2")
+	await _steps(2)
+	# La mue dure le drop : jusqu'au premier temps de boucle_2, à la mesure près.
+	var drop_end: int = finale.sync.resume_bar
+	check(boss.music_waiting() and boss.mue_k >= 0.0, "phase 2 : elle mue pendant le drop")
+	hp_before = boss.hp
+	boss.take_damage(200.0, false)
+	check(boss.hp == hp_before, "invulnérable pendant la mue")
+	check(await _until(func(): return not boss.music_waiting(), 600), "la mue s'achève")
+	check(absf(finale.sync.bars_now() - drop_end) < 0.05 and drop_end - finale.sync.bars_now() >= -0.05,
+		"le combat reprend au retour de la batterie (mesure %d, %.2f)" % [drop_end + 1, finale.sync.bars_now()])
 	seen = {}
 	for i in 900:
 		if boss.attack != "":
@@ -152,13 +198,16 @@ func _run() -> void:
 	check(seen.has("siphon") and seen.has("rafale"), "phase 2 : la sève et le vent (%s)" % ", ".join(seen.keys()))
 	boss.take_damage(boss.max_hp * 0.3, false)
 	check(await _until(func(): return boss.phase == 3), "sous 33 % de vie : phase 3")
+	await _steps(2)
 	check(boss.unbound and boss.transforming(), "sous 33 % : elle prend sa seconde forme")
-	var hp_before: float = boss.hp
+	hp_before = boss.hp
 	boss.take_damage(500.0, false)
 	check(boss.hp == hp_before, "invulnérable pendant la transformation")
+	var drop2_end: int = finale.sync.resume_bar
 	check(await _until(func(): return finale.radius < finale.max_radius), "le creux s'effondre autour d'elle")
 	check(await _until(func(): return not boss.transforming() and finale.radius == finale.collapse_radius and finale.collapse_k == 1.0), "il ne reste qu'une île de radius_collapse au-dessus du gouffre")
 	check(boss.form_k() == 1.0, "la transformation est finie")
+	check(not boss.music_waiting() and absf(finale.sync.bars_now() - drop2_end) < 0.1, "elle dure tout le drop (%.2f mesures, reprise à %d)" % [finale.sync.bars_now(), drop2_end])
 	seen = {}
 	for i in 1500:
 		if boss.attack != "":
@@ -183,6 +232,7 @@ func _run() -> void:
 	await _steps(5)
 	boss = finale.boss
 	check(finale.state == "combat" and boss.hp == boss.max_hp and boss.phase == 1, "la Flétrissure revient avec toute sa vie")
+	check(await _until(func(): return not boss.music_waiting(), 900), "après l'invocation")
 	var points: int = game.points
 	boss.take_damage(boss.max_hp + 1.0, false)
 	check(boss.dead and game.flags.get("finale_vaincue", false), "Flétrissure vaincue : drapeau finale_vaincue")
@@ -191,9 +241,13 @@ func _run() -> void:
 	check(objectives.is_done("finale") and objectives.epilogue_due(), "objectif accompli, l'épilogue est dû")
 	var ending = q.world_ending
 	check(not ending.active, "la fin attend que le creux refleurisse")
-	check(await _until(func(): return ending.active, int(q.EPILOGUE_DELAY * 60.0) + 60), "puis la fin se joue dans le monde")
+	# Le dernier coup (moments.gd › _final_blow) ralentit le jeu à 5 % pendant 3,4 s réelles.
+	check(await _until(func(): return ending.active, int(q.EPILOGUE_DELAY * 60.0) + 60 + 260), "puis la fin se joue dans le monde")
 	check(not paused and game.flags.get("fin_aventure_vue", false), "sans pause ni écran : fin de l'aventure notée")
-	check(not finale.holds(main.player.position), "le joueur est remonté au pied de la graine")
+	# Remontée sans coupure : le geyser de sève, l'éclair, puis il sort de la brèche.
+	check(finale.ascending and finale.holds(main.player.position), "un geyser de sève le soulève dans le creux")
+	check(await _until(func(): return not finale.ascending, int(finale.ASCENT * 60.0) + 30), "il sort de la brèche")
+	check(not finale.holds(main.player.position) and main.player.position.distance_to(finale.entrance()) < 2.0 and main.player.is_physics_processing(), "le joueur est remonté au pied de la graine")
 	var names: Array = []
 	for g in ending.groups:
 		names.append_array(g["lines"])

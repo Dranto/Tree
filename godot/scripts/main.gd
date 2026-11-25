@@ -467,6 +467,13 @@ func _physics_process(delta: float) -> void:
 		SteamBridge.set_region(here if here != "" else "graine")
 	if Music.enabled and Engine.get_physics_frames() % 6 == 0:
 		_music_state()
+	# Morceau de boss fait à la main : suivi à chaque pas, pour que le drop parte à la mesure qui suit
+	# vraiment le changement de phase (boss_track.gd).
+	if Music.enabled:
+		var ma = active_arena()
+		if ma == null and finale != null and finale.music_on():
+			ma = finale
+		Music.follow_boss(ma)
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
 		save_game()
