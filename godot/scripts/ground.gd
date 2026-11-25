@@ -17,6 +17,8 @@ const WAVE_TIME := 1.75
 const WAVE_TICK := 0.05
 
 const Regions = preload("res://scripts/regions.gd")
+## Prototype du sol en trois couches (refonte du monde, vague 0 P), éteint par défaut.
+const GroundLayers = preload("res://scripts/world_bake/ground_layers.gd")
 
 static var _noise_tex: ImageTexture
 
@@ -69,6 +71,18 @@ var _tile_scale := 0.0
 var _frame := 0
 ## Matériau des carrés : recopie opaque, sans mélange (voir shaders/ground_tile.gdshader).
 var _tile_mat: ShaderMaterial
+## Taille des carrés (pixels d'écran) : TILE_PX, ou « --sol-tile=N » (mesures du prototype P).
+var tile_px := TILE_PX
+## Prototype P (« --paysage-sol ») : chaque carré reçoit un calque dessiné (world_bake/ground_layers.gd).
+var layered := false
+## Prototype P : carrés préparés à l'avance dans le sens du déplacement de la vue (vue décalée de
+## ahead_frames fois le pas de la dernière image), au plus ahead_budget par image. 0 : comme avant.
+var ahead_frames := 0
+var ahead_budget := 1
+var _last_view_center := Vector2.INF
+## Mesures : carrés construits (nouveaux) et refaits (vie changée) depuis le début.
+var tiles_built := 0
+var tiles_redrawn := 0
 
 
 func _ready() -> void:
@@ -95,6 +109,13 @@ func _ready() -> void:
 	add_child(rect)
 	if "--sol-direct" in OS.get_cmdline_user_args():
 		cached = false
+	GroundLayers.configure()
+	if GroundLayers.tile_px > 0:
+		tile_px = GroundLayers.tile_px
+	if GroundLayers.ahead_frames >= 0:
+		ahead_frames = GroundLayers.ahead_frames
+	if GroundLayers.enabled:
+		GroundLayers.setup(self)
 
 
 ## Le monde entier, couvert par le shader du sol.
@@ -255,7 +276,7 @@ func _update_tiles() -> void:
 	if not is_equal_approx(s, _tile_scale):
 		_clear_tiles()
 		_tile_scale = s
-	var world := TILE_PX / s
+	var world := tile_px / s
 	# Marge : la caméra (lissage, secousse) bouge encore après ce calcul, dans la même image.
 	var view := (xf.affine_inverse() * Rect2(Vector2.ZERO, vp.get_visible_rect().size * vp.get_final_transform().get_scale())).grow(TILE_MARGIN)
 	var lo := Vector2i(floori(view.position.x / world), floori(view.position.y / world))
@@ -266,8 +287,11 @@ func _update_tiles() -> void:
 			if not _tiles.has(key):
 				_tiles[key] = _make_tile(key, world)
 			_tiles[key]["used"] = _frame
+	var extra := 0
+	if ahead_frames > 0:
+		extra = _prepare_ahead(view, world, lo, hi)
 	_refresh_dirty(view.get_center())
-	var keep := (hi.x - lo.x + 1) * (hi.y - lo.y + 1) + TILE_SPARE
+	var keep := (hi.x - lo.x + 1) * (hi.y - lo.y + 1) + TILE_SPARE + extra
 	if _tiles.size() > keep:
 		var old := _tiles.keys()
 		old.sort_custom(func(a, b): return _tiles[a]["used"] < _tiles[b]["used"])
@@ -275,25 +299,59 @@ func _update_tiles() -> void:
 			_free_tile(old[i])
 
 
+## Carrés devant la vue (prototype P) : ceux que la vue atteindra bientôt sont construits à l'avance,
+## quelques-uns par image, les plus proches d'abord. Rend le nombre de carrés gardés en plus.
+func _prepare_ahead(view: Rect2, world: float, lo: Vector2i, hi: Vector2i) -> int:
+	var c := view.get_center()
+	var step := Vector2.ZERO if _last_view_center == Vector2.INF else c - _last_view_center
+	_last_view_center = c
+	if step.length() > world:
+		step = Vector2.ZERO
+	var far := view.merge(Rect2(view.position + step * ahead_frames, view.size))
+	var lo2 := Vector2i(floori(far.position.x / world), floori(far.position.y / world))
+	var hi2 := Vector2i(floori(far.end.x / world), floori(far.end.y / world))
+	var missing: Array = []
+	var extra := 0
+	for ty in range(lo2.y, hi2.y + 1):
+		for tx in range(lo2.x, hi2.x + 1):
+			if tx >= lo.x and tx <= hi.x and ty >= lo.y and ty <= hi.y:
+				continue
+			extra += 1
+			var key := Vector2i(tx, ty)
+			if _tiles.has(key):
+				_tiles[key]["used"] = _frame
+			else:
+				missing.append(key)
+	missing.sort_custom(func(a, b): return (Vector2(a) + Vector2(0.5, 0.5)).distance_squared_to(c / world) < (Vector2(b) + Vector2(0.5, 0.5)).distance_squared_to(c / world))
+	for i in mini(ahead_budget, missing.size()):
+		_tiles[missing[i]] = _make_tile(missing[i], world)
+	return extra
+
+
 ## Un carré : le shader du sol dessiné une fois dans une texture, montrée par un sprite posé au même
 ## endroit du monde (un pixel de texture par pixel d'écran).
 func _make_tile(key: Vector2i, world: float) -> Dictionary:
 	var origin := Vector2(key) * world
 	var vp := SubViewport.new()
-	vp.size = Vector2i(TILE_PX, TILE_PX)
+	vp.size = Vector2i(tile_px, tile_px)
 	vp.disable_3d = true
 	vp.transparent_bg = false
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	var rect := _make_rect()
 	rect.material = mat
 	vp.add_child(rect)
+	var layer: Node2D = null
+	if layered:
+		layer = GroundLayers.make(self, Rect2(origin, Vector2(world, world)))
+		vp.add_child(layer)
 	add_child(vp)
+	tiles_built += 1
 	# Après l'entrée dans l'arbre : le canevas du SubViewport n'existe qu'à ce moment.
 	vp.canvas_transform = Transform2D(0.0, Vector2(_tile_scale, _tile_scale), 0.0, -origin * _tile_scale)
 	var sprite := Sprite2D.new()
 	sprite.centered = false
 	sprite.position = origin
-	sprite.scale = Vector2(world, world) / TILE_PX
+	sprite.scale = Vector2(world, world) / tile_px
 	sprite.texture = vp.get_texture()
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	if _tile_mat == null:
@@ -301,7 +359,7 @@ func _make_tile(key: Vector2i, world: float) -> Dictionary:
 		_tile_mat.shader = preload("res://shaders/ground_tile.gdshader")
 	sprite.material = _tile_mat
 	add_child(sprite)
-	return {"vp": vp, "sprite": sprite, "used": _frame, "rect": Rect2(origin, Vector2(world, world))}
+	return {"vp": vp, "sprite": sprite, "used": _frame, "rect": Rect2(origin, Vector2(world, world)), "layer": layer}
 
 
 func _free_tile(key: Vector2i) -> void:
@@ -324,7 +382,7 @@ func _invalidate(area: Rect2) -> void:
 			if tile_budget > 0:
 				t["dirty"] = true
 			else:
-				_render_once(t["vp"])
+				_rerender(t)
 
 
 ## Relance le rendu d'un carré. Depuis Godot 4.7, remettre UPDATE_ONCE sur une image qui l'a déjà
@@ -332,6 +390,14 @@ func _invalidate(area: Rect2) -> void:
 func _render_once(vp: SubViewport) -> void:
 	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+## Refait un carré (la vie a changé sous lui) : son calque dessiné aussi, s'il en a un.
+func _rerender(t: Dictionary) -> void:
+	tiles_redrawn += 1
+	if t["layer"] != null:
+		t["layer"].queue_redraw()
+	_render_once(t["vp"])
 
 
 ## Refait au plus tile_budget carrés salis, les plus proches de « center » d'abord.
@@ -347,7 +413,7 @@ func _refresh_dirty(center: Vector2) -> void:
 	dirty_tiles.sort_custom(func(a, b): return (a["rect"] as Rect2).get_center().distance_squared_to(center) < (b["rect"] as Rect2).get_center().distance_squared_to(center))
 	for i in mini(tile_budget, dirty_tiles.size()):
 		dirty_tiles[i]["dirty"] = false
-		_render_once(dirty_tiles[i]["vp"])
+		_rerender(dirty_tiles[i])
 
 
 ## Les vagues de vie avancent à pas fixe : la vie du sol compte pour le jeu (soin, Flétris ralentis).

@@ -87,6 +87,9 @@ class DecorTree extends Node2D:
 	var leaf := 1.0
 	## Lot de triangles partagé par tout le décor (voir _draw).
 	static var _b = _exact_batch()
+	## Prototype du décor cuit (refonte du monde, vague 0 P : world_bake/decor_bake.gd), null par
+	## défaut : son draw(arbre) dessine l'élément depuis un atlas, ou rend faux (dessin direct).
+	static var baker = null
 
 	static func _exact_batch():
 		var b = DrawBatch.new()
@@ -123,6 +126,8 @@ class DecorTree extends Node2D:
 	## Tout le dessin part en un seul appel de rendu (lot fidèle, mêmes pixels que les draw_*) :
 	## sans lui, chaque arbre coûtait une dizaine d'appels, et le décor plus de 200 par image.
 	func _draw() -> void:
+		if baker != null and baker.draw(self):
+			return
 		_paint()
 		_b.flush(self)
 
