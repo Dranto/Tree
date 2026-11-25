@@ -282,6 +282,8 @@ func purify() -> void:
 	Game.flags[flag] = true
 	_set_purified(true)
 	Sfx.play("coeur", center)
+	if main.get("moments") != null:
+		main.moments.on_heart(self)
 	var done := Regions.hearts_done(region, Game.flags) if Regions.exists(region) else count
 	if done >= count:
 		Game.flags[region_flag] = true
