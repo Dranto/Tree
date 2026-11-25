@@ -53,6 +53,15 @@ var collapse_time := 3.6
 ## Avancée visible de l'effondrement (0 : creux entier, 1 : île au-dessus du gouffre) ; la
 ## floraison le referme après la victoire.
 var collapse_k := 0.0
+## Descente calée sur le morceau de la Flétrissure (boss_sync.gd) : de la brèche au creux pendant la
+## première moitié de l'intro (plongée dans la brèche, éclair de sève, chute lente dans le puits de
+## lumière), puis l'invocation du boss pendant la seconde moitié. Premier essai : toute l'intro
+## (16 mesures, 21 s) ; essais suivants : l'intro courte (8 mesures, 10,7 s).
+var descending := false
+## Hauteur (px) d'où le héros tombe dans le puits de lumière.
+const SHAFT_DROP := 520.0
+var _fell := false
+var _last_bar := -1
 
 
 func configure(_id: String) -> void:
@@ -128,6 +137,11 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	if frozen:
+		return
+	if sync != null:
+		sync.tick(delta)
+	if descending:
+		_descent_step()
 		return
 	var p = main.player
 	var under := holds(p.position)
@@ -235,7 +249,7 @@ func _breach_step(p, delta: float) -> void:
 	if p.position.distance_to(DESCENT) < DESCENT_RADIUS:
 		hold += delta
 		if hold >= DESCENT_HOLD:
-			descend()
+			begin_descent()
 	else:
 		hold = 0.0
 
@@ -265,6 +279,88 @@ func descend() -> void:
 	_move_player(landing())
 	main.screen_fx.fade(Art.c("decor").darkened(0.6), 1.0, 0.0, main.screen_fx.FADE_DEATH)
 	main.fx.ring(landing(), 12.0, 140.0, 0.8, Color(Art.ec("seve", "clair"), 0.8), 4.0)
+
+
+## Le morceau joue pendant la descente (boss_track.gd suit l'arène dès la brèche).
+func music_on() -> bool:
+	return descending or in_combat()
+
+
+## Entrée dans la brèche, la Flétrissure à combattre : la descente suit l'intro du morceau, et le combat
+## commence à son premier temps de batterie. Sans morceau : la descente d'avant (un fondu).
+func begin_descent() -> void:
+	if state != "ouverte":
+		descend()
+		return
+	sync = BossSync.for_region(region)
+	if sync == null:
+		descend()
+		return
+	var first := defeats == 0 and int(Game.flags.get("stat_finale_essais", 0)) == 0
+	sync.start("intro" if first else "intro_court")
+	descending = true
+	_fell = false
+	_last_bar = -1
+	hold = 0.0
+	armed = false
+	for e in main.enemies:
+		if is_instance_valid(e) and not e is BossBase:
+			e.dead = true
+			e.queue_free()
+	main.enemies = main.enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
+	var p = main.player
+	if p.has_method("clear_destination"):
+		p.clear_destination()
+	p.set_physics_process(false)
+	main.screen_fx.glow(Art.ec("cendre"), 0.4, 1.2)
+
+
+## Mesures de la plongée (la première moitié de l'intro) : dans la brèche, puis dans le puits.
+func _plunge_bars() -> float:
+	return sync.intro_bars * 0.5
+
+
+## Avancée de la descente (0 → 1) ; -1 hors descente.
+func descent_k() -> float:
+	if not descending or sync == null:
+		return -1.0
+	return clampf(sync.bars_now() / _plunge_bars(), 0.0, 1.0)
+
+
+func _descent_step() -> void:
+	var p = main.player
+	p.invuln = maxf(p.invuln, 0.5)
+	var b: float = sync.bars_now()
+	var u := descent_k()
+	# Sur chaque mesure, une onde de lumière (la brèche, puis le puits) : le monde respire avec l'intro.
+	var bi := int(floor(b))
+	if bi != _last_bar:
+		_last_bar = bi
+		var at: Vector2 = DESCENT if not _fell else landing()
+		main.fx.ring(at, 10.0, 90.0 + 70.0 * u, 0.9, Color(Art.ec("seve" if _fell else "cendre", "clair"), 0.55 + 0.3 * u), 4.0)
+	if u < 0.5:
+		# Il s'enfonce dans la brèche : la lueur monte, il s'efface dans la fente.
+		p.position = DESCENT
+		p.modulate.a = 1.0 - smoothstep(0.25, 0.5, u)
+	else:
+		if not _fell:
+			# Éclair de sève : le héros passe sous la graine, sans écran noir.
+			_fell = true
+			_move_player(landing() + Vector2(0.0, -SHAFT_DROP))
+			main.screen_fx.fade(Art.ec("seve", "clair"), 0.85, 0.0, 1.1)
+			main.fx.shake(4.0)
+		var v := clampf((u - 0.5) / 0.5, 0.0, 1.0)
+		p.position = landing() + Vector2(0.0, -SHAFT_DROP * (1.0 - Anim.ease_out(v)))
+		p.modulate.a = smoothstep(0.0, 0.3, v)
+	queue_redraw()
+	if b >= _plunge_bars():
+		# Il touche le fond du puits : la Flétrissure s'éveille pendant la fin de l'intro.
+		descending = false
+		p.modulate.a = 1.0
+		p.position = landing()
+		p.set_physics_process(true)
+		main.fx.ring(landing(), 12.0, 180.0, 0.7, Color(Art.ec("seve", "clair"), 0.9), 5.0)
+		_start_fight()
 
 
 ## Remonte au pied de la graine.
@@ -347,6 +443,15 @@ func _draw() -> void:
 	if main != null and main.player != null and not holds(main.player.position) and not frozen:
 		return
 	_draw_cave()
+	# Le puits de lumière pendant la chute : des gouttes de sève qui tombent avec le héros.
+	var dk := descent_k()
+	if dk >= 0.5:
+		var top := landing() + Vector2(0.0, -SHAFT_DROP - 200.0)
+		var v := (dk - 0.5) / 0.5
+		draw_rect(Rect2(top.x - 46.0, top.y, 92.0, SHAFT_DROP + 200.0), Color(Art.ec("seve", "clair"), 0.12 * (1.0 - v) + 0.05), true)
+		for i in 18:
+			var f := fposmod(t * 0.5 + i * 0.173, 1.0)
+			draw_circle(top + Vector2((i - 8.5) * 5.5, f * (SHAFT_DROP + 200.0)), 2.5 * (1.0 - f) + 1.0, Color(Art.ec("seve", "clair"), 0.8 * sin(PI * f)))
 
 
 ## La brèche au pied de la graine : une fente sombre entre des racines, d'où monte une lueur de cendre
@@ -376,8 +481,19 @@ func _draw_breach() -> void:
 		var f := fposmod(t * 0.45 + i * 0.17, 1.0)
 		var x := (i - 2.5) * DESCENT_RADIUS * 0.22 + 5.0 * sin(t * 1.3 + i)
 		draw_circle(c + Vector2(x, -f * 60.0), 2.5 * (1.0 - f) + 1.0, Color(Art.ec("seve" if won else "cendre", "clair"), 0.8 * (1.0 - f)))
+	# Descente : une colonne de lueur monte de la fente, de plus en plus haute et vive.
+	var dk := descent_k()
+	if dk >= 0.0 and dk < 0.5:
+		var k := dk / 0.5
+		for j in 5:
+			var w := DESCENT_RADIUS * (0.9 - 0.15 * j)
+			var hgt := 120.0 + 520.0 * k * (1.0 - 0.12 * j)
+			draw_rect(Rect2(c.x - w * 0.5, c.y - hgt, w, hgt), Color(Art.ec("cendre", "clair"), 0.06 + 0.1 * k), true)
+		for i in 14:
+			var f := fposmod(t * 0.8 + i * 0.137, 1.0)
+			draw_circle(c + Vector2((i - 6.5) * 5.0, -f * (200.0 + 400.0 * k)), 2.0 + 2.0 * (1.0 - f), Color(Art.ec("cendre", "clair"), 0.9 * (1.0 - f) * k))
 	# L'anneau d'interaction : il se remplit pendant que le joueur s'y tient.
-	if state == "ouverte":
+	if state == "ouverte" and dk < 0.0:
 		var col := Art.c("interactif")
 		draw_arc(c, DESCENT_RADIUS + 10.0, 0.0, TAU, 40, Color(col, 0.25 + 0.2 * pulse), Art.TRAIT_FIN, true)
 		if hold > 0.0 and not holds(main.player.position):

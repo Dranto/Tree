@@ -462,7 +462,10 @@ func _physics_process(delta: float) -> void:
 	# Morceau de boss fait à la main : suivi à chaque pas, pour que le drop parte à la mesure qui suit
 	# vraiment le changement de phase (boss_track.gd).
 	if Music.enabled:
-		Music.follow_boss(active_arena())
+		var ma = active_arena()
+		if ma == null and finale != null and finale.music_on():
+			ma = finale
+		Music.follow_boss(ma)
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
 		save_game()

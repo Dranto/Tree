@@ -84,6 +84,12 @@ var transition := 0.0
 var dying := 0.0
 ## Petits qu'il a fait naître (tués avec lui).
 var minions: Array = []
+## Combat calé sur le morceau du boss (boss_sync.gd, posé par l'arène) ; null : pas de morceau.
+## Il fixe la fin de l'intro (le premier temps de la première boucle) et des transitions (la fin du
+## drop) ; le boss n'y frappe pas et n'y prend pas de dégâts.
+var sync = null
+## Vrai tant que le boss attendait la musique au pas précédent (la reprise éclate à sa fin).
+var _music_wait := false
 ## Figé par les tests visuels : la logique ne tourne plus, la pose reste affichée.
 var frozen := false
 var marks: Node2D
@@ -174,11 +180,15 @@ func _physics_process(delta: float) -> void:
 		_region_sound("phase")
 		_eclat("phase")
 		main.fx.boss_phase(position, radius)
+		if sync != null:
+			sync.phase(phase)
 	_projectiles_step(delta)
 	minions = minions.filter(func(e): return is_instance_valid(e) and not e.dead and not e.is_queued_for_deletion())
 	var p = main.player
 	if p.position.distance_to(anchor) < radius + p.radius:
 		p.take_hit(contact_damage * damage_scale, self)
+	if sync != null:
+		_follow_music()
 	if intro > 0.0:
 		intro -= delta
 		return
@@ -186,6 +196,33 @@ func _physics_process(delta: float) -> void:
 		transition -= delta
 		return
 	_fight_step(delta)
+
+
+## La musique tient l'intro et les transitions : elles durent jusqu'au premier temps de la boucle.
+func _follow_music() -> void:
+	var waiting: bool = sync.waiting()
+	if waiting and sync.stage == "intro":
+		intro = sync.left()
+	elif waiting and sync.stage == "drop":
+		transition = sync.left()
+	elif _music_wait:
+		# La batterie revient : le combat reprend d'un coup.
+		intro = 0.0
+		transition = 0.0
+		_music_resume()
+	_music_wait = waiting
+
+
+## Le combat (re)prend sur le premier temps de la boucle : un éclat, que chaque boss peut enrichir.
+func _music_resume() -> void:
+	main.fx.ring(anchor, radius, radius * 5.5, 0.55, Color(Art.ec("cendre", "clair"), 0.85), 7.0)
+	main.fx.shake(7.0)
+	main.screen_fx.glow(Art.c("danger"), 0.35, 0.6)
+
+
+## Vrai tant que le boss attend la musique (arrivée, transformation) : invulnérable.
+func music_waiting() -> bool:
+	return sync != null and sync.waiting()
 
 
 # --- À écrire dans chaque boss ---
@@ -244,7 +281,7 @@ static func draw_victory(a: Node2D) -> void:
 # --- Interface d'un ennemi ---
 
 func take_damage(amount: float, crit: bool, dot := false) -> void:
-	if dead:
+	if dead or music_waiting():
 		return
 	hp -= amount
 	if not dot:
@@ -335,6 +372,8 @@ func _region_sound(key: String) -> void:
 
 
 func _die() -> void:
+	if sync != null:
+		sync.stop()
 	_region_sound("mort")
 	dead = true
 	dying = 0.0

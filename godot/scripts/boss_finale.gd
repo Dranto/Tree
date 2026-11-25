@@ -110,6 +110,11 @@ var flash_kind := ""
 var morph_time := -1.0
 ## Seconde forme atteinte (phase 3 entamée).
 var unbound := false
+## Durée de la transformation : TRANSFORM › time, ou tout le drop de la musique (boss_sync.gd).
+var morph_len := 3.6
+## Mue de la phase 2 sur le drop de la musique : durée totale (s) et avancée (0 → 1) ; -1 hors mue.
+var mue_total := 0.0
+var mue_k := -1.0
 
 
 func _setup() -> void:
@@ -125,10 +130,24 @@ func _setup() -> void:
 
 
 func _projectiles_step(delta: float) -> void:
+	var on_drop: bool = music_waiting() and sync.stage == "drop"
 	if morph_time >= 0.0:
 		morph_time += delta
-		if morph_time >= TRANSFORM["time"]:
+		if on_drop:
+			# La transformation dure tout le drop : elle s'achève au retour de la batterie, et le creux
+			# s'effondre au même rythme.
+			morph_len = morph_time + sync.left()
+			if arena.get("collapse_t") != null and arena.collapse_t >= 0.0:
+				arena.collapse_time = maxf(0.5, morph_len)
+		if morph_time >= morph_len and not on_drop:
 			morph_time = -1.0
+	# Mue de la phase 2 : elle se recroqueville et boit la cendre de l'arène pendant le drop.
+	if on_drop and phase == 2:
+		mue_total = maxf(mue_total, sync.left())
+		mue_k = sync.wait_k(mue_total)
+	else:
+		mue_total = 0.0
+		mue_k = -1.0
 	_update_thorns(delta)
 	_update_clouds(delta)
 	_update_roots(delta)
@@ -193,7 +212,7 @@ func form_k() -> float:
 		return 0.0
 	if morph_time < 0.0:
 		return 1.0
-	return Anim.ease_out(clampf(morph_time / (TRANSFORM["time"] * TRANSFORM["morph"]), 0.0, 1.0))
+	return Anim.ease_out(clampf(morph_time / (morph_len * TRANSFORM["morph"]), 0.0, 1.0))
 
 
 # --- Attaques ---
@@ -473,6 +492,7 @@ func _enter_phase(n: int) -> void:
 func _unbind() -> void:
 	unbound = true
 	morph_time = 0.0
+	morph_len = TRANSFORM["time"]
 	transition = TRANSFORM["time"]
 	_clear_attacks()
 	strike_flash = -1.0
@@ -586,6 +606,9 @@ func _announce_k() -> float:
 
 ## Éveil pendant l'entrée en scène (0 : endormie comme dans le creux, 1 : dressée).
 func _wake_k() -> float:
+	if mue_k >= 0.0:
+		# Mue : elle se replie sur elle-même, puis se redresse d'un coup sur la dernière mesure.
+		return 1.0 - 0.45 * sin(PI * clampf(mue_k * 1.15, 0.0, 1.0))
 	if intro_time <= 0.0:
 		return 1.0
 	return Anim.ease_out(clampf(1.0 - intro / intro_time, 0.0, 1.0))
@@ -602,6 +625,34 @@ func _draw() -> void:
 		lit2 = COMBO_ARMS[attack][1]
 	var die := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
 	draw_colossus(self, Vector2.ZERO, radius, t, phase, _announce_k(), lit, die, _wake_k(), _color, lit2, form_k())
+	if sync != null and music_waiting():
+		_draw_music_wait()
+
+
+## Pendant que la musique tient le combat (invocation, mue, transformation) : la cendre de l'arène
+## converge vers elle en spirale, et des veines de braise battent sur chaque temps, de plus en plus
+## fort jusqu'au retour de la batterie.
+func _draw_music_wait() -> void:
+	var k: float = mue_k if mue_k >= 0.0 else (sync.wait_k(intro_time) if sync.stage == "intro" else sync.wait_k(morph_len))
+	var beat: float = sync.beat_k()
+	var pulse := pow(1.0 - beat, 3.0) * (0.25 + 0.75 * k)
+	var ash := Art.ec("cendre", "clair")
+	var h := Vector2(0, -radius * 0.45)
+	# Cendre aspirée : 28 brins qui tournent vers son cœur.
+	for i in 28:
+		var f := fposmod(t * 0.22 + i * 0.6180339, 1.0)
+		var a := TAU * i / 28.0 + f * 2.4
+		var r := lerpf(radius * 5.0, radius * 0.5, f)
+		var p := h + Vector2.from_angle(a) * r
+		var q := h + Vector2.from_angle(a - 0.12) * (r + radius * 0.35)
+		draw_line(q, p, Color(ash, 0.5 * sin(PI * f) * (0.3 + 0.7 * k)), 2.0 + 2.0 * k, true)
+	# Veines de braise sur le corps, qui battent sur les temps.
+	for i in 7:
+		var a := TAU * i / 7.0 + 0.5
+		var from := h + Vector2.from_angle(a) * radius * 0.15
+		var to := h + Vector2.from_angle(a + 0.3 * sin(i * 2.1)) * radius * (0.55 + 0.45 * k)
+		draw_line(from, to, Color(Art.ec("cendre"), 0.35 + 0.6 * pulse), 3.0 + 6.0 * pulse, true)
+	draw_circle(h, radius * (0.25 + 0.2 * pulse), Color(ash, 0.25 + 0.5 * pulse))
 
 
 ## Le sol autour d'elle, sous les annonces (draw_marks) : une flaque de brume de cendre et les
@@ -1167,3 +1218,11 @@ static func draw_victory(a: Node2D) -> void:
 		var tip := base + Vector2.from_angle(ang) * (34.0 + 4.0 * sin(a.t * 1.5 + i)) * k
 		a.draw_line(base, tip, bark, 4.0, true)
 		Art.volume(a, Art.ellipse(tip, 11.0 * k, 7.0 * k, 12), Art.ec(str(ARMS[i]["element"])).lerp(Art.c("decor_vivant"), 0.25), 0.6)
+
+
+## Le retour de la batterie : elle se dresse d'un coup, une onde dans les couleurs des bras éveillés.
+func _music_resume() -> void:
+	super._music_resume()
+	for i in mini(ARMS.size(), phase * 2):
+		main.fx.ring(anchor, radius * 0.8, 260.0 + 70.0 * i, 0.5 + 0.08 * i, Color(Art.ec(ARMS[i]["element"], "clair"), 0.8), 5.0)
+	main.screen_fx.glow(Art.ec("cendre"), 0.5, 0.8)

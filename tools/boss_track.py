@@ -13,7 +13,8 @@ Fiche de repères (texte, « clé: valeur », # pour les commentaires), mesures 
   bpm: 180
   mesure: 4/4
   debut: 0.026        # secondes : premier temps de la mesure 1
-  intro: 1-16         # jouée une fois à l'éveil du boss
+  intro: 1-16         # jouée une fois à l'arrivée (descente, invocation) ; le combat part à boucle_1
+  intro_court: 9-16   # facultatif : intro des essais suivants (après une mort)
   boucle_1: 17-32     # phase 1 (tourne en boucle)
   drop_1: 45-48       # passage vers la phase 2 (une fois), puis boucle_2
   boucle_2: 49-72
@@ -47,7 +48,7 @@ RATE = 44100
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, "godot", "assets", "music", "hand")
 ENTRY_FADE_MS = 3.0
-SECTION_RE = re.compile(r"^(intro|boucle_\d+|drop_\d+|fin|defaite)$")
+SECTION_RE = re.compile(r"^(intro|intro_court|boucle_\d+|drop_\d+|fin|defaite)$")
 
 
 def parse_fiche(path):
@@ -199,6 +200,8 @@ def main(argv):
         clips[head if head in sections else f"boucle_{n_loop}"] = (
             [head, f"boucle_{n_loop}"] if head in sections else [f"boucle_{n_loop}"])
         n_loop += 1
+    if "intro_court" in sections:
+        clips["intro_court"] = ["intro_court", "boucle_1"]
     for k in ("fin", "defaite"):
         if k in sections:
             clips[k] = [k]

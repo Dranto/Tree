@@ -3,7 +3,8 @@
 bpm: 180
 mesure: 4/4
 debut: 0.026        # secondes, premier temps de la mesure 1
-intro: 1-16         # calme puis montée (21,3 s), jouée une fois à l'éveil
+intro: 1-16         # calme puis montée (21,3 s) : descente et invocation au premier essai
+intro_court: 9-16   # la montée seule (10,7 s) : essais suivants
 boucle_1: 17-32     # batterie pleine, 16 mesures
 drop_1: 45-48       # 2 mesures sans batterie ni basse, puis 2 mesures de fill (5,3 s)
 boucle_2: 49-72     # batterie pleine, 24 mesures

@@ -41,6 +41,14 @@ var _arena = null
 ## Vrai tant qu'une arène est suivie (une arène libérée ne se compare plus à null).
 var _following := false
 var dir := DIR
+## Horloge audio (s) : le temps réel en jeu (le ralenti du jeu ne la touche pas) ; dans le Movie Maker,
+## qui mélange le son image par image, le nombre d'images sur leur cadence.
+var clock := 0.0
+var _movie_fps := 0.0
+## Origine de la grille des mesures sur cette horloge : l'instant où le premier échantillon du morceau
+## sort (lu par boss_sync.gd) ; -1 sans morceau. Et le clip de départ.
+var grid_t0 := -1.0
+var clip_start := "intro"
 ## Journal des demandes (tests) : [{"clip": nom, "at": temps audio de la demande}].
 var requests: Array = []
 static var _cache: Dictionary = {}
@@ -48,6 +56,14 @@ static var _cache: Dictionary = {}
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Movie Maker : sa cadence est celle de --fixed-fps, que Godot ne rend pas lisible ; l'outil de film
+	# la redonne après « -- » (--movie-fps=30). Sans elle, la cadence du réglage editor/movie_writer/fps.
+	if OS.has_feature("movie"):
+		_movie_fps = float(ProjectSettings.get_setting("editor/movie_writer/fps", 60))
+		for arg in OS.get_cmdline_user_args():
+			if arg.begins_with("--movie-fps="):
+				_movie_fps = float(arg.get_slice("=", 1))
+	clock = _clock_now()
 	player = AudioStreamPlayer.new()
 	player.bus = BUS if AudioServer.get_bus_index(BUS) >= 0 else "Master"
 	add_child(player)
@@ -140,7 +156,7 @@ func active() -> bool:
 
 
 ## Éveil du boss : intro puis boucle_1. Faux (et rien ne change) si le boss n'a pas de morceau.
-func begin(id: String) -> bool:
+func begin(id: String, clip := "intro") -> bool:
 	var data := track_data(id, dir)
 	if data.is_empty():
 		return false
@@ -154,10 +170,16 @@ func begin(id: String) -> bool:
 	_end_left = -1.0
 	_fade_left = 0.0
 	requests.clear()
+	if not data["clips"].has(clip):
+		clip = "intro"
+	clip_start = clip
+	stream.initial_clip = clip_names(data).find(clip)
 	player.stream = stream
 	player.volume_db = 0.0
 	player.play()
-	requests.append({"clip": "intro", "at": audio_time()})
+	# Le premier échantillon sort au prochain mélange, après la latence de sortie.
+	grid_t0 = audio_time() + AudioServer.get_time_to_next_mix() + AudioServer.get_output_latency()
+	requests.append({"clip": clip, "at": audio_time()})
 	return true
 
 
@@ -206,20 +228,23 @@ func stop() -> void:
 		player.stop()
 	state = ""
 	boss_id = ""
+	grid_t0 = -1.0
 	_arena = null
 	_following = false
 	_end_left = -1.0
 	_fade_left = 0.0
 
 
-## Suit l'arène en combat que main.gd voit à ce pas (null : aucun combat).
+## Suit l'arène dont le morceau joue à ce pas (null : aucune) : en combat, ou pendant l'arrivée
+## (music_on : la descente de la finale). Son « sync » (boss_sync.gd) dit par quel clip commencer.
 func follow(arena) -> void:
-	if arena != null and arena.in_combat():
+	if arena != null and (arena.in_combat() or (arena.has_method("music_on") and arena.music_on())):
 		if arena != _arena or not _following:
 			_arena = arena
 			_following = true
 			if state == "" or state == "fondu" or state == "fin" or state == "defaite":
-				begin(str(arena.region))
+				var sync = arena.get("sync")
+				begin(str(arena.region), sync.intro_clip if sync != null else "intro")
 		if state == "combat" and arena.boss != null and is_instance_valid(arena.boss):
 			if arena.boss.dead:
 				win()
@@ -265,14 +290,16 @@ func current_clip() -> String:
 	return ""
 
 
-## Instant (s, horloge réelle) d'une demande, pour le journal des tests.
+## Instant (s, horloge audio) d'une demande.
 func audio_time() -> float:
-	return Time.get_ticks_usec() / 1000000.0
+	return _clock_now()
 
 
 func _process(_delta: float) -> void:
-	# Les durées suivent l'horloge réelle, pas le temps du jeu (ralenti d'Éclat, pause).
-	var dt := _real_delta()
+	# Les durées suivent l'horloge audio, pas le temps du jeu (ralenti d'Éclat, pause).
+	var now := _clock_now()
+	var dt := clampf(now - clock, 0.0, 0.25)
+	clock = now
 	if _following and not is_instance_valid(_arena):
 		# Retour au menu : l'arène est partie avec la scène du jeu.
 		_arena = null
@@ -289,11 +316,7 @@ func _process(_delta: float) -> void:
 			stop()
 
 
-var _last_usec := -1
-
-
-func _real_delta() -> float:
-	var now := Time.get_ticks_usec()
-	var d := 0.0 if _last_usec < 0 else (now - _last_usec) / 1000000.0
-	_last_usec = now
-	return clampf(d, 0.0, 0.25)
+func _clock_now() -> float:
+	if _movie_fps > 0.0:
+		return Engine.get_process_frames() / _movie_fps
+	return Time.get_ticks_usec() / 1000000.0

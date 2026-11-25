@@ -6395,7 +6395,7 @@ msgid "Traîne-vase"
 msgstr "Traîne-vase"
 
 #. data/finale.json › boss › name
-#. scripts/finale_arena.gd:65
+#. scripts/finale_arena.gd:74
 #. scripts/world_ending.gd:73
 msgid "La Flétrissure"
 msgstr "La Flétrissure"
@@ -7200,7 +7200,7 @@ msgid "Autel de la couronne"
 msgstr "Autel de la couronne"
 
 #. data/regions/ronce.json › ronce › boss › name
-#. scripts/boss_arena.gd:35
+#. scripts/boss_arena.gd:36
 msgid "La Mère-Ronce"
 msgstr "La Mère-Ronce"
 
@@ -7862,20 +7862,20 @@ msgstr "%d formes d'attaque"
 msgid "Synergie possible « %s » : %s"
 msgstr "Synergie possible « %s » : %s"
 
-#. scripts/boss_arena.gd:37
-#. scripts/finale_arena.gd:67
+#. scripts/boss_arena.gd:38
+#. scripts/finale_arena.gd:76
 msgid "Phase 1 sur 3"
 msgstr "Phase 1 sur 3"
 
-#. scripts/boss_arena.gd:37
+#. scripts/boss_arena.gd:38
 msgid "Phase 2 sur 3 : les bourgeons éclosent"
 msgstr "Phase 2 sur 3 : les bourgeons éclosent"
 
-#. scripts/boss_arena.gd:37
+#. scripts/boss_arena.gd:38
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 sur 3 : les ronces se resserrent"
 
-#. scripts/boss_base.gd:285
+#. scripts/boss_base.gd:322
 msgid "Entravée"
 msgstr "Entravée"
 
@@ -8072,11 +8072,11 @@ msgstr "Enragé !"
 msgid "Sous terre"
 msgstr "Sous terre"
 
-#. scripts/finale_arena.gd:67
+#. scripts/finale_arena.gd:76
 msgid "Phase 2 sur 3"
 msgstr "Phase 2 sur 3"
 
-#. scripts/finale_arena.gd:67
+#. scripts/finale_arena.gd:76
 msgid "Phase 3 sur 3"
 msgstr "Phase 3 sur 3"
 
@@ -8172,7 +8172,7 @@ msgstr ""
 "%s\n"
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 
-#. scripts/main.gd:1132
+#. scripts/main.gd:1135
 msgid "%s vaincu"
 msgstr "%s vaincu"
 

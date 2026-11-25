@@ -10,7 +10,7 @@ mkdir -p "$DEST"
 export LIBGL_ALWAYS_SOFTWARE=1
 "$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1 || true
 "$ROOT/tools/godot.sh" --xvfb --resolution "$RES" --position 0,0 --fixed-fps 30 \
-  --write-movie "$DEST/flétrissure_brut.avi" res://tests/visual/boss_track_film.tscn 2>&1 \
+  --write-movie "$DEST/flétrissure_brut.avi" res://tests/visual/boss_track_film.tscn -- --movie-fps=30 2>&1 \
   | grep -E "ERROR|FILM|SCRIPT" | grep -v "…" | tee "$DEST/reperes.txt" || true
 ffmpeg -loglevel error -y -i "$DEST/flétrissure_brut.avi" -c:v libx264 -crf 26 -preset medium -pix_fmt yuv420p \
   -c:a aac -b:a 192k "$DEST/fletrissure_musique.mp4"

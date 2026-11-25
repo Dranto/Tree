@@ -79,8 +79,8 @@ func _check_finale_data() -> void:
 		return
 	check(is_equal_approx(float(d["bpm"]), 180.0) and int(d["bar_beats"]) == 4, "180 BPM, 4/4")
 	var names := BossTrack.clip_names(d)
-	check(names == ["intro", "drop_1", "drop_2", "fin"], "clips : %s" % [names])
-	check(d["sections"].keys() == ["intro", "boucle_1", "drop_1", "boucle_2", "drop_2", "boucle_3", "fin"],
+	check(names == ["intro", "drop_1", "drop_2", "intro_court", "fin"], "clips : %s" % [names])
+	check(d["sections"].keys() == ["intro", "intro_court", "boucle_1", "drop_1", "boucle_2", "drop_2", "boucle_3", "fin"],
 		"sections de la fiche : %s" % [d["sections"].keys()])
 	var bar_frames := RATE * BossTrack.bar_time(d)
 	for n in names:
