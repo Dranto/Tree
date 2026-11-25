@@ -13,7 +13,8 @@ const HIT2_AFTER := 8.0
 const HIT3_AFTER := 10.0
 const KILL_AFTER := 12.0
 ## Temps laissé à la fin du morceau après la mort (s).
-const END_AFTER := 13.0
+const END_AFTER := 24.0
+var _was_ascending := false
 
 var main
 var t := 0.0
@@ -113,6 +114,9 @@ func _physics_process(delta: float) -> void:
 				_mark = t
 				step = 9
 		9:
+			if finale.ascending != _was_ascending:
+				_was_ascending = finale.ascending
+				_log("remontée : geyser de sève" if finale.ascending else "sorti de la brèche : le monde reverdit")
 			if t - _mark >= END_AFTER:
 				_log("fin du film")
 				get_tree().quit(0)

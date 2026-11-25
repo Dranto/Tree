@@ -167,6 +167,7 @@ func run(runner) -> void:
 	# vie, le générique qui s'écrit dans l'herbe, puis tous les noms écrits.
 	var q = main.quest_ui
 	q.start_epilogue()
+	finale.finish_ascent()
 	var ending = q.world_ending
 	ending.set_time(ending.STEP * 3.0 + 1.0)
 	main.ground.finish_waves()

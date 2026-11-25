@@ -244,7 +244,10 @@ func _run() -> void:
 	# Le dernier coup (moments.gd › _final_blow) ralentit le jeu à 5 % pendant 3,4 s réelles.
 	check(await _until(func(): return ending.active, int(q.EPILOGUE_DELAY * 60.0) + 60 + 260), "puis la fin se joue dans le monde")
 	check(not paused and game.flags.get("fin_aventure_vue", false), "sans pause ni écran : fin de l'aventure notée")
-	check(not finale.holds(main.player.position), "le joueur est remonté au pied de la graine")
+	# Remontée sans coupure : le geyser de sève, l'éclair, puis il sort de la brèche.
+	check(finale.ascending and finale.holds(main.player.position), "un geyser de sève le soulève dans le creux")
+	check(await _until(func(): return not finale.ascending, int(finale.ASCENT * 60.0) + 30), "il sort de la brèche")
+	check(not finale.holds(main.player.position) and main.player.position.distance_to(finale.entrance()) < 2.0 and main.player.is_physics_processing(), "le joueur est remonté au pied de la graine")
 	var names: Array = []
 	for g in ending.groups:
 		names.append_array(g["lines"])

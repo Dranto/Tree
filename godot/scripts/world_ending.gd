@@ -31,6 +31,12 @@ var t := -1.0
 ## Groupes du générique : [{title: bool, lines: [texte…]}], chacun posé à un angle de l'anneau.
 var groups: Array = []
 var _waves_sent := 0
+## La vie part de la brèche (juste au-dessus de là où la Flétrissure est morte) ; chaque région
+## reverdit quand le front l'atteint (sol des régions, ground.set_purified, par paliers).
+var _from := Vector2.ZERO
+var _purified := {}
+## Vitesse du front de vie (px/s) : il atteint le bord du monde avec la dernière vague.
+const FRONT_SPEED := 1400.0
 ## Centre de l'anneau de noms : là où le joueur remonte de la finale (sinon la graine).
 var center := Vector2.ZERO
 
@@ -86,8 +92,8 @@ func begin(m) -> void:
 		main.finale.bring_up()
 	center = _center_of(main)
 	main.spawn_paused = true
-	for id in Regions.ids():
-		main.ground.set_purified(id, 1.0)
+	_from = main.finale.descent_point() if main.get("finale") != null else Vector2.ZERO
+	_purified = {}
 	main.screen_fx.glow(Art.ec("seve"), 0.5, 3.0)
 	Sfx.play("coeur")
 	main.save_game()
@@ -110,6 +116,9 @@ func _process(delta: float) -> void:
 		if t == INF:
 			queue_redraw()
 		return
+	# La fin attend que le héros soit sorti de la brèche (finale_arena.gd › bring_up).
+	if main != null and is_instance_valid(main) and main.get("finale") != null and main.finale.ascent_waiting():
+		return
 	t += delta
 	_step()
 	queue_redraw()
@@ -120,9 +129,9 @@ func _step() -> void:
 		return
 	while _waves_sent < WAVES and t >= _waves_sent * WAVE_GAP:
 		var r := Regions.WORLD_HALF * (0.35 + 0.65 * float(_waves_sent + 1) / WAVES) * 1.5
-		main.ground.paint_wave(Vector2.ZERO, r, 2.0)
+		main.ground.paint_wave(_from, r, 2.0)
 		if _waves_sent == 0:
-			main.flora.spawn_patch(Vector2.ZERO, 620.0, 40, Art.ec("seve", "clair"), 2.0, 620.0)
+			main.flora.spawn_patch(_from, 620.0, 40, Art.ec("seve", "clair"), 2.0, 620.0)
 		else:
 			# Chaque vague suivante fait fleurir une partie des régions, à leurs couleurs.
 			for rid in Regions.ids():
@@ -130,7 +139,16 @@ func _step() -> void:
 					var tint := Regions.color(Regions.def(rid).get("color", "#7fd36b"))
 					main.flora.spawn_patch(Regions.center(rid), 900.0, 40, tint, 2.0, 900.0)
 		_waves_sent += 1
+	# Les régions reverdissent quand le front de vie les atteint, par paliers d'un dixième.
+	for id in Regions.ids():
+		var d := _from.distance_to(Regions.center(id))
+		var k := snappedf(clampf((t * FRONT_SPEED - d + 900.0) / 1800.0, 0.0, 1.0), 0.1)
+		if k > float(_purified.get(id, -1.0)):
+			_purified[id] = k
+			main.ground.set_purified(id, maxf(k, main.ground.purified_of(id)))
 	if active and t >= duration():
+		for id in Regions.ids():
+			main.ground.set_purified(id, 1.0)
 		active = false
 		t = INF
 		if not main.in_boss_fight():

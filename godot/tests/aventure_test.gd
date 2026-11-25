@@ -437,6 +437,11 @@ func _finale_blocked() -> bool:
 func _epilogue(epi) -> void:
 	_epilogue_seen = true
 	check(not paused and main.hud.get_parent().visible, "fin : sans pause ni écran")
+	# Remontée animée (finale_arena.gd › bring_up) : le geyser de sève, puis la brèche.
+	for i in 600:
+		if not main.finale.ascending:
+			break
+		await _frames(1)
 	check(not finale_holds_player(), "fin : le joueur est remonté au pied de la graine")
 	epi.set_time(epi.duration() + 1.0)
 	await _frames(2)
