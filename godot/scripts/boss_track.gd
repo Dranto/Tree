@@ -265,7 +265,7 @@ func current_clip() -> String:
 	return ""
 
 
-## Temps audio (s) : position de lecture du mélangeur, indépendante du ralenti du jeu.
+## Instant (s, horloge réelle) d'une demande, pour le journal des tests.
 func audio_time() -> float:
 	return Time.get_ticks_usec() / 1000000.0
 

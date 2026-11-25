@@ -17,6 +17,7 @@ const END_AT := 95.0
 var main
 var t := 0.0
 var step := 0
+var _seen_phase := 1
 
 
 func _ready() -> void:
@@ -62,22 +63,21 @@ func _physics_process(delta: float) -> void:
 	var finale = main.finale
 	match step:
 		1:
-			if t > 1.0:
-				# Le héros entre dans l'arène : le combat commence (comme en jeu).
-				finale._start_fight()
+			# Le héros arrive dans le creux : l'arène réveille le boss d'elle-même (comme en jeu).
+			if finale.in_combat():
 				_log("éveil")
 				step = 2
 		2:
 			if t >= PHASE2_AT:
 				var b = finale.boss
 				b.take_damage(b.hp - b.max_hp * 0.6, false)
-				_log("coup : phase %d" % b.phase)
+				_log("coup : la vie passe sous 66 %")
 				step = 3
 		3:
 			if t >= PHASE3_AT:
 				var b = finale.boss
 				b.take_damage(b.hp - b.max_hp * 0.3, false)
-				_log("coup : phase %d (transformation)" % b.phase)
+				_log("coup : la vie passe sous 33 %")
 				step = 4
 		4:
 			if t >= KILL_AT:
@@ -89,5 +89,8 @@ func _physics_process(delta: float) -> void:
 			if t >= END_AT:
 				_log("fin du film")
 				get_tree().quit(0)
-	if int(t * 60.0) % 120 == 0:
-		_log("…")
+	# Le boss change de phase entre deux attaques (boss_finale.gd) : c'est ce moment que suit la musique.
+	var bb = finale.boss
+	if step >= 2 and bb != null and is_instance_valid(bb) and int(bb.phase) != _seen_phase:
+		_seen_phase = int(bb.phase)
+		_log("le boss entre en phase %d" % _seen_phase)
