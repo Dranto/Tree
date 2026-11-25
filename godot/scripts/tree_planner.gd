@@ -18,6 +18,7 @@ const Content = preload("res://scripts/content.gd")
 const Effects = preload("res://scripts/effects.gd")
 const SkillTree = preload("res://scripts/skill_tree.gd")
 const AttackScript = preload("res://scripts/attack.gd")
+const Demo = preload("res://scripts/demo.gd")
 
 ## Drapeau de Game.flags qui porte le plan : les uid des nœuds prévus, séparés par des virgules.
 const FLAG := "plan_arbre"
@@ -143,14 +144,15 @@ static func with_mutations(tree, set: Dictionary, blocked: Dictionary = {}) -> D
 
 
 ## Nœuds qu'on ne peut pas apprendre pour l'instant (flétris, incompatibles avec un nœud de
-## « set ») : les chemins les contournent. Une mutation n'est pas contournée : le chemin peut
+## « set », hors de la démo) : les chemins les contournent. Une mutation n'est pas contournée : le chemin peut
 ## passer d'abord par le nœud qui donne sa compétence (can_learn_path le vérifie nœud après nœud).
 func blocked(set: Dictionary) -> Dictionary:
 	var out := {}
 	if not game.has_method("lock_reason"):
 		return out
 	for n in game.tree.nodes:
-		if n["requires_flag"] != "" or game.tree.exclusions.has(n["id"]):
+		# Démo : les nœuds sous la ronce (Demo.node_closed) sont fermés aussi.
+		if n["requires_flag"] != "" or game.tree.exclusions.has(n["id"]) or Demo.node_closed(n):
 			if not set.has(n["id"]) and game.lock_reason(n["id"], set) != "":
 				out[n["id"]] = true
 	return out

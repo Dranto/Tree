@@ -7,6 +7,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const Regions = preload("res://scripts/regions.gd")
+const Demo = preload("res://scripts/demo.gd")
 const Content = preload("res://scripts/content.gd")
 const RegionUi = preload("res://scripts/region_ui.gd")
 const WorldEdge = preload("res://scripts/world_edge.gd")
@@ -241,6 +242,8 @@ func draw_map(v: Control) -> void:
 	_name_rects.clear()
 	for reg in Regions.ids():
 		_draw_region(v, reg, s, font)
+	if Demo.active():
+		_draw_demo_wall(v, s)
 
 	# La graine.
 	var seed_at := to_map(Vector2.ZERO, s)
@@ -253,15 +256,22 @@ func draw_map(v: Control) -> void:
 
 	# Sanctuaires et autels du monde (groupes « sanctuaire » et « autel »).
 	for n in main.get_tree().get_nodes_in_group("sanctuaire"):
+		if not Demo.region_open(Regions.region_at(n.position)):
+			continue
 		var lit: bool = Game.flags.get("sanctuaire_" + str(n.get("id")), false)
 		draw_glyph(v, "sanctuary", to_map(n.position, s), Color("9ad7ff"), lit, 1.0)
 	for n in main.get_tree().get_nodes_in_group("autel"):
+		if not Demo.region_open(Regions.region_at(n.position)):
+			continue
 		if Game.flags.get("autel_" + str(n.get("id")), false):
 			draw_glyph(v, "altar", to_map(n.position, s), Color("f2d06b"), true, 1.0)
 
 	# Les Cœurs et l'arène de chaque région : l'arène est scellée tant qu'un Cœur vit, ouverte ensuite,
 	# et son sceau brisé une fois le boss vaincu.
 	for reg in main.arenas:
+		# Démo : les régions fermées n'ont ni Cœurs ni arène sur la carte, seulement la ronce.
+		if not Demo.region_open(reg):
+			continue
 		var list: Array = main.region_hearts.get(reg, [main.hearts[reg]]) if "region_hearts" in main else [main.hearts[reg]]
 		for heart in list:
 			var hc := to_map(heart.center, s)
@@ -332,6 +342,9 @@ func _draw_region(v: Control, reg: String, s: Vector2, font: Font) -> void:
 	var square := PackedVector2Array([wr.position, Vector2(wr.end.x, wr.position.y), wr.end, Vector2(wr.position.x, wr.end.y)])
 	for poly in Geometry2D.intersect_polygons(pts, square):
 		v.draw_colored_polygon(poly, Color(tint, 0.13))
+	if not Demo.region_open(reg):
+		_draw_closed(v, reg, s, font, pts, square, tint)
+		return
 	# Région purifiée : un voile vert ; à l'ouverture qui suit sa purification, il avance de la graine
 	# vers le bord du monde (la région reverdit sous les yeux du joueur).
 	if bool(Game.flags.get(Regions.boss_flag(reg), false)):
@@ -384,6 +397,33 @@ func _seed_label(v: Control, font: Font, seed_at: Vector2, label: String) -> voi
 			pos = seed_at + sp
 			break
 	_text(v, font, pos, label, Color(UiTheme.GOLD, 0.9))
+
+
+## Démo : région fermée, voilée de sombre et bordée de ronce (demo_wall.gd) ; son nom reste, éteint.
+func _draw_closed(v: Control, reg: String, s: Vector2, font: Font, pts: PackedVector2Array, square: PackedVector2Array, tint: Color) -> void:
+	for poly in Geometry2D.intersect_polygons(pts, square):
+		v.draw_colored_polygon(poly, Color(0.035, 0.02, 0.025, 0.62))
+	var a := Regions.angle_of(reg)
+	var label := str(Regions.def(reg).get("map_name", reg.capitalize()))
+	var name_at := to_map(Vector2.from_angle(a) * 1000.0, s)
+	var name_w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, 15).x
+	UiAudit.draw_text(v, "carte", font, name_at + Vector2(-name_w / 2.0, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(tint.lightened(0.1), 0.55), v.get_global_transform())
+
+
+## Démo : la ronce qui ferme les autres régions (demo.gd › wall_pieces), une fois pour toute la carte.
+func _draw_demo_wall(v: Control, s: Vector2) -> void:
+	for piece in Demo.wall_pieces():
+		var line := PackedVector2Array()
+		var len := Demo.piece_length(piece)
+		var n := maxi(2, int(len / 120.0))
+		for i in n + 1:
+			line.append(to_map(Demo.wall_at(piece, len * i / n, 30.0), s))
+		v.draw_polyline(line, Color(0.06, 0.025, 0.03, 0.9), 6.0)
+		v.draw_polyline(line, Color(0.55, 0.2, 0.2, 0.9), 2.5)
+		for i in range(1, line.size() - 1, 2):
+			var dir := (line[i + 1] - line[i - 1]).normalized()
+			var nm := dir.orthogonal()
+			v.draw_colored_polygon(PackedVector2Array([line[i] - dir * 2.5, line[i] + dir * 2.5, line[i] + nm * 6.0 + dir * 2.0]), Color(0.55, 0.2, 0.2, 0.9))
 
 
 ## Texte posé sur la carte, avec un liseré sombre pour rester lisible sur toutes les teintes.

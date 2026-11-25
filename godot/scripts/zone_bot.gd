@@ -147,7 +147,8 @@ func _goal_pos(main, p):
 		"none", "seed":
 			goal = "apprendre (%s)" % id
 			return null
-		"group":
+		"group", "demo_seal":
+			# Un lieu à rejoindre (sanctuaire, autel ; en démo, le sceau de la graine).
 			goal = id
 			return Objectives.target_pos(o)
 		"heart":

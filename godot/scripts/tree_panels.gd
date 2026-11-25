@@ -11,6 +11,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const TreePlanner = preload("res://scripts/tree_planner.gd")
+const Demo = preload("res://scripts/demo.gd")
 const TreeBuilds = preload("res://scripts/tree_builds.gd")
 
 const PATH_OK := Color("7fd36b")
@@ -268,7 +269,8 @@ func set_query(text: String) -> void:
 
 
 func _on_search_changed(text: String) -> void:
-	matches = _sweep(planner.search(text))
+	# Démo : les nœuds sous la ronce ne se trouvent pas (on ne lit pas ce qu'ils font).
+	matches = _sweep(planner.search(text).filter(func(id): return not Demo.node_closed(Game.tree.nodes[id])))
 	match_set = {}
 	for id in matches:
 		match_set[id] = true
@@ -422,7 +424,7 @@ func _preview_for(id: int) -> Dictionary:
 		return _preview
 	_preview_key = key
 	_preview = {"route": [], "path": [], "changes": []}
-	if id < 0 or Game.allocated.has(id):
+	if id < 0 or Game.allocated.has(id) or Demo.node_closed(Game.tree.nodes[id]):
 		return _preview
 	if planner.plan_has(id):
 		_preview["changes"] = planner.preview(planner.plan)

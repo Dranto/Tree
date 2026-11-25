@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "demo"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -34,6 +34,8 @@ const ValleeScript = preload("res://tests/visual/vallee.gd")
 const ForetScript = preload("res://tests/visual/foret.gd")
 const FinaleScript = preload("res://tests/visual/finale.gd")
 const BordScript = preload("res://tests/visual/bord.gd")
+const DemoScript = preload("res://tests/visual/demo.gd")
+const Demo = preload("res://scripts/demo.gd")
 const Enemy = preload("res://scripts/enemy.gd")
 const Orb = preload("res://scripts/orb.gd")
 const Content = preload("res://scripts/content.gd")
@@ -95,6 +97,9 @@ func _ready() -> void:
 	if scenario == "carte5":
 		# Monde à cinq régions et plus : les régions factices des tests complètent celles des données.
 		Regions.set_extra_dirs(["res://tests/regions/"])
+	if scenario == "demo":
+		# Démo (jalon 12 E) : à poser avant la création du jeu (la haie se crée dans main._ready).
+		Demo.forced = 1
 	main = MainScene.instantiate()
 	# Le robot du mode autotest joue à la place de la souris, sans ses captures ni sa fin de partie.
 	# Activé avant l'ajout à la scène : la partie ne lit ni n'écrit aucune sauvegarde.
@@ -161,6 +166,8 @@ func _ready() -> void:
 			await _scenario_reaction()
 		"eclat":
 			await _scenario_eclat()
+		"demo":
+			await DemoScript.new().run(self)
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
