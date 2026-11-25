@@ -14,6 +14,8 @@
 #   tools/aventure.sh --jusqua=spore        # s'arrête après une région (essai rapide)
 #   tools/aventure.sh --continue-on-block   # force une région bloquée pour voir la suite
 #   tools/aventure.sh --ordre=ronce,vent,spore --autotest=aventure:epines   # ordre et build de départ
+#   tools/aventure.sh --demo --niveau-max=22   # la démo (Ronce seule, jusqu'au sceau de la graine) ; le
+#                                              # build Épines atteint son premier nœud clé au niveau 22
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SEEDS=${SEEDS:-"1"}
@@ -48,6 +50,14 @@ for s in $SEEDS; do
     if [[ "$errors" != "0" ]]; then
       echo "    $errors erreur(s) de script :"
       grep -A1 'SCRIPT ERROR' "$log" | head -20 | sed 's/^/    /'
+      fail=1
+    fi
+    # Toute autre erreur ou tout avertissement de Godot (la sortie du robot doit rester propre ;
+    # les fuites « at exit » d'une sortie par quit() ne comptent pas).
+    noise=$(grep -E '^(ERROR|WARNING|USER ERROR|USER WARNING):' "$log" | grep -vE 'leaked|still in use at exit' | sort | uniq -c | head -10 || true)
+    if [[ -n "$noise" ]]; then
+      echo "    avertissements ou erreurs de Godot :"
+      echo "$noise" | sed 's/^/    /'
       fail=1
     fi
     [[ "$res" == *"tout est bon"* ]] || fail=1

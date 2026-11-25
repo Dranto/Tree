@@ -45,7 +45,7 @@ var great := true
 ## Taille du Cœur (1 pour le Grand Cœur) et rayon de son obstacle.
 var size := 1.0
 var body_radius := BODY_RADIUS
-var title := "Cœur de flétrissure"
+var title := "Cœur de flétrissure" # i18n (traduit à l'affichage)
 ## Rayon de la zone à tenir, et durée à y passer.
 var zone := 240.0
 var hold_time := 30.0
@@ -251,8 +251,8 @@ func reset_siege() -> bool:
 
 ## Barre du siège : ce qu'il reste de flétrissure, et le temps à tenir encore.
 func update_bar(inside: bool) -> void:
-	bar.show_bar(title, 1.0 - progress / hold_time,
-		"Tiens la zone : %d s" % ceili(hold_time - progress) if inside else "Reviens dans la zone : la flétrissure regagne du terrain", Art.ec("cendre", "sombre").lerp(Art.c("danger"), 0.5))
+	bar.show_bar(Loc.data(title), 1.0 - progress / hold_time,
+		Loc.t("Tiens la zone : %d s") % ceili(hold_time - progress) if inside else Loc.t("Reviens dans la zone : la flétrissure regagne du terrain"), Art.ec("cendre", "sombre").lerp(Art.c("danger"), 0.5))
 
 
 ## Une vague arrive d'un même côté, en arc, juste hors de la zone.
@@ -282,6 +282,8 @@ func purify() -> void:
 	Game.flags[flag] = true
 	_set_purified(true)
 	Sfx.play("coeur", center)
+	if main.get("moments") != null:
+		main.moments.on_heart(self)
 	var done := Regions.hearts_done(region, Game.flags) if Regions.exists(region) else count
 	if done >= count:
 		Game.flags[region_flag] = true

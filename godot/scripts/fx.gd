@@ -39,6 +39,9 @@ var hitstops := 0
 var last_hitstop := 0.0
 ## Vrai si la dernière image dessinait quelque chose (pour l'effacer une fois tout fini).
 var drawn_something := false
+## Décalage de la secousse de cette image. Avec main.moments (moments.gd), c'est lui qui pose la
+## caméra : secousse + à-coup + cadrage ; sans lui, fx.gd la pose seul.
+var shake_offset := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -49,6 +52,7 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	# Ne jamais laisser le jeu au ralenti si la scène disparaît pendant une micro-pause.
 	if _hitstop_left > 0.0:
+		_hitstop_left = 0.0
 		Engine.time_scale = 1.0
 
 
@@ -98,6 +102,9 @@ func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0, element := 
 			star(pos, radius * feel("sparks", "crit_star", 2.4), int(feel("sparks", "crit_rays", 8.0)), Color(Art.c("butin"), 1.0))
 		shake(feel("shake", "boss_crit" if boss else "crit", 0.32))
 		hitstop(feel("hitstop", "boss_crit" if boss else "crit", 0.055))
+		# Critique lourd : impact frame « encre » (moments.gd).
+		if heavy and not boss and _moments() != null:
+			_moments().on_crit_heavy(pos)
 	elif heavy:
 		shake(feel("shake", "heavy", 0.16))
 		hitstop(feel("hitstop", "heavy", 0.035))
@@ -169,6 +176,8 @@ func boss_phase(pos: Vector2, radius: float) -> void:
 		ring(pos, radius * 0.8, radius * 3.0, 0.5, Color(Art.c("danger_eclair"), 0.9), 6.0)
 	shake(feel("shake", "boss_phase", 0.6))
 	hitstop(feel("hitstop", "boss_phase", 0.14))
+	if _moments() != null:
+		_moments().on_boss_phase(pos)
 
 
 ## Un boss meurt : long arrêt sur image, pleine secousse, voile clair sur l'écran.
@@ -179,6 +188,13 @@ func boss_kill(pos: Vector2, radius: float) -> void:
 	shake(feel("shake", "boss_kill", 1.0))
 	hitstop(feel("hitstop", "boss_kill", 0.32))
 	screen_flash(Art.c("danger_eclair"), feel("death", "boss_flash", 0.4), 0.5)
+	if _moments() != null:
+		_moments().on_boss_kill(pos)
+
+
+## Moments forts (moments.gd : impact frames, caméra, ralenti), ou null hors du jeu.
+func _moments():
+	return main.get("moments") if main != null else null
 
 
 ## Voile bref sur l'écran (screen_fx.gd), dosé par l'option des flashs.
@@ -219,9 +235,9 @@ func player_punished(pos: Vector2, stunned: bool, sap_lost: float, heal_blocked:
 		Sfx.play("etourdi")
 	if Settings.shows_number(true) and texts.size() < MAX_TEXTS - 2:
 		if sap_lost >= 1.0:
-			text(pos + Vector2(26.0, -52.0), "Sève −%d" % roundi(sap_lost), Art.ec("seve"), 17, 1.1, 2)
+			text(pos + Vector2(26.0, -52.0), Loc.t("Sève −%d") % roundi(sap_lost), Art.ec("seve"), 17, 1.1, 2)
 		if heal_blocked and stunned:
-			text(pos + Vector2(-26.0, -70.0), "étourdi", Art.c("or"), 16, 0.8, 2)
+			text(pos + Vector2(-26.0, -70.0), Loc.t("étourdi"), Art.c("or"), 16, 0.8, 2)
 	if sap_lost >= 1.0 and not Settings.reduce_effects:
 		for i in mini(4, 1 + int(sap_lost / 15.0)):
 			var a := _rng.randf_range(-PI, 0.0)
@@ -282,9 +298,19 @@ func hitstop(dur: float) -> void:
 		return
 	_hitstop_left = dur
 	_hitstop_cd = feel("hitstop", "cooldown", HITSTOP_COOLDOWN)
-	Engine.time_scale = feel("hitstop", "scale", HITSTOP_SCALE)
+	_apply_time()
 	hitstops += 1
 	last_hitstop = dur
+
+
+## Vitesse du jeu : arrêt sur image en cours (feel.json › hitstop › scale), multiplié par le
+## ralenti des moments forts (moments.gd) ; 1 sans l'un ni l'autre.
+func _apply_time() -> void:
+	var k := feel("hitstop", "scale", HITSTOP_SCALE) if _hitstop_left > 0.0 else 1.0
+	var m = _moments()
+	if m != null:
+		k *= m.speed()
+	Engine.time_scale = k
 
 
 ## kind : 0 étincelle (trait), 1 cendre, 2 pétale, 3 lueur qui file vers le joueur. drag : freinage par seconde.
@@ -307,7 +333,7 @@ func _process(delta: float) -> void:
 	if _hitstop_left > 0.0:
 		_hitstop_left -= real
 		if _hitstop_left <= 0.0:
-			Engine.time_scale = 1.0
+			_apply_time()
 	_update_shake(real)
 	for list in [rings, texts, particles, stars]:
 		for e in list:
@@ -342,15 +368,19 @@ func _update_shake(real: float) -> void:
 	if cam == null:
 		return
 	var strength := Settings.shake_strength()
+	var own := _moments() == null
 	if _trauma <= 0.0 or strength <= 0.0:
 		_trauma = 0.0
-		if cam.offset != Vector2.ZERO:
+		shake_offset = Vector2.ZERO
+		if own and cam.offset != Vector2.ZERO:
 			cam.offset = Vector2.ZERO
 		return
 	_trauma = maxf(0.0, _trauma - SHAKE_DECAY * real)
 	_shake_t += real
 	var amp := _trauma * _trauma * SHAKE_MAX * strength
-	cam.offset = Vector2(sin(_shake_t * 61.0), cos(_shake_t * 53.0 + 1.7)) * amp
+	shake_offset = Vector2(sin(_shake_t * 61.0), cos(_shake_t * 53.0 + 1.7)) * amp
+	if own:
+		cam.offset = shake_offset
 
 
 ## Nuages de spores : ils infligent des dégâts, donc avancent à pas fixe (grille spatiale).

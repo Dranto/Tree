@@ -140,7 +140,8 @@ func _run() -> void:
 	check(game.points == points + 2, "2 points d'arbre gagnés")
 	check(arena.state == "vaincue" and not main.spawn_paused, "l'arène refleurit, les naissances reprennent")
 	# La durée de la mort varie selon le boss (1,6 s pour la Mère-Ronce, 2 s pour le Harfang…).
-	await _until(func(): return not is_instance_valid(boss), 300)
+	var boss_ref: WeakRef = weakref(boss)   # une capture libérée par le boss lui-même ferait une erreur au dernier appel
+	await _until(func(): return boss_ref.get_ref() == null, 300)
 	check(not is_instance_valid(boss) and not (boss in main.enemies), "la Mère-Ronce a disparu")
 
 	print("Sauvegarde")

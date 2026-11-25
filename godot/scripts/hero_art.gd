@@ -279,3 +279,19 @@ static func leaf_pts(p: Vector2, l: float, a: float) -> PackedVector2Array:
 		var k := i / 8.0
 		pts.append(p + d * l * (2.0 * k - 1.0) - n * l * 0.5 * sin(k * PI))
 	return pts
+
+
+## Silhouette du héros d'une seule couleur (images rémanentes de l'esquive) : cape, corps et
+## capuche, sans détail ni contour. Bon marché : trois feuilles et deux formes.
+static func draw_ghost(ci: CanvasItem, p: Vector2, r: float, facing: float, col: Color) -> void:
+	var back := facing + PI
+	for side: int in [-1, 0, 1]:
+		var a: float = back + side * 0.62
+		var c := p + Vector2.from_angle(a) * r * (1.05 if side == 0 else 0.95)
+		ci.draw_colored_polygon(leaf_pts(c, r * (0.78 if side == 0 else 0.66), a), col)
+	ci.draw_circle(p, r, col)
+	var d := Vector2.from_angle(facing)
+	ci.draw_colored_polygon(leaf_pts(p - d * r * 0.55, r * 0.32, facing + PI + 0.5), col)
+	# Pieds-racines : deux petites ombres.
+	for sgn: int in [-1, 1]:
+		ci.draw_circle(p + Vector2(sgn * r * 0.5, r * 0.92), r * 0.25, col)

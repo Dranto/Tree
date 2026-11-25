@@ -247,8 +247,9 @@ func make_elite(list: Array) -> void:
 	for a in list:
 		if cfg.has(a) and not a in affixes:
 			affixes.append(a)
-			adjectives.append(str(cfg[a]["name"]))
-	elite_name = str(data["name"]) + " " + " et ".join(adjectives)
+			adjectives.append(Loc.data(str(cfg[a]["name"])))
+	# Nom d'élite : « Flétri cendreux et rapide » (traduit à la naissance de l'élite).
+	elite_name = Loc.tc("%s %s", "élite : nom puis modificateurs") % [Loc.data(str(data["name"])), Loc.t(" et ").join(adjectives)]
 	max_hp *= float(ELITES.get("hp", 3.0))
 	hp = max_hp
 	damage *= float(ELITES.get("damage", 1.25))
@@ -411,7 +412,7 @@ func _elite_step(delta: float, dist: float) -> void:
 		damage *= float(cfg["enrage"].get("damage", 1.5))
 		if main.get("fx") != null:
 			main.fx.ring(position, radius, radius * 3.0, 0.4, Art.ec("cendre"), 4.0)
-			main.fx.text(position + Vector2(0, -radius - 30), "Enragé !", Art.ec("cendre", "clair"), 16, 1.0)
+			main.fx.text(position + Vector2(0, -radius - 30), Loc.t("Enragé !"), Art.ec("cendre", "clair"), 16, 1.0)
 	if max_shield > 0.0:
 		shield_wait -= delta
 		if shield_wait <= 0.0 and shield < max_shield:

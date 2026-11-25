@@ -520,9 +520,9 @@ func help_text() -> String:
 	var n := func(code): return Settings.pad_name_of(code)
 	match zone:
 		"outils", "builds":
-			return "Croix : choisir   ·   %s : valider   ·   %s / %s : panneaux   ·   %s : revenir à l'arbre" % [n.call(JOY_BUTTON_A), n.call(JOY_BUTTON_LEFT_SHOULDER), n.call(JOY_BUTTON_RIGHT_SHOULDER), n.call(JOY_BUTTON_B)]
+			return Loc.t("Croix : choisir   ·   %s : valider   ·   %s / %s : panneaux   ·   %s : revenir à l'arbre") % [n.call(JOY_BUTTON_A), n.call(JOY_BUTTON_LEFT_SHOULDER), n.call(JOY_BUTTON_RIGHT_SHOULDER), n.call(JOY_BUTTON_B)]
 		"couronne":
-			return "Croix : choisir   ·   %s : prendre, poser   ·   %s : retirer   ·   %s / %s : panneaux   ·   %s : revenir à l'arbre" % [n.call(JOY_BUTTON_A), n.call(JOY_BUTTON_X), n.call(JOY_BUTTON_LEFT_SHOULDER), n.call(JOY_BUTTON_RIGHT_SHOULDER), n.call(JOY_BUTTON_B)]
-	return "%s : apprendre   ·   %s : oublier   ·   Stick G : de nœud en nœud   ·   Stick D : curseur   ·   %s / %s : zoom   ·   %s : rechercher   ·   %s / %s : panneaux   ·   %s : fermer" % [
+			return Loc.t("Croix : choisir   ·   %s : prendre, poser   ·   %s : retirer   ·   %s / %s : panneaux   ·   %s : revenir à l'arbre") % [n.call(JOY_BUTTON_A), n.call(JOY_BUTTON_X), n.call(JOY_BUTTON_LEFT_SHOULDER), n.call(JOY_BUTTON_RIGHT_SHOULDER), n.call(JOY_BUTTON_B)]
+	return Loc.t("%s : apprendre   ·   %s : oublier   ·   Stick G : de nœud en nœud   ·   Stick D : curseur   ·   %s / %s : zoom   ·   %s : rechercher   ·   %s / %s : panneaux   ·   %s : fermer") % [
 		n.call(JOY_BUTTON_A), n.call(JOY_BUTTON_X), n.call(Settings.PAD_LT), n.call(Settings.PAD_RT), n.call(JOY_BUTTON_Y),
 		n.call(JOY_BUTTON_LEFT_SHOULDER), n.call(JOY_BUTTON_RIGHT_SHOULDER), n.call(JOY_BUTTON_B)]

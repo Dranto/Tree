@@ -28,7 +28,8 @@ const STONES := 7
 ## (« sanctuaries » de data/regions/<id>.json) : « dist » depuis la graine et « side » (ou « angle »,
 ## en radians) par rapport à l'axe de la région. Ils restent hors de la zone du Cœur et de l'arène,
 ## et sont écartés des buissons d'épines.
-const SEED_SITE := {"id": "graine", "name": "de la Graine", "region": "", "dist": 0.0, "angle": 0.0}
+const SEED_SITE := {"id": "graine", "name": "de la Graine", # i18n
+	 "region": "", "dist": 0.0, "angle": 0.0}
 
 
 var main
@@ -83,7 +84,7 @@ func setup(site: Dictionary) -> void:
 
 
 func title() -> String:
-	return "sanctuaire " + place
+	return Loc.t("sanctuaire %s") % Loc.data(place)
 
 
 func is_lit() -> bool:
@@ -147,6 +148,9 @@ func light() -> void:
 	main.fx.ring(position, 12.0, RADIUS * 2.4, 0.8, Color(Art.ec("seve"), 0.9), 5.0)
 	main.fx.pickup(position, "seve", 14, main.player.position)
 	main.screen_fx.glow(Art.ec("seve"), 0.3, 1.0)
+	# Colonne de lumière qui s'élève puis retombe en pluie de lueurs (world_fx.gd).
+	if main.get("world_fx") != null:
+		main.world_fx.sanctuary_lit(position)
 	main.revive(position, LIFE_RADIUS, Art.ec("seve"))
 	rest(true)
 

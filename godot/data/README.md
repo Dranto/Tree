@@ -26,6 +26,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `builds.json` | Builds types joués par le robot d'équilibrage (`tools/balance.sh`), chacun avec sa branche (`branch`). |
 | `conditions.json` | États utilisables dans un `if`, avec leur texte d'affichage. |
 | `difficulty.json` | Difficulté (`scripts/difficulty.gd`) : menace des ennemis (`threat` : par niveau, selon la profondeur dans la région, par Cœur purifié, plafond), effet de la menace sur leurs statistiques (`scaling`), courbe d'expérience et durée visée par niveau (`xp`), apparitions (`spawn` : cadence, plafond d'ennemis et salves près de la graine et au fond de la région), modes Facile / Normal / Difficile (`modes`), élites (`elites` : chance près/loin, niveau minimal, nombre en vie, chance d'un second modificateur, multiplicateurs de vie, dégâts, taille et expérience, chance de greffe, sortes exclues, et `affixes` : nom affiché, couleur, poids et réglages de chaque modificateur). Vérifiée par `check_data.gd` ; le rythme se mesure avec `tools/balance.sh --run`. |
+| `demo.json` | La démo Steam (`scripts/demo.gd`, jalon 12) : régions ouvertes (Ronce), réglages de la ronce qui ferme les autres. Voir « Démo ». |
 | `objectives.json` | Les objectifs : principaux (dans l'ordre), facultatifs, chacun rattaché à sa région, et la fin de l'aventure. Voir « Objectifs ». |
 | `attack.json` | L'attaque de base du Porte-Graine (`scripts/attack.gd`) : forme de départ, formes (graine, échardes, fouet, ronces vives, spores lobées, dards fongiques) et modificateurs cumulables, réglage des formes en écho. Voir « L'attaque de base ». |
 | `synergies.json` | Synergies de l'attaque de base : bonus quand deux formes, familles ou modificateurs se croisent (`scripts/attack.gd`). Voir « L'attaque de base ». |
@@ -436,11 +437,26 @@ Les points passent par `Game.grant_points(n, source, clé)` : une même clé ne 
 | `keystone` (`branch`) | un nœud clé de la branche est appris |
 | `hearts` | tous les Cœurs de la région de l'objectif sont purifiés |
 
-`target.type` : `none`, `seed`, `heart` (le Cœur de la région le plus proche du joueur parmi ceux qui restent) et `arena` (celle de la région de l'objectif), `finale` (la brèche au pied de la graine, puis la Flétrissure une fois descendu), ou `group` (le plus proche des nœuds du groupe `group`, dans la région de l'objectif, dont le drapeau `<done_prefix><id>` n'est pas levé). `needs_group` masque l'objectif tant que le groupe est vide (le monde n'a pas encore de sanctuaire ou d'autel) ; `needs_flag` le masque tant que ce drapeau n'est pas posé (l'objectif `finale` attend `finale_ouverte`).
+`target.type` : `none`, `seed`, `demo_seal` (le sceau de ronce sur la brèche de la graine, démo seulement), `heart` (le Cœur de la région le plus proche du joueur parmi ceux qui restent) et `arena` (celle de la région de l'objectif), `finale` (la brèche au pied de la graine, puis la Flétrissure une fois descendu), ou `group` (le plus proche des nœuds du groupe `group`, dans la région de l'objectif, dont le drapeau `<done_prefix><id>` n'est pas levé). `needs_group` masque l'objectif tant que le groupe est vide (le monde n'a pas encore de sanctuaire ou d'autel) ; `needs_flag` le masque tant que ce drapeau n'est pas posé (l'objectif `finale` attend `finale_ouverte`).
 
 **Ce que les autres systèmes doivent poser** : `sanctuaire_<id>` à la ravivation d'un sanctuaire (le sanctuaire de la graine s'appelle `sanctuaire_graine` et ne compte pas), `autel_<id>` à la découverte d'un autel, `secret_<id>` pour un secret, `<région>_coeur<n>_purifie`, `<région>_coeur_purifie` et `<région>_boss_vaincu` (déjà posés). Les sanctuaires et les autels se rangent dans les groupes `sanctuaire` et `autel` (nœuds Node2D avec une propriété `id`) pour que la carte et la flèche les trouvent. Un élite vaincu émet `main.elite_killed(enemy)` : `Objectives` le compte dans `elites_tuees`. Les points des objectifs facultatifs passent par `Game.grant_points(n, "quete")` quand il existe.
 
 La reverdie « région purifiée » se lance sur place peu après la victoire sur le boss d'une région (`<région>_boss_vaincu`), sans écran, sans pause et sans texte (`region_fanfare.gd`, jalon 11) : la région reverdit depuis l'arène, ses Cœurs et son centre. Elle pose `<région>_fin_vue` dès le début et ne revient plus ; la carte du monde rejoue la région qui reverdit et le sceau brisé à sa prochaine ouverture. Après la dernière région, la cendre reflue vers la graine (flocons qui dérivent, onde qui se resserre) et la finale s'ouvre (voir « Finale »). Les titres et textes des objectifs ne s'affichent plus en jeu (ni journal ni suivi écrit) : la veine de sève (`sap_vein.gd`) et la feuille au bord de l'écran suivent `target`. L'objectif en cours d'une région se lit avec `Objectives.current(région)`. `tools/godot.sh --headless -s res://scripts/check_data.gd` contrôle le fichier.
+
+## Démo
+
+La démo Steam tourne quand l'export a la fonctionnalité `demo` (presets « démo » de `export_presets.cfg`), ou avec `-- --demo` (tests, robots). Le code la lit par `Game.is_demo()` (ou `Demo.active()` dans un script lancé par `-s`). `demo.json` :
+
+- `regions` : régions ouvertes (`["ronce"]` : la région de Ronce entière, ses trois Cœurs et la Mère-Ronce, sans limite de temps). Les autres restent dans le monde, mais une ronce épaisse (`scripts/demo_wall.gd`) les ferme : le long des bords des secteurs ouverts et autour de l'oasis de la graine. Personne ne la franchit (héros, Flétris, apparitions) ; la carte voile les régions fermées et n'y montre ni Cœurs, ni arène, ni lieux.
+- `wall` : `reach` (profondeur de la haie côté fermé, px), `margin` (place entre la haie et le héros), `seal_reach` (distance du sceau à laquelle la fin de démo se lit).
+
+Arbre : il reste entier. Ne s'apprennent pas en démo, et sont cerclés d'une ronce (infobulle : « Dans le jeu complet. ») : les nœuds flétris qu'une région fermée libère (`requires_flag` d'une autre région) et les nœuds des frontières hybrides entre deux branches fermées. Un nœud déjà appris (partie du jeu complet reprise dans la démo) le reste.
+
+Objectifs : seulement ceux des régions ouvertes et les communs ; un objectif `"demo_only": true` n'existe qu'en démo (`demo_sceau` : après la Mère-Ronce, la veine mène au sceau de la graine, `needs_flag` `ronce_boss_vaincu`, accompli par le drapeau `demo_sceau_vu`).
+
+Fin de démo : sans écran ni pause. La reverdie de Ronce se joue comme dans le jeu complet, la boucle continue ; la brèche au pied de la graine reste scellée par un nœud de ronces sous lequel une lumière de sève bat (les baies de la haie aussi), et une seule ligne s'écrit dans l'herbe quand on s'en approche.
+
+Sauvegarde : même fichier, même format. Le jeu complet reprend une partie de la démo sans perte ; la démo reprend une partie du jeu complet (le héros resté derrière la ronce repart de la graine). Test : `tests/demo_test.gd` ; robot : `tools/aventure.sh --demo` ; captures : scénario visuel `demo` (1280x720 et 1280x800).
 
 ## Finale
 
@@ -490,3 +506,20 @@ SEEDS="1 2 3 4 5 6 7 8 9 10" tools/balance.sh
 ```
 
 Pendant la mesure, le niveau reste figé (mêmes points et même difficulté pour tous les builds) et une mort ne vide pas l'écran : le robot repart sur place avec toute sa vie, et chaque mort compte 10 s de plus dans le temps de jeu. Le score est le nombre d'ennemis vaincus par minute ; `tools/balance.sh` compare les builds d'une même branche (échec si le meilleur dépasse le moins bon de plus de 30 %) puis les branches entre elles (moyenne de chaque branche, échec au-delà de 35 %). `tools/zone.sh --region=<id>` joue une région de bout en bout. Une cible absente de l'arbre est ignorée et signalée.
+
+## Traduction
+
+Les textes des données (champs `name`, `text`, `desc`, `title`, `label`, `short`, `head`, `lines`,
+`map_name`, `phases`, `requires_text`…) restent écrits en français dans les JSON : **on ne réécrit
+jamais un JSON pour la traduction**. `tools/i18n.sh` les lit et les range dans les catalogues
+`godot/locale/` (`tree.pot`, `fr.po` identique à la source, `en.po` à remplir). Chaque nombre d'un
+texte devient `{0}`, `{1}`… dans le catalogue : régler un chiffre dans un JSON ne casse pas sa
+traduction, et le nombre est réécrit à la façon de la langue (1,5 en français, 1.5 en anglais).
+Un champ dont la clé commence par `_` est un commentaire, jamais extrait.
+
+Dans le code, un texte des données s'affiche avec `Loc.data(texte)` ; un texte du code avec `tr()`,
+`Loc.t()` (gabarit `%s`, jamais de concaténation), `Loc.tn()` (pluriel), `Loc.tc()` (contexte) ou
+`Loc.key()` (texte posé dans un Control, qui se traduit lui-même). Un littéral jamais montré se marque
+`# i18n: non`. Après un ajout de texte : `tools/i18n.sh` (la CI échoue sur `tools/i18n.sh --check`
+si les catalogues ne sont pas à jour). `tools/i18n.sh --missing en` liste ce qui reste à traduire.
+Le nom du jeu se lit dans `project.godot` (`Loc.game_name()`), jamais écrit en dur.

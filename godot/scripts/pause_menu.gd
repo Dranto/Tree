@@ -45,17 +45,17 @@ func _ready() -> void:
 	divider.custom_minimum_size = Vector2(300, 30)
 	divider.draw.connect(func(): UiTheme.draw_divider(divider, divider.size.x / 2.0, 8.0, 120.0))
 	col.add_child(divider)
-	resume_button = UiTheme.menu_item("Reprendre", 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
+	resume_button = UiTheme.menu_item(Loc.key("Reprendre"), 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
 	resume_button.pressed.connect(close)
 	col.add_child(resume_button)
-	var opt := UiTheme.menu_item("Options", 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
+	var opt := UiTheme.menu_item(Loc.key("Options"), 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
 	opt.pressed.connect(_open_options)
 	col.add_child(opt)
-	var title_btn := UiTheme.menu_item("Retour au titre", 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
+	var title_btn := UiTheme.menu_item(Loc.key("Retour au titre"), 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
 	title_btn.pressed.connect(Flow.go_title)
 	col.add_child(title_btn)
 	if not OS.has_feature("web"):
-		var quit := UiTheme.menu_item("Quitter", 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
+		var quit := UiTheme.menu_item(Loc.key("Quitter"), 30, HORIZONTAL_ALIGNMENT_CENTER, 320)
 		quit.pressed.connect(Flow.quit)
 		col.add_child(quit)
 	footer = Label.new()
@@ -105,7 +105,7 @@ func open() -> void:
 	get_tree().paused = true
 	menu_panel.visible = true
 	options.visible = false
-	footer.text = "Niveau %d  ·  %d nœuds appris" % [Game.level, Game.allocated.size()]
+	footer.text = tr("Niveau %d  ·  %d nœuds appris") % [Game.level, Game.allocated.size()]
 	resume_button.grab_focus()
 	queue_redraw()
 

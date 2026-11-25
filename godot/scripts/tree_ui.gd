@@ -29,16 +29,17 @@ const TreeArt = preload("res://scripts/tree_art.gd")
 const Effects = preload("res://scripts/effects.gd")
 const Content = preload("res://scripts/content.gd")
 const AttackScript = preload("res://scripts/attack.gd")
+const Demo = preload("res://scripts/demo.gd")
 
 const RADIUS := {
 	"root": 26.0, "small": 11.0, "notable": 18.0, "keystone": 26.0,
 	"skill": 23.0, "mutation": 20.0, "mastery": 19.0, "withered": 18.0, "attack": 21.0,
 }
-const KIND_LABEL := {
+const KIND_LABEL := { # i18n (début)
 	"root": "Origine", "small": "Nœud", "notable": "Nœud notable", "keystone": "Nœud clé",
 	"skill": "Compétence", "mutation": "Mutation", "mastery": "Maîtrise", "withered": "Nœud flétri",
 	"attack": "Attaque de base",
-}
+} # i18n (fin)
 ## Couleurs de la cendre qui couvre un nœud flétri tant qu'il n'est pas libéré.
 const ASH := Color(0.56, 0.55, 0.52)
 const ASH_DARK := Color(0.17, 0.17, 0.165)
@@ -136,6 +137,8 @@ var _rings: Array = []
 ## Nœuds appris et nœuds flétris couverts de cendre : ceux que la couche de vie anime.
 var _owned_ids: Array = []
 var _ashen_ids: Array = []
+## Démo : nœuds que seul le jeu complet ouvre (demo.gd › node_closed), cerclés d'une ronce.
+var _demo_ids: Array = []
 var _extent_cache := -1.0
 ## true tant que le joueur n'a ni zoomé ni bougé : la vue se recadre si la fenêtre change de taille.
 var _fitted := false
@@ -564,7 +567,7 @@ func _branch_label_rect(bi: int, z: float, c: Vector2) -> Rect2:
 	var sector := TAU / SkillTree.BRANCHES.size()
 	var d := Vector2.from_angle((bi + 0.5) * sector - PI / 2.0)
 	var anchor := (d * _extent() - c) * z + view_center() + d * 12.0
-	var s := _text_size(SkillTree.BRANCHES[bi]["name"], FONT_BRANCH)
+	var s := _text_size(Loc.data(SkillTree.BRANCHES[bi]["name"]), FONT_BRANCH)
 	return Rect2(anchor - Vector2(s.x * (1.0 - d.x) / 2.0, s.y * (1.0 - d.y) / 2.0), s)
 
 
@@ -742,6 +745,7 @@ func _refresh_states() -> void:
 	_locks = {}
 	_owned_ids = []
 	_ashen_ids = []
+	_demo_ids = []
 	for n in Game.tree.nodes:
 		var id: int = n["id"]
 		var st := _state(id)
@@ -750,6 +754,8 @@ func _refresh_states() -> void:
 			_owned_ids.append(id)
 		if _ashen(n):
 			_ashen_ids.append(id)
+		if st != "owned" and Demo.node_closed(n):
+			_demo_ids.append(id)
 		if st == "available":
 			_available.append(id)
 		elif st == "owned":
@@ -791,7 +797,7 @@ func click(id: int) -> void:
 	if Game.allocated.has(id):
 		if not n["choices"].is_empty():
 			if n["type"] == "mutation" and Game.choice_index(id) >= 0:
-				panels.say("Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre.")
+				panels.say(Loc.t("Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre."))
 			else:
 				open_choice(id)
 		return
@@ -801,7 +807,7 @@ func click(id: int) -> void:
 		for step in panels.planner.path_to(id):
 			var why: String = Game.lock_reason(step, set)
 			if why != "":
-				panels.say(why if step == id else "Ce chemin passe par « %s ». %s" % [Game.tree.nodes[step]["name"], why])
+				panels.say(why if step == id else Loc.t("Ce chemin passe par « %s ». %s") % [SkillTree.node_name(Game.tree.nodes[step]), why])
 				return
 			set[step] = true
 	panels.click(id)
@@ -863,14 +869,14 @@ func open_choice(id: int) -> void:
 	box.add_theme_constant_override("separation", 10)
 	panel.add_child(box)
 	var title := Label.new()
-	title.text = n["name"]
+	title.text = SkillTree.node_name(n)
 	title.add_theme_font_override("font", UiTheme.font(true))
 	title.add_theme_font_size_override("font_size", 24)
 	title.add_theme_color_override("font_color", Game.tree.node_color(n))
 	box.add_child(title)
 	var sub := Label.new()
 	if n["type"] == "mutation":
-		sub.text = "Choisis comment « %s » se transforme. Le choix tient tant que ce nœud reste appris." % Content.skills().get(n["mutates"], {}).get("name", n["mutates"])
+		sub.text = Loc.t("Choisis comment « %s » se transforme. Le choix tient tant que ce nœud reste appris.") % Loc.data(str(Content.skills().get(n["mutates"], {}).get("name", n["mutates"])))
 	else:
 		sub.text = "Choisis un bonus. Tu pourras en changer quand tu veux, sans rien dépenser."
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -882,7 +888,7 @@ func open_choice(id: int) -> void:
 	for i in n["choices"].size():
 		var ch: Dictionary = n["choices"][i]
 		var b := Button.new()
-		var lines := PackedStringArray([str(ch.get("name", "")) + ("   (choix actuel)" if i == current else "")])
+		var lines := PackedStringArray([Loc.data(str(ch.get("name", ""))) + (Loc.t("   (choix actuel)") if i == current else "")])
 		for e in ch.get("effects", []):
 			var line := Effects.describe(e)
 			if line != "":
@@ -900,7 +906,7 @@ func open_choice(id: int) -> void:
 		if first == null or i == current:
 			first = b
 	var later := Button.new()
-	later.text = "Fermer" if current >= 0 else "Plus tard"
+	later.text = Loc.key("Fermer") if current >= 0 else Loc.key("Plus tard")
 	later.add_theme_font_size_override("font_size", 15)
 	later.size_flags_horizontal = Control.SIZE_SHRINK_END
 	later.pressed.connect(func():
@@ -919,9 +925,9 @@ func choice_open() -> bool:
 
 func _pick_choice(index: int) -> void:
 	var id := _choice_id
-	var name_of: String = Game.tree.nodes[id]["choices"][index].get("name", "")
+	var name_of: String = Loc.data(str(Game.tree.nodes[id]["choices"][index].get("name", "")))
 	if Game.set_choice(id, index):
-		panels.say("%s : %s" % [Game.tree.nodes[id]["name"], name_of])
+		panels.say(Loc.t("%s : %s") % [SkillTree.node_name(Game.tree.nodes[id]), name_of])
 		var scene := get_tree().current_scene if is_inside_tree() else null
 		if scene != null and scene.has_method("request_autosave"):
 			scene.request_autosave()
@@ -1057,6 +1063,7 @@ func _draw_world(c: CanvasItem) -> void:
 			continue
 		draw_node(c, n, p, r, st, w, level)
 		_draw_seam(c, n, p, r * (1.12 if kind == "keystone" else 1.0), st, w)
+	_draw_demo_thicket(c, z, level, keep)
 	_draw_test_marks(c, "world", 3.0 / z)
 
 
@@ -1255,6 +1262,72 @@ func _draw_ash(c: CanvasItem, n: Dictionary, p: Vector2, r: float, w: float) -> 
 		var a := (h % 1000) / 1000.0 * TAU + i * 0.9
 		var d := r * (1.25 + 0.35 * ((h >> (i * 3)) & 7) / 7.0)
 		c.draw_circle(p + Vector2.from_angle(a) * d, r * (0.07 + 0.05 * ((h >> (i * 2)) & 3) / 3.0), Color(ASH, 0.55))
+
+
+## Démo : les nœuds que seul le jeu complet ouvre disparaissent sous une ronce épaisse, comme les
+## régions fermées du monde (demo_wall.gd) : masses sombres, tiges à épines et baies, d'un nœud fermé
+## à l'autre le long de leurs liens. Dessiné dans la couche fixe (une fois par vue). L'infobulle
+## dit seulement « Dans le jeu complet. ».
+const THICKET_DARK := Color(0.075, 0.04, 0.05, 0.94)
+const THICKET_STEM := Color(0.17, 0.085, 0.1)
+const THICKET_LIGHT := Color(0.3, 0.15, 0.17, 0.85)
+const THICKET_THORN := Color(0.36, 0.19, 0.2)
+const THICKET_BERRY := Color(0.72, 0.17, 0.2)
+
+
+func _draw_demo_thicket(c: CanvasItem, z: float, level: int, keep: Rect2) -> void:
+	if _demo_ids.is_empty():
+		return
+	var tree = Game.tree
+	var closed := {}
+	for id in _demo_ids:
+		closed[id] = true
+	var w := 1.0 / z
+	# Les liens entre deux nœuds fermés : une haie continue.
+	for e in tree.edges:
+		if not (closed.has(e.x) and closed.has(e.y)):
+			continue
+		var a: Vector2 = tree.nodes[e.x]["pos"]
+		var b: Vector2 = tree.nodes[e.y]["pos"]
+		if not (keep.has_point(a) or keep.has_point(b)):
+			continue
+		var r := minf(_radius(tree.nodes[e.x], z), _radius(tree.nodes[e.y], z))
+		c.draw_line(a, b, THICKET_DARK, r * 2.6, true)
+		_thorny_stem(c, a, b, maxf(r * 0.35, 1.5 * w), hash([e.x, e.y]))
+	for id in _demo_ids:
+		var n: Dictionary = tree.nodes[id]
+		var p: Vector2 = n["pos"]
+		if not keep.has_point(p):
+			continue
+		var r := _radius(n, z)
+		var h: int = absi(hash(n["uid"]))
+		c.draw_colored_polygon(Art.ellipse(p, r * 1.75, r * 1.5, 14), THICKET_DARK)
+		for k in 3:
+			var a := float((h >> (k * 4)) & 15) / 16.0 * PI + k * 1.1
+			var dir := Vector2.from_angle(a)
+			_thorny_stem(c, p - dir * r * 1.9, p + dir * r * 1.9, maxf(r * 0.3, 1.5 * w), h + k)
+		if h % 3 == 0:
+			var bp := p + Vector2.from_angle(float(h % 628) / 100.0) * r * 0.9
+			c.draw_circle(bp, maxf(r * 0.2, 1.2 * w), THICKET_BERRY)
+			c.draw_circle(bp - Vector2(1, 1) * r * 0.06, maxf(r * 0.07, 0.6 * w), Color(1, 0.7, 0.7, 0.7))
+
+
+## Tige de ronce légèrement courbée de « a » à « b », épines de part et d'autre.
+func _thorny_stem(c: CanvasItem, a: Vector2, b: Vector2, width: float, salt: int) -> void:
+	var dir := (b - a).normalized()
+	var nm := dir.orthogonal()
+	var bend := (float(absi(salt) % 7) - 3.0) / 3.0 * a.distance_to(b) * 0.12
+	var pts := PackedVector2Array()
+	for i in 6:
+		var t := i / 5.0
+		pts.append(a.lerp(b, t) + nm * sin(t * PI) * bend)
+	c.draw_polyline(pts, THICKET_STEM, width, true)
+	c.draw_polyline(pts, THICKET_LIGHT, width * 0.35, true)
+	for i in range(1, 5):
+		var d := (pts[i + 1] - pts[i - 1]).normalized()
+		var o := d.orthogonal() * (1.0 if (i + salt) % 2 == 0 else -1.0)
+		var base := pts[i]
+		c.draw_colored_polygon(PackedVector2Array([base - d * width * 0.7, base + d * width * 0.7, base + (o + d * 0.6).normalized() * width * 2.4]), THICKET_THORN)
 
 
 # --- Couche animée ---
@@ -1627,15 +1700,21 @@ func layout_labels() -> Array:
 		var rect := _branch_label_rect(bi, zoom, cam)
 		if area.encloses(rect) and not _hits(rect, placed):
 			placed.append(rect)
-			out.append([rect, SkillTree.BRANCHES[bi]["name"], FONT_BRANCH, tree.branch_color(bi)])
+			out.append([rect, Loc.data(SkillTree.BRANCHES[bi]["name"]), FONT_BRANCH, tree.branch_color(bi)])
 
 	var level := lod()
 	var cands: Array = []
 	# Les disques des nœuds importants à l'écran sont des obstacles : aucun texte ne les recouvre.
 	var discs: Array[Rect2] = []
 	# Les petits nœuds appris ou disponibles (ceux sur lesquels on clique) aussi.
+	var hidden := {}
+	for id in _demo_ids:
+		hidden[id] = true
 	for n in tree.nodes:
 		if n["type"] == "small" and _states.get(n["id"], "locked") == "locked":
+			continue
+		# Démo : un nœud sous la ronce n'a pas d'étiquette.
+		if hidden.has(n["id"]):
 			continue
 		var sp := to_screen(n["pos"])
 		var sr := _radius(n, zoom) * zoom
@@ -1657,7 +1736,8 @@ func layout_labels() -> Array:
 		var sp: Vector2 = cand[2]
 		var sr: float = cand[3]
 		var fs: int = {"root": FONT_ROOT, "keystone": FONT_KEYSTONE, "skill": FONT_KEYSTONE}.get(n["type"], FONT_NOTABLE)
-		var ts := _text_size(n["name"], fs)
+		var label := SkillTree.node_name(n)
+		var ts := _text_size(label, fs)
 		# Quatre places collées au nœud, puis les mêmes un peu plus loin (autour de l'origine, très entourée).
 		var tries := []
 		for gap in [4.0, 4.0 + maxf(14.0, sr * 1.5)]:
@@ -1680,7 +1760,7 @@ func layout_labels() -> Array:
 				col = Color(1, 1, 1, 0.95)
 			elif not n["type"] in ["keystone", "skill"]:
 				col = Color(0.874, 0.817, 0.686, 0.7)
-			out.append([rect, n["name"], fs, col])
+			out.append([rect, label, fs, col])
 			break
 	return out
 
@@ -1717,11 +1797,11 @@ func _draw_overlay(c: CanvasItem) -> void:
 	# Un fondu sous le bandeau, pour que l'arbre y glisse doucement.
 	for i in 6:
 		c.draw_rect(Rect2(0, HEADER_H + TOOLBAR_H + 1 + i * 3, size.x, 3), Color(BG, 0.35 * (1.0 - i / 6.0)))
-	c.draw_string(font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.INK)
+	c.draw_string(font, Vector2(24, 30), tr("Arbre de vie"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.INK)
 	var pts_col := UiTheme.GOLD if Game.points > 0 else UiTheme.SOFT
-	c.draw_string(font, Vector2(24, 57), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col)
+	c.draw_string(font, Vector2(24, 57), tr("%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds") % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col)
 	c.draw_string(font, Vector2(0, 30), help_text(), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.785, 0.733, 0.616))
-	c.draw_string(font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, UiTheme.GOLD)
+	c.draw_string(font, Vector2(0, 52), tr("Chaque nœud appris ravive la région du monde située dans sa direction."), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, UiTheme.GOLD)
 	if hover >= 0:
 		_draw_tooltip(c, tree.nodes[hover], _states.get(hover, _state(hover)))
 	_audit_texts()
@@ -1731,7 +1811,7 @@ func _draw_overlay(c: CanvasItem) -> void:
 func help_text() -> String:
 	if pad != null and Settings.pad_active():
 		return pad.help_text()
-	return "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer"
+	return tr("Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer")
 
 
 func queue_redraw_header() -> void:
@@ -1748,14 +1828,14 @@ func _audit_texts() -> void:
 	UiAudit.begin("arbre")
 	var branch_names := {}
 	for b in SkillTree.BRANCHES:
-		branch_names[b["name"]] = true
+		branch_names[Loc.data(b["name"])] = true
 	for l in layout_labels():
 		UiAudit.text("arbre", l[0], l[1], "", branch_names.has(l[1]) and l[2] == FONT_BRANCH)
 	var tree = Game.tree
-	UiAudit.text_at("arbre", font, Vector2(24, 30), "Arbre de vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Transform2D.IDENTITY, "entete", true)
-	UiAudit.text_at("arbre", font, Vector2(24, 57), "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds" % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Transform2D.IDENTITY, "entete", true)
+	UiAudit.text_at("arbre", font, Vector2(24, 30), tr("Arbre de vie"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Transform2D.IDENTITY, "entete", true)
+	UiAudit.text_at("arbre", font, Vector2(24, 57), tr("%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds") % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Transform2D.IDENTITY, "entete", true)
 	UiAudit.text_at("arbre", font, Vector2(0, 30), help_text(), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
-	UiAudit.text_at("arbre", font, Vector2(0, 52), "Chaque nœud appris ravive la région du monde située dans sa direction.", HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
+	UiAudit.text_at("arbre", font, Vector2(0, 52), tr("Chaque nœud appris ravive la région du monde située dans sa direction."), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
 	if hover >= 0:
 		var lines := tooltip_lines(tree.nodes[hover], _states.get(hover, _state(hover)))
 		var rect := tooltip_rect(lines)
@@ -1774,13 +1854,16 @@ func _audit_texts() -> void:
 func tooltip_lines(n: Dictionary, st: String) -> Array:
 	var tree = Game.tree
 	var raw: Array = []
-	var bname: String = SkillTree.BRANCHES[n["branch"]]["name"] if n["branch"] >= 0 else ""
-	raw.append([n["name"], 18, tree.node_color(n)])
-	var sub: String = KIND_LABEL[n["type"]]
+	# Démo : un nœud hors démo existe, mais on ne lit pas ce qu'il fait.
+	if _demo_ids.has(n["id"]):
+		return [[Loc.t(Game.DEMO_LOCK), 15, LOCK_COLOR]]
+	var bname: String = Loc.data(SkillTree.BRANCHES[n["branch"]]["name"]) if n["branch"] >= 0 else ""
+	raw.append([SkillTree.node_name(n), 18, tree.node_color(n)])
+	var sub: String = Loc.t(KIND_LABEL[n["type"]])
 	if n["border"] >= 0:
-		sub += " · frontière %s et %s · anneau %d" % [bname, SkillTree.BRANCHES[n["border"]]["name"], n["ring"]]
+		sub += Loc.t(" · frontière %s et %s · anneau %d") % [bname, Loc.data(SkillTree.BRANCHES[n["border"]]["name"]), n["ring"]]
 	elif bname != "":
-		sub += " · " + bname + " · anneau %d" % n["ring"]
+		sub += Loc.t(" · %s · anneau %d") % [bname, n["ring"]]
 	var dim := Color(0.731, 0.683, 0.574)
 	var ink := Color(0.995, 0.93, 0.781)
 	raw.append([sub, 15, dim])
@@ -1789,7 +1872,7 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 		if line != "":
 			raw.append(["• " + line, 14, ink])
 	if n["desc"] != "":
-		raw.append(["• " + n["desc"], 14, ink])
+		raw.append(["• " + Loc.data(n["desc"]), 14, ink])
 	# Synergies où entre la forme ou le modificateur d'attaque du nœud (data/synergies.json) :
 	# en or celles qui sont actives.
 	var attack_effects: Array = n["effects"].duplicate()
@@ -1802,29 +1885,29 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 	if not n["choices"].is_empty():
 		var chosen: int = Game.choice_index(id) if st == "owned" else -1
 		if n["type"] == "mutation":
-			raw.append(["Transforme « %s » : un seul choix" % Content.skills().get(n["mutates"], {}).get("name", n["mutates"]), 15, dim])
+			raw.append([Loc.t("Transforme « %s » : un seul choix") % Loc.data(str(Content.skills().get(n["mutates"], {}).get("name", n["mutates"]))), 15, dim])
 		else:
-			raw.append(["Un bonus à choisir, modifiable à tout moment", 15, dim])
+			raw.append([Loc.t("Un bonus à choisir, modifiable à tout moment"), 15, dim])
 		for i in n["choices"].size():
 			var ch: Dictionary = n["choices"][i]
-			var text := "› %s : %s" % [ch.get("name", ""), SkillTree.describe_effects(ch.get("effects", []))]
-			raw.append([text + ("  (choisi)" if i == chosen else ""), 14, UiTheme.GOLD if i == chosen else (ink if chosen < 0 else dim)])
+			var text := Loc.t("› %s : %s") % [Loc.data(str(ch.get("name", ""))), SkillTree.describe_effects(ch.get("effects", []))]
+			raw.append([text + (Loc.t("  (choisi)") if i == chosen else ""), 14, UiTheme.GOLD if i == chosen else (ink if chosen < 0 else dim)])
 		if st == "owned" and chosen < 0:
-			raw.append(["Clic pour faire ton choix", 15, UiTheme.GOLD])
+			raw.append([Loc.t("Clic pour faire ton choix"), 15, UiTheme.GOLD])
 		elif st == "owned" and n["type"] == "mastery":
-			raw.append(["Clic pour changer de bonus", 15, UiTheme.GOLD])
+			raw.append([Loc.t("Clic pour changer de bonus"), 15, UiTheme.GOLD])
 	# Grappe écrite à la main : avancement et bonus de grappe complète.
 	if n["cluster"] != "" and tree.clusters.has(n["cluster"]):
 		var cl: Dictionary = tree.clusters[n["cluster"]]
 		var prog: Array = Game.cluster_progress(n["cluster"])
-		raw.append(["Grappe « %s » : %d / %d nœuds" % [cl["name"], prog[0], prog[1]], 15, dim])
+		raw.append([Loc.t("Grappe « %s » : %d / %d nœuds") % [Loc.data(cl["name"]), prog[0], prog[1]], 15, dim])
 		if not cl["effects"].is_empty():
-			raw.append(["Grappe complète : " + SkillTree.describe_effects(cl["effects"]), 15, UiTheme.GOLD if prog[0] == prog[1] else dim])
+			raw.append([Loc.t("Grappe complète : %s") % SkillTree.describe_effects(cl["effects"]), 15, UiTheme.GOLD if prog[0] == prog[1] else dim])
 	# Résonance de la branche (des deux branches pour un nœud de frontière) : le prochain palier.
 	for bi in [n["branch"], n["border"]]:
 		if bi < 0:
 			continue
-		bname = SkillTree.BRANCHES[bi]["name"]
+		bname = Loc.data(SkillTree.BRANCHES[bi]["name"])
 		var tiers = SkillTree.BRANCHES[bi].get("resonance", [])
 		if tiers is Array and not tiers.is_empty():
 			var count: int = Game.branch_count(bi)
@@ -1834,9 +1917,9 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 					next = tier
 					break
 			if next.is_empty():
-				raw.append(["Résonance de %s : tous les paliers atteints (%d nœuds)" % [bname, count], 15, UiTheme.GOLD])
+				raw.append([Loc.t("Résonance de %s : tous les paliers atteints (%d nœuds)") % [bname, count], 15, UiTheme.GOLD])
 			else:
-				raw.append(["Résonance de %s : %d / %d nœuds, puis %s" % [bname, count, int(next["count"]), SkillTree.describe_effects(next.get("effects", []))], 15, dim])
+				raw.append([Loc.t("Résonance de %s : %d / %d nœuds, puis %s") % [bname, count, int(next["count"]), SkillTree.describe_effects(next.get("effects", []))], 15, dim])
 	if st != "owned" and _locks.has(id):
 		raw.append([_locks[id], 15, LOCK_COLOR])
 	else:
@@ -1917,7 +2000,7 @@ func tooltip_rect(lines: Array) -> Rect2:
 func _draw_tooltip(c: CanvasItem, n: Dictionary, st: String) -> void:
 	var lines := tooltip_lines(n, st)
 	var rect := tooltip_rect(lines)
-	var col: Color = Game.tree.node_color(n)
+	var col: Color = THICKET_THORN if _demo_ids.has(n["id"]) else Game.tree.node_color(n)
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color(0.0553, 0.0517, 0.0434, 0.97)
 	box.border_color = Color(col, 0.45)
@@ -1932,13 +2015,19 @@ func _draw_tooltip(c: CanvasItem, n: Dictionary, st: String) -> void:
 	# Médaillon du nœud, comme dans l'arbre.
 	var bp := rect.position + Vector2(14 + TIP_BADGE * 0.4, 10 + TIP_BADGE * 0.45)
 	var br := TIP_BADGE * 0.36
-	match n["type"]:
-		"small":
-			TreeArt.pearl(c, bp, br * 0.7, st, col, 1.0, true)
-		"root":
-			TreeArt.seed_node(c, bp, br, col, 1.0, true)
-		_:
-			draw_node(c, n, bp, br, st, 1.0, LOD_CLOSE)
+	if _demo_ids.has(n["id"]):
+		# Démo : le médaillon est un nœud de ronce, rien ne dit ce qu'il cache.
+		c.draw_circle(bp, br * 0.85, THICKET_DARK)
+		_thorny_stem(c, bp - Vector2(br, br * 0.4), bp + Vector2(br, br * 0.4), 2.0, 1)
+		_thorny_stem(c, bp + Vector2(-br * 0.4, br), bp + Vector2(br * 0.4, -br), 2.0, 2)
+	else:
+		match n["type"]:
+			"small":
+				TreeArt.pearl(c, bp, br * 0.7, st, col, 1.0, true)
+			"root":
+				TreeArt.seed_node(c, bp, br, col, 1.0, true)
+			_:
+				draw_node(c, n, bp, br, st, 1.0, LOD_CLOSE)
 	var places := _tooltip_layout(lines)
 	for i in lines.size():
 		var l: Array = lines[i]
