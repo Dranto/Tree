@@ -5,8 +5,14 @@ config_version=5
 
 config/name="Sève"
 config/description="Action-RPG : un monde désolé reprend vie au rythme de ton arbre de compétences."
+config/version="0.12.0"
 run/main_scene="res://scenes/title.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://assets/icon/icon.png"
+boot_splash/bg_color=Color(0.1647, 0.1294, 0.0941, 1)
+boot_splash/image="res://assets/icon/splash.png"
+boot_splash/fullsize=true
+boot_splash/show_image=true
 
 [autoload]
 
