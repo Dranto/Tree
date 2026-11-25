@@ -190,24 +190,28 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	_headgear(ci, xf, mc, rm, s, dom, lv, t, sway, p)
 	if p > 0.25 and s["spore"] < 0.5:
 		Sylve._antler(ci, xf, mc + Vector2(rm * 0.35, -rm * 0.8), 1.0, p, _tipkind(dom), acc, gl, t, false)
-	# --- Arme ---
-	var hand := Vector2(sh + 4.0, top + 16.0 + 4.0 * p)
+	# --- Arme : une vraie arme par forme d'attaque, animée par « a » (0 → 1 : une attaque ; < 0 : repos) ---
 	var forme: String = o.get("forme", "graine" if dom == "aucun" or p < 0.3 else FORME_DE[dom])
 	var mods: Array = o.get("mods", [])
-	var behind := forme == "graine" or forme == "echarde" or forme == "ronce_vive" or forme == "spore_lobee" or forme == "lame" or forme == "perle" or forme == "rayon"
-	var c := {"p": p, "t": t, "u": u, "acc": acc, "gl": gl, "lv": lv}
-	if behind:
-		Arme.draw(ci, xf, hand, top, forme, mods, c)
-	Ink.part(ci, xf, Ink.leaf(Vector2(sh - 3.0, top + 6.0), (hand - Vector2(sh - 3.0, top + 6.0)).angle(), 14.0, 7.0), {"clair": K.CREME, "ombre": K.CREME.darkened(0.2)}, 1.4, 1.0, 0.5)
+	var a: float = o.get("a", -1.0)
+	var sp := Vector2(sh - 3.0, top + 6.0)
+	var hand := Arme.pose(forme, sp, top, p, a, t)
+	var c := {"p": p, "t": t, "u": u, "acc": acc, "gl": gl, "lv": lv, "a": a}
+	var devant: bool = Arme.DEVANT.has(forme)
+	if not devant:
+		Arme.draw(ci, xf, hand, forme, mods, c)
+	var arm := PackedVector2Array([sp, sp.lerp(hand, 0.5) + (hand - sp).orthogonal().normalized() * -2.0, hand])
+	Ink.brush(ci, xf, arm, 8.4, Ink.encre(), 1.0, 0.5)
+	Ink.brush(ci, xf, arm, 6.2, K.CREME, 1.0, 0.5)
 	Ink.part(ci, xf, Ink.oval(hand, 2.8, 2.6, 10), {"clair": Color("5b4636"), "ombre": Color("3f3026")}, 1.0)
-	if not behind:
-		Arme.draw(ci, xf, hand, top, forme, mods, c)
+	if devant:
+		Arme.draw(ci, xf, hand, forme, mods, c)
 	# Feuilles-glyphes en orbite, à maturité.
 	if p > 0.7 and not Ink.mono:
 		var k := (p - 0.7) / 0.3
 		for i in 3:
-			var a := t * 1.1 + i * TAU / 3.0
-			var q := Vector2(cos(a) * (hem + 12.0), top + 10.0 + sin(a) * 8.0)
+			var ga := t * 1.1 + i * TAU / 3.0
+			var q := Vector2(cos(ga) * (hem + 12.0), top + 10.0 + sin(ga) * 8.0)
 			Ink.halo(ci, xf * q, 6.0 * u, gl, k)
 			Ink.flat(ci, xf, Ink.leaf(q + Vector2(-3, 0), a, 7.0, 3.6), Color(gl.lerp(Color.WHITE, 0.3), k), 0.6)
 
