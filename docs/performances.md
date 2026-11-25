@@ -47,7 +47,7 @@ du jalon 6 : la base y mesurait ~28 ms (23,5 ms au jalon 6).
 | --- | --- | --- |
 | Socle : image vide, logique de jeu (pas fixe) | ~4 ms | moteur, `main.gd`, `enemy.gd` |
 | Flétris (silhouettes en cache, états, élites) | ~6,5 ms (~0,6 ms de calcul des silhouettes, le reste en rendu) | `enemy.gd`, `silhouette_cache.gd`, `fletri_art.gd` |
-| Sol (carrés en cache, une texture plein écran) | ~5,5 ms (~9 ms sans le cache) ; la recopie opaque des carrés (tâche A) retire ~1 ms | `ground.gd`, `shaders/ground.gdshader`, `shaders/ground_tile.gdshader` |
+| Sol (carrés en cache, une texture plein écran) | ~5,5 ms (~9 ms sans le cache) ; la recopie opaque des carrés (tâche A) retire ~1 ms. Sol en couches (refonte du monde S, 25/11) : chaque carré porte un calque d'éléments tiré une fois (géométrie des cases en cache, état choisi par le shader du calque), l'herbe du front et l'herbe rase sont peintes par le shader du sol ; banc en paires sans écart mesurable | `ground.gd`, `shaders/ground.gdshader`, `shaders/ground_layer.gdshader`, `shaders/ground_tile.gdshader`, `world_bake/ground_layers.gd` |
 | Interface (HUD) | ~2,3 ms (~0,2 ms de scripts, le reste : ~240 appels de rendu, traits lissés) | `hud.gd`, `hud_widgets.gd` |
 | Héros | ~2,5 ms (traits lissés, ~80 appels de rendu) | `player.gd`, `hero_art.gd` |
 | Décor et fleurs | ~1,5 ms | `flora.gd` |
