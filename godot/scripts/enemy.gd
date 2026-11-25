@@ -23,6 +23,7 @@ const Remains = preload("res://scripts/enemy_remains.gd")
 const DrawBatch = preload("res://scripts/draw_batch.gd")
 const Silhouettes = preload("res://scripts/silhouette_cache.gd")
 const Sprites = preload("res://scripts/sprite_bake.gd")
+const Ink = preload("res://scripts/creature_art/ink.gd")
 
 ## Sortes d'ennemis, dans l'ordre de enemies.json (les trois premières sont les Flétris d'origine).
 static var KINDS: Array = Content._load("enemies").get("kinds", [])
@@ -256,6 +257,7 @@ func make_elite(list: Array) -> void:
 	damage *= float(ELITES.get("damage", 1.25))
 	radius = minf(MAX_RADIUS, radius * float(ELITES.get("radius", 1.2)))
 	xp_value *= float(ELITES.get("xp", 5.0))
+	_elite_look()
 	if "rapide" in affixes:
 		speed *= float(cfg["rapide"].get("speed", 1.4))
 		cd_mult = float(cfg["rapide"].get("cooldown", 0.7))
@@ -610,18 +612,26 @@ func pose() -> Dictionary:
 	return o
 
 
-## Couches : le sol (ombre, aura, annonce, dessous de l'élite) est dessiné par l'ennemi lui-même ;
-## la silhouette et ce qui la recouvre (états, signes d'élite, barre de vie) par deux enfants.
-## La silhouette n'est redessinée qu'une douzaine de fois par seconde, et pas hors de l'écran (plus souvent pendant une action) ;
-## entre deux dessins, elle tourne avec le regard. 120 Flétris restent ainsi aussi légers qu'avant.
+## Couches : le sol (ombre, aura, annonce, dessous de l'élite) ; la silhouette et ce qui la recouvre
+## (états, signes d'élite, barre de vie) par deux enfants.
+## Rendu par défaut (sprite_bake.gd) : la silhouette est une image cuite (un quadrilatère), retournée
+## gauche/droite, redessinée 24 fois par seconde ; le sol est une Part posée sur la couche du sol de
+## main.gd (enemy_ground_layer), sous tous les acteurs : les annonces ne passent jamais sur un Flétri.
+## Ancien rendu (« --no-sprites ») : la silhouette n'est redessinée qu'une douzaine de fois par
+## seconde, et pas hors de l'écran (plus souvent pendant une action) ; entre deux dessins, elle tourne
+## avec le regard ; le sol est dessiné par l'ennemi lui-même.
 class Part extends Node2D:
 	var e
 	var top := false
-	## Sprite cuit (prototype, sprite_bake.gd) : dessine l'image de l'atlas.
+	## Sprite cuit (sprite_bake.gd) : dessine l'image de l'atlas.
 	var sprite := false
+	## Couche du sol (ombre, annonces, auras).
+	var ground := false
 
 	func _draw() -> void:
-		if sprite:
+		if ground:
+			e._draw_ground(self)
+		elif sprite:
 			e._draw_sprite(self)
 		elif top:
 			e._draw_over(self)
@@ -634,12 +644,18 @@ var _body: Part
 var _over: Part
 var _body_face := Vector2.RIGHT
 var _body_clock := 0.0
-## Prototype des sprites cuits (« --sprites ») : l'image de l'atlas, son côté (1 : droite,
-## -1 : gauche), son inclinaison, et vrai si la pose du moment vient de l'atlas.
+## Rendu cuit : l'image de l'atlas, son côté (1 : droite, -1 : gauche), son inclinaison (ancien dessin),
+## le regard cuit (sorte dessinée, indice dans Sprites.LOOKS), et vrai si la pose vient de l'atlas.
 var _sprite: Part
+var _ground: Part
 var _side := 1.0
 var _tilt := 0.0
+var _look := 1
 var _baked := false
+## Toile des annonces (draw_attack des comportements) : le sol, ou l'ennemi lui-même.
+var gc: CanvasItem = self
+## Le sol a encore quelque chose à effacer (une annonce vient de finir).
+var _ground_dirty := false
 const SPRITE_PERIOD := 1.0 / 24.0
 
 
@@ -651,23 +667,85 @@ func _ready() -> void:
 		_sprite = Part.new()
 		_sprite.e = self
 		_sprite.sprite = true
-		_sprite.material = Sprites.material()
+		_sprite.material = Sprites.material(elite)
 		_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		add_child(_sprite)
+		_ground = Part.new()
+		_ground.e = self
+		_ground.ground = true
+		var layer = main.get("enemy_ground_layer") if main != null else null
+		if layer != null:
+			layer.add_child(_ground)
+			_ground.position = position
+		else:
+			_ground.show_behind_parent = true
+			add_child(_ground)
+		Sprites.request(kind_id)
 	_over = Part.new()
 	_over.e = self
 	_over.top = true
 	add_child(_over)
 	_body_clock = randf() * BODY_PERIOD
 	_body_face = face if is_processing() else _target_face()
+	_side = 1.0 if _body_face.x >= 0.0 else -1.0
+
+
+func _exit_tree() -> void:
+	if _ground != null and is_instance_valid(_ground) and _ground.get_parent() != self:
+		_ground.queue_free()
+
+
+## Atlas de l'élite d'une sorte qui dessine elle-même ses marques (DRAWS_ELITE), "" sinon.
+var _elite_key := ""
+
+
+func _atlas_key() -> String:
+	return _elite_key if _elite_key != "" else kind_id
+
+
+## Élite faite après la naissance (make_elite) : liseré doré par le matériau du sprite, ou atlas
+## d'élite de la sorte (cuit à la demande, collier à la couleur de la région où elle est née).
+func _elite_look() -> void:
+	if _sprite == null:
+		return
+	if elite and _draws_elite():
+		if elite_region == "" and main != null and main.has_method("region_at"):
+			elite_region = main.region_at(position)
+		_elite_key = Sprites.elite_key(kind_id, elite_region)
+		Sprites.request(kind_id, {"elite": true, "region": elite_region})
+	_sprite.material = Sprites.material(elite and not _draws_elite())
+	_sprite.queue_redraw()
+
+
+## Script de dessin « Bestiaire d'herbier » de la sorte (null : ancien dessin).
+func _art():
+	return Sprites.script_of(kind_id) if _sprite != null else null
+
+
+func _draws_elite() -> bool:
+	var art = _art()
+	return art != null and bool(Sprites._const(art, "DRAWS_ELITE", false))
+
+
+func _ground_redraw() -> void:
+	if _ground != null:
+		_ground.queue_redraw()
+	else:
+		queue_redraw()
 
 
 ## Redessine ce qui bouge, et seulement cela (appelé par _process).
 func _redraw_parts(delta: float) -> void:
 	var busy := (state != "" and not _behavior.calm(self)) or hit_flash > 0.0 or strike_t >= 0.0 or aff_state != ""
 	if busy or behavior == "guard" or elite:
-		queue_redraw()
+		_ground_redraw()
+		_ground_dirty = true
+	elif _ground_dirty:
+		_ground_dirty = false
+		_ground_redraw()
 	if _sprite != null and is_processing():
+		if _ground != null and _ground.get_parent() != self:
+			_ground.position = position
 		_redraw_sprite(delta, busy)
 		return
 	_body_clock -= delta
@@ -684,27 +762,41 @@ func _redraw_parts(delta: float) -> void:
 	var knock := (hit_dir if hit_dir != Vector2.ZERO else -face) * radius * hit_kick * kk * kk
 	_body.position = knock
 	_over.position = knock
+	_over_step()
+
+
+func _over_step() -> void:
 	if elite or guard_time > 0.0 or root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or _over_dirty:
 		_over_dirty = root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or guard_time > 0.0
 		_over.queue_redraw()
 
 
-## Prototype des sprites cuits : retournement gauche/droite au lieu de tourner, image de l'atlas
-## redessinée 24 fois par seconde (une image ne coûte qu'un quadrilatère).
+## Rendu cuit : retournement gauche/droite au lieu de tourner, regard cuit en trois angles, image de
+## l'atlas redessinée 24 fois par seconde (une image ne coûte qu'un quadrilatère).
 func _redraw_sprite(delta: float, busy: bool) -> void:
 	_body_clock -= delta
 	var fc: Array = Sprites.facing(face, _side)
 	var flip: bool = fc[0] != _side
-	if (busy or flip or _body_clock <= 0.0) and _on_screen():
+	if (busy or flip or fc[2] != _look or _body_clock <= 0.0) and _on_screen():
 		_body_clock += SPRITE_PERIOD
 		if _body_clock < 0.0:
 			_body_clock = SPRITE_PERIOD
 		_side = fc[0]
 		_tilt = fc[1]
-		var cooked := Sprites.usable(pose()) and Sprites.atlases.has(kind_id)
+		_look = fc[2]
+		var a = Sprites.atlas_of(_atlas_key())
+		if a == null or (_elite_key != "" and not Sprites.atlases.has(_elite_key)):
+			# Pas encore cuite, ou rendue pour tenir le budget de mémoire : cuite (ou relue) bientôt.
+			Sprites.request(kind_id)
+			if _elite_key != "":
+				Sprites.request(kind_id, {"elite": true, "region": elite_region})
+		var cooked: bool = a != null and Sprites.usable(pose(), a)
 		_sprite.queue_redraw()
 		if not cooked or _baked != cooked:
 			_body.queue_redraw()
+		if _baked != cooked or flip:
+			# L'ombre suit le côté (et n'est plus dessinée par le dessin direct).
+			_ground_redraw()
 		_baked = cooked
 	_body.rotation = 0.0
 	var kk := clampf(hit_flash / maxf(hit_flash_dur, 0.01), 0.0, 1.0)
@@ -712,14 +804,20 @@ func _redraw_sprite(delta: float, busy: bool) -> void:
 	_body.position = knock
 	_sprite.position = knock
 	_over.position = knock
-	if elite or guard_time > 0.0 or root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or _over_dirty:
-		_over_dirty = root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or guard_time > 0.0
-		_over.queue_redraw()
+	_over_step()
 
 
 func _draw_sprite(ci: CanvasItem) -> void:
+	if not is_processing():
+		# Flétri figé (galeries) : l'image de sa pose si la sorte est cuite.
+		var fc: Array = Sprites.facing(_target_face(), _side)
+		_side = fc[0]
+		_tilt = fc[1]
+		_look = fc[2]
+		_baked = Sprites.draw(ci, _atlas_key(), radius, _side, _tilt, t, pose(), _look)
+		return
 	if _baked:
-		Sprites.draw(ci, kind_id, radius, _side, _tilt, t, pose())
+		Sprites.draw(ci, _atlas_key(), radius, _side, _tilt, t, pose(), _look)
 
 
 ## Hors de l'écran (avec une marge), la silhouette n'est pas redessinée.
@@ -736,12 +834,39 @@ var _over_dirty := false
 
 
 func _draw() -> void:
+	if _ground == null:
+		_draw_ground(self)
+
+
+## Le sol de l'ennemi : ombre (rendu cuit), aura du gardien, annonce de l'attaque, dessous de l'élite.
+func _draw_ground(ci: CanvasItem) -> void:
+	gc = ci
 	var f := face if is_processing() else _target_face()
+	if _ground != null:
+		_draw_shadow(ci)
 	if behavior == "guard":
 		_draw_guard_aura()
 	_draw_attack(f)
 	if elite:
 		_draw_elite_under(f)
+	gc = self
+
+
+## Ombre au sol du rendu cuit : relevée à la cuisson (sorte dessinée) ou celle de l'ancien dessin.
+func _draw_shadow(ci: CanvasItem) -> void:
+	var a = Sprites.atlas_of(_atlas_key())
+	if a == null or not a.scripted:
+		if _art() != null and not _baked:
+			return
+		var sr := radius * (1.15 if behavior == "nest" else 1.0)
+		ci.draw_colored_polygon(Art.ellipse(Vector2(0, sr * Art.OMBRE_DECALAGE * 0.5), sr * 1.05, sr * 0.75, 18), Art.c("ombre"))
+		return
+	if not _baked and is_processing():
+		return
+	var k: float = Sprites.size_of(a, radius)
+	var c: Vector2 = a.shadow_c * k
+	c.x *= _side
+	ci.draw_colored_polygon(Art.ellipse(c, a.shadow_r.x * k, a.shadow_r.y * k, 24), Art.c("ombre"))
 
 
 ## Lot de triangles partagé : la silhouette entière part en un seul appel de rendu.
@@ -749,39 +874,84 @@ static var _batch = DrawBatch.new()
 
 func _draw_body(ci: CanvasItem) -> void:
 	var f := _body_face if is_processing() else _target_face()
-	if _sprite != null and is_processing():
-		# Prototype des sprites : l'atlas dessine la pose ; sinon, dessin direct, retourné aussi.
+	if _sprite != null:
+		# Rendu cuit : l'atlas dessine la pose ; sinon, dessin direct, retourné aussi.
 		if _baked:
 			return
 		Sprites.fallback += 1
 		f = Vector2(_side, 0.0)
+		var art = _art()
+		if art != null:
+			_draw_art_direct(ci, art)
+			return
 	# L'ombre tourne avec la silhouette entre deux dessins : on la garde ronde et centrée.
 	var sr := radius * (1.15 if behavior == "nest" else 1.0)
 	var o := pose()
 	# Les Flétris figés (galeries, planches de la charte) gardent le tracé exact de leur pose.
-	if is_processing() and Silhouettes.cacheable(o):
+	if _sprite == null and is_processing() and Silhouettes.cacheable(o):
 		Silhouettes.draw(ci, kind_id, radius, sr, f, t, o)
 		return
 	Silhouettes.live += 1
-	_batch.draw_colored_polygon(Art.ellipse(Vector2(0, sr * Art.OMBRE_DECALAGE * 0.5), sr * 1.05, sr * 0.75, 14), Art.c("ombre"))
+	if _sprite == null:
+		_batch.draw_colored_polygon(Art.ellipse(Vector2(0, sr * Art.OMBRE_DECALAGE * 0.5), sr * 1.05, sr * 0.75, 14), Art.c("ombre"))
 	FletriArt.draw(_batch, kind_id, Vector2.ZERO, radius, f, t, o)
 	_batch.flush(ci)
 
 
+## Dessin direct d'une sorte dessinée, en attendant sa cuisson (ou figée sans atlas).
+func _draw_art_direct(ci: CanvasItem, art) -> void:
+	var o := pose()
+	var p := o.duplicate()
+	p["t"] = t
+	var look := face.angle() if _side > 0.0 else PI - face.angle()
+	p["look"] = clampf(wrapf(look, -PI, PI), -0.6, 0.6)
+	if o.has("flash"):
+		p["hit"] = o["flash"]
+	if state == "charge":
+		p["charge"] = 1.0
+	if elite and _draws_elite():
+		p["elite"] = true
+		p["region"] = elite_region
+	var k := Sprites.ELITE_SCALE if elite else 1.0
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2(k * _side, k))
+	art.draw(ci, Sprites._feet(float(data.get("radius", radius))), float(art.HEIGHT), p)
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	Ink.flash = 0.0
+
+
+## Haut du dessin (pixels du jeu, relatif à la position) : la barre de vie et le nom passent au-dessus.
+func _top_y() -> float:
+	var art = _art()
+	if art == null:
+		return -radius
+	var a = Sprites.atlas_of(_atlas_key())
+	if a != null:
+		return a.top * Sprites.size_of(a, radius)
+	return Sprites.FEET * float(data.get("radius", radius)) - float(art.HEIGHT) * (Sprites.ELITE_SCALE if elite else 1.0)
+
+
+## Centre des signes d'état : le milieu du corps d'une sorte dessinée, la position sinon.
+func _mid() -> Vector2:
+	if _art() == null:
+		return Vector2.ZERO
+	return Vector2(0, (_top_y() + Sprites.FEET * radius) * 0.5)
+
+
 func _draw_over(ci: CanvasItem) -> void:
 	# États : le motif de l'élément de chaque effet (charte, § 3).
+	var mid := _mid()
 	if root_time > 0.0:
-		Art.status(ci, "racine", Vector2.ZERO, radius, t)
+		Art.status(ci, "racine", mid, radius, t)
 	if poison_time > 0.0:
-		Art.status(ci, "poison", Vector2.ZERO, radius, t)
+		Art.status(ci, "poison", mid, radius, t)
 	if dazzle_time > 0.0:
-		Art.status(ci, "lumiere", Vector2.ZERO, radius, t)
+		Art.status(ci, "lumiere", mid, radius, t)
 	if not bleed_stacks.is_empty():
-		Art.status(ci, "saignement", Vector2.ZERO, radius, t * 1.25)
+		Art.status(ci, "saignement", mid, radius, t * 1.25)
 		# Une goutte par piqûre, en arc au-dessus de la tête.
 		for i in bleed_stacks.size():
 			var a := -PI / 2.0 + (i - (bleed_stacks.size() - 1) / 2.0) * 0.4
-			Art._drop(ci, Vector2.from_angle(a) * radius * 1.15, maxf(1.8, radius * 0.11), Art.ec("saignement", "clair"))
+			Art._drop(ci, Vector2.from_angle(a) * radius * 1.15 + (Vector2(0, _top_y() + radius) if mid != Vector2.ZERO else Vector2.ZERO), maxf(1.8, radius * 0.11), Art.ec("saignement", "clair"))
 	if guard_time > 0.0:
 		_draw_guarded(ci)
 	if elite:
@@ -794,7 +964,7 @@ func _draw_bar(ci: CanvasItem) -> void:
 	if hp >= max_hp and (max_shield <= 0.0 or shield >= max_shield):
 		return
 	var w := maxf(radius * 2.0, 22.0)
-	var y := -radius - (radius * 0.95 + 14.0 if elite else 11.0)
+	var y := _top_y() - (radius * 0.95 + 14.0 if elite else 11.0)
 	ci.draw_rect(Rect2(-w / 2.0 - 1.0, y - 1.0, w + 2.0, 5.0), Color(Art.c("contour"), 0.85))
 	ci.draw_rect(Rect2(-w / 2.0, y, w * clampf(hp / max_hp, 0.0, 1.0), 3.0), Art.c("danger"))
 	if max_shield > 0.0 and shield > 0.0:
@@ -807,20 +977,20 @@ func _draw_attack(f: Vector2) -> void:
 	var hit := strike_t / STRIKE_TIME if strike_t >= 0.0 else -1.0
 	_behavior.draw_attack(self, k, hit)
 	if elite and aff_state == "epines":
-		Art.telegraph(self, {"type": "cercle", "centre": Vector2.ZERO, "rayon": radius * 2.8}, affix_ratio(), -1.0, t)
+		Art.telegraph(gc, {"type": "cercle", "centre": Vector2.ZERO, "rayon": radius * 2.8}, affix_ratio(), -1.0, t)
 	elif elite and hit >= 0.0 and behavior in ["chase", "guard", "charger", "bomber"] and "epines" in affixes:
-		Art.telegraph(self, {"type": "cercle", "centre": Vector2.ZERO, "rayon": radius * 2.8}, 1.0, hit, t)
+		Art.telegraph(gc, {"type": "cercle", "centre": Vector2.ZERO, "rayon": radius * 2.8}, 1.0, hit, t)
 
 
 ## Aura du Gardien d'écorce : un cercle de racines au sol, deux nœuds qui en font le tour.
 func _draw_guard_aura() -> void:
 	var aura := float(data.get("aura", 160.0))
 	var col := Art.ec("racine")
-	draw_arc(Vector2.ZERO, aura, 0.0, TAU, 64, Color(col, 0.16), Art.TRAIT, true)
+	gc.draw_arc(Vector2.ZERO, aura, 0.0, TAU, 64, Color(col, 0.16), Art.TRAIT, true)
 	for i in 2:
 		var a := t * 0.4 + i * PI
-		draw_arc(Vector2.ZERO, aura, a, a + 0.7, 10, Color(col, 0.45), Art.TRAIT, true)
-		draw_circle(Vector2.from_angle(a + 0.7) * aura, 3.5, Color(Art.ec("racine", "clair"), 0.6))
+		gc.draw_arc(Vector2.ZERO, aura, a, a + 0.7, 10, Color(col, 0.45), Art.TRAIT, true)
+		gc.draw_circle(Vector2.from_angle(a + 0.7) * aura, 3.5, Color(Art.ec("racine", "clair"), 0.6))
 
 
 ## Protégé par un Gardien d'écorce : une racine le relie au gardien, une plaque d'écorce le couvre.
@@ -833,6 +1003,40 @@ func _draw_guarded(ci: CanvasItem) -> void:
 	var a := dir.angle() + PI
 	ci.draw_arc(Vector2.ZERO, radius + 4.0, a - 0.9, a + 0.9, 12, Art.ec("racine", "sombre"), Art.TRAIT_FORT, true)
 	ci.draw_arc(Vector2.ZERO, radius + 4.0, a - 0.8, a + 0.8, 12, bark, Art.TRAIT_FIN, true)
+
+
+## Région où l'élite est née (couleur de son collier).
+var elite_region := ""
+
+
+## Collier d'élite d'une sorte dessinée : une torsade à la couleur de la région, liserée d'or, posée au
+## point NECK du script, et une gemme de corruption.
+func _draw_collar(ci: CanvasItem) -> void:
+	var a = Sprites.atlas_of(_atlas_key())
+	if a == null:
+		return
+	if elite_region == "" and main != null and main.has_method("region_at"):
+		elite_region = main.region_at(position)
+	var reg := elite_region if Art.BESTIAIRE.has(elite_region) else str(data.get("region", ""))
+	var band: Color = Art.bc(reg, "clair") if Art.BESTIAIRE.has(reg) else Art.c("elite")
+	var k: float = Sprites.size_of(a, radius)
+	var c: Vector2 = a.neck * k
+	c.x *= _side
+	var w := maxf(radius * 0.55, 6.0)
+	var hh := maxf(radius * 0.18, 2.4)
+	var gold := Art.c("or")
+	var ring := Art.ellipse(c, w, hh, 18)
+	ci.draw_colored_polygon(Art.ellipse(c + Vector2(0, 0.8), w + 1.6, hh + 1.6, 18), Art.bc("encre"))
+	ci.draw_colored_polygon(ring, band)
+	ring.append(ring[0])
+	ci.draw_polyline(ring, gold, 1.4, true)
+	# Torsade : trois perles d'or sur le devant.
+	for i in 3:
+		var q := c + Vector2((i - 1) * w * 0.5 * _side, hh * 0.55)
+		ci.draw_circle(q, maxf(hh * 0.45, 1.3), gold)
+	var g := c + Vector2(w * 0.15 * _side, hh * 0.9)
+	var gs := maxf(radius * 0.14, 2.2) * (1.0 + 0.12 * sin(t * 4.0))
+	ci.draw_colored_polygon(PackedVector2Array([g + Vector2(0, -gs), g + Vector2(gs * 0.7, 0), g + Vector2(0, gs), g + Vector2(-gs * 0.7, 0)]), Art.c("elite"))
 
 
 ## Couleur du signe d'un modificateur : celle de son élément (charte), sinon la sienne.
@@ -849,11 +1053,11 @@ func _draw_elite_under(f: Vector2) -> void:
 	var r := radius
 	var col := Art.c("elite")
 	var pulse := 0.5 + 0.5 * sin(t * 3.0)
-	draw_circle(Vector2.ZERO, r * 1.75, Color(col, 0.06 + 0.03 * pulse))
-	draw_circle(Vector2.ZERO, r * 1.38, Color(col, 0.09))
+	gc.draw_circle(Vector2.ZERO, r * 1.75, Color(col, 0.06 + 0.03 * pulse))
+	gc.draw_circle(Vector2.ZERO, r * 1.38, Color(col, 0.09))
 	for i in 10:
 		var a := i * TAU / 10.0 + t * 0.5
-		draw_arc(Vector2.ZERO, r * 1.6, a, a + 0.36, 6, Color(col, 0.7), Art.TRAIT_FIN, true)
+		gc.draw_arc(Vector2.ZERO, r * 1.6, a, a + 0.36, 6, Color(col, 0.7), Art.TRAIT_FIN, true)
 	if "rapide" in affixes:
 		# Traînées de vitesse derrière lui.
 		var c := _affix_color("rapide")
@@ -861,40 +1065,47 @@ func _draw_elite_under(f: Vector2) -> void:
 			var u := fposmod(t * 2.2 + i / 3.0, 1.0)
 			var side := f.orthogonal() * r * (i - 1) * 0.55
 			var from := -f * r * (1.0 + 0.4 * u) + side
-			draw_line(from, from - f * r * (0.6 + 0.6 * (1.0 - u)), Color(c, 0.75 * (1.0 - u)), Art.TRAIT, true)
+			gc.draw_line(from, from - f * r * (0.6 + 0.6 * (1.0 - u)), Color(c, 0.75 * (1.0 - u)), Art.TRAIT, true)
 	if "epines" in affixes:
 		# Couronne d'épines d'os, qui s'allongent pendant l'annonce.
 		var k := affix_ratio()
 		var n := int(ELITES["affixes"]["epines"].get("count", 10))
 		for i in n:
 			var d := Vector2.from_angle(i * TAU / n + t * 0.3)
-			FletriArt._spike(self, Transform2D(), d * r * 0.95, d, r * (0.3 + 0.8 * k), Art.ec("epine", "clair"), {})
+			FletriArt._spike(gc, Transform2D(), d * r * 0.95, d, r * (0.3 + 0.8 * k), Art.ec("epine", "clair"), {})
 	if "invocateur" in affixes:
 		var c := _affix_color("invocateur")
 		var k := affix_ratio()
 		var ring := r * (1.7 - 0.5 * k)
 		if aff_state == "invocateur":
 			# Cercle d'invocation qui se referme (ce n'est pas un coup : pas de rouge).
-			draw_arc(Vector2.ZERO, r * (2.8 - 1.1 * k), 0.0, TAU, 40, Color(c, 0.3 + 0.5 * k), Art.TRAIT, true)
+			gc.draw_arc(Vector2.ZERO, r * (2.8 - 1.1 * k), 0.0, TAU, 40, Color(c, 0.3 + 0.5 * k), Art.TRAIT, true)
 		for i in 3:
 			var a := t * 1.8 + i * TAU / 3.0
 			var q := Vector2.from_angle(a) * ring
-			draw_circle(q, r * 0.16, Color(c, 0.3))
-			draw_arc(q, r * 0.12, 0.0, TAU, 10, Art.ec("poison", "clair"), Art.TRAIT_FIN, true)
-	# Couronne de pointes : la marque des élites (moitié éclairée, moitié dans l'ombre).
+			gc.draw_circle(q, r * 0.16, Color(c, 0.3))
+			gc.draw_arc(q, r * 0.12, 0.0, TAU, 10, Art.ec("poison", "clair"), Art.TRAIT_FIN, true)
+	# Couronne de pointes : la marque des élites (moitié éclairée, moitié dans l'ombre). Une sorte
+	# dessinée porte à la place un collier de sa région et un liseré doré (_draw_collar, sprite_tint).
+	if _art() != null:
+		return
 	for i in 5:
 		var d := Vector2.from_angle(-PI / 2.0 + (i - 2) * 0.42)
-		FletriArt._spike(self, Transform2D(), d * r * 0.78, d, r * (0.85 if i == 2 else 0.68), col, {})
+		FletriArt._spike(gc, Transform2D(), d * r * 0.78, d, r * (0.85 if i == 2 else 0.68), col, {})
 
 
 ## Par-dessus une élite : gemme de corruption, flammes de la rage, plaques d'écorce, signes, nom.
 func _draw_elite_over(ci: CanvasItem) -> void:
 	var r := radius
 	var col := Art.c("elite")
-	var g := Vector2(r * 0.05, -r * 0.55)
-	ci.draw_circle(g, r * (0.22 + 0.05 * sin(t * 4.0)), Color(col, 0.25))
-	ci.draw_colored_polygon(PackedVector2Array([g + Vector2(0, -r * 0.17), g + Vector2(r * 0.12, 0), g + Vector2(0, r * 0.17), g + Vector2(-r * 0.12, 0)]), col)
-	ci.draw_circle(g + Vector2(-r * 0.03, -r * 0.05), maxf(r * 0.04, 1.0), Color.WHITE)
+	if _art() != null:
+		if not _draws_elite():
+			_draw_collar(ci)
+	else:
+		var g := Vector2(r * 0.05, -r * 0.55)
+		ci.draw_circle(g, r * (0.22 + 0.05 * sin(t * 4.0)), Color(col, 0.25))
+		ci.draw_colored_polygon(PackedVector2Array([g + Vector2(0, -r * 0.17), g + Vector2(r * 0.12, 0), g + Vector2(0, r * 0.17), g + Vector2(-r * 0.12, 0)]), col)
+		ci.draw_circle(g + Vector2(-r * 0.03, -r * 0.05), maxf(r * 0.04, 1.0), Color.WHITE)
 	if "enrage" in affixes:
 		# Braises qui s'envolent : quelques-unes au calme, une gerbe une fois enragé.
 		var n := 7 if enraged else 3
@@ -929,6 +1140,6 @@ func _draw_elite_over(ci: CanvasItem) -> void:
 	var font := ThemeDB.fallback_font
 	var size := 12
 	var w := font.get_string_size(elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-	var pos := Vector2(-w / 2.0, -r - (r * 0.95 + 14.0) - 7.0)
+	var pos := Vector2(-w / 2.0, _top_y() - (r * 0.95 + 14.0) - 7.0)
 	ci.draw_string_outline(font, pos, elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, Color(Art.c("contour"), 0.9))
 	ci.draw_string(font, pos, elite_name, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col.lerp(Color.WHITE, 0.55))

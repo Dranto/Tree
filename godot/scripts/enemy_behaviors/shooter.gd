@@ -39,4 +39,4 @@ func step(e, delta: float, dir: Vector2, dist: float, slow: float) -> void:
 func draw_attack(e, k: float, hit: float) -> void:
 	if e.state == "windup" or hit >= 0.0:
 		var reach := minf(float(e.data["range"]), 440.0)
-		Art.telegraph(e, {"type": "ligne", "de": e.attack_dir * (e.radius + 4.0), "a": e.attack_dir * reach, "largeur": 10.0}, k, hit, e.t)
+		Art.telegraph(e.gc, {"type": "ligne", "de": e.attack_dir * (e.radius + 4.0), "a": e.attack_dir * reach, "largeur": 10.0}, k, hit, e.t)

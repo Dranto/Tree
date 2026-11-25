@@ -11,12 +11,17 @@
 ## terre morte et une de terre vivante par région (assets/ambience/).
 ##
 ## Appels du jeu : set_mood(vie, région), set_combat(0 à 1), set_heart(0 à 1), set_boss(vrai/faux),
-## duck(part) pour baisser un instant la musique sous un grand bruitage.
+## duck(part) pour baisser un instant la musique sous un grand bruitage, follow_boss(arène) à chaque pas.
+##
+## Musiques de boss faites à la main (boss_track.gd, assets/music/hand/) : quand le boss du combat en a
+## une, elle joue à la place des couches du code, qui se taisent (HAND_FADE) ; l'ambiance reste baissée
+## comme pour tout boss. Un boss sans morceau garde la couche « boss » du code.
 extends Node
 
 const BUS := "Musique" # i18n: non (bus audio)
 const AMB_BUS := "Ambiance" # i18n: non (bus audio)
 const SfxScript = preload("res://scripts/sfx.gd")
+const BossTrack = preload("res://scripts/boss_track.gd")
 const RegionAudio = preload("res://scripts/region_audio.gd")
 ## Durée des couches de musique (music_synth.gd › LOOP) ; les nappes d'ambiance bouclent sur 12 s.
 const LOOP := 24.0
@@ -29,6 +34,9 @@ const COMBAT_OUT := 0.25
 const COMBAT_HOLD := 4.0
 const HEART_FADE := 0.6
 const BOSS_FADE := 0.8
+## Fondu croisé (s) entre la musique du monde (couches du code) et un morceau de boss fait à la main :
+## le monde s'efface pendant que le morceau monte (boss_track.gd › FADE_IN), sans rupture.
+const HAND_FADE := 3.0
 const DUCK_RECOVER := 0.7
 const SILENT_DB := -60.0
 ## L'ambiance sonore baisse pendant un combat de boss.
@@ -57,6 +65,9 @@ var beds: Dictionary = {}
 ## Position dans la boucle (s), recalée sur une couche qui joue.
 var clock := 0.0
 var _missing: Dictionary = {}
+## Lecteur des morceaux de boss faits à la main, et part (0 à 1) dont ils remplacent les couches du code.
+var hand: Node
+var hand_k := 0.0
 
 
 func _ready() -> void:
@@ -66,6 +77,8 @@ func _ready() -> void:
 	SfxScript.ensure_bus(AMB_BUS)
 	if not enabled:
 		return
+	hand = BossTrack.new()
+	add_child(hand)
 	_ensure_group("")
 	_ensure_bed("")
 	groups[""]["gain"] = 1.0
@@ -147,6 +160,8 @@ func start() -> void:
 
 func stop() -> void:
 	started = false
+	if hand != null:
+		hand.stop()
 	if enabled:
 		for p in _all_players():
 			p.stop()
@@ -186,6 +201,17 @@ func set_boss(on: bool) -> void:
 	boss_target = 1.0 if on else 0.0
 
 
+## Arène en combat à ce pas (null : aucune) : le morceau du boss, s'il en a un, suit ses phases et sa fin.
+func follow_boss(arena) -> void:
+	if hand != null and started:
+		hand.follow(arena)
+
+
+## Vrai pendant qu'un morceau de boss fait à la main tient la musique.
+func hand_playing() -> bool:
+	return hand != null and hand.active()
+
+
 ## Baisse brève de la musique (part de 0 à 1) sous un grand bruitage (mort d'un boss, Cœur purifié…).
 func duck(amount: float) -> void:
 	duck_gain = minf(duck_gain, 1.0 - clampf(amount, 0.0, 1.0) * 0.7)
@@ -199,6 +225,7 @@ func _process(delta: float) -> void:
 	combat = move_toward(combat, combat_target, (COMBAT_IN if combat_target > combat else COMBAT_OUT) * delta)
 	heart = move_toward(heart, heart_target, HEART_FADE * delta)
 	boss = move_toward(boss, boss_target, BOSS_FADE * delta)
+	hand_k = move_toward(hand_k, 1.0 if hand_playing() else 0.0, delta / HAND_FADE)
 	duck_gain = move_toward(duck_gain, 1.0, DUCK_RECOVER * delta)
 	for id in groups:
 		groups[id]["gain"] = move_toward(groups[id]["gain"], 1.0 if id == region else 0.0, REGION_FADE * delta)
@@ -241,7 +268,7 @@ func _apply() -> void:
 	for id in groups:
 		var g: Dictionary = groups[id]
 		var gains := layer_gains(g["players"])
-		var reg_g := sin(float(g["gain"]) * PI / 2.0) * duck_gain
+		var reg_g := sin(float(g["gain"]) * PI / 2.0) * duck_gain * cos(hand_k * PI / 2.0)
 		for layer in g["players"]:
 			_set_volume(g["players"][layer], float(gains.get(layer, 0.0)) * reg_g)
 	for id in beds:

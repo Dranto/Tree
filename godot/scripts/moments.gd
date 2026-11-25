@@ -62,6 +62,8 @@ var _slow := {}
 var _kick := Vector2.ZERO
 var _zoom := {}
 var _focus := {}
+## Distorsion du dernier coup en cours (final_blow.gd), ou null.
+var _warp = null
 var _cam_dirty := false
 
 ## Horloge en secondes réelles (avance même pendant un arrêt sur image ou un ralenti).
@@ -128,7 +130,9 @@ func _benchmark() -> bool:
 ## redessiner {kind, pos, r, face} ; le héros et les Flétris proches de la première cible
 ## s'ajoutent d'eux-mêmes. style : « encre » ou « region » (region_id : la région dont on prend les
 ## couleurs ; vide, celle où se trouve la première cible). Vrai si elle est lancée.
-func impact_frame(force: float, cibles: Array = [], style := "encre", region_id := "") -> bool:
+## hold (> 0) : chaque variante tient « hold » secondes réelles (le dernier coup du boss final), au
+## lieu de deux ou trois images.
+func impact_frame(force: float, cibles: Array = [], style := "encre", region_id := "", hold := 0.0) -> bool:
 	if not style in STYLES or _benchmark() or not is_inside_tree():
 		return false
 	if not _frame.is_empty() and force <= float(_frame["force"]):
@@ -148,7 +152,7 @@ func impact_frame(force: float, cibles: Array = [], style := "encre", region_id 
 		else:
 			var alternate := strong and style == "encre" and room >= 2 and frames >= 3
 			seq = []
-			for i in frames:
+			for i in (2 if hold > 0.0 else frames):
 				seq.append("B" if alternate and i % 2 == 1 else "A")
 			_flashes.append(_now())
 			if alternate:
@@ -161,7 +165,7 @@ func impact_frame(force: float, cibles: Array = [], style := "encre", region_id 
 		region_id = _region_of(at)
 	_frame = {"force": force, "style": style, "seq": seq, "i": 0, "t": 0.0,
 		"min_time": feel("impact_frame", "min_time", 0.03), "region": region_id, "outline": outline, "pos": at,
-		"fresh": true}
+		"fresh": true, "hold": hold}
 	_collect(cibles, at, outline)
 	if outline:
 		outline_frames += 1
@@ -333,6 +337,14 @@ func _step_frame(real: float) -> void:
 		_frame["fresh"] = false
 		return
 	_frame["t"] += real
+	if float(_frame.get("hold", 0.0)) > 0.0:
+		var at := int(float(_frame["t"]) / float(_frame["hold"]))
+		if at >= _frame["seq"].size():
+			_end_frame()
+		elif at != int(_frame["i"]):
+			_frame["i"] = at
+			_apply_variant()
+		return
 	var next := int(_frame["i"]) + 1
 	if next >= _frame["seq"].size() and _frame["t"] >= float(_frame["min_time"]):
 		_end_frame()
@@ -402,11 +414,12 @@ func _draw_ghosts() -> void:
 ## Ralenti : le jeu passe en douceur à « vitesse » (0 à 1), y reste, puis revient à 1, en « duree »
 ## secondes réelles. Le joueur garde la main. Un seul à la fois : un ralenti plus profond remplace
 ## celui en cours, un plus léger est ignoré. Vrai s'il est lancé.
-func slowmo(duree: float, vitesse: float) -> bool:
+## floor (> 0) : vitesse plancher propre à ce ralenti, au lieu de slowmo › min_speed.
+func slowmo(duree: float, vitesse: float, floor_ := -1.0) -> bool:
 	var k := clampf(Settings.hitstop_strength(), 0.0, 1.0)
 	if k <= 0.0 or duree <= 0.0 or _benchmark():
 		return false
-	var speed := lerpf(1.0, clampf(vitesse, feel("slowmo", "min_speed", 0.2), 1.0), k)
+	var speed := lerpf(1.0, clampf(vitesse, floor_ if floor_ > 0.0 else feel("slowmo", "min_speed", 0.2), 1.0), k)
 	if speed >= 0.999:
 		return false
 	if not _slow.is_empty() and speed >= float(_slow["speed"]):
@@ -483,10 +496,13 @@ func zoom_pulse(force: float, duree: float) -> void:
 
 
 ## La caméra glisse vers « position » (une part du chemin, plafonnée) puis revient au héros.
-func focus(position_: Vector2, duree: float) -> void:
+## rise : part de la durée passée à y aller (0,3 : un coup d'œil ; près de 1 : une approche lente,
+## puis un retour bref, comme pendant la charge d'un boss). reach (> 0) : part du chemin et plafond
+## en pixels propres à ce cadrage, au lieu de feel.json › camera (focus_frac, focus_max).
+func focus(position_: Vector2, duree: float, rise := 0.3, frac := -1.0, reach := -1.0) -> void:
 	if Settings.shake_strength() <= 0.0 or duree <= 0.0 or _benchmark():
 		return
-	_focus = {"t": 0.0, "dur": duree, "pos": position_}
+	_focus = {"t": 0.0, "dur": duree, "pos": position_, "rise": clampf(rise, 0.05, 0.95), "frac": frac, "reach": reach}
 	_cam_dirty = true
 
 
@@ -508,9 +524,11 @@ func focus_offset() -> Vector2:
 	if _focus.is_empty() or main == null or main.player == null:
 		return Vector2.ZERO
 	var to: Vector2 = _focus["pos"] - main.player.position
-	to *= feel("camera", "focus_frac", 0.4)
-	to = to.limit_length(feel("camera", "focus_max", 160.0))
-	return to * Settings.shake_strength() * _envelope(_focus, 0.3)
+	var frac := float(_focus.get("frac", -1.0))
+	var reach := float(_focus.get("reach", -1.0))
+	to *= frac if frac > 0.0 else feel("camera", "focus_frac", 0.4)
+	to = to.limit_length(reach if reach > 0.0 else feel("camera", "focus_max", 160.0))
+	return to * Settings.shake_strength() * _envelope(_focus, float(_focus.get("rise", 0.3)))
 
 
 func _step_camera(real: float) -> void:
@@ -614,6 +632,9 @@ func on_boss_phase(pos: Vector2) -> void:
 ## Mort d'un boss (fx.boss_kill) : la plus forte impact frame, long ralenti.
 func on_boss_kill(pos: Vector2) -> void:
 	var b := _boss()
+	if b != null and b.get("grand_finale") == true:
+		_final_blow(b, pos)
+		return
 	impact_frame(feel("impact_frame", "boss_kill", 1.0), [b] if b != null else [{"pos": pos, "r": 40.0, "kind": ""}], "region")
 	Rumble.play("boss_kill")
 	_big_moment("boss_kill", pos)
@@ -629,6 +650,35 @@ func on_heart(heart) -> void:
 	impact_frame(feel("impact_frame", "heart", 0.95), cibles, "region", str(heart.get("region")) if heart.get("region") != null else "")
 	Rumble.play("heart")
 	_big_moment("heart", center)
+
+
+## Le dernier coup du boss final : une impact frame en encre tenue longtemps (papier, puis encre),
+## un ralenti presque à l'arrêt, et tout l'affichage qui se distord (final_blow.gd). Dosage :
+## feel.json › final_blow.
+func _final_blow(b: Node2D, pos: Vector2) -> void:
+	impact_frame(1.0, [b], "encre", "", feel("final_blow", "hold", 0.42))
+	focus(pos, feel("final_blow", "focus", 3.2), 0.15, 0.6, 300.0)
+	zoom_pulse(1.0, feel("final_blow", "zoom_time", 2.6))
+	slowmo(feel("final_blow", "slowmo", 3.4), feel("final_blow", "speed", 0.05), feel("final_blow", "speed", 0.05))
+	if Settings.reduce_effects or Settings.shake_strength() <= 0.0 or _benchmark():
+		return
+	var warp = load("res://scripts/final_blow.gd").new()
+	warp.main = main
+	get_tree().root.add_child(warp)
+	warp.start(b, pos, Settings.shake_strength())
+	_warp = warp
+
+
+## Arrête tout moment en cours (impact frame, ralenti, caméra, distorsion) : tests visuels.
+func stop_all() -> void:
+	_end_frame()
+	_slow = {}
+	_zoom = {}
+	_focus = {}
+	_apply_time()
+	if _warp != null and is_instance_valid(_warp):
+		_warp.queue_free()
+	_warp = null
 
 
 func _big_moment(key: String, pos: Vector2) -> void:

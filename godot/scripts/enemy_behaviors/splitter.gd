@@ -28,7 +28,7 @@ func step(e, delta: float, dir: Vector2, dist: float, slow: float) -> void:
 
 func draw_attack(e, k: float, hit: float) -> void:
 	if e.state == "windup" or hit >= 0.0:
-		Art.telegraph(e, {"type": "cercle", "centre": Vector2.ZERO, "rayon": float(e.data["puff_radius"])}, k, hit, e.t)
+		Art.telegraph(e.gc, {"type": "cercle", "centre": Vector2.ZERO, "rayon": float(e.data["puff_radius"])}, k, hit, e.t)
 
 
 ## Division : les petits naissent au pas suivant (la mort arrive pendant le parcours des ennemis).
