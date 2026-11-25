@@ -29,4 +29,4 @@ func step(e, delta: float, dir: Vector2, dist: float, slow: float) -> void:
 
 func draw_attack(e, k: float, _hit: float) -> void:
 	if e.state == "windup":
-		Art.telegraph(e, {"type": "cercle", "centre": Vector2.ZERO, "rayon": float(e.data["puddle_radius"])}, k, -1.0, e.t)
+		Art.telegraph(e.gc, {"type": "cercle", "centre": Vector2.ZERO, "rayon": float(e.data["puddle_radius"])}, k, -1.0, e.t)
