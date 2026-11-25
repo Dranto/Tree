@@ -196,6 +196,10 @@ const BESTIAIRE := {
 	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
 	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
 	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
+	# Spore (R2) : chair de champignon mauve-gris, lames ocre, chapeaux pâles, vase luisante, lichen vert-de-gris.
+	"spore": {"clair": Color("a084ae"), "ombre": Color("4b3459"), "reflet": Color("e2d2ec"), "detail": Color("c99a5a"),
+		"chapeau": Color("e6d8bf"), "chapeau_ombre": Color("9c8670"), "vase": Color("5e6a4a"), "vase_reflet": Color("b9c98a"),
+		"lichen": Color("9fb38a"), "lichen_ombre": Color("56684c"), "spore": Color("d9c2f0")},
 }
 ## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
 ## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
