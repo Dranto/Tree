@@ -26,6 +26,10 @@ static var flash := 0.0
 static var mono := false
 ## Couleur de la silhouette (mono) : noir par défaut, blanc pour les silhouettes cuites du héros.
 static var mono_col := Color.BLACK
+## Cuisson (sprite_bake.gd) : l'ombre au sol n'est pas dessinée mais relevée (pixels du dessin),
+## le moteur la dessine à part, sous tous les acteurs.
+static var no_shadow := false
+static var shadow_seen := Rect2()
 
 
 static func encre() -> Color:
@@ -180,6 +184,12 @@ static func ground_shadow(ci: CanvasItem, xf: Transform2D, c: Vector2, rx: float
 	if mono:
 		return
 	var w := xf * oval(c, rx, rx * Art.OMBRE_APLATI, 28)
+	if no_shadow:
+		var r := Rect2(w[0], Vector2.ZERO)
+		for q in w:
+			r = r.expand(q)
+		shadow_seen = r if shadow_seen.size == Vector2.ZERO else shadow_seen.merge(r)
+		return
 	_poly(ci, w, Art.c("ombre"))
 
 
