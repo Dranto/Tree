@@ -61,7 +61,7 @@
     "name": "Cœur de flétrissure",
     "zone": 240.0,
     "hold_time": 30.0,
-    "waves": {"every": 6.0, "base": 4, "growth": 2, "kinds": ["fletri", "cendreux"], "second_share": 0.4, "big": "colosse", "big_from": 2},
+    "waves": {"every": 6.0, "base": 4, "growth": 1, "kinds": ["fletri", "cendreux"], "second_share": 0.4, "big": "colosse", "big_from": 3},
     "idle": {"every": 3.5, "max": 6, "kind": "fletri"},
     "spots": [
       {"dist": 2425, "side": -0.8, "zone": 210.0, "hold_time": 25.0, "size": 0.8, "life_radius": 620.0},

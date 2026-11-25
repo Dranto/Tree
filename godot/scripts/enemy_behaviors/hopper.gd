@@ -71,14 +71,14 @@ static func height(e) -> float:
 func draw_attack(e, k: float, hit: float) -> void:
 	var r := float(e.data["splash_radius"])
 	if e.state == "windup":
-		Art.telegraph(e, {"type": "cercle", "centre": target(e) - e.position, "rayon": r}, k, -1.0, e.t)
+		Art.telegraph(e.gc, {"type": "cercle", "centre": target(e) - e.position, "rayon": r}, k, -1.0, e.t)
 	elif e.state == "leap":
 		var u := clampf(1.0 - e.state_t / float(e.data["leap_time"]), 0.0, 1.0)
-		Art.telegraph(e, {"type": "cercle", "centre": target(e) - e.position, "rayon": r}, 1.0, -1.0, e.t)
+		Art.telegraph(e.gc, {"type": "cercle", "centre": target(e) - e.position, "rayon": r}, 1.0, -1.0, e.t)
 		# L'ombre du crapaud file vers le point de chute.
-		e.draw_colored_polygon(Art.ellipse(Vector2.ZERO, e.radius * (1.0 - 0.3 * sin(PI * u)), e.radius * 0.5, 12), Color(Art.c("ombre"), 0.5))
+		e.gc.draw_colored_polygon(Art.ellipse(Vector2.ZERO, e.radius * (1.0 - 0.3 * sin(PI * u)), e.radius * 0.5, 12), Color(Art.c("ombre"), 0.5))
 	elif hit >= 0.0:
-		Art.telegraph(e, {"type": "cercle", "centre": Vector2.ZERO, "rayon": r}, 1.0, hit, e.t)
+		Art.telegraph(e.gc, {"type": "cercle", "centre": Vector2.ZERO, "rayon": r}, 1.0, hit, e.t)
 
 
 ## En l'air : hauteur du bond (« lift », de 0 à 1), pour le dessin.

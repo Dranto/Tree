@@ -113,8 +113,18 @@ func _version(v: int) -> void:
 
 	# Choix, inventaire, couronne.
 	var choices: Dictionary = src["tree"].get("choices", {})
+	# Un choix reste tant que son nœud le propose encore (la mise en page de l'arbre peut déplacer une
+	# mutation générée : jalon 12 I) ; sinon il disparaît sans rien casser.
 	for uid in choices:
-		check(game.choices.get(uid, "") == choices[uid], "choix %s = %s" % [uid, choices[uid]])
+		var id: int = game.tree.id_for_uid(str(uid))
+		var offered := false
+		if id >= 0:
+			for c in game.tree.nodes[id]["choices"]:
+				offered = offered or str(c.get("id", "")) == str(choices[uid])
+		if offered:
+			check(game.choices.get(uid, "") == choices[uid], "choix %s = %s" % [uid, choices[uid]])
+		else:
+			check(not game.choices.has(uid), "choix %s retiré : le nœud ne le propose plus" % uid)
 	if v >= 2 and v <= 6:
 		for gid in src["tree"].get("grafts", {}).values():
 			check(game.graft_inventory.has(gid) and game.crown.has(gid), "greffe « %s » posée sur l'arbre : dans l'inventaire et la couronne" % gid)

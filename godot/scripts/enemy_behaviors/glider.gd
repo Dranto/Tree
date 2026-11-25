@@ -75,4 +75,4 @@ func draw_attack(e, k: float, hit: float) -> void:
 	if e.state == "windup" or hit >= 0.0:
 		var n := int(e.data.get("shots", 2))
 		var spread := float(e.data.get("spread", 0.2))
-		Art.telegraph(e, {"type": "cone", "centre": Vector2.ZERO, "direction": e.attack_dir.angle(), "ouverture": spread * (n - 1) + 0.18, "rayon": 260.0}, k, hit, e.t)
+		Art.telegraph(e.gc, {"type": "cone", "centre": Vector2.ZERO, "direction": e.attack_dir.angle(), "ouverture": spread * (n - 1) + 0.18, "rayon": 260.0}, k, hit, e.t)
