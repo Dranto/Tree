@@ -10,7 +10,9 @@ const Ground = preload("res://scripts/ground.gd")
 const WorldEdge = preload("res://scripts/world_edge.gd")
 const Flora = preload("res://scripts/flora.gd")
 const Fx = preload("res://scripts/fx.gd")
+const WorldFx = preload("res://scripts/world_fx.gd")
 const ScreenFx = preload("res://scripts/screen_fx.gd")
+const Moments = preload("res://scripts/moments.gd")
 const Ambience = preload("res://scripts/ambience.gd")
 const Player = preload("res://scripts/player.gd")
 const MoveMarker = preload("res://scripts/move_marker.gd")
@@ -52,7 +54,11 @@ var ground
 var world_edge
 var flora
 var fx
+## Un monde qui réagit (world_fx.gd) : herbe couchée, traces, repos, montée de niveau, greffe, sanctuaire.
+var world_fx
 var screen_fx
+## Moments forts : impact frames, caméra, ralenti (moments.gd).
+var moments
 ## Signatures visuelles des attaques du héros (skill_fx.gd).
 var skill_fx: SkillFx
 ## Attaque de base : signatures (fouet, fourche, ricochet…) et zones au sol (ronces vives, traînée),
@@ -220,11 +226,24 @@ func _ready() -> void:
 	fx = Fx.new()
 	fx.main = self
 	add_child(fx)
+	# Traces, herbe couchée et graine du repos : au niveau du sol, sous les acteurs ; le reste (spirale,
+	# greffe, colonne de lumière) au-dessus (world_fx.gd).
+	world_fx = WorldFx.new()
+	world_fx.setup(self)
+	add_child(world_fx)
+	move_child(world_fx, flora.get_index() + 1)
+	add_child(world_fx.over)
+	moments = Moments.new()
+	moments.main = self
+	add_child(moments)
 	var ambience = Ambience.new()
 	ambience.main = self
 	add_child(ambience)
 
 	var cam := Camera2D.new()
+	# Avec l'interpolation physique, Godot force ce mode et le dit dans la sortie : on le choisit
+	# avant d'activer le lissage (qui le vérifie).
+	cam.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
 	cam.position_smoothing_enabled = true
 	cam.position_smoothing_speed = 8.0
 	player.add_child(cam)
@@ -324,8 +343,8 @@ func _ready() -> void:
 		loaded = SaveGame.load_into(self, resume_from)
 	elif not autotest and Flow.continue_requested and not "--new-game" in OS.get_cmdline_user_args():
 		loaded = SaveGame.load_into(self)
-		if not loaded and SaveGame.last_error != "aucune sauvegarde":
-			hud.banner("Sauvegarde illisible (%s) : nouvelle partie." % SaveGame.last_error)
+		if not loaded and SaveGame.last_error != Loc.t("aucune sauvegarde"):
+			hud.banner(Loc.t("Sauvegarde illisible (%s) : nouvelle partie.") % SaveGame.last_error)
 	if not loaded:
 		Game.reset()
 	else:
@@ -422,6 +441,10 @@ func _physics_process(delta: float) -> void:
 		Music.set_mood(1.0, "generique")
 	else:
 		Music.set_mood(ground.life_at(player.position), Regions.region_at(player.position))
+	# Présence enrichie Steam : la région du héros (sans effet sans Steam).
+	if Engine.get_physics_frames() % 60 == 0:
+		var here := "finale" if under else Regions.region_at(player.position)
+		SteamBridge.set_region(here if here != "" else "graine")
 	if Music.enabled and Engine.get_physics_frames() % 6 == 0:
 		_music_state()
 	autosave_timer -= delta
@@ -899,6 +922,7 @@ func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void
 	# Les étincelles du coup prennent la couleur de son élément (charte) : racines, épines de Ronce, lumière d'Aube.
 	fx.hit_element = "racine" if root_hit_base > 0.0 or branch == "racine" else ("epine" if branch == "ronce" else ("lumiere" if branch == "aube" else ""))
 	e.take_damage(dmg, crit)
+	world_fx.on_hit(e.position, branch, fx.hit_element, crit, s["poison"] > 0.0, s["bleed"] > 0.0)
 	fx.hit_element = ""
 	Sfx.play(enemy_sound(e, "sound_crit" if crit else "sound_hit", "critique" if crit else "impact"), e.position)
 	if s["poison"] > 0.0:
@@ -1073,7 +1097,7 @@ func import_ground_grafts(list: Array) -> void:
 
 func _on_elite_killed(e) -> void:
 	fx.ring(e.position, e.radius, e.radius * 4.0, 0.6, Color("f2c75a"), 5.0)
-	fx.text(e.position + Vector2(0, -e.radius - 30), e.elite_name + " vaincu", Color("f2c75a"), 18, 1.6)
+	fx.text(e.position + Vector2(0, -e.radius - 30), Loc.t("%s vaincu") % e.elite_name, Color("f2c75a"), 18, 1.6)
 	if rng.randf() < float(Enemy.ELITES.get("graft_chance", 0.0)):
 		drop_graft(e.position)
 	elite_killed.emit(e)
@@ -1132,7 +1156,8 @@ func player_died() -> void:
 	screen_fx.fade(Art.c("decor").darkened(0.5), 1.0, 0.0, ScreenFx.FADE_DEATH)
 	fx.ring(player.position, 16.0, 150.0, 0.9, Art.ec("seve"), 5.0)
 	fx.pickup(player.position, "seve", 10)
-	hud.show_death({"place": spot.place if spot != null else "de la Graine", "dropped": dropped, "lost": lost, "reset": reset})
+	hud.show_death({"place": spot.place if spot != null else "de la Graine", # i18n: non (lieu jamais affiché)
+		 "dropped": dropped, "lost": lost, "reset": reset})
 	# Les annonces de l'endroit où il est tombé n'ont plus lieu d'être.
 	hud.drop_combat_banners()
 	request_autosave()
@@ -1240,7 +1265,8 @@ func revive(world_pos: Vector2, radius: float, tint: Color, strength := 0.9) -> 
 
 
 func _on_level_up(lvl: int) -> void:
-	fx.ring(player.position, 20.0, 160.0, 0.6, Art.c("or"), 5.0)
+	# Spirale de sève et couronne de feuilles (world_fx.gd), à la place de l'anneau doré d'avant.
+	world_fx.level_up()
 	fx.pickup(player.position, "seve", 12)
 	# Plus d'annonce : la touche de l'Arbre de vie pulse dans le HUD (glyphe, hud.gd) tant qu'un point attend.
 	request_autosave()

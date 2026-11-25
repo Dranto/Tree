@@ -50,6 +50,16 @@ jobs:
           [ -d ../base ] && export BASE_DIR=../base
           RUNS=2 tools/bench.sh | tee bench.txt
 
+      # Même banc dans une fenêtre de 1280×800 (écran courant des portables et du Steam Deck) : le
+      # rendu logiciel coûte au pixel, il doit tenir dans le même budget.
+      - name: Banc de jeu en 1280×800 (meilleure de 2 mesures, en paires avec la base sur une PR)
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          [ -d ../base ] && export BASE_DIR=../base
+          RESOLUTION=1280x800 RUNS=2 tools/bench.sh | tee bench_1280.txt
+
       - name: Banc des pics, siège du Cœur (meilleure de 2 mesures)
         if: always()
         shell: bash
@@ -87,6 +97,10 @@ jobs:
             echo "### Banc de performance"
             echo '```'
             cat bench.txt 2>/dev/null
+            echo '```'
+            echo "### Banc de jeu en 1280×800"
+            echo '```'
+            cat bench_1280.txt 2>/dev/null
             echo '```'
             echo "### Banc des pics (siège du Cœur)"
             echo '```'

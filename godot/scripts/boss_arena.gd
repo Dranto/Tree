@@ -31,9 +31,9 @@ var heart
 var region := "ronce"
 var flag := "ronce_boss_vaincu"
 var boss_script: GDScript
-var boss_name := "La Mère-Ronce"
+var boss_name := "La Mère-Ronce" # i18n
 var bar_color := Color("c84b44")
-var phase_names: Array = ["Phase 1 sur 3", "Phase 2 sur 3 : les bourgeons éclosent", "Phase 3 sur 3 : les ronces se resserrent"]
+var phase_names: Array = ["Phase 1 sur 3", "Phase 2 sur 3 : les bourgeons éclosent", "Phase 3 sur 3 : les ronces se resserrent"] # i18n
 ## Rayon de l'arène, rayon final quand elle se resserre, et distance entre le Cœur et son centre
 ## (vers l'extérieur du monde).
 var max_radius := 470.0
@@ -176,7 +176,7 @@ func _physics_process(delta: float) -> void:
 
 
 func update_bar() -> void:
-	bar.show_bar(boss_name, boss.hp / boss.max_hp, phase_names[mini(boss.phase, phase_names.size()) - 1], bar_color)
+	bar.show_bar(Loc.data(boss_name), boss.hp / boss.max_hp, Loc.data(str(phase_names[mini(boss.phase, phase_names.size()) - 1])), bar_color)
 
 
 func _start_fight() -> void:
@@ -226,6 +226,7 @@ func boss_defeated() -> void:
 	shrink_warn = 0.0
 	main.spawn_paused = false
 	Game.flags[flag] = true
+	SteamBridge.unlock(SteamBridge.boss_achievement(region))
 	# Récompense (« boss › reward » de la région) : points d'arbre, donnés une seule fois, et une greffe au sol.
 	var reward: Dictionary = Content.rewards().get("boss", {}).get(region, {})
 	Game.grant_points(int(reward.get("points", REWARD_POINTS)), "boss", region + "_boss")
@@ -406,9 +407,9 @@ func autotest_step(delta: float) -> void:
 	if state == "vaincue":
 		_autotest_end("victoire", 0)
 	elif defeats > 0:
-		_autotest_end("défaite", 0)
+		_autotest_end("défaite", 0) # i18n: non
 	elif auto_time >= auto_max:
-		_autotest_end("ÉCHEC, combat non terminé", 1)
+		_autotest_end("ÉCHEC, combat non terminé", 1) # i18n: non
 
 
 func _autotest_end(result: String, code: int) -> void:

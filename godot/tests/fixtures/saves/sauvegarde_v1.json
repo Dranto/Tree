@@ -1,0 +1,56 @@
+{
+	"format": "seve-save",
+	"game": {
+		"flags": {
+			"fin_ronce_vue": true,
+			"rencontre_gardien": true,
+			"ronce_boss_vaincu": true
+		},
+		"kills": 100,
+		"level": 6,
+		"points": 1,
+		"xp": 12.5
+	},
+	"saved_at": 1763000001,
+	"tree": {
+		"allocated": [
+			"ronce:1:1",
+			"ronce:2:2",
+			"ronce:3:3",
+			"ronce:99:0"
+		]
+	},
+	"version": 1,
+	"world": {
+		"elapsed": 600.0,
+		"flowers": [
+			[
+				10.0,
+				20.0,
+				"ff0000",
+				1.2,
+				5
+			],
+			[
+				-40.5,
+				66.0,
+				"f2c75a",
+				0.9,
+				6
+			],
+			[
+				300.0,
+				-120.0,
+				"7ac0ff",
+				1.0,
+				4
+			]
+		],
+		"life_map": "iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAAAAAA7VNdtAAAAU0lEQVR4nO3UQQoAIAhEUe9/Rg8TrSIya4aQCv/atzITybJn0ho6r4DSPlxsmEEsjSFWBiem8E0ImQjP/ESu3UvQs2TuhblK5vaF+GGaAuaz7GAFPgGdbJay+gYAAAAASUVORK5CYII=",
+		"player": {
+			"hp": 55.0,
+			"x": 321.0,
+			"y": -654.0
+		}
+	}
+}

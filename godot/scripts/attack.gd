@@ -1115,18 +1115,18 @@ static func _afx(main, id: String, d: Dictionary) -> void:
 static func describe_effect(e: Dictionary) -> String:
 	if e.has("attack_form"):
 		var f: Dictionary = forms().get(str(e["attack_form"]), {})
-		return "Attaque de base : %s. %s" % [str(f.get("name", e["attack_form"])).to_lower(), str(f.get("desc", ""))]
+		return Loc.t("Attaque de base : %s. %s") % [Loc.data(str(f.get("name", e["attack_form"]))).to_lower(), Loc.data(str(f.get("desc", "")))]
 	if e.has("attack_mod"):
 		var name := str(e["attack_mod"])
 		var def: Dictionary = mods().get(name, {})
-		return "Attaque : " + mod_text(name, float(e.get("value", 0.0)), float(e.get("factor", def.get("factor", 0.0))))
+		return Loc.t("Attaque : %s") % mod_text(name, float(e.get("value", 0.0)), float(e.get("factor", def.get("factor", 0.0))))
 	return ""
 
 
 ## Phrase d'un modificateur avec sa valeur ({v} valeur, {p} pourcentage, {n} « une sur N », {f} facteur).
 static func mod_text(name: String, v: float, factor := 0.0) -> String:
 	var def: Dictionary = mods().get(name, {})
-	var t := str(def.get("text", name))
+	var t := Loc.data(str(def.get("text", name)))
 	t = t.replace("{v}", _num(v)).replace("{p}", _num(v * 100.0)).replace("{n}", _num(v)).replace("{f}", _num(factor))
 	return t
 
@@ -1135,19 +1135,19 @@ static func mod_text(name: String, v: float, factor := 0.0) -> String:
 static func describe(st: Dictionary) -> PackedStringArray:
 	var out := PackedStringArray()
 	var f := form_def(st)
-	out.append("%s : %s" % [f.get("name", st["form"]), f.get("desc", "")])
+	out.append(Loc.t("%s : %s") % [Loc.data(str(f.get("name", st["form"]))), Loc.data(str(f.get("desc", "")))])
 	for id in st.get("echoes", []):
 		var ef: Dictionary = forms().get(id, {})
-		out.append("En écho, %s : %s" % [str(ef.get("name", id)).to_lower(), ef.get("desc", "")])
+		out.append(Loc.t("En écho, %s : %s") % [Loc.data(str(ef.get("name", id))).to_lower(), Loc.data(str(ef.get("desc", "")))])
 	var names: Array = st["mods"].keys()
 	names.sort()
 	for name in names:
 		var line := mod_text(name, float(st["mods"][name]), float(st.get("factor", 0.0)))
 		if not applies_any(name, st):
-			line += " (sans effet sur : %s)" % ", ".join(all_forms(st).map(func(id): return str(forms().get(id, {}).get("name", id)).to_lower()))
+			line += Loc.t(" (sans effet sur : %s)") % Loc.t(", ").join(all_forms(st).map(func(id): return _form_name(id).to_lower()))
 		out.append(line)
 	for sid in st.get("synergies", []):
-		out.append("Synergie « %s » : %s" % [synergy(sid).get("name", sid), synergy_text(sid)])
+		out.append(Loc.t("Synergie « %s » : %s") % [_syn_name(sid), synergy_text(sid)])
 	return out
 
 
@@ -1160,7 +1160,11 @@ static func applies_any(name: String, st: Dictionary) -> bool:
 
 
 static func _form_name(id: String) -> String:
-	return str(forms().get(id, {}).get("name", id))
+	return Loc.data(str(forms().get(id, {}).get("name", id)))
+
+
+static func _syn_name(sid: String) -> String:
+	return Loc.data(str(synergy(sid).get("name", sid)))
 
 
 ## Différences entre deux états, pour l'aperçu de l'arbre : [{"text": "Attaque : Graines → Fouet"}, …].
@@ -1170,16 +1174,16 @@ static func diff(before: Dictionary, after: Dictionary) -> Array:
 	var had := all_forms(before)
 	var has := all_forms(after)
 	if before["form"] != after["form"]:
-		var line := "Attaque : %s → %s" % [_form_name(before["form"]), _form_name(after["form"])]
+		var line := Loc.t("Attaque : %s → %s") % [_form_name(before["form"]), _form_name(after["form"])]
 		if before["form"] in has:
-			line += " (%s continue en écho)" % _form_name(before["form"]).to_lower()
+			line += Loc.t(" (%s continue en écho)") % _form_name(before["form"]).to_lower()
 		out.append({"stat": "attack_form", "text": line})
 	for id in has:
 		if id != after["form"] and not id in had:
-			out.append({"stat": "attack_form", "text": "Attaque : + %s, en écho (tire en plus, à sa cadence)" % _form_name(id).to_lower()})
+			out.append({"stat": "attack_form", "text": Loc.t("Attaque : + %s, en écho (tire en plus, à sa cadence)") % _form_name(id).to_lower()})
 	for id in had:
 		if not id in has and id != start_form():
-			out.append({"stat": "attack_form", "text": "Attaque : − %s" % _form_name(id).to_lower()})
+			out.append({"stat": "attack_form", "text": Loc.t("Attaque : − %s") % _form_name(id).to_lower()})
 	var names := {}
 	for n in before["mods"]:
 		names[n] = true
@@ -1192,23 +1196,23 @@ static func diff(before: Dictionary, after: Dictionary) -> Array:
 		var b := float(after["mods"].get(n, 0.0))
 		if absf(a - b) < 0.0001 and float(before.get("factor", 0.0)) == float(after.get("factor", 0.0)):
 			continue
-		var label := str(mods().get(n, {}).get("name", n))
+		var label := Loc.data(str(mods().get(n, {}).get("name", n)))
 		var line := ""
 		if not before["mods"].has(n):
-			line = "Attaque : + %s (%s)" % [label.to_lower(), mod_text(n, b, float(after.get("factor", 0.0)))]
+			line = Loc.t("Attaque : + %s (%s)") % [label.to_lower(), mod_text(n, b, float(after.get("factor", 0.0)))]
 		elif not after["mods"].has(n):
-			line = "Attaque : − %s" % label.to_lower()
+			line = Loc.t("Attaque : − %s") % label.to_lower()
 		else:
-			line = "Attaque, %s : %s → %s" % [label.to_lower(), _num(a), _num(b)]
+			line = Loc.t("Attaque, %s : %s → %s") % [label.to_lower(), _num(a), _num(b)]
 		if not applies_any(n, after):
-			line += " (sans effet sur cette forme)"
+			line += Loc.t(" (sans effet sur cette forme)")
 		out.append({"stat": "attack_mod", "text": line})
 	for sid in after.get("synergies", []):
 		if not sid in before.get("synergies", []):
-			out.append({"stat": "synergy", "text": "Synergie : + %s (%s)" % [synergy(sid).get("name", sid), synergy_text(sid)]})
+			out.append({"stat": "synergy", "text": Loc.t("Synergie : + %s (%s)") % [_syn_name(sid), synergy_text(sid)]})
 	for sid in before.get("synergies", []):
 		if not sid in after.get("synergies", []):
-			out.append({"stat": "synergy", "text": "Synergie : − %s" % synergy(sid).get("name", sid)})
+			out.append({"stat": "synergy", "text": Loc.t("Synergie : − %s") % _syn_name(sid)})
 	return out
 
 
@@ -1264,21 +1268,21 @@ static func need_met(n: Dictionary, form_ids: Array, mod_values: Dictionary) -> 
 	return false
 
 
-const BRANCH_NAMES := {"ronce": "Ronce", "spore": "Spore", "vent": "Vent", "seve": "Sève", "aube": "Aube", "racine": "Racine"}
-const FAMILY_NAMES := {"corps_a_corps": "une attaque au corps à corps", "projectile": "une attaque à projectiles", "zone": "une attaque de zone"}
+const BRANCH_NAMES := {"ronce": "Ronce", "spore": "Spore", "vent": "Vent", "seve": "Sève", "aube": "Aube", "racine": "Racine"} # i18n
+const FAMILY_NAMES := {"corps_a_corps": "une attaque au corps à corps", "projectile": "une attaque à projectiles", "zone": "une attaque de zone"} # i18n
 
 ## Texte d'une condition : « Fouet », « une attaque de zone », « trois formes »…
 static func need_text(n: Dictionary) -> String:
 	if n.has("form"):
 		return _form_name(str(n["form"]))
 	if n.has("mod"):
-		return str(mods().get(str(n["mod"]), {}).get("name", n["mod"]))
+		return Loc.data(str(mods().get(str(n["mod"]), {}).get("name", n["mod"])))
 	if n.has("family"):
-		return str(FAMILY_NAMES.get(str(n["family"]), n["family"]))
+		return Loc.t(str(FAMILY_NAMES.get(str(n["family"]), n["family"])))
 	if n.has("branch"):
-		return "une forme de %s" % str(BRANCH_NAMES.get(str(n["branch"]), n["branch"]))
+		return Loc.t("une forme de %s") % Loc.t(str(BRANCH_NAMES.get(str(n["branch"]), n["branch"])))
 	if n.has("forms"):
-		return "%d formes d'attaque" % int(n["forms"])
+		return Loc.t("%d formes d'attaque") % int(n["forms"])
 	return "?"
 
 
@@ -1292,7 +1296,7 @@ static func synergy_needs(sid: String) -> String:
 
 ## Phrase d'une synergie : « Rayon d'aube + Lames de vent : … ».
 static func synergy_text(sid: String) -> String:
-	return "%s : %s" % [synergy_needs(sid), str(synergy(sid).get("desc", ""))]
+	return Loc.t("%s : %s") % [synergy_needs(sid), Loc.data(str(synergy(sid).get("desc", "")))]
 
 
 ## Synergies où entrent les effets d'un nœud (sa forme, ses modificateurs), pour l'infobulle de
@@ -1323,9 +1327,9 @@ static func synergy_hints(effects: Array, st: Dictionary) -> Array:
 			continue
 		# Active : la phrase entière ; possible : le nom et ce qu'elle demande, pour rester court.
 		if sid in active:
-			out.append(["Synergie « %s » : %s" % [sy.get("name", sid), synergy_text(sid)], true])
+			out.append([Loc.t("Synergie « %s » : %s") % [_syn_name(sid), synergy_text(sid)], true])
 		else:
-			out.append(["Synergie possible « %s » : %s" % [sy.get("name", sid), synergy_needs(sid)], false])
+			out.append([Loc.t("Synergie possible « %s » : %s") % [_syn_name(sid), synergy_needs(sid)], false])
 	return out
 
 
@@ -1339,10 +1343,9 @@ static func synergy_effects(ids: Array) -> Array:
 	return out
 
 
-## Nombre à la française : virgule décimale, sans zéros inutiles.
+## Nombre selon la langue (virgule décimale en français), sans zéros inutiles.
 static func _num(v: float) -> String:
-	var s := String.num(snappedf(v, 0.01), 2)
-	return s.replace(".", ",")
+	return Loc.num(v, 2)
 
 
 # --- Vérification des données ---

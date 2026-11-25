@@ -117,6 +117,9 @@ class Slot extends Control:
 				var grow := Anim.pop(born_t / Anim.DUREE["apparition"]) if born_t < 1.0 else 1.0
 				var col := Art.icon_color(skill_id)
 				var rr := r * clampf(grow, 0.0, 1.2)
+				if ready_t < 0.35 and ratio <= 0.0:
+					# Prête : le médaillon gonfle un instant (jalon Éclat).
+					rr *= 1.0 + 0.12 * sin(ready_t / 0.35 * PI)
 				var rect := Rect2(c - Vector2(rr, rr), Vector2(rr, rr) * 2.0)
 				Art.icon_badge(self, skill_id, rect)
 				if ratio > 0.0:
@@ -145,6 +148,7 @@ class Slot extends Control:
 					# Prête : un éclair d'anneau qui s'élargit.
 					var k := ready_t / 0.35
 					draw_arc(c, rr + 3.0 + 8.0 * Anim.ease_out(k), 0.0, TAU, 48, Color(col.lerp(Color.WHITE, 0.5), 1.0 - k), 3.0 * (1.0 - k) + 1.0, true)
+					draw_circle(c, rr * 0.9, Color(col.lerp(Color.WHITE, 0.6), 0.35 * (1.0 - k)))
 		if state != LOCKED and key_text.begins_with("pad:"):
 			# Manette : le glyphe du bouton sous le médaillon.
 			PadGlyphs.draw(self, Vector2(size.x / 2.0, diam + 13.0), int(key_text.substr(4)), 1.0 if state == SKILL else 0.6, 22.0)
@@ -247,7 +251,7 @@ class Corner extends Control:
 	var level := 1
 	var xp := 0.0
 	var points := 0
-	var tree_key := "Tab"
+	var tree_key := "Tab" # i18n: non (nom de touche)
 	var world := 0.0
 	var kills := 0
 	var t := 0.0

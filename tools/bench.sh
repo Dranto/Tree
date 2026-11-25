@@ -11,6 +11,7 @@
 #   REGIONS=six tools/bench.sh      # monde à six régions : ajoute les régions factices de tests/regions/
 #                                   # (aujourd'hui Racine) à celles de data/regions/ ; une vraie région l'emporte
 #                                   # (« cinq » : ancien nom, même banc)
+#   RESOLUTION=1280x800 tools/bench.sh  # taille de la fenêtre du banc (1600x900 par défaut, celle du projet)
 #   BASE_DIR=../base tools/bench.sh # mesure en paires : alterne le banc de la base (une autre copie du
 #                                   # dépôt, ex. develop) et celui-ci. Échoue seulement si ce banc dépasse
 #                                   # la limite ET la base de plus de REGRESSION (8 % par défaut) : la
@@ -26,6 +27,9 @@ P99_MS="${P99_MS:-}"
 REGIONS="${REGIONS:-}"
 BASE_DIR="${BASE_DIR:-}"
 REGRESSION="${REGRESSION:-0.08}"
+RESOLUTION="${RESOLUTION:-}"
+WIN_ARG=()
+[ -n "$RESOLUTION" ] && WIN_ARG=(--resolution "$RESOLUTION")
 SCENE_ARG=()
 # La finale est le banc du boss, joué sous la graine (--region=finale).
 if [ "$SCENE" = "finale" ]; then
@@ -35,7 +39,7 @@ elif [ -n "$SCENE" ]; then
 fi
 [ -n "$REGIONS" ] && SCENE_ARG+=(--regions=res://tests/regions/)
 # Suffixe des fichiers de résultat.
-TAG="${SCENE:+_$SCENE}${REGIONS:+_six}"
+TAG="${SCENE:+_$SCENE}${REGIONS:+_six}${RESOLUTION:+_$RESOLUTION}"
 OUT="$ROOT/godot/autotest/bench"
 mkdir -p "$OUT"
 export LIBGL_ALWAYS_SOFTWARE=1
@@ -58,12 +62,12 @@ best_p99=""
 base_best=""
 for i in $(seq 1 "$RUNS"); do
   if [ -n "$BASE_DIR" ]; then
-    "$BASE_DIR/tools/godot.sh" --xvfb --audio-driver Dummy -- --benchmark "${SCENE_ARG[@]}" 2>&1 | grep -E "BENCHMARK|SCRIPT ERROR" > "$OUT/banc${TAG}_base_$i.txt"
+    "$BASE_DIR/tools/godot.sh" --xvfb --audio-driver Dummy "${WIN_ARG[@]}" -- --benchmark "${SCENE_ARG[@]}" 2>&1 | grep -E "BENCHMARK|SCRIPT ERROR" > "$OUT/banc${TAG}_base_$i.txt"
     bavg=$(sed -nE 's/.*moyen ([0-9.]+) ms.*/\1/p' "$OUT/banc${TAG}_base_$i.txt")
     echo "Base, mesure $i : ${bavg:-sans résultat} ms"
     if [ -n "$bavg" ] && { [ -z "$base_best" ] || awk -v a="$bavg" -v b="$base_best" 'BEGIN{exit !(a < b)}'; }; then base_best="$bavg"; fi
   fi
-  "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy -- --benchmark "${SCENE_ARG[@]}" 2>&1 | grep -E "BENCHMARK|SCRIPT ERROR" > "$OUT/banc${TAG}_$i.txt"
+  "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy "${WIN_ARG[@]}" -- --benchmark "${SCENE_ARG[@]}" 2>&1 | grep -E "BENCHMARK|SCRIPT ERROR" > "$OUT/banc${TAG}_$i.txt"
   cat "$OUT/banc${TAG}_$i.txt"
   if grep -q "SCRIPT ERROR" "$OUT/banc${TAG}_$i.txt"; then
     echo "Erreur de script pendant le banc"

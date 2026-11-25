@@ -1,0 +1,60 @@
+# Builds exportés (Windows et Linux, jeu et démo) en artefacts sur chaque PR vers develop.
+# Le build Linux est lancé sous xvfb (tools/export-smoke.sh) : démarrage, 60 s de robot, sortie propre.
+name: Builds
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [windows, linux, windows-demo, linux-demo]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer l'écran virtuel et le rendu logiciel
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1
+
+      - name: Cache de Godot et des modèles d'export
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/godot
+            ~/.local/share/godot/export_templates
+          key: godot-export-4.7-stable
+
+      - name: Exporter
+        run: tools/export.sh ${{ matrix.preset }}
+
+      - name: Lancer le build Linux (démarrage + robot 60 s)
+        if: startsWith(matrix.preset, 'linux')
+        run: |
+          bin=$(ls build/${{ matrix.preset }}/*.x86_64)
+          tools/export-smoke.sh "$bin"
+
+      - name: Publier le build
+        uses: actions/upload-artifact@v4
+        with:
+          name: seve-${{ matrix.preset }}
+          path: |
+            build/${{ matrix.preset }}/*.exe
+            build/${{ matrix.preset }}/*.x86_64
+          if-no-files-found: error
+
+      - name: Publier le journal du robot
+        if: always() && startsWith(matrix.preset, 'linux')
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-${{ matrix.preset }}
+          path: build/${{ matrix.preset }}/smoke.log
+          if-no-files-found: ignore

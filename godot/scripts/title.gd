@@ -61,19 +61,19 @@ func _ready() -> void:
 	menu.offset_top = 470
 	menu.grow_horizontal = Control.GROW_DIRECTION_END
 	add_child(menu)
-	continue_button = UiTheme.menu_item("Continuer", 32)
+	continue_button = UiTheme.menu_item(Loc.key("Continuer"), 32)
 	continue_button.pressed.connect(Flow.continue_game)
 	menu.add_child(continue_button)
-	new_button = UiTheme.menu_item("Nouvelle partie", 32)
+	new_button = UiTheme.menu_item(Loc.key("Nouvelle partie"), 32)
 	new_button.pressed.connect(Flow.new_game)
 	menu.add_child(new_button)
-	options_button = UiTheme.menu_item("Options", 32)
+	options_button = UiTheme.menu_item(Loc.key("Options"), 32)
 	options_button.pressed.connect(_open_options)
 	menu.add_child(options_button)
 	if OS.has_feature("web"):
 		pass
 	else:
-		quit_button = UiTheme.menu_item("Quitter", 32)
+		quit_button = UiTheme.menu_item(Loc.key("Quitter"), 32)
 		quit_button.pressed.connect(Flow.quit)
 		menu.add_child(quit_button)
 
@@ -97,16 +97,26 @@ func _ready() -> void:
 	add_child(options)
 
 	continue_button.disabled = not Flow.has_save()
-	var sum := Flow.save_summary()
-	if not continue_button.disabled and sum.has("level"):
-		continue_button.set("note", "niveau %d" % int(sum["level"]))
-		if sum.get("ended", false):
-			# L'aventure est finie (finale gagnée) : la partie continue, librement.
-			continue_button.set("note", "niveau %d · fin" % int(sum["level"]))
+	_update_note()
 	_focus_first()
 	menutest = "--menutest" in OS.get_cmdline_user_args()
 	if menutest:
 		_menutest()
+
+
+## Note de « Continuer » : niveau de la partie enregistrée.
+func _update_note() -> void:
+	var sum := Flow.save_summary()
+	if not continue_button.disabled and sum.has("level"):
+		continue_button.set("note", tr("niveau %d") % int(sum["level"]))
+		if sum.get("ended", false):
+			# L'aventure est finie (finale gagnée) : la partie continue, librement.
+			continue_button.set("note", tr("niveau %d · fin") % int(sum["level"]))
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and continue_button != null:
+		_update_note()
 
 
 func _focus_first() -> void:
@@ -138,7 +148,7 @@ func _draw() -> void:
 	var base := Vector2(maxf(w * 0.74, w - h * 0.5), h * 0.86)
 	_engraved_tree(base, h * 0.7)
 	var cap_font := UiTheme.serif(600, 3)
-	var cap := "PLANCHE I  ·  L'ARBRE DE VIE"
+	var cap := tr("PLANCHE I  ·  L'ARBRE DE VIE")
 	draw_string(cap_font, Vector2(base.x - cap_font.get_string_size(cap, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x / 2.0, base.y + 66), cap, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(UiTheme.GOLD, 0.6))
 	# Pollen d'or qui monte lentement.
 	for m in motes:
@@ -147,17 +157,19 @@ func _draw() -> void:
 		var a := 0.18 + 0.14 * sin(t * 1.1 + m["p"])
 		draw_circle(Vector2(x * w, y * h), m["r"], Color(UiTheme.GOLD, a))
 	UiTheme.draw_frame(self, Rect2(34, 34, w - 68, h - 68), 1.15)
-	draw_texture_rect(_vignette, Rect2(-w * 0.1, -h * 0.25, w * 1.2, h * 1.5), false, Color(1, 1, 1, 0.5))
+	# Sans titre (robots, « --autotest ») _ready s'arrête avant de la fabriquer : le dernier dessin avant le changement de scène s'en passe.
+	if _vignette != null:
+		draw_texture_rect(_vignette, Rect2(-w * 0.1, -h * 0.25, w * 1.2, h * 1.5), false, Color(1, 1, 1, 0.5))
 	# Titre, aligné à gauche sur la colonne des entrées.
 	var x := w * MENU_X
 	var kicker := UiTheme.serif(500, 3)
-	draw_string(kicker, Vector2(x, 140), "HERBIER  DES  TERRES  FLÉTRIES", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(UiTheme.GOLD, 0.8))
-	draw_string(UiTheme.display(600, 4), Vector2(x - 5, 290), "Sève", HORIZONTAL_ALIGNMENT_LEFT, -1, 133, UiTheme.INK)
+	draw_string(kicker, Vector2(x, 140), tr("HERBIER  DES  TERRES  FLÉTRIES"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(UiTheme.GOLD, 0.8))
+	draw_string(UiTheme.display(600, 4), Vector2(x - 5, 290), Loc.game_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, 133, UiTheme.INK)
 	draw_line(Vector2(x, 322), Vector2(x + 350, 322), Color(UiTheme.GOLD, 0.6), 1.0, true)
 	UiTheme.draw_diamond(self, Vector2(x + 357, 322), 3.5, UiTheme.GOLD)
 	var sub := UiTheme.serif(500)
-	draw_string(sub, Vector2(x, 362), "Un monde désolé reprend vie", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.SOFT)
-	draw_string(sub, Vector2(x, 394), "au rythme de ton arbre", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.SOFT)
+	draw_string(sub, Vector2(x, 362), tr("Un monde désolé reprend vie"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.SOFT)
+	draw_string(sub, Vector2(x, 394), tr("au rythme de ton arbre"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.SOFT)
 
 
 ## Arbre gravé : tronc hachuré, racines, branches qui se divisent, feuilles au trait (certaines

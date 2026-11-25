@@ -281,7 +281,7 @@ func apply_status(status: String, value: float, duration: float) -> void:
 			if root_immune > 0.0 or statuses.has(status) or get("no_root") == true:
 				return
 			statuses[status] = {"value": value, "time": minf(duration, 3.0), "stacks": 1}
-			main.fx.text(position + Vector2(0, -radius * 2.0), "Entravée", Color("9af07a"), 18, 0.8)
+			main.fx.text(position + Vector2(0, -radius * 2.0), Loc.t("Entravée"), Color("9af07a"), 18, 0.8)
 		"ebloui":
 			# Ébloui (Aube) : moitié moins de critiques en plus qu'un Flétri, 2 s au plus (main.dazzle_of).
 			var s: Dictionary = statuses.get(status, {"value": 0.0, "time": 0.0, "stacks": 1})

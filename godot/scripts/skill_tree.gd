@@ -30,8 +30,12 @@ const SEED := 20261109
 ## Types de nœuds qu'une grappe peut contenir.
 ## « attack » : nœud qui change la forme ou le comportement de l'attaque de base (attack.gd).
 const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "withered", "attack"]
+## Nom d'un nœud notable généré : un nom et un qualificatif de data/branches/<b>.json › notable.names
+## (« Épine vorace » ; en anglais, l'ordre peut s'inverser). Nom d'une mutation sans « name ».
+const NOTABLE_NAME := "%s %s" # i18n
+const MUTATION_NAME := "Mutation : %s" # i18n
 ## Nom par défaut d'un nœud de grappe sans « name ».
-const DEFAULT_NAME := {"withered": "Nœud flétri", "mastery": "Maîtrise", "small": "Nœud", "attack": "Attaque"}
+const DEFAULT_NAME := {"withered": "Nœud flétri", "mastery": "Maîtrise", "small": "Nœud", "attack": "Attaque"} # i18n
 ## Distances de dégagement autour d'une grappe, en unités d'anneau : un nœud généré plus proche
 ## que CLEAR_NODE d'un nœud de grappe (ou que CLEAR_LINK d'un de ses liens) est écarté ; un lien
 ## généré qui passe à moins de CLEAR_EDGE d'un nœud de grappe est retiré.
@@ -143,6 +147,7 @@ func build() -> void:
 				var nm := ""
 				var desc := ""
 				var effects: Array = []
+				var notable_parts: Array = []
 				if i == mid and r % 4 == 0 and r <= KEYSTONES * 4:
 					kind = "keystone"
 					var ks: Dictionary = b["keystones"][int(r / 4.0) - 1]
@@ -158,7 +163,8 @@ func build() -> void:
 					var words: Array = b["notable"]["names"]
 					name_idx[bid] = int(name_idx.get(bid, 0)) + 1
 					var k: int = name_idx[bid]
-					nm = "%s %s" % [words[0][k % words[0].size()], words[1][int(k / float(words[0].size())) % words[1].size()]]
+					notable_parts = [str(words[0][k % words[0].size()]), str(words[1][int(k / float(words[0].size())) % words[1].size()])]
+					nm = "%s %s" % notable_parts
 					effects = _effects(b, r, true, i)
 				elif kind == "small":
 					effects = _effects(b, r, false, i)
@@ -166,6 +172,8 @@ func build() -> void:
 				var id := nodes.size()
 				var node := _make(id, r, bi, kind, Vector2.from_angle(ang) * rad, nm, key, desc, effects)
 				node["uid"] = "key:" + key if key != "" else "%s:%d:%d" % [bid, r, i]
+				if not notable_parts.is_empty():
+					node["name_tpl"] = [NOTABLE_NAME] + notable_parts
 				nodes.append(node)
 				row.append(id)
 			rows[bi].append(row)
@@ -555,15 +563,17 @@ func _cluster_node(id: int, bi: int, cluster: String, cn: Dictionary, pos: Vecto
 	var nm := str(cn.get("name", ""))
 	if nm == "":
 		if kind == "skill":
-			nm = Content.skills().get(skill, {}).get("name", "Compétence")
+			nm = Content.skills().get(skill, {}).get("name", Loc.key("Compétence"))
 		elif kind == "mutation":
-			nm = "Mutation : " + str(Content.skills().get(mutates, {}).get("name", mutates))
+			nm = MUTATION_NAME % str(Content.skills().get(mutates, {}).get("name", mutates))
 		else:
-			nm = DEFAULT_NAME.get(kind, "Nœud notable")
+			nm = DEFAULT_NAME.get(kind, Loc.key("Nœud notable"))
 	var key := str(cn.get("key", "")) if kind == "keystone" else ""
 	var ring := clampi(roundi(pos.length() / RING_GAP), 1, RINGS)
 	var node := _make(id, ring, bi, kind, pos, nm, key, str(cn.get("desc", "")), effects)
 	node["uid"] = "key:" + key if key != "" else "c:%s:%s" % [cluster, cn["id"]]
+	if kind == "mutation" and str(cn.get("name", "")) == "":
+		node["name_tpl"] = [MUTATION_NAME, str(Content.skills().get(mutates, {}).get("name", mutates))]
 	node["cluster"] = cluster
 	node["local"] = str(cn["id"])
 	node["mutates"] = mutates
@@ -961,7 +971,10 @@ func _make_mutation(id: int, m: Dictionary) -> void:
 	var sid := str(m["mutates"])
 	n["type"] = "mutation"
 	n["mutates"] = sid
-	n["name"] = str(m.get("name", "Mutation : " + str(Content.skills().get(sid, {}).get("name", sid))))
+	n.erase("name_tpl")
+	n["name"] = str(m.get("name", MUTATION_NAME % str(Content.skills().get(sid, {}).get("name", sid))))
+	if not m.has("name"):
+		n["name_tpl"] = [MUTATION_NAME, str(Content.skills().get(sid, {}).get("name", sid))]
 	n["desc"] = str(m.get("desc", ""))
 	n["effects"] = []
 	n["choices"] = []
@@ -979,6 +992,7 @@ func _make_original(id: int, o: Dictionary, turn: int) -> void:
 	var names: Array = _list(o.get("names"))
 	if not names.is_empty():
 		n["name"] = str(names[turn % names.size()])
+		n.erase("name_tpl")
 	n["desc"] = str(o.get("desc", ""))
 	var effects: Array = _list(o.get("effects")).duplicate(true)
 	effects.append_array(n["effects"])
@@ -986,6 +1000,18 @@ func _make_original(id: int, o: Dictionary, turn: int) -> void:
 	for e in effects:
 		if e is Dictionary and e.has("attack_form"):
 			n["attack_form"] = str(e["attack_form"])
+
+
+## Nom affiché d'un nœud dans la langue en cours (le champ « name » reste le nom français, celui
+## des données) : nom composé (« name_tpl » : gabarit puis morceaux) ou texte des données.
+static func node_name(n: Dictionary) -> String:
+	var tpl: Array = n.get("name_tpl", [])
+	if not tpl.is_empty():
+		var args: Array = []
+		for i in range(1, tpl.size()):
+			args.append(Loc.data(str(tpl[i])))
+		return Loc.t(str(tpl[0])) % args
+	return Loc.data(str(n.get("name", "")))
 
 
 ## Texte lisible des effets d'un nœud.
@@ -996,9 +1022,9 @@ static func describe(n: Dictionary) -> PackedStringArray:
 		if line != "":
 			out.append(line)
 	for ch in n.get("choices", []):
-		out.append("%s : %s" % [ch.get("name", ""), describe_effects(ch.get("effects", []))])
+		out.append(Loc.t("%s : %s") % [Loc.data(str(ch.get("name", ""))), describe_effects(ch.get("effects", []))])
 	if n["desc"] != "":
-		out.append(n["desc"])
+		out.append(Loc.data(str(n["desc"])))
 	return out
 
 
@@ -1009,4 +1035,4 @@ static func describe_effects(effects: Array) -> String:
 		var line := Effects.describe(e)
 		if line != "":
 			parts.append(line)
-	return " ; ".join(parts)
+	return Loc.t(" ; ").join(parts)

@@ -110,7 +110,7 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 	if not dot and airborne():
 		if t - _dodge_text > 0.8:
 			_dodge_text = t
-			main.fx.text(dive_target + Vector2(0, -60), "Hors d'atteinte", Art.ec("vent", "clair"), 16, 0.6)
+			main.fx.text(dive_target + Vector2(0, -60), Loc.t("Hors d'atteinte"), Art.ec("vent", "clair"), 16, 0.6)
 		return
 	if landed() and not dot:
 		amount *= DIVE["landed_mult"]
