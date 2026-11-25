@@ -7764,7 +7764,7 @@ msgstr ""
 
 #. project.godot › application/config/name
 msgctxt "nom du jeu"
-msgid "Sève"
+msgid "Arborescence"
 msgstr ""
 
 #. scripts/attack.gd:1118
@@ -7777,7 +7777,7 @@ msgstr ""
 
 #. scripts/attack.gd:1138
 #. scripts/attack.gd:1299
-#. scripts/skill_tree.gd:1025
+#. scripts/skill_tree.gd:1028
 #. scripts/tree_ui.gd:924
 msgid "%s : %s"
 msgstr ""
@@ -8705,7 +8705,13 @@ msgstr ""
 msgid "Bouton %d"
 msgstr ""
 
-#. scripts/skill_tree.gd:1038
+#. scripts/skill_tree.gd:1015
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgctxt "nœud notable : nom puis qualificatif"
+msgid "{0} {1}"
+msgstr ""
+
+#. scripts/skill_tree.gd:1041
 msgid " ; "
 msgstr ""
 
@@ -8758,11 +8764,11 @@ msgstr ""
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
 msgstr ""
 
-#. scripts/title.gd:171
+#. scripts/title.gd:178
 msgid "Un monde désolé reprend vie"
 msgstr ""
 
-#. scripts/title.gd:172
+#. scripts/title.gd:179
 msgid "au rythme de ton arbre"
 msgstr ""
 

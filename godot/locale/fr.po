@@ -7764,8 +7764,8 @@ msgstr "Graine de l'Arbre-Monde"
 
 #. project.godot › application/config/name
 msgctxt "nom du jeu"
-msgid "Sève"
-msgstr "Sève"
+msgid "Arborescence"
+msgstr "Arborescence"
 
 #. scripts/attack.gd:1118
 msgid "Attaque de base : %s. %s"
@@ -7777,7 +7777,7 @@ msgstr "Attaque : %s"
 
 #. scripts/attack.gd:1138
 #. scripts/attack.gd:1299
-#. scripts/skill_tree.gd:1025
+#. scripts/skill_tree.gd:1028
 #. scripts/tree_ui.gd:924
 msgid "%s : %s"
 msgstr "%s : %s"
@@ -8710,7 +8710,13 @@ msgstr "Reculer"
 msgid "Bouton %d"
 msgstr "Bouton %d"
 
-#. scripts/skill_tree.gd:1038
+#. scripts/skill_tree.gd:1015
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgctxt "nœud notable : nom puis qualificatif"
+msgid "{0} {1}"
+msgstr "{0} {1}"
+
+#. scripts/skill_tree.gd:1041
 msgid " ; "
 msgstr " ; "
 
@@ -8763,11 +8769,11 @@ msgstr "PLANCHE I  ·  L'ARBRE DE VIE"
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
 msgstr "HERBIER  DES  TERRES  FLÉTRIES"
 
-#. scripts/title.gd:171
+#. scripts/title.gd:178
 msgid "Un monde désolé reprend vie"
 msgstr "Un monde désolé reprend vie"
 
-#. scripts/title.gd:172
+#. scripts/title.gd:179
 msgid "au rythme de ton arbre"
 msgstr "au rythme de ton arbre"
 
