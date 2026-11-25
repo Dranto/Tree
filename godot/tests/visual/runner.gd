@@ -183,7 +183,7 @@ func _scenario_combat() -> void:
 
 
 ## Le jeu, l'arbre (avec la couronne de greffes : quatorze greffes trouvées, deux posées, la fiche
-## de l'une d'elles) et l'écran titre à la résolution de la fenêtre (fixée par tools/visual-tests.sh).
+## de l'une d'elles), le panneau des builds et l'écran titre à la résolution de la fenêtre (fixée par tools/visual-tests.sh).
 func _scenario_resolution() -> void:
 	var tag := _res_tag()
 	await _frames(60)
@@ -198,6 +198,14 @@ func _scenario_resolution() -> void:
 	main.tree_ui.grafts_panel.set_hover_graft(ids[5])
 	await _frames(10)
 	await _shot("arbre_" + tag, "arbre")
+	# Builds enregistrés (jalon 11 I) : le build actif copié et renommé, le panneau ouvert.
+	Game.rename_build(0, "Épines")
+	Game.copy_build_to(2)
+	Game.rename_build(2, "Fouet lointain")
+	main.tree_ui.panels.set_builds_visible(true)
+	await _frames(10)
+	await _shot("arbre_builds_" + tag, "arbre")
+	main.tree_ui.panels.set_builds_visible(false)
 	main.tree_ui.toggle()
 	main.queue_free()
 	get_tree().paused = false

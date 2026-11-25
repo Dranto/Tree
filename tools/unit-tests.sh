@@ -23,6 +23,7 @@ TESTS=(
   "attack|--headless --fixed-fps 60|"
   "aube|--headless --fixed-fps 60|"
   "borders|--headless|"
+  "builds|--headless|"
   "boss|--headless --fixed-fps 60|"
   "death|--headless --fixed-fps 60|"
   "difficulty|--headless|"

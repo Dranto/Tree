@@ -20,6 +20,7 @@ La commande signale les fautes de frappe (statistique, opération ou action inco
 | `borders/<a>-<b>.json` | Une frontière hybride entre deux branches voisines : grappes à cheval sur la limite des deux secteurs. Voir « Frontières hybrides ». |
 | `grafts.json` | Les greffes : objets à poser dans la couronne de greffes (nom, effets, d'où elles viennent, dessin). |
 | `crown.json` | La couronne de greffes : emplacements au départ, gagnés par région purifiée, par boss et à la finale, plafond. Voir « Greffes ». |
+| `respec.json` | Oubli de nœuds et builds enregistrés : nombre d'emplacements de build (3 à 5), anneaux où l'oubli est gratuit, coût de l'oubli plus loin (part de la barre d'expérience du niveau en cours, par anneau, plafonnée), gratuité au sanctuaire. Changer de build hors sanctuaire coûte l'oubli des nœuds qui disparaissent. Valeurs indicatives (équilibrage final). |
 | `regions/<id>.json` | Une région du monde, tout entière : sol, décor, apparitions, sanctuaires, autels, secret, Cœur, boss, fin. Voir « Régions ». |
 | `skills.json` | Réglages des compétences actives (recharge, rayon, dégâts, texte). |
 | `builds.json` | Builds types joués par le robot d'équilibrage (`tools/balance.sh`), chacun avec sa branche (`branch`). |
