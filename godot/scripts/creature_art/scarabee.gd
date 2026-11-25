@@ -52,6 +52,9 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var shell := Ink.lumpy(Vector2(-10, -30), 40.0, 23.0, 48, 0.025, 9.0)
 	for i in shell.size():
 		shell[i].y = minf(shell[i].y, -9.0)
+	# Respiration : les élytres se soulèvent un peu.
+	var breath := 1.0 + 0.025 * sin(t * TAU / 2.4)
+	shell = Transform2D(0.0, Vector2(1.0, breath), 0.0, Vector2(0, -12 * (1.0 - breath))) * shell
 	Ink.part(ci, xf, shell, pal(), 2.4, 1.0, 0.8)
 	# Écorce : stries en long, plus marquées dans l'ombre.
 	for i in 4:
@@ -70,9 +73,31 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	# Lichens clairs : la forêt qui reprend.
 	for q: Vector2 in [Vector2(-22, -46), Vector2(-16, -44), Vector2(-26, -42)]:
 		Ink.flat(ci, xf, Ink.oval(q, 3.0, 2.0, 10), Art.bc("racine", "reflet").lerp(Art.ec("racine", "clair"), 0.4))
+	# Liseré de lumière au bord des élytres, trous de larves dans l'écorce, mousse en touffe.
+	Ink.brush(ci, xf, PackedVector2Array([Vector2(-46, -40), Vector2(-34, -50), Vector2(-14, -53)]), 1.3, Art.bc("racine", "reflet"))
+	for q: Vector3 in [Vector3(-8, -24, 1.8), Vector3(2, -30, 1.4), Vector3(-26, -30, 1.6)]:
+		Ink.flat(ci, xf, Ink.oval(Vector2(q.x, q.y), q.z * 1.3, q.z, 10), Art.bc("racine", "ombre").darkened(0.4))
+		Ink.brush(ci, xf, PackedVector2Array([Vector2(q.x - q.z, q.y + q.z * 0.9), Vector2(q.x + q.z, q.y + q.z * 0.9)]), 0.8, Art.bc("racine", "reflet"))
+	var moss := Art.ec("racine", "clair").darkened(0.2)
+	for j in 5:
+		var b0 := Vector2(-20 + j * 2.2, -47 - absf(j - 2.0) * 0.4)
+		Ink.brush(ci, xf, PackedVector2Array([b0, b0 + Vector2(-1.5 + sin(t * 2.0 + j) * 1.2, -5.0 - (j % 2) * 2.0)]), 1.4, moss, 1.0, 0.0)
+	# Étincelles qui montent de la fente.
+	Ink.sparks(ci, xf, Vector2(-14, -50), Vector2(-0.2, -1.0), 3, t * 0.8, 1.1, 0.5 + kk)
 	# Corselet, tête et cornes : la tête suit la cible.
 	var head_rot := clampf(la, -0.35, 0.3) + 0.12 * kk
 	var hx := xf * Transform2D(head_rot, Vector2(26, -26)) * Transform2D(0.0, Vector2(-26, 26))
+	# Antennes en massue, qui tâtent l'air.
+	for j in 2:
+		var sway := sin(t * 3.1 + j * 1.3) * 0.18
+		var a0 := -0.55 - j * 0.35 + sway
+		var r0 := Vector2(40 - j * 3, -26)
+		var r1 := r0 + Vector2.from_angle(a0) * 9.0
+		var r2 := r1 + Vector2.from_angle(a0 + 0.7) * 7.0
+		var ant := PackedVector2Array([r0, r1, r2])
+		Ink.brush(ci, hx, ant, 2.6, Ink.encre(), 1.0, 1.0)
+		Ink.brush(ci, hx, ant, 1.1, Art.bc("racine", "ombre").lightened(0.1 * (1 - j)), 1.0, 1.0)
+		Ink.part(ci, hx, Ink.oval(r2, 2.4, 1.6, 10, a0 + 0.7), {"clair": Art.bc("racine", "detail"), "ombre": Art.bc("racine", "detail").darkened(0.4)}, 0.9, 1.0, 0.0)
 	Ink.part(ci, xf, Ink.lumpy(Vector2(24, -28), 15.0, 15.0, 28, 0.03, 6.0), {"clair": Art.bc("racine", "clair").darkened(0.12), "ombre": Art.bc("racine", "ombre").darkened(0.1), "reflet": Art.bc("racine", "reflet")}, 2.4)
 	var bone := {"clair": Art.bc("os"), "ombre": Art.bc("os").darkened(0.35), "reflet": Color.WHITE}
 	Ink.part(ci, hx, PackedVector2Array([Vector2(24, -38), Vector2(36, -54), Vector2(42, -58), Vector2(38, -48), Vector2(33, -36)]), bone, 1.8, 1.0, 0.0)
@@ -83,10 +108,14 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	if kk > 0.0:
 		Ink.halo(ci, hx * Vector2(63, -60), 10.0 * h / 100.0 * (0.5 + kk), Art.bc("braise"), kk * 1.5)
 	# Œil de braise (plissé sous le coup).
-	if hit > 0.4:
+	if hit > 0.4 or (kk == 0.0 and Ink.blink(t, 1.1) > 0.0):
 		Ink.brush(ci, hx, PackedVector2Array([Vector2(39, -24), Vector2(45, -23)]), 2.0, Ink.encre())
 	else:
 		Ink.ember(ci, hx, Ink.leaf(Vector2(39, -24), -0.15, 7.0, 3.8), 0.3 + 0.7 * kk)
+	# Mandibules sous la corne, qui s'ouvrent pendant l'annonce.
+	for j in 2:
+		var ma: float = 0.35 + (0.25 + 0.35 * kk) * (1.0 if j == 0 else -0.4) + 0.06 * sin(t * 5.0)
+		Ink.part(ci, hx, Ink.thorn(Vector2(44, -16 - j * 2), ma, 8.0 - j * 2.0, 3.4, 0.2), {"clair": Art.bc("racine", "ombre").lightened(0.1), "ombre": Art.bc("racine", "ombre").darkened(0.4)}, 1.0, 1.0, 0.0)
 	# Pattes de devant.
 	for i in 3:
 		var ph := walk * 1.5 + (PI if i % 2 else 0.0)
@@ -100,6 +129,10 @@ static func _leg(ci: CanvasItem, base: Transform2D, hip_w: Vector2, foot: Vector
 	var out := -1.0 if foot.x < hip.x else 1.0
 	var knee := Vector2(hip.x + (foot.x - hip.x) * 0.4 + out * 4.0, minf(hip.y, foot.y) - 6.0)
 	var pts := PackedVector2Array([hip, knee, foot])
-	Ink.brush(ci, base, pts, 6.5, Ink.encre(), 1.0, 0.5)
+	Ink.brush(ci, base, pts, 5.6, Ink.encre(), 1.0, 0.5)
 	Ink.brush(ci, base, pts, 3.4, col, 1.0, 0.4)
+	Ink.brush(ci, base, PackedVector2Array([hip.lerp(knee, 0.3), knee]), 1.0, col.lightened(0.4))
+	ci.draw_circle(base * knee, 1.3 * base.get_scale().abs().x, Ink.shade(col.lightened(0.25)) if not Ink.mono else Color.BLACK)
+	# Griffe au bout.
+	Ink.brush(ci, base, PackedVector2Array([foot, foot + Vector2(out * 3.5, 0.5)]), 1.6, Ink.encre(), 1.0, 0.0)
 	Ink.brush(ci, base, PackedVector2Array([knee.lerp(foot, 0.45), knee.lerp(foot, 0.45) + Vector2(out * 4.0, -2.0)]), 1.6, Ink.encre(), 1.0, 0.0)

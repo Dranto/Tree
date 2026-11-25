@@ -18,6 +18,9 @@ extends RefCounted
 ## Direction d'où vient la lumière (écran) : haut gauche, comme toute la charte.
 const LIGHT := Vector2(-0.55, -0.83)
 
+## Épaisseur de l'encre (1 : trait de la première planche ; affiné à la demande d'Antoine, 25/11).
+const INK := 0.72
+
 ## Pose courante : éclair d'un coup reçu (0 → 1), silhouette noire, niveaux de gris.
 static var flash := 0.0
 static var mono := false
@@ -54,6 +57,7 @@ static func _shift(pts: PackedVector2Array, d: Vector2) -> PackedVector2Array:
 
 ## Encre seule autour d'une forme (déjà dans le repère de l'écran) : épaisseur iw, décalée vers l'ombre.
 static func ink_world(ci: CanvasItem, w: PackedVector2Array, iw: float) -> void:
+	iw *= INK
 	for poly in Geometry2D.offset_polygon(w, iw, Geometry2D.JOIN_ROUND):
 		_poly(ci, _shift(poly, -LIGHT * iw * 0.45), encre())
 
@@ -208,3 +212,35 @@ static func halo(ci: CanvasItem, p: Vector2, r: float, col: Color, k := 1.0) -> 
 static func frame(feet: Vector2, h: float, flip: bool) -> Transform2D:
 	var s := h / 100.0
 	return Transform2D(0.0, Vector2(-s if flip else s, s), 0.0, feet)
+
+
+## Clignement : 1 quand les yeux sont fermés (une fois toutes les ~3 s, décalé par salt).
+static func blink(t: float, salt := 0.0) -> float:
+	var u := fposmod(t + salt * 1.37, 3.1)
+	return 1.0 if u < 0.12 else 0.0
+
+
+## Braises qui s'échappent : n étincelles qui montent (dir.y < 0) ou tombent depuis p (repère local),
+## sur une durée de vie cyclique ; taille s.
+static func sparks(ci: CanvasItem, xf: Transform2D, p: Vector2, dir: Vector2, n: int, t: float, s: float, k := 1.0) -> void:
+	if mono or k <= 0.0:
+		return
+	for i in n:
+		var u := fposmod(t * 0.9 + i / float(n) + p.x * 0.013, 1.0)
+		var q := p + dir * u * 22.0 + Vector2(sin(t * 3.0 + i * 2.1) * 3.0 * u, 0)
+		var c := Art.bc("braise").lerp(Art.bc("braise_coeur"), 1.0 - u)
+		ci.draw_circle(xf * q, s * (1.0 - 0.6 * u) * xf.get_scale().abs().x, Color(c, (1.0 - u) * k))
+
+
+## Vrille qui s'enroule (repère local) : de b, direction a, longueur l, tours turns, balancée par sway.
+static func tendril(ci: CanvasItem, xf: Transform2D, b: Vector2, a: float, l: float, turns: float, w: float, col: Color, sway := 0.0) -> void:
+	var pts := PackedVector2Array()
+	var p := b
+	var ang := a
+	for i in 14:
+		var u := i / 13.0
+		pts.append(p)
+		ang += (turns * TAU / 13.0) * u * u * 1.6 + sway * 0.06
+		p += Vector2.from_angle(ang) * l / 13.0 * (1.0 - 0.55 * u)
+	brush(ci, xf, pts, w + 1.6, encre(), 1.0, 0.0)
+	brush(ci, xf, pts, w, col, 1.0, 0.0)

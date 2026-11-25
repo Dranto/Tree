@@ -68,9 +68,16 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 		var a := -PI * (0.92 - i * 0.21)
 		var droop := 0.25 * sin(t * 2.0 + i)
 		Ink.part(ci, xf, Ink.leaf(Vector2(-2, -76), a + droop * 0.15, 17.0 - absf(i - 2) * 2.0, 7.0, 0.12 if i < 2 else -0.12), sep, 1.6, 1.0, 0.4)
-	# Yeux de braise sous les sépales (celui du fond plus petit) : plissés sous le coup.
+	# Une vrille de ronce qui se balance au-dessus des sépales, et une feuille encore verte sur la tige.
+	Ink.tendril(ci, xf, Vector2(-8, -84), -PI * 0.62 + 0.12 * sin(t * 1.7), 22.0, -0.9, 1.6, Art.bc("ronce", "detail").lightened(0.1), sin(t * 2.3))
+	var green := {"clair": Art.ec("racine", "clair").darkened(0.15), "ombre": Art.ec("racine", "clair").darkened(0.55), "reflet": Art.ec("racine", "clair").lightened(0.3)}
+	Ink.part(ci, xf, Ink.leaf(Vector2(4, -80), -0.9 + 0.1 * sin(t * 2.0), 11.0, 6.0, 0.1), green, 1.3, 1.0, 0.5)
+	Ink.brush(ci, xf, PackedVector2Array([Vector2(4, -80), Vector2(4, -80) + Vector2.from_angle(-0.9) * 9.0]), 0.8, green["ombre"])
+	# Braises qui tombent de la plaie.
+	Ink.sparks(ci, xf, Vector2(-16, -31), Vector2(0.1, 1.0), 3, t, 1.3, 0.8)
+	# Yeux de braise sous les sépales (celui du fond plus petit) : plissés sous le coup, clignent au repos.
 	var glow := 0.25 + 0.75 * k
-	if hit > 0.4:
+	if hit > 0.4 or (k == 0.0 and Ink.blink(t, 0.3) > 0.0):
 		Ink.brush(ci, xf, PackedVector2Array([Vector2(8, -62), Vector2(16, -60)]), 2.4, Ink.encre())
 	else:
 		Ink.ember(ci, xf, Ink.leaf(Vector2(8, -61), -0.18, 9.0, 4.2), glow)
@@ -82,8 +89,14 @@ static func _leg(ci: CanvasItem, base: Transform2D, hip_w: Vector2, foot: Vector
 	var hip := base.affine_inverse() * hip_w
 	var knee := hip.lerp(foot, 0.5) + Vector2(-4 if foot.x < hip.x else 4, -4)
 	var pts := PackedVector2Array([hip, knee, foot])
-	Ink.brush(ci, base, pts, 8.5, Ink.encre(), 1.0, 0.45)
+	Ink.brush(ci, base, pts, 7.2, Ink.encre(), 1.0, 0.45)
 	Ink.brush(ci, base, pts, 5.0, col, 1.0, 0.35)
+	# Écorce de la tige : un reflet du côté de la lumière, deux épines.
+	Ink.brush(ci, base, PackedVector2Array([hip.lerp(knee, 0.2) + Vector2(-1, 0), knee + Vector2(-1, -0.5)]), 1.2, col.lightened(0.35))
+	var bone := {"clair": Art.bc("os"), "ombre": Art.bc("os").darkened(0.3)}
+	var side := -1.0 if foot.x < hip.x else 1.0
+	Ink.part(ci, base, Ink.thorn(knee.lerp(foot, 0.35), (PI if side < 0 else 0.0) - 0.4 * side, 4.5, 2.2), bone, 0.9, 1.0, 0.0)
+	Ink.part(ci, base, Ink.thorn(hip.lerp(knee, 0.55), (PI if side < 0 else 0.0) + 0.3 * side, 3.5, 1.8), bone, 0.9, 1.0, 0.0)
 	# Radicelles au pied.
 	for s: float in [-1.0, 1.0]:
 		Ink.brush(ci, base, PackedVector2Array([foot + Vector2(0, -1), foot + Vector2(s * 5.0, 0.5)]), 2.2, col.darkened(0.2), 1.0, 0.0)

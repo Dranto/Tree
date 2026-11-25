@@ -101,7 +101,7 @@ func _ready() -> void:
 		await _attach(e, kind, o, box, feet, Vector2(0, e.radius * 0.45))
 		e._body.visible = false
 	p.self_modulate = Color(1, 1, 1, 0)
-	await _attach(p, "heros", {"t": 0.5, "look": p.aim.angle(), "build": "ronce"}, Vector2(130, 100), Vector2(65, 82), Vector2(0, 11))
+	await _attach(p, "heros", {"t": 0.5, "look": p.aim.angle(), "build": "ronce"}, Vector2(220, 150), Vector2(110, 110), Vector2(0, 11))
 	await _frames(4)
 	var after := await _grab()
 	after.save_png(out + "/scene_apres.png")

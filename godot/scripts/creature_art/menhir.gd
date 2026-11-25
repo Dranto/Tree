@@ -71,6 +71,17 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 			var y := -94.0 - 9.0 * sin(PI * (i + 0.5) / 7.0)
 			var sway := 4.0 * sin(t * 3.0 + i * 0.7) + 6.0
 			Ink.brush(ci, xf, PackedVector2Array([Vector2(x, y + 6), Vector2(x + sway * 0.6, y - 6), Vector2(x + sway * 1.6, y - 13 + absf(i - 3.0))]), 2.6, lich.lerp(Art.bc("vent", "reflet"), 0.15 * (i % 2)), 1.0, 0.0)
+	# Une fleur des plateaux qui pousse dans l'herbe, et du gravier qui s'effrite à chaque pas.
+	if not Ink.mono:
+		var fp := Vector2(-20 + 1.5 * sin(t * 2.0), -104)
+		Ink.brush(ci, xf, PackedVector2Array([Vector2(-21, -96), fp]), 1.2, lich.darkened(0.3), 1.0, 0.0)
+		for j in 5:
+			ci.draw_circle(xf * (fp + Vector2.from_angle(j * TAU / 5.0 + t * 0.3) * 2.6), 1.9 * h / 100.0, Art.ec("vent", "clair"))
+		ci.draw_circle(xf * fp, 1.3 * h / 100.0, Art.c("butin"))
+		var crumble := absf(sin(walk)) * mv
+		for j in 3:
+			var u := fposmod(t * 1.3 + j * 0.33, 1.0)
+			ci.draw_circle(xf * Vector2(-30 + j * 26, -10 + u * 10.0), (1.6 - j * 0.3) * h / 100.0, Color(stone["ombre"], crumble * (1.0 - u)))
 	# Racines noires de la Flétrissure qui la ligotent, nœuds de braise.
 	var roots := [
 		PackedVector2Array([Vector2(-37, -62), Vector2(-14, -54), Vector2(10, -64), Vector2(33, -58)]),
@@ -83,7 +94,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	# Visage taillé : arcade gravée, deux yeux de braise ; la rune du vent au milieu.
 	Ink.brush(ci, xf, PackedVector2Array([Vector2(-18, -80), Vector2(-4, -84), Vector2(14, -80)]), 3.4, Ink.encre())
 	var glow := 0.3 + 0.7 * kk
-	if hit > 0.4:
+	if hit > 0.4 or (kk == 0.0 and Ink.blink(t, 2.0) > 0.0):
 		Ink.brush(ci, xf, PackedVector2Array([Vector2(-12, -75), Vector2(-4, -74)]), 2.6, Ink.encre())
 		Ink.brush(ci, xf, PackedVector2Array([Vector2(4, -74), Vector2(11, -74)]), 2.2, Ink.encre())
 	else:
