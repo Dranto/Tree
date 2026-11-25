@@ -366,7 +366,7 @@ func _render_once(vp: SubViewport) -> void:
 func _rerender(t: Dictionary) -> void:
 	tiles_redrawn += 1
 	var layer = t["layer"]
-	if layer != null:
+	if layer != null and layer.mask != GroundLayers.DEAD | GroundLayers.ALIVE | GroundLayers.FRONT:
 		var m: int = GroundLayers.needs(self, t["rect"])
 		if m & ~layer.mask:
 			layer.mask |= m

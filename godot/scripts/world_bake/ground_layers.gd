@@ -191,9 +191,11 @@ static func needs(g, rect: Rect2) -> int:
 	var lo := 255
 	var hi := 0
 	var data: PackedByteArray = g.data
-	for y in range(y0, y1 + 1):
+	# Au plus ~24 × 24 lectures (un carré immense, vue très dézoomée ou écran minuscule).
+	var step := maxi(1, maxi(x1 - x0, y1 - y0) / 24)
+	for y in range(y0, y1 + 1, step):
 		var row: int = y * g.RES
-		for x in range(x0, x1 + 1):
+		for x in range(x0, x1 + 1, step):
 			var v: int = data[row + x]
 			lo = mini(lo, v)
 			hi = maxi(hi, v)
@@ -258,6 +260,8 @@ class TileLayer extends Node2D:
 	static var _cache := {}
 	## Au-delà, le cache est vidé (≈ 2 Ko par entrée).
 	const CACHE_MAX := 12000
+	## Côté (pixels du monde) au-delà duquel un carré ne tire plus d'éléments.
+	const MAX_AREA := 2048.0
 	## Palettes de toutes les régions (et « » : l'oasis), remplies par make().
 	static var pals := {}
 
@@ -274,6 +278,11 @@ class TileLayer extends Node2D:
 			_cache.clear()
 		if _cache.size() > CACHE_MAX:
 			_cache.clear()
+		# Vue très dézoomée (carré de plus de MAX_AREA px du monde) : les éléments feraient moins d'un
+		# pixel, le lavis suffit (et tirer des milliers de cases coûterait des secondes).
+		if area.size.x > MAX_AREA:
+			draws += 1
+			return
 		var out_p := PackedVector2Array()
 		var out_c := PackedColorArray()
 		var out_u := PackedVector2Array()
