@@ -29,6 +29,8 @@ const SEED := 20261109
 
 ## Types de nœuds qu'une grappe peut contenir.
 ## « attack » : nœud qui change la forme ou le comportement de l'attaque de base (attack.gd).
+## Détour maximal (en liens) qu'une mutation générée peut imposer à un nœud ouvert (voir _detour_ok).
+const MUTATION_DETOUR := 2
 const CLUSTER_TYPES := ["small", "notable", "keystone", "skill", "mutation", "mastery", "withered", "attack"]
 ## Nom d'un nœud notable généré : un nom et un qualificatif de data/branches/<b>.json › notable.names
 ## (« Épine vorace » ; en anglais, l'ordre peut s'inverser). Nom d'une mutation sans « name ».
@@ -892,8 +894,19 @@ func _enliven() -> void:
 			k += 1
 
 
-## Distance (en liens) de chaque nœud à la graine.
-func _distances() -> Array:
+## Vrai si fermer les nœuds de « locked » ne rallonge d'aucun nœud ouvert son chemin depuis la graine
+## de plus de MUTATION_DETOUR liens par rapport à « free » (distances sans les mutations générées) :
+## une mutation fermée ne doit pas imposer un détour par une autre branche (chemin d'Épines, jalon 12).
+func _detour_ok(locked: Dictionary, free: Array) -> bool:
+	var d := _distances(locked)
+	for i in d.size():
+		if not locked.has(i) and free[i] < (1 << 20) and d[i] > free[i] + MUTATION_DETOUR:
+			return false
+	return true
+
+
+## Distance (en liens) de chaque nœud à la graine, sans traverser les nœuds de « blocked ».
+func _distances(blocked: Dictionary = {}) -> Array:
 	var dist: Array = []
 	dist.resize(nodes.size())
 	dist.fill(1 << 20)
@@ -904,7 +917,7 @@ func _distances() -> Array:
 		var u: int = queue[head]
 		head += 1
 		for m in nodes[u]["neighbors"]:
-			if dist[m] > dist[u] + 1:
+			if dist[m] > dist[u] + 1 and not blocked.has(m):
 				dist[m] = dist[u] + 1
 				queue.append(m)
 	return dist
@@ -931,6 +944,7 @@ func _reach(blocked: Dictionary) -> int:
 func _mutation_sites(list: Array, muts: Array, rings: Dictionary, locked: Dictionary, base: int) -> Array:
 	var sites: Array = []
 	var taken := 0
+	var free_dist := _distances(locked)
 	for m in muts:
 		var want: int = int(rings[str(m["mutates"])]) + 2
 		var cand: Array = list.filter(func(id): return not id in sites)
@@ -948,7 +962,7 @@ func _mutation_sites(list: Array, muts: Array, rings: Dictionary, locked: Dictio
 			if near:
 				continue
 			locked[id] = true
-			if _reach(locked) == base - taken - 1:
+			if _reach(locked) == base - taken - 1 and _detour_ok(locked, free_dist):
 				found = id
 				taken += 1
 				break
