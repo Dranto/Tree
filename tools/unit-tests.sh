@@ -50,6 +50,7 @@ TESTS=(
   "region_engine|--headless --fixed-fps 60|"
   "region|--headless|"
   "region_ui|--headless --fixed-fps 60|"
+  "rumble|--headless|"
   "migration|--headless|"
   "save|--headless|--new-game"
   "seve|--headless --fixed-fps 60|"
