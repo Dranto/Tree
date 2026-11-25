@@ -7875,7 +7875,7 @@ msgstr "Phase 2 sur 3 : les bourgeons éclosent"
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 sur 3 : les ronces se resserrent"
 
-#. scripts/boss_base.gd:322
+#. scripts/boss_base.gd:448
 msgid "Entravée"
 msgstr "Entravée"
 
