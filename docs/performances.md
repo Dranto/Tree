@@ -292,3 +292,13 @@ Mesures et recommandation complètes dans la PR.
   `e.gc`). Élite : ×1,15, liseré doré (shader), collier de la région au point `NECK`, ou atlas d'élite (`DRAWS_ELITE`).
 - Banc en paires (4 tours, machine lente) : develop 53,5 ms (p99 92,8) ; rendu cuit 48,1 ms (p99 81,6), soit −10 %.
 - `tools/sprites-determinisme.sh` : même empreinte de l'état du jeu avec et sans rendu cuit (graine et pas fixes).
+
+## Prototype : sol en couches et décor cuit (refonte du monde, vague 0 P, 25/11)
+
+Réglages internes, éteints par défaut (aucune référence visuelle ne change) : `--paysage-sol`
+(scripts/world_bake/ground_layers.gd : lavis dans le shader, matière et détails dessinés une fois par
+carré de sol), `--paysage-decor` (scripts/world_bake/decor_bake.gd : décor cuit dans un atlas ;
+decor_compose.gd : lisière composée autour d'une clairière de test). Bancs : `--bench-at=ronce`,
+`--bench-run=1400`. Mesures en paires (Roncier, 120 Flétris) : sol en couches +5 %, décor composé en
+direct +19 %, cuit +8 % ; un carré de sol 5,5 ms au lieu de 2,5. Tableau complet et recommandation :
+/mnt/project-files/captures/refonte-monde/P/mesures.md (projet). Test : tests/paysages_proto_test.gd.

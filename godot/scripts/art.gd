@@ -221,6 +221,19 @@ const MONDE := {
 		"pierre": {"clair": Color("948a7c"), "ombre": Color("5a524a"), "reflet": Color("cbc2b2")},
 	},
 	"ronce": {
+		# Sol en couches et décor cuit (scripts/world_bake/, ex-prototype P) : lavis, matière, détails en grappes.
+		"sol_couches": {
+			# Lavis (couche 1) : grandes formes sans bruit fin. Flétri sombre, ravivé nettement plus clair.
+			"lavis_mort_sombre": Color("2e2224"), "lavis_mort_clair": Color("47343a"),
+			"lavis_vif_sombre": Color("4f6b34"), "lavis_vif_clair": Color("86a24a"),
+			# Matière (couche 2) : encre fine des tiges rampantes, épines, fissures.
+			"encre_morte": Color("1f1318"), "tige_morte": Color("5a3442"), "fissure": Color("1a1214"),
+			"encre_vive": Color("2c3a1a"), "tige_vive": Color("3f5a26"), "feuille": Color("6f9a3a"),
+			# Détails en grappes (couche 3) : cailloux, feuilles sèches ; herbe, fleurs et baies.
+			"caillou": Color("6b5a58"), "caillou_lumiere": Color("9a8783"), "feuille_seche": Color("6e4a3a"),
+			"herbe": Color("5e8a36"), "herbe_claire": Color("a6c860"), "fleur": Color("f08a8a"),
+			"fleur_coeur": Color("ffe2a0"), "baie": Color("d4485a"), "pousse": Color("b8e070"),
+		},
 		"fletri": {
 			"sol": Color("4f3d35"), "sol_clair": Color("62493b"), "sol_sombre": Color("3b2d2a"),
 			"matiere": Color("2a1d1a"), "feuille": Color("7d4b30"), "feuille_2": Color("94603a"),
@@ -284,6 +297,15 @@ const MONDE := {
 		},
 	},
 }
+
+## Couleur du sol en couches et du décor cuit : mpc("ronce", "lavis_vif_clair") (MONDE[région]["sol_couches"]).
+static func mpc(region: String, key: String) -> Color:
+	var r: Dictionary = MONDE.get(region, {}).get("sol_couches", {})
+	if r.has(key):
+		return r[key]
+	push_error("Art.mpc : couleur du sol en couches inconnue « %s/%s »" % [region, key])
+	return Color.MAGENTA
+
 
 
 ## Couleur du monde : mc("ronce", "fletri", "sol"), ou mc("commun", "", "seve"). Une clé absente d'un
