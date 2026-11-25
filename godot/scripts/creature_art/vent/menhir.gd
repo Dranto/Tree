@@ -35,10 +35,10 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var kk := Anim.ease_out(k)
 	var slam := 0.0 if strike < 0.0 else 1.0 - strike
 	Ink.ground_shadow(ci, base, Vector2(0, 0), 48.0)
-	# Onde de choc au sol après la frappe.
+	# Onde de choc de la frappe : petite, sous les poings (les grands effets au sol restent au comportement).
 	if slam > 0.0 and not Ink.mono:
 		var u := 1.0 - slam
-		var ring := Ink.oval(Vector2(30, 0), 20.0 + 50.0 * u, (20.0 + 50.0 * u) * Art.OMBRE_APLATI, 32)
+		var ring := Ink.oval(Vector2(36, 0), 14.0 + 16.0 * u, (14.0 + 16.0 * u) * Art.OMBRE_APLATI, 24)
 		ring.append(ring[0])
 		ci.draw_polyline(base * ring, Color(Art.bc("braise"), 0.8 * slam), 3.0 * h / 100.0, true)
 	# Marche lourde : il bascule d'un pied sur l'autre.
