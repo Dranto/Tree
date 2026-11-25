@@ -56,20 +56,22 @@ static func credit_groups() -> Array:
 		if not entry is Dictionary:
 			continue
 		if str(entry.get("title", "")) != "":
-			out.append({"title": true, "lines": [str(entry["title"])]})
+			var title := str(entry["title"])
+			# Le titre qui porte le nom du jeu suit project.godot (Loc.game_name).
+			out.append({"title": true, "lines": [Loc.game_name() if title == str(ProjectSettings.get_setting("application/config/name")) else Loc.data(title)]})
 			continue
 		var lines: Array = []
 		for l in entry.get("lines", []):
-			lines.append(str(l))
+			lines.append(Loc.data(str(l)))
 		match str(entry.get("auto", "")):
 			"regions":
 				for id in Regions.ids():
-					lines.append(str(Regions.def(id).get("map_name", id)))
+					lines.append(Loc.data(str(Regions.def(id).get("map_name", id))))
 			"bosses":
 				for id in Regions.ids():
-					lines.append(str(Regions.section(id, "boss").get("name", id)))
-				lines.append(str(Content._load("finale").get("boss", {}).get("name", "La Flétrissure")))
-		out.append({"title": false, "head": str(entry.get("head", "")), "lines": lines})
+					lines.append(Loc.data(str(Regions.section(id, "boss").get("name", id))))
+				lines.append(Loc.data(str(Content._load("finale").get("boss", {}).get("name", Loc.key("La Flétrissure")))))
+		out.append({"title": false, "head": Loc.data(str(entry.get("head", ""))), "lines": lines})
 	return out
 
 

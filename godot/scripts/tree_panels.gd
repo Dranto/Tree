@@ -82,24 +82,24 @@ func _ready() -> void:
 	count_label.custom_minimum_size = Vector2(96, 0)
 	count_label.add_theme_color_override("font_color", DIM)
 	bar.add_child(count_label)
-	_bar_buttons.append(_button(bar, "Précédent", func(): next_match(-1)))
-	_bar_buttons.append(_button(bar, "Suivant", func(): next_match(1)))
-	plan_button = _button(bar, "Mode plan", Callable())
+	_bar_buttons.append(_button(bar, Loc.key("Précédent"), func(): next_match(-1)))
+	_bar_buttons.append(_button(bar, Loc.key("Suivant"), func(): next_match(1)))
+	plan_button = _button(bar, Loc.key("Mode plan"), Callable())
 	plan_button.toggle_mode = true
 	plan_button.toggled.connect(set_plan_mode)
 	_bar_buttons.append(plan_button)
-	undo_button = _button(bar, "Annuler", undo)
+	undo_button = _button(bar, Loc.key("Annuler"), undo)
 	_bar_buttons.append(undo_button)
-	summary_button = _button(bar, "Résumé", Callable())
+	summary_button = _button(bar, Loc.key("Résumé"), Callable())
 	summary_button.toggle_mode = true
 	summary_button.toggled.connect(set_summary_visible)
 	_bar_buttons.append(summary_button)
-	builds_button = _button(bar, "Builds", Callable())
+	builds_button = _button(bar, Loc.key("Builds"), Callable())
 	builds_button.toggle_mode = true
 	builds_button.toggled.connect(set_builds_visible)
 	_bar_buttons.append(builds_button)
 	# Avec près de 900 nœuds, on se perd vite en zoomant : un bouton (et la touche Origine) recadre l'arbre entier.
-	_bar_buttons.append(_button(bar, "Vue d'ensemble", func(): ui.glide_fit()))
+	_bar_buttons.append(_button(bar, Loc.key("Vue d'ensemble"), func(): ui.glide_fit()))
 
 	plan_bar = PanelContainer.new()
 	plan_bar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -109,8 +109,8 @@ func _ready() -> void:
 	plan_bar.add_child(row)
 	plan_label = Label.new()
 	row.add_child(plan_label)
-	commit_button = _button(row, "Valider le plan", commit_plan)
-	clear_button = _button(row, "Effacer", func(): planner.plan_clear())
+	commit_button = _button(row, Loc.key("Valider le plan"), commit_plan)
+	clear_button = _button(row, Loc.key("Effacer"), func(): planner.plan_clear())
 
 	message = Label.new()
 	message.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -317,19 +317,19 @@ func click(id: int) -> void:
 	if plan_mode:
 		if planner.plan_has(id):
 			var removed: int = planner.plan_remove(id)
-			say("%d nœud(s) retiré(s) du plan" % removed)
+			say(Loc.t("%d nœud(s) retiré(s) du plan") % removed)
 		else:
 			var added: int = planner.plan_add(id)
-			say("%d nœud(s) ajouté(s) au plan" % added)
+			say(Loc.t("%d nœud(s) ajouté(s) au plan") % added)
 		return
 	var path: Array = planner.path_to(id)
 	if path.is_empty():
 		return
 	if not planner.learn_path(path):
 		var missing: int = path.size() - Game.points
-		say("Il manque %d point(s) pour ce chemin de %d nœud(s). Le mode plan permet de le préparer." % [missing, path.size()])
+		say(Loc.t("Il manque %d point(s) pour ce chemin de %d nœud(s). Le mode plan permet de le préparer.") % [missing, path.size()])
 	elif path.size() > 1:
-		say("%d nœuds appris d'un coup" % path.size())
+		say(Loc.t("%d nœuds appris d'un coup") % path.size())
 
 
 func right_click(id: int) -> void:
@@ -339,18 +339,18 @@ func right_click(id: int) -> void:
 		var cost: int = Game.refund_cost(id)
 		if planner.forget(id):
 			if cost > 0:
-				say("Nœud oublié : %d essence" % cost)
+				say(Loc.t("Nœud oublié : %d essence") % cost)
 		elif id != 0:
 			if not Game.can_refund(id):
-				say("Ce nœud en relie d'autres à la graine : oublie d'abord ceux-là.")
+				say(Loc.t("Ce nœud en relie d'autres à la graine : oublie d'abord ceux-là."))
 			else:
-				say("Oublier ce nœud coûte %d essence : il t'en manque %d. Au sanctuaire, c'est gratuit." % [cost, cost - Game.essence()])
+				say(Loc.t("Oublier ce nœud coûte %d essence : il t'en manque %d. Au sanctuaire, c'est gratuit.") % [cost, cost - Game.essence()])
 
 
 func undo() -> void:
 	var what: String = planner.undo_label()
 	if planner.undo():
-		say("Annulé : " + what)
+		say(Loc.t("Annulé : %s") % what)
 
 
 func set_plan_mode(on: bool) -> void:
@@ -364,7 +364,7 @@ func set_plan_mode(on: bool) -> void:
 func commit_plan() -> void:
 	var n: int = planner.plan_cost()
 	if planner.plan_commit():
-		say("Plan validé : %d nœuds appris" % n)
+		say(Loc.t("Plan validé : %d nœuds appris") % n)
 		set_plan_mode(false)
 
 
@@ -444,36 +444,36 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 		var how := ""
 		if ok:
 			var cost: int = Game.refund_cost(id)
-			how = "  ·  clic droit pour l'oublier" + (" (%d essence)" % cost if cost > 0 else " (gratuit)")
-		lines.append(["Appris" + how, 15, UiTheme.LEAF])
+			how = Loc.t("  ·  clic droit pour l'oublier (%d essence)") % cost if cost > 0 else Loc.t("  ·  clic droit pour l'oublier (gratuit)")
+		lines.append([Loc.t("Appris%s") % how, 15, UiTheme.LEAF])
 		return lines
 	var p := _preview_for(id)
 	var count: int = p["path"].size()
 	var planned: bool = planner.plan_has(id)
 	if not p["changes"].is_empty():
-		var title := "Après ce nœud :"
+		var title := Loc.t("Après ce nœud :")
 		if planned:
-			title = "Après tout le plan (%d nœuds) :" % planner.plan_cost()
+			title = Loc.t("Après tout le plan (%d nœuds) :") % planner.plan_cost()
 		elif plan_mode and planner.plan_cost() > 0:
-			title = "Après le plan et ce chemin (%d nœuds) :" % (planner.plan_cost() + count)
+			title = Loc.t("Après le plan et ce chemin (%d nœuds) :") % (planner.plan_cost() + count)
 		elif count > 1:
-			title = "Après ce chemin (%d nœuds) :" % count
+			title = Loc.t("Après ce chemin (%d nœuds) :") % count
 		lines.append([title, 15, DIM])
 		for c in p["changes"]:
 			lines.append(["   " + c["text"], 14, PLAN])
 	if planned:
-		lines.append(["Dans le plan  ·  clic pour l'en retirer", 15, PLAN])
+		lines.append([Loc.t("Dans le plan  ·  clic pour l'en retirer"), 15, PLAN])
 	elif plan_mode:
-		lines.append(["Clic pour ajouter au plan (%d nœud(s), %d point(s))" % [count, count], 15, PLAN])
+		lines.append([Loc.t("Clic pour ajouter au plan (%d nœud(s), %d point(s))") % [count, count], 15, PLAN])
 	elif count <= Game.points:
 		if count == 1:
-			lines.append(["Clic pour apprendre (1 point)", 15, UiTheme.GOLD])
+			lines.append([Loc.t("Clic pour apprendre (1 point)"), 15, UiTheme.GOLD])
 		else:
-			lines.append(["Chemin de %d nœuds, %d points  ·  clic pour tout apprendre" % [count, count], 15, UiTheme.GOLD])
+			lines.append([Loc.t("Chemin de %d nœuds, %d points  ·  clic pour tout apprendre") % [count, count], 15, UiTheme.GOLD])
 	elif Game.points <= 0 and count == 1:
-		lines.append(["Pas de point disponible : monte de niveau", 15, PATH_SHORT])
+		lines.append([Loc.t("Pas de point disponible : monte de niveau"), 15, PATH_SHORT])
 	else:
-		lines.append(["Chemin de %d nœuds : il te manque %d point(s)" % [count, count - Game.points], 15, PATH_SHORT])
+		lines.append([Loc.t("Chemin de %d nœuds : il te manque %d point(s)") % [count, count - Game.points], 15, PATH_SHORT])
 	return lines
 
 
@@ -553,7 +553,7 @@ func _refresh() -> void:
 	elif match_index >= 0:
 		count_label.text = "%d / %d" % [match_index + 1, matches.size()]
 	else:
-		count_label.text = "%d trouvé(s)" % matches.size()
+		count_label.text = Loc.t("%d trouvé(s)") % matches.size()
 	undo_button.disabled = not planner.can_undo()
 	var cost: int = planner.plan_cost()
 	plan_bar.visible = plan_mode or cost > 0
@@ -561,9 +561,9 @@ func _refresh() -> void:
 	if cost == 0:
 		plan_label.text = "Mode plan : clique des nœuds pour tracer un chemin sans dépenser de points."
 	elif planner.plan_missing() > 0:
-		plan_label.text = "Plan : %d nœuds, %d points. Il t'en manque %d." % [cost, cost, planner.plan_missing()]
+		plan_label.text = Loc.t("Plan : %d nœuds, %d points. Il t'en manque %d.") % [cost, cost, planner.plan_missing()]
 	else:
-		plan_label.text = "Plan : %d nœuds, %d points. Tu as de quoi le valider." % [cost, cost]
+		plan_label.text = Loc.t("Plan : %d nœuds, %d points. Tu as de quoi le valider.") % [cost, cost]
 	if summary_panel.visible:
 		_fill_summary()
 
@@ -576,13 +576,13 @@ func _fill_summary() -> void:
 	var with_plan: bool = planner.plan_cost() > 0
 	var later: Dictionary = planner.summary(planner.plan) if with_plan else now
 
-	_text("Résumé du build", 20, UiTheme.GOLD)
-	var head := "%d nœuds appris sur %d  ·  %d point(s) à placer" % [now["nodes"], now["total"], now["points"]]
+	_text(Loc.t("Résumé du build"), 20, UiTheme.GOLD)
+	var head := Loc.t("%d nœuds appris sur %d  ·  %d point(s) à placer") % [now["nodes"], now["total"], now["points"]]
 	_text(head, 15, DIM)
 	if with_plan:
-		_text("Les valeurs après « → » tiennent compte du plan (%d nœuds)." % planner.plan_cost(), 15, PLAN)
+		_text(Loc.t("Les valeurs après « → » tiennent compte du plan (%d nœuds).") % planner.plan_cost(), 15, PLAN)
 
-	_section("Branches")
+	_section(Loc.t("Branches"))
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 10)
@@ -614,21 +614,21 @@ func _fill_summary() -> void:
 		num.add_theme_color_override("font_color", PLAN if planned != b["count"] else UiTheme.INK)
 		grid.add_child(num)
 
-	_section("Compétences")
+	_section(Loc.t("Compétences"))
 	if later["skills"].is_empty():
-		_text("Aucune pour l'instant : elles viennent des nœuds clés.", 14, DIM)
+		_text(Loc.t("Aucune pour l'instant : elles viennent des nœuds clés."), 14, DIM)
 	for s in later["skills"]:
-		_text(s + ("" if now["skills"].has(s) else "  (plan)"), 14, UiTheme.INK if now["skills"].has(s) else PLAN)
+		_text(s + ("" if now["skills"].has(s) else Loc.t("  (plan)")), 14, UiTheme.INK if now["skills"].has(s) else PLAN)
 
-	_section("Nœuds clés")
+	_section(Loc.t("Nœuds clés"))
 	if later["keystones"].is_empty():
-		_text("Aucun pour l'instant.", 14, DIM)
+		_text(Loc.t("Aucun pour l'instant."), 14, DIM)
 	for i in later["keystones"].size():
 		var k: Dictionary = later["keystones"][i]
 		var owned: bool = now["keystones"].any(func(o): return o["name"] == k["name"])
-		_text(k["name"] + ("" if owned else "  (plan)"), 14, Game.tree.branch_color(k["branch"]))
+		_text(k["name"] + ("" if owned else Loc.t("  (plan)")), 14, Game.tree.branch_color(k["branch"]))
 
-	_section("Statistiques")
+	_section(Loc.t("Statistiques"))
 	var stats := GridContainer.new()
 	stats.columns = 2
 	stats.add_theme_constant_override("h_separation", 12)

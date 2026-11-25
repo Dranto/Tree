@@ -28,7 +28,8 @@ const STONES := 7
 ## (« sanctuaries » de data/regions/<id>.json) : « dist » depuis la graine et « side » (ou « angle »,
 ## en radians) par rapport à l'axe de la région. Ils restent hors de la zone du Cœur et de l'arène,
 ## et sont écartés des buissons d'épines.
-const SEED_SITE := {"id": "graine", "name": "de la Graine", "region": "", "dist": 0.0, "angle": 0.0}
+const SEED_SITE := {"id": "graine", "name": "de la Graine", # i18n
+	 "region": "", "dist": 0.0, "angle": 0.0}
 
 
 var main
@@ -83,7 +84,7 @@ func setup(site: Dictionary) -> void:
 
 
 func title() -> String:
-	return "sanctuaire " + place
+	return Loc.t("sanctuaire %s") % Loc.data(place)
 
 
 func is_lit() -> bool:

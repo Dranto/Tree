@@ -14,8 +14,8 @@
 ## duck(part) pour baisser un instant la musique sous un grand bruitage.
 extends Node
 
-const BUS := "Musique"
-const AMB_BUS := "Ambiance"
+const BUS := "Musique" # i18n: non (bus audio)
+const AMB_BUS := "Ambiance" # i18n: non (bus audio)
 const SfxScript = preload("res://scripts/sfx.gd")
 const RegionAudio = preload("res://scripts/region_audio.gd")
 const LOOP := 12.0

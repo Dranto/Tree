@@ -442,7 +442,7 @@ class MenuItem extends Button:
 
 	func _draw() -> void:
 		var f: Font = get_theme_font("font")
-		var tw := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, item_size).x
+		var tw := f.get_string_size(atr(text), HORIZONTAL_ALIGNMENT_LEFT, -1, item_size).x
 		var sb := get_theme_stylebox("normal")
 		var left := sb.get_margin(SIDE_LEFT)
 		var x0 := left

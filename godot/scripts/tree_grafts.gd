@@ -432,9 +432,9 @@ func refresh() -> void:
 	if held != "" and not Game.has_graft(held):
 		held = ""
 	var open: int = Game.crown_size()
-	_title.text = ("▸ " if folded else "▾ ") + "Couronne de greffes"
+	_title.text = ("▸ " if folded else "▾ ") + Loc.t("Couronne de greffes")
 	var free: int = Game.free_grafts().size()
-	_count.text = "%d trouvée%s" % [Game.graft_inventory.size(), "s" if Game.graft_inventory.size() > 1 else ""]
+	_count.text = Loc.tn("%d trouvée", "%d trouvées", Game.graft_inventory.size()) % Game.graft_inventory.size()
 	var count: int = Game.graft_inventory.size()
 	while _grid.get_child_count() > count:
 		var last := _grid.get_child(_grid.get_child_count() - 1)
@@ -455,11 +455,11 @@ func refresh() -> void:
 	var pad := Settings.pad_active()
 	var a_name := Settings.pad_name_of(JOY_BUTTON_A)
 	if held != "":
-		_hint.text = ("%s sur un emplacement de la couronne : y poser la greffe." % a_name) if pad else "Clique un emplacement de la couronne pour y poser la greffe."
+		_hint.text = (Loc.t("%s sur un emplacement de la couronne : y poser la greffe.") % a_name) if pad else Loc.t("Clique un emplacement de la couronne pour y poser la greffe.")
 	elif Game.placed_grafts().size() < open and free > 0:
-		_hint.text = ("%s sur une greffe pour la prendre, puis sur un emplacement libre." % a_name) if pad else "Glisse une greffe dans un emplacement libre de la couronne."
+		_hint.text = (Loc.t("%s sur une greffe pour la prendre, puis sur un emplacement libre.") % a_name) if pad else Loc.t("Glisse une greffe dans un emplacement libre de la couronne.")
 	else:
-		_hint.text = ("%s sur un emplacement : retire sa greffe." % Settings.pad_name_of(JOY_BUTTON_X)) if pad else "Clic sur un emplacement : retire sa greffe."
+		_hint.text = (Loc.t("%s sur un emplacement : retire sa greffe.") % Settings.pad_name_of(JOY_BUTTON_X)) if pad else Loc.t("Clic sur un emplacement : retire sa greffe.")
 	crown_view.queue_redraw()
 	_refresh_detail()
 
@@ -480,8 +480,8 @@ func _refresh_detail() -> void:
 	var open: int = Game.crown_size()
 	if hover_slot >= open:
 		_hint.visible = false
-		_line("Emplacement fermé", 16, DIM, true)
-		_line("Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien.", 15, DIM)
+		_line(Loc.t("Emplacement fermé"), 16, DIM, true)
+		_line(Loc.t("Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."), 15, DIM)
 		return
 	var id := held if held != "" else hover_graft
 	if id == "" and hover_slot >= 0:
@@ -491,7 +491,7 @@ func _refresh_detail() -> void:
 		return
 	if held == "":
 		_hint.visible = false
-	_line(str(g.get("name", id)), 17, UiTheme.GOLD, true)
+	_line(Loc.data(str(g.get("name", id))), 17, UiTheme.GOLD, true)
 	for e in g.get("effects", []):
 		var text := Effects.describe(e)
 		if text != "":
@@ -504,16 +504,16 @@ func _refresh_detail() -> void:
 	var title := ""
 	if held != "" and hover_slot >= 0 and hover_slot < open and hover_slot != slot:
 		changes = planner.preview_graft(hover_slot, id)
-		title = "Posée ici :"
+		title = Loc.t("Posée ici :")
 		var current := Game.graft_of(hover_slot)
 		if current != "":
-			_line("Remplace « %s »." % Content.grafts()[current]["name"], 15, DIM)
+			_line(Loc.t("Remplace « %s ».") % Loc.data(Content.grafts()[current]["name"]), 15, DIM)
 	elif slot < 0 and Game.first_free_slot() >= 0:
 		changes = planner.preview_graft(Game.first_free_slot(), id)
-		title = "Posée :"
+		title = Loc.t("Posée :")
 	elif slot >= 0 and held == "":
 		changes = planner.preview_graft(-1, id)
-		title = "Retirée :"
+		title = Loc.t("Retirée :")
 	if not changes.is_empty():
 		_line(title, 15, DIM)
 		for c in changes.slice(0, 4):
