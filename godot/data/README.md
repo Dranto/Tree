@@ -409,6 +409,28 @@ Les grands bruitages (`duck` dans `SOUNDS`) baissent un instant la musique. Le j
 - **Bruitages** : couches superposées (oscillateur ou bruit, glissé de hauteur, filtre, saturation), petite réverbération, crête (`peak`, qui fixe le volume relatif), `variants` (variantes tirées au hasard), `duck`. Format en tête de `synth.gd`. **Sons choisis par les données** : `"sound"` dans une compétence (`skills.json`) ou une forme d'attaque (`attack.json`), `"sound_hit"`, `"sound_crit"` et `"sound_death"` dans une sorte d'ennemi (`enemies.json`) ; le nom doit exister dans `Synth.SOUNDS`. Sons de combat prêts à brancher : `impact`, `impact_lourd`, `critique`, `mort`, `mort_elite`, `annonce`, `annonce_boss`.
 - **Finale et générique** : `finale` (sous la graine, `Music.set_mood(vie, "finale")`) et `generique` (épilogue, `Music.set_mood(1.0, "generique")`) ne sont pas des régions.
 
+**Musiques de boss faites à la main.** Un boss peut avoir son propre morceau (Antoine), qui remplace sa couche `boss` du code pendant le combat ; sans morceau, rien ne change. Identifiant = région du boss (`finale` pour la Flétrissure, `ronce`, `spore`…).
+- **Livraison** : un fichier audio (WAV de préférence, sans blanc au début) et une fiche de repères en texte, mesures comptées depuis 1. Exemple : `assets/music/hand/finale.fiche.txt`.
+  ```
+  bpm: 180
+  mesure: 4/4
+  debut: 0.026        # secondes : premier temps de la mesure 1
+  intro: 1-16         # jouée une fois à l'éveil du boss
+  boucle_1: 17-32     # phase 1, en boucle
+  drop_1: 45-48       # passage vers la phase 2 (une fois), puis boucle_2
+  boucle_2: 49-72
+  drop_2: 77-80
+  boucle_3: 81-120
+  fin: 121-128        # à la mort du boss
+  defaite: …          # facultatif : à la mort du héros (sinon fondu d'une seconde)
+  fin_fondu: 2        # facultatif : fondu de sortie sur les 2 dernières mesures de la fin
+  ```
+- **Préparation** : `tools/boss-track.sh <fichier> <fiche> <boss>` (ffmpeg et numpy) coupe aux mesures exactes, rend chaque boucle sans clic (ses 12 dernières ms sont fondues vers ce qui précède son début dans l'original), met un fondu de 3 ms à l'entrée des drops et de la fin, et écrit `assets/music/hand/<boss>/<clip>.ogg` (Vorbis qualité 6) et `assets/music/hand/<boss>.json`. Le rapport compare chaque raccord de boucle au même passage dans l'original.
+- **Clips** : `intro.ogg` (intro puis boucle_1), `drop_<n>.ogg` (drop_n puis boucle_<n+1>), `fin.ogg`, `defaite.ogg` ; un ogg qui finit par une boucle reboucle de lui-même sur elle (`boucle_depuis`, en mesures) : c'est exact à l'échantillon, alors qu'un enchaînement « à la fin du clip » d'`AudioStreamInteractive` tombe sur un tampon du mélangeur.
+- **`<boss>.json`** : `bpm`, `bar_beats`, `debut`, `source` ; `sections` (mesures de la fiche et rapport des raccords) ; `clips` : `fichier`, `sections`, `mesures`, `boucle`, `boucle_depuis`, `echantillons`.
+- **Jeu** (`scripts/boss_track.gd`, branché dans `music.gd` › `follow_boss`, appelé par main.gd à chaque pas) : intro à l'éveil ; à chaque changement de phase, le drop part **au début de la mesure suivante** (AudioStreamInteractive, transition `NEXT_BAR`), puis sa boucle ; à la mort du boss, la fin à la mesure suivante ; mort du héros, fuite ou retour au menu : `defaite` s'il y en a une, sinon fondu d'une seconde. La musique suit l'horloge audio : le ralenti d'Éclat ne la touche pas. Les fichiers de boss ne sont pas touchés : le lecteur lit `boss.phase`, `boss.dead` et l'état de l'arène. Test : `tests/boss_track_test.gd` (morceau d'essai dans `tests/fixtures/boss_track/`). Film : `tools/boss-track-film.sh DOSSIER`.
+- **Export** : le jeu complet embarque `assets/music/hand/` ; la démo (Ronce seule) l'exclut.
+
 ## Points et greffes du monde
 
 Chaque région décrit ce qu'elle donne, hors des niveaux : `heart › reward` et `boss › reward` (`{"points": 2, "graft": "greffe_mere"}`), `altars` et `secrets` :

@@ -8164,7 +8164,7 @@ msgid ""
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 msgstr ""
 
-#. scripts/main.gd:1124
+#. scripts/main.gd:1128
 msgid "%s vaincu"
 msgstr ""
 

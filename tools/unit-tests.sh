@@ -25,6 +25,7 @@ TESTS=(
   "borders|--headless|"
   "builds|--headless|"
   "boss|--headless --fixed-fps 60|"
+  "boss_track|--headless|"
   "death|--headless --fixed-fps 60|"
   "difficulty|--headless|"
   "demo|--headless --fixed-fps 60|"

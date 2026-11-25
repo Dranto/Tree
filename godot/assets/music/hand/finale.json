@@ -1,0 +1,123 @@
+{
+  "bpm": 180.0,
+  "bar_beats": 4,
+  "debut": 0.026,
+  "source": "breakcore.mp3",
+  "sections": {
+    "intro": {
+      "mesures": [
+        1,
+        16
+      ]
+    },
+    "boucle_1": {
+      "mesures": [
+        17,
+        32
+      ],
+      "saut_avant": 0.2527,
+      "spectre_avant_db": 13.78,
+      "saut_apres": 0.0903,
+      "spectre_apres_db": 11.94,
+      "saut_naturel": 0.0903,
+      "spectre_naturel_db": 16.47,
+      "saut_ogg": 0.2854
+    },
+    "drop_1": {
+      "mesures": [
+        45,
+        48
+      ],
+      "saut_entree": 0.0299
+    },
+    "boucle_2": {
+      "mesures": [
+        49,
+        72
+      ],
+      "saut_avant": 0.0952,
+      "spectre_avant_db": 17.75,
+      "saut_apres": 0.0581,
+      "spectre_apres_db": 17.53,
+      "saut_naturel": 0.0581,
+      "spectre_naturel_db": 21.41,
+      "saut_ogg": 0.3818
+    },
+    "drop_2": {
+      "mesures": [
+        77,
+        80
+      ],
+      "saut_entree": 0.029
+    },
+    "boucle_3": {
+      "mesures": [
+        81,
+        120
+      ],
+      "saut_avant": 0.1001,
+      "spectre_avant_db": 17.81,
+      "saut_apres": 0.0821,
+      "spectre_apres_db": 12.76,
+      "saut_naturel": 0.0821,
+      "spectre_naturel_db": 16.0,
+      "saut_ogg": 0.372
+    },
+    "fin": {
+      "mesures": [
+        121,
+        128
+      ],
+      "saut_entree": 0.1877,
+      "fondu_mesures": 2
+    }
+  },
+  "clips": {
+    "intro": {
+      "fichier": "finale/intro.ogg",
+      "sections": [
+        "intro",
+        "boucle_1"
+      ],
+      "mesures": 32,
+      "boucle": true,
+      "echantillons": 1881600,
+      "decalage_ech": 0,
+      "boucle_depuis": 16
+    },
+    "drop_1": {
+      "fichier": "finale/drop_1.ogg",
+      "sections": [
+        "drop_1",
+        "boucle_2"
+      ],
+      "mesures": 28,
+      "boucle": true,
+      "echantillons": 1646400,
+      "decalage_ech": 0,
+      "boucle_depuis": 4
+    },
+    "drop_2": {
+      "fichier": "finale/drop_2.ogg",
+      "sections": [
+        "drop_2",
+        "boucle_3"
+      ],
+      "mesures": 44,
+      "boucle": true,
+      "echantillons": 2587200,
+      "decalage_ech": 0,
+      "boucle_depuis": 4
+    },
+    "fin": {
+      "fichier": "finale/fin.ogg",
+      "sections": [
+        "fin"
+      ],
+      "mesures": 8,
+      "boucle": false,
+      "echantillons": 471451,
+      "decalage_ech": 0
+    }
+  }
+}
