@@ -33,6 +33,7 @@ TESTS=(
   "demo|--headless --fixed-fps 60|"
   "direct_screen|--xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0|"
   "draw_batch|--xvfb --audio-driver Dummy|"
+  "bestiaire|--xvfb --audio-driver Dummy|"
   "heros|--xvfb --audio-driver Dummy|"
   "sprite_bake|--xvfb --audio-driver Dummy|"
   "paysages_proto|--xvfb --audio-driver Dummy|"
