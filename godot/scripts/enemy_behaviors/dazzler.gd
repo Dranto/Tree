@@ -60,9 +60,9 @@ func in_cone(e, pos: Vector2, r: float) -> bool:
 func draw_attack(e, k: float, hit: float) -> void:
 	var cone := {"type": "cone", "centre": e.attack_dir * e.radius * 0.6, "direction": e.attack_dir.angle(), "ouverture": float(e.data["cone"]), "rayon": float(e.data["range"])}
 	if e.state == "windup":
-		Art.telegraph(e, cone, k, -1.0, e.t)
+		Art.telegraph(e.gc, cone, k, -1.0, e.t)
 	elif hit >= 0.0:
-		Art.telegraph(e, cone, 1.0, hit, e.t)
+		Art.telegraph(e.gc, cone, 1.0, hit, e.t)
 	if e.state == "recover":
 		# L'éclair : un éventail de lumière blanche qui s'éteint.
 		var u := 1.0 - clampf(e.state_t / maxf(0.01, float(e.data.get("flash_time", 0.3))), 0.0, 1.0)
@@ -72,4 +72,4 @@ func draw_attack(e, k: float, hit: float) -> void:
 		var pts := PackedVector2Array([e.attack_dir * e.radius * 0.6])
 		for i in 9:
 			pts.append(Vector2.from_angle(a0 - half + 2.0 * half * i / 8.0) * reach * (0.4 + 0.6 * u))
-		e.draw_colored_polygon(pts, Color(1.0, 0.97, 0.85, 0.45 * (1.0 - u)))
+		e.gc.draw_colored_polygon(pts, Color(1.0, 0.97, 0.85, 0.45 * (1.0 - u)))
