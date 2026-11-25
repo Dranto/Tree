@@ -317,6 +317,9 @@ func _charge_impulse(e: float, rate: float) -> void:
 		var from := anchor + Vector2.from_angle(a) * d
 		var dur := _charge_rng.randf_range(0.28, 0.45)
 		main.fx.mote(from, (anchor - from) / dur, dur, _charge_rng.randf_range(2.0, 3.5 + 3.0 * e), Color(col, 0.9))
+	# La dernière mesure : la caméra se resserre sur chaque coup.
+	if rate >= 4.0 and main.get("moments") != null:
+		main.moments.zoom_pulse(0.25 + 0.35 * e, 0.2)
 	# Le bord de l'écran s'allume sur chaque temps fort.
 	if rate <= 1.0 or e > 0.6:
 		main.screen_fx.glow(col, (0.08 + 0.35 * e) * (1.0 if rate <= 1.0 else 0.5), clampf(0.6 / rate, 0.12, 0.5))
@@ -333,6 +336,9 @@ func _music_resume() -> void:
 	var col := _charge_color()
 	main.fx.shake(1.0)
 	main.fx.screen_flash(Color(1.0, 0.97, 0.9), 0.75, 0.45)
+	if main.get("moments") != null:
+		main.moments.impact_frame(1.0, [self], "encre")
+		main.moments.zoom_pulse(1.0, 0.7)
 	main.screen_fx.glow(col, 0.6, 0.9)
 	if Settings.reduce_effects:
 		return

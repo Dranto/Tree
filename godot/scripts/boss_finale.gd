@@ -652,6 +652,10 @@ func _draw_charge_back() -> void:
 	var ember := Art.ec("cendre")
 	var h := Vector2(0, -radius * 0.45)
 	var beat: float = fposmod(sync.bars_now() * sync.beats * charge_rate(), 1.0)
+	_draw_charge_cracks(e, pulse)
+	_draw_charge_sigil(e, pulse)
+	_draw_charge_streams(e, pulse)
+	_draw_charge_debris(e, pulse)
 	# Anneaux au sol qui se referment : un par impulsion.
 	for j in 3:
 		var f := fposmod(beat + j / 3.0, 1.0)
@@ -676,6 +680,151 @@ func _draw_charge_back() -> void:
 			var a := a0 - k * (0.07 + 0.08 * e)
 			var p := h + Vector2.from_angle(a) * rr * Vector2(1.0, 0.62)
 			draw_circle(p, radius * (0.11 - 0.014 * k) * (1.0 + 0.6 * pulse * e), Color(col, (0.85 - 0.13 * k) * (0.4 + 0.6 * charge)))
+
+
+static func _rand(i: float) -> float:
+	return fposmod(sin(i * 12.9898 + 78.233) * 43758.5453, 1.0)
+
+
+## Le sol se fend autour d'elle : des failles de braise qui partent de son pied et gagnent l'arène à
+## mesure qu'elle charge ; elles s'allument sur chaque impulsion et blanchissent à la fin.
+func _draw_charge_cracks(e: float, pulse: float) -> void:
+	var ember := Art.ec("cendre")
+	var hot := Art.ec("cendre", "clair")
+	var white := Color(1.0, 0.97, 0.9)
+	var reach := radius * lerpf(1.2, 7.0, Anim.ease_out(charge))
+	if arena != null and arena.get("max_radius") != null:
+		reach = minf(reach, arena.max_radius * 0.85)
+	for i in 14:
+		var a := TAU * i / 14.0 + 0.4 * _rand(i)
+		var pts := PackedVector2Array([Vector2.from_angle(a) * radius * 0.5])
+		var dir := a
+		var l := 0.0
+		var seg := radius * 0.45
+		var k := 0
+		while l < reach * (0.6 + 0.4 * _rand(i + 50)):
+			dir += (_rand(i * 7 + k) - 0.5) * 0.9
+			l += seg
+			pts.append(pts[pts.size() - 1] + Vector2.from_angle(dir) * seg * Vector2(1.0, 0.62))
+			k += 1
+			if k > 24:
+				break
+		if pts.size() < 2:
+			continue
+		var w := 2.0 + 5.0 * e
+		draw_polyline(pts, Color(Art.ec("cendre", "sombre"), 0.55 * (0.3 + 0.7 * charge)), w + 5.0, true)
+		draw_polyline(pts, Color(ember.lerp(hot, pulse), 0.35 + 0.6 * pulse * (0.4 + 0.6 * e)), w, true)
+		if e > 0.5:
+			draw_polyline(pts, Color(white, (e - 0.5) * 1.6 * pulse), 1.5, true)
+
+
+## Le cercle de la charge, au sol : trois anneaux de glyphes qui tournent en sens contraires (de plus
+## en plus vite) et un compte à rebours : un segment s'allume sur chaque temps jusqu'au drop.
+func _draw_charge_sigil(e: float, pulse: float) -> void:
+	var hot := Art.ec("cendre", "clair")
+	var ember := Art.ec("cendre")
+	var white := Color(1.0, 0.97, 0.9)
+	var sq := Vector2(1.0, 0.62)
+	var total := maxi(1, int(round(_charge_total / (sync.bar / float(sync.beats)))))
+	var done := clampi(total - int(ceil(charge_beats_left())), 0, total)
+	var r0 := radius * 2.2
+	var al := 0.25 + 0.6 * minf(1.0, charge * 3.0)
+	# Compte à rebours : un segment par temps.
+	for i in total:
+		var a0 := -PI / 2.0 + TAU * i / total + 0.03
+		var a1 := -PI / 2.0 + TAU * (i + 1) / total - 0.03
+		var lit := i < done
+		var col := hot.lerp(white, e) if lit else Art.ec("cendre", "sombre")
+		var pts := PackedVector2Array()
+		for k in 7:
+			pts.append(Vector2.from_angle(lerpf(a0, a1, k / 6.0)) * r0 * sq)
+		draw_polyline(pts, Color(col, al * (1.0 if lit else 0.6)), (5.0 + 4.0 * e) * (1.0 + (0.6 * pulse if i == done - 1 else 0.0)), true)
+	# Anneaux de glyphes.
+	for j in 3:
+		var rr := radius * (1.3 + 0.55 * j + 0.25 * e)
+		var spin := charge_spin * (1.0 + 0.6 * j) * (1.0 if j % 2 == 0 else -1.0)
+		var n := 12 + 6 * j
+		var pts := PackedVector2Array()
+		for k in 65:
+			pts.append(Vector2.from_angle(TAU * k / 64.0) * rr * sq)
+		draw_polyline(pts, Color(ember, al * 0.6), 1.5 + 1.5 * e, true)
+		for k in n:
+			var a := spin + TAU * k / n
+			var p := Vector2.from_angle(a) * rr * sq
+			var d := Vector2.from_angle(a) * sq
+			var o := d.orthogonal()
+			var g := radius * (0.07 + 0.03 * pulse)
+			match (k + j) % 3:
+				0:
+					draw_line(p - d * g, p + d * g, Color(hot, al), 2.0, true)
+				1:
+					draw_polyline(PackedVector2Array([p - o * g, p + d * g, p + o * g]), Color(hot, al), 2.0, true)
+				_:
+					draw_circle(p, g * 0.45, Color(hot.lerp(white, e), al))
+	# Hexagramme qui relie les six bras, quand la charge est à mi-chemin.
+	if charge > 0.35:
+		var hk := clampf((charge - 0.35) / 0.3, 0.0, 1.0)
+		var rr := radius * 1.9
+		for k in 6:
+			var a := -charge_spin * 0.5 + TAU * k / 6.0
+			var b := a + TAU * 2.0 / 6.0
+			var p := Vector2.from_angle(a) * rr * sq
+			var q := Vector2.from_angle(b) * rr * sq
+			draw_line(p, p.lerp(q, hk), Color(Art.ec(str(ARMS[k]["element"]), "clair"), al * 0.9), 2.0 + 2.5 * e, true)
+
+
+## Six courants d'énergie, un par élément de ses bras, qui viennent du bord de l'arène et coulent vers
+## son cœur : des traits qui filent de plus en plus vite le long de courbes qui se tordent.
+func _draw_charge_streams(e: float, pulse: float) -> void:
+	var h := Vector2(0, -radius * 0.45)
+	var far: float = (arena.max_radius if arena != null and arena.get("max_radius") != null else radius * 7.0) * 0.95
+	for i in ARMS.size():
+		var col := Art.ec(str(ARMS[i]["element"]), "clair")
+		var a := TAU * i / ARMS.size() + 0.3 + 0.25 * sin(charge_spin * 0.3 + i)
+		var from := Vector2.from_angle(a) * far * Vector2(1.0, 0.62)
+		var ctrl := Vector2.from_angle(a + 0.9 + 0.4 * e) * far * 0.55
+		var pts := PackedVector2Array()
+		for k in 25:
+			var f := k / 24.0
+			pts.append(from.lerp(ctrl, f).lerp(ctrl.lerp(h, f), f))
+		var al := smoothstep(0.05, 0.4, charge)
+		draw_polyline(pts, Color(col, 0.12 * al + 0.18 * e * pulse), 10.0 + 14.0 * e, true)
+		draw_polyline(pts, Color(col, 0.3 * al + 0.3 * e), 2.0 + 2.0 * e, true)
+		# Paquets d'énergie qui filent le long du courant.
+		var m := 4 + int(10.0 * e)
+		for k in m:
+			var f := fposmod(charge_spin * (0.5 + 0.6 * e) + k / float(m) + i * 0.13, 1.0)
+			var idx := int(f * 23.0)
+			var p := pts[idx].lerp(pts[idx + 1], f * 23.0 - idx)
+			draw_circle(p, (3.0 + 4.0 * e) * (0.5 + f), Color(col.lerp(Color.WHITE, f * e), al * (0.4 + 0.6 * f)))
+
+
+## Des blocs du sol arrachés qui lévitent autour d'elle, tremblent, et sont aspirés vers elle à la fin.
+func _draw_charge_debris(e: float, pulse: float) -> void:
+	var stone := Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.2).darkened(0.3)
+	var hot := Art.ec("cendre", "clair")
+	var h := Vector2(0, -radius * 0.45)
+	for i in 16:
+		var born := 0.05 + 0.5 * _rand(i + 3)
+		if charge < born:
+			continue
+		var up := clampf((charge - born) / 0.3, 0.0, 1.0)
+		var a := TAU * _rand(i + 11) + charge_spin * (0.15 + 0.2 * _rand(i)) * (1.0 + 2.0 * charge_overflow())
+		var d := radius * lerpf(2.0 + 3.0 * _rand(i + 23), 0.5, pow(charge_overflow(), 0.7))
+		var ground := Vector2.from_angle(a) * d * Vector2(1.0, 0.62)
+		var lift := radius * (0.3 + 0.9 * _rand(i + 31)) * Anim.ease_out(up) + sin(t * 2.0 + i) * radius * 0.05
+		var p := ground + Vector2(0, -lift) + Vector2(sin(t * 47.0 + i), cos(t * 53.0 + i)) * radius * 0.02 * e
+		var s := radius * (0.08 + 0.1 * _rand(i + 41))
+		draw_circle(ground, s * 0.9, Color(0, 0, 0, 0.25 * up))
+		var rot := t * (0.5 + _rand(i + 5)) + i
+		var poly := PackedVector2Array()
+		for k in 5:
+			poly.append(p + Vector2.from_angle(rot + TAU * k / 5.0) * s * (0.7 + 0.4 * _rand(i * 5 + k)))
+		draw_colored_polygon(poly, stone)
+		poly.append(poly[0])
+		draw_polyline(poly, Color(hot, 0.3 + 0.6 * pulse * e), 1.5 + 1.5 * e, true)
+		if e > 0.3:
+			draw_line(p, p.lerp(h, 0.25), Color(hot, 0.25 * e * pulse), 1.5, true)
 
 
 ## La charge, devant elle : le cœur qui s'embrase et blanchit, la couronne de rayons, les éclairs
@@ -722,6 +871,15 @@ func _draw_charge_front() -> void:
 	draw_circle(h, core * 1.9, Color(ember, 0.18 + 0.25 * e))
 	draw_circle(h, core * 1.3, Color(hot, 0.3 + 0.4 * e))
 	draw_circle(h, core, Color(hot.lerp(white, 0.4 + 0.6 * e), 0.55 + 0.45 * e))
+	# Fissures de lumière sur son corps, de plus en plus nombreuses.
+	var fissures := int(3.0 + 14.0 * e)
+	for i in fissures:
+		var a0 := TAU * _rand(i + 101)
+		var p0 := h + Vector2.from_angle(a0) * radius * 0.35 * _rand(i + 102)
+		var pts := PackedVector2Array([p0])
+		for k in 3:
+			pts.append(pts[k] + Vector2.from_angle(a0 + (_rand(i * 3 + k + 7) - 0.5) * 1.6) * radius * (0.12 + 0.1 * e))
+		draw_polyline(pts, Color(hot.lerp(white, pulse), 0.4 + 0.6 * pulse), 2.0 + 2.0 * e, true)
 	# Le dernier temps : elle déborde.
 	if over > 0.0:
 		var flick := 0.6 + 0.4 * sin(t * 90.0)

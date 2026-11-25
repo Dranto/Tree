@@ -7875,7 +7875,7 @@ msgstr "Phase 2 of 3: the buds burst open"
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 of 3: the brambles close in"
 
-#. scripts/boss_base.gd:448
+#. scripts/boss_base.gd:454
 msgid "Entravée"
 msgstr "Snared"
 
