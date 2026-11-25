@@ -4,13 +4,18 @@
 ##
 ## Pose (toutes les clés sont facultatives) :
 ##   t, walk (phase en radians), moving (0 → 1), k (annonce 0 → 1), strike (0 → 1 après le tir, -1 : aucun),
-##   hit (coup reçu 1 → 0), look (angle de la cible, radians, écran).
+##   hit (coup reçu 1 → 0), look (angle de la cible, radians, écran), state ("windup" : annonce),
+##   elite, region (où se trouve l'élite : couleur du collier), mono.
 extends RefCounted
 
 const Ink = preload("res://scripts/creature_art/ink.gd")
+const O = preload("res://scripts/creature_art/ronce/_outils.gd")
 
 ## Hauteur du dessin (100 unités) en px du jeu (1600×900) : 44 px à l'écran en 1080p.
 const HEIGHT := 37.0
+## L'élite : collier et liseré dessinés ici (contrat moteur), collier sous les sépales.
+const DRAWS_ELITE := true
+const NECK := Vector2(-2, -76)
 
 
 static func pal(v := "") -> Dictionary:
@@ -25,6 +30,9 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var strike: float = o.get("strike", -1.0)
 	var hit: float = o.get("hit", 0.0)
 	var look: float = o.get("look", 0.0)
+	var elite: bool = o.get("elite", false)
+	if o.get("state", "") == "windup" and not o.has("k"):
+		k = 1.0
 	var flip := cos(look) < 0.0
 	var la := wrapf(PI - look if flip else look, -PI, PI)
 	Ink.flash = hit
@@ -53,15 +61,22 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	_tube(ci, xf, piv, aim, recoil, k, t)
 	# Corps : la mûre (drupes en relief).
 	var body := Ink.lumpy(Vector2(-2, -50), 26.0, 28.0, 56, 0.05, 14.0)
+	if elite:
+		O.rim(ci, xf, body, 2.4)
 	Ink.part(ci, xf, body, pal(), 2.4, 1.0, 0.9)
 	_drupes(ci, xf, t)
 	# La Flétrissure qui ronge le bas de la mûre : une plaque sombre, fendue de braise.
-	var rot := Ink.lumpy(Vector2(-17, -38), 10.0, 11.0, 22, 0.3, 5.0, 0.6)
+	var rot := Ink.lumpy(Vector2(-19, -36), 7.0, 8.0, 20, 0.35, 5.0, 0.6)
 	Ink.flat(ci, xf, rot, Art.bc("ronge"))
-	Ink.brush(ci, xf, PackedVector2Array([Vector2(-22, -45), Vector2(-17, -40), Vector2(-20, -35), Vector2(-14, -30)]), 1.8, Art.bc("braise"))
+	Ink.brush(ci, xf, PackedVector2Array([Vector2(-22, -41), Vector2(-18, -37), Vector2(-20, -33)]), 1.6, Art.bc("braise"))
+	# Fêlures de la Flétrissure qui gagnent la mûre autour de la plaie.
+	Ink.brush(ci, xf, PackedVector2Array([Vector2(-13, -40), Vector2(-7, -44), Vector2(-4, -42)]), 1.2, Art.bc("ronge"))
+	Ink.brush(ci, xf, PackedVector2Array([Vector2(-14, -31), Vector2(-8, -28), Vector2(-5, -30)]), 1.2, Art.bc("ronge"))
 	# Patte avant (devant le corps).
 	_leg(ci, base, xf * Vector2(-12, -26), Vector2(-16 + sw, -maxf(sin(walk), 0.0) * 4.0 * mv), leg_col)
 	_leg(ci, base, xf * Vector2(12, -26), Vector2(16 - sw, -maxf(-sin(walk), 0.0) * 4.0 * mv), leg_col)
+	if elite:
+		O.collar(ci, xf, NECK, 18.0, 4.0, t, o.get("region", "ronce"))
 	# Sépales secs en couronne.
 	var sep := {"clair": Art.bc("ronce", "detail"), "ombre": Art.bc("ronce", "detail").darkened(0.4), "reflet": Art.bc("ronce", "detail").lightened(0.4)}
 	for i in 5:

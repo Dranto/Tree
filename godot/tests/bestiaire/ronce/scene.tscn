@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tests/bestiaire/ronce/scene.gd" id="1_scene"]
+
+[node name="RonceScene" type="Node"]
+script = ExtResource("1_scene")
