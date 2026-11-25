@@ -63,7 +63,28 @@
 			"fouet": 0.44,
 			"volee": 0.36,
 			"nova": 0.68,
-			"saignee": 0.8
+			"saignee": 0.8,
+			"aurore": 0.72,
+			"bloom": 1.1,
+			"essaim": 0.36,
+			"eclosion": 0.75
+		},
+		"windup": {
+			"_doc": "Anticipation propre à chaque compétence des autres branches (secondes, multipliées par « anticipation ») : la terre qui tremble avant les pieux, la lumière qui converge avant l'aurore… Purement visuel : l'effet en jeu a lieu quand il a toujours eu lieu. « pieu » : chaque pieu ; « vesse » : le chapeau qui gonfle avant d'éclater ; « essaim » : le premier bond.",
+			"ecorce": 0.3,
+			"ancrage": 0.2,
+			"pieu": 0.07,
+			"aurore": 0.14,
+			"prisme": 0.3,
+			"cloud": 0.25,
+			"vesse": 0.08,
+			"essaim": 0.1,
+			"tornade": 0.35,
+			"ruee": 0.06,
+			"bloom": 0.16,
+			"liane": 0.12,
+			"fontaine": 0.28,
+			"cocon": 0.3
 		},
 		"anticipation": 1.0,
 		"release_time": 0.24,
@@ -259,6 +280,57 @@
 			"ray_time": 1.8,
 			"decor_hold": 2.2,
 			"decor_fade": 2.0
+		}
+	},
+	"deaths": {
+		"_doc": "Morts des Flétris selon l'élément du coup final (scripts/enemy_remains.gd, jalon Éclat B) : purement visuel, ni tués, ni expérience, ni butin. Durées en secondes. « Réduire les effets » divise les morceaux par trois.",
+		"max_styled": 14,
+		"sprout_at": 0.7,
+		"overkill": 0.75,
+		"overkill_speed": 1.9,
+		"overkill_more": 0.5,
+		"elite_wave_time": 0.9,
+		"elite_wave_reach": 4.5,
+		"elite_wave_items": 18,
+		"styles": {
+			"_doc": "Par mort : « time » durée de la mort avant la pousse de vie, « pieces » nombre de morceaux (bouffées, éclats, flocons, lueurs, cailloux, gouttes).",
+			"venin": {
+				"time": 0.6,
+				"pieces": 7
+			},
+			"sang": {
+				"time": 0.5,
+				"pieces": 12
+			},
+			"tranche": {
+				"time": 0.6,
+				"pieces": 5
+			},
+			"vent": {
+				"time": 0.6,
+				"pieces": 14
+			},
+			"aube": {
+				"time": 0.6,
+				"pieces": 8
+			},
+			"racine": {
+				"time": 0.8,
+				"pieces": 9
+			},
+			"seve": {
+				"time": 0.7,
+				"pieces": 5
+			}
+		},
+		"streak": {
+			"_doc": "Série de tués rapprochés : chaque tué ajoute « step » (de 0 à 1), tenu « hold » secondes puis retombe de « decay » par seconde ; le halo de sève du héros apparaît au-dessus de « show ».",
+			"step": 0.12,
+			"hold": 0.9,
+			"decay": 0.45,
+			"show": 0.2,
+			"radius": 30.0,
+			"motes": 9
 		}
 	}
 }

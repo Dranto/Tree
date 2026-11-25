@@ -52,7 +52,7 @@ func _ready() -> void:
 	_rule = Label.new()
 	_rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_rule.custom_minimum_size = Vector2(WIDTH - 24.0, 0)
-	_rule.add_theme_font_size_override("font_size", 14)
+	_rule.add_theme_font_size_override("font_size", UiTheme.legible(14))
 	_rule.add_theme_color_override("font_color", DIM)
 	box.add_child(_rule)
 	_rows = VBoxContainer.new()
@@ -139,7 +139,7 @@ func _row(i: int) -> Control:
 		_button(head, Loc.key("Renommer"), func(): ask_name(i))
 	if info["active"]:
 		var tag := Label.new()
-		tag.text = "actif"
+		tag.text = Loc.key("actif")
 		tag.add_theme_color_override("font_color", UiTheme.LEAF)
 		head.add_child(tag)
 	else:
@@ -153,7 +153,7 @@ func _row(i: int) -> Control:
 		if not info["empty"]:
 			_button(head, Loc.key("Vider"), func(): clear(i))
 	var detail := Label.new()
-	detail.add_theme_font_size_override("font_size", 13)
+	detail.add_theme_font_size_override("font_size", UiTheme.legible(13))
 	detail.add_theme_color_override("font_color", DIM)
 	if info["empty"]:
 		detail.text = "Vide"

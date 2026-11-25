@@ -26,7 +26,12 @@ Dessinés par le code (`godot/tools/gen_icon.gd`) aux couleurs Herbier : `godot/
 
 ## Sauvegardes (`user://`)
 
-Le dossier utilisateur ne dépend que de `application/config/name` (« Sève ») : **identique en éditeur et dans le build exporté**, aucune migration.
+Le dossier utilisateur ne dépend que de `application/config/name` (« Arborescence », choisi le 25/11) : **identique en éditeur et dans le build exporté**.
+- Windows : `%APPDATA%\Godot\app_userdata\Arborescence\`
+- Linux : `~/.local/share/godot/app_userdata/Arborescence/`
+- Contenu : `saves/partie.json`, `settings.cfg`.
+
+Renommage : au premier lancement, l'autoload `UserDirMigration` (`scripts/user_dir_migration.gd`) recopie l'ancien dossier (`…/app_userdata/Sève/`) si le nouveau n'a ni partie ni options ; l'ancien reste intact. À chaque nouveau renommage, ajouter l'ancien nom à `OLD_NAMES`.
 - Windows : `%APPDATA%\Godot\app_userdata\Sève\`
 - Linux : `~/.local/share/godot/app_userdata/Sève/`
 - Contenu : `saves/partie.json`, `settings.cfg`.

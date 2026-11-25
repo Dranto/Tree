@@ -74,7 +74,7 @@
           "name": "Bois dur",
           "at": [0.55, -0.35],
           "links": ["m1"],
-          "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.15}, {"stat": "armor", "op": "add", "value": 0.03}]
+          "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.1}, {"stat": "armor", "op": "add", "value": 0.03}]
         },
         {
           "id": "m3",
@@ -102,7 +102,7 @@
           "name": "Secousse",
           "at": [1.5, -0.3],
           "links": ["m4"],
-          "effects": [{"attack_mod": "secousse", "value": 0.2}]
+          "effects": [{"attack_mod": "secousse", "value": 0.1}]
         },
         {"id": "m6n", "type": "small", "name": "Nœud du bois", "at": [1.5, 0.35], "links": ["m4"], "effects": [{"stat": "melee_damage", "op": "inc", "value": 0.04}, {"stat": "armor", "op": "add", "value": 0.012}]},
         {
@@ -111,7 +111,7 @@
           "name": "Aubier",
           "at": [2.0, -0.05],
           "links": ["m5"],
-          "effects": [{"attack_mod": "aubier", "value": 0.15}, {"stat": "melee_damage", "op": "inc", "value": 0.1}]
+          "effects": [{"attack_mod": "aubier", "value": 0.15}, {"stat": "melee_damage", "op": "inc", "value": 0.05}]
         }
       ],
       "complete": {"name": "Massue complète", "effects": [{"stat": "melee_damage", "op": "more", "value": 1.05}]}

@@ -1,6 +1,6 @@
 // Présence enrichie Steam (jalon 12 D) : à déposer sur Steamworks › Communauté › Présence enrichie.
 // Le jeu envoie « region » (id de la région, « graine » au départ, « finale » sous la graine) et steam_display = « #Explore ».
-// Noms anglais provisoires : la tâche B (anglais) les remplacera par la liste validée.
+// Noms anglais : glossaire validé par Antoine (godot/locale/glossaire.md, 25/11).
 "lang"
 {
 	"french"
@@ -24,11 +24,11 @@
 		{
 			"#Explore"	"{#Region_%region%}"
 			"#Region_graine"	"At the foot of the seed"
-			"#Region_ronce"	"In the Bramble"
+			"#Region_ronce"	"In the Bramble region"
 			"#Region_spore"	"In the Spore marsh"
 			"#Region_vent"	"On the Wind plateaus"
 			"#Region_seve"	"In the Sap valley"
-			"#Region_aube"	"In the Dawn cliffs"
+			"#Region_aube"	"On the Dawn cliffs"
 			"#Region_racine"	"In the Root forest"
 			"#Region_finale"	"Beneath the seed, facing the Blight"
 		}
