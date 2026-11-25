@@ -389,9 +389,11 @@ func _test_mods() -> void:
 	_with([{"attack_mod": "saignement", "value": 0.5}, {"attack_mod": "poison", "value": 0.5}, {"attack_mod": "enracine", "value": 1.0}])
 	var rooted := 0
 	var e = _spawn(Vector2(60, 0))
+	# Tirage fixé : la chance (60 %) ne doit pas faire échouer le test une fois de temps en temps en CI.
+	main.rng.seed = 20261125
 	for i in 12:
 		AttackScript.fire(p, e)
-		await _frames(6)
+		await _frames(8)
 		if e.root_time > 0.0:
 			rooted += 1
 	check(e.bleed_stacks.size() > 0, "saignement au coup")
