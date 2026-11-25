@@ -15,4 +15,4 @@ Seul `BOSS_RONCE` existe dans la démo (la démo a son propre App ID et donc ses
 | `BOSS_RACINE` | La pierre s'éveille | Vaincre l'Ancien pétrifié. | The Stone Awakens | Defeat the Petrified Elder. | non |
 | `BOSS_FINALE` | Le monde refleurit | Vaincre la Flétrissure sous la graine. | The World Blooms Again | Defeat the Blight beneath the seed. | oui (révèle la fin) |
 
-Icônes : 64×64 px, une version débloquée et une grisée par succès (à faire avec la tâche H, page Steam).
+Icônes : 64×64 px, `steam/art/fr/succes/<API Name>.png` (débloqué) et `<API Name>_gris.png` (verrouillé), le boss dans une médaille d'or ; refaites par `tools/steam-art.sh` (tâche H).
