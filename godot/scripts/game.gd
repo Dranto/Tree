@@ -50,8 +50,8 @@ var active_build := 0
 var at_sanctuary := false
 ## Libellés des sources de points hors niveau (annonce du HUD).
 const POINT_SOURCES := {
-	"boss": "Boss vaincu", "coeur": "Cœur purifié", "autel": "Autel ravivé",
-	"secret": "Secret découvert", "quete": "Objectif accompli",
+	"boss": "Boss vaincu", "coeur": "Cœur purifié", "autel": "Autel ravivé", # i18n
+	"secret": "Secret découvert", "quete": "Objectif accompli", # i18n
 }
 ## Tirages des greffes (élites, autels sans greffe fixée) : rejouables avec « --seed ».
 var graft_rng := RandomNumberGenerator.new()
@@ -67,6 +67,12 @@ var test_skills: Dictionary = {}
 ## Attaque de base imposée sans nœud, pour l'essayer (« -- --attack=fouet,fourche:2,saignement:0.3 ») :
 ## une forme et des modificateurs (nom:valeur, 1 par défaut). Voir attack.gd.
 var test_attack: Array = []
+
+
+## Vrai dans la démo : preset d'export avec la fonctionnalité « demo » (tools/export.sh démo-*),
+## ou « -- --demo » pour la tester depuis l'éditeur et dans les tests. Seul accès à connaître.
+func is_demo() -> bool:
+	return OS.has_feature("demo") or "--demo" in OS.get_cmdline_user_args()
 
 
 func _ready() -> void:
@@ -135,7 +141,7 @@ func grant_points(n: int, source: String, key := "") -> bool:
 
 ## Libellé d'une source de points (« autel ravivé »…), la source telle quelle si elle est inconnue.
 func point_source_label(source: String) -> String:
-	return str(POINT_SOURCES.get(source, source))
+	return Loc.t(str(POINT_SOURCES.get(source, source)))
 
 
 ## Ajoute une greffe à l'inventaire. Renvoie false si elle n'existe pas ou si elle est déjà possédée.
@@ -265,7 +271,7 @@ func build_name(i: int) -> String:
 	if i < 0 or i >= builds.size():
 		return ""
 	var nm := str(builds[i].get("name", "")).strip_edges()
-	return nm if nm != "" else "Build %d" % (i + 1)
+	return nm if nm != "" else Loc.t("Build %d") % (i + 1)
 
 
 ## L'état vivant, sous la forme d'un emplacement de build.
@@ -312,7 +318,7 @@ func rename_build(i: int, nm: String) -> void:
 	nm = nm.strip_edges().left(24)
 	if i == active_build and not builds[i].has("allocated"):
 		builds[i] = capture_build()
-	if nm == "" or nm == "Build %d" % (i + 1):
+	if nm == "" or nm == Loc.t("Build %d") % (i + 1) or nm == "Build %d" % (i + 1): # i18n: non (nom par défaut en français)
 		builds[i].erase("name")
 	else:
 		builds[i]["name"] = nm
@@ -587,7 +593,7 @@ func lock_reason(id: int, owned = null) -> String:
 	var flag: String = n["requires_flag"]
 	if flag != "" and not flags.get(flag, false):
 		var why: String = n["requires_text"]
-		return "Couvert de cendre : " + (why if why != "" else "un évènement du monde doit le libérer.")
+		return Loc.t("Couvert de cendre : %s") % (Loc.data(why) if why != "" else Loc.t("un évènement du monde doit le libérer."))
 	if n["mutates"] == "" and not tree.exclusions.has(id):
 		return ""
 	var set: Dictionary = allocated if owned == null else owned
@@ -598,10 +604,10 @@ func lock_reason(id: int, owned = null) -> String:
 				has = true
 				break
 		if not has:
-			return "Demande la compétence « %s »." % Content.skills().get(n["mutates"], {}).get("name", n["mutates"])
+			return Loc.t("Demande la compétence « %s ».") % Loc.data(str(Content.skills().get(n["mutates"], {}).get("name", n["mutates"])))
 	for other in tree.exclusions.get(id, []):
 		if set.has(other):
-			return "Incompatible avec « %s »." % tree.nodes[other]["name"]
+			return Loc.t("Incompatible avec « %s ».") % SkillTree.node_name(tree.nodes[other])
 	return ""
 
 

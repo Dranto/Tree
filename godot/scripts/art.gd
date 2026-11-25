@@ -100,6 +100,7 @@ static func c(role: String) -> Color:
 
 
 ## Groupes de la palette, dans l'ordre de la planche.
+# Noms de la planche de la charte (outil de développement), jamais montrés en jeu. # i18n: non (début)
 const GROUPES := [
 	["Fond", ["sol_mort", "sol_vivant", "brume", "decor", "decor_vivant"]],
 	["Héros et alliés", ["joueur", "joueur_accent", "allie"]],
@@ -157,6 +158,7 @@ const ELEMENTS := {
 		"motif": "rayons",
 	},
 }
+# i18n: non (fin)
 const ELEMENT_IDS := ["epine", "saignement", "racine", "poison", "cendre", "seve", "vent", "lumiere"]
 
 ## Couleur d'un élément : variante "couleur" (par défaut), "clair" ou "sombre".
@@ -607,7 +609,7 @@ const ICONES := {
 	# Formes de l'attaque de base (data/attack.json) et nœud qui la modifie : Art.icon("attaque_<forme>").
 	"attaques": ["attaque_graine", "attaque_echarde", "attaque_fouet", "attaque_ronce_vive", "attaque_spore_lobee", "attaque_dard", "attaque_lame", "attaque_bourrasque", "attaque_rayon", "attaque_perle", "attaque_massue", "attaque_mod"],
 }
-## Nom affiché de chaque icône (planche, infobulles).
+## Nom affiché de chaque icône (planche de la charte seulement). # i18n: non (début)
 const NOM_ICONE := {
 	"graine": "Graines", "nova": "Couronne d'épines", "fouet": "Fouet de ronce", "racines": "Racines voraces",
 	"volee": "Volée d'épines", "saignee": "Saignée", "cloud": "Nuage de spores", "bloom": "Floraison",
@@ -626,7 +628,7 @@ const NOM_ICONE := {
 	"liane": "Liane buveuse", "fontaine": "Fontaine de sève", "cocon": "Cocon de sève",
 	"attaque_perle": "Attaque : perles de sève",
 	"ecorce": "Bouclier d'écorce", "ancrage": "Ancrage", "pieux": "Pieux", "attaque_massue": "Attaque : massue de bois",
-}
+} # i18n: non (fin)
 ## Élément de chaque forme de l'attaque de base (le même que dans data/attack.json).
 const ELEMENT_D_ATTAQUE := {
 	"attaque_graine": "seve", "attaque_echarde": "epine", "attaque_fouet": "epine", "attaque_ronce_vive": "saignement",

@@ -251,35 +251,35 @@ static func describe(e: Dictionary) -> String:
 	if e.get("hidden", false):
 		return ""
 	if e.has("text"):
-		return e["text"]
+		return Loc.data(str(e["text"]))
 	if e.has("attack_form") or e.has("attack_mod"):
 		return AttackScript.describe_effect(e)
 	if e.has("skill"):
-		return Content.skills().get(e["skill"], {}).get("desc", "Nouvelle compétence")
+		var sk: Dictionary = Content.skills().get(e["skill"], {})
+		return Loc.data(str(sk["desc"])) if sk.has("desc") else Loc.t("Nouvelle compétence")
 	if not e.has("stat"):
 		return ""
 	var def: Dictionary = Content.stats().get(e["stat"], {})
-	var label: String = def.get("label", e["stat"])
+	var label: String = Loc.data(str(def.get("label", e["stat"])))
 	var v: float = e["value"]
 	var line := ""
 	if e["op"] == "more":
-		line = "%s ×%s" % [label, number(v, 2)]
+		line = Loc.t("%s ×%s") % [label, number(v, 2)]
 	else:
 		var sign := "+" if v >= 0.0 else "-"
 		if e["op"] == "inc" or def.get("percent", false):
-			line = "%s%s %% %s" % [sign, number(absf(v) * 100.0, 1), label]
+			line = Loc.t("%s%s %% %s") % [sign, number(absf(v) * 100.0, 1), label]
 		else:
-			line = "%s%s %s" % [sign, number(absf(v), 1), label]
+			line = Loc.t("%s%s %s") % [sign, number(absf(v), 1), label]
 	if e.has("if"):
 		var parts := PackedStringArray()
 		for cond in conditions_of(e):
-			var text: String = Content.conditions().get(cond["state"], {}).get("label", cond["state"])
+			var text: String = Loc.data(str(Content.conditions().get(cond["state"], {}).get("label", cond["state"])))
 			parts.append(text.replace("{min}", number(float(cond.get("min", 0.0)), 1)))
-		line += " (%s)" % " et ".join(parts)
+		line += Loc.t(" (%s)") % Loc.t(" et ").join(parts)
 	return line
 
 
-## Nombre à la française : virgule décimale, sans zéros inutiles.
+## Nombre selon la langue (virgule décimale en français), sans zéros inutiles.
 static func number(v: float, decimals: int) -> String:
-	var s := String.num(snappedf(v, pow(10.0, -decimals)), decimals)
-	return s.replace(".", ",")
+	return Loc.num(v, decimals)

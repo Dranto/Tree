@@ -219,9 +219,9 @@ func player_punished(pos: Vector2, stunned: bool, sap_lost: float, heal_blocked:
 		Sfx.play("etourdi")
 	if Settings.shows_number(true) and texts.size() < MAX_TEXTS - 2:
 		if sap_lost >= 1.0:
-			text(pos + Vector2(26.0, -52.0), "Sève −%d" % roundi(sap_lost), Art.ec("seve"), 17, 1.1, 2)
+			text(pos + Vector2(26.0, -52.0), Loc.t("Sève −%d") % roundi(sap_lost), Art.ec("seve"), 17, 1.1, 2)
 		if heal_blocked and stunned:
-			text(pos + Vector2(-26.0, -70.0), "étourdi", Art.c("or"), 16, 0.8, 2)
+			text(pos + Vector2(-26.0, -70.0), Loc.t("étourdi"), Art.c("or"), 16, 0.8, 2)
 	if sap_lost >= 1.0 and not Settings.reduce_effects:
 		for i in mini(4, 1 + int(sap_lost / 15.0)):
 			var a := _rng.randf_range(-PI, 0.0)

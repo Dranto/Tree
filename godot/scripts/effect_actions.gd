@@ -82,7 +82,7 @@ static func _survive(p: Dictionary, ctx: Dictionary) -> bool:
 	player.hp = p["hp"]
 	player.invuln = p.get("invuln", 0.0)
 	if p.has("label"):
-		main.fx.text(player.position + Vector2(0, -50), p["label"], Color(p.get("color", "#ffffff")), 22, 1.5)
+		main.fx.text(player.position + Vector2(0, -50), Loc.data(str(p["label"])), Color(p.get("color", "#ffffff")), 22, 1.5)
 	return true
 
 
