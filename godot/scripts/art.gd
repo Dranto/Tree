@@ -196,6 +196,8 @@ const BESTIAIRE := {
 	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
 	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
 	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
+	# Flétris communs : la Flétrissure pure, cendre pâle sur écorce brûlée (lisible sur tous les sols sombres).
+	"commun": {"clair": Color("a59c97"), "ombre": Color("564c55"), "reflet": Color("ebe4da"), "detail": Color("2e2428"), "charbon": Color("3d3236")},
 }
 ## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
 ## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
