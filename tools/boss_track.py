@@ -24,6 +24,9 @@ Fiche de repères (texte, « clé: valeur », # pour les commentaires), mesures 
   defaite: …          # facultatif : à la mort du héros (sinon fondu d'une seconde)
   fin_fondu: 2        # facultatif : fondu de sortie sur les N dernières mesures de « fin »
 
+    tools/boss-track.sh <fichier audio> <fiche> <boss> --coups-seuls
+                     ne refait que les coups de batterie des boucles (« coups ») dans <boss>.json.
+
 Raccords vérifiés :
   - chaque boucle se raccorde sans clic : ses dernières millisecondes sont fondues vers ce qui précède
     son début dans le morceau d'origine (le bouclage enchaîne alors comme l'original) ; le rapport donne
@@ -119,12 +122,50 @@ def lag(a, b, n=RATE // 2, span=256):
     return best_l
 
 
+# Coups de batterie de chaque boucle (« coups » dans le .json) : pour chaque mesure de la boucle, les
+# doubles croches (0-15) où tombe un coup de grosse caisse (« kick », 30-110 Hz) ou de caisse claire
+# (« caisse », 180-400 Hz) franc. Le boss final pose dessus ses ondes de choc et ses roulements
+# d'épines (scripts/boss_finale.gd › SCORE). Détection : hausse d'énergie de la bande sur 30 ms à
+# chaque double croche, rapportée au plus fort de la boucle ; gardée au-dessus de COUPS_SEUIL.
+COUPS_BANDES = {"kick": (30.0, 110.0), "caisse": (180.0, 400.0)}
+COUPS_SEUIL = 0.45
+
+
+def bandpass(sig, lo, hi):
+    spec = np.fft.rfft(sig)
+    f = np.fft.rfftfreq(len(sig), 1.0 / RATE)
+    spec[(f < lo) | (f > hi)] = 0
+    return np.fft.irfft(spec, len(sig))
+
+
+def coups(x, start, bars, bar):
+    """Doubles croches des coups francs, mesure par mesure, d'une boucle qui commence à « start »."""
+    six = bar / 16.0
+    win = int(0.03 * RATE)
+    s0 = max(0, start - win)
+    seg = x[s0: int(start + bars * bar) + win].mean(1)
+    out = {}
+    for name, (lo, hi) in COUPS_BANDES.items():
+        b = bandpass(seg, lo, hi)
+        rise = []
+        for i in range(bars * 16):
+            c = int(start - s0 + i * six)
+            pre, post = b[max(0, c - win):c], b[c:c + win]
+            rise.append(max(0.0, float(np.sqrt((post ** 2).mean()) - np.sqrt((pre ** 2).mean() if len(pre) else 0.0))))
+        top = max(rise) or 1.0
+        out[name] = [[j for j in range(16) if rise[m * 16 + j] / top > COUPS_SEUIL] for m in range(bars)]
+    return out
+
+
 def main(argv):
     args = [a for a in argv if not a.startswith("--")]
     opts = {}
     i = 0
     while i < len(argv):
-        if argv[i].startswith("--"):
+        if argv[i] == "--coups-seuls":
+            opts["coups-seuls"] = True
+            i += 1
+        elif argv[i].startswith("--"):
             opts[argv[i][2:]] = argv[i + 1]
             args.remove(argv[i + 1])
             i += 2
@@ -139,6 +180,20 @@ def main(argv):
     bpm, beats, debut, sections, fin_fade = parse_fiche(fiche)
     x = decode(src)
     bar = beats * 60.0 / bpm * RATE
+    if opts.get("coups-seuls"):
+        # Seulement les coups de batterie des boucles, dans le .json déjà écrit (les .ogg ne bougent pas).
+        path = os.path.join(out_dir, boss + ".json")
+        with open(path, encoding="utf-8") as f:
+            out = json.load(f)
+        for name, (a, b) in sections.items():
+            if name.startswith("boucle") and name in out["sections"]:
+                out["sections"][name]["coups"] = coups(x, int(round(debut * RATE + (a - 1) * bar)), b - a + 1, bar)
+                n = sum(len(m) for m in out["sections"][name]["coups"]["kick"])
+                print(f"  {name} : {n} coups de grosse caisse sur {b - a + 1} mesures")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+        return
     print(f"{os.path.basename(src)} : {len(x) / RATE:.2f} s, {bpm:g} BPM, mesure de {bar / RATE:.4f} s")
 
     def at(m):  # premier échantillon de la mesure m
@@ -172,6 +227,7 @@ def main(argv):
             # Référence : le même passage dans l'original (ce qui précède le début, puis le début).
             info["saut_naturel"] = round(jump(x[s - 1:s], x[s:s + 1]), 4) if s > 0 else 0.0
             info["spectre_naturel_db"] = round(spectral_gap(x[max(0, s - 512):s], x[s:s + 512]), 2) if s >= 512 else 0.0
+            info["coups"] = coups(x, s, b - a + 1, bar)
         elif name.startswith("drop") or name in ("fin", "defaite"):
             info["saut_entree"] = round(float(np.max(np.abs(clip[0]))), 4)
             clip[:entry_n] *= np.linspace(0.0, 1.0, entry_n, dtype=np.float32)[:, None]
