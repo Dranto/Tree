@@ -3,13 +3,18 @@
 ## bas et long, une grande corne d'os : le signe du chargeur. La braise couve dans la fente des élytres.
 ## Annonce : il baisse la tête, lève l'arrière, gratte le sol ; la corne et la fente s'allument.
 ##
-## Pose : t, walk, moving, k (annonce 0 → 1), charge (0 → 1, pleine course), hit, look.
+## Charge : corps étiré, élytres entrouvertes, poussière derrière. Retour : sonné, braises qui tournent.
+##
+## Pose : t, walk, moving, k (annonce 0 → 1), state (windup/charge/recover), charge (0 → 1, pleine course),
+## hit, look, elite.
 extends RefCounted
 
 const Ink = preload("res://scripts/creature_art/ink.gd")
+const R = preload("res://scripts/creature_art/racine/outils.gd")
 
 ## 100 unités en px du jeu (1600×900) : ~56 px de long à l'écran en 1080p.
 const HEIGHT := 42.0
+const DRAWS_ELITE := true
 
 
 static func pal() -> Dictionary:
@@ -21,8 +26,12 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var walk: float = o.get("walk", 0.0)
 	var mv: float = o.get("moving", 0.0)
 	var k: float = o.get("k", 0.0)
-	var charge: float = o.get("charge", 0.0)
-	var hit: float = o.get("hit", 0.0)
+	var state: String = o.get("state", "")
+	var charge: float = o.get("charge", 1.0 if state == "charge" else 0.0)
+	var hit: float = o.get("hit", o.get("flash", 0.0))
+	var recover := 1.0 if state == "recover" else 0.0
+	if state != "" and state != "windup":
+		k = 0.0
 	var look: float = o.get("look", 0.0)
 	var flip := cos(look) < 0.0
 	var la := wrapf(PI - look if flip else look, -PI, PI)
@@ -32,9 +41,9 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var kk := Anim.ease_out(k)
 	# Annonce : nez vers le sol, arrière levé, tremblement. Charge : étiré dans l'élan.
 	var shake := sin(t * 70.0) * 1.2 * kk
-	var tilt := 0.13 * kk - 0.06 * hit
+	var tilt := 0.13 * kk - 0.06 * hit - 0.05 * recover
 	var bob := -absf(sin(walk * 1.5)) * 1.6 * mv
-	var sq := Vector2(1.0 + 0.14 * charge + 0.08 * hit, 1.0 - 0.1 * charge - 0.1 * hit)
+	var sq := Vector2(1.0 + 0.14 * charge + 0.08 * hit + 0.04 * recover, 1.0 - 0.1 * charge - 0.1 * hit - 0.05 * recover)
 	var xf := base * Transform2D(tilt, sq, 0.0, Vector2(20 + shake, 0)) * Transform2D(0.0, Vector2(-20, bob))
 	var legc := Art.bc("racine", "ombre").darkened(0.45)
 	# Poussière grattée derrière lui pendant l'annonce, traînée pendant la charge.
@@ -65,6 +74,12 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	Ink.flat(ci, xf, Ink.lumpy(Vector2(-40, -22), 9.0, 7.0, 20, 0.35, 7.0, 1.1), Art.bc("ronge"))
 	Ink.flat(ci, xf, Ink.lumpy(Vector2(-30, -16), 6.0, 4.0, 14, 0.35, 5.0, 0.3), Art.bc("ronge"))
 	Ink.brush(ci, xf, PackedVector2Array([Vector2(-46, -26), Vector2(-40, -22), Vector2(-34, -19), Vector2(-28, -16)]), 1.5, Art.bc("braise"))
+	# Charge : les élytres s'entrouvrent, l'aile membraneuse vibre dessous.
+	if charge > 0.0:
+		var flap := 0.5 + 0.5 * sin(t * 90.0)
+		var wing := PackedVector2Array([Vector2(-4, -50), Vector2(-30, -60 - 4.0 * flap), Vector2(-46, -54 - 3.0 * flap), Vector2(-30, -48)])
+		Ink.flat(ci, xf, wing, Color(Art.bc("racine", "reflet"), 0.55 * charge), 0.8)
+		Ink.part(ci, xf, PackedVector2Array([Vector2(-44, -34), Vector2(-30, -52), Vector2(-6, -58), Vector2(12, -50), Vector2(-10, -46)]), pal(), 1.6, 1.0, 0.4)
 	# Fente des élytres : la braise couve, s'allume pendant l'annonce.
 	var seam := PackedVector2Array([Vector2(-48, -32), Vector2(-28, -46), Vector2(-4, -51), Vector2(16, -44)])
 	Ink.brush(ci, xf, seam, 4.2, Ink.encre())
@@ -116,6 +131,10 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	for j in 2:
 		var ma: float = 0.35 + (0.25 + 0.35 * kk) * (1.0 if j == 0 else -0.4) + 0.06 * sin(t * 5.0)
 		Ink.part(ci, hx, Ink.thorn(Vector2(44, -16 - j * 2), ma, 8.0 - j * 2.0, 3.4, 0.2), {"clair": Art.bc("racine", "ombre").lightened(0.1), "ombre": Art.bc("racine", "ombre").darkened(0.4)}, 1.0, 1.0, 0.0)
+	if recover > 0.0:
+		R.dazed(ci, xf, Vector2(32, -66), t, 14.0)
+	if o.get("elite", false):
+		R.elite(ci, xf, Vector2(14, -46), Vector2(22, -10), 3.0, PackedVector2Array([Vector2(-48, -34), Vector2(-30, -50), Vector2(-6, -55), Vector2(14, -48)]), t, 1.0)
 	# Pattes de devant.
 	for i in 3:
 		var ph := walk * 1.5 + (PI if i % 2 else 0.0)
