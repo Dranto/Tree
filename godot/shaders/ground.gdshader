@@ -47,6 +47,16 @@ uniform vec3 alive_light;
 uniform vec3 moss_col;
 uniform vec3 bloom_col;
 
+// Prototype « Paysages d'herbier » (refonte du monde, vague 0 P ; scripts/world_bake/ground_layers.gd) :
+// dans la région wash_region, le shader ne dessine plus que le lavis (couche 1 : grandes formes, sans
+// bruit fin, fissures, cailloux ni points) ; la matière et les détails sont dessinés par-dessus, à
+// l'encre, dans chaque carré en cache. -1 (par défaut) : rien ne change.
+uniform int wash_region = -1;
+uniform vec3 wash_dead_dark;
+uniform vec3 wash_dead_light;
+uniform vec3 wash_alive_dark;
+uniform vec3 wash_alive_light;
+
 // Hachage entier (exact sur toutes les cartes graphiques) d'une case de la grille.
 uint hash_u(vec2 cell) {
 	uvec2 q = uvec2(ivec2(cell) + ivec2(65536));
@@ -91,8 +101,15 @@ void fragment() {
 		rw_any = max(rw_any, rws[i]);
 	}
 
+	float wash = 0.0;
+	if (wash_region >= 0 && wash_region < region_count) {
+		wash = rws[wash_region];
+	}
+	float tone_wash = smoothstep(0.25, 0.75, n);
+
 	float l = texture(life_map, UV).r;
-	float edge = smoothstep(0.30, 0.60, l + (n2 - 0.5) * 0.3);
+	// Lavis : front de vie plus net (le bord de vie est aussi dessiné, ground_layers.gd).
+	float edge = smoothstep(mix(0.30, 0.41, wash), mix(0.60, 0.49, wash), l + (n2 - 0.5) * 0.3);
 
 	// On ne calcule que la terre visible : morte, vivante, ou les deux sur la frontière.
 	vec3 dead = vec3(0.0);
@@ -109,8 +126,12 @@ void fragment() {
 				dead = mix(dead, mix(rust, calm, region_purified[i]), rws[i]);
 			}
 		}
-		dead = mix(dead, crack_col, crack * 0.3);
-		dead = mix(dead, pebble_col, pebble * 0.4);
+		dead = mix(dead, crack_col, crack * 0.3 * (1.0 - wash));
+		dead = mix(dead, pebble_col, pebble * 0.4 * (1.0 - wash));
+		if (wash > 0.0) {
+			vec3 lavis = mix(wash_dead_dark, wash_dead_light, tone_wash);
+			dead = mix(dead, lavis, wash * (1.0 - region_purified[wash_region]));
+		}
 	}
 	vec3 alive = vec3(0.0);
 	if (edge > 0.0) {
@@ -131,9 +152,12 @@ void fragment() {
 			alive = mix(alive, bloom_col, bloom * 0.7);
 		}
 	}
+	if (wash > 0.0 && edge > 0.0) {
+		alive = mix(alive, mix(wash_alive_dark, wash_alive_light, tone_wash), wash);
+	}
 	vec3 col = mix(dead, alive, edge);
 	// Liseré de mousse à la frontière de la vie : la terre ravivée a un bord net et vivant.
 	float rim = smoothstep(0.03, 0.2, edge) * smoothstep(0.45, 0.22, edge);
-	col = mix(col, moss_col, rim * 0.45);
+	col = mix(col, moss_col, rim * 0.45 * (1.0 - wash));
 	COLOR = vec4(col, 1.0);
 }
