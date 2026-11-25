@@ -1,0 +1,160 @@
+## Planche avant / après des Flétris de Sève (refonte « Bestiaire d'herbier », R4) : pour chaque sorte,
+## avant / après en grand et à la taille réelle sur le sol de la vallée, silhouettes noires, niveaux de gris.
+## Lancer (depuis la racine du dépôt) :
+##   tools/godot.sh --xvfb --resolution 2560x1440 -s res://tests/bestiaire/seve/planche.gd -- sortie.png
+extends SceneTree
+
+const Bake = preload("res://tests/bestiaire/bake.gd")
+const C = preload("res://tests/bestiaire/commun.gd")
+const Ink = preload("res://scripts/creature_art/ink.gd")
+const P = preload("res://tests/bestiaire/seve/poses.gd")
+
+const W := 2560
+const H := 1440
+const TOP := 178
+const ROW := 314
+## Colonnes : [x, largeur].
+const COLS := {
+	"nom": [24, 236], "avant": [270, 300], "avant_reel": [580, 250],
+	"apres": [870, 420], "apres_reel": [1300, 330], "silhouette": [1650, 300], "gris": [1966, 570],
+}
+## Agrandissement des colonnes « en grand » : ×3 la taille à l'écran en 1080p.
+const BIG := 3.0 * C.S1080
+
+var b
+var font: FontFile
+var canvas: Image
+var labels: Array = []
+
+
+func _initialize() -> void:
+	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
+	_run.call_deferred()
+
+
+func _run() -> void:
+	var out: String = OS.get_cmdline_user_args()[0]
+	b = Bake.new(self)
+	font = load("res://assets/fonts/CormorantGaramond-Herbier.ttf")
+	canvas = Image.create(W, H, false, Image.FORMAT_RGBA8)
+	canvas.fill(Art.c("papier_sombre"))
+	_text("Bestiaire d'herbier : les Flétris de la vallée des sources (Sève)", Vector2(24, 14), 44, Art.c("or"))
+	_text("Même sorte, même pose : à gauche le dessin d'aujourd'hui (develop), à droite le nouveau (trois quarts, encre commune, vert d'eau dormante de la vallée, braise = ennemi, vert sève = vivant : vie bue, soin).\n« En grand » : ×3 la taille à l'écran en 1080p. « Taille réelle » : pixels d'un écran 1920×1080, sur le sol mort de la vallée, le héros à côté pour l'échelle.", Vector2(24, 64), 19, Art.c("texte_doux"))
+	var heads := {"avant": "Avant, en grand", "avant_reel": "Avant, taille réelle", "apres": "Après, en grand", "apres_reel": "Après, taille réelle", "silhouette": "Silhouettes (avant · après)", "gris": "Niveaux de gris (avant · après)"}
+	for k in heads:
+		_text(heads[k], Vector2(COLS[k][0], TOP - 34), 24, Art.c("texte"))
+	for i in P.CAST.size():
+		var c: Array = P.CAST[i]
+		await _row(i, {"id": c[0], "nom": c[1], "role": c[2], "r": c[3], "region": "seve"}, TOP + i * ROW)
+	var tex := TextureRect.new()
+	tex.texture = ImageTexture.create_from_image(canvas)
+	root.add_child(tex)
+	for l in labels:
+		root.add_child(l)
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(out)
+	quit(0)
+
+
+func _text(s: String, pos: Vector2, size: int, col: Color, width := 0) -> void:
+	var l := Label.new()
+	l.text = s
+	l.position = pos
+	var ls := LabelSettings.new()
+	ls.font = font
+	ls.font_size = size
+	ls.font_color = col
+	l.label_settings = ls
+	# Noms de la planche en français, tels quels (pas de traduction automatique).
+	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	if width > 0:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(width, 0)
+		l.size = Vector2(width, 0)
+	labels.append(l)
+
+
+func _blit(img: Image, x: int, y: int) -> void:
+	canvas.blend_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i(x, y))
+
+
+func _row(i: int, c: Dictionary, y: int) -> void:
+	var id: String = c["id"]
+	var region: String = c["region"]
+	var panel := Image.create(W - 32, ROW - 10, false, Image.FORMAT_RGBA8)
+	panel.fill(Art.c("papier"))
+	_blit(panel, 16, y)
+	# Nom, rôle, tailles.
+	var art = load("res://scripts/creature_art/seve/%s.gd" % id)
+	var before_px := roundi(2.4 * float(c["r"]))
+	var after_px := roundi(art.HEIGHT * C.S1080)
+	_text(c["nom"], Vector2(28, y + 10), 28, Art.c("texte"), 230)
+	_text("Sève · %s" % c["role"], Vector2(28, y + 104), 21, Art.c("or"), 230)
+	_text("À l'écran (1080p) :\n~%d px aujourd'hui\n~%d px (100 unités) après\nCollision inchangée (r %d)" % [before_px, after_px, int(c["r"])], Vector2(28, y + 168), 19, Art.c("texte_doux"), 230)
+	var cy := y + 6
+	var gc: Array = C.ground_colors(region)
+	var r: float = c["r"]
+	var face := Vector2(1, 0.3).normalized()
+	var pose_b := {"t": 0.5}
+	var pose_a := {"t": 0.4, "look": 0.25}
+	# Avant, en grand (rendu brut, comme en jeu).
+	var big_b: Image = await b.bake(Vector2i(300, 300), func(ci): C.draw_before(ci, id, r, Vector2(150, 150), BIG, pose_b, face), 1)
+	_blit(big_b, COLS["avant"][0], cy)
+	# Avant, taille réelle sur le sol (le héros d'aujourd'hui à côté).
+	var real_b: Image = await b.bake(Vector2i(250, 300), func(ci):
+		C.draw_ground(ci, Rect2(0, 0, 250, 300), region, 11 + i)
+		C.draw_before(ci, "heros", 14.0, Vector2(62, 160), C.S1080, {"t": 0.5}, Vector2(1, 0.1).normalized())
+		C.draw_before(ci, id, r, Vector2(160, 150), C.S1080, pose_b, Vector2(-1, 0.3).normalized()), 1)
+	_blit(real_b, COLS["avant_reel"][0], cy)
+	# Après, en grand (lissé).
+	var sc := BIG * minf(1.0, 380.0 / (P.span(id) * art.HEIGHT * BIG / 100.0))
+	var big_a: Image = await b.bake(Vector2i(420, 300), func(ci): art.draw(ci, Vector2(210 - P.span_x(id) * art.HEIGHT * sc / 100.0, 270), art.HEIGHT * sc, pose_a))
+	_blit(big_a, COLS["apres"][0], cy)
+	# Après, taille réelle sur le sol (le héros, Esprit masqué, à côté).
+	var real_a: Image = await b.bake(Vector2i(330, 300), func(ci):
+		C.draw_ground(ci, Rect2(0, 0, 330, 300), region, 11 + i)
+		C.draw_after(ci, "heros", Vector2(70, 170), C.S1080, {"t": 0.4, "look": 0.1})
+		art.draw(ci, Vector2(210, 175), art.HEIGHT * C.S1080, {"t": 0.4, "look": PI - 0.25}))
+	_blit(real_a, COLS["apres_reel"][0], cy)
+	# Silhouettes : avant et après, à ×2,1 la taille à l'écran, en noir sur papier clair.
+	var sil_bg := Image.create(300, 300, false, Image.FORMAT_RGBA8)
+	sil_bg.fill(Color("e8dcc0"))
+	_blit(sil_bg, COLS["silhouette"][0], cy)
+	var s15 := 1.5 * C.S1080 * 1.4
+	var sb: Image = await b.bake(Vector2i(150, 300), func(ci): C.draw_before(ci, id, r, Vector2(75, 150), s15, {"t": 0.5}, face), 1)
+	var ss := s15 * minf(1.0, 140.0 / (P.span(id) * art.HEIGHT * s15 / 100.0))
+	var sa: Image = await b.bake(Vector2i(150, 300), func(ci): art.draw(ci, Vector2(75 - P.span_x(id) * art.HEIGHT * ss / 100.0, 230), art.HEIGHT * ss, pose_a))
+	_blit(_silhouette(sb), COLS["silhouette"][0], cy)
+	_blit(_silhouette(sa), COLS["silhouette"][0] + 150, cy)
+	# Niveaux de gris : la lecture des valeurs (avant, après), sur le sol de la région.
+	var gb: Image = await b.bake(Vector2i(285, 300), func(ci):
+		ci.draw_rect(Rect2(0, 0, 285, 300), gc[1])
+		C.draw_before(ci, id, r, Vector2(142, 150), BIG * 0.85, {"t": 0.5}, face), 1)
+	var gs := BIG * 0.7
+	var ga: Image = await b.bake(Vector2i(285, 300), func(ci):
+		ci.draw_rect(Rect2(0, 0, 285, 300), gc[1])
+		art.draw(ci, Vector2(142 - P.span_x(id) * art.HEIGHT * gs / 100.0, 262), art.HEIGHT * gs, pose_a))
+	_blit(_gray(gb), COLS["gris"][0], cy)
+	_blit(_gray(ga), COLS["gris"][0] + 285, cy)
+
+
+## Silhouette noire : tout pixel assez opaque devient noir (ombres et halos, transparents, disparaissent).
+static func _silhouette(img: Image) -> Image:
+	var out := Image.create(img.get_width(), img.get_height(), false, Image.FORMAT_RGBA8)
+	for yy in img.get_height():
+		for xx in img.get_width():
+			var a := img.get_pixel(xx, yy).a
+			if a > 0.55:
+				out.set_pixel(xx, yy, Color(0.05, 0.04, 0.04, 1.0))
+	return out
+
+
+static func _gray(img: Image) -> Image:
+	var out := img.duplicate()
+	for yy in img.get_height():
+		for xx in img.get_width():
+			var c := img.get_pixel(xx, yy)
+			var l := c.get_luminance()
+			out.set_pixel(xx, yy, Color(l, l, l, c.a))
+	return out
