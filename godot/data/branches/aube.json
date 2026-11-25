@@ -617,7 +617,7 @@
             {
               "stat": "fire_rate",
               "op": "more",
-              "value": 0.8
+              "value": 0.7
             }
           ]
         }
@@ -1608,7 +1608,7 @@
     {"names": ["Œil de l'aube", "Lueur sur l'ébloui"], "effects": [{"on": "kill", "if": {"state": "cible_eblouie"}, "do": "reduce_cooldown", "target": "skills", "value": 0.3, "cooldown": 0.5, "text": "Un ennemi vaincu ébloui réduit la recharge de toutes tes compétences de 0,3 s (au plus deux fois par seconde)."}]},
     {"names": ["Prairie dorée", "Soleil natal"], "effects": [{"stat": "crit_mult", "op": "add", "value": 0.2, "if": {"state": "terre_vive"}}]},
     {"names": ["Aube grise", "Lumière dans la cendre"], "effects": [{"stat": "crit", "op": "add", "value": 0.04, "if": {"state": "terre_fletrie"}}]},
-    {"names": ["Étoile filante", "Éclat mortel", "Météore"], "effects": [{"on": "kill", "do": "ray", "factor": 0.5, "cooldown": 0.4, "text": "Un ennemi vaincu lance un rayon vers l'ennemi le plus proche (au plus toutes les 0,4 s)."}]},
+    {"names": ["Étoile filante", "Éclat mortel", "Météore"], "effects": [{"on": "kill", "do": "ray", "factor": 0.35, "cooldown": 0.6, "text": "Un ennemi vaincu lance un rayon vers l'ennemi le plus proche (au plus toutes les 0,6 s)."}]},
     {"names": ["Crépuscule", "Dernière lueur"], "effects": [{"stat": "crit", "op": "add", "value": 0.08, "if": {"state": "vie_basse"}}]},
     {"names": ["Couronne d'or", "Aube greffée"], "effects": [{"stat": "crit_mult", "op": "add", "value": 0.2, "if": {"state": "greffes", "min": 3}}]},
     {"names": ["Aube ancienne", "Clarté du Cœur"], "effects": [{"stat": "crit", "op": "add", "value": 0.03, "if": {"state": "coeurs_purifies", "min": 2}}]},

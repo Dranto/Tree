@@ -45,6 +45,12 @@ static func wind(a: float) -> float:
 	return lerpf(-0.35, 0.0, smoothstep(0.0, 1.0, (a - 0.55) / 0.45))
 
 
+## Vrai si l'arme dessine aussi ce qu'elle lance (planches) ; en jeu (vol = false), projectiles, rayon
+## et ondes sont ceux du jeu (projectile.gd, attack_fx.gd) : l'arme ne montre que le geste.
+static func _vol(c: Dictionary) -> bool:
+	return c.get("vol", true)
+
+
 ## Vol du projectile (0 → 1 après le coup ; -1 avant).
 static func fly(a: float) -> float:
 	return -1.0 if a < 0.5 else (a - 0.5) / 0.5
@@ -136,8 +142,9 @@ static func _fronde(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, reac
 	Ink.part(ci, xf, Ink.oval(pouch, 2.4, 3.0, 10), {"clair": WOOD_DARK, "ombre": Color("3f3026")}, 0.8)
 	var f := fly(a)
 	var seed_at := pouch if f < 0.0 else (l + r) * 0.5 + Vector2(70.0 * f * reach, -3.0 - 6.0 * sin(PI * f))
-	K.seed(ci, xf * seed_at, c["u"], c["p"], c["t"], c["gl"], 3.0 * sz, 0.7)
-	if f >= 0.0:
+	if f < 0.0 or _vol(c):
+		K.seed(ci, xf * seed_at, c["u"], c["p"], c["t"], c["gl"], 3.0 * sz, 0.7)
+	if f >= 0.0 and _vol(c):
 		_speed(ci, xf, seed_at, Vector2(1, 0), 14.0, c["gl"], 1.0 - f)
 	return {"shaft": PackedVector2Array([h + Vector2(0, 4), fk]), "tip": seed_at, "dir": Vector2(1, 0), "base": h}
 
@@ -151,6 +158,8 @@ static func _echardes(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, re
 	var tip := h
 	for j in 3:
 		var ang := base_a + (j - 1) * 0.35
+		if f >= 0.0 and not _vol(c):
+			continue
 		if f >= 0.0:
 			var q := h + Vector2(8.0 + 64.0 * f * reach, (j - 1) * (4.0 + 14.0 * f) - 4.0)
 			Ink.part(ci, xf, Ink.thorn(q, (j - 1) * 0.15 * f, 11.0 * sz, 3.6), BONE, 1.0, 1.0, 1.0)
@@ -226,6 +235,8 @@ static func _arc(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, reach: 
 	if a < 0.0 or (a < 0.5 and w < 0.05):
 		tail = h + Vector2(-6, 0)
 		head = tail + Vector2(18.0 * sz, 0)
+	if f >= 0.0 and not _vol(c):
+		return {"shaft": limb, "tip": h + Vector2(4, 0), "dir": Vector2(1, 0), "base": bot}
 	var arrow := PackedVector2Array()
 	for i in 7:
 		var k := i / 6.0
@@ -271,7 +282,7 @@ static func _encensoir(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, r
 			ci.draw_circle(xf * (bob + Vector2(-3.0 + j * 3.0, 8.0 + k * 6.0)), (1.0 + k) * float(c["u"]), Color(Art.ec("poison", "clair"), 0.7 * (1.0 - k)))
 	var f := fly(a)
 	var tip := bob
-	if f >= 0.0:
+	if f >= 0.0 and _vol(c):
 		var q := bob + Vector2(60.0 * f * reach, -30.0 * sin(PI * f) + 20.0 * f)
 		Ink.part(ci, xf, Ink.lumpy(q, 4.4 * sz, 4.0 * sz, 14, 0.15, 6.0, f * 5.0), {"clair": Art.ec("poison"), "ombre": Art.ec("poison", "sombre"), "reflet": Art.ec("poison", "clair")}, 1.0, 1.0, 0.6)
 		if not Ink.mono:
@@ -302,8 +313,11 @@ static func _sarbacane(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, r
 		Ink.part(ci, xf, Ink.thorn(b - d * 2.0, aim, 5.0 * sz, 2.4), CAP, 0.7, 1.0, 0.0)
 	else:
 		var q := b + Vector2(80.0 * f * reach, 0)
-		Ink.part(ci, xf, Ink.thorn(q, 0.0, 7.0 * sz, 2.6), CAP, 0.8, 1.0, 0.4)
-		_speed(ci, xf, q, Vector2(1, 0), 14.0, Art.ec("poison", "clair"), 1.0 - f)
+		if _vol(c):
+			Ink.part(ci, xf, Ink.thorn(q, 0.0, 7.0 * sz, 2.6), CAP, 0.8, 1.0, 0.4)
+			_speed(ci, xf, q, Vector2(1, 0), 14.0, Art.ec("poison", "clair"), 1.0 - f)
+		else:
+			q = b
 		if f < 0.3 and not Ink.mono:
 			ci.draw_circle(xf * (b + d * 3.0), 4.0 * (1.0 + f * 3.0) * float(c["u"]), Color(Color.WHITE, 0.6 * (1.0 - f / 0.3)))
 		tip = q
@@ -318,7 +332,7 @@ static func _faucilles(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, r
 	var held := -0.8 - 1.6 * maxf(w, 0.0)
 	_sickle(ci, xf, h, held, sz, 1.0)
 	var tip := h + Vector2.from_angle(held) * 12.0 * sz
-	if f >= 0.0:
+	if f >= 0.0 and _vol(c):
 		var q := h + Vector2(72.0 * sin(PI * f) * reach, -6.0 * sin(PI * f))
 		_sickle(ci, xf, q, float(c["t"]) * 20.0 + f * 30.0, sz, 1.0)
 		if not Ink.mono:
@@ -364,7 +378,7 @@ static func _eventail(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, re
 		Ink.flat(ci, xf, Ink.oval(h + Vector2.from_angle(aa) * l * 0.82, 1.4, 1.4, 8), Art.FEUILLES_BUILD["vent"]["accent"])
 	Ink.part(ci, xf, Ink.oval(h, 2.8, 2.6, 10), GOLD, 1.0)
 	var tip := h + Vector2.from_angle(axis) * l
-	if a >= 0.45 and a < 1.0 and not Ink.mono:
+	if a >= 0.45 and a < 1.0 and not Ink.mono and _vol(c):
 		var k := clampf((a - 0.45) / 0.55, 0.0, 1.0)
 		for j in 3:
 			var r := 16.0 + 50.0 * k * reach + j * 7.0
@@ -398,6 +412,8 @@ static func _calice(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, reac
 		q = cup + Vector2(cos(ang) * rr, -8.0 * sz + sin(ang) * rr * 0.5)
 		if f >= 0.0:
 			var fi := clampf(f * 1.4 - i * 0.18, 0.0, 1.0)
+			if fi > 0.0 and not _vol(c):
+				continue
 			if fi > 0.0:
 				q = cup + Vector2(10.0 + 72.0 * fi * reach, -8.0 - sin(fi * 9.0 + i) * 3.0)
 				_speed(ci, xf, q, Vector2(1, 0), 8.0, Art.ec("seve", "clair"), 1.0 - fi)
@@ -428,7 +444,7 @@ static func _prisme(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, reac
 	if a >= 0.45 and a < 0.85:
 		beam = 1.0 if a < 0.7 else 1.0 - (a - 0.7) / 0.15
 	var tip := q
-	if beam > 0.0 and not Ink.mono:
+	if beam > 0.0 and not Ink.mono and _vol(c):
 		var l := 110.0 * reach
 		var e := q + Vector2(l, 0)
 		var ww := (6.0 + 3.0 * sin(t * 30.0)) * sz * beam
@@ -467,7 +483,7 @@ static func _massue(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, reac
 		var aa := ang + (j - 1) * 0.6
 		Ink.brush(ci, xf, PackedVector2Array([head + Vector2.from_angle(aa) * r * 0.8, head + Vector2.from_angle(aa) * r * 1.25]), 2.0, Art.FEUILLES_BUILD["racine"]["clair"], 1.0, 0.0)
 	Ink.brush(ci, xf, PackedVector2Array([h.lerp(b, 0.2), h.lerp(b, 0.7)]), 1.4, Art.ec("racine"), 1.0, 1.0)
-	if a >= 0.53 and a < 0.95 and not Ink.mono:
+	if a >= 0.53 and a < 0.95 and not Ink.mono and _vol(c):
 		var k := (a - 0.53) / 0.42
 		var g := Vector2(head.x, float(c["gy"]))
 		var ring := Ink.oval(g, 6.0 + 40.0 * k, (6.0 + 40.0 * k) * 0.4, 32)

@@ -61,9 +61,9 @@ func in_cone(e, pos: Vector2, r: float) -> bool:
 func draw_attack(e, k: float, hit: float) -> void:
 	var cone := {"type": "cone", "centre": e.attack_dir * e.radius * 0.6, "direction": e.attack_dir.angle(), "ouverture": float(e.data["cone"]), "rayon": float(e.data["range"])}
 	if e.state == "windup":
-		Art.telegraph(e, cone, k, -1.0, e.t)
+		Art.telegraph(e.gc, cone, k, -1.0, e.t)
 	elif hit >= 0.0:
-		Art.telegraph(e, cone, 1.0, hit, e.t)
+		Art.telegraph(e.gc, cone, 1.0, hit, e.t)
 	if e.state == "recover":
 		# Le souffle : traits clairs du vent qui filent dans le cône.
 		var u := 1.0 - clampf(e.state_t / maxf(0.01, float(e.data["blow_time"])), 0.0, 1.0)
@@ -72,4 +72,4 @@ func draw_attack(e, k: float, hit: float) -> void:
 			var a: float = e.attack_dir.angle() + (i - 2) * float(e.data["cone"]) / 5.0
 			var d := Vector2.from_angle(a)
 			var s := reach * (0.2 + 0.7 * fposmod(u + i * 0.17, 1.0))
-			e.draw_line(d * s, d * (s + 46.0), Color(Art.ec("vent", "clair"), 0.8 * (1.0 - u)), Art.TRAIT, true)
+			e.gc.draw_line(d * s, d * (s + 46.0), Color(Art.ec("vent", "clair"), 0.8 * (1.0 - u)), Art.TRAIT, true)

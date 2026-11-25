@@ -46,14 +46,14 @@
   },
   "punish": {
     "_doc": "Punir les coups reçus (jalon 10 C, scripts/player.gd › take_hit). Dégâts reçus : × (1 + damage_per_level × (niveau − 1) + damage_per_heart × Cœurs purifiés). Seuls comptent (perte de sève, soin bloqué, étourdissement) les coups d'au moins min_frac de la vie max : les petites brûlures du poison n'y comptent pas. Un coup d'au moins stagger_min de la vie max étourdit : vitesse × stagger_speed pendant stagger secondes, avec un recul de recoil pixels. Chaque coup fait perdre sap_loss de l'expérience du niveau en cours (jamais un niveau). Le soin (régénération, vol de vie, compétences) est bloqué heal_block secondes ; le sanctuaire et le niveau gagné soignent toujours. « boss » : les coups des boss comptent ce multiple pour l'étourdissement et la perte de sève.",
-    "damage_per_level": 0.012,
+    "damage_per_level": 0.004,
     "damage_per_heart": 0.04,
-    "min_frac": 0.02,
+    "min_frac": 0.04,
     "stagger_min": 0.07,
     "stagger": 0.3,
     "stagger_speed": 0.35,
     "recoil": 30.0,
-    "sap_loss": 0.04,
+    "sap_loss": 0.02,
     "heal_block": 1.2,
     "boss": 1.5
   },

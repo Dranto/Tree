@@ -46,7 +46,7 @@ func end_charge(e, factor: float) -> void:
 func draw_attack(e, k: float, _hit: float) -> void:
 	var ln := float(e.data["charge_dist"])
 	if e.state == "windup":
-		Art.telegraph(e, {"type": "ligne", "de": Vector2.ZERO, "a": e.attack_dir * ln, "largeur": e.radius * 2.0}, k, -1.0, e.t)
+		Art.telegraph(e.gc, {"type": "ligne", "de": Vector2.ZERO, "a": e.attack_dir * ln, "largeur": e.radius * 2.0}, k, -1.0, e.t)
 	elif e.state == "charge":
 		var from: Vector2 = -e.attack_dir * e.travelled
-		Art.telegraph(e, {"type": "ligne", "de": from, "a": from + e.attack_dir * ln, "largeur": e.radius * 2.0}, 1.0, e.travelled / ln, e.t)
+		Art.telegraph(e.gc, {"type": "ligne", "de": from, "a": from + e.attack_dir * ln, "largeur": e.radius * 2.0}, 1.0, e.travelled / ln, e.t)
