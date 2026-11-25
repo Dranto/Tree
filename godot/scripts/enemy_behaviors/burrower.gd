@@ -89,9 +89,9 @@ static func under(e) -> bool:
 func draw_attack(e, k: float, hit: float) -> void:
 	var r := float(e.data["burst_radius"])
 	if e.state == "windup":
-		Art.telegraph(e, {"type": "cercle", "centre": Vector2.ZERO, "rayon": r}, k, -1.0, e.t)
+		Art.telegraph(e.gc, {"type": "cercle", "centre": Vector2.ZERO, "rayon": r}, k, -1.0, e.t)
 	elif hit >= 0.0:
-		Art.telegraph(e, {"type": "cercle", "centre": Vector2.ZERO, "rayon": r}, 1.0, hit, e.t)
+		Art.telegraph(e.gc, {"type": "cercle", "centre": Vector2.ZERO, "rayon": r}, 1.0, hit, e.t)
 
 
 ## Sous terre : la silhouette n'est plus qu'un sillon (« under » de 0 à 1), dessiné image par image.
