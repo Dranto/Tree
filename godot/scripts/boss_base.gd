@@ -100,6 +100,7 @@ var _charge_hit := -1
 var charge_spin := 0.0
 ## Hasard propre aux étincelles (ne touche pas au hasard du jeu).
 var _charge_rng := RandomNumberGenerator.new()
+const CHARGE_SEED := 5151
 ## Figé par les tests visuels : la logique ne tourne plus, la pose reste affichée.
 var frozen := false
 var marks: Node2D
@@ -127,6 +128,7 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	_charge_rng.seed = CHARGE_SEED
 	anchor = position
 	# Le choix de difficulté des options (Facile / Normal / Difficile) vaut aussi pour les boss.
 	max_hp = (base_hp + hp_per_level * Game.level) * Difficulty.boss_hp_factor(region) * Difficulty.hp_mult()
@@ -179,6 +181,7 @@ func _physics_process(delta: float) -> void:
 	root_immune -= delta
 	if dead:
 		dying += delta
+		_dying_step(delta)
 		if dying >= death_time:
 			queue_free()
 		return
@@ -323,6 +326,11 @@ func _charge_impulse(e: float, rate: float) -> void:
 	# Le bord de l'écran s'allume sur chaque temps fort.
 	if rate <= 1.0 or e > 0.6:
 		main.screen_fx.glow(col, (0.08 + 0.35 * e) * (1.0 if rate <= 1.0 else 0.5), clampf(0.6 / rate, 0.12, 0.5))
+
+
+## Pendant la mort (dying de 0 à death_time) : à écrire dans chaque boss qui veut ses particules.
+func _dying_step(_delta: float) -> void:
+	pass
 
 
 ## Couleur de l'énergie qu'il charge.

@@ -440,6 +440,7 @@ func _ascent_step(delta: float) -> void:
 	p.invuln = maxf(p.invuln, 0.5)
 	var before := ascent_t
 	ascent_t += delta
+	_ascent_particles(before)
 	if ascent_t < ASCENT_SWITCH:
 		# Le geyser le soulève, de plus en plus vite, et il se fond dans la lumière.
 		var u := ascent_t / ASCENT_SWITCH
@@ -485,6 +486,7 @@ func boss_defeated() -> void:
 		main.fx.ring(center, 40.0, max_radius * (0.45 + 0.25 * i), 0.9 + 0.4 * i, Color(Art.ec("seve", "clair"), 0.9), 6.0)
 	main.screen_fx.glow(Art.ec("seve"), 0.6, 2.2)
 	bloom_from = boss.anchor if is_instance_valid(boss) else center
+	_prng.seed = 1717
 	life_wave = 0.0
 	bar.hide_bar()
 	main.request_autosave()
@@ -501,6 +503,7 @@ func _life_wave_step(delta: float) -> void:
 	if life_wave < 0.0:
 		return
 	life_wave += delta
+	_life_particles()
 	bloom = clampf(life_wave / 3.0, 0.0, 1.0)
 	# Le creux effondré se referme à mesure qu'il refleurit.
 	collapse_k = minf(collapse_k, 1.0 - bloom)
@@ -602,6 +605,68 @@ func _draw_breach() -> void:
 		draw_arc(c, DESCENT_RADIUS + 10.0, 0.0, TAU, 40, Color(col, 0.25 + 0.2 * pulse), Art.TRAIT_FIN, true)
 		if hold > 0.0 and not holds(main.player.position):
 			draw_arc(c, DESCENT_RADIUS + 10.0, -PI / 2.0, -PI / 2.0 + TAU * clampf(hold / DESCENT_HOLD, 0.0, 1.0), 40, col, Art.TRAIT, true)
+
+
+var _prng := RandomNumberGenerator.new()
+
+
+## Particules du front de vie dans le creux : des lueurs de sève filent sur le front, des pétales
+## éclosent derrière lui, et quelques lueurs rejoignent le héros.
+func _life_particles() -> void:
+	if Settings.reduce_effects or not holds(main.player.position):
+		return
+	var u := clampf(life_wave / 3.0, 0.0, 1.0)
+	if u >= 1.0:
+		return
+	var r := lerpf(20.0, max_radius * 2.0, Anim.ease_out(u))
+	var fx = main.fx
+	for i in 4:
+		var a := _prng.randf() * TAU
+		var at := bloom_from + Vector2.from_angle(a) * r
+		if at.distance_to(center) > max_radius:
+			continue
+		fx.mote(at, Vector2.from_angle(a) * _prng.randf_range(200.0, 420.0), _prng.randf_range(0.25, 0.5), 2.5, Color(Art.ec("seve", "clair"), 0.95))
+		var b := bloom_from + Vector2.from_angle(a + 0.3) * r * _prng.randf_range(0.5, 0.95)
+		if b.distance_to(center) < max_radius:
+			var tint: Color = [Art.ec("seve", "clair"), Art.ec("lumiere", "clair"), Art.ec("vent", "clair"), Art.ec("poison", "clair")][_prng.randi() % 4]
+			fx.petal(b, Vector2(_prng.randf_range(-40.0, 40.0), -_prng.randf_range(60.0, 140.0)), _prng.randf_range(1.2, 2.0), _prng.randf_range(6.0, 9.5), Color(tint, 0.9))
+	if _prng.randf() < 0.5:
+		var a := _prng.randf() * TAU
+		fx.glow_mote(bloom_from + Vector2.from_angle(a) * r * 0.7, Vector2.from_angle(a) * 60.0, 1.6, 3.0, Color(Art.ec("seve", "clair"), 0.9), true)
+
+
+## Particules de la remontée : le geyser crache des gouttes et des pétales qui tourbillonnent autour
+## du héros ; à la sortie de la brèche, une gerbe ; puis la sève qui retombe en pluie autour de lui.
+func _ascent_particles(before: float) -> void:
+	if Settings.reduce_effects:
+		return
+	var fx = main.fx
+	var sap := Art.ec("seve", "clair")
+	var p = main.player
+	if ascent_t < ASCENT_SWITCH:
+		var u := ascent_t / ASCENT_SWITCH
+		for i in 2 + int(4.0 * u):
+			fx.mote(_ascent_from + Vector2(_prng.randf_range(-30.0, 30.0), 0.0), Vector2(_prng.randf_range(-50.0, 50.0), -_prng.randf_range(500.0, 900.0)), _prng.randf_range(0.4, 0.8), _prng.randf_range(2.0, 3.5), Color(sap, 0.95))
+		var a := ascent_t * 9.0
+		for j in 2:
+			var aa := a + PI * j
+			fx.petal(p.position + Vector2(cos(aa) * 60.0, sin(aa) * 30.0), Vector2(-sin(aa) * 160.0, -120.0), 1.0, 7.5, Color(Art.ec("lumiere" if j == 0 else "seve", "clair"), 0.9))
+		return
+	if before < ASCENT_SWITCH:
+		for i in 70:
+			var a := _prng.randf() * TAU
+			var tint: Color = [sap, Art.ec("lumiere", "clair"), Art.ec("vent", "clair"), Art.ec("poison", "clair"), Art.ec("epine", "clair")][i % 5]
+			if i % 2 == 0:
+				fx.petal(DESCENT, Vector2.from_angle(a) * _prng.randf_range(150.0, 520.0) + Vector2(0, -200.0), _prng.randf_range(1.4, 2.6), _prng.randf_range(6.0, 10.0), Color(tint, 0.95))
+			else:
+				fx.mote(DESCENT, Vector2.from_angle(a) * _prng.randf_range(300.0, 800.0), _prng.randf_range(0.3, 0.7), 3.0, Color(sap, 0.95))
+		return
+	var v := clampf((ascent_t - ASCENT_SWITCH) / (ASCENT - ASCENT_SWITCH), 0.0, 1.0)
+	for i in int(5.0 * (1.0 - v)) + 1:
+		var a := -PI / 2.0 + _prng.randf_range(-0.6, 0.6)
+		fx.mote(DESCENT + Vector2(_prng.randf_range(-20.0, 20.0), 0.0), Vector2.from_angle(a) * _prng.randf_range(400.0, 800.0) * (1.0 - 0.5 * v), _prng.randf_range(0.3, 0.6), 2.5, Color(sap, 0.9))
+	if _prng.randf() < 0.6:
+		fx.petal(p.position + Vector2(_prng.randf_range(-120.0, 120.0), -_prng.randf_range(80.0, 200.0)), Vector2(_prng.randf_range(-50.0, 50.0), 20.0), 2.0, _prng.randf_range(6.0, 9.0), Color([sap, Art.ec("lumiere", "clair"), Art.ec("vent", "clair")][_prng.randi() % 3], 0.9))
 
 
 ## La vie qui part de là où elle est morte : un disque de sève qui grandit dans le creux, son front

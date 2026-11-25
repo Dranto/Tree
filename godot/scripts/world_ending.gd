@@ -92,6 +92,7 @@ func begin(m) -> void:
 		main.finale.bring_up()
 	center = _center_of(main)
 	main.spawn_paused = true
+	_prng.seed = 4242
 	_from = main.finale.descent_point() if main.get("finale") != null else Vector2.ZERO
 	_purified = {}
 	main.screen_fx.glow(Art.ec("seve"), 0.5, 3.0)
@@ -130,6 +131,14 @@ func _step() -> void:
 	while _waves_sent < WAVES and t >= _waves_sent * WAVE_GAP:
 		var r := Regions.WORLD_HALF * (0.35 + 0.65 * float(_waves_sent + 1) / WAVES) * 1.5
 		main.ground.paint_wave(_from, r, 2.0)
+		# Chaque vague part de la brèche dans une gerbe de pétales et de lueurs.
+		if not Settings.reduce_effects and main.get("fx") != null:
+			for i in 40:
+				var dir := Vector2.from_angle(TAU * i / 40.0 + _prng.randf_range(-0.08, 0.08))
+				if i % 2 == 0:
+					main.fx.petal(_from, dir * _prng.randf_range(250.0, 600.0), _prng.randf_range(1.6, 2.6), _prng.randf_range(6.0, 10.0), Color(Art.ec(["seve", "lumiere", "vent", "poison"][i % 4], "clair"), 0.95))
+				else:
+					main.fx.mote(_from, dir * _prng.randf_range(500.0, 1000.0), _prng.randf_range(0.4, 0.8), 3.0, Color(Art.ec("seve", "clair"), 0.95))
 		if _waves_sent == 0:
 			main.flora.spawn_patch(_from, 620.0, 40, Art.ec("seve", "clair"), 2.0, 620.0)
 		else:
@@ -146,6 +155,7 @@ func _step() -> void:
 		if k > float(_purified.get(id, -1.0)):
 			_purified[id] = k
 			main.ground.set_purified(id, maxf(k, main.ground.purified_of(id)))
+	_particles()
 	if active and t >= duration():
 		for id in Regions.ids():
 			main.ground.set_purified(id, 1.0)
@@ -153,6 +163,27 @@ func _step() -> void:
 		t = INF
 		if not main.in_boss_fight():
 			main.spawn_paused = false
+
+
+var _prng := RandomNumberGenerator.new()
+
+
+## Pendant la fin : des pétales aux couleurs des régions volent autour du héros, portés par le vent,
+## et des lueurs de sève montent de l'herbe et le rejoignent ; plus nombreux au début.
+func _particles() -> void:
+	if not active or Settings.reduce_effects or main.get("fx") == null or main.player == null:
+		return
+	var fx = main.fx
+	var p: Vector2 = main.player.position
+	var k := clampf(1.0 - t / maxf(duration(), 1.0), 0.25, 1.0)
+	var ids := Regions.ids()
+	if _prng.randf() < 0.9 * k and not ids.is_empty():
+		var rid: String = ids[_prng.randi() % ids.size()]
+		var tint := Regions.color(Regions.def(rid).get("color", "#7fd36b")).lightened(0.25)
+		fx.petal(p + Vector2(_prng.randf_range(-900.0, 300.0), _prng.randf_range(-520.0, 420.0)), Vector2(_prng.randf_range(120.0, 220.0), _prng.randf_range(-30.0, 10.0)), _prng.randf_range(3.0, 5.0), _prng.randf_range(6.0, 10.0), Color(tint, 0.9))
+	if _prng.randf() < 0.6 * k:
+		var a := _prng.randf() * TAU
+		fx.glow_mote(p + Vector2.from_angle(a) * _prng.randf_range(250.0, 600.0), Vector2(0.0, -40.0), 2.4, 3.0, Color(Art.ec("seve", "clair"), 0.9), true)
 
 
 ## Apparition (0 à 1) du groupe i.

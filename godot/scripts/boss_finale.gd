@@ -677,6 +677,35 @@ func _charge_color() -> Color:
 	return Art.ec("cendre", "clair")
 
 
+## Sa mort : la cendre de son corps s'envole par flocons, la sève jaillit de ses fentes en étincelles,
+## puis, à mesure qu'elle s'efface, des pétales et des lueurs de sève montent de ce qui reste.
+var _die_rng := RandomNumberGenerator.new()
+
+
+func _ready() -> void:
+	super._ready()
+	_die_rng.seed = 2323
+
+
+func _dying_step(_delta: float) -> void:
+	if Settings.reduce_effects:
+		return
+	var k := clampf(dying / death_time, 0.0, 1.0)
+	var h := anchor + Vector2(0, -radius * 0.45)
+	var fx = main.fx
+	for i in 3:
+		var a := _die_rng.randf() * TAU
+		var at := h + Vector2.from_angle(a) * radius * _die_rng.randf_range(0.2, 1.1)
+		fx.glow_mote(at, Vector2(_die_rng.randf_range(-40.0, 40.0), -_die_rng.randf_range(60.0, 160.0)), _die_rng.randf_range(1.2, 2.2), _die_rng.randf_range(2.0, 4.0), Color(FletriArt.ash_color().lightened(0.2), 0.85))
+	if _die_rng.randf() < 0.8:
+		var a := _die_rng.randf() * TAU
+		fx.mote(h + Vector2.from_angle(a) * radius * 0.3, Vector2.from_angle(a) * _die_rng.randf_range(250.0, 520.0), _die_rng.randf_range(0.3, 0.6), _die_rng.randf_range(2.0, 3.5), Color(Art.ec("seve", "clair"), 0.95))
+	if k > 0.35:
+		var tint := Art.ec(str(ARMS[_die_rng.randi() % ARMS.size()]["element"]), "clair")
+		fx.petal(h + Vector2(_die_rng.randf_range(-1.0, 1.0), _die_rng.randf_range(-0.6, 0.6)) * radius, Vector2(_die_rng.randf_range(-90.0, 90.0), -_die_rng.randf_range(120.0, 240.0)), _die_rng.randf_range(1.6, 2.6), _die_rng.randf_range(6.0, 10.0), Color(tint, 0.95))
+		fx.glow_mote(anchor + Vector2(_die_rng.randf_range(-1.0, 1.0) * radius, 0.0), Vector2(0.0, -_die_rng.randf_range(40.0, 110.0)), 2.0, 3.0, Color(Art.ec("seve", "clair"), 0.9))
+
+
 ## La charge, derrière elle : le sol qui se creuse d'anneaux qui se resserrent sur la grille, la cendre
 ## de l'arène aspirée en spirale (de plus en plus vite, de plus en plus dense), et les six éléments
 ## de ses bras qui tournent autour d'elle en se rapprochant.

@@ -6,7 +6,7 @@
 extends Node2D
 
 ## Nombre maximal de particules et de textes en même temps (garde le dessin léger dans la foule).
-const MAX_PARTICLES := 160
+const MAX_PARTICLES := 260
 const MAX_TEXTS := 28
 ## Secousse maximale (pixels) à pleine puissance, et vitesse à laquelle elle retombe.
 const SHAKE_MAX := 16.0
@@ -387,6 +387,16 @@ func _particle(kind: int, pos: Vector2, vel: Vector2, dur: float, size: float, c
 		return
 	particles.append({"kind": kind, "pos": pos, "vel": vel, "t": 0.0, "dur": dur, "size": size,
 		"color": color, "rot": rot, "drag": drag, "spin": _rng.randf_range(-4.0, 4.0), "ph": _rng.randf() * TAU})
+
+
+## Un pétale qui tournoie en tombant doucement (fin de la finale : la vie qui revient).
+func petal(pos: Vector2, vel: Vector2, dur: float, size: float, color: Color) -> void:
+	_particle(2, pos, vel, dur, size, color, _rng.randf() * TAU, 0.8)
+
+
+## Une lueur (cendre, sève) qui monte et ralentit ; « seek » : elle rejoint le héros.
+func glow_mote(pos: Vector2, vel: Vector2, dur: float, size: float, color: Color, seek := false) -> void:
+	_particle(3 if seek else 1, pos, vel, dur, size, color, 0.0, 1.2)
 
 
 ## Un trait de lumière lancé à la vitesse « vel » (charge et éclat des boss, boss_base.gd).
