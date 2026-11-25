@@ -89,8 +89,53 @@ static func world_palette(id: String) -> Dictionary:
 		out["fletri"] = _derived(dd, dl, dot, false)
 		out["apaise"] = _derived(cd, cl, dot, false)
 		out["ravive"] = _derived(ad, al, dot, true)
+	# Lisibilité (banc tests/paysages_test.gd) : le sol ravivé ne doit pas écraser le héros (clair) ni
+	# trop contraster sous les personnages ; le flétri du Roncier, plus clair que le reste, s'assombrit
+	# pour que les Flétris (sombres) s'en détachent.
+	var ym: float = RAVIVE_Y_MAX.get(id, RAVIVE_Y_MAX[""])
+	var rg: float = RAVIVE_GAIN.get(id, 1.0)
+	var fg: float = FLETRI_GAIN.get(id, 1.0)
+	out["ravive"] = _tones(out["ravive"], ym, RAVIVE_CONTRAST, rg)
+	out["fletri"] = _tones(out["fletri"], 1.0, 1.0, fg)
+	out["apaise"] = _tones(out["apaise"], 1.0, 1.0, fg)
 	_pals[id] = out
 	return out
+
+
+## Luminance relative (linéaire) au plus du ton moyen du sol ravivé (≈ L* 42) : le héros, clair, reste
+## au moins 10 L* au-dessus.
+## Par région (« » : les autres), réglé au banc de lisibilité (tests/paysages_test.gd) : le Marais plus
+## sombre, les Falaises plus claires (distinctes des Plateaux et de la Forêt, Flétris lisibles).
+const RAVIVE_Y_MAX := {"": 0.125, "spore": 0.10, "aube": 0.21, "seve": 0.14}
+## Écart des tons sombre et clair du lavis ravivé autour du ton moyen (1 : celui de la palette).
+const RAVIVE_CONTRAST := 0.35
+## Gain (linéaire) du sol ravivé par région, avant le plafond.
+const RAVIVE_GAIN := {"seve": 1.3}
+## Gain (linéaire) de la terre morte par région.
+const FLETRI_GAIN := {"ronce": 0.72, "spore": 0.75, "aube": 0.62, "racine": 0.6}
+
+
+static func _lum(c: Color) -> float:
+	var l := c.srgb_to_linear()
+	return 0.2126 * l.r + 0.7152 * l.g + 0.0722 * l.b
+
+
+## Tons du sol d'un état : contraste resserré autour du ton moyen, puis assombri (gain linéaire, et
+## plafond de luminance du ton moyen).
+static func _tones(e: Dictionary, y_max: float, contrast: float, gain: float) -> Dictionary:
+	var e2 := e.duplicate()
+	var mid: Color = e["sol"]
+	var k := gain
+	var y := _lum(mid) * gain
+	if y > y_max:
+		k *= y_max / y
+	for key in ["sol", "sol_clair", "sol_sombre"]:
+		var c: Color = e[key]
+		if key != "sol":
+			c = mid.lerp(c, contrast)
+		var l := c.srgb_to_linear()
+		e2[key] = Color(l.r * k, l.g * k, l.b * k, c.a).linear_to_srgb()
+	return e2
 
 
 static func _region_ground(id: String) -> Dictionary:

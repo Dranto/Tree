@@ -117,7 +117,7 @@ void fragment() {
 				}
 			}
 		}
-		alive = mix(alive, stroke, hit * 0.38);
+		alive = mix(alive, stroke, hit * 0.22);
 	}
 	vec3 col = mix(dead, alive, edge);
 	// Herbe dense juste dedans (ombre), liseré de sève sur le front, léger halo dehors.
