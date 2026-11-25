@@ -171,6 +171,8 @@ func _run() -> void:
 	var was: String = boss.stage
 	var waves_seen := 0
 	var rolls_seen := 0
+	var sparks_seen := 0
+	var pricks_seen := 0
 	var wave_n: int = boss._wave_count
 	for i in 600:
 		main.player.hp = maxf(main.player.hp, 100.0)
@@ -186,12 +188,20 @@ func _run() -> void:
 			if s.get("roll", false) and not s.has("seen"):
 				s["seen"] = true
 				rolls_seen += 1
+			if s.get("spark", false) and not s.has("seen"):
+				s["seen"] = true
+				sparks_seen += 1
+		for r in boss.pricks:
+			if not r.has("seen"):
+				r["seen"] = true
+				pricks_seen += 1
 		was = boss.stage
 		await physics_frame
 	waves_seen = boss._wave_count - wave_n
 	check(strikes.size() >= 2 and strikes.all(func(x): return absf(x) < 0.08), "les frappes tombent sur les temps du morceau (%s)" % [strikes.map(func(x): return snappedf(x, 0.01))])
 	check(off_score.is_empty() and boss.score_skipped == 0, "phase 1 : chaque frappe tombe sur la partition, aucun coup sauté (hors partition : %s, sautés : %d)" % [off_score, boss.score_skipped])
 	check(boss.score_len == 64.0, "la partition de la phase 1 suit boucle_1 (16 mesures)")
+	check(sparks_seen >= 10 and pricks_seen >= 4, "les petites attaques suivent les drums discrets : étincelles sur les charlestons, piqûres sur les caisses douces (%d étincelles, %d piqûres)" % [sparks_seen, pricks_seen])
 	check(waves_seen >= 2 and rolls_seen >= 2, "les ondes de choc partent sur les grosses caisses, les roulements d'épines sur les caisses claires (%d ondes, %d épines)" % [waves_seen, rolls_seen])
 	check(seen.has("epines") and seen.has("spores"), "phase 1 : épines et spores (%s)" % ", ".join(seen.keys()))
 	var hp_before: float = boss.hp

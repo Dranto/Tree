@@ -127,8 +127,12 @@ def lag(a, b, n=RATE // 2, span=256):
 # (« caisse », 180-400 Hz) franc. Le boss final pose dessus ses ondes de choc et ses roulements
 # d'épines (scripts/boss_finale.gd › SCORE). Détection : hausse d'énergie de la bande sur 30 ms à
 # chaque double croche, rapportée au plus fort de la boucle ; gardée au-dessus de COUPS_SEUIL.
-COUPS_BANDES = {"kick": (30.0, 110.0), "caisse": (180.0, 400.0)}
+# Les coups discrets ont leur propre liste : « charleston » (6-10 kHz, au-dessus de COUPS_SEUIL_HAT) et
+# « caisse_douce » (caisse claire entre COUPS_SEUIL_DOUX et COUPS_SEUIL : notes fantômes, petits coups).
+COUPS_BANDES = {"kick": (30.0, 110.0), "caisse": (180.0, 400.0), "charleston": (6000.0, 10000.0)}
 COUPS_SEUIL = 0.45
+COUPS_SEUIL_HAT = 0.25
+COUPS_SEUIL_DOUX = 0.18
 
 
 def bandpass(sig, lo, hi):
@@ -153,7 +157,11 @@ def coups(x, start, bars, bar):
             pre, post = b[max(0, c - win):c], b[c:c + win]
             rise.append(max(0.0, float(np.sqrt((post ** 2).mean()) - np.sqrt((pre ** 2).mean() if len(pre) else 0.0))))
         top = max(rise) or 1.0
-        out[name] = [[j for j in range(16) if rise[m * 16 + j] / top > COUPS_SEUIL] for m in range(bars)]
+        seuil = COUPS_SEUIL_HAT if name == "charleston" else COUPS_SEUIL
+        out[name] = [[j for j in range(16) if rise[m * 16 + j] / top > seuil] for m in range(bars)]
+        if name == "caisse":
+            out["caisse_douce"] = [[j for j in range(16) if COUPS_SEUIL_DOUX < rise[m * 16 + j] / top <= COUPS_SEUIL]
+                                   for m in range(bars)]
     return out
 
 
