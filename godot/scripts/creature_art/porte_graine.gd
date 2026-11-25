@@ -290,42 +290,18 @@ static func _face(ci: CanvasItem, xf: Transform2D, c: Vector2, rx: float, ry: fl
 	var sS: float = s["seve"]
 	var sT: float = s["racine"]
 	var sV: float = s["vent"]
-	var gaze := Vector2.from_angle(clampf(la, -1.0, 1.0)) * 1.2
+	var gaze := Vector2.from_angle(clampf(la, -1.0, 1.0)) * 1.0
 	var e1 := c + Vector2(rx * 0.38, -ry * 0.2)
-	var e2 := c + Vector2(rx * 0.82, -ry * 0.22)
-	var size := 1.0 + 0.35 * sV - 0.3 * sT - 0.1 * sR
+	var e2 := c + Vector2(rx * 0.8, -ry * 0.22)
 	var closed := hit > 0.3 or (cast == 0.0 and Ink.blink(t, 0.7) > 0.0)
-	var serene := sS > 0.45 and sS >= maxf(sR, maxf(sT, sV)) and cast < 0.3
-	if closed or serene:
-		# Yeux fermés (coup) ou mi-clos, sereins (Sève) : deux arcs.
+	if closed:
 		for q: Vector2 in [e1, e2]:
 			var wv := 4.4 if q == e1 else 3.0
-			var arc := PackedVector2Array([q + Vector2(-wv, 0), q + Vector2(0, 1.8 if serene and not closed else -0.6), q + Vector2(wv, 0)])
-			Ink.brush(ci, xf, arc, 1.8, Ink.encre(), 0.3, 0.3)
+			Ink.brush(ci, xf, PackedVector2Array([q + Vector2(-wv, 0), q + Vector2(0, -0.6), q + Vector2(wv, 0)]), 1.8, Ink.encre(), 0.3, 0.3)
 	else:
-		for q: Vector2 in [e1, e2]:
-			var far := q == e2
-			var ew := (4.2 if not far else 2.8) * size
-			var eh := (5.0 if not far else 4.4) * size * (1.0 - 0.35 * sR)
-			Ink.flat(ci, xf, Ink.oval(q, ew, eh, 18), Color("fbf6e8"), 1.0)
-			if Ink.mono:
-				continue
-			ci.draw_circle(xf * (q + gaze + Vector2(ew * 0.2, 0.3)), eh * 0.62 * u, Ink.shade(Art.ec("seve").lerp(Art.ec("seve", "sombre"), 0.3 * sT)))
-			if sR > 0.3:
-				# Pupille en fente.
-				Ink.flat(ci, xf, Ink.leaf(q + gaze + Vector2(ew * 0.25, -eh * 0.5), PI * 0.5, eh, 1.6), Ink.encre())
-			else:
-				ci.draw_circle(xf * (q + gaze + Vector2(ew * 0.25, 0.4)), eh * 0.36 * u, Ink.encre())
-			ci.draw_circle(xf * (q + gaze + Vector2(-ew * 0.15, -eh * 0.35)), eh * 0.22 * u, Color.WHITE)
-			if sV > 0.3:
-				ci.draw_circle(xf * (q + gaze + Vector2(ew * 0.35, eh * 0.25)), eh * 0.12 * u, Color.WHITE)
-	# Sourcils : froncés (Ronce), arcade d'écorce (Racine).
-	if sR > 0.1:
-		for q: Vector2 in [e1, e2]:
-			var wv := 5.0 if q == e1 else 3.4
-			Ink.brush(ci, xf, PackedVector2Array([q + Vector2(-wv, -6.5 - 1.5 * sR), q + Vector2(wv * 0.9, -4.2)]), 1.4 + 1.4 * sR, Ink.encre(), 0.5, 0.2)
-	if sT > 0.1:
-		Ink.part(ci, xf, PackedVector2Array([e1 + Vector2(-7, -5), e2 + Vector2(5, -6.5), e2 + Vector2(4, -3.5), e1 + Vector2(-6, -2.5)]), {"clair": Art.ec("racine"), "ombre": Art.ec("racine", "sombre")}, 1.1 * sT, 1.0, 0.0)
+		# Yeux en amande, iris vert sève, paupière supérieure appuyée (comme la planche v2), sans sourcils.
+		_eye(ci, xf, e1 + gaze, 4.6, 3.4, -0.12, u, s)
+		_eye(ci, xf, e2 + gaze, 2.9, 3.0, -0.2, u, s)
 	# Bouche : sourire (début, Sève, Vent), crocs (Ronce), trait têtu (Racine).
 	var m := c + Vector2(rx * 0.62, ry * 0.18)
 	if sR > 0.3:
@@ -352,6 +328,18 @@ static func _face(ci: CanvasItem, xf: Transform2D, c: Vector2, rx: float, ry: fl
 		Ink.brush(ci, xf, PackedVector2Array([m + Vector2(-3, -0.5), m + Vector2(0, 1.6 + sV), m + Vector2(3, -0.5)]), 1.3, Ink.encre())
 	if not Ink.mono:
 		ci.draw_circle(xf * (e1 + Vector2(-3, 7)), 2.6 * u, Color(Art.ec("saignement", "clair"), 0.18))
+
+
+static func _eye(ci: CanvasItem, xf: Transform2D, c: Vector2, w: float, hgt: float, tilt: float, u: float, s: Dictionary) -> void:
+	var lid := Ink.leaf(c - Vector2(w, 0).rotated(tilt), tilt, w * 2.0, hgt * 1.6, 0.0)
+	Ink.flat(ci, xf, lid, Color("fbf6e8"), 1.0)
+	if Ink.mono:
+		return
+	var iris := Art.ec("seve").lerp(Art.ec("saignement", "clair"), 0.5 * s["ronce"])
+	ci.draw_circle(xf * (c + Vector2(w * 0.25, 0.2)), hgt * 0.62 * u, Ink.shade(iris))
+	ci.draw_circle(xf * (c + Vector2(w * 0.32, 0.3)), hgt * 0.34 * u, Ink.encre())
+	ci.draw_circle(xf * (c + Vector2(w * 0.1, -0.8)), hgt * 0.2 * u, Color.WHITE)
+	Ink.brush(ci, xf, PackedVector2Array([c - Vector2(w * 1.05, -0.2), c + Vector2(0, -hgt * 0.75), c + Vector2(w * 1.05, -0.6)]), 1.5, Ink.encre(), 1.0, 0.2)
 
 
 ## Sommet de la tête : la pousse du début, transformée par les branches.
