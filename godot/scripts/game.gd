@@ -69,6 +69,12 @@ var test_skills: Dictionary = {}
 var test_attack: Array = []
 
 
+## Vrai dans la démo : preset d'export avec la fonctionnalité « demo » (tools/export.sh démo-*),
+## ou « -- --demo » pour la tester depuis l'éditeur et dans les tests. Seul accès à connaître.
+func is_demo() -> bool:
+	return OS.has_feature("demo") or "--demo" in OS.get_cmdline_user_args()
+
+
 func _ready() -> void:
 	# Police du jeu pour tous les textes, même ceux dessinés sans thème (voir ui_theme.gd).
 	UiTheme.install()
