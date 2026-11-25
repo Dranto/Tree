@@ -165,10 +165,17 @@ func _run() -> void:
 	check(await _until(func(): return not boss.music_waiting(), 900), "l'invocation dure l'intro")
 	check(await _until(func(): return boss.attack != "" and boss.stage == "annonce"), "une attaque est annoncée avant de frapper")
 	var seen := {}
+	# Au rythme du morceau : chaque frappe tombe sur un temps (boss_base.gd › beat_target).
+	var strikes: Array = []
+	var was: String = boss.stage
 	for i in 600:
 		if boss.attack != "":
 			seen[boss.attack] = true
+		if boss.stage == "frappe" and was == "annonce":
+			strikes.append(fposmod(boss.beats_now() + 0.5, 1.0) - 0.5)
+		was = boss.stage
 		await physics_frame
+	check(strikes.size() >= 2 and strikes.all(func(x): return absf(x) < 0.08), "les frappes tombent sur les temps du morceau (%s)" % [strikes.map(func(x): return snappedf(x, 0.01))])
 	check(seen.has("epines") and seen.has("spores"), "phase 1 : épines et spores (%s)" % ", ".join(seen.keys()))
 	var hp_before: float = boss.hp
 	boss.take_damage(boss.max_hp * 0.4, false)
@@ -234,7 +241,8 @@ func _run() -> void:
 	check(objectives.is_done("finale") and objectives.epilogue_due(), "objectif accompli, l'épilogue est dû")
 	var ending = q.world_ending
 	check(not ending.active, "la fin attend que le creux refleurisse")
-	check(await _until(func(): return ending.active, int(q.EPILOGUE_DELAY * 60.0) + 60), "puis la fin se joue dans le monde")
+	# Le dernier coup (moments.gd › _final_blow) ralentit le jeu à 5 % pendant 3,4 s réelles.
+	check(await _until(func(): return ending.active, int(q.EPILOGUE_DELAY * 60.0) + 60 + 260), "puis la fin se joue dans le monde")
 	check(not paused and game.flags.get("fin_aventure_vue", false), "sans pause ni écran : fin de l'aventure notée")
 	check(not finale.holds(main.player.position), "le joueur est remonté au pied de la graine")
 	var names: Array = []

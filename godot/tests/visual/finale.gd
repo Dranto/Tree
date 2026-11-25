@@ -148,6 +148,8 @@ func run(runner) -> void:
 	# Sa mort, à mi-chemin : les bras retombent en cendre, la sève jaillit des fentes.
 	boss._clear_attacks()
 	boss.take_damage(boss.max_hp * 2.0, false)
+	# La pose de la mort seule : sans le dernier coup (impact frame tenue, ralenti, distorsion).
+	main.moments.stop_all()
 	boss.dying = boss.death_time * 0.5
 	main.fx.rings = []
 	boss.redraw()

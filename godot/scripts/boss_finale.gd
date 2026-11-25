@@ -103,6 +103,13 @@ var rays: Array = []
 var roots: Array = []
 ## Rejetons annoncés (positions).
 var buds: Array = []
+## Marqué « boss final » : son dernier coup est le plus grand moment du jeu (moments.gd › _final_blow).
+var grand_finale := true
+## Temps du morceau où tombe la frappe annoncée, et où commence l'attaque suivante ; -1 : sans grille.
+var _strike_beat := -1.0
+var _begin_beat := -1.0
+## Attaques qui tombent sur un temps fort (le premier ou le troisième temps de la mesure).
+const HEAVY := ["siphon", "rafale", "tempete", "lumiere", "aurore", "floraison"]
 ## Éclair de la dernière frappe (rafale, lumière), de 0 à FLASH ; -1 : aucun.
 var strike_flash := -1.0
 var flash_kind := ""
@@ -164,13 +171,20 @@ func _fight_step(delta: float) -> void:
 		if wanted > phase:
 			_enter_phase(wanted)
 			return
-		gap -= delta * cad
+		if _begin_beat >= 0.0 and on_music_grid():
+			gap = (_begin_beat - beats_now()) * beat_len()
+		else:
+			gap -= delta * cad
 		if gap <= 0.0:
+			_begin_beat = -1.0
 			var order: Array = PHASES[phase]["order"]
 			_begin(order[cycle % order.size()])
 			cycle += 1
 	elif stage == "annonce":
-		timer -= delta * cad
+		if _strike_beat >= 0.0 and on_music_grid():
+			timer = (_strike_beat - beats_now()) * beat_len()
+		else:
+			timer -= delta * cad
 		_announce_step()
 		if timer <= 0.0:
 			_strike()
@@ -259,7 +273,7 @@ func _begin(kind: String) -> void:
 						var at: Vector2 = anchor + dir * (DAWN["first"] + DAWN["spacing"] * i)
 						if at.distance_to(arena.center) > arena.radius - ROOTS["radius"] * 0.5:
 							break
-						roots.append({"pos": at, "fuse": LIGHT["annonce"] + DAWN["delay"] + ROOTS["step"] * i, "burst": -1.0})
+						roots.append({"pos": at, "fuse": LIGHT["annonce"] + DAWN["delay"] + ROOTS["step"] * i, "burst": -1.0, "i": i})
 		"racines":
 			_set_timer(ROOTS["annonce"])
 			roots = []
@@ -267,7 +281,7 @@ func _begin(kind: String) -> void:
 				var at: Vector2 = anchor + aim * (ROOTS["first"] + ROOTS["spacing"] * i)
 				if at.distance_to(arena.center) > arena.radius - ROOTS["radius"] * 0.5:
 					break
-				roots.append({"pos": at, "fuse": ROOTS["annonce"] + ROOTS["step"] * i, "burst": -1.0})
+				roots.append({"pos": at, "fuse": ROOTS["annonce"] + ROOTS["step"] * i, "burst": -1.0, "i": i})
 		"rejetons":
 			_set_timer(SPROUTS["annonce"])
 			buds = []
@@ -275,6 +289,25 @@ func _begin(kind: String) -> void:
 			for i in n:
 				var a := aim.angle() + PI + (i - (n - 1) / 2.0) * 0.8
 				buds.append(_in_arena(anchor + Vector2.from_angle(a) * 180.0, 60.0))
+	_sync_announce()
+
+
+## L'annonce qui vient d'être posée tombe sur la grille du morceau : la frappe sur un temps (un temps
+## fort pour les grosses attaques), les racines en doubles croches derrière elle.
+func _sync_announce() -> void:
+	_strike_beat = -1.0
+	if not on_music_grid():
+		return
+	_strike_beat = beat_target(timer, 2.0 if attack in HEAVY else 1.0)
+	var synced := (_strike_beat - beats_now()) * beat_len()
+	timer = synced
+	stage_time = synced
+	if attack == "racines" or attack == "aurore":
+		var step := beat_step(ROOTS["step"])
+		var lead := beat_step(DAWN["delay"]) if attack == "aurore" else 0.0
+		for r in roots:
+			r["fuse"] = synced + lead + step * int(r.get("i", 0))
+			r["total"] = r["fuse"]
 
 
 func _set_timer(v: float) -> void:
@@ -308,6 +341,7 @@ func _announce_step() -> void:
 
 func _strike() -> void:
 	stage = "frappe"
+	_strike_beat = -1.0
 	var p = main.player
 	match attack:
 		"epines":
@@ -367,7 +401,7 @@ func _strike_step(delta: float) -> void:
 		"epines", "tempete":
 			volley_timer -= delta
 			if volleys_left > 0 and volley_timer <= 0.0:
-				volley_timer = THORNS["between"]
+				volley_timer = beat_step(THORNS["between"]) if on_music_grid() else THORNS["between"]
 				var storm := attack == "tempete"
 				var speed: float = THORNS["speed"] * (STORM["thorn_speed"] if storm else 1.0)
 				for dir in thorn_dirs(volleys_left % 2 == 0, STORM["spread"] if storm else 1.0):
@@ -412,6 +446,7 @@ func _end_attack() -> void:
 	attack = ""
 	stage = ""
 	gap = PHASES[phase]["gap"]
+	_begin_beat = beat_target(gap, 1.0) if on_music_grid() else -1.0
 
 
 func _update_thorns(delta: float) -> void:
@@ -1395,7 +1430,7 @@ func draw_marks(c: CanvasItem) -> void:
 	for r in roots:
 		var forme := {"type": "cercle", "centre": r["pos"], "rayon": ROOTS["radius"]}
 		if r["burst"] < 0.0:
-			var total: float = ROOTS["annonce"] + ROOTS["step"] * roots.find(r)
+			var total: float = r.get("total", ROOTS["annonce"] + ROOTS["step"] * roots.find(r))
 			Art.telegraph(c, forme, clampf(1.0 - float(r["fuse"]) / maxf(total, 0.01), 0.0, 1.0), -1.0, t)
 		else:
 			var f: float = r["burst"] / FLASH

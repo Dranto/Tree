@@ -220,6 +220,14 @@
 		"boss_kill": 1.6,
 		"boss_kill_speed": 0.25
 	},
+	"final_blow": {
+		"_doc": "Dernier coup du boss final (moments.gd › _final_blow, final_blow.gd) : chaque variante de l'impact frame tient « hold » s réelles (papier puis encre), ralenti à « speed » pendant « slowmo » s réelles, zoom et cadrage ; l'écran entier se distord (aspiration, onde de choc, torsion, aberration chromatique) pendant 3 s réelles.",
+		"hold": 0.42,
+		"slowmo": 3.4,
+		"speed": 0.05,
+		"zoom_time": 2.6,
+		"focus": 3.2
+	},
 	"boss": {
 		"_doc": "Moments signatures des boss (boss_eclat.gd) : arrivée, phases, mort. Purement visuel ; l'entrée en scène garde sa durée (BossBase.intro_time) et rien ne change dans le combat. Durées en secondes de jeu (suivent le ralenti). « Réduire les effets » divise les quantités par trois.",
 		"max_particles": 150,

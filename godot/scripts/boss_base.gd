@@ -352,6 +352,49 @@ func _music_resume() -> void:
 		main.fx.mote(anchor + Vector2.from_angle(a) * radius * 0.6, v, _charge_rng.randf_range(0.5, 0.9), _charge_rng.randf_range(3.0, 6.0), Color(col if i % 2 == 0 else Color(1.0, 0.95, 0.85), 0.95))
 
 
+# --- Combat au rythme du morceau ---
+# Quand le morceau joue et que le combat est lancé (hors attentes), les attaques peuvent tomber sur
+# ses temps : l'annonce s'allonge ou se raccourcit un peu pour que la frappe tombe sur un temps (ou
+# un demi-temps de mesure pour les grosses), et les rafales suivent les subdivisions. La grille est
+# celle de boss_sync.gd (horloge audio, ou temps du jeu sans son) : mêmes règles dans les tests.
+
+## Vrai quand les attaques suivent la grille du morceau.
+func on_music_grid() -> bool:
+	return sync != null and sync.running and sync.stage == "" and cadence() >= 0.999
+
+
+## Durée d'un temps (s).
+func beat_len() -> float:
+	return sync.bar / float(sync.beats) if sync != null else 0.5
+
+
+## Temps écoulés depuis le début du morceau (fractionnaire).
+func beats_now() -> float:
+	return sync.bars_now() * sync.beats if sync != null else 0.0
+
+
+## Temps (compté depuis le début du morceau) où doit tomber ce qui arriverait dans « delay » s : la
+## marque de la grille (tous les « grid » temps) la plus proche, jamais avant min_k × delay.
+func beat_target(delay: float, grid := 1.0, min_k := 0.75) -> float:
+	var bl := beat_len()
+	var now := beats_now()
+	var want := now + delay / bl
+	var g: float = round(want / grid) * grid
+	while g < now + delay * min_k / bl - 0.0001:
+		g += grid
+	return g
+
+
+## Intervalle ramené à la subdivision du temps la plus proche (double croche à deux temps).
+func beat_step(interval: float) -> float:
+	var bl := beat_len()
+	var best := bl
+	for sub in [0.25, 0.5, 1.0, 2.0]:
+		if absf(bl * sub - interval) < absf(best - interval):
+			best = bl * sub
+	return best
+
+
 ## Vrai tant que le boss attend la musique (arrivée, transformation) : invulnérable.
 func music_waiting() -> bool:
 	return sync != null and sync.waiting()

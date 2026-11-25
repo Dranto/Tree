@@ -7873,7 +7873,7 @@ msgstr ""
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr ""
 
-#. scripts/boss_base.gd:454
+#. scripts/boss_base.gd:497
 msgid "Entravée"
 msgstr ""
 
