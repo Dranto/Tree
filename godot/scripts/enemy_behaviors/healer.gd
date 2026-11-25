@@ -59,7 +59,7 @@ func draw_attack(e, k: float, hit: float) -> void:
 	var col := Art.ec("seve", "clair")
 	if e.state == "windup":
 		# Un soin, pas un coup : un cercle vert qui se resserre, jamais le rouge des annonces.
-		e.draw_arc(Vector2.ZERO, r, 0.0, TAU, 48, Color(col, 0.2 + 0.4 * k), Art.TRAIT, true)
-		e.draw_arc(Vector2.ZERO, r * (1.0 - 0.7 * k), 0.0, TAU, 40, Color(col, 0.6 * k), Art.TRAIT_FIN, true)
+		e.gc.draw_arc(Vector2.ZERO, r, 0.0, TAU, 48, Color(col, 0.2 + 0.4 * k), Art.TRAIT, true)
+		e.gc.draw_arc(Vector2.ZERO, r * (1.0 - 0.7 * k), 0.0, TAU, 40, Color(col, 0.6 * k), Art.TRAIT_FIN, true)
 	elif hit >= 0.0:
-		e.draw_arc(Vector2.ZERO, r * hit, 0.0, TAU, 48, Color(col, 0.7 * (1.0 - hit)), Art.TRAIT, true)
+		e.gc.draw_arc(Vector2.ZERO, r * hit, 0.0, TAU, 48, Color(col, 0.7 * (1.0 - hit)), Art.TRAIT, true)

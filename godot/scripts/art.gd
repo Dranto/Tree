@@ -487,7 +487,7 @@ static func telegraph(ci: CanvasItem, forme: Dictionary, progression: float, fra
 	var p := clampf(progression, 0.0, 1.0)
 	var full := telegraph_polygon(forme, 1.0)
 	ci.draw_colored_polygon(full, Color(danger, 0.10))
-	if p > 0.0:
+	if p > 0.01:
 		ci.draw_colored_polygon(telegraph_polygon(forme, p), c("danger_annonce"))
 	if motifs:
 		hatch(ci, telegraph_polygon(forme, 1.0), Color(danger, 0.35 + 0.4 * p))
