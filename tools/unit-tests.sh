@@ -61,6 +61,7 @@ TESTS=(
   "vallee|--headless --fixed-fps 60|"
   "vent|--headless --fixed-fps 60|"
   "world_edge|--headless|"
+  "world_fx|--headless --fixed-fps 60|"
   "world|--headless --fixed-fps 60|"
 )
 

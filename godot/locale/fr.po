@@ -8163,17 +8163,17 @@ msgstr ""
 "%s\n"
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 
-#. scripts/main.gd:1086
+#. scripts/main.gd:1097
 msgid "%s vaincu"
 msgstr "%s vaincu"
 
-#. scripts/main.gd:333
+#. scripts/main.gd:343
 #. scripts/save_game.gd:136
 #. scripts/save_game.gd:188
 msgid "aucune sauvegarde"
 msgstr "aucune sauvegarde"
 
-#. scripts/main.gd:334
+#. scripts/main.gd:344
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr "Sauvegarde illisible (%s) : nouvelle partie."
 

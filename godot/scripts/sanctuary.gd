@@ -148,6 +148,9 @@ func light() -> void:
 	main.fx.ring(position, 12.0, RADIUS * 2.4, 0.8, Color(Art.ec("seve"), 0.9), 5.0)
 	main.fx.pickup(position, "seve", 14, main.player.position)
 	main.screen_fx.glow(Art.ec("seve"), 0.3, 1.0)
+	# Colonne de lumière qui s'élève puis retombe en pluie de lueurs (world_fx.gd).
+	if main.get("world_fx") != null:
+		main.world_fx.sanctuary_lit(position)
 	main.revive(position, LIFE_RADIUS, Art.ec("seve"))
 	rest(true)
 
