@@ -8134,11 +8134,11 @@ msgstr "Demande la compétence « %s »."
 msgid "Incompatible avec « %s »."
 msgstr "Incompatible avec « %s »."
 
-#. scripts/heart.gd:277
+#. scripts/heart.gd:282
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
 msgstr "Reviens dans la zone : la flétrissure regagne du terrain"
 
-#. scripts/heart.gd:277
+#. scripts/heart.gd:282
 msgid "Tiens la zone : %d s"
 msgstr "Tiens la zone : %d s"
 
