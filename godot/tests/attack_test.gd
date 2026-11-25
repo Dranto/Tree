@@ -387,18 +387,26 @@ func _test_mods() -> void:
 
 	# Saignement, poison, enracinement au coup.
 	_with([{"attack_mod": "saignement", "value": 0.5}, {"attack_mod": "poison", "value": 0.5}, {"attack_mod": "enracine", "value": 1.0}])
-	var rooted := 0
 	var e = _spawn(Vector2(60, 0))
-	# Tirage fixé : la chance (60 %) ne doit pas faire échouer le test une fois de temps en temps en CI.
-	main.rng.seed = 20261125
 	for i in 12:
 		AttackScript.fire(p, e)
-		await _frames(8)
-		if e.root_time > 0.0:
-			rooted += 1
+		await _frames(6)
 	check(e.bleed_stacks.size() > 0, "saignement au coup")
 	check(e.poison_time > 0.0, "poison au coup")
-	check(rooted > 0, "enracinement (au moins une fois sur 12)")
+	# Enracinement : testé sans projectile ni hasard du tir (avant : 12 tirs à 60 %, instable quand les
+	# projectiles s'accumulaient sans toucher). Chance 1 : toujours ; chance plafonnée du jeu (60 %)
+	# avec un tirage à graine fixe : ni jamais, ni toujours.
+	e.root_time = 0.0
+	AttackScript.apply_on_hit(main, {"enracine": 1.0}, e, 1.0, e.position)
+	check(e.root_time > 0.0, "enracinement : chance 1, l'ennemi est retenu")
+	main.rng.seed = 12345
+	var rooted := 0
+	for i in 40:
+		e.root_time = 0.0
+		AttackScript.apply_on_hit(main, {"enracine": 0.6}, e, 1.0, e.position)
+		if e.root_time > 0.0:
+			rooted += 1
+	check(rooted > 8 and rooted < 40, "enracinement : environ 60 %% des coups (%d sur 40)" % rooted)
 	_clear()
 
 	# Éclat : l'ennemi tué éclate en épines.
