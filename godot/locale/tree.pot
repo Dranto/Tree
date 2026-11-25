@@ -5996,6 +5996,7 @@ msgid "frais"
 msgstr ""
 
 #. data/branches/vent.json › vent › notable › names
+#. scripts/hud.gd:305
 msgid "libre"
 msgstr ""
 
@@ -8782,6 +8783,10 @@ msgstr ""
 msgid "Renommer"
 msgstr ""
 
+#. scripts/tree_builds.gd:142
+msgid "actif"
+msgstr ""
+
 #. scripts/tree_builds.gd:147
 msgid "Charger"
 msgstr ""
@@ -9032,6 +9037,10 @@ msgstr ""
 
 #. scripts/tree_panels.gd:476
 msgid "Chemin de %d nœuds : il te manque %d point(s)"
+msgstr ""
+
+#. scripts/tree_panels.gd:552
+msgid "aucun"
 msgstr ""
 
 #. scripts/tree_panels.gd:556
