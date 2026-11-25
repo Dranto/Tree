@@ -6,6 +6,7 @@
 extends Node
 
 const Synth = preload("res://scripts/synth.gd")
+const Regions = preload("res://scripts/regions.gd")
 
 const BUS := "Effets" # i18n: non (bus audio)
 const POOL := 16
@@ -105,10 +106,25 @@ func has_sound(name: String) -> bool:
 	return streams.has(name)
 
 
+## Nom du son à jouer : sa version régionale « <nom>@<région> » s'il en a une (synth.gd), pour la région
+## de la position (ou, sans position, la région où joue la musique), sinon le son commun.
+func regional(name: String, pos := Vector2.INF) -> String:
+	var reg := Regions.region_at(pos) if pos != Vector2.INF else _music_region()
+	var key := name + "@" + reg
+	return key if reg != "" and streams.has(key) else name
+
+
+func _music_region() -> String:
+	var music = get_node_or_null("/root/Music")
+	return str(music.region) if music != null else ""
+
+
 ## pitch : hauteur de base (1 = normale), pour caler un son sur l'action (ex. enchaînement de ramassages).
+## Un son qui a des versions régionales (impact@spore…) prend celle de la région où il se produit.
 func play(name: String, pos := Vector2.INF, pitch := 1.0) -> void:
 	if not enabled or not streams.has(name):
 		return
+	name = regional(name, pos)
 	var now := Time.get_ticks_msec()
 	var list: Array = recent.get(name, [])
 	list = list.filter(func(t): return now - t < WINDOW_MSEC)
