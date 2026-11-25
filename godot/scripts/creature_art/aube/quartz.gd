@@ -15,6 +15,8 @@ const HEIGHT := 66.0
 ## La sorte dessine elle-même sa parure d'élite (collier de prismes, liseré d'or).
 const DRAWS_ELITE := true
 const NECK := Vector2(40, -30)
+## La tête ne suit presque pas la cible : un seul regard cuit (atlas deux fois plus léger).
+const LOOKS := false
 
 ## Aiguilles de la géode : [x du pied, y du pied, demi-largeur, longueur, inclinaison], du fond vers l'avant.
 const NEEDLES := [

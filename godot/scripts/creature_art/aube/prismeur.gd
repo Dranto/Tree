@@ -10,8 +10,8 @@ extends RefCounted
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const V = preload("res://scripts/creature_art/aube/verre.gd")
 
-## 100 unités en px du jeu (1600×900) : ~50 px de haut à l'écran en 1080p.
-const HEIGHT := 42.0
+## 100 unités en px du jeu (1600×900) : ~56 px de haut à l'écran en 1080p.
+const HEIGHT := 47.0
 ## La sorte dessine elle-même sa parure d'élite (collier de prismes, liseré d'or).
 const DRAWS_ELITE := true
 const NECK := Vector2(0, -40)

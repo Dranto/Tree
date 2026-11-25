@@ -196,8 +196,9 @@ const BESTIAIRE := {
 	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
 	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
 	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
-	# Aube : verre fumé mauve des falaises (corps), verre clair (ailes, aiguilles), lumière d'or sale (detail).
-	"aube": {"clair": Color("9d86b8"), "ombre": Color("47375f"), "reflet": Color("ece2ff"), "detail": Color("e6c25a"),
+	# Aube : verre pâle et mauve des falaises (corps, clair pour trancher sur le calcaire et se distinguer
+	# de Vent et de Racine même pour un daltonien), verre clair (ailes, aiguilles), lumière d'or sale (detail).
+	"aube": {"clair": Color("e2d8f4"), "ombre": Color("7c6c9c"), "reflet": Color("fcf9ff"), "detail": Color("e6c25a"),
 		"verre": Color("bfe0ea"), "verre_ombre": Color("587886"), "lueur": Color("fff2c4")},
 }
 ## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
