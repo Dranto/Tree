@@ -38,6 +38,7 @@ TESTS=(
   "i18n|--headless --fixed-fps 60|"
   "grafts|--headless --fixed-fps 60|"
   "marais|--headless --fixed-fps 60|"
+  "moments|--headless|"
   "move|--xvfb --fixed-fps 60 --audio-driver Dummy|"
   "node_types|--headless|"
   "pad|--xvfb --fixed-fps 60 --audio-driver Dummy|"

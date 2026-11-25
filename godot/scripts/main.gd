@@ -11,6 +11,7 @@ const WorldEdge = preload("res://scripts/world_edge.gd")
 const Flora = preload("res://scripts/flora.gd")
 const Fx = preload("res://scripts/fx.gd")
 const ScreenFx = preload("res://scripts/screen_fx.gd")
+const Moments = preload("res://scripts/moments.gd")
 const Ambience = preload("res://scripts/ambience.gd")
 const Player = preload("res://scripts/player.gd")
 const MoveMarker = preload("res://scripts/move_marker.gd")
@@ -53,6 +54,8 @@ var world_edge
 var flora
 var fx
 var screen_fx
+## Moments forts : impact frames, caméra, ralenti (moments.gd).
+var moments
 ## Signatures visuelles des attaques du héros (skill_fx.gd).
 var skill_fx: SkillFx
 ## Attaque de base : signatures (fouet, fourche, ricochet…) et zones au sol (ronces vives, traînée),
@@ -220,6 +223,9 @@ func _ready() -> void:
 	fx = Fx.new()
 	fx.main = self
 	add_child(fx)
+	moments = Moments.new()
+	moments.main = self
+	add_child(moments)
 	var ambience = Ambience.new()
 	ambience.main = self
 	add_child(ambience)
