@@ -156,6 +156,12 @@ func active() -> bool:
 
 
 ## Éveil du boss : intro puis boucle_1. Faux (et rien ne change) si le boss n'a pas de morceau.
+## Le morceau monte en douceur depuis le silence (s), pendant que la musique du monde s'efface
+## (music.gd › HAND_FADE) : pas de rupture à l'entrée du combat.
+const FADE_IN := 2.5
+var _in_t := -1.0
+
+
 func begin(id: String, clip := "intro") -> bool:
 	var data := track_data(id, dir)
 	if data.is_empty():
@@ -175,7 +181,8 @@ func begin(id: String, clip := "intro") -> bool:
 	clip_start = clip
 	stream.initial_clip = clip_names(data).find(clip)
 	player.stream = stream
-	player.volume_db = 0.0
+	_in_t = 0.0
+	player.volume_db = SILENT_DB
 	player.play()
 	# Le premier échantillon sort au prochain mélange, après la latence de sortie.
 	grid_t0 = audio_time() + AudioServer.get_time_to_next_mix() + AudioServer.get_output_latency()
@@ -227,6 +234,7 @@ func stop() -> void:
 	if player != null:
 		player.stop()
 	state = ""
+	_in_t = -1.0
 	boss_id = ""
 	grid_t0 = -1.0
 	_arena = null
@@ -305,6 +313,12 @@ func _process(_delta: float) -> void:
 		_arena = null
 		_following = false
 		lose()
+	if _in_t >= 0.0 and state != "fondu":
+		_in_t += dt
+		var k := clampf(_in_t / FADE_IN, 0.0, 1.0)
+		player.volume_db = maxf(SILENT_DB, linear_to_db(sin(k * PI / 2.0)))
+		if k >= 1.0:
+			_in_t = -1.0
 	if state == "fondu":
 		_fade_left -= dt
 		player.volume_db = maxf(SILENT_DB, linear_to_db(maxf(0.0, _fade_left / DEFEAT_FADE)))

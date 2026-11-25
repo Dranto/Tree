@@ -33,8 +33,9 @@ const COMBAT_OUT := 0.25
 const COMBAT_HOLD := 4.0
 const HEART_FADE := 0.6
 const BOSS_FADE := 0.8
-## Les couches du code s'effacent en une demi-seconde sous un morceau de boss fait à la main.
-const HAND_FADE := 2.0
+## Fondu croisé (s) entre la musique du monde (couches du code) et un morceau de boss fait à la main :
+## le monde s'efface pendant que le morceau monte (boss_track.gd › FADE_IN), sans rupture.
+const HAND_FADE := 3.0
 const DUCK_RECOVER := 0.7
 const SILENT_DB := -60.0
 ## L'ambiance sonore baisse pendant un combat de boss.
@@ -223,7 +224,7 @@ func _process(delta: float) -> void:
 	combat = move_toward(combat, combat_target, (COMBAT_IN if combat_target > combat else COMBAT_OUT) * delta)
 	heart = move_toward(heart, heart_target, HEART_FADE * delta)
 	boss = move_toward(boss, boss_target, BOSS_FADE * delta)
-	hand_k = move_toward(hand_k, 1.0 if hand_playing() else 0.0, HAND_FADE * delta)
+	hand_k = move_toward(hand_k, 1.0 if hand_playing() else 0.0, delta / HAND_FADE)
 	duck_gain = move_toward(duck_gain, 1.0, DUCK_RECOVER * delta)
 	for id in groups:
 		groups[id]["gain"] = move_toward(groups[id]["gain"], 1.0 if id == region else 0.0, REGION_FADE * delta)
