@@ -43,6 +43,7 @@ var _air_voile := Color(0.02, 0.03, 0.02, 0.4)
 var _air_bas := 0.0
 var _air_rays := 0.0
 var _life := 0.0
+var _air_ready := false
 var _life_timer := 0.0
 var _region := "ronce"
 ## Temps : intensité de chaque calque (0 à 1) et rafale en cours.
@@ -115,7 +116,7 @@ class Air extends Control:
 				PackedColorArray([luz, clear_l, Color(voile, bas), clear_v]))
 		if rays > 0.004:
 			# Rayons obliques depuis le haut à gauche (même direction que la lumière commune).
-			var d := -Art.LUMIERE_DIR * h * 1.25
+			var d := -Art.LUMIERE_DIR * h * 0.6
 			for i in 3:
 				var x := w * (0.04 + 0.2 * i)
 				var rw := 36.0 + 26.0 * (i % 2)
@@ -155,7 +156,9 @@ func _step_air(delta: float) -> void:
 		_region = Regions.region_at(main.player.position)
 		_life = main.ground.life_at(main.player.position)
 	var t := _air_target()
-	var k := 1.0 - exp(-delta * AIR_RATE)
+	# Au premier pas, l'air prend tout de suite sa teinte (pas de fondu depuis un air neutre à l'ouverture).
+	var k := 1.0 if not _air_ready else 1.0 - exp(-delta * AIR_RATE)
+	_air_ready = true
 	var before := [_air_luz, _air_voile, _air_bas, _air_rays]
 	_air_luz = _air_luz.lerp(t[0], k)
 	_air_voile = _air_voile.lerp(t[1], k)
@@ -351,7 +354,7 @@ func _draw_weather() -> void:
 			var x := front - 220.0 * fposmod(i * 0.7548776, 1.0)
 			pts.append(Vector2(x - 70.0, y + 4.0 * sin(_t * 3.0 + i)))
 			pts.append(Vector2(x, y))
-		draw_multiline(pts, Color(tint, 0.38 * env * _gust), 1.4)
+		draw_multiline(pts, Color(tint, 0.26 * env * _gust), 1.2)
 
 
 ## Pétale de Ronce : ovale rose qui tourne en tombant ; dans la lumière du haut à gauche, un bord clair.

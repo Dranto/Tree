@@ -89,8 +89,8 @@
       },
       "ambience": {
         "butterflies": 0,
-        "dead": {"shape": "streak", "color": "vent/sombre", "alpha": 0.45, "vel": [150.0, 10.0], "sway": [20.0, 6.0], "size": [1.0, 1.8], "length": 22.0, "alt": "feather", "alt_ratio": 0.16},
-        "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.7, "vel": [170.0, 8.0], "sway": [24.0, 8.0], "size": [1.0, 1.8], "length": 26.0, "alt": "feather", "alt_ratio": 0.16}
+        "dead": {"shape": "streak", "color": "vent/sombre", "alpha": 0.45, "vel": [150.0, 10.0], "sway": [20.0, 6.0], "size": [1.0, 1.8], "length": 22.0, "alt": "feather", "alt_ratio": 0.08},
+        "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.7, "vel": [170.0, 8.0], "sway": [24.0, 8.0], "size": [1.0, 1.8], "length": 26.0, "alt": "feather", "alt_ratio": 0.08}
       },
       "boss": {"eveil": "vent_boss_eveil", "phase": "vent_boss_phase", "mort": "vent_boss_mort"}
     },
