@@ -172,6 +172,7 @@ func _physics_process(delta: float) -> void:
 	if phase != _last_phase:
 		_last_phase = phase
 		_region_sound("phase")
+		_eclat("phase")
 		main.fx.boss_phase(position, radius)
 	_projectiles_step(delta)
 	minions = minions.filter(func(e): return is_instance_valid(e) and not e.dead and not e.is_queued_for_deletion())
@@ -344,8 +345,16 @@ func _die() -> void:
 		if is_instance_valid(e) and not e.dead:
 			e.take_damage(e.hp + 1.0, false)
 	main.on_enemy_killed(self)
+	_eclat("die")
 	main.fx.boss_kill(position, radius)
 	arena.boss_defeated()
+
+
+## Moment signature de l'arène (boss_eclat.gd : « phase », « die »), purement visuel.
+func _eclat(what: String) -> void:
+	var e = arena.get("eclat") if arena != null else null
+	if e != null:
+		e.call(what, self)
 
 
 ## Couleur d'une partie du corps : éclair du coup reçu, poison, puis cendre pendant la mort.

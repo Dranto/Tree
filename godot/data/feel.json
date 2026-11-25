@@ -198,5 +198,67 @@
 		"heart_speed": 0.35,
 		"boss_kill": 1.6,
 		"boss_kill_speed": 0.25
+	},
+	"boss": {
+		"_doc": "Moments signatures des boss (boss_eclat.gd) : arrivée, phases, mort. Purement visuel ; l'entrée en scène garde sa durée (BossBase.intro_time) et rien ne change dans le combat. Durées en secondes de jeu (suivent le ralenti). « Réduire les effets » divise les quantités par trois.",
+		"max_particles": 150,
+		"materials": {
+			"_doc": "Matière dessinée pour chaque région (mur, onde, décors de phase, mort).",
+			"defaut": "ronce",
+			"ronce": "ronce",
+			"spore": "spore",
+			"vent": "vent",
+			"seve": "seve",
+			"aube": "aube",
+			"racine": "racine",
+			"finale": "finale"
+		},
+		"arrival": {
+			"wall_spikes": 56,
+			"spike_size": 52,
+			"wall_wave": 0.8,
+			"spike_rise": 0.22,
+			"spike_hold": 0.25,
+			"spike_sink": 0.5,
+			"cracks": 7,
+			"crack_len": 3.4,
+			"crack_fade": 1.6,
+			"clods": 16,
+			"gap_dust": 8,
+			"shake": 0.3
+		},
+		"emerge": {
+			"_doc": "Le boss sort du sol pendant son entrée en scène : hauteur de départ, dépassement (ease_out_back) et teinte de départ.",
+			"squash": 0.25,
+			"overshoot": 1.6,
+			"dark": 0.3
+		},
+		"phase": {
+			"wave_time": 0.7,
+			"decor": 9,
+			"decor_scale": 1.6,
+			"max_decor": 40,
+			"particles": 10
+		},
+		"death": {
+			"vines": 9,
+			"vine_out": 0.35,
+			"vine_in": 1.4,
+			"petals": 18,
+			"puffs": 16,
+			"spores": 26,
+			"feathers": 30,
+			"drops": 26,
+			"sprout_chance": 0.5,
+			"shards": 28,
+			"motes": 10,
+			"stones": 20,
+			"dust": 8,
+			"rays": 10,
+			"light_motes": 24,
+			"ray_time": 1.8,
+			"decor_hold": 2.2,
+			"decor_fade": 2.0
+		}
 	}
 }
