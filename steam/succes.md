@@ -2,13 +2,13 @@
 
 Un succès par boss, débloqué à sa mort (et rattrapé au chargement d'une sauvegarde où il est déjà vaincu).
 À créer sur Steamworks › Statistiques et succès › Succès, avec ces **identifiants exacts** (API Name).
-Textes anglais provisoires : la tâche B (anglais) les alignera sur la liste de noms validée.
+Textes anglais alignés sur le glossaire validé par Antoine (`godot/locale/glossaire.md`, 25/11).
 Seul `BOSS_RONCE` existe dans la démo (la démo a son propre App ID et donc ses propres succès).
 
 | API Name | Nom (FR) | Description (FR) | Name (EN) | Description (EN) | Caché |
 | --- | --- | --- | --- | --- | --- |
-| `BOSS_RONCE` | La ronce apaisée | Vaincre la Mère-Ronce. | The Bramble Soothed | Defeat the Mother Bramble. | non |
-| `BOSS_SPORE` | Le marais respire | Vaincre l'Amanite-Mère. | The Marsh Breathes | Defeat the Mother Amanita. | non |
+| `BOSS_RONCE` | La ronce apaisée | Vaincre la Mère-Ronce. | The Bramble Soothed | Defeat the Bramble Mother. | non |
+| `BOSS_SPORE` | Le marais respire | Vaincre l'Amanite-Mère. | The Marsh Breathes | Defeat the Amanita Mother. | non |
 | `BOSS_VENT` | Les cendres retombent | Vaincre le Harfang de cendre. | The Ashes Settle | Defeat the Ash Owl. | non |
 | `BOSS_SEVE` | La sève remonte | Vaincre le Saule exsangue. | The Sap Rises | Defeat the Bloodless Willow. | non |
 | `BOSS_AUBE` | Le verre se brise | Vaincre la Phalène de verre. | The Glass Breaks | Defeat the Glass Moth. | non |

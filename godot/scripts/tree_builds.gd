@@ -139,7 +139,7 @@ func _row(i: int) -> Control:
 		_button(head, Loc.key("Renommer"), func(): ask_name(i))
 	if info["active"]:
 		var tag := Label.new()
-		tag.text = "actif"
+		tag.text = Loc.key("actif")
 		tag.add_theme_color_override("font_color", UiTheme.LEAF)
 		head.add_child(tag)
 	else:
