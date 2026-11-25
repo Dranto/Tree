@@ -127,7 +127,35 @@ func _run() -> void:
 	check(ronce_ash >= 0 and game.lock_reason(ronce_ash) != game.DEMO_LOCK, "nœud flétri de Ronce : libéré par la démo")
 	check(closed_border >= 0 and game.lock_reason(closed_border) == game.DEMO_LOCK, "frontière hybride sans Ronce fermée")
 	check(open_border >= 0 and not Demo.node_closed(game.tree.nodes[open_border]), "frontière hybride de Ronce ouverte")
-	check(spore_small >= 0 and not Demo.node_closed(game.tree.nodes[spore_small]), "les autres branches restent apprenables")
+	check(spore_small >= 0 and game.lock_reason(spore_small) == game.DEMO_LOCK, "les autres branches sont sous la ronce (ni lues ni apprises)")
+	var ronce_bi: int = game.tree.BRANCHES.map(func(b): return b["id"]).find("ronce")
+	var ronce_open: Array = game.tree.nodes.filter(func(n): return n["branch"] == ronce_bi and int(n["border"]) < 0 and str(n["requires_flag"]) == "")
+	check(not ronce_open.is_empty() and not ronce_open.any(func(n): return Demo.node_closed(n)), "toute la branche de Ronce se lit (%d nœuds)" % ronce_open.size())
+	check(not Demo.node_closed(game.tree.nodes[0]), "la graine reste ouverte")
+	var ui = main.tree_ui
+	ui.toggle()
+	await _frames(2)
+	var tip: Array = ui.tooltip_lines(game.tree.nodes[spore_small], "locked")
+	check(tip.size() == 1 and tip[0][0] == game.DEMO_LOCK, "infobulle d'un nœud de Spore : « %s » seulement" % game.DEMO_LOCK)
+	ui.zoom = 0.9
+	ui.cam = game.tree.nodes[spore_small]["pos"]
+	ui.queue_redraw()
+	await _frames(2)
+	var sname := str(game.tree.nodes[spore_small]["name"])
+	check(not ui.layout_labels().any(func(l): return str(l[1]) == sname), "pas de libellé sous la ronce")
+	check(ui.panels._preview_for(spore_small)["route"].is_empty(), "pas de chemin tracé vers un nœud sous la ronce")
+	var spore_far := -1
+	for n in game.tree.nodes:
+		if int(n["ring"]) >= 4 and n["branch"] == ronce_bi and int(n["border"]) < 0 and not Demo.node_closed(n):
+			spore_far = n["id"]
+			break
+	var r_path: Array = ui.panels.planner.route_to(spore_far)
+	check(not r_path.is_empty() and not r_path.any(func(i): return Demo.node_closed(game.tree.nodes[i])), "les chemins vers Ronce contournent la ronce")
+	ui.panels.set_query(str(game.tree.nodes[spore_small]["name"]))
+	check(not ui.panels.matches.has(spore_small), "la recherche ne trouve pas les nœuds sous la ronce")
+	ui.panels.set_query("")
+	ui.toggle()
+	await _frames(2)
 
 	print("Objectifs")
 	var ids: Array = obj.list().map(func(o): return o["id"])
@@ -181,7 +209,11 @@ func _run() -> void:
 	check(save.load_into(main, PATH), "chargement dans le jeu complet")
 	check(game.level == before["level"] and game.points == before["points"] and is_equal_approx(game.xp, before["xp"]), "niveau, points, expérience")
 	check(game.allocated_uids() == before["uids"], "nœuds appris (%d)" % before["uids"].size())
-	check(game.flags == before["flags"], "drapeaux (%d)" % before["flags"].size())
+	# Valeur par valeur : le JSON relit les nombres en flottants (1 → 1.0), égaux pour le jeu.
+	var same: bool = game.flags.size() == before["flags"].size()
+	for k in before["flags"]:
+		same = same and game.flags.has(k) and game.flags[k] == before["flags"][k]
+	check(same, "drapeaux (%d)" % before["flags"].size())
 	check(main.player.position.is_equal_approx(Regions.center("ronce")), "position")
 	check(obj.list().any(func(o): return o["id"] == "spore_sanctuaire") and not obj.list().any(func(o): return o["id"] == "demo_sceau"), "jeu complet : la suite (Spore) s'ouvre, plus de sceau")
 	check(obj.followed().get("region", "") == "spore", "le jeu complet reprend à la région suivante")

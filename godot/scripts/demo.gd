@@ -1,6 +1,6 @@
 ## Démo Steam (jalon 12 E) : la région de Ronce entière, ses trois Cœurs et son boss, sans limite
 ## de temps. Le reste du monde est là, mais fermé par une ronce épaisse (demo_wall.gd) ; l'arbre de
-## vie reste entier, seuls les nœuds que la démo ne peut pas ouvrir sont marqués (tree_ui.gd).
+## vie reste entier, mais seule la branche de Ronce se lit : le reste est sous la ronce (tree_ui.gd).
 ## Après la Mère-Ronce, la boucle continue (region_fanfare.gd) ; la brèche au pied de la graine
 ## reste scellée et pulse : la suite pousse dans le jeu complet.
 ##
@@ -218,22 +218,23 @@ static func _into_fan(p: Vector2, a0: float, a1: float, m: float) -> Vector2:
 
 # --- Arbre de vie ---
 
-## Vrai si le nœud est hors de portée de la démo : un nœud flétri que seule une région fermée libère,
-## ou un nœud de frontière hybride entre deux branches fermées. L'arbre reste entier : ces nœuds sont
-## marqués (tree_ui.gd) et ne s'apprennent pas.
+## Vrai si le nœud est hors de portée de la démo : tout nœud qui n'est pas de la branche d'une région
+## ouverte (ni d'une frontière qui la touche), et les nœuds flétris que seule une région fermée libère.
+## L'arbre reste entier, on voit qu'il existe, mais ces nœuds sont couverts de ronce et illisibles
+## (tree_ui.gd : ni libellé, ni effet dans l'infobulle, ni résultat de recherche), et ne s'apprennent pas.
 static func node_closed(n: Dictionary) -> bool:
-	if not active():
+	if not active() or str(n.get("type", "")) == "root":
 		return false
 	var flag := str(n.get("requires_flag", ""))
 	if flag != "":
 		var reg := flag.get_slice("_", 0)
 		if Regions.exists(reg) and not region_open(reg):
 			return true
+	var names: Array = Content.tree().get("branches", [])
+	var b := int(n.get("branch", -1))
 	var border := int(n.get("border", -1))
-	if border >= 0:
-		var names: Array = Content.tree().get("branches", [])
-		var b := int(n.get("branch", -1))
-		var b1 := str(names[b]) if b >= 0 and b < names.size() else ""
-		var b2 := str(names[border]) if border < names.size() else ""
-		return not branch_open(b1) and not branch_open(b2)
-	return false
+	var b1 := str(names[b]) if b >= 0 and b < names.size() else ""
+	var b2 := str(names[border]) if border >= 0 and border < names.size() else ""
+	if b1 == "" and b2 == "":
+		return false
+	return not (b1 != "" and branch_open(b1)) and not (b2 != "" and branch_open(b2))

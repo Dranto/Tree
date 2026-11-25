@@ -1853,6 +1853,9 @@ func _audit_texts() -> void:
 func tooltip_lines(n: Dictionary, st: String) -> Array:
 	var tree = Game.tree
 	var raw: Array = []
+	# Démo : un nœud hors démo existe, mais on ne lit pas ce qu'il fait.
+	if _demo_ids.has(n["id"]):
+		return [[Game.DEMO_LOCK, 15, LOCK_COLOR]]
 	var bname: String = SkillTree.BRANCHES[n["branch"]]["name"] if n["branch"] >= 0 else ""
 	raw.append([n["name"], 18, tree.node_color(n)])
 	var sub: String = KIND_LABEL[n["type"]]
@@ -1996,7 +1999,7 @@ func tooltip_rect(lines: Array) -> Rect2:
 func _draw_tooltip(c: CanvasItem, n: Dictionary, st: String) -> void:
 	var lines := tooltip_lines(n, st)
 	var rect := tooltip_rect(lines)
-	var col: Color = Game.tree.node_color(n)
+	var col: Color = THICKET_THORN if _demo_ids.has(n["id"]) else Game.tree.node_color(n)
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color(0.0553, 0.0517, 0.0434, 0.97)
 	box.border_color = Color(col, 0.45)
@@ -2011,13 +2014,19 @@ func _draw_tooltip(c: CanvasItem, n: Dictionary, st: String) -> void:
 	# Médaillon du nœud, comme dans l'arbre.
 	var bp := rect.position + Vector2(14 + TIP_BADGE * 0.4, 10 + TIP_BADGE * 0.45)
 	var br := TIP_BADGE * 0.36
-	match n["type"]:
-		"small":
-			TreeArt.pearl(c, bp, br * 0.7, st, col, 1.0, true)
-		"root":
-			TreeArt.seed_node(c, bp, br, col, 1.0, true)
-		_:
-			draw_node(c, n, bp, br, st, 1.0, LOD_CLOSE)
+	if _demo_ids.has(n["id"]):
+		# Démo : le médaillon est un nœud de ronce, rien ne dit ce qu'il cache.
+		c.draw_circle(bp, br * 0.85, THICKET_DARK)
+		_thorny_stem(c, bp - Vector2(br, br * 0.4), bp + Vector2(br, br * 0.4), 2.0, 1)
+		_thorny_stem(c, bp + Vector2(-br * 0.4, br), bp + Vector2(br * 0.4, -br), 2.0, 2)
+	else:
+		match n["type"]:
+			"small":
+				TreeArt.pearl(c, bp, br * 0.7, st, col, 1.0, true)
+			"root":
+				TreeArt.seed_node(c, bp, br, col, 1.0, true)
+			_:
+				draw_node(c, n, bp, br, st, 1.0, LOD_CLOSE)
 	var places := _tooltip_layout(lines)
 	for i in lines.size():
 		var l: Array = lines[i]
