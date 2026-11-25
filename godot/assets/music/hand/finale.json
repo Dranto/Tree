@@ -6,12 +6,6 @@
   "sections": {
     "intro": {
       "mesures": [
-        1,
-        16
-      ]
-    },
-    "intro_court": {
-      "mesures": [
         9,
         16
       ]
@@ -85,11 +79,11 @@
         "intro",
         "boucle_1"
       ],
-      "mesures": 32,
+      "mesures": 24,
       "boucle": true,
-      "echantillons": 1881600,
+      "echantillons": 1411200,
       "decalage_ech": 0,
-      "boucle_depuis": 16
+      "boucle_depuis": 8
     },
     "drop_1": {
       "fichier": "finale/drop_1.ogg",
@@ -114,18 +108,6 @@
       "echantillons": 2587200,
       "decalage_ech": 0,
       "boucle_depuis": 4
-    },
-    "intro_court": {
-      "fichier": "finale/intro_court.ogg",
-      "sections": [
-        "intro_court",
-        "boucle_1"
-      ],
-      "mesures": 24,
-      "boucle": true,
-      "echantillons": 1411200,
-      "decalage_ech": 0,
-      "boucle_depuis": 8
     },
     "fin": {
       "fichier": "finale/fin.ogg",

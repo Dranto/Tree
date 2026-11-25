@@ -79,8 +79,8 @@ func _check_finale_data() -> void:
 		return
 	check(is_equal_approx(float(d["bpm"]), 180.0) and int(d["bar_beats"]) == 4, "180 BPM, 4/4")
 	var names := BossTrack.clip_names(d)
-	check(names == ["intro", "drop_1", "drop_2", "intro_court", "fin"], "clips : %s" % [names])
-	check(d["sections"].keys() == ["intro", "intro_court", "boucle_1", "drop_1", "boucle_2", "drop_2", "boucle_3", "fin"],
+	check(names == ["intro", "drop_1", "drop_2", "fin"], "clips : %s" % [names])
+	check(d["sections"].keys() == ["intro", "boucle_1", "drop_1", "boucle_2", "drop_2", "boucle_3", "fin"],
 		"sections de la fiche : %s" % [d["sections"].keys()])
 	var bar_frames := RATE * BossTrack.bar_time(d)
 	for n in names:
@@ -103,8 +103,8 @@ func _check_finale_data() -> void:
 	check(s != null and s.clip_count == names.size(), "flux interactif construit (%d sections)" % names.size())
 	if s != null:
 		var ogg: AudioStreamOggVorbis = s.get_clip_stream(0)
-		check(ogg.loop and ogg.beat_count == 32 * 4 and is_equal_approx(ogg.bpm, 180.0)
-			and is_equal_approx(ogg.loop_offset, 16 * 4 / 3.0), "intro : 128 temps, boucle_1 boucle depuis la mesure 17")
+		check(ogg.loop and ogg.beat_count == 24 * 4 and is_equal_approx(ogg.bpm, 180.0)
+			and is_equal_approx(ogg.loop_offset, 8 * 4 / 3.0), "intro : 96 temps (8 d'intro + 16 de boucle_1), boucle depuis la 9e mesure")
 
 
 func _check_without_file() -> void:

@@ -55,8 +55,8 @@ var collapse_time := 3.6
 var collapse_k := 0.0
 ## Descente calée sur le morceau de la Flétrissure (boss_sync.gd) : de la brèche au creux pendant la
 ## première moitié de l'intro (plongée dans la brèche, éclair de sève, chute lente dans le puits de
-## lumière), puis l'invocation du boss pendant la seconde moitié. Premier essai : toute l'intro
-## (16 mesures, 21 s) ; essais suivants : l'intro courte (8 mesures, 10,7 s).
+## lumière), puis l'invocation du boss pendant la seconde moitié. La Flétrissure : 8 mesures
+## (10,7 s) à chaque essai ; une fiche qui donne aussi une intro_court la réserve aux essais suivants.
 var descending := false
 ## Hauteur (px) d'où le héros tombe dans le puits de lumière.
 const SHAFT_DROP := 520.0

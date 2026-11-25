@@ -415,7 +415,7 @@ Les grands bruitages (`duck` dans `SOUNDS`) baissent un instant la musique. Le j
   bpm: 180
   mesure: 4/4
   debut: 0.026        # secondes : premier temps de la mesure 1
-  intro: 1-16         # arrivée : descente et invocation ; le combat part à boucle_1
+  intro: 9-16         # arrivée : descente et invocation ; le combat part à boucle_1
   intro_court: 9-16   # facultatif : arrivée des essais suivants
   boucle_1: 17-32     # phase 1, en boucle
   drop_1: 45-48       # passage vers la phase 2 (une fois), puis boucle_2
@@ -431,7 +431,7 @@ Les grands bruitages (`duck` dans `SOUNDS`) baissent un instant la musique. Le j
 - **`<boss>.json`** : `bpm`, `bar_beats`, `debut`, `source` ; `sections` (mesures de la fiche et rapport des raccords) ; `clips` : `fichier`, `sections`, `mesures`, `boucle`, `boucle_depuis`, `echantillons`.
 - **Jeu** (`scripts/boss_track.gd`, branché dans `music.gd` › `follow_boss`, appelé par main.gd à chaque pas) : intro à l'éveil ; à chaque changement de phase, le drop part **au début de la mesure suivante** (AudioStreamInteractive, transition `NEXT_BAR`), puis sa boucle ; à la mort du boss, la fin à la mesure suivante ; mort du héros, fuite ou retour au menu : `defaite` s'il y en a une, sinon fondu d'une seconde. La musique suit l'horloge audio : le ralenti d'Éclat ne la touche pas. Les fichiers de boss ne sont pas touchés : le lecteur lit `boss.phase`, `boss.dead` et l'état de l'arène. Test : `tests/boss_track_test.gd` (morceau d'essai dans `tests/fixtures/boss_track/`). Film : `tools/boss-track-film.sh DOSSIER`.
 - **Combat calé sur le morceau** (`scripts/boss_sync.gd`, posé par l'arène sur le boss) : l'intro couvre l'arrivée et le boss devient touchable et frappe au premier temps de la première boucle ; à chaque changement de phase, il est figé et invulnérable pendant tout le drop (la Flétrissure mue en phase 2, se transforme en phase 3) et le combat reprend au retour de la batterie, avec un éclat. Grille des mesures sur l'horloge audio quand le morceau joue (le ralenti d'Éclat ne la décale pas ; le drop effectivement parti recale la reprise), sinon sur le temps du jeu : mêmes durées sans son (tests, robot). Boss sans morceau : rien ne change.
-- **Descente de la finale** (`finale_arena.gd › begin_descent`) : la brèche lance le morceau ; plongée dans la brèche puis chute lente dans le puits de lumière sur la première moitié de l'intro (éclair de sève, sans écran noir), invocation sur la seconde. Premier essai : `intro` (16 mesures, 21 s) ; essais suivants et entrée directe dans l'arène : `intro_court` (8 mesures, la montée seule), si la fiche en donne une.
+- **Descente de la finale** (`finale_arena.gd › begin_descent`) : la brèche lance le morceau ; plongée dans la brèche puis chute lente dans le puits de lumière sur la première moitié de l'intro (éclair de sève, sans écran noir), invocation sur la seconde. La Flétrissure : `intro` = mesures 9-16 du morceau (10,7 s, la montée seule) à chaque essai ; une fiche qui donne aussi une `intro_court` la réserve aux essais suivants et à l'entrée directe dans l'arène.
 - **Export** : le jeu complet embarque `assets/music/hand/` ; la démo (Ronce seule) l'exclut.
 
 ## Points et greffes du monde

@@ -107,25 +107,25 @@ func _run() -> void:
 	await _steps(30)
 	check(not finale.holds(main.player.position) and finale.hold > 0.0, "se tenir dans la brèche : l'anneau se remplit")
 	# Descente calée sur le morceau de la Flétrissure (boss_sync.gd) : sans son, la même grille sur le
-	# temps du jeu. Premier essai : toute l'intro (16 mesures), plongée sur la première moitié.
+	# temps du jeu. L'intro : 8 mesures (9-16 du morceau), plongée sur la première moitié.
 	check(await _until(func(): return finale.descending, 120), "après une seconde, la descente commence")
-	check(finale.sync != null and finale.sync.intro_clip == "intro", "premier essai : l'intro entière")
+	check(finale.sync != null and finale.sync.intro_clip == "intro", "l'intro du morceau")
 	await _steps(2)
 	check(main.enemies.is_empty(), "les Flétris du monde ne suivent pas")
 	check(not main.in_boss_fight() and main.player.invuln > 0.0, "pendant la plongée : pas de combat, rien ne blesse le héros")
 	var bar: float = finale.sync.bar
-	check(await _until(func(): return finale.holds(main.player.position), int(5.0 * bar * 60.0)), "à mi-plongée (mesure 5), le héros passe sous la graine")
+	check(await _until(func(): return finale.holds(main.player.position), int(3.0 * bar * 60.0)), "à mi-plongée (2 mesures), le héros passe sous la graine")
 	check(main.underground(), "sous la graine")
-	check(await _until(func(): return main.in_boss_fight(), int(5.0 * bar * 60.0)), "au fond du puits (mesure 9), la Flétrissure s'éveille")
-	check(absf(finale.sync.bars_now() - 8.0) < 0.05, "l'éveil tombe sur la mesure 9 (%.2f mesures)" % finale.sync.bars_now())
+	check(await _until(func(): return main.in_boss_fight(), int(3.0 * bar * 60.0)), "au fond du puits (4 mesures), la Flétrissure s'éveille")
+	check(absf(finale.sync.bars_now() - 4.0) < 0.05, "l'éveil tombe sur la 5e mesure (%.2f mesures)" % finale.sync.bars_now())
 	check(main.player.position.distance_to(finale.landing()) < 2.0 and main.player.is_physics_processing(), "le héros a pied au fond du puits et reprend la main")
 	check(objectives.target_pos(cur) == finale.center, "sous la graine, la flèche montre la Flétrissure")
 	var wake_boss = finale.boss
 	var hp0: float = wake_boss.hp
 	wake_boss.take_damage(500.0, false)
 	check(wake_boss.hp == hp0 and wake_boss.music_waiting(), "pendant l'invocation, elle ne prend pas de coups")
-	check(await _until(func(): return not wake_boss.music_waiting(), int(9.0 * bar * 60.0)), "puis le combat commence")
-	check(absf(finale.sync.bars_now() - 16.0) < 0.05, "à l'entrée de la batterie, mesure 17 (%.2f mesures)" % finale.sync.bars_now())
+	check(await _until(func(): return not wake_boss.music_waiting(), int(5.0 * bar * 60.0)), "puis le combat commence")
+	check(absf(finale.sync.bars_now() - 8.0) < 0.05, "à l'entrée de la batterie, 9e mesure (%.2f mesures)" % finale.sync.bars_now())
 	wake_boss.take_damage(500.0, false)
 	check(wake_boss.hp < hp0, "elle prend des coups dès la batterie")
 	# Fin de ce combat (sans compter d'essai) : la remontée se teste hors combat.
@@ -161,8 +161,8 @@ func _run() -> void:
 	check(finale.state == "combat" and is_instance_valid(boss) and main.in_boss_fight(), "s'avancer réveille la Flétrissure")
 	check(boss.has_method("_fight_step") and boss in main.enemies and finale.bar.visible, "un boss BossBase, inscrit dans les ennemis, avec sa barre")
 	check(main.active_arena() == finale, "main.active_arena() renvoie la finale")
-	check(finale.sync.intro_clip == "intro_court", "entrée directe dans l'arène : l'intro courte")
-	check(await _until(func(): return not boss.music_waiting(), 900), "l'invocation dure l'intro courte")
+	check(finale.sync.intro_bars == 8, "entrée directe dans l'arène : la même intro (8 mesures)")
+	check(await _until(func(): return not boss.music_waiting(), 900), "l'invocation dure l'intro")
 	check(await _until(func(): return boss.attack != "" and boss.stage == "annonce"), "une attaque est annoncée avant de frapper")
 	var seen := {}
 	for i in 600:

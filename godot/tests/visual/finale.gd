@@ -45,6 +45,9 @@ func run(runner) -> void:
 	p.position = pos
 	finale._start_fight()
 	var boss = finale.boss
+	# Captures du combat lui-même : sans l'attente calée sur le morceau (invocation, drops ; boss_sync.gd).
+	if finale.sync != null:
+		finale.sync.stop()
 	boss.frozen = true
 	boss.intro = 0.0
 	boss.t = 0.7
