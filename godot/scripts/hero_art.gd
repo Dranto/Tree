@@ -1,11 +1,22 @@
-## Dessin du Porte-Graine, gardien de l'Arbre : silhouette, poses et états, selon la charte.
-## Fonctions statiques sans état : player.gd s'en sert en jeu, la galerie pour figer chaque pose.
+## Dessin du Porte-Graine, gardien de l'Arbre : l'Esprit masqué (refonte des personnages, 25/11).
+## Fonctions statiques sans état : player.gd s'en sert en jeu, les signatures (skill_fx.gd) et les
+## galeries pour figer chaque pose.
 ##
-## Le héros est rond et organique (charte, § 4) : un corps crème en volume, une capuche de
-## feuillage avec une pousse, une cape de trois feuilles nervurées, deux pieds-racines, et devant
-## lui la graine-lanterne qui montre où il vise. Lisible à 40 px : capuche et lanterne donnent le sens.
+## Le dessin vient de scripts/creature_art/heros/esprit.gd (tenue selon les branches du build, vraie arme
+## selon la forme d'attaque, ornements selon les modifications) : en jeu, cuit en sprites par
+## hero_bake.gd à chaque changement d'apparence (hero_look.gd) ; sans atlas cuit (galeries, tests),
+## dessiné directement. Les états passagers (coup reçu, vie basse, voile, chez soi, lancer, renaissance,
+## transition de tenue) sont dessinés ici, par-dessus.
+##
+## L'ancien héros (rond, capuche de feuillage, graine-lanterne) reste dessinable avec `legacy` (planches
+## avant/après).
 class_name HeroArt
 extends RefCounted
+
+const Esprit = preload("res://scripts/creature_art/heros/esprit.gd")
+const Ink = preload("res://scripts/creature_art/ink.gd")
+const HeroBake = preload("res://scripts/hero_bake.gd")
+const HeroLook = preload("res://scripts/hero_look.gd")
 
 ## Pose par défaut (voir draw) : chaque clé peut manquer.
 const POSE := {
@@ -24,12 +35,21 @@ const POSE := {
 	"wither": 0.0,     ## mort : 0 vivant → 1 flétri, effondré
 	"appear": 1.0,     ## renaissance : 0 (graine en terre) → 1 (debout)
 	"dash": 0.0,       ## esquive : 1 → 0 (corps étiré dans le sens de l'élan)
+	"a": -1.0,         ## attaque de base : 0 → 1 (préparation, coup, retour), < 0 au repos
+	"morph": 0.0,      ## changement de tenue : 1 → 0 (l'ancienne s'efface, la nouvelle éclot)
+	"side": 0.0,       ## côté regardé (1 droite, -1 gauche) ; 0 : selon facing (player.gd y met de l'hystérésis)
 }
 
 
 ## Repère de base des dessins (identité en jeu). La galerie le change pour dessiner en grand :
 ## HeroArt compose ses propres écrasements avec lui au lieu de l'écraser.
 static var base := Transform2D.IDENTITY
+## Ancien dessin (planches avant/après).
+static var legacy := false
+## Atlas cuits de l'apparence en cours ({corps, bras}, hero_bake.gd) et de la précédente pendant une
+## transition : posés par player.gd. Vides : dessin direct.
+static var sprites := {}
+static var prev_sprites := {}
 
 
 ## Valeur d'une clé de pose, ou sa valeur par défaut.
@@ -38,8 +58,176 @@ static func _g(st: Dictionary, k: String):
 
 
 ## Dessine le héros centré en p, rayon r (14 en jeu), tourné vers facing (radians).
-## st : pose (voir POSE). ci : le CanvasItem qui dessine (depuis son _draw).
+## st : pose (voir POSE), plus « apparence » ({voie, evol, forme, mods}, hero_look.gd) pour un dessin
+## direct d'une apparence donnée. ci : le CanvasItem qui dessine (depuis son _draw).
 static func draw(ci: CanvasItem, p: Vector2, r: float, facing: float, st := {}) -> void:
+	if legacy:
+		draw_legacy(ci, p, r, facing, st)
+		return
+	var appear: float = clampf(_g(st, "appear"), 0.0, 1.0)
+	ci.draw_set_transform_matrix(base)
+	if appear < 1.0:
+		_draw_rebirth(ci, p, r, facing, st, appear)
+		ci.draw_set_transform_matrix(base)
+		return
+	var t: float = _g(st, "t")
+	var feet := p + Vector2(0, r)
+	var sk := r / 14.0
+	var wither: float = clampf(_g(st, "wither"), 0.0, 1.0)
+	var dash: float = _g(st, "dash")
+	var sq: Vector2 = _g(st, "squash")
+	if dash > 0.0:
+		sq *= Vector2(1.0 + 0.22 * dash, 1.0 - 0.14 * dash)
+	if wither > 0.0:
+		sq *= Vector2(1.0 + 0.25 * wither, 1.0 - 0.45 * Anim.ease_in(wither))
+	var sgn: float = _g(st, "side")
+	if sgn == 0.0:
+		sgn = 1.0 if cos(facing) >= 0.0 else -1.0
+	# Penché dans l'élan de l'esquive.
+	var lean := 0.25 * dash * sgn
+	var xf := base * Transform2D(lean, sq * sk, 0.0, feet)
+	var mod := Color(1, 1, 1, 1.0 - 0.55 * wither)
+	if wither > 0.0:
+		mod = Color(Color(0.78, 0.74, 0.68).lerp(Color.WHITE, 1.0 - wither), mod.a)
+	var sp: Dictionary = sprites
+	var look: Dictionary = st.get("apparence", {})
+	var morph: float = _g(st, "morph")
+	var direct := st.has("apparence") or sp.is_empty()
+	if direct:
+		_draw_direct(ci, xf, sgn, facing, st, look)
+	else:
+		look = sp["corps"].look
+		if morph > 0.0 and not prev_sprites.is_empty():
+			# L'ancienne tenue s'efface et se dilate, la nouvelle éclot (sans pause ni texte).
+			var g := 1.0 + 0.15 * (1.0 - morph)
+			_draw_sprites(ci, xf * Transform2D(0.0, Vector2(g, g), 0.0, Vector2.ZERO), prev_sprites, sgn, facing, st, Color(mod, mod.a * morph))
+			var s2 := maxf(Anim.pop(1.0 - morph), 0.05)
+			_draw_sprites(ci, xf * Transform2D(0.0, Vector2(s2, s2), 0.0, Vector2.ZERO), sp, sgn, facing, st, Color(mod, mod.a * (1.0 - morph * 0.6)))
+		else:
+			_draw_sprites(ci, xf, sp, sgn, facing, st, mod)
+	ci.draw_set_transform_matrix(base)
+	_draw_states(ci, feet, r, sgn, facing, st, look)
+
+
+## Hauteur du dessin (px du jeu pour 100 unités) et facteur d'échelle de son repère.
+static func _evol(look: Dictionary) -> float:
+	return float(look.get("evol", 0.0))
+
+
+## Dessin direct de l'Esprit (galeries, tests, avant la première cuisson) : coûteux, jamais en jeu.
+static func _draw_direct(ci: CanvasItem, xf: Transform2D, sgn: float, facing: float, st: Dictionary, look: Dictionary) -> void:
+	var o := look.duplicate()
+	o["t"] = _g(st, "t")
+	o["walk"] = _g(st, "step")
+	o["moving"] = clampf(_g(st, "walk"), 0.0, 1.0)
+	o["look"] = 0.0 if sgn > 0.0 else PI
+	o["hit"] = _g(st, "hurt")
+	o["cast"] = _g(st, "cast")
+	o["a"] = _g(st, "a")
+	o["vise"] = _vise(facing, sgn)
+	o["vol"] = false
+	ci.draw_set_transform_matrix(xf)
+	Esprit.draw(ci, Vector2.ZERO, HeroBake.h_for(_evol(look)), o)
+	Ink.flash = 0.0
+
+
+## Inclinaison du bras vers la visée, dans le repère du dessin (vers le bas : positive).
+static func _vise(facing: float, sgn: float) -> float:
+	var la := angle_difference(0.0, facing) if sgn > 0.0 else -angle_difference(PI, facing)
+	return clampf(la, -0.9, 0.9)
+
+
+## Corps puis bras cuits. xf : pieds à l'origine, pixels du jeu (r = 14).
+static func _draw_sprites(ci: CanvasItem, xf: Transform2D, sp: Dictionary, sgn: float, facing: float, st: Dictionary, mod: Color) -> void:
+	var ab = sp["corps"]
+	var aa = sp["bras"]
+	var t: float = _g(st, "t")
+	var walking: bool = _g(st, "walk") > 0.3
+	var anim := "walk" if walking else "idle"
+	var u: float = fposmod(_g(st, "step"), TAU) / TAU if walking else fposmod(t, HeroBake.IDLE_LOOP) / HeroBake.IDLE_LOOP
+	var fx := xf * Transform2D(0.0, Vector2(sgn, 1.0), 0.0, Vector2.ZERO)
+	ab.draw(ci, ab.frame(anim, u), fx, mod)
+	# Le bras : rebond et penché du pas, puis rotation autour de l'épaule vers la visée.
+	var an: Dictionary = aa.anchors
+	var fs: float = aa.fs
+	var shoulder: Vector2 = an["shoulder"] * fs
+	var v := _vise(facing, sgn)
+	var arm := fx * Transform2D(0.06 if walking else 0.0, Vector2(0, HeroBake.bob(anim, u) * fs))
+	arm = arm * Transform2D(v, shoulder - shoulder.rotated(v))
+	var a: float = _g(st, "a")
+	var i: int = aa.frame("attack", a, false) if a >= 0.0 else aa.frame("idle", fposmod(t, HeroBake.ARM_LOOP) / HeroBake.ARM_LOOP)
+	aa.draw(ci, i, arm, mod)
+
+
+## États passagers par-dessus le dessin : lancer, coup reçu, vie basse, voile, chez soi, transition.
+static func _draw_states(ci: CanvasItem, feet: Vector2, r: float, sgn: float, facing: float, st: Dictionary, look: Dictionary) -> void:
+	var t: float = _g(st, "t")
+	var wither: float = clampf(_g(st, "wither"), 0.0, 1.0)
+	var an := Esprit.anchors(look)
+	var fs: float = HeroBake.h_for(_evol(look), r) * float(an["scale"]) / 100.0
+	var core: Vector2 = feet + Vector2(an["core"].x * sgn, an["core"].y) * fs
+	var mask: Vector2 = feet + Vector2(an["mask"].x * sgn, an["mask"].y) * fs
+	if _g(st, "home") and wither == 0.0:
+		_draw_home(ci, feet - Vector2(0, r * 0.95), r, t)
+	var cast: float = _g(st, "cast")
+	if cast > 0.0 and wither < 0.5:
+		var cc: Color = _g(st, "cast_col")
+		var col := Art.ec("seve") if cc.a == 0.0 else cc
+		Ink.halo(ci, mask, r * (0.9 + 0.6 * cast), col, 1.6 * cast)
+		var sh: Vector2 = feet + Vector2(an["shoulder"].x * sgn, an["shoulder"].y) * fs
+		var hand := sh + Vector2.from_angle(facing) * r * 0.9
+		for i in 5:
+			var a: float = facing + (i - 2) * 0.35
+			ci.draw_line(hand + Vector2.from_angle(a) * r * 0.45, hand + Vector2.from_angle(a) * r * (0.85 + 0.5 * cast), Color(col.lightened(0.2), 0.85 * cast), maxf(r * 0.07, 1.0), true)
+	var hurt: float = _g(st, "hurt")
+	if hurt > 0.0:
+		ci.draw_arc(core, r * (1.1 + 0.6 * (1.0 - hurt)), 0, TAU, 32, Color(Art.c("danger"), 0.9 * hurt), maxf(r * 0.1, 1.5), true)
+	var low: float = _g(st, "low")
+	if low > 0.0 and wither == 0.0:
+		# Battement de cœur : deux pulsations rapprochées, puis un silence.
+		var beat := fposmod(t * 1.3, 1.0)
+		var pulse := maxf(Anim.flash(beat / 0.18), 0.7 * Anim.flash((beat - 0.22) / 0.18) if beat > 0.22 else 0.0)
+		ci.draw_arc(core, r * (1.35 + 0.25 * pulse), 0, TAU, 32, Color(Art.c("danger"), (0.25 + 0.55 * pulse) * low), maxf(r * 0.1, 1.5), true)
+		Ink.halo(ci, core, r * 0.5 * (1.0 + 0.3 * pulse), Art.c("danger"), low * pulse)
+	var inv: float = _g(st, "invuln")
+	if inv > 0.0:
+		_draw_shield(ci, core, r, t, inv)
+	var morph: float = _g(st, "morph")
+	if morph > 0.0:
+		# Changement de tenue : un anneau de sève qui s'ouvre et des feuilles de la nouvelle branche.
+		var u := 1.0 - morph
+		var acc := Esprit.K.accent(_dominant(look))
+		ci.draw_arc(core, r * (0.8 + 2.4 * Anim.ease_out(u)), 0, TAU, 40, Color(Art.ec("seve", "clair"), 0.8 * morph), maxf(r * 0.1, 1.4), true)
+		for i in 8:
+			var a := i * TAU / 8.0 + t * 0.6
+			var q := core + Vector2.from_angle(a) * r * (0.6 + 2.0 * u) + Vector2(0, r * 0.6 * u * u)
+			ci.draw_colored_polygon(leaf_pts(q, r * 0.2, a + u * 4.0), Color(acc if i % 2 == 0 else Art.ec("seve", "clair"), morph))
+
+
+## Centre du masque (la tête) du héros dessiné en p, rayon r, tourné vers facing.
+static func head_at(p: Vector2, r: float, facing: float) -> Vector2:
+	var look: Dictionary = sprites["corps"].look if not sprites.is_empty() else {}
+	if legacy:
+		return p + Vector2(0, -r * 1.6)
+	var an := Esprit.anchors(look)
+	var fs: float = HeroBake.h_for(_evol(look), r) * float(an["scale"]) / 100.0
+	var sgn := 1.0 if cos(facing) >= 0.0 else -1.0
+	return p + Vector2(0, r) + Vector2(an["mask"].x * sgn, an["mask"].y) * fs
+
+
+static func _dominant(look: Dictionary) -> String:
+	var w := Esprit.weights(look)
+	var dom := "aucun"
+	var best := 0.0
+	for b in w:
+		if w[b] > best:
+			best = w[b]
+			dom = b
+	return dom
+
+
+## Ancien héros (avant la refonte) : planches avant/après.
+static func draw_legacy(ci: CanvasItem, p: Vector2, r: float, facing: float, st := {}) -> void:
 	var t: float = _g(st, "t")
 	var appear: float = clampf(_g(st, "appear"), 0.0, 1.0)
 	ci.draw_set_transform_matrix(base)
@@ -281,9 +469,22 @@ static func leaf_pts(p: Vector2, l: float, a: float) -> PackedVector2Array:
 	return pts
 
 
-## Silhouette du héros d'une seule couleur (images rémanentes de l'esquive) : cape, corps et
-## capuche, sans détail ni contour. Bon marché : trois feuilles et deux formes.
+## Silhouette du héros d'une seule couleur (images rémanentes de l'esquive) : les cases « mono » des
+## atlas cuits (corps et bras), teintées ; sans atlas, l'ancienne silhouette (trois feuilles, deux formes).
 static func draw_ghost(ci: CanvasItem, p: Vector2, r: float, facing: float, col: Color) -> void:
+	if not legacy and not sprites.is_empty():
+		var sgn := 1.0 if cos(facing) >= 0.0 else -1.0
+		var xf := base * Transform2D(0.0, Vector2(sgn, 1.0) * r / 14.0, 0.0, p + Vector2(0, r))
+		var ab = sprites["corps"]
+		var aa = sprites["bras"]
+		ab.draw(ci, ab.frame("mono", 0.0), xf, col)
+		aa.draw(ci, aa.frame("mono", 0.0), xf, col)
+		ci.draw_set_transform_matrix(base)
+		return
+	_draw_ghost_legacy(ci, p, r, facing, col)
+
+
+static func _draw_ghost_legacy(ci: CanvasItem, p: Vector2, r: float, facing: float, col: Color) -> void:
 	var back := facing + PI
 	for side: int in [-1, 0, 1]:
 		var a: float = back + side * 0.62

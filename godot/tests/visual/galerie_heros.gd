@@ -66,14 +66,27 @@ func _draw() -> void:
 
 const POSES := [
 	["Repos (respire)", "repos"], ["Marche", "marche"], ["Esquive (traînée de feuilles)", "esquive"],
-	["Tir de graine", "tir"], ["Lancer de compétence", "lancer"], ["Coup reçu", "touche"],
+	["Attaque : le fouet claque", "tir"], ["Lancer de compétence", "lancer"], ["Coup reçu", "touche"],
 	["Vie basse", "vie_basse"], ["Invulnérable", "invuln"], ["Chez soi (terre ravivée)", "chez_soi"],
 	["Mort : il se fane", "mort"], ["Renaissance : la pousse", "pousse"], ["Renaissance : debout", "debout"],
+]
+## Apparence des grandes poses : un build Ronce mêlé de Vent, deux paliers, fouet à deux modifications.
+const LOOK := {"voie": {"ronce": 0.7, "vent": 0.3}, "evol": 0.72, "forme": "fouet", "mods": ["fourche", "saignement"]}
+## Ligne du bas (taille du jeu) : le départ, chaque branche maîtrisée avec son arme, un hybride.
+const LOOKS := [
+	{"voie": {}, "evol": 0.0, "forme": "graine", "mods": []},
+	{"voie": {"ronce": 1.0}, "evol": 1.0, "forme": "fouet", "mods": ["fourche"]},
+	{"voie": {"seve": 1.0}, "evol": 1.0, "forme": "perle", "mods": ["rosee"]},
+	{"voie": {"racine": 1.0}, "evol": 1.0, "forme": "massue", "mods": ["secousse"]},
+	{"voie": {"vent": 1.0}, "evol": 1.0, "forme": "lame", "mods": ["elan"]},
+	{"voie": {"spore": 1.0}, "evol": 1.0, "forme": "spore_lobee", "mods": ["poison"]},
+	{"voie": {"aube": 1.0}, "evol": 1.0, "forme": "rayon", "mods": ["refraction"]},
+	{"voie": {"seve": 0.5, "aube": 0.5}, "evol": 0.72, "forme": "echarde", "mods": ["eclat", "saignement"]},
 ]
 
 
 func _page_heros() -> void:
-	_text(Vector2(40, 48), "Porte-Graine · poses et états (taille ×4)", 30, Art.c("texte"), true)
+	_text(Vector2(40, 48), "Esprit masqué · poses et états (taille ×4)", 30, Art.c("texte"), true)
 	var cols := 6
 	var cw := (view.x - 80) / cols
 	var ch := 520.0
@@ -82,26 +95,26 @@ func _page_heros() -> void:
 		_ground(r, i, POSES[i][1] == "chez_soi")
 		_text_c(Vector2(r.get_center().x, r.position.y + 36), POSES[i][0], 22, Art.c("texte"), cw, true)
 		_pose(POSES[i][1], r.get_center() + Vector2(0, 20), 4.0, t)
-	# À la taille du jeu : les huit orientations, pour vérifier la lecture à 40 px.
+	# À la taille du jeu : une tenue par branche, puis les états.
 	var y := 70 + 2 * (ch + 14) + 6
 	var r := Rect2(40, y, view.x - 80, view.y - y - 30)
 	_ground(r, 40)
-	_text(Vector2(56, y + 36), "À la taille du jeu (écran 2560 × 1440) : la capuche et la lanterne donnent le sens", 22, Art.c("texte"), true)
-	for i in 8:
-		var c := Vector2(150 + i * 150, y + 150)
+	_text(Vector2(56, y + 36), "À la taille du jeu (écran 2560 × 1440) : le départ, chaque branche maîtrisée, un hybride ; puis les états", 22, Art.c("texte"), true)
+	for i in LOOKS.size():
+		var c := Vector2(130 + i * 140, y + 140)
 		HeroArt.base = Transform2D(0.0, Vector2(1.6, 1.6), 0.0, c)
-		HeroArt.draw(self, Vector2.ZERO, 14.0, i * TAU / 8.0, {"t": t + i * 0.3})
+		HeroArt.draw(self, Vector2.ZERO, 14.0, 0.0 if i % 2 == 0 else PI, {"t": t + i * 0.3, "apparence": LOOKS[i]})
 		HeroArt.base = Transform2D.IDENTITY
 		draw_set_transform_matrix(Transform2D.IDENTITY)
 	var states := [["marche", 0.0], ["tir", 0.0], ["lancer", 0.0], ["touche", 0.0], ["vie_basse", 0.0], ["invuln", 0.0], ["chez_soi", 0.0]]
 	for i in states.size():
-		var c := Vector2(1400 + i * 150, y + 150)
+		var c := Vector2(1400 + i * 150, y + 140)
 		_pose(states[i][0], c, 1.6, t)
 
 
 ## Dessine une pose du héros centrée en c, à l'échelle k.
 func _pose(kind: String, c: Vector2, k: float, time: float) -> void:
-	var st := {"t": time}
+	var st := {"t": time, "apparence": LOOK}
 	var facing := 0.0
 	match kind:
 		"marche":
@@ -114,9 +127,7 @@ func _pose(kind: String, c: Vector2, k: float, time: float) -> void:
 			st["move"] = Vector2.RIGHT
 			_dash_trail(c, k, Vector2.RIGHT)
 		"tir":
-			st["shoot"] = 0.8
-			var sp := ProjectileScript.new()
-			_seed_ghost(c + Vector2(34, 0) * k, k)
+			st["a"] = 0.52
 		"lancer":
 			st["cast"] = 0.7
 			st["cast_col"] = Art.ec("epine")
@@ -155,7 +166,7 @@ func _dash_trail(c: Vector2, k: float, d: Vector2) -> void:
 
 
 func _falling_leaf(q: Vector2, l: float, a: float, fade: float) -> void:
-	draw_colored_polygon(HeroArt.leaf_pts(q, l, a), Color(Art.c("joueur_accent").darkened(0.3), 1.0 - fade))
+	draw_colored_polygon(HeroArt.leaf_pts(q, l, a), Color(Art.FEUILLES_BUILD["ronce"]["clair"], 1.0 - fade))
 
 
 ## Une graine en vol (même dessin que projectile.gd), à l'échelle k.
