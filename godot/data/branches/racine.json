@@ -82,7 +82,7 @@
           "name": "Bras noueux",
           "at": [0.55, 0.35],
           "links": ["m1"],
-          "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.05}, {"stat": "max_hp", "op": "inc", "value": 0.08}]
+          "effects": [{"stat": "fire_rate", "op": "inc", "value": 0.1}, {"stat": "max_hp", "op": "inc", "value": 0.08}]
         },
         {
           "id": "m4",
