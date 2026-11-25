@@ -52,6 +52,9 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var piv := Vector2(-46, -12)
 	var xf := base * Transform2D(0.0, piv) * Transform2D(rear + rock + 0.04 * hit, sq, 0.0, Vector2.ZERO) * Transform2D(0.0, -piv)
 	var shell := Sp.flesh()
+	# Carapace un peu plus claire que la région, pour ressortir aussi sur le marais ravivé.
+	shell["clair"] = shell["clair"].lightened(0.1)
+	shell["ombre"] = shell["ombre"].lightened(0.18)
 	shell = {"clair": shell["clair"].lerp(Art.bc("spore", "lichen_ombre"), 0.35), "ombre": shell["ombre"].darkened(0.1), "reflet": shell["reflet"]}
 	var leg := Art.bc("spore", "ombre").darkened(0.2)
 	# Pattes du fond (plus sombres), puis carapace, puis pattes de devant.

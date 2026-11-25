@@ -44,7 +44,10 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var sy := (1.0 - crawl * 0.8) * (1.0 + 0.16 * kk - 0.22 * splat) * (1.0 - 0.14 * hit)
 	var breath := sin(t * TAU / 2.6) * 0.02
 	var xf := base * Transform2D(0.0, Vector2(sx, sy + breath), 0.0, Vector2(-6.0 * kk, 0))
+	# Chair un peu plus claire que la région : la limace, longue et plate, doit ressortir aussi sur le marais ravivé.
 	var fl := Sp.flesh()
+	fl["clair"] = fl["clair"].lightened(0.18)
+	fl["ombre"] = fl["ombre"].lightened(0.22)
 	var body := _body(walk, mv, t)
 	# Champignon du fond (derrière la bosse).
 	Sp.cap(ci, xf, Vector2(-34, -40), -PI / 2.0 - 0.6 - 0.3 * kk, 16.0 - 4.0 * kk, 26.0, 0.3 * sin(t * 1.9 + 1.0), kk * 0.8)
@@ -62,11 +65,11 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	for i in range(32, -1, -1):
 		var x := lerpf(-84.0, 76.0, i / 32.0)
 		sole.append(Vector2(x, 1.0 - 2.2 * absf(sin(x * 0.2 - walk * 2.0 * mv))))
-	Ink.flat(ci, xf, sole, fl["ombre"].lerp(fl["clair"], 0.35))
+	Ink.flat(ci, xf, sole, fl["ombre"].lerp(fl["clair"], 0.6))
 	if not Ink.mono:
 		# Taches sombres du manteau, comme une limace léopard.
 		for q: Vector3 in [Vector3(-58, -16, 3.2), Vector3(-30, -30, 4.0), Vector3(-6, -36, 3.0), Vector3(-18, -22, 2.4), Vector3(8, -24, 2.8), Vector3(-44, -10, 2.2), Vector3(56, -20, 2.4)]:
-			Ink.flat(ci, xf, Ink.lumpy(Vector2(q.x, q.y), q.z * 1.3, q.z, 12, 0.25, 3.0, q.x), Color(fl["ombre"], 0.75))
+			Ink.flat(ci, xf, Ink.lumpy(Vector2(q.x, q.y), q.z * 1.3, q.z, 12, 0.25, 3.0, q.x), Color(fl["ombre"], 0.55))
 	# Le manteau (bouclier de la limace) sur l'avant du dos, son bord en relief.
 	var mantle := Ink.lumpy(Vector2(30, -32), 24.0, 12.0, 26, 0.05, 6.0)
 	Ink.part(ci, xf, mantle, {"clair": fl["clair"].lightened(0.08), "ombre": fl["ombre"].lightened(0.06), "reflet": fl["reflet"]}, 1.6, 1.0, 0.6)
