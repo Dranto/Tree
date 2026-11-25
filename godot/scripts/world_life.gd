@@ -120,8 +120,10 @@ func _ready() -> void:
 		Atlas.bake(self)
 
 
+## Sortie du jeu : rien de gardé dans des variables statiques (atlas, tables de scripts).
 func _exit_tree() -> void:
 	Atlas.clear()
+	_tabs = []
 
 
 func _less() -> bool:
