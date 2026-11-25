@@ -45,6 +45,9 @@ func run(runner) -> void:
 	p.position = pos
 	finale._start_fight()
 	var boss = finale.boss
+	# Captures du combat lui-même : sans l'attente calée sur le morceau (invocation, drops ; boss_sync.gd).
+	if finale.sync != null:
+		finale.sync.stop()
 	boss.frozen = true
 	boss.intro = 0.0
 	boss.t = 0.7
@@ -145,6 +148,8 @@ func run(runner) -> void:
 	# Sa mort, à mi-chemin : les bras retombent en cendre, la sève jaillit des fentes.
 	boss._clear_attacks()
 	boss.take_damage(boss.max_hp * 2.0, false)
+	# La pose de la mort seule : sans le dernier coup (impact frame tenue, ralenti, distorsion).
+	main.moments.stop_all()
 	boss.dying = boss.death_time * 0.5
 	main.fx.rings = []
 	boss.redraw()
@@ -162,6 +167,7 @@ func run(runner) -> void:
 	# vie, le générique qui s'écrit dans l'herbe, puis tous les noms écrits.
 	var q = main.quest_ui
 	q.start_epilogue()
+	finale.finish_ascent()
 	var ending = q.world_ending
 	ending.set_time(ending.STEP * 3.0 + 1.0)
 	main.ground.finish_waves()
