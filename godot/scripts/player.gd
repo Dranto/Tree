@@ -438,6 +438,7 @@ func _physics_process(delta: float) -> void:
 		dash_cd = s["dash_cd"]
 		invuln = maxf(invuln, DASH_TIME + 0.08)
 		Sfx.play("esquive")
+		_sig("esquive", {"pos": position, "dir": dash_dir, "facing": facing().angle(), "dash": DASH_TIME, "follow": self})
 		Game.fire("dash", {"main": main})
 
 	if dash_time > 0.0:
@@ -816,11 +817,7 @@ func _draw() -> void:
 		for i in pts.size():
 			pts[i] = q + (pts[i] - q) * Vector2(1.0, w).rotated(0.0)
 		draw_colored_polygon(pts, Color(l["col"], 1.0 - k * k))
-	if dash_time > 0.0:
-		# Silhouettes fantômes de l'élan.
-		for i in 3:
-			var q := -dash_dir * (i + 1) * 13.0
-			draw_circle(q, radius * (0.85 - i * 0.18), Color(Art.ec("seve"), 0.22 - i * 0.06))
+	# L'élan de l'esquive (traînée, images rémanentes) est dessiné par sa signature (skill_fx.gd).
 	HeroArt.draw(self, Vector2.ZERO, radius, facing().angle(), pose())
 	if pad_aiming:
 		# Visée au stick droit : un petit chevron d'or au point visé, sans masquer le jeu.
