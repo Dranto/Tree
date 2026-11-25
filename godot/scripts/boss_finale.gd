@@ -624,35 +624,112 @@ func _draw() -> void:
 		lit = COMBO_ARMS[attack][0]
 		lit2 = COMBO_ARMS[attack][1]
 	var die := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
+	var charging := sync != null and music_waiting() and charge >= 0.0
+	if charging:
+		_draw_charge_back()
+		# Elle gonfle sur chaque impulsion et tremble de plus en plus : l'énergie la déborde.
+		var e := charge_energy()
+		var sw := 1.0 + 0.05 * e + 0.05 * e * charge_pulse() + 0.08 * charge_overflow()
+		var h := Vector2(0, -radius * 0.45)
+		draw_set_transform(charge_jitter() + h - h * sw, 0.0, Vector2(sw, sw))
 	draw_colossus(self, Vector2.ZERO, radius, t, phase, _announce_k(), lit, die, _wake_k(), _color, lit2, form_k())
-	if sync != null and music_waiting():
-		_draw_music_wait()
+	if charging:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		_draw_charge_front()
 
 
-## Pendant que la musique tient le combat (invocation, mue, transformation) : la cendre de l'arène
-## converge vers elle en spirale, et des veines de braise battent sur chaque temps, de plus en plus
-## fort jusqu'au retour de la batterie.
-func _draw_music_wait() -> void:
-	var k: float = mue_k if mue_k >= 0.0 else (sync.wait_k(intro_time) if sync.stage == "intro" else sync.wait_k(morph_len))
-	var beat: float = sync.beat_k()
-	var pulse := pow(1.0 - beat, 3.0) * (0.25 + 0.75 * k)
-	var ash := Art.ec("cendre", "clair")
+func _charge_color() -> Color:
+	return Art.ec("cendre", "clair")
+
+
+## La charge, derrière elle : le sol qui se creuse d'anneaux qui se resserrent sur la grille, la cendre
+## de l'arène aspirée en spirale (de plus en plus vite, de plus en plus dense), et les six éléments
+## de ses bras qui tournent autour d'elle en se rapprochant.
+func _draw_charge_back() -> void:
+	var e := charge_energy()
+	var pulse := charge_pulse()
+	var hot := Art.ec("cendre", "clair")
+	var ember := Art.ec("cendre")
 	var h := Vector2(0, -radius * 0.45)
-	# Cendre aspirée : 28 brins qui tournent vers son cœur.
-	for i in 28:
-		var f := fposmod(t * 0.22 + i * 0.6180339, 1.0)
-		var a := TAU * i / 28.0 + f * 2.4
-		var r := lerpf(radius * 5.0, radius * 0.5, f)
+	var beat: float = fposmod(sync.bars_now() * sync.beats * charge_rate(), 1.0)
+	# Anneaux au sol qui se referment : un par impulsion.
+	for j in 3:
+		var f := fposmod(beat + j / 3.0, 1.0)
+		var rr := radius * lerpf(5.5, 0.9, f)
+		draw_arc(Vector2.ZERO, rr, 0.0, TAU, 64, Color(ember, (0.12 + 0.4 * e) * sin(PI * f)), 2.0 + 4.0 * e, true)
+	# Cendre aspirée : de 28 à 76 brins, de plus en plus vite.
+	var n := 28 + int(48.0 * e)
+	for i in n:
+		var f := fposmod(charge_spin * 0.3 + i * 0.6180339, 1.0)
+		var a := TAU * i / float(n) + f * (2.4 + 2.0 * e)
+		var r := lerpf(radius * 5.5, radius * 0.4, f)
 		var p := h + Vector2.from_angle(a) * r
-		var q := h + Vector2.from_angle(a - 0.12) * (r + radius * 0.35)
-		draw_line(q, p, Color(ash, 0.5 * sin(PI * f) * (0.3 + 0.7 * k)), 2.0 + 2.0 * k, true)
-	# Veines de braise sur le corps, qui battent sur les temps.
-	for i in 7:
-		var a := TAU * i / 7.0 + 0.5
+		var q := h + Vector2.from_angle(a - 0.12 - 0.2 * e) * (r + radius * (0.3 + 0.6 * e))
+		var c := Art.ec("cendre", "clair").lerp(ember, 0.5) if i % 3 else hot
+		draw_line(q, p, Color(c, 0.55 * sin(PI * f) * (0.3 + 0.7 * charge)), 2.0 + 3.0 * e, true)
+	# Les six éléments de ses bras : des orbes qui tournent et se resserrent, avec leur traîne.
+	for i in ARMS.size():
+		var col := Art.ec(str(ARMS[i]["element"]), "clair")
+		var a0 := charge_spin * (1.0 + 0.5 * e) * 1.4 + TAU * i / ARMS.size()
+		var rr := radius * lerpf(3.6, 0.75, Anim.ease_in(charge))
+		for k in 6:
+			var a := a0 - k * (0.07 + 0.08 * e)
+			var p := h + Vector2.from_angle(a) * rr * Vector2(1.0, 0.62)
+			draw_circle(p, radius * (0.11 - 0.014 * k) * (1.0 + 0.6 * pulse * e), Color(col, (0.85 - 0.13 * k) * (0.4 + 0.6 * charge)))
+
+
+## La charge, devant elle : le cœur qui s'embrase et blanchit, la couronne de rayons, les éclairs
+## qui crépitent (plus nombreux à chaque impulsion), les veines qui battent ; sur le dernier temps,
+## elle déborde : un halo blanc qui vibre et des rayons qui fendent l'écran.
+func _draw_charge_front() -> void:
+	var e := charge_energy()
+	var pulse := charge_pulse()
+	var over := charge_overflow()
+	var hot := Art.ec("cendre", "clair")
+	var ember := Art.ec("cendre")
+	var white := Color(1.0, 0.97, 0.9)
+	var h := Vector2(0, -radius * 0.45) + charge_jitter()
+	# Veines de braise sur le corps, qui battent sur les impulsions.
+	for i in 9:
+		var a := TAU * i / 9.0 + 0.5
 		var from := h + Vector2.from_angle(a) * radius * 0.15
-		var to := h + Vector2.from_angle(a + 0.3 * sin(i * 2.1)) * radius * (0.55 + 0.45 * k)
-		draw_line(from, to, Color(Art.ec("cendre"), 0.35 + 0.6 * pulse), 3.0 + 6.0 * pulse, true)
-	draw_circle(h, radius * (0.25 + 0.2 * pulse), Color(ash, 0.25 + 0.5 * pulse))
+		var to := h + Vector2.from_angle(a + 0.3 * sin(i * 2.1)) * radius * (0.55 + 0.6 * e)
+		draw_line(from, to, Color(ember.lerp(white, over), 0.35 + 0.6 * pulse), 3.0 + 6.0 * pulse + 4.0 * e, true)
+	# Éclairs : 2 à 12, retirés à chaque impulsion.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(_charge_hit) if _charge_hit >= 0 else 7
+	var bolts := 2 + int(10.0 * e)
+	for b in bolts:
+		var a := rng.randf() * TAU
+		var length := radius * rng.randf_range(1.0, 1.6 + 1.6 * e)
+		var pts := PackedVector2Array([h])
+		var steps := 6
+		for k in range(1, steps + 1):
+			var f := float(k) / steps
+			var side := Vector2.from_angle(a).orthogonal() * rng.randf_range(-1.0, 1.0) * radius * 0.22 * f
+			pts.append(h + Vector2.from_angle(a) * length * f + side)
+		var al := (0.25 + 0.75 * pulse) * (0.4 + 0.6 * e)
+		draw_polyline(pts, Color(hot, al * 0.5), 6.0 + 4.0 * e, true)
+		draw_polyline(pts, Color(white, al), 2.0, true)
+	# Couronne de rayons autour du cœur.
+	var rays := 12 + int(12.0 * e)
+	for i in rays:
+		var a := TAU * i / rays + charge_spin * 0.5
+		var l := radius * (0.5 + 0.9 * e * (0.6 + 0.4 * sin(t * 9.0 + i * 1.7)) + 0.5 * pulse * e)
+		draw_line(h + Vector2.from_angle(a) * radius * 0.3, h + Vector2.from_angle(a) * (radius * 0.3 + l), Color(hot.lerp(white, e), 0.2 + 0.45 * e), 2.0 + 2.0 * e, true)
+	# Le cœur : il grossit, blanchit, bat.
+	var core := radius * (0.16 + 0.18 * e + 0.1 * pulse * (0.3 + e) + 0.15 * over)
+	draw_circle(h, core * 1.9, Color(ember, 0.18 + 0.25 * e))
+	draw_circle(h, core * 1.3, Color(hot, 0.3 + 0.4 * e))
+	draw_circle(h, core, Color(hot.lerp(white, 0.4 + 0.6 * e), 0.55 + 0.45 * e))
+	# Le dernier temps : elle déborde.
+	if over > 0.0:
+		var flick := 0.6 + 0.4 * sin(t * 90.0)
+		draw_circle(h, radius * (1.0 + 1.6 * over), Color(white, 0.18 * over * flick))
+		for i in 10:
+			var a := TAU * i / 10.0 + 0.3 * sin(i * 4.1) + t * 0.7
+			var l := radius * (2.0 + 10.0 * over)
+			draw_line(h, h + Vector2.from_angle(a) * l, Color(white, 0.55 * over * flick), 3.0 + 8.0 * over, true)
 
 
 ## Le sol autour d'elle, sous les annonces (draw_marks) : une flaque de brume de cendre et les

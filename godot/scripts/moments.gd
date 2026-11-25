@@ -483,10 +483,13 @@ func zoom_pulse(force: float, duree: float) -> void:
 
 
 ## La caméra glisse vers « position » (une part du chemin, plafonnée) puis revient au héros.
-func focus(position_: Vector2, duree: float) -> void:
+## rise : part de la durée passée à y aller (0,3 : un coup d'œil ; près de 1 : une approche lente,
+## puis un retour bref, comme pendant la charge d'un boss). reach (> 0) : part du chemin et plafond
+## en pixels propres à ce cadrage, au lieu de feel.json › camera (focus_frac, focus_max).
+func focus(position_: Vector2, duree: float, rise := 0.3, frac := -1.0, reach := -1.0) -> void:
 	if Settings.shake_strength() <= 0.0 or duree <= 0.0 or _benchmark():
 		return
-	_focus = {"t": 0.0, "dur": duree, "pos": position_}
+	_focus = {"t": 0.0, "dur": duree, "pos": position_, "rise": clampf(rise, 0.05, 0.95), "frac": frac, "reach": reach}
 	_cam_dirty = true
 
 
@@ -508,9 +511,11 @@ func focus_offset() -> Vector2:
 	if _focus.is_empty() or main == null or main.player == null:
 		return Vector2.ZERO
 	var to: Vector2 = _focus["pos"] - main.player.position
-	to *= feel("camera", "focus_frac", 0.4)
-	to = to.limit_length(feel("camera", "focus_max", 160.0))
-	return to * Settings.shake_strength() * _envelope(_focus, 0.3)
+	var frac := float(_focus.get("frac", -1.0))
+	var reach := float(_focus.get("reach", -1.0))
+	to *= frac if frac > 0.0 else feel("camera", "focus_frac", 0.4)
+	to = to.limit_length(reach if reach > 0.0 else feel("camera", "focus_max", 160.0))
+	return to * Settings.shake_strength() * _envelope(_focus, float(_focus.get("rise", 0.3)))
 
 
 func _step_camera(real: float) -> void:

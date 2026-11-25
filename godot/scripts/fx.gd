@@ -389,6 +389,11 @@ func _particle(kind: int, pos: Vector2, vel: Vector2, dur: float, size: float, c
 		"color": color, "rot": rot, "drag": drag, "spin": _rng.randf_range(-4.0, 4.0), "ph": _rng.randf() * TAU})
 
 
+## Un trait de lumière lancé à la vitesse « vel » (charge et éclat des boss, boss_base.gd).
+func mote(pos: Vector2, vel: Vector2, dur: float, size: float, color: Color) -> void:
+	_particle(0, pos, vel, dur, size, color, vel.angle(), 0.0)
+
+
 func cloud(pos: Vector2, radius: float, dur: float, dps: float) -> void:
 	clouds.append({"pos": pos, "radius": radius, "t": 0.0, "dur": dur, "dps": dps})
 

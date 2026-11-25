@@ -90,6 +90,16 @@ var minions: Array = []
 var sync = null
 ## Vrai tant que le boss attendait la musique au pas précédent (la reprise éclate à sa fin).
 var _music_wait := false
+## Charge pendant l'attente de la musique (invocation, pont avant chaque phase) : 0 au début de
+## l'attente, 1 au retour de la batterie ; -1 hors attente. Elle suit la mesure, pas le temps du jeu.
+var charge := -1.0
+var _charge_total := 0.0
+## Dernière impulsion de charge jouée (numéro de subdivision depuis le début du morceau).
+var _charge_hit := -1
+## Rotation accumulée de ce qui tourne autour de lui pendant la charge (de plus en plus vite).
+var charge_spin := 0.0
+## Hasard propre aux étincelles (ne touche pas au hasard du jeu).
+var _charge_rng := RandomNumberGenerator.new()
 ## Figé par les tests visuels : la logique ne tourne plus, la pose reste affichée.
 var frozen := false
 var marks: Node2D
@@ -188,7 +198,7 @@ func _physics_process(delta: float) -> void:
 	if p.position.distance_to(anchor) < radius + p.radius:
 		p.take_hit(contact_damage * damage_scale, self)
 	if sync != null:
-		_follow_music()
+		_follow_music(delta)
 	if intro > 0.0:
 		intro -= delta
 		return
@@ -199,7 +209,7 @@ func _physics_process(delta: float) -> void:
 
 
 ## La musique tient l'intro et les transitions : elles durent jusqu'au premier temps de la boucle.
-func _follow_music() -> void:
+func _follow_music(delta := 0.0) -> void:
 	var waiting: bool = sync.waiting()
 	if waiting and sync.stage == "intro":
 		intro = sync.left()
@@ -209,15 +219,131 @@ func _follow_music() -> void:
 		# La batterie revient : le combat reprend d'un coup.
 		intro = 0.0
 		transition = 0.0
+		charge = -1.0
 		_music_resume()
+	if waiting:
+		_charge_step(delta)
 	_music_wait = waiting
 
 
-## Le combat (re)prend sur le premier temps de la boucle : un éclat, que chaque boss peut enrichir.
+# --- Charge sur le pont de la musique ---
+# Pendant toute l'attente, le boss charge sa forme suivante : des impulsions calées sur la grille du
+# morceau, de plus en plus serrées (blanches, noires, croches, doubles croches sur la dernière mesure),
+# l'énergie qui afflue vers lui de plus en plus vite, la secousse qui monte ; sur le dernier temps il
+# déborde ; au retour de la batterie, tout éclate (_music_resume).
+
+## Énergie de la charge (0 → 1), qui accélère vers la fin ; 0 hors attente.
+func charge_energy() -> float:
+	return pow(charge, 2.2) if charge > 0.0 else 0.0
+
+
+## Temps (au sens musical) d'ici le retour de la batterie.
+func charge_beats_left() -> float:
+	if sync == null:
+		return 0.0
+	return sync.left() / (sync.bar / float(sync.beats))
+
+
+## Impulsions par temps à cet instant : 0,5 (blanches) loin du drop, puis 1, 2, et 4 sur la
+## dernière mesure.
+func charge_rate() -> float:
+	var lb := charge_beats_left()
+	if lb > 8.0:
+		return 0.5
+	if lb > 4.0:
+		return 1.0
+	if lb > 2.0:
+		return 2.0
+	return 4.0
+
+
+## Battement de la charge (1 sur l'impulsion, retombe à 0 avant la suivante).
+func charge_pulse() -> float:
+	if charge < 0.0 or sync == null:
+		return 0.0
+	return pow(1.0 - fposmod(sync.bars_now() * sync.beats * charge_rate(), 1.0), 3.0)
+
+
+## Débordement du dernier temps (0 → 1 sur le dernier temps avant la batterie).
+func charge_overflow() -> float:
+	if charge < 0.0:
+		return 0.0
+	return clampf(1.0 - charge_beats_left(), 0.0, 1.0)
+
+
+## Tremblement du corps (en pixels, local) : il grandit avec l'énergie et explose sur le dernier temps.
+func charge_jitter() -> Vector2:
+	var e := charge_energy()
+	if e <= 0.0:
+		return Vector2.ZERO
+	var amp := radius * (0.012 * e + 0.03 * e * charge_pulse() + 0.05 * charge_overflow())
+	return Vector2(sin(t * 71.0) + 0.6 * sin(t * 113.0), cos(t * 83.0) + 0.6 * sin(t * 59.0)) * amp
+
+
+func _charge_step(delta: float) -> void:
+	var left: float = sync.left()
+	if charge < 0.0 or left > _charge_total:
+		_charge_total = left
+		_charge_hit = -1
+		# La caméra glisse vers lui pendant toute la charge, et revient au héros après l'éclat.
+		if main.get("moments") != null and left > 0.5:
+			main.moments.focus(anchor + Vector2(0, -radius * 0.45), left + 0.9, left / (left + 0.9), 0.6, 300.0)
+	charge = clampf(1.0 - left / maxf(_charge_total, 0.001), 0.0, 1.0)
+	var e := charge_energy()
+	charge_spin += delta * lerpf(0.25, 4.0, e)
+	var rate := charge_rate()
+	var hit := int(floor(sync.bars_now() * sync.beats * rate + 0.0001) * (4.0 / rate))
+	if hit != _charge_hit and _charge_total > 0.0:
+		var first := _charge_hit < 0
+		_charge_hit = hit
+		if not first:
+			_charge_impulse(e, rate)
+
+
+## Une impulsion de charge (sur la grille) : l'énergie est aspirée vers lui, la secousse monte.
+## Chaque boss peut l'enrichir (sa couleur, ses formes).
+func _charge_impulse(e: float, rate: float) -> void:
+	var col := _charge_color()
+	main.fx.shake(0.03 + 0.2 * e)
+	if Settings.reduce_effects:
+		return
+	# Anneau qui se referme sur lui (l'inverse d'une onde de choc) : de plus en plus vite.
+	main.fx.ring(anchor, radius * (6.5 - 2.5 * e), radius * 0.7, clampf(0.55 / rate, 0.12, 0.6), Color(col, 0.35 + 0.55 * e), 2.0 + 6.0 * e)
+	# Étincelles aspirées depuis le bord de l'arène.
+	var n := 3 + int(16.0 * e)
+	for i in n:
+		var a := _charge_rng.randf() * TAU
+		var d := radius * _charge_rng.randf_range(3.5, 6.5)
+		var from := anchor + Vector2.from_angle(a) * d
+		var dur := _charge_rng.randf_range(0.28, 0.45)
+		main.fx.mote(from, (anchor - from) / dur, dur, _charge_rng.randf_range(2.0, 3.5 + 3.0 * e), Color(col, 0.9))
+	# Le bord de l'écran s'allume sur chaque temps fort.
+	if rate <= 1.0 or e > 0.6:
+		main.screen_fx.glow(col, (0.08 + 0.35 * e) * (1.0 if rate <= 1.0 else 0.5), clampf(0.6 / rate, 0.12, 0.5))
+
+
+## Couleur de l'énergie qu'il charge.
+func _charge_color() -> Color:
+	return Art.c("danger_eclair")
+
+
+## Le combat (re)prend sur le premier temps de la boucle : tout ce qu'il a chargé éclate d'un coup.
+## Chaque boss peut l'enrichir.
 func _music_resume() -> void:
+	var col := _charge_color()
+	main.fx.shake(1.0)
+	main.fx.screen_flash(Color(1.0, 0.97, 0.9), 0.75, 0.45)
+	main.screen_fx.glow(col, 0.6, 0.9)
+	if Settings.reduce_effects:
+		return
 	main.fx.ring(anchor, radius, radius * 5.5, 0.55, Color(Art.ec("cendre", "clair"), 0.85), 7.0)
-	main.fx.shake(7.0)
-	main.screen_fx.glow(Art.c("danger"), 0.35, 0.6)
+	main.fx.ring(anchor, radius * 0.5, radius * 9.0, 0.8, Color(1.0, 0.97, 0.9, 0.9), 14.0)
+	main.fx.ring(anchor, radius * 0.8, radius * 7.0, 1.1, Color(col, 0.7), 5.0)
+	main.fx.star(anchor, radius * 3.4, 16, Color(1.0, 0.97, 0.9), 0.45)
+	for i in 48:
+		var a := TAU * i / 48.0 + _charge_rng.randf_range(-0.06, 0.06)
+		var v := Vector2.from_angle(a) * _charge_rng.randf_range(420.0, 900.0)
+		main.fx.mote(anchor + Vector2.from_angle(a) * radius * 0.6, v, _charge_rng.randf_range(0.5, 0.9), _charge_rng.randf_range(3.0, 6.0), Color(col if i % 2 == 0 else Color(1.0, 0.95, 0.85), 0.95))
 
 
 ## Vrai tant que le boss attend la musique (arrivée, transformation) : invulnérable.
