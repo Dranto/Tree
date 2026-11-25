@@ -3,9 +3,9 @@
   "epines": {
     "name": "Épines",
     "branch": "ronce",
-    "opening": ["c:ronce:epines:e7", "c:ronce:epines:e3", "key:nova"],
+    "opening": ["c:ronce:fouet:f1", "c:ronce:epines:e7", "c:ronce:epines:e3", "key:nova"],
     "targets": [
-      "c:ronce:epines:e7",
+      "c:ronce:fouet:f1", "c:ronce:epines:e7",
       "key:nova",
       "c:ronce:epines:e1",
       "c:ronce:epines:e2",
