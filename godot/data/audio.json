@@ -21,7 +21,7 @@
         },
         "combat": {"kit": "water", "kick": "x.....x...x.....", "snare": "....x..o....x...", "hat": ".x.x.x.x.x.x.x.x", "bass": [0, null, 0, 3, null, 7, 10, 7]},
         "heart": {"vowel": "u"},
-        "boss": {"counter_tone": "clarinet",
+        "boss": {"counter_tone": "cello",
           "chord": [0, 3, 6, 10],
           "kit": "water",
           "kick": "x..x...x..x..x..",

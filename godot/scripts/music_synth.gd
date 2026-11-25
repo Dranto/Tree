@@ -33,7 +33,7 @@ const BED_LOOP := 12.0
 const EIGHTH := CHORD_TIME / 8.0
 const SIXTEENTH := CHORD_TIME / 16.0
 ## Version des formules (empreinte des pistes) : à changer quand le rendu change.
-const VERSION := 3
+const VERSION := 4
 const BED_VERSION := 2
 
 ## Fichier (couche) → section de réglages.
@@ -43,7 +43,7 @@ const PEAKS := {"sombre": 0.62, "lumineux": 0.62, "combat": 0.55, "coeur": 0.5, 
 const KITS := ["frame", "taiko", "wood", "metal", "water"]
 const VOWELS := {"a": [800.0, 1150.0, 2900.0], "o": [450.0, 800.0, 2830.0], "u": [325.0, 700.0, 2530.0], "e": [400.0, 1700.0, 2600.0]}
 ## Voix mélodiques (lead_tone, counter_tone) et instruments d'arpège (arp).
-const TONES := ["flute", "clarinet", "horn", "brass", "cello", "glass"]
+const TONES := ["flute", "clarinet", "horn", "horns", "brass", "cello", "glass"]
 const ARPS := ["pizz", "harp", "marimba", "kalimba", "glock", "piano"]
 ## Modes des instruments frappés : rapports de fréquence, gains, amortissements (par seconde).
 const MODES := {
@@ -69,11 +69,11 @@ const DEFAULTS := {
 		"motif": [[0, 2, 2], [2, 1, 1], [3, 2, 1], [4, 3, 4], [8, 3, 2], [10, 2, 2], [12, 1, 4], [16, 2, 2], [18, 3, 1], [19, 2, 1], [20, 0, 4], [24, 1, 3], [27, 2, 1], [28, 3, 4]],
 		"motif_b": []},
 	"combat": {"kit": "frame", "kick": "x.......x.x.....", "snare": "....x.......x...", "hat": "..x...x...x...x.", "tom": "",
-		"bass": [0, 0, 12, 0, 7, 0, 12, 3], "bass_vol": 0.42, "pulse": 0.3, "drums": 0.9, "verb": 0.22, "horn": 0.25, "fill": 0.6, "swell": 0.3},
+		"bass": [0, 0, 12, 0, 7, 0, 12, 3], "bass_vol": 0.42, "pulse": 0.3, "drums": 0.9, "verb": 0.22, "horn": 0.25, "fill": 0.6, "swell": 0.3, "density": 0.5},
 	"heart": {"vowel": "a", "choir": 0.6, "beat": 0.32, "shimmer": 0.2, "verb": 0.5, "solo": 0.22, "strings": 0.25},
 	"boss": {"chord": [0, 7, 12, 15], "kit": "taiko", "kick": "x..x..x.x..x..x.", "snare": "....x.......x..x", "hat": "x.x.x.x.x.x.x.x.", "tom": "...........x.xx.",
-		"bass": [0, 0, 12, 0, 0, 10, 12, 7], "bass_vol": 0.6, "brass": 0.42, "lead": 0.45, "lead_tone": "brass", "lead_octave": 2, "choir": 0.3, "pulse": 0.3, "pad": 0.3,
-		"drums": 1.0, "verb": 0.3, "counter": 0.3, "counter_tone": "cello", "gong": 0.5, "fill": 0.8, "echo": 0.12,
+		"bass": [0, 0, 12, 0, 0, 10, 12, 7], "bass_vol": 0.6, "brass": 0.42, "lead": 0.45, "lead_tone": "horns", "lead_octave": 2, "choir": 0.3, "pulse": 0.3, "pad": 0.3,
+		"drums": 1.0, "density": 1.0, "verb": 0.3, "counter": 0.3, "counter_tone": "cello", "gong": 0.5, "fill": 0.8, "echo": 0.12,
 		"motif": [[0, 0, 1], [1, 0, 1], [2, 3, 2], [4, 2, 2], [6, 1, 2], [8, 0, 1], [9, 0, 1], [10, 3, 2], [12, 4, 4], [16, 0, 1], [17, 0, 1], [18, 3, 2], [20, 2, 2], [22, 1, 2], [24, 2, 3], [27, 3, 1], [28, 1, 4]],
 		"motif_b": []},
 }
@@ -446,6 +446,7 @@ static func _drums(out: PackedFloat32Array, st: Dictionary, rng: RandomNumberGen
 	var kit := str(st["kit"])
 	var vol: float = st["drums"]
 	var fill := float(st.get("fill", 0.0))
+	var density := float(st.get("density", 0.0))
 	for c in chords:
 		var b := c >= 4
 		var end_of_half := c % 4 == 3
@@ -456,6 +457,7 @@ static func _drums(out: PackedFloat32Array, st: Dictionary, rng: RandomNumberGen
 				var f := 150.0 - 14.0 * float(j - 12)
 				_tom(out, t + hum, vol * fill * (0.7 + 0.1 * float(j - 12)), f)
 				continue
+			var hit := {}
 			for part in ["kick", "snare", "hat", "tom"]:
 				var pat := str(st.get(part, ""))
 				if part == "tom" and pat.is_empty() and b and fill > 0.0:
@@ -466,6 +468,7 @@ static func _drums(out: PackedFloat32Array, st: Dictionary, rng: RandomNumberGen
 				if ch == ".":
 					continue
 				var v := vol * (1.0 if ch == "x" else 0.5) * rng.randf_range(0.88, 1.0)
+				hit[part] = true
 				match part:
 					"kick":
 						_kick(out, t + hum, v, kit)
@@ -475,6 +478,16 @@ static func _drums(out: PackedFloat32Array, st: Dictionary, rng: RandomNumberGen
 						_hat(out, t + hum, v * (0.5 if j % 2 == 0 else 0.38), kit, rng)
 					"tom":
 						_tom(out, t + hum, v * 0.7, 98.0 if j % 2 == 0 else 74.0)
+			# Densité : hochet en doubles croches, frappes fantômes, reprises de grosse caisse, toms en B.
+			if density > 0.0:
+				if not hit.has("hat"):
+					_hat(out, t + hum, vol * density * (0.3 if j % 4 == 2 else 0.18), kit, rng)
+				if not hit.has("snare") and j in [7, 10, 15]:
+					_snare(out, t + hum, vol * density * 0.28, kit, rng)
+				if density >= 0.8 and not hit.has("kick") and (j == 14 or (b and j == 11)):
+					_kick(out, t + hum, vol * 0.55, kit)
+				if density >= 0.8 and b and not hit.has("tom") and j % 4 == 2:
+					_tom(out, t + hum, vol * density * 0.45, 130.0 if j % 8 == 2 else 110.0)
 
 
 # --- Instruments (tous écrits en anneau) ------------------------------------------------------------------
@@ -570,11 +583,11 @@ static func _spiccato(out: PackedFloat32Array, t0: float, dur: float, f: float, 
 
 
 ## Voix mélodique : flute (flûte en bois, souffle), clarinet (anche, harmoniques impaires), horn (cor doux),
-## brass (cuivres graves qui s'ouvrent), cello (violoncelle à l'archet, caisse), glass (harmonica de verre).
+## horns (pupitre de cors à l'octave, rond), brass (cuivres graves, pour les accords plaqués), cello (violoncelle à l'archet, caisse), glass (harmonica de verre).
 static func _tone(out: PackedFloat32Array, tone: String, t0: float, dur: float, f: float, vol: float, rng: RandomNumberGenerator) -> void:
 	var n := out.size()
-	var rel := {"glass": 0.5, "cello": 0.22, "horn": 0.2, "brass": 0.15}.get(tone, 0.12) as float
-	var att := {"flute": 0.05, "clarinet": 0.04, "horn": 0.09, "brass": 0.05, "cello": 0.1, "glass": 0.18}.get(tone, 0.05) as float
+	var rel := {"glass": 0.5, "cello": 0.22, "horn": 0.2, "horns": 0.25, "brass": 0.15}.get(tone, 0.12) as float
+	var att := {"flute": 0.05, "clarinet": 0.04, "horn": 0.09, "horns": 0.1, "brass": 0.05, "cello": 0.1, "glass": 0.18}.get(tone, 0.05) as float
 	var cnt := int((dur + rel) * RATE)
 	var i0 := int(t0 * RATE)
 	var svf := Dsp.Svf.new(0, clampf(f * 8.0, 1200.0, 3500.0), 0.2)
@@ -597,16 +610,22 @@ static func _tone(out: PackedFloat32Array, tone: String, t0: float, dur: float, 
 			"clarinet":
 				s = Dsp.osc(Dsp.SQUARE, ph, dt, 0.5, null) * 0.5
 				if i % 32 == 0:
-					svf.set_params(minf(f * (2.0 + 1.5 * minf(1.0, t / 0.1)), 1800.0), 0.15)
+					svf.set_params(minf(f * (1.6 + 1.0 * minf(1.0, t / 0.1)), 1200.0), 0.1)
 				s = svf.process(s) + breath.process(rng.randf_range(-1.0, 1.0)) * 0.04
 			"horn":
 				var br := minf(1.0, t / 0.15) * 0.8
 				s = sin(TAU * ph) + 0.45 * br * sin(TAU * ph * 2.0) + 0.22 * br * sin(TAU * ph * 3.0) + 0.08 * br * sin(TAU * ph * 4.0)
 				s *= 0.8
+			"horns":
+				# Pupitre de cors : la note et son octave grave, harmoniques douces qui s'ouvrent à l'attaque.
+				var br := minf(1.0, t / 0.12) * (0.7 + 0.15 * exp(-t * 4.0))
+				s = sin(TAU * ph) + 0.4 * br * sin(TAU * ph * 2.0) + 0.15 * br * sin(TAU * ph * 3.0)
+				s += 0.7 * (sin(PI * ph) + 0.35 * br * sin(TAU * ph))
+				s *= 0.6
 			"brass":
 				s = Dsp.osc(Dsp.SAW, ph, dt, 0.5, null)
 				if i % 32 == 0:
-					svf.set_params(minf(f * (2.0 + 5.0 * minf(1.0, t / 0.08) * (0.6 + 0.4 * exp(-t * 3.0))), 2600.0), 0.25)
+					svf.set_params(minf(f * (1.5 + 3.0 * minf(1.0, t / 0.08) * (0.6 + 0.4 * exp(-t * 3.0))), 1500.0), 0.2)
 				s = svf.process(s) * 0.85
 			"cello":
 				s = Dsp.osc(Dsp.SAW, ph, dt, 0.5, null)
