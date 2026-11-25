@@ -194,8 +194,14 @@ const BESTIAIRE := {
 	"ronge": Color("2b1a22"),
 	"os": Color("e6d2a8"),
 	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
-	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
-	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
+	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f"),
+		# Flétris de la forêt pétrifiée (R6) : bois mort, chair de racine (mandragore), cendre (termite), feuille sèche.
+		"bois": Color("6e5238"), "bois_ombre": Color("3a2a1e"), "chair": Color("b89468"), "chair_ombre": Color("6a4e34"),
+		"cendre": Color("c2b8a4"), "cendre_ombre": Color("6e6658"), "feuille": Color("8a7a40")},
+	"vent": {"clair": Color("a3b6c8"), "ombre": Color("5a6a80"), "reflet": Color("e4eef7"), "detail": Color("d6c27e"),
+		"plume": Color("77869c"), "duvet": Color("dfe2dc"), "aile": Color("c8d4df")},
+	# Sève (R4) : vert profond de mare (distinct des autres régions pour les daltoniens, bestiaire_test), loin du vert menthe de la sève vivante ; detail = vase ocre ; vase = limon du fond.
+	"seve": {"clair": Color("308533"), "ombre": Color("1e5c2a"), "reflet": Color("b0e6a8"), "detail": Color("a88d52"), "vase": Color("4a3f30")},
 }
 ## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
 ## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
