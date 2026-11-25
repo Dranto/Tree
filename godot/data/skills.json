@@ -9,7 +9,7 @@
     "name": "Nuage de spores", "short": "Spores", "color": "#b48ae0", "cooldown": 9,
     "branch": "spore", "tags": ["zone"],
     "desc": "Nouvelle compétence : un nuage toxique ronge les ennemis à l'endroit visé.",
-    "range": 420, "radius": 120, "duration": 5, "damage": 1.5
+    "range": 420, "radius": 120, "duration": 5, "damage": 1.35
   },
   "bloom": {
     "name": "Floraison", "short": "Floraison", "color": "#7fd36b", "cooldown": 18,
@@ -136,10 +136,10 @@
     "walk": 0, "heal": 0, "uproot": 0
   },
   "pieux": {
-    "name": "Pieux", "short": "Pieux", "color": "#9a7446", "cooldown": 3.5,
+    "name": "Pieux", "short": "Pieux", "color": "#9a7446", "cooldown": 3.0,
     "branch": "racine", "tags": ["zone"],
     "desc": "Nouvelle compétence : une ligne de pieux de bois jaillit du sol vers l'endroit visé ; chaque pieu blesse et cloue un instant les ennemis qu'il soulève.",
-    "range": 520, "count": 6, "gap": 0.05, "radius": 46, "damage": 6.2, "root_duration": 0.6,
+    "range": 520, "count": 6, "gap": 0.05, "radius": 46, "damage": 5.4, "root_duration": 0.6,
     "ring": false, "stay": 0
   }
 }
