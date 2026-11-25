@@ -8055,16 +8055,16 @@ msgid " (%s)"
 msgstr " (%s)"
 
 #. scripts/effects.gd:279
-#. scripts/enemy.gd:252
+#. scripts/enemy.gd:253
 msgid " et "
 msgstr " et "
 
-#. scripts/enemy.gd:252
+#. scripts/enemy.gd:253
 msgctxt "élite : nom puis modificateurs"
 msgid "%s %s"
 msgstr "%s %s"
 
-#. scripts/enemy.gd:417
+#. scripts/enemy.gd:418
 msgid "Enragé !"
 msgstr "Enragé !"
 
@@ -8172,17 +8172,17 @@ msgstr ""
 "%s\n"
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 
-#. scripts/main.gd:1128
+#. scripts/main.gd:1138
 msgid "%s vaincu"
 msgstr "%s vaincu"
 
-#. scripts/main.gd:358
+#. scripts/main.gd:366
 #. scripts/save_game.gd:140
 #. scripts/save_game.gd:197
 msgid "aucune sauvegarde"
 msgstr "aucune sauvegarde"
 
-#. scripts/main.gd:359
+#. scripts/main.gd:367
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr "Sauvegarde illisible (%s) : nouvelle partie."
 
