@@ -197,6 +197,36 @@ const BESTIAIRE := {
 	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
 	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
 }
+# --- Paysages d'herbier, prototype technique (refonte du monde, vague 0 P) ---
+#
+# Couleurs du sol en couches et du décor cuit du prototype (scripts/world_bake/), Roncier seulement.
+# Réglage interne éteint par défaut (« --paysage-sol », « --paysage-decor ») : rien n'est branché
+# dans le jeu. À fondre dans le bloc des palettes du monde (Art.MONDE) en vague 1.
+const MONDE_PROTO := {
+	"ronce": {
+		# Lavis (couche 1) : grandes formes sans bruit fin. Flétri sombre, ravivé nettement plus clair.
+		"lavis_mort_sombre": Color("2e2224"), "lavis_mort_clair": Color("47343a"),
+		"lavis_vif_sombre": Color("4f6b34"), "lavis_vif_clair": Color("86a24a"),
+		# Matière (couche 2) : encre fine des tiges rampantes, épines, fissures.
+		"encre_morte": Color("1f1318"), "tige_morte": Color("5a3442"), "fissure": Color("1a1214"),
+		"encre_vive": Color("2c3a1a"), "tige_vive": Color("3f5a26"), "feuille": Color("6f9a3a"),
+		# Détails en grappes (couche 3) : cailloux, feuilles sèches ; herbe, fleurs et baies.
+		"caillou": Color("6b5a58"), "caillou_lumiere": Color("9a8783"), "feuille_seche": Color("6e4a3a"),
+		"herbe": Color("5e8a36"), "herbe_claire": Color("a6c860"), "fleur": Color("f08a8a"),
+		"fleur_coeur": Color("ffe2a0"), "baie": Color("d4485a"), "pousse": Color("b8e070"),
+	},
+}
+
+
+## Couleur du prototype du monde : mpc("ronce", "lavis_vif_clair").
+static func mpc(region: String, key: String) -> Color:
+	var r: Dictionary = MONDE_PROTO.get(region, {})
+	if r.has(key):
+		return r[key]
+	push_error("Art.mpc : couleur du prototype du monde inconnue « %s/%s »" % [region, key])
+	return Color.MAGENTA
+
+
 ## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
 ## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
 const FEUILLES_BUILD := {

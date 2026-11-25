@@ -51,6 +51,9 @@ signal elite_killed(enemy)
 ## Dernier état connu de la purification du Cœur de chaque région (identifiant -> vrai).
 var regions_purified := {}
 const BuildBot = preload("res://scripts/build_bot.gd")
+## Prototype de la refonte du monde (vague 0 P), éteint par défaut : décor cuit et composé.
+const DecorBake = preload("res://scripts/world_bake/decor_bake.gd")
+const DecorCompose = preload("res://scripts/world_bake/decor_compose.gd")
 
 var world_half := WORLD_HALF
 var ground
@@ -155,6 +158,13 @@ var bench_scene := ""
 var bench_kinds := PackedStringArray()
 var bench_shot := ""
 var bench_clock := 0.0
+## Prototype de la refonte du monde (vague 0 P) : « --bench-at=ronce » joue le banc au milieu du
+## Roncier (zone de test du décor composé), « --bench-run=V » y fait traverser le héros à V px/s
+## (marche 220, Ruée 1400) pour compter les carrés de sol construits.
+var bench_origin := Vector2.ZERO
+var bench_orbit := 900.0
+var bench_run := 0.0
+var _bench_tiles := [0, 0]
 var bench_last_usec := 0
 var bench_frames: PackedFloat32Array = PackedFloat32Array()
 var bench_cpu := {"process": 0.0, "physics": 0.0, "samples": 0}
@@ -208,6 +218,12 @@ func _ready() -> void:
 	flora.ground = ground
 	flora.trees_parent = trees_layer
 	add_child(flora)
+	DecorBake.configure()
+	if DecorBake.enabled:
+		DecorCompose.configure()
+		DecorCompose.spawn(flora, DecorCompose.test_center())
+		if DecorBake.baked:
+			_bake_decor()
 	orbs_layer = Node2D.new()
 	add_child(orbs_layer)
 	# Signatures des attaques du héros : une moitié sous les acteurs, l'autre au-dessus des projectiles.
@@ -231,6 +247,7 @@ func _ready() -> void:
 	actors_layer.add_child(enemies_layer)
 	player = Player.new()
 	player.main = self
+	player.position = bench_origin
 	actors_layer.add_child(player)
 	projectiles_layer = Node2D.new()
 	add_child(projectiles_layer)
@@ -482,6 +499,11 @@ func _physics_process(delta: float) -> void:
 	enemies = enemies.filter(func(e): return is_instance_valid(e) and not e.dead)
 	if benchmark:
 		player.invuln = maxf(player.invuln, 1.0)
+		if bench_run > 0.0:
+			# Aller-retour sur 1800 px en travers du Roncier, à vitesse constante.
+			var side := bench_origin.normalized().orthogonal() if bench_origin != Vector2.ZERO else Vector2.RIGHT
+			var u := fposmod(bench_clock * bench_run, 3600.0)
+			player.position = bench_origin + side * (absf(u - 1800.0) - 900.0)
 		while bench_scene == "" and enemies.size() < BENCH_ENEMIES:
 			_spawn_enemy()
 	_rebuild_grid()
@@ -1342,7 +1364,7 @@ func bot_input(p) -> Dictionary:
 		var styled: Dictionary = build_bot.steer(p, target, best, Game.stats["max_hp"])
 		if not styled.is_empty():
 			return styled
-	var orbit := Vector2.from_angle(elapsed * 0.35) * minf(900.0, 200.0 + elapsed * 20.0)
+	var orbit := bench_origin + Vector2.from_angle(elapsed * 0.35) * minf(bench_orbit, 200.0 + elapsed * 20.0)
 	var mv: Vector2 = orbit - p.position
 	mv = mv.normalized() if mv.length() > 40.0 else Vector2.ZERO
 	return {"move": mv, "aim": target, "dash": best < 50.0 * 50.0}
@@ -1423,6 +1445,8 @@ func _benchmark_frame(delta: float) -> void:
 	bench_clock += delta
 	if bench_clock > BENCH_WARMUP and bench_frames.is_empty():
 		Prof.reset()
+		_bench_tiles = [ground.tiles_built, ground.tiles_redrawn]
+		Ground.GroundLayers.reset_stats()
 	if bench_clock > BENCH_WARMUP and bench_last_usec > 0:
 		bench_frames.append((now - bench_last_usec) / 1000.0)
 		bench_cpu["process"] += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
@@ -1461,6 +1485,13 @@ func _finish_benchmark() -> void:
 		print(line)
 	var sil = Enemy.Silhouettes
 	print("BENCHMARK silhouettes : %d dessins en cache, %d calculées pour le cache (%d maillages gardés), %d calculées en action" % [sil.hits, sil.misses, sil._meshes.size() + sil._old.size(), sil.live])
+	var secs := maxf(0.001, bench_clock - BENCH_WARMUP)
+	print("BENCHMARK sol : %d carrés construits (%.1f/s), %d refaits (%.1f/s), carré de %d px" % [ground.tiles_built - _bench_tiles[0], (ground.tiles_built - _bench_tiles[0]) / secs, ground.tiles_redrawn - _bench_tiles[1], (ground.tiles_redrawn - _bench_tiles[1]) / secs, ground.tile_px])
+	if ground.layered:
+		var gs := Ground.GroundLayers.stats()
+		print("BENCHMARK sol en couches : %d calques dessinés, %.2f ms chacun, %d sommets chacun" % [gs["draws"], gs["usec"] / 1000.0 / maxf(1.0, gs["draws"]), gs["verts"] / maxi(1, gs["draws"])])
+	if DecorBake.enabled:
+		print("BENCHMARK décor : %d éléments, cuit %s (%d dessins cuits, %d en direct), atlas %.1f Mo, cuisson %.0f ms" % [flora.trees.size(), "oui" if DecorBake.baked else "non", DecorBake.drawn, DecorBake.fallback, DecorBake.bytes / 1048576.0, DecorBake.bake_usec / 1000.0])
 	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
 	var kinds := {}
 	for e in enemies:
@@ -1504,6 +1535,11 @@ func _benchmark_setup() -> void:
 			bench_kinds = a.substr(14).split(",")
 		elif a.begins_with("--bench-shot="):
 			bench_shot = a.substr(13)
+		elif a == "--bench-at=ronce":
+			bench_origin = DecorCompose.test_center()
+			bench_orbit = 380.0
+		elif a.begins_with("--bench-run="):
+			bench_run = maxf(0.0, float(a.substr(12)))
 	get_tree().process_frame.connect(func(): _seg_start = Time.get_ticks_usec())
 	RenderingServer.frame_pre_draw.connect(func(): _seg_pre = Time.get_ticks_usec())
 	RenderingServer.frame_post_draw.connect(func():
@@ -1511,6 +1547,13 @@ func _benchmark_setup() -> void:
 			bench_seg["script"] += _seg_pre - _seg_start
 			bench_seg["render"] += Time.get_ticks_usec() - _seg_pre
 			bench_seg["n"] += 1)
+
+
+## Prototype du décor cuit : cuisson à la mise en route (une image), puis le décor se redessine
+## depuis l'atlas.
+func _bake_decor() -> void:
+	await DecorBake.bake(self)
+	DecorBake.install(flora)
 
 
 ## « --hide=sol,ennemis » : cache ces calques pendant le banc (la différence de temps dit leur coût).

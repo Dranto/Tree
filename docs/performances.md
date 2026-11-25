@@ -273,3 +273,13 @@ Options du banc ajoutées : `--bench-kinds=fletri,tireur` (seules ces sortes nai
 Banc en paires (5 tours, machine lente) : develop 58,4 ms (p99 99,5) ; sprites ×4 48,2 ms (p99 79,0).
 Atlas des 30 sortes : 27 Mo à ×2, 59 Mo à ×3, 103 Mo à ×4 ; cuisson 0,8 / 1,4 / 2-3 s (llvmpipe).
 Mesures et recommandation complètes dans la PR.
+
+## Prototype : sol en couches et décor cuit (refonte du monde, vague 0 P, 25/11)
+
+Réglages internes, éteints par défaut (aucune référence visuelle ne change) : `--paysage-sol`
+(scripts/world_bake/ground_layers.gd : lavis dans le shader, matière et détails dessinés une fois par
+carré de sol), `--paysage-decor` (scripts/world_bake/decor_bake.gd : décor cuit dans un atlas ;
+decor_compose.gd : lisière composée autour d'une clairière de test). Bancs : `--bench-at=ronce`,
+`--bench-run=1400`. Mesures en paires (Roncier, 120 Flétris) : sol en couches +5 %, décor composé en
+direct +19 %, cuit +8 % ; un carré de sol 5,5 ms au lieu de 2,5. Tableau complet et recommandation :
+/mnt/project-files/captures/refonte-monde/P/mesures.md (projet). Test : tests/paysages_proto_test.gd.

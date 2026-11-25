@@ -35,6 +35,7 @@ TESTS=(
   "draw_batch|--xvfb --audio-driver Dummy|"
   "heros|--xvfb --audio-driver Dummy|"
   "sprite_bake|--xvfb --audio-driver Dummy|"
+  "paysages_proto|--xvfb --audio-driver Dummy|"
   "eclat_skills|--headless --fixed-fps 60|"
   "enemies|--headless|"
   "falaises|--headless --fixed-fps 60|"
