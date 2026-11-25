@@ -287,7 +287,7 @@ Mesures et recommandation complètes dans la PR.
   direct en attendant, une ou deux images). Cache disque `user://sprites/` (zstd), invalidé par une empreinte des scripts
   de dessin (texte, ou fichier compilé d'un export), d'`art.gd` et des réglages : 30 sortes relues en ~60 ms.
 - Mémoire : 52 Mo pour les 30 sortes aujourd'hui (3 dessinées, ~4 à 9 Mo chacune). Budget de 64 Mo en jeu : au-delà, les
-  atlas qui n'ont pas servi depuis 3 s sont rendus et relus du cache s'ils reviennent ; une sorte au plus 10 Mo (test).
+  atlas qui n'ont pas servi depuis 3 s sont rendus et relus du cache s'ils reviennent ; une sorte vise 3,5 Mo : au-delà elle est cuite moins fin, de ×3 jusqu'à ×2 (`KIND_TARGET`, `MIN_SCALE`), et le test la plafonne à 5 Mo ; `const LOOKS := false` cuit un seul regard pour un dessin qui ne suit pas la cible.
 - Ombres, annonces d'attaque, auras : couche `enemy_ground_layer` sous tous les acteurs (les comportements dessinent sur
   `e.gc`). Élite : ×1,15, liseré doré (shader), collier de la région au point `NECK`, ou atlas d'élite (`DRAWS_ELITE`).
 - Banc en paires (4 tours, machine lente) : develop 53,5 ms (p99 92,8) ; rendu cuit 48,1 ms (p99 81,6), soit −10 %.

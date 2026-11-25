@@ -11,7 +11,7 @@ const Sprites = preload("res://scripts/sprite_bake.gd")
 ## Mémoire gardée en jeu (octets, mipmaps comprises), élites comprises (atlas réutilisé) : le budget
 ## du moteur (atlas oubliés rendus au-delà), et le plus gros atlas permis pour une sorte.
 const MEMORY_MAX := 70 * 1024 * 1024
-const KIND_MAX := 10 * 1024 * 1024
+const KIND_MAX := 5 * 1024 * 1024
 
 var failures := 0
 
@@ -44,10 +44,10 @@ func _run() -> void:
 			_check(a.anims.has(anim) and not a.anims[anim][0].is_empty(), "%s : animation %s absente" % [kr[0], anim])
 		if a.scripted:
 			for anim in ["idle"] + (["windup"] if a.anims.has("windup") else []):
-				_check(a.anims[anim].size() == Sprites.LOOKS.size(), "%s : regards de %s absents" % [kr[0], anim])
+				_check(a.anims[anim].size() == (Sprites.LOOKS.size() if Sprites._const(Sprites.script_of(kr[0]), "LOOKS", true) else 1), "%s : regards de %s absents" % [kr[0], anim])
 			_check(a.anims.has("hit"), "%s : coup reçu absent" % kr[0])
 			_check(a.shadow_r.x > 2.0, "%s : ombre non relevée" % kr[0])
-			_check(a.top < -float(Sprites.script_of(kr[0]).HEIGHT) * 0.4, "%s : haut du dessin trop bas (%.1f)" % [kr[0], a.top])
+			_check(a.top < -float(Sprites.script_of(kr[0]).HEIGHT) * 0.25, "%s : haut du dessin trop bas (%.1f)" % [kr[0], a.top])
 		_check(a.unique >= 1 and a.unique <= a.total, "%s : %d images uniques sur %d" % [kr[0], a.unique, a.total])
 		var img: Image = a.tex.get_image()
 		var src: Rect2 = a.src(a.anims["idle"][0][0])

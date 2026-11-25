@@ -33,7 +33,7 @@ const CREATURE_DIR := "res://scripts/creature_art/"
 static var creature_dir := CREATURE_DIR
 const CACHE_DIR := "user://sprites/"
 ## À changer quand le format ou la façon de cuire change : invalide tout le cache.
-const FORMAT := 2
+const FORMAT := 3
 
 ## Rendu par défaut ; « --no-sprites » revient au dessin direct d'avant (comparaisons, banc).
 static var enabled := true
@@ -67,6 +67,10 @@ const FEET := 0.45
 const ELITE_SCALE := 1.15
 ## Coup reçu cuit des sortes dessinées (pose « hit »).
 const HIT_POSES := [1.0, 0.5]
+## Mémoire visée pour l'atlas d'une sorte dessinée (octets, mipmaps comprises) et résolution minimale :
+## au-delà, la sorte est cuite moins fin (×3 → ×2 au plus bas).
+const KIND_TARGET := 3.5 * 1024 * 1024
+const MIN_SCALE := 2.0
 ## Repérage de la place prise par un dessin (première passe, petite).
 const PROBE_SCALE := 1.5
 
@@ -381,8 +385,10 @@ static func _poses_scripted(kind_id: String, art) -> Array:
 	# repos et l'annonce suivent la cible en trois angles.
 	for i in walk_frames:
 		out.append(["walk", 0, {"walk": i * TAU / walk_frames, "moving": 1.0, "t": i * TIME_LOOP / walk_frames, "look": 0.0}])
-	for li in LOOKS.size():
-		var look: float = LOOKS[li]
+	# « const LOOKS := false » : dessin qui ne suit pas la cible (un seul regard, moitié moins d'images).
+	var looks: Array = LOOKS if _const(art, "LOOKS", true) else [0.0]
+	for li in looks.size():
+		var look: float = looks[li]
 		for i in idle_frames:
 			out.append(["idle", li, {"t": (i + 0.5) * TIME_LOOP / idle_frames, "look": look}])
 		if "windup" in want:
@@ -639,7 +645,7 @@ static func _pack(a: Atlas, boxes: Array) -> Vector2i:
 	var area := 0.0
 	for i in boxes.size():
 		var bx: Rect2 = boxes[i]
-		var sz := (bx.size * scale).ceil() + Vector2.ONE * PAD * 2
+		var sz := (bx.size * a.bake_scale).ceil() + Vector2.ONE * PAD * 2
 		sizes.append([i, sz])
 		area += sz.x * sz.y
 		a.cell = a.cell.max(sz)
@@ -657,7 +663,7 @@ static func _pack(a: Atlas, boxes: Array) -> Vector2i:
 			y += row_h
 			row_h = 0.0
 		var bx: Rect2 = boxes[it[0]]
-		a.frames[it[0]] = [Rect2(Vector2(x, y), sz), -bx.position * scale + Vector2.ONE * PAD]
+		a.frames[it[0]] = [Rect2(Vector2(x, y), sz), -bx.position * a.bake_scale + Vector2.ONE * PAD]
 		x += sz.x
 		w = maxf(w, x)
 		row_h = maxf(row_h, sz.y)
@@ -755,6 +761,14 @@ static func _job_new(host: Node, pr: Dictionary):
 	else:
 		a.shadow_c = feet
 		a.shadow_r = Vector2(h * 0.3, h * 0.3 * Art.OMBRE_APLATI)
+	# Une sorte grande ou très animée est cuite un peu moins fin (pas sous MIN_SCALE) pour que son
+	# atlas tienne dans KIND_TARGET : la mémoire des 30 sortes reste bornée quand toutes sont dessinées.
+	var area := 0.0
+	for bx in boxes:
+		area += (bx.size.x * scale + PAD * 2) * (bx.size.y * scale + PAD * 2)
+	var est := area * 4.0 * 4.0 / 3.0
+	if est > KIND_TARGET:
+		a.bake_scale = maxf(MIN_SCALE, scale * sqrt(KIND_TARGET / est))
 	var size := _pack(a, boxes)
 	var out := ScriptPainter.new()
 	out.art = art
@@ -762,7 +776,7 @@ static func _job_new(host: Node, pr: Dictionary):
 	out.feet = feet
 	for j in uniq.size():
 		var at := (a.src(j).position + a.anchor(j)) * ss
-		out.items.append([Transform2D(0.0, Vector2.ONE * scale * ss, 0.0, at), poses[uniq[j]][2]])
+		out.items.append([Transform2D(0.0, Vector2.ONE * a.bake_scale * ss, 0.0, at), poses[uniq[j]][2]])
 	return [a, _viewport(host, size * ss, out)]
 
 
@@ -896,7 +910,7 @@ static func draw(ci: CanvasItem, kind_id: String, r: float, sgn: float, tilt: fl
 	drawn += 1
 	a.last_used = Time.get_ticks_msec()
 	var i := frame_of(a, o, t, li)
-	var k := size_of(a, r) / scale
+	var k := size_of(a, r) / a.bake_scale
 	if a.scripted:
 		ci.draw_set_transform_matrix(Transform2D(0.0, Vector2(k * sgn, k), 0.0, Vector2.ZERO))
 	else:
