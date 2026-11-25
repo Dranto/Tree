@@ -180,6 +180,42 @@ const ELEMENT_DE_COMPETENCE := {
 	"ecorce": "racine", "ancrage": "racine", "pieux": "racine",
 }
 
+# --- Bestiaire d'herbier (refonte des personnages, vague 0 : planche de direction) ---
+#
+# Couleur du corps d'un Flétri = sa région (deux tons et une lumière : « clair », « ombre »,
+# « reflet »), plus un « detail » propre à la région (feuille sèche, ocre, lichen). La braise
+# (« braise », « braise_coeur ») est le signe commun de l'ennemi ; le « ronge » est la Flétrissure
+# qui mange la bête. Le héros garde son corps crème ; ses feuilles prennent la couleur de son build.
+# Utilisé seulement par scripts/creature_art/ (planche), rien n'est encore branché dans le jeu.
+const BESTIAIRE := {
+	"encre": Color("1a1210"),
+	"braise": Color("ff8a2a"),
+	"braise_coeur": Color("ffd27a"),
+	"ronge": Color("2b1a22"),
+	"os": Color("e6d2a8"),
+	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
+	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
+	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
+}
+## Feuilles du Porte-Graine selon la branche dominante du build.
+const FEUILLES_BUILD := {
+	"aucun": {"clair": Color("6fae58"), "ombre": Color("355e2c"), "reflet": Color("c6ecb0"), "detail": Color("8af5c0")},
+	"ronce": {"clair": Color("5f7d3a"), "ombre": Color("2f3f1f"), "reflet": Color("b9cf8a"), "detail": Color("e0675e")},
+	"seve": {"clair": Color("4fd69a"), "ombre": Color("1f7a56"), "reflet": Color("d6fff0"), "detail": Color("eafff4")},
+}
+
+
+## Couleur du bestiaire : bc("encre"), ou bc("ronce", "clair") pour la palette d'une région.
+static func bc(nom: String, variante := "") -> Color:
+	var v = BESTIAIRE.get(nom, null)
+	if v is Color:
+		return v
+	if v is Dictionary and v.has(variante):
+		return v[variante]
+	push_error("Art.bc : couleur du bestiaire inconnue « %s/%s »" % [nom, variante])
+	return Color.MAGENTA
+
+
 # --- Traits, ombres, lumière ---
 
 const TRAIT_FIN := 1.5     ## détails, motifs, icônes de petite taille

@@ -10,3 +10,4 @@ tests/unit-out/
 
 # GodotSteam (facultatif), posé par tools/steam-fetch.sh : jamais dans le dépôt.
 addons/godotsteam/
+tests/bestiaire/out/
