@@ -35,7 +35,7 @@
       "cible": 8.0
     },
     "fletri_dl:vent:ravive": {
-      "valeur": 1.6,
+      "valeur": 0.2,
       "cible": 8.0
     },
     "heros_dl:vent:ravive": {
@@ -43,11 +43,11 @@
       "cible": 10.0
     },
     "dalto_perso:deuteranopie:vent:ravive": {
-      "valeur": 8.6,
+      "valeur": 9.6,
       "cible": 10.0
     },
     "dalto_perso:tritanopie:vent:ravive": {
-      "valeur": 8.2,
+      "valeur": 4.0,
       "cible": 10.0
     },
     "fletri_dl:seve:fletri": {
