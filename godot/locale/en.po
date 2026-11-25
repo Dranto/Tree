@@ -6395,8 +6395,8 @@ msgid "Traîne-vase"
 msgstr "Mudcrawler"
 
 #. data/finale.json › boss › name
-#. scripts/finale_arena.gd:65
-#. scripts/world_ending.gd:73
+#. scripts/finale_arena.gd:84
+#. scripts/world_ending.gd:79
 msgid "La Flétrissure"
 msgstr "The Blight"
 
@@ -7200,7 +7200,7 @@ msgid "Autel de la couronne"
 msgstr "Altar of the Crown"
 
 #. data/regions/ronce.json › ronce › boss › name
-#. scripts/boss_arena.gd:35
+#. scripts/boss_arena.gd:36
 msgid "La Mère-Ronce"
 msgstr "The Bramble Mother"
 
@@ -7862,20 +7862,20 @@ msgstr "%d attack forms"
 msgid "Synergie possible « %s » : %s"
 msgstr "Possible synergy “%s”: %s"
 
-#. scripts/boss_arena.gd:37
-#. scripts/finale_arena.gd:67
+#. scripts/boss_arena.gd:38
+#. scripts/finale_arena.gd:86
 msgid "Phase 1 sur 3"
 msgstr "Phase 1 of 3"
 
-#. scripts/boss_arena.gd:37
+#. scripts/boss_arena.gd:38
 msgid "Phase 2 sur 3 : les bourgeons éclosent"
 msgstr "Phase 2 of 3: the buds burst open"
 
-#. scripts/boss_arena.gd:37
+#. scripts/boss_arena.gd:38
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 of 3: the brambles close in"
 
-#. scripts/boss_base.gd:285
+#. scripts/boss_base.gd:505
 msgid "Entravée"
 msgstr "Snared"
 
@@ -8072,11 +8072,11 @@ msgstr "Enraged!"
 msgid "Sous terre"
 msgstr "Underground"
 
-#. scripts/finale_arena.gd:67
+#. scripts/finale_arena.gd:86
 msgid "Phase 2 sur 3"
 msgstr "Phase 2 of 3"
 
-#. scripts/finale_arena.gd:67
+#. scripts/finale_arena.gd:86
 msgid "Phase 3 sur 3"
 msgstr "Phase 3 of 3"
 
@@ -8172,7 +8172,7 @@ msgstr ""
 "%s\n"
 "Click to change skill, or drag it onto another slot."
 
-#. scripts/main.gd:1163
+#. scripts/main.gd:1170
 msgid "%s vaincu"
 msgstr "%s defeated"
 
