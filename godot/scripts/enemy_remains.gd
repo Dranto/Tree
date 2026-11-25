@@ -13,11 +13,21 @@
 ## fleurs ou de cendres propre à la région court au sol. Apparence seulement : aucun effet de jeu.
 ## Tout le dessin est une fonction du temps (draw_at), sans état qui avance : la galerie et les
 ## tests peuvent figer n'importe quel instant.
+##
+## Sprites cuits (refonte des personnages, tâche M) : quand le Flétri était dessiné depuis son image
+## cuite (sprite_bake.gd), sa mort part de cette image-là (« sprite », posé par enemy.gd) au lieu de
+## la silhouette calculée : un enfant la dessine sous les morceaux, avec shaders/remains_sprite.gdshader
+## (teinte qui garde les traits du dessin, cendre, effritement par le haut avec un front de braise) ;
+## la tranche coupe le quadrilatère de l'image (coordonnées de texture) ; les morceaux prennent la
+## couleur de l'image et la taille du dessin (plus grand que le rayon de collision). Sans image : la
+## silhouette d'avant, inchangée.
 extends Node2D
 
 const FletriArt = preload("res://scripts/fletri_art.gd")
 const DrawBatch = preload("res://scripts/draw_batch.gd")
 const Content = preload("res://scripts/content.gd")
+const Sprites = preload("res://scripts/sprite_bake.gd")
+const SpriteShader = preload("res://shaders/remains_sprite.gdshader")
 ## Mort « cendre » : la silhouette s'éteint et s'effondre pendant ASH ; la pousse vit de SPROUT_FROM à DURATION.
 const ASH := 0.5
 const SPROUT_FROM := 0.32
@@ -41,6 +51,11 @@ var power := 0.0
 var color := Color(0.5, 0.4, 0.4)
 ## Région de l'élite (onde au sol) ; vide : fleurs.
 var region := ""
+## Image cuite de la créature à sa mort ({tex, src, rect, r} : sprite_bake.gd › frame) ; vide :
+## silhouette calculée (fletri_art.gd).
+var sprite := {}
+## Côté de l'image (1 : vers la droite, -1 : retournée).
+var side := 1.0
 
 ## Morts élémentaires en cours (plafond feel.json › deaths › max_styled) ; au-delà, mort « cendre ».
 static var active := 0
@@ -54,6 +69,17 @@ var _end := DURATION
 var _pieces: Array = []   # morceaux (éclats, gouttes, flocons, cailloux, bouffées, lueurs)
 var _wave: Array = []     # onde de l'élite
 var _halves: Array = []   # tranche : deux moitiés en triangles, calculées au premier dessin
+# Image cuite : enfant qui la dessine (sous les morceaux), son matériau, la case à la taille du Flétri
+# (non retournée), le centre et le rayon du dessin visible, et vrai pendant le passage de l'enfant.
+var _spr: Node2D
+var _smat: ShaderMaterial
+var _rect := Rect2()
+var _vc := Vector2.ZERO
+var _vr := 0.0
+var _feet := 0.0
+var _body_pass := false
+## Couleur moyenne de l'image de chaque sorte (morceaux), lue une fois.
+static var _tones := {}
 
 
 ## Façon de mourir selon le coup final : forme de l'attaque (fouet), branche du coup, état qui a
@@ -98,6 +124,7 @@ func prepare() -> void:
 	_body = ASH if style == "cendre" else _style_feel(style, "time", 0.6)
 	_sprout = SPROUT_FROM if style == "cendre" else _body * _feel("sprout_at", 0.7)
 	_end = _sprout + SPROUT_LIFE
+	_setup_sprite()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(Vector2i(roundi(position.x), roundi(position.y))) ^ hash(style)
 	_pieces = _make_pieces(rng)
@@ -115,6 +142,7 @@ func _enter_tree() -> void:
 			active += 1
 			started[style] = int(started.get(style, 0)) + 1
 	prepare()
+	_ensure_sprite_node()
 
 
 func _exit_tree() -> void:
@@ -134,6 +162,8 @@ func _process(delta: float) -> void:
 		queue_free()
 		return
 	queue_redraw()
+	if _spr != null:
+		_spr.queue_redraw()
 
 
 func _draw() -> void:
@@ -176,7 +206,7 @@ func _boost() -> float:
 
 func _make_pieces(rng: RandomNumberGenerator) -> Array:
 	var out: Array = []
-	var r := radius
+	var r := _r()
 	var b := _boost()
 	var n := int(_style_feel(style, "pieces", 8.0))
 	match style:
@@ -256,6 +286,8 @@ func draw_at(ci: CanvasItem, pos: Vector2, time: float) -> void:
 		prepare()
 	if elite and not _wave.is_empty():
 		_draw_wave(ci, pos, time)
+	var feet := pos
+	pos += _vc
 	match style:
 		"venin":
 			_venin(ci, pos, time)
@@ -273,12 +305,18 @@ func draw_at(ci: CanvasItem, pos: Vector2, time: float) -> void:
 			_seve(ci, pos, time)
 		_:
 			_cendre(ci, pos, time)
-	_draw_sprout(ci, pos, time)
+	if _body_pass:
+		_b.clear()
+		return
+	_draw_sprout(ci, feet + Vector2(0, _feet), time)
 	_b.flush(ci)
 
 
 ## La silhouette, transformée (échelle, décalage, rotation), teinte « tint » et opacité « alpha ».
 func _silhouette(ci: CanvasItem, pos: Vector2, sc: Vector2, o: Dictionary, alpha := 1.0, rot := 0.0) -> void:
+	if not sprite.is_empty():
+		_sprite_body(ci, pos, sc, o, alpha, rot)
+		return
 	if alpha <= 0.01 or sc.x <= 0.01 or sc.y <= 0.01:
 		return
 	_b.flush(ci)
@@ -298,18 +336,211 @@ static func _fade(cols: PackedColorArray, alpha: float) -> PackedColorArray:
 	return cols
 
 
+# --- Image cuite (sprite_bake.gd) ---
+
+## Rayon du dessin visible : celui de collision sans image cuite ; sinon la taille de l'image, qui
+## est plus grande (seul le dessin grandit).
+func _r() -> float:
+	return _vr if not sprite.is_empty() else radius
+
+
+## Image cuite d'une sorte dans cette pose : {tex, src (pixels de l'atlas), rect (pixels du jeu,
+## relatif à la position, pour le rayon de base), r (rayon de base)} ; vide si rien n'est cuit.
+## Les teintes d'état et l'éclair ne comptent pas (la mort a les siennes) ; une pose qui n'est pas
+## cuite prend l'image du repos.
+static func frame_for(kind: String, o := {}, t := 0.0) -> Dictionary:
+	var oo: Dictionary = o.duplicate()
+	oo.erase("flash")
+	oo.erase("tint")
+	return Sprites.frame(kind, oo, t)
+
+
+## Image cuite d'un Flétri tel qu'il est affiché (vide s'il est dessiné autrement), avec son côté.
+static func enemy_frame(e) -> Dictionary:
+	if e == null or e.get("_sprite") == null:
+		return {}
+	var f := frame_for(str(e.kind_id), e.pose(), float(e.t))
+	if not f.is_empty():
+		f["side"] = float(e.get("_side"))
+	return f
+
+
+## Prépare le dessin depuis l'image : case à la taille du Flétri, centre et rayon visibles, couleur.
+func _setup_sprite() -> void:
+	if sprite.is_empty():
+		_vc = Vector2.ZERO
+		_feet = 0.0
+		return
+	side = -1.0 if side < 0.0 else 1.0
+	var k := radius / maxf(float(sprite.get("r", radius)), 0.01)
+	var rc: Rect2 = sprite["rect"]
+	_rect = Rect2(rc.position * k, rc.size * k)
+	var cu := _rect.get_center()
+	_vc = Vector2(cu.x * side, cu.y)
+	_vr = maxf(radius, (_rect.size.x + _rect.size.y) * 0.25 * (0.85 if sprite.get("shadow", false) else 1.0))
+	# Pieds : en bas du dessin ; la pousse sort là (draw_at ajoute r × 0,35).
+	_feet = _rect.end.y - _rect.size.y * 0.08 - radius * 0.35
+	var tone := tone_of(sprite)
+	if tone.a > 0.0:
+		color = tone
+
+
+func _ensure_sprite_node() -> void:
+	if sprite.is_empty() or _spr != null:
+		return
+	_smat = ShaderMaterial.new()
+	_smat.shader = SpriteShader
+	_smat.set_shader_parameter("ash_color", FletriArt.ash_color())
+	_smat.set_shader_parameter("ember", Art.c("danger_eclair").lerp(Color("ff8a3d"), 0.6))
+	_smat.set_shader_parameter("drop_shadow", bool(sprite.get("shadow", false)))
+	var tex: Texture2D = sprite["tex"]
+	var src: Rect2 = sprite["src"]
+	var ts := Vector2(tex.get_size())
+	_smat.set_shader_parameter("cell", Vector4(src.position.x / ts.x, src.position.y / ts.y, src.end.x / ts.x, src.end.y / ts.y))
+	_smat.set_shader_parameter("grain", maxf(2.0, src.size.y / maxf(_rect.size.y, 1.0) * 1.6))
+	_spr = Node2D.new()
+	_spr.show_behind_parent = true
+	_spr.material = _smat
+	_spr.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_spr.draw.connect(func(): _draw_body_pass(_spr))
+	add_child(_spr)
+
+
+## Passage de l'enfant : la même mort, mais seulement l'image (les morceaux sont dessinés par le nœud).
+func _draw_body_pass(ci: CanvasItem) -> void:
+	# Rien de dessiné tant qu'une mort ne pose pas l'image (lu aussi par les tests).
+	_smat.set_shader_parameter("alpha", 0.0)
+	_body_pass = true
+	draw_at(ci, Vector2.ZERO, t)
+	_body_pass = false
+
+
+## Transformation de l'image : centre visible en pos, tournée, mise à l'échelle, retournée.
+func _sprite_xf(pos: Vector2, sc: Vector2, rot: float) -> Transform2D:
+	return Transform2D(rot, sc, 0.0, pos) * Transform2D(0.0, Vector2(side, 1.0), 0.0, Vector2.ZERO) \
+		* Transform2D(0.0, Vector2.ONE, 0.0, -_rect.get_center())
+
+
+## Pose les réglages du shader (une image par mort : la tranche dessine deux moitiés aux mêmes réglages).
+func _sprite_params(o: Dictionary, alpha: float) -> void:
+	var tint: Color = o.get("tint", Color(0, 0, 0, 0))
+	_smat.set_shader_parameter("tint", Vector4(tint.r, tint.g, tint.b, tint.a))
+	_smat.set_shader_parameter("ash", float(o.get("ash", 0.0)))
+	_smat.set_shader_parameter("crumble", float(o.get("crumble", 0.0)))
+	_smat.set_shader_parameter("alpha", alpha)
+
+
+## L'image entière (centre visible en pos), au passage de l'enfant seulement.
+func _sprite_body(ci: CanvasItem, pos: Vector2, sc: Vector2, o: Dictionary, alpha := 1.0, rot := 0.0) -> void:
+	if not _body_pass or _smat == null:
+		return
+	if alpha <= 0.01 or sc.x <= 0.01 or sc.y <= 0.01:
+		_sprite_params(o, 0.0)
+		return
+	_sprite_params(o, alpha)
+	ci.draw_set_transform_matrix(_sprite_xf(pos, sc, rot))
+	ci.draw_texture_rect_region(sprite["tex"], _rect, sprite["src"])
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+
+## Une moitié de l'image : le quadrilatère coupé par le trait (normal, repère du centre visible).
+func _sprite_half(ci: CanvasItem, pos: Vector2, rot: float, sc: Vector2, normal: Vector2, ash: float, alpha: float) -> void:
+	if not _body_pass or _smat == null:
+		return
+	_sprite_params({"ash": ash}, alpha)
+	if alpha <= 0.01:
+		return
+	var tex: Texture2D = sprite["tex"]
+	var src: Rect2 = sprite["src"]
+	var ts := Vector2(tex.get_size())
+	var cu := _rect.get_center()
+	var pts := PackedVector2Array()
+	var uvs := PackedVector2Array()
+	for c in [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]:
+		var p: Vector2 = _rect.position + _rect.size * c
+		pts.append(Vector2((p.x - cu.x) * side, p.y - cu.y))
+		uvs.append((src.position + src.size * c) / ts)
+	var cut := clip_poly(pts, uvs, normal)
+	if cut[0].size() < 3:
+		return
+	ci.draw_set_transform(pos, rot, sc)
+	ci.draw_polygon(cut[0], PackedColorArray([Color.WHITE]), cut[1], tex)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Garde la part d'un polygone convexe du côté où dot(point, normal) ≥ 0, coordonnées de texture
+## interpolées (Sutherland-Hodgman, comme clip_half). Rend [points, uvs].
+static func clip_poly(pts: PackedVector2Array, uvs: PackedVector2Array, normal: Vector2) -> Array:
+	var out_p := PackedVector2Array()
+	var out_u := PackedVector2Array()
+	var n := pts.size()
+	for j in n:
+		var a := pts[j]
+		var b := pts[(j + 1) % n]
+		var da := a.dot(normal)
+		var db := b.dot(normal)
+		if da >= 0.0:
+			out_p.append(a)
+			out_u.append(uvs[j])
+		if (da >= 0.0) != (db >= 0.0):
+			var f := da / (da - db)
+			out_p.append(a.lerp(b, f))
+			out_u.append(uvs[j].lerp(uvs[(j + 1) % n], f))
+	return [out_p, out_u]
+
+
+## Couleur moyenne du corps dans l'image (pixels presque opaques, hors encre), lue une fois par
+## image ; transparente si l'image n'est pas lisible (rendu sans écran).
+static func tone_of(f: Dictionary) -> Color:
+	var tex: Texture2D = f.get("tex")
+	if tex == null:
+		return Color(0, 0, 0, 0)
+	var src: Rect2 = f["src"]
+	var key := [tex.get_rid(), src]
+	if _tones.has(key):
+		return _tones[key]
+	var out := Color(0, 0, 0, 0)
+	var img: Image = tex.get_image() if DisplayServer.get_name() != "headless" else null
+	if img != null and not img.is_empty():
+		var sum := Vector3.ZERO
+		var wsum := 0.0
+		var steps := 14
+		for yi in steps:
+			for xi in steps:
+				var p := Vector2i(src.position + src.size * Vector2((xi + 0.5) / steps, (yi + 0.5) / steps))
+				var c := img.get_pixelv(p)
+				if c.a < 0.85:
+					continue
+				var rgb := Vector3(c.r, c.g, c.b) / c.a
+				var l := rgb.dot(Vector3(0.299, 0.587, 0.114))
+				# L'encre et les reflets comptent peu : la couleur du corps, c'est le ton moyen.
+				var w := clampf(1.0 - absf(l - 0.4) * 2.2, 0.05, 1.0)
+				sum += rgb * w
+				wsum += w
+		if wsum > 0.0:
+			sum /= wsum
+			out = Color(sum.x, sum.y, sum.z, 1.0)
+	_tones[key] = out
+	return out
+
+
 ## Mort d'avant : la silhouette se tasse, s'éteint et s'effrite en cendre.
 func _cendre(ci: CanvasItem, pos: Vector2, time: float) -> void:
-	var r := radius
+	var r := _r()
 	if time < ASH:
 		var k := time / ASH
 		var e := Anim.ease_in(k)
 		# La silhouette se tasse et s'éteint, puis s'effrite par le haut.
-		ci.draw_set_transform(pos + Vector2(0, r * 0.35 * e), 0.0, Vector2(1.0 + 0.15 * e, 1.0 - 0.55 * e))
-		var o := {"ash": minf(1.0, k * 1.6)}
-		FletriArt.draw(_b, kind_id, Vector2.ZERO, r, face, 0.0, o)
-		_b.flush(ci)
-		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		if not sprite.is_empty():
+			# Image cuite : elle se tasse moins (le dessin est haut) et s'effrite vraiment, grain par grain.
+			_sprite_body(ci, pos + Vector2(0, r * 0.2 * e), Vector2(1.0 + 0.08 * e, 1.0 - 0.25 * e),
+				{"ash": minf(1.0, k * 1.6), "crumble": Anim.ease_in(clampf((k - 0.25) / 0.75, 0.0, 1.0))})
+		else:
+			ci.draw_set_transform(pos + Vector2(0, r * 0.35 * e), 0.0, Vector2(1.0 + 0.15 * e, 1.0 - 0.55 * e))
+			var o := {"ash": minf(1.0, k * 1.6)}
+			FletriArt.draw(_b, kind_id, Vector2.ZERO, r, face, 0.0, o)
+			_b.flush(ci)
+			ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		if e > 0.6:
 			# Un voile de cendre recouvre la fin de l'effondrement.
 			_b.draw_colored_polygon(Art.ellipse(pos + Vector2(0, r * 0.3), r * 1.1, r * 0.55), Color(FletriArt.ash_color(), (e - 0.6) * 1.5))
@@ -330,7 +561,7 @@ func _cendre(ci: CanvasItem, pos: Vector2, time: float) -> void:
 
 ## Venin : il verdit, gonfle de bulles, puis se dissout en fumée verte qui monte.
 func _venin(ci: CanvasItem, pos: Vector2, time: float) -> void:
-	var r := radius
+	var r := _r()
 	var k := clampf(time / _body, 0.0, 1.0)
 	var green := _venin_color()
 	var swell := 1.0 + 0.08 * sin(k * PI * 4.0) * (1.0 - k)
@@ -364,7 +595,7 @@ static func _venin_color() -> Color:
 
 ## Sang : il gonfle d'un coup puis éclate en éclats de son corps et en gouttes qui retombent en taches.
 func _sang(ci: CanvasItem, pos: Vector2, time: float) -> void:
-	var r := radius
+	var r := _r()
 	var pop := 0.12
 	if time < pop:
 		var k := time / pop
@@ -401,9 +632,9 @@ func _sang(ci: CanvasItem, pos: Vector2, time: float) -> void:
 
 ## Tranche : un trait clair le coupe, les deux moitiés glissent de part et d'autre, puis retombent en cendre.
 func _tranche(ci: CanvasItem, pos: Vector2, time: float) -> void:
-	var r := radius
+	var r := _r()
 	var k := clampf(time / _body, 0.0, 1.0)
-	if _halves.is_empty():
+	if sprite.is_empty() and _halves.is_empty():
 		_halves = _cut_halves()
 	var axis := dir.orthogonal()   # le trait de coupe suit le geste du fouet, en travers du coup
 	var n := dir                    # les moitiés s'écartent de part et d'autre du trait
@@ -412,10 +643,14 @@ func _tranche(ci: CanvasItem, pos: Vector2, time: float) -> void:
 	var alpha := 1.0 - drop
 	var ash := clampf((k - 0.3) / 0.5, 0.0, 1.0)
 	for i in 2:
-		var h: Dictionary = _halves[i]
 		var sgn := 1.0 if i == 0 else -1.0
 		var off := n * sgn * slide + axis * sgn * r * 0.12 * k + Vector2(0, r * 0.35 * drop)
 		var rot := sgn * 0.35 * Anim.ease_out(k)
+		if not sprite.is_empty():
+			# Image cuite : le quadrilatère de l'image est coupé le long du trait (coordonnées de texture).
+			_sprite_half(ci, pos + off, rot, Vector2(1.0, 1.0 - 0.4 * drop), n * sgn, ash * 0.7, alpha)
+			continue
+		var h: Dictionary = _halves[i]
 		var cols: PackedColorArray = h["cols"].duplicate()
 		var ash_col := FletriArt.ash_color()
 		for j in cols.size():
@@ -496,7 +731,7 @@ static func clip_half(pts: PackedVector2Array, cols: PackedColorArray, idx: Pack
 
 ## Vent : il grisonne, puis part en cendres emportées dans le sens du coup, le côté frappé d'abord.
 func _vent(ci: CanvasItem, pos: Vector2, time: float) -> void:
-	var r := radius
+	var r := _r()
 	var k := clampf(time / _body, 0.0, 1.0)
 	var e := Anim.ease_in(k)
 	var lean := dir * r * 0.5 * e * _boost()
@@ -526,7 +761,7 @@ func _vent(ci: CanvasItem, pos: Vector2, time: float) -> void:
 
 ## Aube : il s'éclaire de l'intérieur, devient lumière, se resserre en un point qui monte en rayon.
 func _aube(ci: CanvasItem, pos: Vector2, time: float) -> void:
-	var r := radius
+	var r := _r()
 	var k := clampf(time / _body, 0.0, 1.0)
 	var light := Art.ec("lumiere", "clair")
 	var gold := Art.ec("lumiere")
@@ -563,7 +798,7 @@ func _aube(ci: CanvasItem, pos: Vector2, time: float) -> void:
 
 ## Racine : il se fige en pierre (des fissures le parcourent), tient un instant, puis s'effrite en cailloux.
 func _racine(ci: CanvasItem, pos: Vector2, time: float) -> void:
-	var r := radius
+	var r := _r()
 	var k := clampf(time / _body, 0.0, 1.0)
 	var stone := _stone_color()
 	var petrify := clampf(k / 0.3, 0.0, 1.0)
@@ -606,7 +841,7 @@ static func _stone_color() -> Color:
 
 ## Sève : il fond, s'affaisse en une flaque de sève qui brille puis rentre dans la terre.
 func _seve(ci: CanvasItem, pos: Vector2, time: float) -> void:
-	var r := radius
+	var r := _r()
 	var k := clampf(time / _body, 0.0, 1.0)
 	var sap := Art.ec("seve")
 	var e := Anim.ease_in_out(k)
@@ -633,7 +868,7 @@ func _seve(ci: CanvasItem, pos: Vector2, time: float) -> void:
 func _draw_sprout(ci: CanvasItem, pos: Vector2, time: float) -> void:
 	if time <= _sprout:
 		return
-	var r := radius
+	var r := radius   # la pousse garde sa taille d'avant, quelle que soit la taille du dessin
 	var u := (time - _sprout) / SPROUT_LIFE
 	var grow := Anim.pop(clampf(u / 0.45, 0.0, 1.0))
 	var fade := 1.0 - Anim.ease_in(clampf((u - 0.6) / 0.4, 0.0, 1.0))
@@ -660,7 +895,7 @@ func _draw_wave(ci: CanvasItem, pos: Vector2, time: float) -> void:
 	var u := time / life
 	if u <= 0.0 or u >= 1.0:
 		return
-	var r := radius
+	var r := radius   # même dosage qu'avant : l'onde suit le rayon de collision
 	var reach := r + r * _feel("elite_wave_reach", 4.5) * Anim.ease_out(u) * (1.0 + 0.3 * power)
 	var fade := 1.0 - Anim.ease_in(u)
 	var cols := region_colors(region)
