@@ -604,6 +604,7 @@ func on_elite_kill(e) -> void:
 		return
 	var ghost := {"kind": str(e.get("kind_id")), "pos": e.position, "r": float(e.radius), "face": e.get("face") if e.get("face") is Vector2 else Vector2.RIGHT}
 	impact_frame(feel("impact_frame", "elite_kill", 0.85), [ghost], "encre")
+	Rumble.play("elite_kill")
 	if main != null and main.player != null:
 		camera_kick(e.position - main.player.position, feel("camera", "elite_kick", 0.8))
 	zoom_pulse(feel("camera", "elite_zoom", 0.25), feel("camera", "elite_zoom_time", 0.35))
@@ -624,6 +625,7 @@ func _boss() -> Node2D:
 func on_boss_phase(pos: Vector2) -> void:
 	var b := _boss()
 	impact_frame(feel("impact_frame", "boss_phase", 0.9), [b] if b != null else [{"pos": pos, "r": 40.0, "kind": ""}], "region")
+	Rumble.play("boss_phase")
 	_big_moment("boss_phase", pos)
 
 
@@ -634,6 +636,7 @@ func on_boss_kill(pos: Vector2) -> void:
 		_final_blow(b, pos)
 		return
 	impact_frame(feel("impact_frame", "boss_kill", 1.0), [b] if b != null else [{"pos": pos, "r": 40.0, "kind": ""}], "region")
+	Rumble.play("boss_kill")
 	_big_moment("boss_kill", pos)
 
 
@@ -645,6 +648,7 @@ func on_heart(heart) -> void:
 	var body = heart.get("body")
 	var cibles: Array = [body] if body is Node2D and is_instance_valid(body) else [{"pos": center, "r": 40.0, "kind": ""}]
 	impact_frame(feel("impact_frame", "heart", 0.95), cibles, "region", str(heart.get("region")) if heart.get("region") != null else "")
+	Rumble.play("heart")
 	_big_moment("heart", center)
 
 

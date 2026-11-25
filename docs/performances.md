@@ -258,3 +258,18 @@ Le projet, les outils et la CI tournent en Godot 4.7 (`tools/godot.sh`, `GODOT_V
 - Même machine, banc de jeu : 4.7 donne ~31 ms contre ~33 ms en 4.3 (la machine de la CI reste la référence du budget).
 - Les références visuelles ont été refaites en 4.7 : les écarts (0,2 à 5 % de pixels) viennent du texte et des bords
   des panneaux, décalés d'un pixel.
+
+## Prototype : silhouettes cuites en sprites (refonte des personnages, vague 0 T, 25/11)
+
+Réglage interne `-- --sprites` (`--sprites=3` : résolution, `--sprites-walk=8`, `--sprites-ss=2`),
+éteint par défaut. Au chargement, `scripts/sprite_bake.gd` dessine chaque sorte une fois (dessins
+d'aujourd'hui), suréchantillonnée dans un SubViewport (pas de MSAA 2D en rendu Compatibility), en
+31 poses (repos 6, marche 12, annonce 6, élan 2, retour 1, frappe 4 ; doublons retirés), dans un
+atlas par sorte avec mipmaps. En jeu, un quadrilatère texturé par Flétri, retourné gauche/droite ;
+teinte d'état et éclair par `shaders/sprite_tint.gdshader`. Planche : `tests/sprites_planche.gd`.
+Options du banc ajoutées : `--bench-kinds=fletri,tireur` (seules ces sortes naissent),
+`--bench-shot=x.png` (capture finale, sans rendu direct).
+
+Banc en paires (5 tours, machine lente) : develop 58,4 ms (p99 99,5) ; sprites ×4 48,2 ms (p99 79,0).
+Atlas des 30 sortes : 27 Mo à ×2, 59 Mo à ×3, 103 Mo à ×4 ; cuisson 0,8 / 1,4 / 2-3 s (llvmpipe).
+Mesures et recommandation complètes dans la PR.

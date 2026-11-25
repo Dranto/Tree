@@ -116,7 +116,9 @@ func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0, element := 
 		# Critique lourd : impact frame « encre » (moments.gd).
 		if heavy and not boss and _moments() != null:
 			_moments().on_crit_heavy(pos)
+		Rumble.play("crit_heavy" if heavy and not boss else "crit")
 	elif heavy:
+		Rumble.play("heavy")
 		shake(feel("shake", "heavy", 0.16))
 		hitstop(feel("hitstop", "heavy", 0.035))
 	elif boss:
@@ -278,6 +280,7 @@ func screen_flash(color: Color, alpha: float, dur: float) -> void:
 ## (screen_fx.gd) et quelques éclats rouges qui jaillissent de lui.
 ## amount (> 0) : le chiffre des dégâts reçus, d'une autre couleur que ceux qu'on inflige.
 func player_hurt(frac := 0.1, amount := 0.0, pos := Vector2.ZERO) -> void:
+	Rumble.hurt(frac)
 	shake(clampf(0.4 + frac * 1.6, 0.4, 0.9))
 	if main != null and main.get("screen_fx") != null:
 		main.screen_fx.hurt(frac)

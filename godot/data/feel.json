@@ -228,6 +228,61 @@
 		"zoom_time": 2.6,
 		"focus": 3.2
 	},
+	"rumble": {
+		"_doc": "Vibration de la manette (scripts/rumble.gd). Chaque événement : moteur faible (sourd, 0 à 1), moteur fort, durée en secondes réelles ; le tout multiplié par Settings.rumble_scale (0 = rien). Plafond : max_duty secondes de vibration par fenêtre de window secondes, min_gap entre deux impulsions, et une impulsion plus forte d'au moins bypass passe toujours. hurt : de min (petit coup) à max (hurt_full_frac de la vie perdue ou plus).",
+		"window": 1.0,
+		"max_duty": 0.5,
+		"min_gap": 0.07,
+		"bypass": 0.25,
+		"max_duration": 0.9,
+		"hurt_full_frac": 0.3,
+		"heavy": { "faible": 0.25, "fort": 0.35, "duree": 0.08 },
+		"crit": { "faible": 0.3, "fort": 0.5, "duree": 0.1 },
+		"crit_heavy": { "faible": 0.4, "fort": 0.75, "duree": 0.14 },
+		"elite_kill": { "faible": 0.5, "fort": 0.85, "duree": 0.22 },
+		"hurt": {
+			"min": { "faible": 0.2, "fort": 0.1, "duree": 0.1 },
+			"max": { "faible": 0.7, "fort": 0.95, "duree": 0.35 }
+		},
+		"dash": { "faible": 0.12, "fort": 0.0, "duree": 0.06 },
+		"boss_phase": { "faible": 0.7, "fort": 0.9, "duree": 0.45 },
+		"boss_kill": { "faible": 0.9, "fort": 1.0, "duree": 0.8 },
+		"heart": { "faible": 0.8, "fort": 0.8, "duree": 0.6 },
+		"level_up": { "faible": 0.35, "fort": 0.3, "duree": 0.3 },
+		"preview": { "faible": 0.4, "fort": 0.5, "duree": 0.2 }
+	},
+	"tree": {
+		"_doc": "Apprendre un nœud devient un plaisir (écran de l'Arbre de vie : scripts/tree_ui.gd, tree_art.gd, tree_grafts.gd). Purement visuel : aucun chiffre de puissance, rien dans skill_tree.gd. Durées en secondes ; distances en rayons de nœud. L'éclair d'écran suit Settings.flash_strength() (à 0 : un contour lumineux seulement) et ne se répète pas plus de « flash_per_second » fois par seconde ; « Réduire les effets » divise les quantités par trois.",
+		"flower": {
+			"_doc": "Nœud clé, maîtrise ou mutation appris : grande fleur, onde et éclair d'écran doux.",
+			"time": 1.5,
+			"petals": 14,
+			"reach": 9.0,
+			"flash_alpha": 0.14,
+			"flash_time": 0.4,
+			"flash_per_second": 3
+		},
+		"wilt": {
+			"_doc": "Nœud oublié : la sève reflue vers son voisin (part « flow » du temps), puis il se fane.",
+			"time": 0.9,
+			"flow": 0.35,
+			"stagger": 0.06,
+			"stagger_max": 0.6
+		},
+		"recompose": {
+			"_doc": "Bascule de build : une vague part de la graine ; les nœuds retirés se fanent et les nouveaux s'allument à son passage. « max » : nombre de nœuds animés ; au-delà d'« wave_min » changements sans bascule, c'est aussi une vague.",
+			"time": 1.2,
+			"glint_time": 0.5,
+			"max": 90,
+			"wave_min": 12
+		},
+		"roots": {
+			"_doc": "Greffe posée dans la couronne : des racines poussent de l'emplacement.",
+			"time": 1.1,
+			"count": 7,
+			"size": 34.0
+		}
+	},
 	"boss": {
 		"_doc": "Moments signatures des boss (boss_eclat.gd) : arrivée, phases, mort. Purement visuel ; l'entrée en scène garde sa durée (BossBase.intro_time) et rien ne change dans le combat. Durées en secondes de jeu (suivent le ralenti). « Réduire les effets » divise les quantités par trois.",
 		"max_particles": 150,

@@ -56,6 +56,7 @@ const PAD_ACTION_ROW0 := 300
 var pad_slot_buttons: Array = []
 var pad_action_buttons: Array = []
 var pad_style_select: OptionButton
+var rumble_slider: HSlider
 const TAB_NAMES := ["Son", "Affichage", "Jeu", "Commandes"] # i18n
 ## Largeur des libellés devant les curseurs et les listes.
 const LABEL_W := 170.0
@@ -255,6 +256,8 @@ func _ready() -> void:
 	for id in Settings.PAD_STYLES:
 		pad_style_select.add_item(Settings.PAD_STYLE_NAMES[id])
 	pad_style_select.item_selected.connect(func(i): Settings.set_pad_style(Settings.PAD_STYLES[i]); Settings.save_settings(); _update_keys())
+	rumble_slider = _slider_row(p_cmd, Loc.key("Vibration"), Settings.rumble_scale, func(v): Settings.set_rumble(v); Settings.save_settings(); _update_pct(rumble_slider, Loc.key("Aucune")); Rumble.preview(), 0.1)
+	_update_pct(rumble_slider, Loc.key("Aucune"))
 	var grid3 := GridContainer.new()
 	grid3.columns = 2
 	grid3.add_theme_constant_override("h_separation", 16)
@@ -547,6 +550,7 @@ func _notification(what: int) -> void:
 		_update_shake_label()
 		_update_pct(flash_slider, Loc.key("Aucun"))
 		_update_pct(hitstop_slider, Loc.key("Aucune"))
+		_update_pct(rumble_slider, Loc.key("Aucune"))
 		_update_wind_label()
 		_update_access()
 		_update_difficulty()
@@ -658,6 +662,7 @@ func open() -> void:
 	shake_slider.value = Settings.shake_scale
 	flash_slider.value = Settings.flash_scale
 	hitstop_slider.value = Settings.hitstop_scale
+	rumble_slider.value = Settings.rumble_scale
 	focus_box.button_pressed = Settings.pause_on_focus_loss
 	_update_access()
 	wind_slider.value = Settings.wind

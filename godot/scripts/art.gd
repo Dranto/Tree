@@ -180,6 +180,47 @@ const ELEMENT_DE_COMPETENCE := {
 	"ecorce": "racine", "ancrage": "racine", "pieux": "racine",
 }
 
+# --- Bestiaire d'herbier (refonte des personnages, vague 0 : planche de direction) ---
+#
+# Couleur du corps d'un Flétri = sa région (deux tons et une lumière : « clair », « ombre »,
+# « reflet »), plus un « detail » propre à la région (feuille sèche, ocre, lichen). La braise
+# (« braise », « braise_coeur ») est le signe commun de l'ennemi ; le « ronge » est la Flétrissure
+# qui mange la bête. Le héros garde son corps crème ; ses feuilles prennent la couleur de son build.
+# Utilisé seulement par scripts/creature_art/ (planche), rien n'est encore branché dans le jeu.
+const BESTIAIRE := {
+	"encre": Color("1a1210"),
+	"braise": Color("ff8a2a"),
+	"braise_coeur": Color("ffd27a"),
+	"ronge": Color("2b1a22"),
+	"os": Color("e6d2a8"),
+	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
+	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
+	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
+}
+## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
+## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
+const FEUILLES_BUILD := {
+	"aucun": {"corps": Color("f3ead2"), "clair": Color("6fae58"), "ombre": Color("355e2c"), "reflet": Color("c6ecb0"), "detail": Color("8af5c0"), "accent": Color("8af5c0"), "lueur": Color("eafff4")},
+	"ronce": {"corps": Color("f2cfc4"), "clair": Color("5f7d3a"), "ombre": Color("2f3f1f"), "reflet": Color("b9cf8a"), "detail": Color("e0675e"), "accent": Color("d4485a"), "lueur": Color("ff9a8a")},
+	"seve": {"corps": Color("c9f7e2"), "clair": Color("4fd69a"), "ombre": Color("1f7a56"), "reflet": Color("d6fff0"), "detail": Color("eafff4"), "accent": Color("eafff4"), "lueur": Color("eafff4")},
+	"racine": {"corps": Color("e6d1a8"), "clair": Color("7a8a3c"), "ombre": Color("3e4a1e"), "reflet": Color("c9d68a"), "detail": Color("8a6a3e"), "accent": Color("c08a3e"), "lueur": Color("f2d27a")},
+	"vent": {"corps": Color("e4eef7"), "clair": Color("a4bcd4"), "ombre": Color("4e6680"), "reflet": Color("f2f8ff"), "detail": Color("fdf6dc"), "accent": Color("8fb4e0"), "lueur": Color("d8ecff")},
+	"spore": {"corps": Color("efe2f5"), "clair": Color("a07cc0"), "ombre": Color("4a3560"), "reflet": Color("e2d0f2"), "detail": Color("d9a64a"), "accent": Color("b48ae6"), "lueur": Color("e2ccff")},
+	"aube": {"corps": Color("fbf3dc"), "clair": Color("d9b860"), "ombre": Color("6e5a2e"), "reflet": Color("fff4c8"), "detail": Color("fffb3d"), "accent": Color("f0c840"), "lueur": Color("fffde6")},
+}
+
+
+## Couleur du bestiaire : bc("encre"), ou bc("ronce", "clair") pour la palette d'une région.
+static func bc(nom: String, variante := "") -> Color:
+	var v = BESTIAIRE.get(nom, null)
+	if v is Color:
+		return v
+	if v is Dictionary and v.has(variante):
+		return v[variante]
+	push_error("Art.bc : couleur du bestiaire inconnue « %s/%s »" % [nom, variante])
+	return Color.MAGENTA
+
+
 # --- Traits, ombres, lumière ---
 
 const TRAIT_FIN := 1.5     ## détails, motifs, icônes de petite taille
