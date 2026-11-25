@@ -157,7 +157,9 @@ func _draw() -> void:
 		var a := 0.18 + 0.14 * sin(t * 1.1 + m["p"])
 		draw_circle(Vector2(x * w, y * h), m["r"], Color(UiTheme.GOLD, a))
 	UiTheme.draw_frame(self, Rect2(34, 34, w - 68, h - 68), 1.15)
-	draw_texture_rect(_vignette, Rect2(-w * 0.1, -h * 0.25, w * 1.2, h * 1.5), false, Color(1, 1, 1, 0.5))
+	# Sans titre (robots, « --autotest ») _ready s'arrête avant de la fabriquer : le dernier dessin avant le changement de scène s'en passe.
+	if _vignette != null:
+		draw_texture_rect(_vignette, Rect2(-w * 0.1, -h * 0.25, w * 1.2, h * 1.5), false, Color(1, 1, 1, 0.5))
 	# Titre, aligné à gauche sur la colonne des entrées.
 	var x := w * MENU_X
 	var kicker := UiTheme.serif(500, 3)
