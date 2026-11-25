@@ -96,7 +96,7 @@ static func mode(id: String) -> Dictionary:
 
 
 static func mode_name(id: String) -> String:
-	return str(mode(id).get("name", id))
+	return Loc.data(str(mode(id).get("name", id)))
 
 
 ## Multiplicateurs du mode choisi dans les options (Settings.difficulty).

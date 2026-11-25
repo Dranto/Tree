@@ -1,0 +1,36 @@
+// Présence enrichie Steam (jalon 12 D) : à déposer sur Steamworks › Communauté › Présence enrichie.
+// Le jeu envoie « region » (id de la région, « graine » au départ, « finale » sous la graine) et steam_display = « #Explore ».
+// Noms anglais provisoires : la tâche B (anglais) les remplacera par la liste validée.
+"lang"
+{
+	"french"
+	{
+		"tokens"
+		{
+			"#Explore"	"{#Region_%region%}"
+			"#Region_graine"	"Au pied de la graine"
+			"#Region_ronce"	"Dans la région de Ronce"
+			"#Region_spore"	"Dans la région de Spore"
+			"#Region_vent"	"Dans la région de Vent"
+			"#Region_seve"	"Dans la région de Sève"
+			"#Region_aube"	"Dans la région d'Aube"
+			"#Region_racine"	"Dans la région de Racine"
+			"#Region_finale"	"Sous la graine, face à la Flétrissure"
+		}
+	}
+	"english"
+	{
+		"tokens"
+		{
+			"#Explore"	"{#Region_%region%}"
+			"#Region_graine"	"At the foot of the seed"
+			"#Region_ronce"	"In the Bramble"
+			"#Region_spore"	"In the Spore marsh"
+			"#Region_vent"	"On the Wind plateaus"
+			"#Region_seve"	"In the Sap valley"
+			"#Region_aube"	"In the Dawn cliffs"
+			"#Region_racine"	"In the Root forest"
+			"#Region_finale"	"Beneath the seed, facing the Blight"
+		}
+	}
+}

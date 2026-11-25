@@ -107,7 +107,10 @@ func save_now(main, path := DEFAULT_PATH) -> bool:
 	var abs_path := ProjectSettings.globalize_path(path)
 	if FileAccess.file_exists(path):
 		DirAccess.copy_absolute(abs_path, abs_path + ".bak")
-	return DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), abs_path) == OK
+	var ok := DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), abs_path) == OK
+	if ok:
+		SteamBridge.cloud_push(path)
+	return ok
 
 
 ## Position et vie du joueur à sauvegarder. Pendant le combat de boss, le joueur est noté devant
@@ -130,7 +133,7 @@ func _player_entry(main) -> Dictionary:
 func load_into(main, path := DEFAULT_PATH) -> bool:
 	last_error = ""
 	if not has_save(path):
-		last_error = "aucune sauvegarde"
+		last_error = Loc.t("aucune sauvegarde")
 		return false
 	var data := _read(path)
 	if data.is_empty():
@@ -155,6 +158,8 @@ func apply(data: Dictionary, main) -> void:
 	var refunded := Game.restore_allocation(uids if uids is Array else [])
 	Game.restore_extras(t.get("choices", {}), t.get("crown", []), t.get("inventory", []))
 	Game.restore_builds(t.get("builds", []), t.get("active_build", 0))
+	# Succès Steam des boss déjà vaincus (sauvegarde d'avant Steam ou d'une autre machine).
+	SteamBridge.sync_achievements(Game.flags)
 	if refunded > 0:
 		print("Sauvegarde : %d nœud(s) absent(s) de l'arbre actuel, point(s) rendu(s)." % refunded)
 
@@ -180,15 +185,15 @@ func apply(data: Dictionary, main) -> void:
 ## Lit, valide et migre un fichier. Renvoie {} en cas d'échec (last_error renseigné).
 func _read(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
-		last_error = "aucune sauvegarde"
+		last_error = Loc.t("aucune sauvegarde")
 		return {}
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not (parsed is Dictionary) or parsed.get("format", "") != FORMAT:
-		last_error = "fichier illisible ou d'un autre format"
+		last_error = Loc.t("fichier illisible ou d'un autre format")
 		return {}
 	var version := int(parsed.get("version", 0))
 	if version > VERSION:
-		last_error = "sauvegarde créée par une version plus récente du jeu (format %d > %d)" % [version, VERSION]
+		last_error = Loc.t("sauvegarde créée par une version plus récente du jeu (format %d > %d)") % [version, VERSION]
 		return {}
 	return _migrate(parsed)
 

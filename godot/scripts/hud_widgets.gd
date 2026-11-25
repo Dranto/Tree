@@ -247,7 +247,7 @@ class Corner extends Control:
 	var level := 1
 	var xp := 0.0
 	var points := 0
-	var tree_key := "Tab"
+	var tree_key := "Tab" # i18n: non (nom de touche)
 	var world := 0.0
 	var kills := 0
 	var t := 0.0

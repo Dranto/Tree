@@ -118,5 +118,64 @@
 			"rise": 0.9,
 			"glints": 36
 		}
+	},
+	"impact_frame": {
+		"_doc": "Moments forts (scripts/moments.gd, jalon Éclat A) : impact frames de 2 ou 3 images affichées (temps réel). force de 0 à 1 par moment ; au moins « strong » : 3 images, et en « encre » alternance papier/encre. Couleurs : papier et encre (style « encre »), couleur de chaque région (style « region », sinon celle de data/regions/<id>.json) sur sa complémentaire assombrie (region_back_value). Au plus max_per_second éclairs par seconde (WCAG 2.3.1). Option flash_strength à 0 : simple contour lumineux.",
+		"frames": 2,
+		"frames_strong": 3,
+		"min_time": 0.03,
+		"strong": 0.8,
+		"max_per_second": 3,
+		"near_radius": 340.0,
+		"near_max": 8,
+		"crit_heavy": 0.55,
+		"crit_cooldown": 0.6,
+		"elite_kill": 0.85,
+		"boss_phase": 0.9,
+		"heart": 0.95,
+		"boss_kill": 1.0,
+		"papier": "#efe6cf",
+		"encre": "#140f0c",
+		"region_back_value": 0.82,
+		"rays": 14,
+		"rays_inner": 110.0,
+		"region_colors": {
+			"ronce": "#a3121f",
+			"finale": "#f2c14e",
+			"defaut": "#e0675e"
+		}
+	},
+	"camera": {
+		"_doc": "Caméra (moments.gd) : à-coup en pixels (kick_px à force 1) qui retombe (kick_decay par seconde), zoom bref (zoom_max à force 1, rapproche seulement), cadrage vers un point (focus_frac du chemin, au plus focus_max pixels). Par moment : force du zoom, durées en secondes réelles. Dosé par l'option shake_strength ; à 0, caméra immobile.",
+		"kick_px": 9.0,
+		"kick_decay": 16.0,
+		"zoom_max": 0.12,
+		"focus_frac": 0.4,
+		"focus_max": 160.0,
+		"crit_heavy_kick": 0.5,
+		"elite_kick": 0.8,
+		"elite_zoom": 0.25,
+		"elite_zoom_time": 0.35,
+		"boss_phase_zoom": 0.5,
+		"boss_phase_zoom_time": 0.7,
+		"boss_phase_focus": 1.0,
+		"heart_zoom": 0.55,
+		"heart_zoom_time": 0.9,
+		"heart_focus": 1.3,
+		"boss_kill_zoom": 0.8,
+		"boss_kill_zoom_time": 1.2,
+		"boss_kill_focus": 1.8
+	},
+	"slowmo": {
+		"_doc": "Ralenti (moments.gd), SEULEMENT Cœurs purifiés, phases et morts de boss : durée totale (secondes réelles) et vitesse visée, entrée et sortie en rampe. Le joueur garde la main. Dosé par l'option hitstop_strength ; à 0, vitesse normale.",
+		"ramp_in": 0.12,
+		"ramp_out": 0.4,
+		"min_speed": 0.2,
+		"boss_phase": 0.7,
+		"boss_phase_speed": 0.45,
+		"heart": 1.1,
+		"heart_speed": 0.35,
+		"boss_kill": 1.6,
+		"boss_kill_speed": 0.25
 	}
 }

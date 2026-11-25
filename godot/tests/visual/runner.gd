@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "reaction"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue", "eclat", "reaction"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -84,6 +84,9 @@ func _ready() -> void:
 	Settings.bindings = Settings.BINDING_DEFAULTS.duplicate()
 	Settings.moba_main_2_key = Settings.MOBA_MAIN_2_DEFAULT
 	Settings.apply_bindings()
+	if scenario == "langue":
+		# Pseudo-langue (jalon 12) : textes allongés de 40 % et accentués, pour voir ce qui déborde.
+		Loc.apply(Loc.PSEUDO)
 	if scenario == "carte5":
 		# Monde à cinq régions et plus : les régions factices des tests complètent celles des données.
 		Regions.set_extra_dirs(["res://tests/regions/"])
@@ -145,10 +148,14 @@ func _ready() -> void:
 			await _scenario_menus()
 		"manette":
 			await _scenario_manette()
+		"langue":
+			await _scenario_langue()
 		"cumul":
 			await _scenario_cumul()
 		"reaction":
 			await _scenario_reaction()
+		"eclat":
+			await _scenario_eclat()
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -251,6 +258,34 @@ func _scenario_menus() -> void:
 	await _frames(30)
 	UiAudit.scan_controls("titre", title)
 	await _shot("menu_titre_" + tag, "titre")
+
+
+## Pseudo-langue (jalon 12), au plus petit écran (1280 x 720) : jeu (HUD), infobulle d'un nœud de
+## l'arbre, pause et onglet « Jeu » des options (sélecteur de langue). Chaque texte est allongé de
+## 40 % et accentué : un texte coupé ou qui déborde se voit ici, et l'audit de l'interface le signale.
+func _scenario_langue() -> void:
+	var tag := _res_tag()
+	await _frames(60)
+	main.hud.banner_time = 0.0
+	await _shot("langue_jeu_" + tag, "jeu")
+	main.tree_ui.toggle()
+	await _frames(10)
+	_hover(_first_neighbor_of_root())
+	await _frames(2)
+	await _shot("langue_arbre_" + tag, "arbre")
+	_hover(-1)
+	main.tree_ui.toggle()
+	await _frames(2)
+	main.pause_menu.open()
+	await _frames(10)
+	UiAudit.scan_controls("pause", main.pause_menu)
+	await _shot("langue_pause_" + tag)
+	main.pause_menu._open_options()
+	main.pause_menu.options.show_tab(2)
+	await _frames(6)
+	UiAudit.scan_controls("options", main.pause_menu.options)
+	await _shot("langue_options_" + tag)
+	main.pause_menu.close()
 
 
 ## Manette (jalon 11), à la taille de l'écran du Steam Deck (1280 x 800) : la barre et le coin avec
@@ -584,6 +619,36 @@ func _scenario_cumul() -> void:
 	await _frames(2)
 	await _shot("arbre_synergies")
 	Game.test_attack = []
+
+
+## Moments forts (jalon Éclat A, moments.gd) : une impact frame de chaque style, figée. « encre » :
+## fond papier, héros et Flétris proches à l'encre ; « region » (Ronce) : silhouettes rouge sang sur
+## la couleur complémentaire. Le reste du jeu est arrêté, la pose est exacte.
+func _scenario_eclat() -> void:
+	var p = main.player
+	main.hud.glyphs.hide()
+	main.autotest = false
+	p.set_physics_process(false)
+	main.spawn_timer = 1e9
+	await _frames(2)
+	var spots := [Vector2(150, -40), Vector2(190, 50), Vector2(-120, 80), Vector2(60, -150), Vector2(-170, -60)]
+	for i in spots.size():
+		_frozen_enemy(p.position + spots[i], [0, 1, 0, 2, 1][i])
+	await _frames(3)
+	var m = main.moments
+	m.frozen = true
+	m.impact_frame(0.5, [main.enemies[0]], "encre")
+	await _frames(2)
+	await _shot("eclat_encre", "jeu")
+	m.frozen = false
+	m._end_frame()
+	await _frames(2)
+	m.frozen = true
+	m.impact_frame(0.95, [main.enemies[1]], "region", "ronce")
+	await _frames(2)
+	await _shot("eclat_region", "jeu")
+	m.frozen = false
+	m._end_frame()
 
 
 ## Galerie : ennemis et effets, puis les six états d'un nœud de l'arbre sur une planche.

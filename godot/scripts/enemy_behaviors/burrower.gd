@@ -69,7 +69,7 @@ func dodge(e) -> bool:
 	var now: float = e.t
 	if now - float(e.get_meta("esquive", -10.0)) > DODGE_TEXT and e.main.get("fx") != null:
 		e.set_meta("esquive", now)
-		e.main.fx.text(e.position + Vector2(0, -e.radius * 2.4), "Sous terre", Art.ec("racine", "clair"), 14, 0.6)
+		e.main.fx.text(e.position + Vector2(0, -e.radius * 2.4), Loc.t("Sous terre"), Art.ec("racine", "clair"), 14, 0.6)
 	return true
 
 
