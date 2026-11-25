@@ -33,7 +33,7 @@ const BED_LOOP := 12.0
 const EIGHTH := CHORD_TIME / 8.0
 const SIXTEENTH := CHORD_TIME / 16.0
 ## Version des formules (empreinte des pistes) : à changer quand le rendu change.
-const VERSION := 5
+const VERSION := 6
 const BED_VERSION := 2
 
 ## Fichier (couche) → section de réglages.
@@ -64,6 +64,8 @@ const DEFAULTS := {
 	"seed": 11,
 	"roots": [0, -4, -9, -5],
 	"roots_b": [-2, -7, -4, -5],
+	"key": 0,
+	"qualities": ["m", "M", "M", "M", "M", "m", "M", "7"],
 	"dark": {"chord": [0, 7, 12, 15], "pad": 0.5, "pad_lp": 650.0, "drone": 0.3, "bell": 0.3, "bell_ratio": 3.5, "texture": 0.12, "verb": 0.5,
 		"strings": 0.35, "piano": 0.22, "sweep": 0.5, "pad_tone": "saw"},
 	"bright": {"chord": [0, 4, 7, 12], "octave": 1, "pattern": [0, 4, 7, 12, 16, 12, 7, 4], "pattern_b": [], "arp": "pizz", "pad": 0.32, "pad_lp": 1100.0,
@@ -106,12 +108,59 @@ static func progression(style: Dictionary) -> Array:
 	var b: Array = style.get("roots_b", [])
 	if b.size() != 4:
 		b = DEFAULTS["roots_b"] if not style.has("roots") else [a[2], a[3], a[0], a[1]]
-	return a + b
+	var key := float(style.get("key", DEFAULTS["key"]))
+	var out: Array = []
+	for r in a + b:
+		out.append(float(r) + key)
+	return out
+
+
+## Couleur de chacun des huit accords (« qualities ») : m (mineur), M (majeur), 7 (septième de dominante),
+## dim (diminué), sus4. Vide : chaque section garde la couleur de son « chord ».
+static func qualities(style: Dictionary) -> Array:
+	var q: Array = style.get("qualities", DEFAULTS["qualities"])
+	if q.size() != CHORDS:
+		q = []
+		q.resize(CHORDS)
+		q.fill("")
+	return q
+
+
+## Tierce, quinte et septième de chaque couleur d'accord.
+const QUALITIES := {"m": [3, 7, 10], "M": [4, 7, 11], "7": [4, 7, 10], "dim": [3, 6, 9], "sus4": [5, 7, 10]}
+
+
+## Une note (demi-tons depuis la fondamentale) recolorée : la tierce, la quinte et la septième suivent la
+## couleur de l'accord ; les autres notes (seconde, quarte, sixte ajoutées) restent.
+static func _qnote(semis: float, q: String) -> float:
+	if not QUALITIES.has(q):
+		return semis
+	var oct := floorf(semis / 12.0) * 12.0
+	var n := int(semis - oct)
+	var tq: Array = QUALITIES[q]
+	if n == 3 or n == 4:
+		return oct + tq[0]
+	if n == 6 or n == 7:
+		return oct + tq[1]
+	if n == 10 or n == 11:
+		return oct + tq[2]
+	return semis
+
+
+## Les huit formes d'un accord de section, une par accord de la boucle, recolorées.
+static func _qualify(shape: Array, quals: Array) -> Array:
+	var out: Array = []
+	for c in CHORDS:
+		var ch: Array = []
+		for sm in shape:
+			ch.append(_qnote(float(sm), str(quals[c])))
+		out.append(ch)
+	return out
 
 
 ## Empreinte d'une couche (formules + réglages) : gen_sounds l'écrit à côté des pistes, sound_test la compare.
 static func fingerprint(layer: String, style: Dictionary) -> int:
-	return hash([VERSION, layer, style.get("seed", DEFAULTS["seed"]), progression(style), section(style, LAYERS[layer]),
+	return hash([VERSION, layer, style.get("seed", DEFAULTS["seed"]), progression(style), qualities(style), section(style, LAYERS[layer]),
 		section(style, "dark")["chord"] if layer in ["combat", "boss"] else 0, section(style, "bright"), section(style, "heart")["vowel"]])
 
 
@@ -144,7 +193,7 @@ static func _blank(seconds := LOOP) -> PackedFloat32Array:
 ## Trois bus : « main » (sec), « pads » (nappes, passées dans un chorus) et « lead » (voix, passées dans un
 ## écho) ; puis réverbération, balayage du filtre, couleur douce et crête.
 static func render(layer: String, style := {}) -> PackedFloat32Array:
-	var bus := {"main": _blank(), "pads": _blank(), "lead": _blank()}
+	var bus := {"main": _blank(), "pads": _blank(), "lead": _blank(), "quals": qualities(style)}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(style.get("seed", DEFAULTS["seed"])) * 31 + hash(layer)
 	var roots := progression(style)
@@ -272,8 +321,9 @@ static func vary(motif: Array) -> Array:
 
 static func _dark(bus: Dictionary, st: Dictionary, sig: Dictionary, roots: Array, rng: RandomNumberGenerator) -> void:
 	var pad_tone := str(st["pad_tone"])
-	var chord: Array = st["chord"]
+	var chords := _qualify(st["chord"], bus["quals"])
 	for c in roots.size():
+		var chord: Array = chords[c]
 		var t0: float = c * CHORD_TIME
 		var b := c >= 4
 		var freqs: Array = []
@@ -308,7 +358,7 @@ static func _dark(bus: Dictionary, st: Dictionary, sig: Dictionary, roots: Array
 
 
 static func _bright(bus: Dictionary, st: Dictionary, roots: Array, rng: RandomNumberGenerator) -> void:
-	var chord: Array = st["chord"]
+	var chords := _qualify(st["chord"], bus["quals"])
 	var oct := int(st["octave"])
 	var pattern: Array = st["pattern"]
 	var pattern_b: Array = st["pattern_b"]
@@ -317,6 +367,7 @@ static func _bright(bus: Dictionary, st: Dictionary, roots: Array, rng: RandomNu
 		pattern_b.reverse()
 	var arp := str(st["arp"])
 	for c in roots.size():
+		var chord: Array = chords[c]
 		var t0: float = c * CHORD_TIME
 		var b := c >= 4
 		var freqs: Array = []
@@ -335,28 +386,30 @@ static func _bright(bus: Dictionary, st: Dictionary, roots: Array, rng: RandomNu
 			if c < 2 and j % 2 == 1:
 				continue
 			var acc := 1.0 if j % 4 == 0 else 0.72
-			_arp(bus["main"], arp, t0 + j * step + rng.randf_range(0.0, 0.01), Dsp.hz(roots[c] + float(pat[j]), oct + 1), st["pluck"] * acc * rng.randf_range(0.85, 1.0), float(st["pluck_tone"]), rng)
+			_arp(bus["main"], arp, t0 + j * step + rng.randf_range(0.0, 0.01), Dsp.hz(roots[c] + _qnote(float(pat[j]), str(bus["quals"][c])), oct + 1), st["pluck"] * acc * rng.randf_range(0.85, 1.0), float(st["pluck_tone"]), rng)
 		if st["sparkle"] > 0.0 and (b or c % 2 == 1):
-			_mallet(bus["lead"], t0 + CHORD_TIME * 0.5, Dsp.hz(roots[c] + float(st["sparkle_note"]), 1), st["sparkle"], "glock", 2.0)
+			_mallet(bus["lead"], t0 + CHORD_TIME * 0.5, Dsp.hz(roots[c] + _qnote(float(st["sparkle_note"]), str(bus["quals"][c])), 1), st["sparkle"], "glock", 2.0)
 	var motif: Array = st["motif"]
 	var motif_b: Array = st["motif_b"] if not st["motif_b"].is_empty() else vary(motif)
 	var lo := int(st["lead_octave"])
-	_melody(bus["lead"], motif, chord, roots, 0, lo, st["lead"], str(st["lead_tone"]), rng)
-	_melody(bus["lead"], motif_b, chord, roots, 4, lo, st["lead"], str(st["lead_tone"]), rng)
+	_melody(bus["lead"], motif, chords, roots, 0, lo, st["lead"], str(st["lead_tone"]), rng)
+	_melody(bus["lead"], motif_b, chords, roots, 4, lo, st["lead"], str(st["lead_tone"]), rng)
 	if st["counter"] > 0.0:
-		_melody(bus["lead"], motif, chord, roots, 4, lo, st["counter"], str(st["counter_tone"]), rng)
+		_melody(bus["lead"], motif, chords, roots, 4, lo, st["counter"], str(st["counter_tone"]), rng)
 
 
-static func _combat(bus: Dictionary, st: Dictionary, sig: Dictionary, chord: Array, roots: Array, rng: RandomNumberGenerator) -> void:
+static func _combat(bus: Dictionary, st: Dictionary, sig: Dictionary, base: Array, roots: Array, rng: RandomNumberGenerator) -> void:
+	var chords := _qualify(base, bus["quals"])
 	_drums(bus["main"], st, rng, roots.size())
 	var bass: Array = st["bass"]
 	for c in roots.size():
+		var chord: Array = chords[c]
 		var t0: float = c * CHORD_TIME
 		var b := c >= 4
 		for j in bass.size():
 			if bass[j] == null:
 				continue
-			var semis := float(bass[j])
+			var semis := _qnote(float(bass[j]), str(bus["quals"][c]))
 			# En B, la basse saute à l'octave sur les contretemps.
 			if b and j % 2 == 1 and semis == 0.0:
 				semis = 12.0
@@ -377,8 +430,9 @@ static func _combat(bus: Dictionary, st: Dictionary, sig: Dictionary, chord: Arr
 
 
 static func _heart(bus: Dictionary, st: Dictionary, sig: Dictionary, bright: Dictionary, roots: Array, rng: RandomNumberGenerator) -> void:
-	var chord: Array = bright["chord"]
+	var chords := _qualify(bright["chord"], bus["quals"])
 	for c in roots.size():
+		var chord: Array = chords[c]
 		var t0: float = c * CHORD_TIME
 		var b := c >= 4
 		var voices: Array = chord.slice(0, 4 if b else 3)
@@ -398,14 +452,15 @@ static func _heart(bus: Dictionary, st: Dictionary, sig: Dictionary, bright: Dic
 				_kick(bus["main"], t + EIGHTH, st["beat"] * 0.3, "heart")
 	# En B, la mélodie de la terre vivante revient, à l'instrument de l'arpège, très doucement.
 	if st["solo"] > 0.0:
-		_melody(bus["lead"], bright["motif"], chord, roots, 4, 2, st["solo"], sig["arp"], rng)
+		_melody(bus["lead"], bright["motif"], chords, roots, 4, 2, st["solo"], sig["arp"], rng)
 
 
 static func _boss(bus: Dictionary, st: Dictionary, sig: Dictionary, roots: Array, rng: RandomNumberGenerator) -> void:
-	var chord: Array = st["chord"]
+	var chords := _qualify(st["chord"], bus["quals"])
 	_drums(bus["main"], st, rng, roots.size())
 	var bass: Array = st["bass"]
 	for c in roots.size():
+		var chord: Array = chords[c]
 		var t0: float = c * CHORD_TIME
 		var b := c >= 4
 		var freqs: Array = []
@@ -416,7 +471,7 @@ static func _boss(bus: Dictionary, st: Dictionary, sig: Dictionary, roots: Array
 		for j in bass.size():
 			if bass[j] == null:
 				continue
-			_bass(bus["main"], t0 + j * (CHORD_TIME / bass.size()), CHORD_TIME / bass.size() * 0.85, Dsp.hz(roots[c] + float(bass[j]), 0), st["bass_vol"], 0.7)
+			_bass(bus["main"], t0 + j * (CHORD_TIME / bass.size()), CHORD_TIME / bass.size() * 0.85, Dsp.hz(roots[c] + _qnote(float(bass[j]), str(bus["quals"][c])), 0), st["bass_vol"], 0.7)
 		if st["brass"] > 0.0:
 			# Accords de cuivres graves sur les temps forts (1 et le « et » du 3) ; en B, un de plus sur le 4.
 			var hits := [0.0, EIGHTH * 5.0] if not b else [0.0, EIGHTH * 3.0, EIGHTH * 5.0, EIGHTH * 7.0]
@@ -437,21 +492,22 @@ static func _boss(bus: Dictionary, st: Dictionary, sig: Dictionary, roots: Array
 	var motif: Array = st["motif"]
 	var motif_b: Array = st["motif_b"] if not st["motif_b"].is_empty() else vary(motif)
 	var lo := int(st["lead_octave"])
-	_melody(bus["lead"], motif, chord, roots, 0, lo, st["lead"], str(st["lead_tone"]), rng)
-	_melody(bus["lead"], motif_b, chord, roots, 4, lo, st["lead"], str(st["lead_tone"]), rng)
+	_melody(bus["lead"], motif, chords, roots, 0, lo, st["lead"], str(st["lead_tone"]), rng)
+	_melody(bus["lead"], motif_b, chords, roots, 4, lo, st["lead"], str(st["lead_tone"]), rng)
 	if st["counter"] > 0.0:
-		_melody(bus["lead"], motif, chord, roots, 4, lo, st["counter"], str(st["counter_tone"]), rng)
+		_melody(bus["lead"], motif, chords, roots, 4, lo, st["counter"], str(st["counter_tone"]), rng)
 	_swell(bus["main"], LOOP, 1.6, 0.35, rng)
 
 
 ## Mélodie : chaque note est prise dans l'accord en cours (motif : [croche, note de l'accord, durée, altération]).
 ## first : premier accord (0 pour A, 4 pour B).
-static func _melody(out: PackedFloat32Array, motif: Array, chord: Array, roots: Array, first: int, octave: int, vol: float, tone: String, rng: RandomNumberGenerator) -> void:
+static func _melody(out: PackedFloat32Array, motif: Array, chords: Array, roots: Array, first: int, octave: int, vol: float, tone: String, rng: RandomNumberGenerator) -> void:
 	if vol <= 0.0:
 		return
 	for m in motif:
 		var stp := int(m[0])
 		var c := first + (stp / 8) % 4
+		var chord: Array = chords[c]
 		var idx := int(m[1])
 		var semis: float = chord[posmod(idx, chord.size())] + 12.0 * floorf(float(idx) / chord.size()) + (float(m[3]) if m.size() > 3 else 0.0)
 		var f := Dsp.hz(roots[c] + semis, octave)

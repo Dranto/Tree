@@ -148,12 +148,18 @@ static func validate() -> PackedStringArray:
 
 static func _check_music(errors: PackedStringArray, w: String, m: Dictionary) -> void:
 	for k in m:
-		if not k in ["seed", "roots", "roots_b", "layers"] and not k in MusicSynth.DEFAULTS:
+		if not k in ["seed", "roots", "roots_b", "key", "qualities", "layers"] and not k in MusicSynth.DEFAULTS:
 			errors.append("%s, music : réglage inconnu « %s »" % [w, k])
 	if m.has("roots") and (not m["roots"] is Array or m["roots"].size() != 4):
 		errors.append("%s, music : « roots » doit avoir quatre fondamentales" % w)
 	if m.has("roots_b") and (not m["roots_b"] is Array or m["roots_b"].size() != 4):
 		errors.append("%s, music : « roots_b » (seconde moitié de la boucle) doit avoir quatre fondamentales" % w)
+	if m.has("qualities"):
+		var q = m["qualities"]
+		if not q is Array or q.size() != MusicSynth.CHORDS or q.any(func(x): return not MusicSynth.QUALITIES.has(str(x))):
+			errors.append("%s, music : « qualities » : huit couleurs d'accord parmi %s" % [w, ", ".join(MusicSynth.QUALITIES.keys())])
+	if m.has("key") and not (m["key"] is float or m["key"] is int):
+		errors.append("%s, music : « key » (transposition en demi-tons) doit être un nombre" % w)
 	if m.has("layers"):
 		if not m["layers"] is Array or m["layers"].is_empty():
 			errors.append("%s, music › layers : une liste de couches" % w)
@@ -162,7 +168,7 @@ static func _check_music(errors: PackedStringArray, w: String, m: Dictionary) ->
 				if not LAYERS.has(str(l)):
 					errors.append("%s, music › layers : couche inconnue « %s » (%s)" % [w, l, ", ".join(LAYERS.keys())])
 	for sec in MusicSynth.DEFAULTS:
-		if sec in ["seed", "roots", "roots_b"] or not m.has(sec):
+		if sec in ["seed", "roots", "roots_b", "key", "qualities"] or not m.has(sec):
 			continue
 		var st = m[sec]
 		if not st is Dictionary:
