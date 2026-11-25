@@ -226,6 +226,7 @@ func boss_defeated() -> void:
 	shrink_warn = 0.0
 	main.spawn_paused = false
 	Game.flags[flag] = true
+	SteamBridge.unlock(SteamBridge.boss_achievement(region))
 	# Récompense (« boss › reward » de la région) : points d'arbre, donnés une seule fois, et une greffe au sol.
 	var reward: Dictionary = Content.rewards().get("boss", {}).get(region, {})
 	Game.grant_points(int(reward.get("points", REWARD_POINTS)), "boss", region + "_boss")

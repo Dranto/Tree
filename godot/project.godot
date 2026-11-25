@@ -16,6 +16,7 @@ boot_splash/show_image=true
 
 [autoload]
 
+SteamBridge="*res://scripts/steam_bridge.gd"
 Game="*res://scripts/game.gd"
 SaveGame="*res://scripts/save_game.gd"
 Settings="*res://scripts/settings.gd"

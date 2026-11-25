@@ -107,7 +107,10 @@ func save_now(main, path := DEFAULT_PATH) -> bool:
 	var abs_path := ProjectSettings.globalize_path(path)
 	if FileAccess.file_exists(path):
 		DirAccess.copy_absolute(abs_path, abs_path + ".bak")
-	return DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), abs_path) == OK
+	var ok := DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), abs_path) == OK
+	if ok:
+		SteamBridge.cloud_push(path)
+	return ok
 
 
 ## Position et vie du joueur à sauvegarder. Pendant le combat de boss, le joueur est noté devant
@@ -155,6 +158,8 @@ func apply(data: Dictionary, main) -> void:
 	var refunded := Game.restore_allocation(uids if uids is Array else [])
 	Game.restore_extras(t.get("choices", {}), t.get("crown", []), t.get("inventory", []))
 	Game.restore_builds(t.get("builds", []), t.get("active_build", 0))
+	# Succès Steam des boss déjà vaincus (sauvegarde d'avant Steam ou d'une autre machine).
+	SteamBridge.sync_achievements(Game.flags)
 	if refunded > 0:
 		print("Sauvegarde : %d nœud(s) absent(s) de l'arbre actuel, point(s) rendu(s)." % refunded)
 
