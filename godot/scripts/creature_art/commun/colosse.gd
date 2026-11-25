@@ -13,6 +13,8 @@ const U = preload("res://scripts/creature_art/commun/_outils.gd")
 ## 100 unités en px du jeu (1600×900) : ~86 px de haut à l'écran en 1080p.
 const HEIGHT := 72.0
 const DRAWS_ELITE := true
+## La tête bouge à peine avec la cible : un seul regard cuit (atlas presque moitié moins lourd).
+const LOOKS := false
 
 
 static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
@@ -35,7 +37,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	# Onde de choc au sol quand les poings tombent.
 	if slam > 0.0 and not Ink.mono:
 		var u := 1.0 - slam
-		var ring := Ink.oval(Vector2(34, 0), 18.0 + 40.0 * u, (18.0 + 40.0 * u) * Art.OMBRE_APLATI, 32)
+		var ring := Ink.oval(Vector2(34, 0), 16.0 + 22.0 * u, (16.0 + 22.0 * u) * Art.OMBRE_APLATI, 32)
 		ring.append(ring[0])
 		ci.draw_polyline(base * ring, Color(Art.bc("braise"), 0.8 * slam), 3.0 * h / 100.0, true)
 	# Démarche : il roule d'une épaule à l'autre, lourdement.
@@ -50,9 +52,9 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var lift_r := maxf(-sin(walk), 0.0) * 5.0 * mv
 	# Poings : au sol à la marche, levés au-dessus de la tête pendant l'annonce, écrasés à la frappe.
 	var swing := sin(walk) * 6.0 * mv
-	var fist_far := Vector2(44 - swing, -14).lerp(Vector2(30, -112), up).lerp(Vector2(52, -10), slam)
-	var fist_near := Vector2(-2 + swing, -12).lerp(Vector2(10, -116), up).lerp(Vector2(40, -8), slam)
-	_arm(ci, xf, Vector2(24, -70), fist_far, far_bark, 15.0)
+	var fist_far := Vector2(44 - swing, -14).lerp(Vector2(32, -100), up).lerp(Vector2(52, -10), slam)
+	var fist_near := Vector2(-2 + swing, -12).lerp(Vector2(14, -102), up).lerp(Vector2(40, -8), slam)
+	_arm(ci, xf, Vector2(24, -70), fist_far, {"clair": ash["ombre"], "ombre": ash["ombre"].darkened(0.3), "reflet": ash["clair"]}, 15.0)
 	# Jambes courtes : deux racines en souche.
 	Ink.part(ci, base, _stump_leg(Vector2(14, -lift_r)), far_bark, 2.4, 1.0, 0.0)
 	Ink.part(ci, base, _stump_leg(Vector2(-12, -lift_l)), bark, 2.4, 1.0, 0.3)
@@ -77,10 +79,10 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	if not Ink.mono and up > 0.0:
 		Ink.halo(ci, xf * Vector2(2, -58), 30.0 * h / 100.0, Art.bc("braise"), up)
 	# Branches mortes cassées sur les épaules, cendre qui monte.
-	Ink.part(ci, xf, PackedVector2Array([Vector2(-30, -80), Vector2(-46, -104), Vector2(-42, -107), Vector2(-36, -100), Vector2(-34, -112), Vector2(-30, -110), Vector2(-30, -98), Vector2(-20, -86)]), bark, 2.0, 1.0, 0.0)
+	Ink.part(ci, xf, PackedVector2Array([Vector2(-30, -80), Vector2(-44, -98), Vector2(-40, -101), Vector2(-36, -95), Vector2(-34, -104), Vector2(-30, -102), Vector2(-30, -94), Vector2(-20, -86)]), bark, 2.0, 1.0, 0.0)
 	Ink.part(ci, xf, PackedVector2Array([Vector2(16, -86), Vector2(22, -104), Vector2(26, -103), Vector2(24, -88)]), bark, 1.8, 1.0, 0.0)
-	Ink.flat(ci, xf, Ink.oval(Vector2(-32, -111), 2.2, 1.4, 10, -0.3), Art.bc("braise"))
-	U.ash(ci, xf, Vector2(-32, -112), 4, t, 2.6, 16.0)
+	Ink.flat(ci, xf, Ink.oval(Vector2(-32, -103), 2.2, 1.4, 10, -0.3), Art.bc("braise"))
+	U.ash(ci, xf, Vector2(-32, -104), 3, t, 2.6, 12.0, 14.0)
 	# La tête : un creux sombre entre les épaules, qui se tourne un peu vers la cible.
 	var ha := clampf(la, -0.5, 0.5) * 0.5
 	var hx := xf * Transform2D(ha, Vector2(12, -74))
@@ -91,7 +93,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	U.eyes(ci, hx, Vector2(5, -1), Vector2(13, -2), 6.0, 0.3 + 0.7 * maxf(up, slam), hit, t, 2.2)
 	if elite:
 		U.elite_collar(ci, xf, Vector2(6, -76), 26.0, 7.0, o.get("region", ""), t)
-	_arm(ci, xf, Vector2(-20, -72), fist_near, bark, 17.0)
+	_arm(ci, xf, Vector2(-20, -72), fist_near, ash, 17.0)
 
 
 ## Jambe-souche : une racine trapue qui s'évase au sol (pied en p, local).

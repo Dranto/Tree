@@ -29,13 +29,13 @@ static func crack(ci: CanvasItem, xf: Transform2D, pts: PackedVector2Array, w: f
 
 
 ## Flocons de cendre qui montent depuis p (repère local) : n losanges pâles qui s'éteignent.
-static func ash(ci: CanvasItem, xf: Transform2D, p: Vector2, n: int, t: float, s := 2.2, spread := 14.0) -> void:
+static func ash(ci: CanvasItem, xf: Transform2D, p: Vector2, n: int, t: float, s := 2.2, spread := 14.0, rise := 34.0) -> void:
 	if Ink.mono:
 		return
 	var k := xf.get_scale().abs().x
 	for i in n:
 		var u := fposmod(t * 0.45 + i / float(n), 1.0)
-		var q := xf * (p + Vector2(sin(TAU * u + i * 1.9) * spread * 0.5 + (i - n * 0.5) * 3.0, -u * 34.0))
+		var q := xf * (p + Vector2(sin(TAU * u + i * 1.9) * spread * 0.5 + (i - n * 0.5) * 3.0, -u * rise))
 		var r := s * k * (1.0 - 0.4 * u)
 		var col := Color(Art.bc("commun", "reflet"), 0.75 * sin(PI * u))
 		ci.draw_colored_polygon(PackedVector2Array([q + Vector2(0, -r * 1.4), q + Vector2(r, 0), q + Vector2(0, r * 1.4), q + Vector2(-r, 0)]), col)
