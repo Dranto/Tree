@@ -9,6 +9,11 @@ signal device_changed
 
 const PATH := "user://settings.cfg"
 
+## Langue (jalon 12 A) : "" = langue du système (repli français), "fr", "en" (voir Loc.LOCALES), ou
+## la pseudo-langue "xx". Section « general » de settings.cfg. L'argument « --lang=<code> » ou la
+## variable d'environnement TREE_LANG passent avant (tests : toujours en français).
+var locale := ""
+
 var volume := 0.8
 ## Réglages séparés de la musique et des bruitages, en plus du volume général.
 var music_volume := 0.7
@@ -21,7 +26,7 @@ var show_hints := true
 ## lit à l'impact), « critiques » (coups critiques et dégâts reçus) ou « tous ».
 ## Clé à part (« gameplay/damage_numbers ») : l'ancien réglage, toujours enregistré à vrai, n'est pas repris.
 const DAMAGE_NUMBERS := ["aucun", "critiques", "tous"]
-const DAMAGE_NUMBERS_NAMES := {"aucun": "Aucun", "critiques": "Critiques et dégâts reçus", "tous": "Tous"}
+const DAMAGE_NUMBERS_NAMES := {"aucun": "Aucun", "critiques": "Critiques et dégâts reçus", "tous": "Tous"} # i18n
 var damage_numbers := "aucun"
 ## Commandes de la barre de compétences : six emplacements, alignés sur player.bar.
 ## - 0 et 1 : les deux compétences principales, sur les clics gauche et droit (actions
@@ -45,7 +50,7 @@ var moba_main_2_key: int = MOBA_MAIN_2_DEFAULT
 ## Visée de l'attaque de base : « auto » (par défaut, l'ennemi à portée le plus proche du
 ## curseur, voir player.auto_target) ou « curseur » (toujours vers la souris, même sans ennemi).
 const AIM_MODES := ["auto", "curseur"]
-const AIM_MODE_NAMES := {"auto": "Automatique", "curseur": "Vers le curseur"}
+const AIM_MODE_NAMES := {"auto": "Automatique", "curseur": "Vers le curseur"} # i18n
 var aim_mode := "auto"
 ## Secousse d'écran, de 0 (aucune) à 1 (pleine). Ancienne clé « gameplay/shake », reprise.
 var shake_scale := 0.6
@@ -56,11 +61,11 @@ var hitstop_scale := 1.0
 ## Accessibilité (jalon 11). Mode daltonien : palette adaptée des signaux de danger, d'élite et de
 ## butin (Art.c), et motifs ajoutés aux zones de danger annoncées. Voir COLORBLIND_MODES.
 const COLORBLIND_MODES := ["aucun", "protanopie", "deuteranopie", "tritanopie"]
-const COLORBLIND_NAMES := {"aucun": "Aucun", "protanopie": "Protanopie (rouge)", "deuteranopie": "Deutéranopie (vert)", "tritanopie": "Tritanopie (bleu)"}
+const COLORBLIND_NAMES := {"aucun": "Aucun", "protanopie": "Protanopie (rouge)", "deuteranopie": "Deutéranopie (vert)", "tritanopie": "Tritanopie (bleu)"} # i18n
 var colorblind_mode := "aucun"
 ## Taille des textes de l'interface (menus, panneaux, bannières), en facteur du thème Herbier.
 const TEXT_SCALES := [1.0, 1.15, 1.3]
-const TEXT_SCALE_NAMES := ["Normale", "Grande", "Très grande"]
+const TEXT_SCALE_NAMES := ["Normale", "Grande", "Très grande"] # i18n
 var text_scale := 1.0
 ## Contraste renforcé : textes secondaires en pleine encre, filets et panneaux plus marqués, zones de
 ## danger plus opaques.
@@ -72,8 +77,8 @@ var pause_on_focus_loss := true
 ## l'arbre. La carte garde par défaut la lettre logique (M) quelle que soit la
 ## disposition du clavier ; réassignée, elle prend la touche physique pressée.
 const GAME_ACTIONS := ["move_up", "move_left", "move_down", "move_right", "dash", "toggle_tree", "toggle_map"]
-const GAME_ACTION_NAMES := {"move_up": "Avancer", "move_left": "Aller à gauche", "move_down": "Reculer", "move_right": "Aller à droite",
-	"dash": "Esquive", "toggle_tree": "Arbre de vie", "toggle_map": "Carte"}
+const GAME_ACTION_NAMES := {"move_up": "Avancer", "move_left": "Aller à gauche", "move_down": "Reculer", "move_right": "Aller à droite", # i18n
+	"dash": "Esquive", "toggle_tree": "Arbre de vie", "toggle_map": "Carte"} # i18n
 const ACTION_DEFAULTS := {"move_up": KEY_W, "move_left": KEY_A, "move_down": KEY_S, "move_right": KEY_D,
 	"dash": KEY_SPACE, "toggle_tree": KEY_TAB, "toggle_map": KEY_M}
 ## Touches toujours actives en plus (non réassignables, ne gênent pas une réassignation).
@@ -104,10 +109,10 @@ const PAD_RESERVED := [JOY_BUTTON_START]
 ## Boutons et gâchettes acceptés pour une liaison.
 const PAD_BUTTONS := [JOY_BUTTON_A, JOY_BUTTON_B, JOY_BUTTON_X, JOY_BUTTON_Y, JOY_BUTTON_LEFT_SHOULDER, JOY_BUTTON_RIGHT_SHOULDER,
 	JOY_BUTTON_LEFT_STICK, JOY_BUTTON_RIGHT_STICK, JOY_BUTTON_BACK, JOY_BUTTON_DPAD_UP, JOY_BUTTON_DPAD_DOWN, JOY_BUTTON_DPAD_LEFT,
-	JOY_BUTTON_DPAD_RIGHT, JOY_BUTTON_PADDLE1, JOY_BUTTON_PADDLE2, JOY_BUTTON_PADDLE3, JOY_BUTTON_PADDLE4, PAD_LT, PAD_RT]
+	JOY_BUTTON_DPAD_RIGHT, JOY_BUTTON_PADDLE1, JOY_BUTTON_PADDLE2, JOY_BUTTON_PADDLE3, JOY_BUTTON_PADDLE4, PAD_LT, PAD_RT] # i18n
 ## Glyphes de la manette : « auto » (selon le nom de la manette branchée), « xbox » ou « playstation ».
 const PAD_STYLES := ["auto", "xbox", "playstation"]
-const PAD_STYLE_NAMES := {"auto": "Automatique", "xbox": "Xbox (A B X Y)", "playstation": "PlayStation (croix, rond…)"}
+const PAD_STYLE_NAMES := {"auto": "Automatique", "xbox": "Xbox (A B X Y)", "playstation": "PlayStation (croix, rond…)"} # i18n
 var pad_style := "auto"
 ## Zone morte des sticks (part de la course) : marche, visée, curseur de l'arbre.
 const STICK_DEADZONE := 0.22
@@ -128,17 +133,22 @@ var difficulty := "normal"
 ## souris, le clavier reste utilisable et prend la main tant qu'une touche de direction est tenue.
 ## Un choix déjà enregistré dans user://settings.cfg est gardé.
 const MOVE_MODES := ["clavier", "curseur", "moba"]
-const MOVE_MODE_NAMES := {"clavier": "Clavier (Z Q S D)", "curseur": "Suivre le curseur", "moba": "Clic droit (MOBA)"}
+const MOVE_MODE_NAMES := {"clavier": "Clavier (Z Q S D)", "curseur": "Suivre le curseur", "moba": "Clic droit (MOBA)"} # i18n
 const MOVE_MODE_DEFAULT := "clavier"
 var move_mode := MOVE_MODE_DEFAULT
 ## Réduit les effets de jeu : plus de secousse ni de micro-pause, très peu de particules, ambiance coupée.
 var reduce_effects := false
 
 
+func _exit_tree() -> void:
+	Loc.shutdown()
+
+
 func _ready() -> void:
 	# Toujours à l'écoute (menus et arbre mettent le jeu en pause) : suit l'appareil utilisé.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	load_settings()
+	apply_locale()
 	apply_bindings()
 	apply()
 	_apply_access.call_deferred()
@@ -148,6 +158,8 @@ func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(PATH) != OK:
 		return
+	var loc := str(cfg.get_value("general", "locale", locale))
+	locale = loc if loc == "" or loc == Loc.PSEUDO or loc in Loc.LOCALES else ""
 	volume = clampf(float(cfg.get_value("audio", "volume", volume)), 0.0, 1.0)
 	music_volume = clampf(float(cfg.get_value("audio", "music_volume", music_volume)), 0.0, 1.0)
 	sfx_volume = clampf(float(cfg.get_value("audio", "sfx_volume", sfx_volume)), 0.0, 1.0)
@@ -195,6 +207,7 @@ func load_settings() -> void:
 
 func save_settings() -> void:
 	var cfg := ConfigFile.new()
+	cfg.set_value("general", "locale", locale)
 	cfg.set_value("audio", "volume", volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
@@ -361,12 +374,12 @@ func action_key_name(a: String) -> String:
 func key_user(code: int, except := "") -> String:
 	for a in GAME_ACTIONS:
 		if a != except and action_keys[a] == code:
-			return GAME_ACTION_NAMES[a]
+			return tr(GAME_ACTION_NAMES[a])
 	for i in SLOT_COUNT:
 		if SLOT_ACTIONS[i] != except and effective_binding(i) == code:
-			return "compétence %d" % (i + 1)
+			return tr("compétence %d") % (i + 1)
 	if move_mode == "moba" and except != "moba_main_2" and moba_main_2_key == code:
-		return "compétence principale 2 (MOBA)"
+		return tr("compétence principale 2 (MOBA)")
 	return ""
 
 
@@ -376,7 +389,7 @@ func set_action_key(a: String, code: int) -> String:
 	if not a in GAME_ACTIONS or code <= 0:
 		return "?"
 	if code == KEY_ESCAPE:
-		return "le menu"
+		return tr("le menu")
 	var user := key_user(code, a)
 	if user != "":
 		return user
@@ -449,9 +462,9 @@ func binding_short(i: int) -> String:
 	var code := effective_binding(i)
 	if code < 0:
 		match -code:
-			MOUSE_BUTTON_LEFT: return "Clic G"
-			MOUSE_BUTTON_RIGHT: return "Clic D"
-			MOUSE_BUTTON_MIDDLE: return "Clic M"
+			MOUSE_BUTTON_LEFT: return tr("Clic G")
+			MOUSE_BUTTON_RIGHT: return tr("Clic D")
+			MOUSE_BUTTON_MIDDLE: return tr("Clic M")
 			MOUSE_BUTTON_XBUTTON1: return "B4"
 			MOUSE_BUTTON_XBUTTON2: return "B5"
 	return code_name(code)
@@ -461,12 +474,12 @@ func binding_short(i: int) -> String:
 func code_name(code: int) -> String:
 	if code < 0:
 		match -code:
-			MOUSE_BUTTON_LEFT: return "Clic gauche"
-			MOUSE_BUTTON_RIGHT: return "Clic droit"
-			MOUSE_BUTTON_MIDDLE: return "Clic milieu"
-			MOUSE_BUTTON_XBUTTON1: return "Bouton 4"
-			MOUSE_BUTTON_XBUTTON2: return "Bouton 5"
-		return "Souris %d" % -code
+			MOUSE_BUTTON_LEFT: return tr("Clic gauche")
+			MOUSE_BUTTON_RIGHT: return tr("Clic droit")
+			MOUSE_BUTTON_MIDDLE: return tr("Clic milieu")
+			MOUSE_BUTTON_XBUTTON1: return tr("Bouton 4")
+			MOUSE_BUTTON_XBUTTON2: return tr("Bouton 5")
+		return tr("Souris %d") % -code
 	return key_name(code)
 
 
@@ -500,7 +513,7 @@ func key_name(physical_keycode: int) -> String:
 	if physical_keycode == KEY_NONE:
 		return "—"
 	if KEY_FR.has(physical_keycode):
-		return KEY_FR[physical_keycode]
+		return tr(KEY_FR[physical_keycode])
 	var kc := physical_keycode
 	if DisplayServer.get_name() != "headless":
 		kc = DisplayServer.keyboard_get_keycode_from_physical(kc)
@@ -508,8 +521,8 @@ func key_name(physical_keycode: int) -> String:
 
 
 ## Noms français des touches que Godot nomme en anglais.
-const KEY_FR := {KEY_UP: "Flèche haut", KEY_DOWN: "Flèche bas", KEY_LEFT: "Flèche gauche", KEY_RIGHT: "Flèche droite",
-	KEY_SPACE: "Espace", KEY_SHIFT: "Maj", KEY_TAB: "Tab", KEY_ENTER: "Entrée", KEY_CTRL: "Ctrl", KEY_BACKSPACE: "Retour arrière"}
+const KEY_FR := {KEY_UP: "Flèche haut", KEY_DOWN: "Flèche bas", KEY_LEFT: "Flèche gauche", KEY_RIGHT: "Flèche droite", # i18n
+	KEY_SPACE: "Espace", KEY_SHIFT: "Maj", KEY_TAB: "Tab", KEY_ENTER: "Entrée", KEY_CTRL: "Ctrl", KEY_BACKSPACE: "Retour arrière"} # i18n
 
 
 ## Action du jeu (hors barre de compétences) qui utilise déjà cette liaison, ou "".
@@ -533,9 +546,9 @@ func key_owner(code: int) -> String:
 func apply() -> void:
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(volume, 0.0001)))
 	AudioServer.set_bus_mute(0, volume <= 0.001)
-	_set_bus("Musique", music_volume)
-	_set_bus("Effets", sfx_volume)
-	_set_bus("Ambiance", ambience_volume)
+	_set_bus("Musique", music_volume) # i18n: non (bus audio)
+	_set_bus("Effets", sfx_volume) # i18n: non
+	_set_bus("Ambiance", ambience_volume) # i18n: non
 	if DisplayServer.get_name() != "headless":
 		var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 		if DisplayServer.window_get_mode() != mode:
@@ -653,6 +666,32 @@ func set_reduce_effects(on: bool) -> void:
 	changed.emit()
 
 
+## Langue forcée par « --lang=<code> » (arguments après --) ou TREE_LANG, sinon "".
+static func forced_locale() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--lang="):
+			return a.substr(7)
+	return OS.get_environment("TREE_LANG")
+
+
+## Langue affichée : celle forcée par les tests, sinon le choix du joueur (ou celle du système).
+func effective_locale() -> String:
+	var f := forced_locale()
+	return Loc.resolve(f if f != "" else locale)
+
+
+## Applique la langue : changement à chaud, sans redémarrer.
+func apply_locale() -> void:
+	Loc.apply(effective_locale())
+
+
+## Change la langue ("" = langue du système) et l'applique aussitôt.
+func set_locale(id: String) -> void:
+	locale = id if id == "" or id == Loc.PSEUDO or id in Loc.LOCALES else ""
+	apply_locale()
+	changed.emit()
+
+
 ## Change la difficulté : vaut pour les ennemis qui naissent ensuite.
 func set_difficulty(id: String) -> void:
 	difficulty = id if id in DIFFICULTIES else "normal"
@@ -675,8 +714,8 @@ func set_aim_mode(id: String) -> void:
 ## Explication d'une visée, affichée sous le choix dans les options.
 static func aim_mode_text(id: String) -> String:
 	if id == "curseur":
-		return "L'attaque de base part toute seule vers la souris, même sans ennemi."
-	return "L'attaque de base part toute seule sur l'ennemi à portée le plus proche du curseur. Sans ennemi à portée, elle ne part pas."
+		return Loc.t("L'attaque de base part toute seule vers la souris, même sans ennemi.")
+	return Loc.t("L'attaque de base part toute seule sur l'ennemi à portée le plus proche du curseur. Sans ennemi à portée, elle ne part pas.")
 
 
 ## Explication d'un mode de déplacement, affichée sous le choix dans les options.
@@ -684,10 +723,10 @@ func move_mode_text(id: String) -> String:
 	match id:
 		"moba":
 			var key := code_name(moba_main_2_key)
-			return "Clic droit : le héros marche jusqu'à l'endroit cliqué (un repère s'affiche au sol) ; clic droit tenu : il suit le curseur. La compétence du clic droit passe sur %s ; Espace reste l'esquive, vers le curseur." % key
+			return tr("Clic droit : le héros marche jusqu'à l'endroit cliqué (un repère s'affiche au sol) ; clic droit tenu : il suit le curseur. La compétence du clic droit passe sur %s ; Espace reste l'esquive, vers le curseur.") % key
 		"curseur":
-			return "Le héros marche vers la souris et s'arrête quand elle est tout près de lui. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur. L'esquive part vers le curseur."
-	return "Z Q S D (W A S D en QWERTY) ou les flèches. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur."
+			return tr("Le héros marche vers la souris et s'arrête quand elle est tout près de lui. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur. L'esquive part vers le curseur.")
+	return tr("Z Q S D (W A S D en QWERTY) ou les flèches. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur.")
 
 
 ## Force réellement appliquée de la secousse d'écran (0 si les effets sont réduits).
@@ -759,16 +798,16 @@ func set_pad_style(id: String) -> void:
 	device_changed.emit()
 
 
-const PAD_NAMES_XBOX := {JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y",
-	JOY_BUTTON_LEFT_SHOULDER: "LB", JOY_BUTTON_RIGHT_SHOULDER: "RB", JOY_BUTTON_BACK: "Affichage", JOY_BUTTON_START: "Menu",
-	JOY_BUTTON_LEFT_STICK: "Stick G", JOY_BUTTON_RIGHT_STICK: "Stick D", PAD_LT: "LT", PAD_RT: "RT"}
-const PAD_NAMES_PS := {JOY_BUTTON_A: "Croix", JOY_BUTTON_B: "Rond", JOY_BUTTON_X: "Carré", JOY_BUTTON_Y: "Triangle",
-	JOY_BUTTON_LEFT_SHOULDER: "L1", JOY_BUTTON_RIGHT_SHOULDER: "R1", JOY_BUTTON_BACK: "Partage", JOY_BUTTON_START: "Options",
+const PAD_NAMES_XBOX := {JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y", # i18n
+	JOY_BUTTON_LEFT_SHOULDER: "LB", JOY_BUTTON_RIGHT_SHOULDER: "RB", JOY_BUTTON_BACK: "Affichage", JOY_BUTTON_START: "Menu", # i18n
+	JOY_BUTTON_LEFT_STICK: "Stick G", JOY_BUTTON_RIGHT_STICK: "Stick D", PAD_LT: "LT", PAD_RT: "RT"} # i18n
+const PAD_NAMES_PS := {JOY_BUTTON_A: "Croix", JOY_BUTTON_B: "Rond", JOY_BUTTON_X: "Carré", JOY_BUTTON_Y: "Triangle", # i18n
+	JOY_BUTTON_LEFT_SHOULDER: "L1", JOY_BUTTON_RIGHT_SHOULDER: "R1", JOY_BUTTON_BACK: "Partage", JOY_BUTTON_START: "Options", # i18n
 	JOY_BUTTON_LEFT_STICK: "L3", JOY_BUTTON_RIGHT_STICK: "R3", PAD_LT: "L2", PAD_RT: "R2"}
-const PAD_NAMES_COMMON := {JOY_BUTTON_DPAD_UP: "Croix haut", JOY_BUTTON_DPAD_DOWN: "Croix bas", JOY_BUTTON_DPAD_LEFT: "Croix gauche",
-	JOY_BUTTON_DPAD_RIGHT: "Croix droite", JOY_BUTTON_PADDLE1: "Palette 1", JOY_BUTTON_PADDLE2: "Palette 2",
-	JOY_BUTTON_PADDLE3: "Palette 3", JOY_BUTTON_PADDLE4: "Palette 4", PAD_STICK_L: "Stick gauche", PAD_STICK_R: "Stick droit",
-	PAD_DPAD: "Croix directionnelle"}
+const PAD_NAMES_COMMON := {JOY_BUTTON_DPAD_UP: "Croix haut", JOY_BUTTON_DPAD_DOWN: "Croix bas", JOY_BUTTON_DPAD_LEFT: "Croix gauche", # i18n
+	JOY_BUTTON_DPAD_RIGHT: "Croix droite", JOY_BUTTON_PADDLE1: "Palette 1", JOY_BUTTON_PADDLE2: "Palette 2", # i18n
+	JOY_BUTTON_PADDLE3: "Palette 3", JOY_BUTTON_PADDLE4: "Palette 4", PAD_STICK_L: "Stick gauche", PAD_STICK_R: "Stick droit", # i18n
+	PAD_DPAD: "Croix directionnelle"} # i18n
 
 
 ## Nom affiché d'une liaison de manette, selon le style des glyphes (« RT » ou « R2 »).
@@ -777,8 +816,8 @@ func pad_name_of(code: int) -> String:
 		return "—"
 	var names: Dictionary = PAD_NAMES_PS if pad_layout() == "playstation" else PAD_NAMES_XBOX
 	if names.has(code):
-		return names[code]
-	return PAD_NAMES_COMMON.get(code, "Bouton %d" % code)
+		return tr(names[code])
+	return tr(PAD_NAMES_COMMON[code]) if PAD_NAMES_COMMON.has(code) else tr("Bouton %d") % code
 
 
 ## Liaison de manette d'une commande : emplacement de la barre (« skill_main_1 »…) ou commande du jeu.
@@ -797,10 +836,10 @@ func pad_code(action: String) -> int:
 func pad_user(code: int, except := "") -> String:
 	for a in PAD_ACTIONS:
 		if a != except and pad_actions[a] == code:
-			return GAME_ACTION_NAMES[a]
+			return tr(GAME_ACTION_NAMES[a])
 	for i in SLOT_COUNT:
 		if SLOT_ACTIONS[i] != except and pad_bindings[i] == code:
-			return "compétence %d" % (i + 1)
+			return tr("compétence %d") % (i + 1)
 	return ""
 
 
@@ -811,7 +850,7 @@ func set_pad_binding(i: int, code: int) -> String:
 		return "?"
 	for a in PAD_ACTIONS:
 		if pad_actions[a] == code:
-			return GAME_ACTION_NAMES[a]
+			return tr(GAME_ACTION_NAMES[a])
 	for j in SLOT_COUNT:
 		if j != i and pad_bindings[j] == code:
 			pad_bindings[j] = JOY_BUTTON_INVALID

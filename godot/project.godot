@@ -38,6 +38,11 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.05, 0.05, 0.05, 1)
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://locale/fr.po", "res://locale/en.po")
+locale/fallback="fr"
+
 [physics]
 
 common/physics_ticks_per_second=60

@@ -324,8 +324,8 @@ func _ready() -> void:
 		loaded = SaveGame.load_into(self, resume_from)
 	elif not autotest and Flow.continue_requested and not "--new-game" in OS.get_cmdline_user_args():
 		loaded = SaveGame.load_into(self)
-		if not loaded and SaveGame.last_error != "aucune sauvegarde":
-			hud.banner("Sauvegarde illisible (%s) : nouvelle partie." % SaveGame.last_error)
+		if not loaded and SaveGame.last_error != Loc.t("aucune sauvegarde"):
+			hud.banner(Loc.t("Sauvegarde illisible (%s) : nouvelle partie.") % SaveGame.last_error)
 	if not loaded:
 		Game.reset()
 	else:
@@ -1073,7 +1073,7 @@ func import_ground_grafts(list: Array) -> void:
 
 func _on_elite_killed(e) -> void:
 	fx.ring(e.position, e.radius, e.radius * 4.0, 0.6, Color("f2c75a"), 5.0)
-	fx.text(e.position + Vector2(0, -e.radius - 30), e.elite_name + " vaincu", Color("f2c75a"), 18, 1.6)
+	fx.text(e.position + Vector2(0, -e.radius - 30), Loc.t("%s vaincu") % e.elite_name, Color("f2c75a"), 18, 1.6)
 	if rng.randf() < float(Enemy.ELITES.get("graft_chance", 0.0)):
 		drop_graft(e.position)
 	elite_killed.emit(e)
@@ -1132,7 +1132,8 @@ func player_died() -> void:
 	screen_fx.fade(Art.c("decor").darkened(0.5), 1.0, 0.0, ScreenFx.FADE_DEATH)
 	fx.ring(player.position, 16.0, 150.0, 0.9, Art.ec("seve"), 5.0)
 	fx.pickup(player.position, "seve", 10)
-	hud.show_death({"place": spot.place if spot != null else "de la Graine", "dropped": dropped, "lost": lost, "reset": reset})
+	hud.show_death({"place": spot.place if spot != null else "de la Graine", # i18n: non (lieu jamais affiché)
+		 "dropped": dropped, "lost": lost, "reset": reset})
 	# Les annonces de l'endroit où il est tombé n'ont plus lieu d'être.
 	hud.drop_combat_banners()
 	request_autosave()

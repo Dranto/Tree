@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -84,6 +84,9 @@ func _ready() -> void:
 	Settings.bindings = Settings.BINDING_DEFAULTS.duplicate()
 	Settings.moba_main_2_key = Settings.MOBA_MAIN_2_DEFAULT
 	Settings.apply_bindings()
+	if scenario == "langue":
+		# Pseudo-langue (jalon 12) : textes allongés de 40 % et accentués, pour voir ce qui déborde.
+		Loc.apply(Loc.PSEUDO)
 	if scenario == "carte5":
 		# Monde à cinq régions et plus : les régions factices des tests complètent celles des données.
 		Regions.set_extra_dirs(["res://tests/regions/"])
@@ -145,6 +148,8 @@ func _ready() -> void:
 			await _scenario_menus()
 		"manette":
 			await _scenario_manette()
+		"langue":
+			await _scenario_langue()
 		"cumul":
 			await _scenario_cumul()
 	_finish_audit()
@@ -249,6 +254,34 @@ func _scenario_menus() -> void:
 	await _frames(30)
 	UiAudit.scan_controls("titre", title)
 	await _shot("menu_titre_" + tag, "titre")
+
+
+## Pseudo-langue (jalon 12), au plus petit écran (1280 x 720) : jeu (HUD), infobulle d'un nœud de
+## l'arbre, pause et onglet « Jeu » des options (sélecteur de langue). Chaque texte est allongé de
+## 40 % et accentué : un texte coupé ou qui déborde se voit ici, et l'audit de l'interface le signale.
+func _scenario_langue() -> void:
+	var tag := _res_tag()
+	await _frames(60)
+	main.hud.banner_time = 0.0
+	await _shot("langue_jeu_" + tag, "jeu")
+	main.tree_ui.toggle()
+	await _frames(10)
+	_hover(_first_neighbor_of_root())
+	await _frames(2)
+	await _shot("langue_arbre_" + tag, "arbre")
+	_hover(-1)
+	main.tree_ui.toggle()
+	await _frames(2)
+	main.pause_menu.open()
+	await _frames(10)
+	UiAudit.scan_controls("pause", main.pause_menu)
+	await _shot("langue_pause_" + tag)
+	main.pause_menu._open_options()
+	main.pause_menu.options.show_tab(2)
+	await _frames(6)
+	UiAudit.scan_controls("options", main.pause_menu.options)
+	await _shot("langue_options_" + tag)
+	main.pause_menu.close()
 
 
 ## Manette (jalon 11), à la taille de l'écran du Steam Deck (1280 x 800) : la barre et le coin avec

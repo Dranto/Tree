@@ -68,11 +68,11 @@ func scan_controls(screen: String, root: Node) -> void:
 		var col := Color(0, 0, 0, 0)
 		var halo := false
 		if ctl is Label:
-			s = (ctl as Label).text
+			s = ctl.atr((ctl as Label).text)
 			col = ctl.get_theme_color("font_color", "Label")
 			halo = ctl.get_theme_constant("outline_size", "Label") >= 3 and ctl.get_theme_color("font_outline_color", "Label").a > 0.5
 		elif ctl is Button:
-			s = (ctl as Button).text
+			s = ctl.atr((ctl as Button).text)
 			var b := ctl as Button
 			var state := "font_disabled_color" if b.disabled else ("font_focus_color" if b.has_focus() else "font_color")
 			col = ctl.get_theme_color(state, ctl.get_class())

@@ -130,7 +130,7 @@ func _player_entry(main) -> Dictionary:
 func load_into(main, path := DEFAULT_PATH) -> bool:
 	last_error = ""
 	if not has_save(path):
-		last_error = "aucune sauvegarde"
+		last_error = Loc.t("aucune sauvegarde")
 		return false
 	var data := _read(path)
 	if data.is_empty():
@@ -180,15 +180,15 @@ func apply(data: Dictionary, main) -> void:
 ## Lit, valide et migre un fichier. Renvoie {} en cas d'échec (last_error renseigné).
 func _read(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
-		last_error = "aucune sauvegarde"
+		last_error = Loc.t("aucune sauvegarde")
 		return {}
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not (parsed is Dictionary) or parsed.get("format", "") != FORMAT:
-		last_error = "fichier illisible ou d'un autre format"
+		last_error = Loc.t("fichier illisible ou d'un autre format")
 		return {}
 	var version := int(parsed.get("version", 0))
 	if version > VERSION:
-		last_error = "sauvegarde créée par une version plus récente du jeu (format %d > %d)" % [version, VERSION]
+		last_error = Loc.t("sauvegarde créée par une version plus récente du jeu (format %d > %d)") % [version, VERSION]
 		return {}
 	return _migrate(parsed)
 
