@@ -54,8 +54,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var low := PackedVector2Array([Vector2(-14, -12), Vector2(-18, -30), Vector2(-16, -44), Vector2(-6, -40), Vector2(4, -45), Vector2(15, -40), Vector2(16, -30), Vector2(12, -12), Vector2(-2, -8)])
 	Ink.fill_world(ci, xf * low, bark, 0.5, 0.0)
 	Ink.brush(ci, xf, PackedVector2Array([Vector2(-16, -44), Vector2(-6, -40), Vector2(4, -45), Vector2(15, -40)]), 1.6, Art.bc("commun", "reflet"))
-	for c: PackedVector2Array in [PackedVector2Array([Vector2(-14, -30), Vector2(-6, -27), Vector2(3, -31), Vector2(12, -28)]), PackedVector2Array([Vector2(-6, -40), Vector2(-8, -33), Vector2(-5, -27)]), PackedVector2Array([Vector2(4, -30), Vector2(6, -22), Vector2(3, -14)])]:
-		U.crack(ci, xf, c, 1.3, 0.5, t + c[0].x)
+	U.char_cracks(ci, xf, low, 5, 1.3, 0.5, t, 5)
 	for g: Array in [[Vector2(-10, -54), Vector2(-12, -80)], [Vector2(-2, -52), Vector2(0, -84)], [Vector2(8, -56), Vector2(10, -78)]]:
 		Ink.brush(ci, xf, PackedVector2Array(g), 1.3, Art.bc("commun", "ombre"))
 	# Masque de bois : un nœud creusé, deux fentes de braise qui suivent la cible.

@@ -65,12 +65,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var low := PackedVector2Array([Vector2(-30, -14), Vector2(-36, -34), Vector2(-35, -46), Vector2(-24, -42), Vector2(-12, -46), Vector2(0, -41), Vector2(12, -46), Vector2(24, -42), Vector2(32, -46), Vector2(30, -36), Vector2(24, -14), Vector2(0, -10)])
 	Ink.fill_world(ci, xf * low, bark, 0.6, 0.0)
 	Ink.brush(ci, xf, PackedVector2Array([Vector2(-35, -46), Vector2(-24, -42), Vector2(-12, -46), Vector2(0, -41), Vector2(12, -46), Vector2(24, -42), Vector2(32, -46)]), 2.0, Art.bc("commun", "reflet"))
-	for c: PackedVector2Array in [
-		PackedVector2Array([Vector2(-32, -30), Vector2(-22, -27), Vector2(-12, -31), Vector2(-2, -27), Vector2(10, -31), Vector2(22, -27), Vector2(29, -30)]),
-		PackedVector2Array([Vector2(-22, -42), Vector2(-24, -34), Vector2(-21, -27)]), PackedVector2Array([Vector2(12, -45), Vector2(9, -37), Vector2(11, -30)]),
-		PackedVector2Array([Vector2(-14, -28), Vector2(-12, -20), Vector2(-15, -13)]), PackedVector2Array([Vector2(6, -27), Vector2(4, -19), Vector2(7, -12)]),
-	]:
-		U.crack(ci, xf, c, 2.0, 0.5 + 0.5 * maxf(up, slam), t + c[0].x)
+	U.char_cracks(ci, xf, low, 11, 2.0, 0.5 + 0.5 * maxf(up, slam), t, 23)
 	# Écorce en long, fendue de braise : une grande fente dans la poitrine (elle s'ouvre avant le coup).
 	for g: Array in [[Vector2(-30, -52), Vector2(-28, -76)], [Vector2(-18, -50), Vector2(-16, -80)], [Vector2(18, -50), Vector2(20, -78)], [Vector2(28, -54), Vector2(30, -74)]]:
 		Ink.brush(ci, xf, PackedVector2Array(g), 1.6, Art.bc("commun", "ombre"))

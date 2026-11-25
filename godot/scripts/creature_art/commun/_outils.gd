@@ -82,3 +82,41 @@ static func elite_collar(ci: CanvasItem, xf: Transform2D, c: Vector2, rx: float,
 		var q := c + Vector2(cos(a) * rx, sin(a) * ry)
 		var rr := (2.6 if i == 2 else 1.9) * (1.0 + 0.06 * sin(t * 3.0 + i))
 		Ink.part(ci, xf, Ink.oval(q + Vector2(0, rr * 0.6), rr, rr * 1.15, 12), bead if i != 2 else gold, 1.0, 1.0, 0.8)
+
+
+## Charbon craquelé : un réseau irrégulier de fentes de braise dans la forme zone (repère local),
+## tiré d'une graine fixe (RNG locale : même pose, même dessin). n : nombre de fentes mères.
+static func char_cracks(ci: CanvasItem, xf: Transform2D, zone: PackedVector2Array, n: int, w: float, glow: float, t: float, seed := 1) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var box := Rect2(zone[0], Vector2.ZERO)
+	for q in zone:
+		box = box.expand(q)
+	var inner := Geometry2D.offset_polygon(zone, -w * 1.2)
+	var area: PackedVector2Array = inner[0] if not inner.is_empty() else zone
+	var made := 0
+	var tries := 0
+	while made < n and tries < n * 12:
+		tries += 1
+		var p := box.position + Vector2(rng.randf(), rng.randf()) * box.size
+		if not Geometry2D.is_point_in_polygon(p, area):
+			continue
+		made += 1
+		var a := rng.randf_range(-0.6, 0.6) + (PI if rng.randf() < 0.5 else 0.0)
+		var line := PackedVector2Array([p])
+		var segs := rng.randi_range(2, 4)
+		var len := box.size.x * rng.randf_range(0.12, 0.22)
+		for s in segs:
+			a += rng.randf_range(-0.9, 0.9)
+			var q := line[line.size() - 1] + Vector2.from_angle(a) * len * rng.randf_range(0.6, 1.2)
+			if not Geometry2D.is_point_in_polygon(q, area):
+				break
+			line.append(q)
+			# Une fente fille, plus courte, qui part vers le haut ou le bas.
+			if rng.randf() < 0.35:
+				var b := a + (PI / 2.0 if rng.randf() < 0.5 else -PI / 2.0) + rng.randf_range(-0.4, 0.4)
+				var r := q + Vector2.from_angle(b) * len * rng.randf_range(0.4, 0.8)
+				if Geometry2D.is_point_in_polygon(r, area):
+					crack(ci, xf, PackedVector2Array([q, q.lerp(r, 0.5) + Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)), r]), w * 0.75, glow, t + made)
+		if line.size() >= 2:
+			crack(ci, xf, line, w * rng.randf_range(0.8, 1.15), glow, t + made * 1.7)

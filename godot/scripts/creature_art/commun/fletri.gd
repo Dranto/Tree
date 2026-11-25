@@ -51,14 +51,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var low := PackedVector2Array([Vector2(-15, -28), Vector2(-19, -40), Vector2(-24, -46), Vector2(-20, -52), Vector2(-12, -50), Vector2(-4, -54), Vector2(6, -50), Vector2(12, -55), Vector2(17, -56), Vector2(16, -44), Vector2(11, -36), Vector2(11, -28), Vector2(-2, -24)])
 	Ink.fill_world(ci, xf * low, bark, 0.6, 0.0)
 	var glow := 0.4 + 0.6 * maxf(kk, sw)
-	for c: PackedVector2Array in [
-		PackedVector2Array([Vector2(-19, -45), Vector2(-12, -41), Vector2(-6, -44), Vector2(1, -40), Vector2(8, -44), Vector2(15, -47)]),
-		PackedVector2Array([Vector2(-15, -33), Vector2(-9, -35), Vector2(-3, -31), Vector2(4, -34), Vector2(10, -31)]),
-		PackedVector2Array([Vector2(-11, -50), Vector2(-12, -46), Vector2(-9, -41)]), PackedVector2Array([Vector2(3, -52), Vector2(0, -46), Vector2(1, -40)]),
-		PackedVector2Array([Vector2(-6, -43), Vector2(-4, -38), Vector2(-7, -33)]), PackedVector2Array([Vector2(8, -43), Vector2(6, -37), Vector2(8, -32)]),
-		PackedVector2Array([Vector2(-1, -31), Vector2(-3, -25)]),
-	]:
-		U.crack(ci, xf, c, 1.4, glow, t + c[0].x)
+	U.char_cracks(ci, xf, low, 9, 1.4, glow, t, 11)
 	# Bord de la croûte de cendre, qui s'effrite sur le charbon.
 	Ink.brush(ci, xf, PackedVector2Array([Vector2(-21, -51), Vector2(-12, -49), Vector2(-4, -53), Vector2(6, -49), Vector2(16, -55)]), 1.6, Art.bc("commun", "reflet"))
 	# Veines du bois mort dans la cendre, et une grande fente de braise qui monte vers le cœur.
