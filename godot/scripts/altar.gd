@@ -107,7 +107,10 @@ func _process(delta: float) -> void:
 			body.modulate.a = v
 			body.visible = v > 0.01
 			body.queue_redraw()
-			_keep_baked()
+			_bake_wait -= delta
+			if _bake_wait <= 0.0:
+				_bake_wait = 0.25
+				_keep_baked()
 	_was_near = v > 0.0
 
 
@@ -196,6 +199,10 @@ func _draw() -> void:
 
 
 ## Jeu d'images cuites : un par région (table éteinte et ravivée).
+## Attente avant de revérifier la cuisson (inutile de le faire à chaque image).
+var _bake_wait := 0.0
+
+
 func _bake_key() -> String:
 	return "autel/" + region
 

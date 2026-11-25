@@ -190,7 +190,6 @@ func _process(delta: float) -> void:
 	t += delta
 	bloom = maxf(0.0, bloom - delta / BLOOM_TIME)
 	jolt = maxf(0.0, jolt - delta * 3.0)
-	_keep_baked()
 	# Rien à animer quand le Cœur est loin de l'écran (avec trois régions, deux Cœurs tombaient
 	# souvent à moins de 1600 px du joueur sans être visibles) : on regarde le cadre de la caméra.
 	_since_draw += delta
@@ -198,6 +197,7 @@ func _process(delta: float) -> void:
 		return
 	if not frozen and main.player.position.distance_squared_to(center) < 1600.0 * 1600.0 and _near_view():
 		_since_draw = 0.0
+		_keep_baked()
 		queue_redraw()
 		body.queue_redraw()
 
@@ -458,7 +458,17 @@ func _art() -> GDScript:
 
 ## Jeu d'images cuites du Cœur : par région et par taille (deux petits Cœurs d'une région le partagent).
 func _bake_key() -> String:
-	return "coeur/%s/%.2f" % [region, size]
+	if _key_region != region or _key_size != size:
+		_key_region = region
+		_key_size = size
+		_key = "coeur/%s/%.2f" % [region, size]
+	return _key
+
+
+## La clé est gardée (elle est demandée à chaque dessin) : refaite si la région ou la taille changent.
+var _key := ""
+var _key_region := ""
+var _key_size := -1.0
 
 
 ## Cuit les images du Cœur quand il approche de l'écran (LieuxBake rend les plus anciennes au-delà
@@ -467,7 +477,7 @@ func _keep_baked() -> void:
 	if main == null or main.get("player") == null:
 		return
 	var key := _bake_key()
-	if LieuxBake.ready(key) or main.player.position.distance_squared_to(center) > 1600.0 * 1600.0 or not _near_view():
+	if LieuxBake.ready(key):
 		return
 	var art := _art()
 	var s := size
