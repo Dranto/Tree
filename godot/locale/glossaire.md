@@ -3,7 +3,7 @@
 Noms propres et mots du jeu, à garder identiques partout dans `en.po`. Ton : écrit, végétal, sobre ;
 pas de mot à mot, pas d'anglais familier. Une ligne de justification pour les noms délicats.
 
-Statut : **proposé le 25/11, à valider par Antoine.**
+Statut : **validé par Antoine le 25/11.**
 
 ## Le jeu et le monde
 

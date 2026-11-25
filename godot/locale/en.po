@@ -9,237 +9,237 @@ msgstr ""
 
 #. data/attack.json › forms › bourrasque › desc
 msgid "Un souffle en cône devant toi, qui blesse, repousse et emporte les plumes des Planeurs."
-msgstr ""
+msgstr "A cone of wind before you that wounds, knocks back and strips the Gliders of their feathers."
 
 #. data/attack.json › forms › bourrasque › name
 #. data/branches/vent.json › vent › clusters › course › nodes › r6 › name
 #. data/branches/vent.json › vent › notable › names
 msgid "Bourrasque"
-msgstr ""
+msgstr "Gust"
 
 #. data/attack.json › forms › dard › desc
 msgid "Une volée rapide de fines aiguilles de moisissure qui perforent."
-msgstr ""
+msgstr "A quick volley of fine, piercing mold needles."
 
 #. data/attack.json › forms › dard › name
 #. data/branches/spore.json › spore › clusters › graines › nodes › a2 › name
 msgid "Dards fongiques"
-msgstr ""
+msgstr "Fungal Darts"
 
 #. data/attack.json › forms › echarde › desc
 msgid "Une rafale courte d'échardes qui perforent."
-msgstr ""
+msgstr "A short burst of piercing splinters."
 
 #. data/attack.json › forms › echarde › name
 #. data/branches/racine.json › racine › clusters › ecorce › nodes › e2 › name
 #. data/branches/ronce.json › ronce › clusters › epines › nodes › e7 › name
 msgid "Échardes"
-msgstr ""
+msgstr "Splinters"
 
 #. data/attack.json › forms › fouet › desc
 msgid "Un coup de fouet en arc, au corps à corps, qui repousse."
-msgstr ""
+msgstr "A sweeping melee lash that knocks back."
 
 #. data/attack.json › forms › fouet › name
 #. data/skills.json › fouet › short
 msgid "Fouet"
-msgstr ""
+msgstr "Whip"
 
 #. data/attack.json › forms › graine › desc
 msgid "Un éventail de graines de sève vers la cible."
-msgstr ""
+msgstr "A fan of sap seeds toward the target."
 
 #. data/attack.json › forms › graine › name
 msgid "Graines"
-msgstr ""
+msgstr "Seeds"
 
 #. data/attack.json › forms › lame › desc
 msgid "Des lames de vent qui fendent tout sur leur passage, puis reviennent à toi."
-msgstr ""
+msgstr "Blades of wind that cleave through everything in their path, then return to you."
 
 #. data/attack.json › forms › lame › name
 #. data/branches/vent.json › vent › clusters › lames › name
 #. data/branches/vent.json › vent › clusters › lames › nodes › l1 › name
 msgid "Lames de vent"
-msgstr ""
+msgstr "Wind Blades"
 
 #. data/attack.json › forms › massue › desc
 msgid "Un lourd coup de massue en arc devant toi : lent, mais il écrase et repousse tout ce qu'il touche."
-msgstr ""
+msgstr "A heavy sweeping club blow before you: slow, but it crushes and knocks back all it touches."
 
 #. data/attack.json › forms › massue › name
 #. data/branches/racine.json › racine › clusters › massue › name
 #. data/branches/racine.json › racine › clusters › massue › nodes › m1 › name
 msgid "Massue de bois"
-msgstr ""
+msgstr "Wooden Club"
 
 #. data/attack.json › forms › perle › desc
 msgid "De lourdes perles de sève qui éclaboussent à l'impact ; chaque perle qui touche te rend un peu de vie."
-msgstr ""
+msgstr "Heavy pearls of sap that splash on impact; each pearl that hits gives you back a little life."
 
 #. data/attack.json › forms › perle › name
 #. data/branches/seve.json › seve › clusters › perles › name
 #. data/branches/seve.json › seve › clusters › perles › nodes › p1 › name
 msgid "Perles de sève"
-msgstr ""
+msgstr "Sap Pearls"
 
 #. data/attack.json › forms › rayon › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un rayon de lumière qui part d'un coup jusqu'à sa portée et traverse tout ce qu'il touche ; il vise juste (+{0} % de chance de critique)."
-msgstr ""
+msgstr "A ray of light that reaches its full range at once and passes through all it touches; it aims true (+{0}% critical chance)."
 
 #. data/attack.json › forms › rayon › name
 #. data/branches/aube.json › aube › clusters › rayon › name
 #. data/branches/aube.json › aube › clusters › rayon › nodes › l1 › name
 msgid "Rayon d'aube"
-msgstr ""
+msgstr "Dawn Ray"
 
 #. data/attack.json › forms › ronce_vive › desc
 msgid "Des graines qui plantent une ronce piégeuse là où elles tombent."
-msgstr ""
+msgstr "Seeds that plant a snaring bramble where they land."
 
 #. data/attack.json › forms › ronce_vive › name
 #. data/branches/ronce.json › ronce › clusters › sang › nodes › s8 › name
 msgid "Ronces vives"
-msgstr ""
+msgstr "Living Brambles"
 
 #. data/attack.json › forms › spore_lobee › desc
 msgid "Des spores lancées en cloche qui éclatent à l'arrivée et laissent un petit nuage de spores."
-msgstr ""
+msgstr "Spores lobbed in an arc that burst on landing and leave a small spore cloud."
 
 #. data/attack.json › forms › spore_lobee › name
 #. data/branches/spore.json › spore › clusters › nuee › nodes › n6 › name
 msgid "Spores lobées"
-msgstr ""
+msgstr "Lobbed Spores"
 
 #. data/attack.json › mods › aubier › name
 #. data/branches/racine.json › racine › clusters › massue › nodes › m7 › name
 msgid "Aubier"
-msgstr ""
+msgstr "Sapwood"
 
 #. data/attack.json › mods › aubier › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Chaque coup de l'attaque te couvre d'écorce : {p} % des dégâts en bouclier (au plus {0} % de ta vie maximale)."
-msgstr ""
+msgstr "Each hit of the attack covers you in bark: {p}% of damage as a shield (at most {0}% of your maximum life)."
 
 #. data/attack.json › mods › bouffee › name
 msgid "Bouffée"
-msgstr ""
+msgstr "Puff"
 
 #. data/attack.json › mods › bouffee › text
 msgid "Un ennemi tué par l'attaque libère un petit nuage de spores ({p} % des dégâts par seconde)."
-msgstr ""
+msgstr "An enemy killed by the attack releases a small spore cloud ({p}% of damage per second)."
 
 #. data/attack.json › mods › eblouit › name
 msgid "Éblouissement"
-msgstr ""
+msgstr "Dazzle"
 
 #. data/attack.json › mods › eblouit › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "{p} % de chances d'éblouir l'ennemi touché ({0} s) : les coups critiques le trouvent plus souvent."
-msgstr ""
+msgstr "{p}% chance to dazzle the enemy hit ({0} s): critical hits find it more often."
 
 #. data/attack.json › mods › eclat › name
 #. data/branches/aube.json › aube › notable › names
 msgid "Éclat"
-msgstr ""
+msgstr "Burst"
 
 #. data/attack.json › mods › eclat › text
 msgid "Un ennemi tué par l'attaque éclate en épines ({p} % des dégâts)."
-msgstr ""
+msgstr "An enemy killed by the attack bursts into thorns ({p}% of damage)."
 
 #. data/attack.json › mods › elan › name
 #. data/branches/vent.json › vent › clusters › course › nodes › r7 › name
 msgid "Élan"
-msgstr ""
+msgstr "Momentum"
 
 #. data/attack.json › mods › elan › text
 msgid "En mouvement, l'attaque fait {p} % de dégâts en plus."
-msgstr ""
+msgstr "While moving, the attack deals {p}% more damage."
 
 #. data/attack.json › mods › enracine › name
 msgid "Enracinement"
-msgstr ""
+msgstr "Rooting"
 
 #. data/attack.json › mods › enracine › text
 msgid "{p} % de chances d'enraciner l'ennemi touché."
-msgstr ""
+msgstr "{p}% chance to root the enemy hit."
 
 #. data/attack.json › mods › fourche › name
 msgid "Fourche"
-msgstr ""
+msgstr "Fork"
 
 #. data/attack.json › mods › fourche › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Au premier coup, l'attaque se divise : +{v} branche(s) ({0} % des dégâts ; éclats pour un coup au corps à corps ou une spore, rayons obliques pour un rayon)."
-msgstr ""
+msgstr "On the first hit, the attack splits: +{v} branch(es) ({0}% of damage; shards for a melee blow or a spore, slanting rays for a ray)."
 
 #. data/attack.json › mods › incandescence › name
 #. data/branches/aube.json › aube › originals › names
 msgid "Incandescence"
-msgstr ""
+msgstr "Incandescence"
 
 #. data/attack.json › mods › incandescence › text
 msgid "Les coups critiques de l'attaque font {p} % de dégâts en plus."
-msgstr ""
+msgstr "The attack's critical hits deal {p}% more damage."
 
 #. data/attack.json › mods › poison › name
 msgid "Poison"
-msgstr ""
+msgstr "Poison"
 
 #. data/attack.json › mods › poison › text
 msgid "Chaque coup empoisonne ({p} % des dégâts par seconde)."
-msgstr ""
+msgstr "Each hit poisons ({p}% of damage per second)."
 
 #. data/attack.json › mods › portee › name
 msgid "Portée"
-msgstr ""
+msgstr "Range"
 
 #. data/attack.json › mods › portee › text
 msgid "Portée de l'attaque : +{p} %."
-msgstr ""
+msgstr "Attack range: +{p}%."
 
 #. data/attack.json › mods › refraction › name
 #. data/branches/aube.json › aube › clusters › rayon › nodes › l5 › name
 msgid "Réfraction"
-msgstr ""
+msgstr "Refraction"
 
 #. data/attack.json › mods › refraction › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Au premier ennemi touché, l'attaque se brise en {v} rayon(s) obliques ({0} % des dégâts)."
-msgstr ""
+msgstr "On the first enemy hit, the attack breaks into {v} slanting ray(s) ({0}% of damage)."
 
 #. data/attack.json › mods › renforcee › name
 msgid "Attaque renforcée"
-msgstr ""
+msgstr "Empowered Attack"
 
 #. data/attack.json › mods › renforcee › text
 msgid "Une attaque sur {n} est renforcée (dégâts ×{f}, plus grande)."
-msgstr ""
+msgstr "One attack in {n} is empowered (damage ×{f}, larger)."
 
 #. data/attack.json › mods › repetition › name
 msgid "Répétition"
-msgstr ""
+msgstr "Repeat"
 
 #. data/attack.json › mods › repetition › text
 msgid "L'attaque frappe {v} fois de plus."
-msgstr ""
+msgstr "The attack strikes {v} more time(s)."
 
 #. data/attack.json › mods › repousse › name
 msgid "Repousse"
-msgstr ""
+msgstr "Knockback"
 
 #. data/attack.json › mods › repousse › text
 msgid "Chaque coup repousse l'ennemi de {v} pixels."
-msgstr ""
+msgstr "Each hit pushes the enemy back {v} pixels."
 
 #. data/attack.json › mods › ricochet › name
 msgid "Ricochet"
-msgstr ""
+msgstr "Ricochet"
 
 #. data/attack.json › mods › ricochet › text
 msgid "L'attaque rebondit vers un autre ennemi : +{v} rebond(s)."
-msgstr ""
+msgstr "The attack bounces to another enemy: +{v} bounce(s)."
 
 #. data/attack.json › mods › rosee › name
 #. data/branches/seve.json › seve › clusters › lianes › nodes › n6 › name
@@ -247,75 +247,75 @@ msgstr ""
 #. data/branches/seve.json › seve › notable › names
 #. data/grafts.json › greffe_rosee › name
 msgid "Rosée"
-msgstr ""
+msgstr "Dew"
 
 #. data/attack.json › mods › rosee › text
 msgid "Un ennemi tué par l'attaque te rend {p} % de ta vie maximale (au plus quatre fois par seconde)."
-msgstr ""
+msgstr "An enemy killed by the attack restores {p}% of your maximum life (at most four times per second)."
 
 #. data/attack.json › mods › saignement › name
 msgid "Saignement"
-msgstr ""
+msgstr "Bleed"
 
 #. data/attack.json › mods › saignement › text
 msgid "Chaque coup fait saigner ({p} % des dégâts par seconde)."
-msgstr ""
+msgstr "Each hit causes bleeding ({p}% of damage per second)."
 
 #. data/attack.json › mods › sangsue › name
 msgid "Sangsue"
-msgstr ""
+msgstr "Leech"
 
 #. data/attack.json › mods › sangsue › text
 msgid "Chaque coup de l'attaque te rend {p} % des dégâts infligés."
-msgstr ""
+msgstr "Each hit of the attack gives you back {p}% of the damage dealt."
 
 #. data/attack.json › mods › saut › name
 msgid "Saut"
-msgstr ""
+msgstr "Leap"
 
 #. data/attack.json › mods › saut › text
 msgid "L'attaque saute d'ennemi empoisonné en ennemi empoisonné : +{v} saut(s)."
-msgstr ""
+msgstr "The attack leaps from poisoned enemy to poisoned enemy: +{v} leap(s)."
 
 #. data/attack.json › mods › secousse › name
 #. data/branches/racine.json › racine › clusters › massue › nodes › m5 › name
 #. scripts/options_panel.gd:145
 msgid "Secousse"
-msgstr ""
+msgstr "Tremor"
 
 #. data/attack.json › mods › secousse › text
 msgid "Chaque coup secoue le sol au point d'impact (devant toi au corps à corps) : {p} % des dégâts aux ennemis autour."
-msgstr ""
+msgstr "Each hit shakes the ground at the point of impact (in front of you in melee): {p}% of damage to nearby enemies."
 
 #. data/attack.json › mods › taille › name
 msgid "Taille"
-msgstr ""
+msgstr "Size"
 
 #. data/attack.json › mods › taille › text
 msgid "Attaque plus grande : +{p} %."
-msgstr ""
+msgstr "Larger attack: +{p}%."
 
 #. data/attack.json › mods › trainee › name
 msgid "Traînée d'épines"
-msgstr ""
+msgstr "Thorn Trail"
 
 #. data/attack.json › mods › trainee › text
 msgid "L'attaque sème des épines au sol ({p} % des dégâts par seconde) : le long d'un projectile, au point d'impact sinon."
-msgstr ""
+msgstr "The attack sows thorns on the ground ({p}% of damage per second): along a projectile's path, otherwise at the point of impact."
 
 #. data/attack.json › mods › volee › name
 #. data/skills.json › volee › short
 msgid "Volée"
-msgstr ""
+msgstr "Volley"
 
 #. data/attack.json › mods › volee › text
 msgid "Une attaque sur {n} part en couronne tout autour de toi."
-msgstr ""
+msgstr "One attack in {n} fires in a ring all around you."
 
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › name
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c5 › name
 msgid "Cadran solaire"
-msgstr ""
+msgstr "Sundial"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c1 › name
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c12 › name
@@ -325,23 +325,23 @@ msgstr ""
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s12 › name
 #. … et 2 autres
 msgid "Éclat d'écorce"
-msgstr ""
+msgstr "Bark Glint"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c10 › choices › lumiere_enracinee › name
 msgid "Lumière enracinée"
-msgstr ""
+msgstr "Rooted Light"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c10 › choices › midi_juste › name
 msgid "Midi juste"
-msgstr ""
+msgstr "High Noon"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c10 › choices › ombre_portee › name
 msgid "Ombre portée"
-msgstr ""
+msgstr "Cast Shadow"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c10 › name
 msgid "Maîtrise du cadran"
-msgstr ""
+msgstr "Sundial Mastery"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c11 › name
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c3 › name
@@ -351,7 +351,7 @@ msgstr ""
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s8 › name
 #. … et 1 autres
 msgid "Sève dorée"
-msgstr ""
+msgstr "Golden Sap"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c2 › name
 #. data/borders/aube-racine.json › aube-racine › clusters › cadran › nodes › c6 › name
@@ -359,49 +359,49 @@ msgstr ""
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s10 › name
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s2 › name
 msgid "Rayon tenace"
-msgstr ""
+msgstr "Tenacious Ray"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › name
 msgid "Solstice"
-msgstr ""
+msgstr "Solstice"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s13 › desc
 msgid "La lumière frappe juste qui ne bouge plus."
-msgstr ""
+msgstr "Light strikes true on one who no longer moves."
 
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s13 › name
 msgid "Pierre de soleil"
-msgstr ""
+msgstr "Sunstone"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s5 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Quand un coup te touche, ton écorce jette un éclat : les ennemis proches sont éblouis {0} s (+{1} % de chance de critique contre eux, au plus toutes les {2} s)."
-msgstr ""
+msgstr "When a blow lands on you, your bark flares: nearby enemies are dazzled for {0} s (+{1}% critical chance against them, at most every {2} s)."
 
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s5 › name
 msgid "Écorce aveuglante"
-msgstr ""
+msgstr "Blinding Bark"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s6 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un coup critique sur un ennemi enraciné lance un rayon d'aube vers l'ennemi le plus proche ({0} % de tes dégâts, au plus toutes les {1} s)."
-msgstr ""
+msgstr "A critical hit on a rooted enemy casts a dawn ray at the nearest enemy ({0}% of your damage, at most every {1} s)."
 
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s6 › name
 msgid "Racines de lumière"
-msgstr ""
+msgstr "Roots of Light"
 
 #. data/borders/aube-racine.json › aube-racine › clusters › solstice › nodes › s7 › name
 msgid "Midi immobile"
-msgstr ""
+msgstr "Still Noon"
 
 #. data/borders/aube-racine.json › aube-racine › name
 msgid "Frontière Aube–Racine"
-msgstr ""
+msgstr "Dawn–Root Border"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › name
 msgid "Bois épineux"
-msgstr ""
+msgstr "Thornwood"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b1 › name
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b12 › name
@@ -411,26 +411,26 @@ msgstr ""
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r12 › name
 #. … et 2 autres
 msgid "Épine de bois"
-msgstr ""
+msgstr "Wooden Thorn"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b10 › choices › ecorce_dure › name
 #. data/branches/ronce.json › ronce › clusters › epines › nodes › e4 › choices › ecorce_dure › name
 #. data/branches/seve.json › seve › clusters › ecorce › nodes › c4 › choices › ecorce_dure › name
 #. data/grafts.json › greffe_ecorce_dure › name
 msgid "Écorce dure"
-msgstr ""
+msgstr "Hard Bark"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b10 › choices › epines_profondes › name
 msgid "Épines profondes"
-msgstr ""
+msgstr "Deep Thorns"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b10 › choices › seve_rouge › name
 msgid "Sève rouge"
-msgstr ""
+msgstr "Red Sap"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b10 › name
 msgid "Maîtrise du bois épineux"
-msgstr ""
+msgstr "Thornwood Mastery"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b11 › name
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b3 › name
@@ -439,7 +439,7 @@ msgstr ""
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r3 › name
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r8 › name
 msgid "Nœud dur"
-msgstr ""
+msgstr "Hard Knot"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b2 › name
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b6 › name
@@ -447,65 +447,65 @@ msgstr ""
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r10 › name
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r2 › name
 msgid "Écorce rouge"
-msgstr ""
+msgstr "Red Bark"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b5 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Quand un coup te touche, les ennemis proches saignent ({0} % de tes dégâts par seconde pendant {1} s, au plus une fois par seconde)."
-msgstr ""
+msgstr "When a blow lands on you, nearby enemies bleed ({0}% of your damage per second for {1} s, at most once per second)."
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › bois › nodes › b5 › name
 msgid "Écorce sanglante"
-msgstr ""
+msgstr "Bloody Bark"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › name
 msgid "Racines sanglantes"
-msgstr ""
+msgstr "Bloody Roots"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r13 › desc
 msgid "Planté là, il rend chaque coup au centuple."
-msgstr ""
+msgstr "Planted there, it returns every blow a hundredfold."
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r13 › name
 msgid "Chêne épineux"
-msgstr ""
+msgstr "Thorn Oak"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r5 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un ennemi que tu enracines saigne ({0} % des dégâts du coup par seconde, {1} s)."
-msgstr ""
+msgstr "An enemy you root bleeds ({0}% of the hit's damage per second, {1} s)."
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r5 › name
 #. data/branches/ronce.json › ronce › clusters › racines › nodes › r5 › choices › racines_voraces › name
 #. data/skills.json › racines › name
 msgid "Racines voraces"
-msgstr ""
+msgstr "Ravenous Roots"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r6 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un ennemi qui meurt en saignant te rend {0} % de ta vie maximale (au plus toutes les {1} s)."
-msgstr ""
+msgstr "An enemy that dies bleeding restores {0}% of your maximum life (at most every {1} s)."
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r6 › name
 msgid "Bois qui boit"
-msgstr ""
+msgstr "Drinking Wood"
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r7 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Enraciner un ennemi qui saigne te rend {0} % de ta vie maximale (au plus deux fois par seconde)."
-msgstr ""
+msgstr "Rooting a bleeding enemy restores {0}% of your maximum life (at most twice per second)."
 
 #. data/borders/racine-ronce.json › racine-ronce › clusters › racines_sanglantes › nodes › r7 › name
 msgid "Racine qui boit"
-msgstr ""
+msgstr "Drinking Root"
 
 #. data/borders/racine-ronce.json › racine-ronce › name
 msgid "Frontière Racine–Ronce"
-msgstr ""
+msgstr "Root–Bramble Border"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › name
 msgid "Ronce vénéneuse"
-msgstr ""
+msgstr "Venomous Bramble"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d1 › name
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d12 › name
@@ -515,24 +515,24 @@ msgstr ""
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f12 › name
 #. … et 2 autres
 msgid "Épine moisie"
-msgstr ""
+msgstr "Moldy Thorn"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d10 › choices › epines_enduites › name
 msgid "Épines enduites"
-msgstr ""
+msgstr "Coated Thorns"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d10 › choices › ronces_fongiques › name
 msgid "Ronces fongiques"
-msgstr ""
+msgstr "Fungal Brambles"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d10 › choices › sang_noir › name
 #. data/branches/ronce.json › ronce › clusters › sang › nodes › s6 › name
 msgid "Sang noir"
-msgstr ""
+msgstr "Black Blood"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d10 › name
 msgid "Maîtrise des épines vénéneuses"
-msgstr ""
+msgstr "Venomous Thorn Mastery"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d11 › name
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d3 › name
@@ -541,7 +541,7 @@ msgstr ""
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f3 › name
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f8 › name
 msgid "Sang de spore"
-msgstr ""
+msgstr "Spore Blood"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d2 › name
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d6 › name
@@ -549,62 +549,62 @@ msgstr ""
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f10 › name
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f2 › name
 msgid "Dard sanglant"
-msgstr ""
+msgstr "Bloody Sting"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d5 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un coup au corps à corps sur un ennemi empoisonné le fait aussi saigner ({0} % des dégâts du coup par seconde, {1} s)."
-msgstr ""
+msgstr "A melee hit on a poisoned enemy also makes it bleed ({0}% of the hit's damage per second, {1} s)."
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › dard › nodes › d5 › name
 msgid "Plaie infectée"
-msgstr ""
+msgstr "Infected Wound"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › name
 msgid "Fiel de ronce"
-msgstr ""
+msgstr "Bramble Gall"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f13 › desc
 msgid "Le venin et le sang avant la force du coup."
-msgstr ""
+msgstr "Venom and blood before the force of the blow."
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f13 › name
 msgid "Ronce-Amanite"
-msgstr ""
+msgstr "Amanita Bramble"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f5 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un ennemi qui saigne et qui est empoisonné éclate en épines à sa mort ({0} % de tes dégâts autour de lui)."
-msgstr ""
+msgstr "An enemy that is both bleeding and poisoned bursts into thorns when it dies ({0}% of your damage around it)."
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f5 › name
 msgid "Épine qui pourrit"
-msgstr ""
+msgstr "Rotting Thorn"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f6 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Le saignement d'un ennemi empoisonné crache un petit nuage de spores (au plus toutes les {0} s)."
-msgstr ""
+msgstr "The bleeding of a poisoned enemy spits a small spore cloud (at most every {0} s)."
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f6 › name
 msgid "Spores sanglantes"
-msgstr ""
+msgstr "Bloody Spores"
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f7 › effects › text
 msgid "Un ennemi qui saigne et qui est empoisonné répand son poison autour de lui (au plus une fois par seconde)."
-msgstr ""
+msgstr "An enemy that is both bleeding and poisoned spreads its poison around it (at most once per second)."
 
 #. data/borders/ronce-spore.json › ronce-spore › clusters › fiel › nodes › f7 › name
 msgid "Fiel qui coule"
-msgstr ""
+msgstr "Seeping Gall"
 
 #. data/borders/ronce-spore.json › ronce-spore › name
 msgid "Frontière Ronce–Spore"
-msgstr ""
+msgstr "Bramble–Spore Border"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › name
 msgid "Bourgeons de bourrasque"
-msgstr ""
+msgstr "Gust Buds"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b1 › name
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b12 › name
@@ -614,7 +614,7 @@ msgstr ""
 #. data/borders/seve-vent.json › seve-vent › clusters › seve_vive › nodes › s10 › choices › seve_legere › name
 #. … et 3 autres
 msgid "Sève légère"
-msgstr ""
+msgstr "Light Sap"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b10 › name
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b2 › name
@@ -622,7 +622,7 @@ msgstr ""
 #. data/borders/seve-vent.json › seve-vent › clusters › seve_vive › nodes › s6 › name
 #. data/borders/seve-vent.json › seve-vent › clusters › seve_vive › nodes › s9 › name
 msgid "Bourgeon au vent"
-msgstr ""
+msgstr "Bud on the Wind"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b11 › name
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b3 › name
@@ -631,68 +631,68 @@ msgstr ""
 #. data/borders/seve-vent.json › seve-vent › clusters › seve_vive › nodes › s3 › name
 #. data/borders/seve-vent.json › seve-vent › clusters › seve_vive › nodes › s7 › name
 msgid "Souffle vert"
-msgstr ""
+msgstr "Green Breath"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b13 › desc
 msgid "La sève ne coule que si tu bouges."
-msgstr ""
+msgstr "Sap only flows while you move."
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b13 › name
 msgid "Sève de vent"
-msgstr ""
+msgstr "Windsap"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b5 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Touché sous un cocon de sève, tu repousses tes agresseurs d'une rafale (au plus toutes les {0} s)."
-msgstr ""
+msgstr "When hit inside a sap cocoon, you drive back your attackers with a gust (at most every {0} s)."
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b5 › name
 msgid "Cocon de bourrasque"
-msgstr ""
+msgstr "Gust Cocoon"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b6 › effects › text
 #. data/branches/seve.json › seve › originals › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Chaque esquive te rend {0} % de ta vie maximale (au plus toutes les {1} s)."
-msgstr ""
+msgstr "Each dodge restores {0}% of your maximum life (at most every {1} s)."
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b6 › name
 msgid "Ruée buveuse"
-msgstr ""
+msgstr "Drinking Rush"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › bourrasque › nodes › b7 › name
 msgid "Sève dans le vent"
-msgstr ""
+msgstr "Sap on the Wind"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › seve_vive › name
 #. data/branches/seve.json › seve › originals › names
 msgid "Sève vive"
-msgstr ""
+msgstr "Quick Sap"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › seve_vive › nodes › s10 › choices › seve_qui_porte › name
 msgid "Sève qui porte"
-msgstr ""
+msgstr "Bearing Sap"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › seve_vive › nodes › s10 › choices › souffle_long › name
 #. data/branches/vent.json › vent › clusters › vif › nodes › v4 › choices › souffle_long › name
 msgid "Souffle long"
-msgstr ""
+msgstr "Long Breath"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › seve_vive › nodes › s10 › name
 msgid "Maîtrise du souffle"
-msgstr ""
+msgstr "Breath Mastery"
 
 #. data/borders/seve-vent.json › seve-vent › clusters › seve_vive › nodes › s5 › name
 msgid "Sang qui court"
-msgstr ""
+msgstr "Running Blood"
 
 #. data/borders/seve-vent.json › seve-vent › name
 msgid "Frontière Sève–Vent"
-msgstr ""
+msgstr "Sap–Wind Border"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › name
 msgid "Compost"
-msgstr ""
+msgstr "Compost"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c1 › name
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c12 › name
@@ -702,7 +702,7 @@ msgstr ""
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m12 › name
 #. … et 4 autres
 msgid "Humus"
-msgstr ""
+msgstr "Humus"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c10 › name
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c2 › name
@@ -710,7 +710,7 @@ msgstr ""
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m6 › name
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m9 › name
 msgid "Filament de sève"
-msgstr ""
+msgstr "Sap Filament"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c11 › name
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c3 › name
@@ -719,71 +719,71 @@ msgstr ""
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m3 › name
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m7 › name
 msgid "Pourriture douce"
-msgstr ""
+msgstr "Soft Rot"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c13 › desc
 msgid "Lent comme un champignon, mais il pousse partout."
-msgstr ""
+msgstr "Slow as a mushroom, but it grows everywhere."
 
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c13 › name
 msgid "Champignon-hôte"
-msgstr ""
+msgstr "Host Fungus"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c5 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Quand tu es touché, un nuage de spores naît sous tes pieds (au plus toutes les {0} s)."
-msgstr ""
+msgstr "When you are hit, a spore cloud rises beneath your feet (at most every {0} s)."
 
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c5 › name
 msgid "Plaie qui germe"
-msgstr ""
+msgstr "Sprouting Wound"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c6 › name
 msgid "Sève gâtée"
-msgstr ""
+msgstr "Spoiled Sap"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c7 › name
 msgid "Compost vivant"
-msgstr ""
+msgstr "Living Compost"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › name
 #. data/grafts.json › greffe_mycelium › name
 msgid "Mycélium"
-msgstr ""
+msgstr "Mycelium"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m10 › choices › humus_acide › name
 msgid "Humus acide"
-msgstr ""
+msgstr "Acid Humus"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m10 › choices › humus_riche › name
 msgid "Humus riche"
-msgstr ""
+msgstr "Rich Humus"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m10 › choices › humus_vivant › name
 msgid "Humus vivant"
-msgstr ""
+msgstr "Living Humus"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m10 › name
 msgid "Maîtrise de l'humus"
-msgstr ""
+msgstr "Humus Mastery"
 
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m5 › effects › text
 #. data/branches/spore.json › spore › clusters › pourriture › nodes › r3 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un ennemi empoisonné vaincu te rend {0} % de ta vie maximale (au plus {1} fois par seconde)."
-msgstr ""
+msgstr "A defeated poisoned enemy restores {0}% of your maximum life (at most {1} times per second)."
 
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m5 › name
 msgid "Mycorhize"
-msgstr ""
+msgstr "Mycorrhiza"
 
 #. data/borders/spore-seve.json › spore-seve › name
 msgid "Frontière Spore–Sève"
-msgstr ""
+msgstr "Spore–Sap Border"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › name
 msgid "Halo de bourrasque"
-msgstr ""
+msgstr "Gust Halo"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h1 › name
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h12 › name
@@ -793,7 +793,7 @@ msgstr ""
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › nodes › z12 › name
 #. … et 2 autres
 msgid "Poussière d'or"
-msgstr ""
+msgstr "Gold Dust"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h10 › name
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h2 › name
@@ -801,7 +801,7 @@ msgstr ""
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › nodes › z6 › name
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › nodes › z9 › name
 msgid "Rayon porté"
-msgstr ""
+msgstr "Borne Ray"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h11 › name
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h3 › name
@@ -810,71 +810,71 @@ msgstr ""
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › nodes › z3 › name
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › nodes › z7 › name
 msgid "Plume claire"
-msgstr ""
+msgstr "Bright Feather"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h13 › desc
 msgid "La lumière ne vise juste qu'en plein vol."
-msgstr ""
+msgstr "Light only strikes true in full flight."
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h13 › name
 msgid "Vent d'or"
-msgstr ""
+msgstr "Golden Wind"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h5 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Chaque esquive éblouit les ennemis proches pendant {0} s (+{1} % de chance de critique contre eux, au plus une fois par seconde)."
-msgstr ""
+msgstr "Each dodge dazzles nearby enemies for {0} s (+{1}% critical chance against them, at most once per second)."
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h5 › name
 msgid "Rafale éblouissante"
-msgstr ""
+msgstr "Dazzling Squall"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h6 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un coup critique sur un ennemi ébloui souffle une rafale autour de lui (au plus toutes les {0} s)."
-msgstr ""
+msgstr "A critical hit on a dazzled enemy blows a squall around it (at most every {0} s)."
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h6 › name
 msgid "Coup de soleil"
-msgstr ""
+msgstr "Sunstroke"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h7 › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Chaque esquive lance un rayon vers l'ennemi le plus proche (au plus toutes les {0} s)."
-msgstr ""
+msgstr "Each dodge casts a ray at the nearest enemy (at most every {0} s)."
 
 #. data/borders/vent-aube.json › vent-aube › clusters › halo › nodes › h7 › name
 msgid "Halo filant"
-msgstr ""
+msgstr "Shooting Halo"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › name
 msgid "Zéphyr doré"
-msgstr ""
+msgstr "Golden Zephyr"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › nodes › z10 › choices › oeil_du_vent › name
 msgid "Œil du vent"
-msgstr ""
+msgstr "Eye of the Wind"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › nodes › z10 › choices › pas_de_lumiere › name
 #. data/branches/aube.json › aube › originals › names
 msgid "Pas de lumière"
-msgstr ""
+msgstr "Light Step"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › nodes › z10 › choices › rafale_vive › name
 msgid "Rafale vive"
-msgstr ""
+msgstr "Quick Squall"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › nodes › z10 › name
 msgid "Maîtrise du vent solaire"
-msgstr ""
+msgstr "Solar Wind Mastery"
 
 #. data/borders/vent-aube.json › vent-aube › clusters › zephyr › nodes › z5 › name
 msgid "Éclat du vent"
-msgstr ""
+msgstr "Wind Glint"
 
 #. data/borders/vent-aube.json › vent-aube › name
 msgid "Frontière Vent–Aube"
-msgstr ""
+msgstr "Wind–Dawn Border"
 
 #. data/branches/aube.json › aube › clusters › clarte › complete › name
 msgid "Clarté complète"
@@ -6173,908 +6173,908 @@ msgstr ""
 
 #. data/conditions.json › cible_eblouie › label
 msgid "si la cible est éblouie"
-msgstr ""
+msgstr "if the target is dazzled"
 
 #. data/conditions.json › cible_empoisonnee › label
 msgid "si la cible est empoisonnée"
-msgstr ""
+msgstr "if the target is poisoned"
 
 #. data/conditions.json › cible_enracinee › label
 msgid "si la cible est enracinée"
-msgstr ""
+msgstr "if the target is rooted"
 
 #. data/conditions.json › cible_saignante › label
 msgid "si la cible saigne ({min} piqûres ou plus)"
-msgstr ""
+msgstr "if the target is bleeding ({min} or more stings)"
 
 #. data/conditions.json › coeurs_purifies › label
 msgid "avec {min} Cœurs purifiés ou plus"
-msgstr ""
+msgstr "with {min} or more Hearts cleansed"
 
 #. data/conditions.json › en_mouvement › label
 msgid "en mouvement depuis {min} s"
-msgstr ""
+msgstr "moving for {min} s"
 
 #. data/conditions.json › enracine › label
 msgid "enraciné (Ancrage)"
-msgstr ""
+msgstr "rooted (Anchoring)"
 
 #. data/conditions.json › greffes › label
 msgid "avec {min} greffes posées ou plus"
-msgstr ""
+msgstr "with {min} or more grafts set"
 
 #. data/conditions.json › immobile › label
 msgid "immobile depuis {min} s"
-msgstr ""
+msgstr "standing still for {min} s"
 
 #. data/conditions.json › sous_cocon › label
 msgid "sous un cocon de sève"
-msgstr ""
+msgstr "inside a sap cocoon"
 
 #. data/conditions.json › sous_ecorce › label
 msgid "sous un bouclier d'écorce"
-msgstr ""
+msgstr "behind a bark shield"
 
 #. data/conditions.json › terre_fletrie › label
 msgid "sur une terre flétrie"
-msgstr ""
+msgstr "on withered ground"
 
 #. data/conditions.json › terre_vive › label
 msgid "sur une terre vivante"
-msgstr ""
+msgstr "on living ground"
 
 #. data/conditions.json › vie_basse › label
 msgid "sous la moitié de ta vie"
-msgstr ""
+msgstr "below half your life"
 
 #. data/difficulty.json › elites › affixes › ecorce › name
 msgid "cuirassé d'écorce"
-msgstr ""
+msgstr "bark-armored"
 
 #. data/difficulty.json › elites › affixes › enrage › name
 msgid "enragé"
-msgstr ""
+msgstr "enraged"
 
 #. data/difficulty.json › elites › affixes › epines › name
 msgid "épineux"
-msgstr ""
+msgstr "thorny"
 
 #. data/difficulty.json › elites › affixes › invocateur › name
 msgid "invocateur"
-msgstr ""
+msgstr "summoner"
 
 #. data/difficulty.json › elites › affixes › rapide › name
 msgid "rapide"
-msgstr ""
+msgstr "swift"
 
 #. data/difficulty.json › modes › difficile › name
 msgid "Difficile"
-msgstr ""
+msgstr "Hard"
 
 #. data/difficulty.json › modes › difficile › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Ennemis plus résistants (vie +{0} %) et plus dangereux (dégâts +{1} %)."
-msgstr ""
+msgstr "Enemies are tougher (life +{0}%) and more dangerous (damage +{1}%)."
 
 #. data/difficulty.json › modes › facile › name
 msgid "Facile"
-msgstr ""
+msgstr "Easy"
 
 #. data/difficulty.json › modes › facile › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Ennemis moins résistants (vie −{0} %) et moins dangereux (dégâts −{1} %)."
-msgstr ""
+msgstr "Enemies are frailer (life −{0}%) and less dangerous (damage −{1}%)."
 
 #. data/difficulty.json › modes › normal › name
 msgid "Normal"
-msgstr ""
+msgstr "Normal"
 
 #. data/difficulty.json › modes › normal › text
 msgid "La difficulté prévue."
-msgstr ""
+msgstr "The intended difficulty."
 
 #. data/enemies.json › kinds › boursoufle › name
 msgid "Boursouflé"
-msgstr ""
+msgstr "Bloater"
 
 #. data/enemies.json › kinds › cendreux › name
 msgid "Cendreux"
-msgstr ""
+msgstr "Ashen"
 
 #. data/enemies.json › kinds › chargeur › name
 msgid "Chargeur"
-msgstr ""
+msgstr "Charger"
 
 #. data/enemies.json › kinds › colosse › name
 msgid "Colosse"
-msgstr ""
+msgstr "Colossus"
 
 #. data/enemies.json › kinds › cracheur › name
 msgid "Cracheur de cendre"
-msgstr ""
+msgstr "Ash Spitter"
 
 #. data/enemies.json › kinds › crapaud › name
 msgid "Crapaud des sources"
-msgstr ""
+msgstr "Spring Toad"
 
 #. data/enemies.json › kinds › fletri › name
 msgid "Flétri"
-msgstr ""
+msgstr "Witherling"
 
 #. data/enemies.json › kinds › gardien › name
 msgid "Gardien d'écorce"
-msgstr ""
+msgstr "Bark Warden"
 
 #. data/enemies.json › kinds › libellule › name
 msgid "Libellule de cendre"
-msgstr ""
+msgstr "Ash Dragonfly"
 
 #. data/enemies.json › kinds › lichen › name
 msgid "Lichen cuirassé"
-msgstr ""
+msgstr "Armored Lichen"
 
 #. data/enemies.json › kinds › luciole › name
 msgid "Luciole flétrie"
-msgstr ""
+msgstr "Withered Firefly"
 
 #. data/enemies.json › kinds › mandragore › name
 msgid "Mandragore"
-msgstr ""
+msgstr "Mandrake"
 
 #. data/enemies.json › kinds › menhir › name
 msgid "Menhir flétri"
-msgstr ""
+msgstr "Withered Menhir"
 
 #. data/enemies.json › kinds › miroitier › name
 msgid "Miroitier"
-msgstr ""
+msgstr "Mirrorwing"
 
 #. data/enemies.json › kinds › nid › name
 msgid "Nid de ronces"
-msgstr ""
+msgstr "Bramble Nest"
 
 #. data/enemies.json › kinds › planeur › name
 msgid "Planeur de cendre"
-msgstr ""
+msgstr "Ash Glider"
 
 #. data/enemies.json › kinds › plongeur › name
 msgid "Piqueur"
-msgstr ""
+msgstr "Stinger"
 
 #. data/enemies.json › kinds › prismeur › name
 msgid "Prismeur"
-msgstr ""
+msgstr "Prismer"
 
 #. data/enemies.json › kinds › quartz › name
 msgid "Colosse de quartz"
-msgstr ""
+msgstr "Quartz Colossus"
 
 #. data/enemies.json › kinds › rejeton › name
 msgid "Rejeton"
-msgstr ""
+msgstr "Offshoot"
 
 #. data/enemies.json › kinds › sangsue_vase › name
 msgid "Sangsue de vase"
-msgstr ""
+msgstr "Mud Leech"
 
 #. data/enemies.json › kinds › scarabee › name
 msgid "Scarabée perce-écorce"
-msgstr ""
+msgstr "Barkborer Beetle"
 
 #. data/enemies.json › kinds › scissipore › name
 msgid "Scissipore"
-msgstr ""
+msgstr "Splitspore"
 
 #. data/enemies.json › kinds › souche › name
 msgid "Souche gorgée"
-msgstr ""
+msgstr "Swollen Stump"
 
 #. data/enemies.json › kinds › souffleur › name
 msgid "Souffleur"
-msgstr ""
+msgstr "Blower"
 
 #. data/enemies.json › kinds › sporule › name
 msgid "Sporule"
-msgstr ""
+msgstr "Sporule"
 
 #. data/enemies.json › kinds › termite › name
 msgid "Termite de cendre"
-msgstr ""
+msgstr "Ash Termite"
 
 #. data/enemies.json › kinds › tertre › name
 msgid "Tertre de pierre"
-msgstr ""
+msgstr "Stone Mound"
 
 #. data/enemies.json › kinds › tireur › name
 msgid "Tireur d'épines"
-msgstr ""
+msgstr "Thorn Shooter"
 
 #. data/enemies.json › kinds › traine_vase › name
 msgid "Traîne-vase"
-msgstr ""
+msgstr "Mudcrawler"
 
 #. data/finale.json › boss › name
 #. scripts/finale_arena.gd:65
 #. scripts/world_ending.gd:73
 msgid "La Flétrissure"
-msgstr ""
+msgstr "The Blight"
 
 #. data/finale.json › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : sève et vent"
-msgstr ""
+msgstr "Phase {0} of {1}: sap and wind"
 
 #. data/finale.json › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : épines et spores"
-msgstr ""
+msgstr "Phase {0} of {1}: thorns and spores"
 
 #. data/finale.json › boss › phases
 msgid "Seconde forme : les six gardiens à la fois"
-msgstr ""
+msgstr "Second form: all six guardians at once"
 
 #. data/finale.json › credits › head
 msgid "Code, dessins et sons"
-msgstr ""
+msgstr "Code, drawings and sounds"
 
 #. data/finale.json › credits › head
 msgid "Conception, choix et direction"
-msgstr ""
+msgstr "Design, choices and direction"
 
 #. data/finale.json › credits › head
 msgid "Gardiens"
-msgstr ""
+msgstr "Guardians"
 
 #. data/finale.json › credits › head
 msgid "Moteur"
-msgstr ""
+msgstr "Engine"
 
 #. data/finale.json › credits › head
 msgid "Régions"
-msgstr ""
+msgstr "Regions"
 
 #. data/finale.json › credits › head
 msgid "Une aventure de"
-msgstr ""
+msgstr "An adventure by"
 
 #. data/finale.json › credits › lines
 msgid "Dranto"
-msgstr ""
+msgstr "Dranto"
 
 #. data/finale.json › credits › lines
 msgid "Godot Engine"
-msgstr ""
+msgstr "Godot Engine"
 
 #. data/finale.json › credits › lines
 msgid "tout est dessiné et composé par le code"
-msgstr ""
+msgstr "everything is drawn and composed by code"
 
 #. data/finale.json › credits › lines
 msgid "écrits avec Claude (Anthropic)"
-msgstr ""
+msgstr "written with Claude (Anthropic)"
 
 #. data/finale.json › credits › title
 msgid "Merci d'avoir joué"
-msgstr ""
+msgstr "Thank you for playing"
 
 #. data/grafts.json › greffe_aiguille › desc
 msgid "Tes traits sautent d'ennemi empoisonné en ennemi empoisonné."
-msgstr ""
+msgstr "Your shots leap from poisoned enemy to poisoned enemy."
 
 #. data/grafts.json › greffe_aiguille › name
 msgid "Aiguille de moisissure"
-msgstr ""
+msgstr "Mold Needle"
 
 #. data/grafts.json › greffe_aile_de_verre › desc
 msgid "Chaque coup critique renvoie un rayon vers un autre ennemi."
-msgstr ""
+msgstr "Each critical hit sends a ray on to another enemy."
 
 #. data/grafts.json › greffe_aile_de_verre › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un coup critique renvoie un rayon de lumière de sa cible vers l'ennemi le plus proche ({0} % des dégâts, au plus toutes les {1} s)."
-msgstr ""
+msgstr "A critical hit sends a ray of light from its target to the nearest enemy ({0}% of damage, at most every {1} s)."
 
 #. data/grafts.json › greffe_aile_de_verre › name
 msgid "Aile de verre"
-msgstr ""
+msgstr "Glass Wing"
 
 #. data/grafts.json › greffe_alize › desc
 msgid "La tornade naît en double."
-msgstr ""
+msgstr "The tornado is born twice over."
 
 #. data/grafts.json › greffe_alize › effects › text
 msgid "Tornade : une tornade de plus."
-msgstr ""
+msgstr "Tornado: one more tornado."
 
 #. data/grafts.json › greffe_alize › name
 msgid "Alizé jumeau"
-msgstr ""
+msgstr "Twin Trade Wind"
 
 #. data/grafts.json › greffe_amadou › desc
 msgid "Un coup critique sur une cible empoisonnée la fait éclater."
-msgstr ""
+msgstr "A critical hit on a poisoned target makes it burst."
 
 #. data/grafts.json › greffe_amadou › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un coup critique sur une cible empoisonnée blesse ses voisins ({0} % du coup, au plus toutes les {1} s)."
-msgstr ""
+msgstr "A critical hit on a poisoned target wounds its neighbors ({0}% of the hit, at most every {1} s)."
 
 #. data/grafts.json › greffe_amadou › name
 msgid "Amadou"
-msgstr ""
+msgstr "Tinder Fungus"
 
 #. data/grafts.json › greffe_ambre › desc
 msgid "Une goutte de résine figée, qui garde la blessure fermée."
-msgstr ""
+msgstr "A drop of hardened resin that keeps the wound closed."
 
 #. data/grafts.json › greffe_ambre › name
 msgid "Ambre"
-msgstr ""
+msgstr "Amber"
 
 #. data/grafts.json › greffe_aube_lente › desc
 msgid "La lance d'aube revient plus vite."
-msgstr ""
+msgstr "Dawn Lance comes back sooner."
 
 #. data/grafts.json › greffe_aube_lente › name
 msgid "Aube lente"
-msgstr ""
+msgstr "Slow Dawn"
 
 #. data/grafts.json › greffe_bise › desc
 msgid "Tes coups prennent de l'élan quand tu bouges."
-msgstr ""
+msgstr "Your blows gather momentum as you move."
 
 #. data/grafts.json › greffe_bise › name
 msgid "Bise"
-msgstr ""
+msgstr "North Wind"
 
 #. data/grafts.json › greffe_bourgeon › desc
 msgid "Un bourgeon qui ne cesse de repousser."
-msgstr ""
+msgstr "A bud that never stops growing back."
 
 #. data/grafts.json › greffe_cerf_volant › desc
 msgid "L'appel d'air s'ouvre sur toi, plus large."
-msgstr ""
+msgstr "Updraft opens on you, wider."
 
 #. data/grafts.json › greffe_cerf_volant › effects › text
 msgid "Appel d'air : s'ouvre sur toi au lieu de l'endroit visé."
-msgstr ""
+msgstr "Updraft: opens on you instead of where you aim."
 
 #. data/grafts.json › greffe_cerf_volant › name
 msgid "Cerf-volant"
-msgstr ""
+msgstr "Kite"
 
 #. data/grafts.json › greffe_cerne › desc
 msgid "Un anneau de bois serré, cent ans de patience."
-msgstr ""
+msgstr "A tight ring of wood, a hundred years of patience."
 
 #. data/grafts.json › greffe_coeur_de_chene › desc
 msgid "Le cœur de l'Ancien pétrifié bat de nouveau, lent et sûr."
-msgstr ""
+msgstr "The heart of the Petrified Elder beats again, slow and sure."
 
 #. data/grafts.json › greffe_coeur_de_chene › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Quand un coup te touche, tu récupères {0} % de ta vie maximale (au plus une fois par seconde)."
-msgstr ""
+msgstr "When a blow lands on you, you recover {0}% of your maximum life (at most once per second)."
 
 #. data/grafts.json › greffe_coeur_de_chene › name
 msgid "Cœur de chêne"
-msgstr ""
+msgstr "Oak Heart"
 
 #. data/grafts.json › greffe_coeur_de_saule › desc
 msgid "Le cœur du Saule exsangue bat de nouveau, pour toi."
-msgstr ""
+msgstr "The heart of the Bloodless Willow beats again, for you."
 
 #. data/grafts.json › greffe_coeur_de_saule › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Chaque ennemi vaincu te rend {0} % de ta vie maximale (au plus deux fois par seconde)."
-msgstr ""
+msgstr "Each defeated enemy restores {0}% of your maximum life (at most twice per second)."
 
 #. data/grafts.json › greffe_coeur_de_saule › name
 msgid "Cœur de saule"
-msgstr ""
+msgstr "Willow Heart"
 
 #. data/grafts.json › greffe_coque › desc
 msgid "Le cocon s'épaissit d'une écorce dure."
-msgstr ""
+msgstr "The cocoon thickens with hard bark."
 
 #. data/grafts.json › greffe_couronne › desc
 msgid "La volée d'épines part dans toutes les directions."
-msgstr ""
+msgstr "The thorn volley flies in every direction."
 
 #. data/grafts.json › greffe_couronne › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Volée d'épines : +{0} épines."
-msgstr ""
+msgstr "Thorn Volley: +{0} thorns."
 
 #. data/grafts.json › greffe_couronne › effects › text
 msgid "Volée d'épines : les épines partent tout autour de toi."
-msgstr ""
+msgstr "Thorn Volley: the thorns fly all around you."
 
 #. data/grafts.json › greffe_couronne › name
 msgid "Volée en couronne"
-msgstr ""
+msgstr "Crown Volley"
 
 #. data/grafts.json › greffe_couronne_graines › desc
 msgid "Une attaque sur cinq part tout autour de toi."
-msgstr ""
+msgstr "One attack in five fires all around you."
 
 #. data/grafts.json › greffe_couronne_graines › name
 msgid "Couronne de graines"
-msgstr ""
+msgstr "Seed Crown"
 
 #. data/grafts.json › greffe_eclat › desc
 msgid "Ce que ton attaque abat éclate en épines."
-msgstr ""
+msgstr "Whatever your attack brings down bursts into thorns."
 
 #. data/grafts.json › greffe_eclat › name
 msgid "Graine éclatée"
-msgstr ""
+msgstr "Burst Seed"
 
 #. data/grafts.json › greffe_eclat_verre › desc
 msgid "Ton rayon se brise sur le premier ennemi et vise plus juste."
-msgstr ""
+msgstr "Your ray shatters on the first enemy and aims truer."
 
 #. data/grafts.json › greffe_eclat_verre › name
 msgid "Éclat de verre"
-msgstr ""
+msgstr "Glass Shard"
 
 #. data/grafts.json › greffe_eclosion › desc
 msgid "L'Éclosion porte plus loin et rend un peu de vie."
-msgstr ""
+msgstr "Hatching reaches farther and gives back a little life."
 
 #. data/grafts.json › greffe_eclosion › name
 msgid "Éclosion en chaîne"
-msgstr ""
+msgstr "Chain Hatching"
 
 #. data/grafts.json › greffe_ecorce › desc
 msgid "Être touché fait jaillir des épines tout autour de toi."
-msgstr ""
+msgstr "Being hit makes thorns burst out all around you."
 
 #. data/grafts.json › greffe_ecorce › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Quand un coup te touche, une onde d'épines blesse les ennemis autour de toi (×{0} dégâts, toutes les {1} s au plus)."
-msgstr ""
+msgstr "When a blow lands on you, a wave of thorns wounds the enemies around you (×{0} damage, at most every {1} s)."
 
 #. data/grafts.json › greffe_ecorce › name
 msgid "Écorce de mûrier"
-msgstr ""
+msgstr "Mulberry Bark"
 
 #. data/grafts.json › greffe_ecorce_dure › desc
 msgid "Le bouclier d'écorce s'épaissit d'une couche de liège."
-msgstr ""
+msgstr "The bark shield thickens with a layer of cork."
 
 #. data/grafts.json › greffe_essaim_double › desc
 msgid "L'Essaim saute plus loin et plus souvent."
-msgstr ""
+msgstr "Swarm leaps farther and more often."
 
 #. data/grafts.json › greffe_essaim_double › name
 msgid "Essaim jumeau"
-msgstr ""
+msgstr "Twin Swarm"
 
 #. data/grafts.json › greffe_girouette › desc
 msgid "Chaque victoire relance le vent : ruée et tornade reviennent plus vite."
-msgstr ""
+msgstr "Each kill stirs the wind again: Rush and Tornado come back sooner."
 
 #. data/grafts.json › greffe_girouette › name
 msgid "Girouette"
-msgstr ""
+msgstr "Weathervane"
 
 #. data/grafts.json › greffe_gland › desc
 msgid "Un gland lourd qui donne du poids à chaque coup."
-msgstr ""
+msgstr "A heavy acorn that lends weight to every blow."
 
 #. data/grafts.json › greffe_gland › name
 msgid "Gland"
-msgstr ""
+msgstr "Acorn"
 
 #. data/grafts.json › greffe_graine › desc
 msgid "Une graine enfouie depuis toujours, qui refuse de mourir."
-msgstr ""
+msgstr "A seed buried since the beginning, which refuses to die."
 
 #. data/grafts.json › greffe_graine › effects › label
 msgid "La graine ancienne te garde en vie"
-msgstr ""
+msgstr "The ancient seed keeps you alive"
 
 #. data/grafts.json › greffe_graine › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un coup mortel te laisse à {0} points de vie, invulnérable {1} s (une fois toutes les {2} minutes)."
-msgstr ""
+msgstr "A fatal blow leaves you at {0} life, invulnerable for {1} s (once every {2} minutes)."
 
 #. data/grafts.json › greffe_graine › name
 msgid "Graine ancienne"
-msgstr ""
+msgstr "Ancient Seed"
 
 #. data/grafts.json › greffe_halo › desc
 msgid "L'aurore s'ouvre plus loin."
-msgstr ""
+msgstr "Aurora spreads farther."
 
 #. data/grafts.json › greffe_halo › name
 msgid "Halo"
-msgstr ""
+msgstr "Halo"
 
 #. data/grafts.json › greffe_lichen › desc
 msgid "Immobile, tu te couvres de lichen : ton poison redouble."
-msgstr ""
+msgstr "Standing still, you grow a coat of lichen: your poison doubles."
 
 #. data/grafts.json › greffe_lichen › name
 msgid "Lichen"
-msgstr ""
+msgstr "Lichen"
 
 #. data/grafts.json › greffe_lueur › desc
 msgid "Ton attaque éblouit parfois l'ennemi touché."
-msgstr ""
+msgstr "Your attack sometimes dazzles the enemy hit."
 
 #. data/grafts.json › greffe_lumiere_premiere › desc
 msgid "La première lumière du monde : tes coups trouvent la faille."
-msgstr ""
+msgstr "The first light of the world: your blows find the flaw."
 
 #. data/grafts.json › greffe_lumiere_premiere › name
 msgid "Lumière première"
-msgstr ""
+msgstr "First Light"
 
 #. data/grafts.json › greffe_mere › desc
 msgid "Ce qui tombe sous tes coups éclate en épines."
-msgstr ""
+msgstr "Whatever falls to your blows bursts into thorns."
 
 #. data/grafts.json › greffe_mere › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un ennemi vaincu éclate en épines qui blessent ses voisins (×{0} dégâts)."
-msgstr ""
+msgstr "A defeated enemy bursts into thorns that wound its neighbors (×{0} damage)."
 
 #. data/grafts.json › greffe_mere › name
 msgid "Cœur de la Mère-Ronce"
-msgstr ""
+msgstr "Heart of the Bramble Mother"
 
 #. data/grafts.json › greffe_mousse › desc
 msgid "Une mousse épaisse qui amortit les coups."
-msgstr ""
+msgstr "A thick moss that softens blows."
 
 #. data/grafts.json › greffe_mousse › name
 msgid "Mousse"
-msgstr ""
+msgstr "Moss"
 
 #. data/grafts.json › greffe_mycelium › desc
 msgid "Tes nuages s'étendent et durent plus longtemps."
-msgstr ""
+msgstr "Your clouds spread wider and last longer."
 
 #. data/grafts.json › greffe_mycelium › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Vesse-de-loup : nuage +{0} s."
-msgstr ""
+msgstr "Puffball: cloud +{0} s."
 
 #. data/grafts.json › greffe_nid › desc
 msgid "Un ennemi pris dans les racines projette des épines."
-msgstr ""
+msgstr "An enemy caught in roots sprays thorns."
 
 #. data/grafts.json › greffe_nid › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Chaque ennemi enraciné projette des épines autour de lui (×{0} dégâts)."
-msgstr ""
+msgstr "Each rooted enemy sprays thorns around it (×{0} damage)."
 
 #. data/grafts.json › greffe_nid › name
 msgid "Nid de mûres"
-msgstr ""
+msgstr "Blackberry Nest"
 
 #. data/grafts.json › greffe_oeil_tempete › desc
 msgid "Ce qui tombe sous tes coups se relève en tornade."
-msgstr ""
+msgstr "Whatever falls to your blows rises again as a tornado."
 
 #. data/grafts.json › greffe_oeil_tempete › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un ennemi vaincu laisse une tornade là où il tombe ({0} % des dégâts et de la durée de la tornade, au plus toutes les {1} s)."
-msgstr ""
+msgstr "A defeated enemy leaves a tornado where it falls ({0}% of the tornado's damage and duration, at most every {1} s)."
 
 #. data/grafts.json › greffe_oeil_tempete › name
 msgid "Œil du Harfang"
-msgstr ""
+msgstr "Eye of the Ash Owl"
 
 #. data/grafts.json › greffe_perle_rosee › desc
 msgid "Chaque ennemi que ton attaque abat te rafraîchit."
-msgstr ""
+msgstr "Each enemy your attack brings down refreshes you."
 
 #. data/grafts.json › greffe_perle_rosee › name
 msgid "Perle de rosée"
-msgstr ""
+msgstr "Dewdrop"
 
 #. data/grafts.json › greffe_pieu_double › desc
 msgid "Chaque pieu en appelle un autre."
-msgstr ""
+msgstr "Each stake calls up another."
 
 #. data/grafts.json › greffe_pieu_double › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Pieux : +{0} pieux."
-msgstr ""
+msgstr "Stakes: +{0} stakes."
 
 #. data/grafts.json › greffe_pieu_double › name
 msgid "Pieu double"
-msgstr ""
+msgstr "Double Stake"
 
 #. data/grafts.json › greffe_plume_vive › desc
 msgid "Ton esquive lâche une salve de ton attaque tout autour de toi."
-msgstr ""
+msgstr "Your dodge looses a volley of your attack all around you."
 
 #. data/grafts.json › greffe_plume_vive › name
 msgid "Plume vive"
-msgstr ""
+msgstr "Quick Feather"
 
 #. data/grafts.json › greffe_prisme › desc
 msgid "Le prisme tire un rayon de plus et dure un peu plus longtemps."
-msgstr ""
+msgstr "The prism fires one more ray and lasts a little longer."
 
 #. data/grafts.json › greffe_prisme › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Prisme : +{0} rayon à chaque tir."
-msgstr ""
+msgstr "Prism: +{0} ray with each shot."
 
 #. data/grafts.json › greffe_prisme › name
 msgid "Prisme taillé"
-msgstr ""
+msgstr "Cut Prism"
 
 #. data/grafts.json › greffe_racine_profonde › desc
 msgid "Une racine qui plonge sous la roche, plus vieille que la forêt."
-msgstr ""
+msgstr "A root that plunges beneath the rock, older than the forest."
 
 #. data/grafts.json › greffe_rampante › desc
 msgid "Les racines naissent sous tes pieds, plus larges."
-msgstr ""
+msgstr "The roots spring up beneath your feet, wider."
 
 #. data/grafts.json › greffe_rampante › effects › text
 msgid "Racines voraces : jaillissent autour de toi au lieu de l'endroit visé."
-msgstr ""
+msgstr "Ravenous Roots: burst out around you instead of where you aim."
 
 #. data/grafts.json › greffe_rampante › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Racines voraces : rayon ×{0}."
-msgstr ""
+msgstr "Ravenous Roots: radius ×{0}."
 
 #. data/grafts.json › greffe_rampante › name
 msgid "Racines rampantes"
-msgstr ""
+msgstr "Crawling Roots"
 
 #. data/grafts.json › greffe_rosee › desc
 msgid "Chaque coup critique te soigne un peu."
-msgstr ""
+msgstr "Each critical hit heals you a little."
 
 #. data/grafts.json › greffe_rosee › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un coup critique te rend {0} % de ta vie maximale (au plus toutes les {1} s)."
-msgstr ""
+msgstr "A critical hit restores {0}% of your maximum life (at most every {1} s)."
 
 #. data/grafts.json › greffe_sang_vif › desc
 msgid "Les coups critiques ouvrent des plaies."
-msgstr ""
+msgstr "Critical hits open wounds."
 
 #. data/grafts.json › greffe_sang_vif › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Chaque coup critique fait saigner la cible ({0} % des dégâts du coup par seconde, {1} s)."
-msgstr ""
+msgstr "Each critical hit makes the target bleed ({0}% of the hit's damage per second, {1} s)."
 
 #. data/grafts.json › greffe_sentinelle › desc
 msgid "Planté dans le sol, tu frappes bien plus fort ; tu marches un peu moins vite."
-msgstr ""
+msgstr "Planted in the ground, you strike much harder; you walk a little slower."
 
 #. data/grafts.json › greffe_sentinelle › name
 msgid "Sentinelle"
-msgstr ""
+msgstr "Sentinel"
 
 #. data/grafts.json › greffe_seve_amere › desc
 msgid "Une liane de plus, qui boit sans fin."
-msgstr ""
+msgstr "One more vine, which drinks without end."
 
 #. data/grafts.json › greffe_seve_amere › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Liane buveuse : +{0} liane."
-msgstr ""
+msgstr "Drinking Vine: +{0} vine."
 
 #. data/grafts.json › greffe_seve_amere › name
 msgid "Sève amère"
-msgstr ""
+msgstr "Bitter Sap"
 
 #. data/grafts.json › greffe_silex › desc
 msgid "Un éclat de pierre pris dans l'écorce, qui coupe qui le frappe."
-msgstr ""
+msgstr "A shard of stone caught in the bark, which cuts whoever strikes it."
 
 #. data/grafts.json › greffe_silex › name
 msgid "Silex"
-msgstr ""
+msgstr "Flint"
 
 #. data/grafts.json › greffe_sillage › desc
 msgid "Tes traits laissent derrière eux une traînée d'épines."
-msgstr ""
+msgstr "Your shots leave a trail of thorns behind them."
 
 #. data/grafts.json › greffe_soeurs › desc
 msgid "Chaque tir lance deux graines de plus, un peu moins fortes."
-msgstr ""
+msgstr "Each shot throws two more seeds, slightly weaker."
 
 #. data/grafts.json › greffe_soeurs › name
 msgid "Épines sœurs"
-msgstr ""
+msgstr "Sister Thorns"
 
 #. data/grafts.json › greffe_soleil_bas › desc
 msgid "Les coups critiques de ton attaque brûlent plus fort."
-msgstr ""
+msgstr "Your attack's critical hits burn hotter."
 
 #. data/grafts.json › greffe_soleil_bas › name
 msgid "Soleil bas"
-msgstr ""
+msgstr "Low Sun"
 
 #. data/grafts.json › greffe_souffle_ancien › desc
 msgid "Un souffle venu des hauteurs, qui porte et qui soigne."
-msgstr ""
+msgstr "A breath from the heights, which carries and heals."
 
 #. data/grafts.json › greffe_souffle_ancien › name
 msgid "Souffle ancien"
-msgstr ""
+msgstr "Ancient Breath"
 
 #. data/grafts.json › greffe_source_vive › desc
 msgid "Une source cachée, plus pure que toutes les autres."
-msgstr ""
+msgstr "A hidden spring, purer than all the others."
 
 #. data/grafts.json › greffe_sporange › desc
 msgid "Ce qui tombe sous tes coups libère un nuage de spores."
-msgstr ""
+msgstr "Whatever falls to your blows releases a spore cloud."
 
 #. data/grafts.json › greffe_sporange › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un ennemi vaincu libère un nuage de spores (×{0} dégâts par seconde, {1} s ; au plus toutes les {2} s)."
-msgstr ""
+msgstr "A defeated enemy releases a spore cloud (×{0} damage per second, {1} s; at most every {2} s)."
 
 #. data/grafts.json › greffe_sporange › name
 msgid "Sporange de l'Amanite-Mère"
-msgstr ""
+msgstr "Sporangium of the Amanita Mother"
 
 #. data/grafts.json › greffe_spore_lourde › desc
 msgid "Ce que ton attaque abat éclate en nuage de spores."
-msgstr ""
+msgstr "Whatever your attack brings down bursts into a spore cloud."
 
 #. data/grafts.json › greffe_spore_lourde › name
 msgid "Spore lourde"
-msgstr ""
+msgstr "Heavy Spore"
 
 #. data/grafts.json › greffe_sureau › desc
 msgid "Le bois de sureau se referme sur la blessure."
-msgstr ""
+msgstr "Elderwood closes over the wound."
 
 #. data/grafts.json › greffe_sureau › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Quand un coup te touche, tu récupères {0} % de ta vie maximale (au plus toutes les {1} s)."
-msgstr ""
+msgstr "When a blow lands on you, you recover {0}% of your maximum life (at most every {1} s)."
 
 #. data/grafts.json › greffe_sureau › name
 msgid "Sureau"
-msgstr ""
+msgstr "Elderberry"
 
 #. data/grafts.json › greffe_tournoyante › desc
 msgid "Le fouet balaie tout autour de toi."
-msgstr ""
+msgstr "The whip sweeps all around you."
 
 #. data/grafts.json › greffe_tournoyante › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Fouet de ronce : dégâts ×{0}."
-msgstr ""
+msgstr "Bramble Whip: damage ×{0}."
 
 #. data/grafts.json › greffe_tournoyante › effects › text
 msgid "Fouet de ronce : frappe tout autour de toi."
-msgstr ""
+msgstr "Bramble Whip: strikes all around you."
 
 #. data/grafts.json › greffe_tournoyante › name
 msgid "Tourbillon de ronce"
-msgstr ""
+msgstr "Bramble Whirl"
 
 #. data/grafts.json › greffe_tracante › desc
 msgid "Ton esquive plante des racines là où tu étais."
-msgstr ""
+msgstr "Your dodge plants roots where you stood."
 
 #. data/grafts.json › greffe_tracante › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "L'esquive fait jaillir des racines qui immobilisent les ennemis proches ({0} s)."
-msgstr ""
+msgstr "Dodging makes roots burst out and hold nearby enemies ({0} s)."
 
 #. data/grafts.json › greffe_tracante › name
 msgid "Racine traçante"
-msgstr ""
+msgstr "Creeping Root"
 
 #. data/grafts.json › greffe_trombe › desc
 msgid "La ruée laisse une tornade derrière elle."
-msgstr ""
+msgstr "Rush leaves a tornado behind it."
 
 #. data/grafts.json › greffe_trombe › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Ruée : une tornade naît au bout de la ruée ({0} % de ses dégâts et de sa durée)."
-msgstr ""
+msgstr "Rush: a tornado is born at the end of the rush ({0}% of its damage and duration)."
 
 #. data/grafts.json › greffe_trombe › name
 msgid "Trombe"
-msgstr ""
+msgstr "Waterspout"
 
 #. data/grafts.json › greffe_truffe › desc
 msgid "Une truffe enfouie au fond du marais, qui ouvre un emplacement de compétence."
-msgstr ""
+msgstr "A truffle buried deep in the marsh, which opens a skill slot."
 
 #. data/grafts.json › greffe_truffe › name
 msgid "Truffe noire"
-msgstr ""
+msgstr "Black Truffle"
 
 #. data/grafts.json › greffe_vent_coupant › desc
 msgid "Chaque coup de ton attaque repousse l'ennemi."
-msgstr ""
+msgstr "Each hit of your attack knocks the enemy back."
 
 #. data/grafts.json › greffe_vent_coupant › name
 msgid "Vent coupant"
-msgstr ""
+msgstr "Cutting Wind"
 
 #. data/grafts.json › greffe_vesse › desc
 msgid "Ton esquive laisse derrière toi un nuage de spores."
-msgstr ""
+msgstr "Your dodge leaves a spore cloud behind you."
 
 #. data/grafts.json › greffe_vesse › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "L'esquive laisse un nuage de spores là où tu étais (×{0} dégâts par seconde, {1} s)."
-msgstr ""
+msgstr "Dodging leaves a spore cloud where you stood (×{0} damage per second, {1} s)."
 
 #. data/grafts.json › greffe_vesse › name
 msgid "Vesse fumante"
-msgstr ""
+msgstr "Smoking Puffball"
 
 #. data/grafts.json › greffe_vitrail › desc
 msgid "Un ennemi vaincu renvoie un rayon vers son voisin."
-msgstr ""
+msgstr "A defeated enemy sends a ray on to its neighbor."
 
 #. data/grafts.json › greffe_vitrail › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Un ennemi vaincu renvoie un rayon de lumière vers l'ennemi le plus proche ({0} % des dégâts, au plus toutes les {1} s)."
-msgstr ""
+msgstr "A defeated enemy sends a ray of light to the nearest enemy ({0}% of damage, at most every {1} s)."
 
 #. data/grafts.json › greffe_vitrail › name
 msgid "Vitrail"
-msgstr ""
+msgstr "Stained Glass"
 
 #. data/grafts.json › greffe_vorace › desc
 msgid "Chaque coup au corps à corps boit un peu de vie."
-msgstr ""
+msgstr "Each melee hit drinks a little life."
 
 #. data/grafts.json › greffe_vorace › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Chaque coup au corps à corps te soigne de {0} % de ta vie maximale."
-msgstr ""
+msgstr "Each melee hit heals you for {0}% of your maximum life."
 
 #. data/grafts.json › greffe_vorace › name
 msgid "Sève vorace"
-msgstr ""
+msgstr "Ravenous Sap"
 
 #. data/grafts.json › greffe_vortex › desc
 msgid "L'appel d'air revient plus souvent, un peu moins fort."
-msgstr ""
+msgstr "Updraft comes back more often, a little weaker."
 
 #. data/grafts.json › greffe_vortex › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Appel d'air : dégâts ×{0}."
-msgstr ""
+msgstr "Updraft: damage ×{0}."
 
 #. data/grafts.json › greffe_vortex › name
 msgid "Vortex"
-msgstr ""
+msgstr "Vortex"
 
 #. data/regions/aube.json › aube › altars › aube_1 › name
 msgid "Autel de l'éclat"
-msgstr ""
+msgstr "Altar of Radiance"
 
 #. data/regions/aube.json › aube › altars › aube_2 › name
 msgid "Autel du prisme"
-msgstr ""
+msgstr "Altar of the Prism"
 
 #. data/regions/aube.json › aube › altars › aube_3 › name
 #. data/regions/seve.json › seve › altars › seve_1 › name
 msgid "Autel de la rosée"
-msgstr ""
+msgstr "Altar of Dew"
 
 #. data/regions/aube.json › aube › altars › aube_4 › name
 msgid "Autel de la lueur"
-msgstr ""
+msgstr "Altar of the Glimmer"
 
 #. data/regions/aube.json › aube › boss › name
 msgid "La Phalène de verre"
-msgstr ""
+msgstr "The Glass Moth"
 
 #. data/regions/aube.json › aube › boss › phases
 #. data/regions/racine.json › racine › boss › phases
@@ -7084,868 +7084,868 @@ msgstr ""
 #. data/regions/vent.json › vent › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1}"
-msgstr ""
+msgstr "Phase {0} of {1}"
 
 #. data/regions/aube.json › aube › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la Phalène brise la lumière"
-msgstr ""
+msgstr "Phase {0} of {1}: the Moth shatters the light"
 
 #. data/regions/aube.json › aube › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la lumière tombe du ciel"
-msgstr ""
+msgstr "Phase {0} of {1}: light falls from the sky"
 
 #. data/regions/aube.json › aube › map_name
 msgid "Falaises"
-msgstr ""
+msgstr "Cliffs"
 
 #. data/regions/aube.json › aube › name
 msgid "Région d'Aube"
-msgstr ""
+msgstr "Dawn Region"
 
 #. data/regions/aube.json › aube › sanctuaries › aube_prisme › name
 msgid "du Prisme"
-msgstr ""
+msgstr "Prism"
 
 #. data/regions/aube.json › aube › sanctuaries › aube_seuil › name
 msgid "du Seuil"
-msgstr ""
+msgstr "Threshold"
 
 #. data/regions/aube.json › aube › sanctuaries › aube_verre › name
 msgid "du Verre"
-msgstr ""
+msgstr "Glass"
 
 #. data/regions/aube.json › aube › sanctuaries › aube_zenith › name
 msgid "du Zénith"
-msgstr ""
+msgstr "Zenith"
 
 #. data/regions/aube.json › aube › secrets › aube › name
 msgid "La lumière première"
-msgstr ""
+msgstr "The First Light"
 
 #. data/regions/racine.json › racine › altars › racine_1 › name
 msgid "Autel des cernes"
-msgstr ""
+msgstr "Altar of Rings"
 
 #. data/regions/racine.json › racine › altars › racine_2 › name
 msgid "Autel du gland"
-msgstr ""
+msgstr "Altar of the Acorn"
 
 #. data/regions/racine.json › racine › altars › racine_3 › name
 msgid "Autel de l'ambre"
-msgstr ""
+msgstr "Altar of Amber"
 
 #. data/regions/racine.json › racine › altars › racine_4 › name
 msgid "Autel du silex"
-msgstr ""
+msgstr "Altar of Flint"
 
 #. data/regions/racine.json › racine › boss › name
 msgid "L'Ancien pétrifié"
-msgstr ""
+msgstr "The Petrified Elder"
 
 #. data/regions/racine.json › racine › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la cime se fend"
-msgstr ""
+msgstr "Phase {0} of {1}: the crown splits"
 
 #. data/regions/racine.json › racine › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la forêt se referme"
-msgstr ""
+msgstr "Phase {0} of {1}: the forest closes in"
 
 #. data/regions/racine.json › racine › map_name
 msgid "Forêt"
-msgstr ""
+msgstr "Forest"
 
 #. data/regions/racine.json › racine › name
 msgid "Région de Racine"
-msgstr ""
+msgstr "Root Region"
 
 #. data/regions/racine.json › racine › sanctuaries › racine_cernes › name
 msgid "des Cernes"
-msgstr ""
+msgstr "Rings"
 
 #. data/regions/racine.json › racine › sanctuaries › racine_futaie › name
 msgid "de la Futaie"
-msgstr ""
+msgstr "Grove"
 
 #. data/regions/racine.json › racine › sanctuaries › racine_silex › name
 msgid "du Silex"
-msgstr ""
+msgstr "Flint"
 
 #. data/regions/racine.json › racine › sanctuaries › racine_souche › name
 msgid "de la Souche"
-msgstr ""
+msgstr "Stump"
 
 #. data/regions/racine.json › racine › secrets › racine › name
 msgid "La racine profonde"
-msgstr ""
+msgstr "The Deep Root"
 
 #. data/regions/ronce.json › ronce › altars › ronce_1 › name
 msgid "Autel des épines"
-msgstr ""
+msgstr "Altar of Thorns"
 
 #. data/regions/ronce.json › ronce › altars › ronce_2 › name
 msgid "Autel de l'écorce"
-msgstr ""
+msgstr "Altar of Bark"
 
 #. data/regions/ronce.json › ronce › altars › ronce_3 › name
 msgid "Autel des racines"
-msgstr ""
+msgstr "Altar of Roots"
 
 #. data/regions/ronce.json › ronce › altars › ronce_4 › name
 msgid "Autel de la couronne"
-msgstr ""
+msgstr "Altar of the Crown"
 
 #. data/regions/ronce.json › ronce › boss › name
 #. scripts/boss_arena.gd:34
 msgid "La Mère-Ronce"
-msgstr ""
+msgstr "The Bramble Mother"
 
 #. data/regions/ronce.json › ronce › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : les bourgeons éclosent"
-msgstr ""
+msgstr "Phase {0} of {1}: the buds burst open"
 
 #. data/regions/ronce.json › ronce › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : les ronces se resserrent"
-msgstr ""
+msgstr "Phase {0} of {1}: the brambles close in"
 
 #. data/regions/ronce.json › ronce › heart › name
 #. scripts/heart.gd:48
 #. scripts/regions.gd:223
 #. scripts/world_map.gd:114
 msgid "Cœur de flétrissure"
-msgstr ""
+msgstr "Blight Heart"
 
 #. data/regions/ronce.json › ronce › map_name
 msgid "Roncier"
-msgstr ""
+msgstr "Thicket"
 
 #. data/regions/ronce.json › ronce › name
 msgid "Région de Ronce"
-msgstr ""
+msgstr "Bramble Region"
 
 #. data/regions/ronce.json › ronce › sanctuaries › epine › name
 msgid "de l'Épine"
-msgstr ""
+msgstr "Thorn"
 
 #. data/regions/ronce.json › ronce › sanctuaries › lisiere › name
 msgid "de la Lisière"
-msgstr ""
+msgstr "Woodland Edge"
 
 #. data/regions/ronce.json › ronce › sanctuaries › ravin › name
 msgid "du Ravin"
-msgstr ""
+msgstr "Ravine"
 
 #. data/regions/ronce.json › ronce › sanctuaries › veille › name
 msgid "de la Veille"
-msgstr ""
+msgstr "Vigil"
 
 #. data/regions/ronce.json › ronce › secrets › ronce › name
 msgid "La graine enfouie"
-msgstr ""
+msgstr "The Buried Seed"
 
 #. data/regions/seve.json › seve › altars › seve_2 › name
 msgid "Autel du bourgeon"
-msgstr ""
+msgstr "Altar of the Bud"
 
 #. data/regions/seve.json › seve › altars › seve_3 › name
 msgid "Autel du sureau"
-msgstr ""
+msgstr "Altar of the Elderberry"
 
 #. data/regions/seve.json › seve › altars › seve_4 › name
 msgid "Autel de la mousse"
-msgstr ""
+msgstr "Altar of Moss"
 
 #. data/regions/seve.json › seve › boss › name
 msgid "Le Saule exsangue"
-msgstr ""
+msgstr "The Bloodless Willow"
 
 #. data/regions/seve.json › seve › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : l'étang se vide"
-msgstr ""
+msgstr "Phase {0} of {1}: the pond drains"
 
 #. data/regions/seve.json › seve › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : le Saule boit la vallée"
-msgstr ""
+msgstr "Phase {0} of {1}: the Willow drinks the valley"
 
 #. data/regions/seve.json › seve › map_name
 msgid "Vallée"
-msgstr ""
+msgstr "Valley"
 
 #. data/regions/seve.json › seve › name
 msgid "Région de Sève"
-msgstr ""
+msgstr "Sap Region"
 
 #. data/regions/seve.json › seve › sanctuaries › seve_gue › name
 msgid "du Gué"
-msgstr ""
+msgstr "Ford"
 
 #. data/regions/seve.json › seve › sanctuaries › seve_saule › name
 msgid "du Saule"
-msgstr ""
+msgstr "Willow"
 
 #. data/regions/seve.json › seve › sanctuaries › seve_source › name
 msgid "de la Source"
-msgstr ""
+msgstr "Spring"
 
 #. data/regions/seve.json › seve › sanctuaries › seve_val › name
 msgid "du Val"
-msgstr ""
+msgstr "Vale"
 
 #. data/regions/seve.json › seve › secrets › seve › name
 msgid "La source vive"
-msgstr ""
+msgstr "The Living Spring"
 
 #. data/regions/spore.json › spore › altars › spore_1 › name
 msgid "Autel de la vesse"
-msgstr ""
+msgstr "Altar of the Puffball"
 
 #. data/regions/spore.json › spore › altars › spore_2 › name
 msgid "Autel du mycélium"
-msgstr ""
+msgstr "Altar of Mycelium"
 
 #. data/regions/spore.json › spore › altars › spore_3 › name
 msgid "Autel de l'amadou"
-msgstr ""
+msgstr "Altar of Tinder"
 
 #. data/regions/spore.json › spore › altars › spore_4 › name
 msgid "Autel du lichen"
-msgstr ""
+msgstr "Altar of Lichen"
 
 #. data/regions/spore.json › spore › boss › name
 msgid "L'Amanite-Mère"
-msgstr ""
+msgstr "The Amanita Mother"
 
 #. data/regions/spore.json › spore › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : le mycélium se déchaîne"
-msgstr ""
+msgstr "Phase {0} of {1}: the mycelium runs wild"
 
 #. data/regions/spore.json › spore › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : les lamelles s'ouvrent"
-msgstr ""
+msgstr "Phase {0} of {1}: the gills open"
 
 #. data/regions/spore.json › spore › map_name
 msgid "Marais"
-msgstr ""
+msgstr "Marsh"
 
 #. data/regions/spore.json › spore › name
 msgid "Région de Spore"
-msgstr ""
+msgstr "Spore Region"
 
 #. data/regions/spore.json › spore › sanctuaries › berge › name
 msgid "de la Berge"
-msgstr ""
+msgstr "Bank"
 
 #. data/regions/spore.json › spore › sanctuaries › brume › name
 msgid "de la Brume"
-msgstr ""
+msgstr "Mist"
 
 #. data/regions/spore.json › spore › sanctuaries › roseliere › name
 msgid "de la Roselière"
-msgstr ""
+msgstr "Reedbed"
 
 #. data/regions/spore.json › spore › sanctuaries › tourbiere › name
 msgid "de la Tourbière"
-msgstr ""
+msgstr "Peat Bog"
 
 #. data/regions/spore.json › spore › secrets › spore › name
 msgid "La truffe enfouie"
-msgstr ""
+msgstr "The Buried Truffle"
 
 #. data/regions/vent.json › vent › altars › vent_1 › name
 msgid "Autel des plumes"
-msgstr ""
+msgstr "Altar of Feathers"
 
 #. data/regions/vent.json › vent › altars › vent_2 › name
 msgid "Autel de la girouette"
-msgstr ""
+msgstr "Altar of the Weathervane"
 
 #. data/regions/vent.json › vent › altars › vent_3 › name
 msgid "Autel de l'alizé"
-msgstr ""
+msgstr "Altar of the Trade Wind"
 
 #. data/regions/vent.json › vent › altars › vent_4 › name
 msgid "Autel du cerf-volant"
-msgstr ""
+msgstr "Altar of the Kite"
 
 #. data/regions/vent.json › vent › boss › name
 msgid "Le Harfang de cendre"
-msgstr ""
+msgstr "The Ash Owl"
 
 #. data/regions/vent.json › vent › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la tempête se lève"
-msgstr ""
+msgstr "Phase {0} of {1}: the storm rises"
 
 #. data/regions/vent.json › vent › boss › phases
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : le Harfang prend son envol"
-msgstr ""
+msgstr "Phase {0} of {1}: the Owl takes flight"
 
 #. data/regions/vent.json › vent › map_name
 msgid "Plateaux"
-msgstr ""
+msgstr "Plateaus"
 
 #. data/regions/vent.json › vent › name
 msgid "Région de Vent"
-msgstr ""
+msgstr "Wind Region"
 
 #. data/regions/vent.json › vent › sanctuaries › vent_belvedere › name
 msgid "du Belvédère"
-msgstr ""
+msgstr "Lookout"
 
 #. data/regions/vent.json › vent › sanctuaries › vent_cairn › name
 msgid "du Cairn"
-msgstr ""
+msgstr "Cairn"
 
 #. data/regions/vent.json › vent › sanctuaries › vent_cime › name
 msgid "de la Cime"
-msgstr ""
+msgstr "Summit"
 
 #. data/regions/vent.json › vent › sanctuaries › vent_col › name
 msgid "du Col"
-msgstr ""
+msgstr "Pass"
 
 #. data/regions/vent.json › vent › secrets › vent › name
 msgid "Le souffle ancien"
-msgstr ""
+msgstr "The Ancient Breath"
 
 #. data/skills.json › ancrage › desc
 msgid "Nouvelle compétence : tu prends racine quelques secondes ; tes racines immobilisent et blessent les ennemis autour de toi. Enraciné, tu ne marches plus (l'esquive arrache les racines) mais tu encaisses mieux."
-msgstr ""
+msgstr "New skill: you take root for a few seconds; your roots hold and wound the enemies around you. While rooted you cannot walk (a dodge tears the roots free), but you withstand more."
 
 #. data/skills.json › appel_air › desc
 msgid "Nouvelle compétence : un tourbillon aspire les ennemis vers l'endroit visé, puis éclate sur eux."
-msgstr ""
+msgstr "New skill: a whirlwind draws enemies toward where you aim, then bursts over them."
 
 #. data/skills.json › appel_air › short
 msgid "Appel"
-msgstr ""
+msgstr "Updraft"
 
 #. data/skills.json › aurore › desc
 msgid "Nouvelle compétence : une onde de lumière part de toi, blesse et éblouit les ennemis autour (ils subissent plus de coups critiques)."
-msgstr ""
+msgstr "New skill: a wave of light spreads from you, wounding and dazzling the enemies around (they take more critical hits)."
 
 #. data/skills.json › bloom › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Nouvelle compétence : soigne {0} % de ta vie et fait renaître le sol autour de toi."
-msgstr ""
+msgstr "New skill: heals {0}% of your life and brings the ground around you back to life."
 
 #. data/skills.json › cloud › desc
 msgid "Nouvelle compétence : un nuage toxique ronge les ennemis à l'endroit visé."
-msgstr ""
+msgstr "New skill: a toxic cloud eats away at enemies where you aim."
 
 #. data/skills.json › cocon › desc
 msgid "Nouvelle compétence : un cocon de sève t'enveloppe et absorbe les coups ; à la fin, ce qui reste te soigne et le cocon éclate."
-msgstr ""
+msgstr "New skill: a cocoon of sap wraps around you and absorbs blows; at the end, what remains heals you and the cocoon bursts."
 
 #. data/skills.json › eclosion › desc
 msgid "Nouvelle compétence : le poison des ennemis proches éclot d'un coup ; leurs spores empoisonnent leurs voisins."
-msgstr ""
+msgstr "New skill: the poison in nearby enemies hatches all at once; their spores poison their neighbors."
 
 #. data/skills.json › ecorce › desc
 msgid "Nouvelle compétence : des plaques d'écorce te couvrent et absorbent les coups ; chaque coup absorbé renvoie des échardes à l'agresseur, et à la fin l'écorce éclate."
-msgstr ""
+msgstr "New skill: plates of bark cover you and absorb blows; each blow absorbed sends splinters back at the attacker, and at the end the bark bursts."
 
 #. data/skills.json › essaim › desc
 msgid "Nouvelle compétence : une spore vivante empoisonne l'ennemi visé, puis saute d'ennemi en ennemi."
-msgstr ""
+msgstr "New skill: a living spore poisons the targeted enemy, then leaps from enemy to enemy."
 
 #. data/skills.json › fontaine › desc
 msgid "Nouvelle compétence : une source de sève jaillit à tes pieds ; tant que tu t'y tiens, tu régénères vite, et elle ronge les ennemis qui y entrent."
-msgstr ""
+msgstr "New skill: a spring of sap wells up at your feet; while you stand in it you regenerate quickly, and it eats away at enemies who step in."
 
 #. data/skills.json › fontaine › short
 msgid "Fontaine"
-msgstr ""
+msgstr "Fountain"
 
 #. data/skills.json › fouet › desc
 msgid "Nouvelle compétence : un fouet d'épines frappe en arc devant toi et fait saigner."
-msgstr ""
+msgstr "New skill: a whip of thorns lashes in an arc before you and causes bleeding."
 
 #. data/skills.json › fouet › name
 msgid "Fouet de ronce"
-msgstr ""
+msgstr "Bramble Whip"
 
 #. data/skills.json › lance_aube › desc
 msgid "Nouvelle compétence : après un court instant, un grand rayon part vers l'endroit visé et traverse tout ; il touche toujours en critique un ennemi ébloui."
-msgstr ""
+msgstr "New skill: after a brief moment, a great ray sets off toward where you aim and passes through everything; it always crits a dazzled enemy."
 
 #. data/skills.json › lance_aube › short
 msgid "Lance"
-msgstr ""
+msgstr "Lance"
 
 #. data/skills.json › liane › desc
 msgid "Nouvelle compétence : des lianes s'accrochent aux ennemis autour de l'endroit visé, boivent leur vie et te la rendent."
-msgstr ""
+msgstr "New skill: vines cling to the enemies around where you aim, drink their life and give it to you."
 
 #. data/skills.json › liane › short
 msgid "Liane"
-msgstr ""
+msgstr "Vine"
 
 #. data/skills.json › nova › desc
 msgid "Nouvelle compétence : une onde d'épines blesse et repousse les ennemis autour de toi."
-msgstr ""
+msgstr "New skill: a wave of thorns wounds and knocks back the enemies around you."
 
 #. data/skills.json › nova › short
 msgid "Épines"
-msgstr ""
+msgstr "Thorns"
 
 #. data/skills.json › pieux › desc
 msgid "Nouvelle compétence : une ligne de pieux de bois jaillit du sol vers l'endroit visé ; chaque pieu blesse et cloue un instant les ennemis qu'il soulève."
-msgstr ""
+msgstr "New skill: a line of wooden stakes bursts from the ground toward where you aim; each stake wounds and briefly pins the enemies it lifts."
 
 #. data/skills.json › prisme › desc
 msgid "Nouvelle compétence : tu poses un cristal à l'endroit visé ; il tire des rayons sur les ennemis proches pendant quelques secondes."
-msgstr ""
+msgstr "New skill: you set a crystal where you aim; it fires rays at nearby enemies for a few seconds."
 
 #. data/skills.json › racines › desc
 msgid "Nouvelle compétence : des racines jaillissent à l'endroit visé et immobilisent les ennemis."
-msgstr ""
+msgstr "New skill: roots burst out where you aim and hold enemies in place."
 
 #. data/skills.json › racines › short
 msgid "Racines"
-msgstr ""
+msgstr "Roots"
 
 #. data/skills.json › ruee › desc
 msgid "Nouvelle compétence : tu fends l'air vers l'endroit visé, intouchable, et frappes tout sur ton passage."
-msgstr ""
+msgstr "New skill: you cut through the air toward where you aim, untouchable, striking all in your path."
 
 #. data/skills.json › saignee › desc
 msgid "Nouvelle compétence : les saignements des ennemis proches éclatent d'un coup et te soignent."
-msgstr ""
+msgstr "New skill: the bleeding of nearby enemies bursts all at once and heals you."
 
 #. data/skills.json › tornade › desc
 msgid "Nouvelle compétence : une tornade part vers l'endroit visé, aspire les ennemis qu'elle croise et les blesse sans cesse."
-msgstr ""
+msgstr "New skill: a tornado sets off toward where you aim, draws in the enemies it meets and wounds them without pause."
 
 #. data/skills.json › vesse › desc
 msgid "Nouvelle compétence : un champignon-piège pousse à l'endroit visé et éclate en nuage de spores quand un ennemi s'approche."
-msgstr ""
+msgstr "New skill: a trap mushroom grows where you aim and bursts into a spore cloud when an enemy comes near."
 
 #. data/skills.json › vesse › short
 msgid "Vesse"
-msgstr ""
+msgstr "Puffball"
 
 #. data/skills.json › volee › desc
 msgid "Nouvelle compétence : un éventail d'épines perforantes qui font saigner."
-msgstr ""
+msgstr "New skill: a fan of piercing thorns that cause bleeding."
 
 #. data/stats.json › area › label
 msgid "Taille des zones"
-msgstr ""
+msgstr "Area size"
 
 #. data/stats.json › area_damage › label
 msgid "Dégâts de zone"
-msgstr ""
+msgstr "Area damage"
 
 #. data/stats.json › armor › label
 msgid "Armure (réduction des dégâts)"
-msgstr ""
+msgstr "Armor (damage reduction)"
 
 #. data/stats.json › armor_cap › label
 msgid "Plafond d'armure"
-msgstr ""
+msgstr "Armor cap"
 
 #. data/stats.json › bleed › label
 msgid "Saignement (dégâts par seconde, part du coup)"
-msgstr ""
+msgstr "Bleed (damage per second, share of the hit)"
 
 #. data/stats.json › bleed_duration › label
 msgid "Durée du saignement"
-msgstr ""
+msgstr "Bleed duration"
 
 #. data/stats.json › crit › label
 msgid "Chance de critique"
-msgstr ""
+msgstr "Critical chance"
 
 #. data/stats.json › crit_mult › label
 msgid "Multiplicateur de critique"
-msgstr ""
+msgstr "Critical multiplier"
 
 #. data/stats.json › damage › label
 msgid "Dégâts"
-msgstr ""
+msgstr "Damage"
 
 #. data/stats.json › dash_cd › label
 msgid "Recharge de l'esquive"
-msgstr ""
+msgstr "Dodge cooldown"
 
 #. data/stats.json › fire_rate › label
 msgid "Vitesse d'attaque"
-msgstr ""
+msgstr "Attack speed"
 
 #. data/stats.json › lifesteal › label
 msgid "Vol de vie"
-msgstr ""
+msgstr "Life steal"
 
 #. data/stats.json › max_hp › label
 msgid "Vie maximale"
-msgstr ""
+msgstr "Maximum life"
 
 #. data/stats.json › melee_damage › label
 msgid "Dégâts au corps à corps"
-msgstr ""
+msgstr "Melee damage"
 
 #. data/stats.json › move_speed › label
 msgid "Vitesse de déplacement"
-msgstr ""
+msgstr "Movement speed"
 
 #. data/stats.json › pickup › label
 msgid "Rayon de collecte"
-msgstr ""
+msgstr "Pickup radius"
 
 #. data/stats.json › pierce › label
 msgid "Perforation"
-msgstr ""
+msgstr "Pierce"
 
 #. data/stats.json › poison › label
 msgid "Poison (dégâts du coup par seconde)"
-msgstr ""
+msgstr "Poison (hit damage per second)"
 
 #. data/stats.json › projectile_damage › label
 msgid "Dégâts des projectiles"
-msgstr ""
+msgstr "Projectile damage"
 
 #. data/stats.json › projectile_size › label
 msgid "Taille des projectiles"
-msgstr ""
+msgstr "Projectile size"
 
 #. data/stats.json › projectiles › label
 msgid "Projectiles"
-msgstr ""
+msgstr "Projectiles"
 
 #. data/stats.json › regen › label
 msgid "Régénération /s"
-msgstr ""
+msgstr "Regeneration /s"
 
 #. data/stats.json › root_duration › label
 msgid "Durée d'immobilisation"
-msgstr ""
+msgstr "Root duration"
 
 #. data/stats.json › skill_slots › label
 msgid "Emplacements de compétence"
-msgstr ""
+msgstr "Skill slots"
 
 #. data/stats.json › thorns › label
 msgid "Épines (dégâts renvoyés)"
-msgstr ""
+msgstr "Thorns (damage reflected)"
 
 #. data/synergies.json › synergies › arsenal › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "+{0} % de vitesse d'attaque."
-msgstr ""
+msgstr "+{0}% attack speed."
 
 #. data/synergies.json › synergies › arsenal › name
 msgid "Arsenal"
-msgstr ""
+msgstr "Arsenal"
 
 #. data/synergies.json › synergies › aube_tranchante › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "les coups critiques de l'attaque font {0} % de dégâts en plus, +{1} % de chance de critique."
-msgstr ""
+msgstr "the attack's critical hits deal {0}% more damage, +{1}% critical chance."
 
 #. data/synergies.json › synergies › aube_tranchante › name
 msgid "Aube tranchante"
-msgstr ""
+msgstr "Keen Dawn"
 
 #. data/synergies.json › synergies › jardin_piege › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "chaque coup de l'attaque empoisonne ({0} % des dégâts par seconde)."
-msgstr ""
+msgstr "each hit of the attack poisons ({0}% of damage per second)."
 
 #. data/synergies.json › synergies › jardin_piege › name
 msgid "Jardin piégé"
-msgstr ""
+msgstr "Trapped Garden"
 
 #. data/synergies.json › synergies › massue_solaire › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "{0} % de chances d'éblouir l'ennemi touché."
-msgstr ""
+msgstr "{0}% chance to dazzle the enemy hit."
 
 #. data/synergies.json › synergies › massue_solaire › name
 msgid "Massue solaire"
-msgstr ""
+msgstr "Solar Club"
 
 #. data/synergies.json › synergies › pluie_fongique › desc
 msgid "au premier coup, le projectile se divise en une branche de plus."
-msgstr ""
+msgstr "on the first hit, the projectile splits into one more branch."
 
 #. data/synergies.json › synergies › pluie_fongique › name
 msgid "Pluie fongique"
-msgstr ""
+msgstr "Fungal Rain"
 
 #. data/synergies.json › synergies › prisme_d_epines › desc
 msgid "au premier ennemi touché, le rayon se brise en un rayon oblique de plus."
-msgstr ""
+msgstr "on the first enemy hit, the ray breaks into one more slanting ray."
 
 #. data/synergies.json › synergies › prisme_d_epines › name
 msgid "Prisme d'épines"
-msgstr ""
+msgstr "Prism of Thorns"
 
 #. data/synergies.json › synergies › racines_et_seve › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "chaque coup de l'attaque te couvre d'écorce ({0} % des dégâts en bouclier)."
-msgstr ""
+msgstr "each hit of the attack covers you in bark ({0}% of damage as a shield)."
 
 #. data/synergies.json › synergies › racines_et_seve › name
 msgid "Racines et sève"
-msgstr ""
+msgstr "Roots and Sap"
 
 #. data/synergies.json › synergies › ronces_croisees › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "chaque coup de l'attaque fait saigner ({0} % des dégâts par seconde)."
-msgstr ""
+msgstr "each hit of the attack causes bleeding ({0}% of damage per second)."
 
 #. data/synergies.json › synergies › ronces_croisees › name
 msgid "Ronces croisées"
-msgstr ""
+msgstr "Crossed Brambles"
 
 #. data/synergies.json › synergies › rosee_d_aube › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "un ennemi tué par l'attaque te rend {0} % de ta vie maximale."
-msgstr ""
+msgstr "an enemy killed by the attack restores {0}% of your maximum life."
 
 #. data/synergies.json › synergies › rosee_d_aube › name
 msgid "Rosée d'aube"
-msgstr ""
+msgstr "Dawn Dew"
 
 #. data/synergies.json › synergies › seve_et_bois › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "chaque coup de l'attaque te rend {0} % des dégâts infligés."
-msgstr ""
+msgstr "each hit of the attack gives you back {0}% of the damage dealt."
 
 #. data/synergies.json › synergies › seve_et_bois › name
 msgid "Sève et bois"
-msgstr ""
+msgstr "Sap and Wood"
 
 #. data/synergies.json › synergies › tempete_de_spores › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "un ennemi tué par l'attaque libère un nuage de spores ({0} % des dégâts par seconde)."
-msgstr ""
+msgstr "an enemy killed by the attack releases a spore cloud ({0}% of damage per second)."
 
 #. data/synergies.json › synergies › tempete_de_spores › name
 msgid "Tempête de spores"
-msgstr ""
+msgstr "Spore Storm"
 
 #. data/synergies.json › synergies › terre_fendue › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "chaque coup au corps à corps secoue le sol ({0} % des dégâts autour de l'impact)."
-msgstr ""
+msgstr "each melee hit shakes the ground ({0}% of damage around the impact)."
 
 #. data/synergies.json › synergies › terre_fendue › name
 msgid "Terre fendue"
-msgstr ""
+msgstr "Cleft Earth"
 
 #. data/synergies.json › synergies › vent_double › desc
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "en mouvement, l'attaque fait {0} % de dégâts en plus."
-msgstr ""
+msgstr "while moving, the attack deals {0}% more damage."
 
 #. data/synergies.json › synergies › vent_double › name
 msgid "Vent double"
-msgstr ""
+msgstr "Twin Wind"
 
 #. data/tree.json › root › desc
 msgid "Le cœur de l'arbre. Tout part d'ici."
-msgstr ""
+msgstr "The heart of the tree. Everything starts here."
 
 #. data/tree.json › root › name
 msgid "Graine de l'Arbre-Monde"
-msgstr ""
+msgstr "Seed of the World Tree"
 
 #. project.godot › application/config/name
 msgctxt "nom du jeu"
 msgid "Arborescence"
-msgstr ""
+msgstr "Arborescence"
 
 #. scripts/attack.gd:1118
 msgid "Attaque de base : %s. %s"
-msgstr ""
+msgstr "Basic attack: %s. %s"
 
 #. scripts/attack.gd:1122
 msgid "Attaque : %s"
-msgstr ""
+msgstr "Attack: %s"
 
 #. scripts/attack.gd:1138
 #. scripts/attack.gd:1299
 #. scripts/skill_tree.gd:1028
 #. scripts/tree_ui.gd:924
 msgid "%s : %s"
-msgstr ""
+msgstr "%s: %s"
 
 #. scripts/attack.gd:1141
 msgid "En écho, %s : %s"
-msgstr ""
+msgstr "As an echo, %s: %s"
 
 #. scripts/attack.gd:1147
 msgid " (sans effet sur : %s)"
-msgstr ""
+msgstr " (no effect on: %s)"
 
 #. scripts/attack.gd:1147
 #. scripts/options_panel.gd:423
 msgid ", "
-msgstr ""
+msgstr ", "
 
 #. scripts/attack.gd:1150
 #. scripts/attack.gd:1330
 msgid "Synergie « %s » : %s"
-msgstr ""
+msgstr "Synergy “%s”: %s"
 
 #. scripts/attack.gd:1177
 msgid "Attaque : %s → %s"
-msgstr ""
+msgstr "Attack: %s → %s"
 
 #. scripts/attack.gd:1179
 msgid " (%s continue en écho)"
-msgstr ""
+msgstr " (%s carries on as an echo)"
 
 #. scripts/attack.gd:1183
 msgid "Attaque : + %s, en écho (tire en plus, à sa cadence)"
-msgstr ""
+msgstr "Attack: + %s, as an echo (fires as well, at its own rate)"
 
 #. scripts/attack.gd:1186
 #. scripts/attack.gd:1204
 msgid "Attaque : − %s"
-msgstr ""
+msgstr "Attack: − %s"
 
 #. scripts/attack.gd:1202
 msgid "Attaque : + %s (%s)"
-msgstr ""
+msgstr "Attack: + %s (%s)"
 
 #. scripts/attack.gd:1206
 msgid "Attaque, %s : %s → %s"
-msgstr ""
+msgstr "Attack, %s: %s → %s"
 
 #. scripts/attack.gd:1208
 msgid " (sans effet sur cette forme)"
-msgstr ""
+msgstr " (no effect on this form)"
 
 #. scripts/attack.gd:1212
 msgid "Synergie : + %s (%s)"
-msgstr ""
+msgstr "Synergy: + %s (%s)"
 
 #. scripts/attack.gd:1215
 msgid "Synergie : − %s"
-msgstr ""
+msgstr "Synergy: − %s"
 
 #. scripts/attack.gd:1272
 msgid "une attaque au corps à corps"
-msgstr ""
+msgstr "a melee attack"
 
 #. scripts/attack.gd:1272
 msgid "une attaque de zone"
-msgstr ""
+msgstr "an area attack"
 
 #. scripts/attack.gd:1272
 msgid "une attaque à projectiles"
-msgstr ""
+msgstr "a projectile attack"
 
 #. scripts/attack.gd:1283
 msgid "une forme de %s"
-msgstr ""
+msgstr "a %s form"
 
 #. scripts/attack.gd:1285
 msgid "%d formes d'attaque"
-msgstr ""
+msgstr "%d attack forms"
 
 #. scripts/attack.gd:1332
 msgid "Synergie possible « %s » : %s"
-msgstr ""
+msgstr "Possible synergy “%s”: %s"
 
 #. scripts/boss_arena.gd:36
 #. scripts/finale_arena.gd:67
 msgid "Phase 1 sur 3"
-msgstr ""
+msgstr "Phase 1 of 3"
 
 #. scripts/boss_arena.gd:36
 msgid "Phase 2 sur 3 : les bourgeons éclosent"
-msgstr ""
+msgstr "Phase 2 of 3: the buds burst open"
 
 #. scripts/boss_arena.gd:36
 msgid "Phase 3 sur 3 : les ronces se resserrent"
-msgstr ""
+msgstr "Phase 3 of 3: the brambles close in"
 
 #. scripts/boss_base.gd:284
 msgid "Entravée"
-msgstr ""
+msgstr "Snared"
 
 #. scripts/boss_vent.gd:113
 #. scripts/enemy_behaviors/glider.gd:70
 msgid "Hors d'atteinte"
-msgstr ""
+msgstr "Out of reach"
 
 #. scripts/controls_text.gd:101
 msgid "%s : compétence 1   ·   %s : compétence 2   ·   %s : compétences secondaires"
-msgstr ""
+msgstr "%s: skill 1   ·   %s: skill 2   ·   %s: secondary skills"
 
 #. scripts/controls_text.gd:102
 msgid "%s et %s : tes deux compétences principales   ·   %s : compétences secondaires"
-msgstr ""
+msgstr "%s and %s: your two main skills   ·   %s: secondary skills"
 
 #. scripts/controls_text.gd:121
 msgid "Le héros marche vers le curseur"
-msgstr ""
+msgstr "The hero walks toward the cursor"
 
 #. scripts/controls_text.gd:121
 msgid "Souris"
-msgstr ""
+msgstr "Mouse"
 
 #. scripts/controls_text.gd:123
 #. scripts/controls_text.gd:8
 #. scripts/settings.gd:485
 msgid "Clic droit"
-msgstr ""
+msgstr "Right click"
 
 #. scripts/controls_text.gd:123
 msgid "Marcher jusqu'au point cliqué"
-msgstr ""
+msgstr "Walk to the clicked spot"
 
 #. scripts/controls_text.gd:125
 #. scripts/controls_text.gd:141
 msgid "Se déplacer"
-msgstr ""
+msgstr "Move"
 
 #. scripts/controls_text.gd:126
 #. scripts/settings.gd:117
 #. scripts/settings.gd:53
 msgid "Automatique"
-msgstr ""
+msgstr "Automatic"
 
 #. scripts/controls_text.gd:126
 msgid "L'attaque de base part toute seule sur l'ennemi visé"
-msgstr ""
+msgstr "The basic attack fires on its own at the targeted enemy"
 
 #. scripts/controls_text.gd:127
 #. scripts/controls_text.gd:143
 #. scripts/options_panel.gd:66
 msgid "Compétence principale 1"
-msgstr ""
+msgstr "Main skill 1"
 
 #. scripts/controls_text.gd:128
 #. scripts/controls_text.gd:144
 #. scripts/options_panel.gd:66
 msgid "Compétence principale 2"
-msgstr ""
+msgstr "Main skill 2"
 
 #. scripts/controls_text.gd:129
 #. scripts/controls_text.gd:145
 msgid "Compétences secondaires"
-msgstr ""
+msgstr "Secondary skills"
 
 #. scripts/controls_text.gd:130
 #. scripts/controls_text.gd:146
 #. scripts/settings.gd:83
 msgid "Esquive"
-msgstr ""
+msgstr "Dodge"
 
 #. scripts/controls_text.gd:131
 #. scripts/controls_text.gd:147
@@ -7953,203 +7953,205 @@ msgstr ""
 #. scripts/tree_ui.gd:1721
 #. scripts/tree_ui.gd:1756
 msgid "Arbre de vie"
-msgstr ""
+msgstr "Tree of Life"
 
 #. scripts/controls_text.gd:142
 msgid "Viser (sinon, la cible la plus proche)"
-msgstr ""
+msgstr "Aim (otherwise, the nearest target)"
 
 #. scripts/controls_text.gd:148
 #. scripts/settings.gd:83
 #. scripts/world_map.gd:169
 #. scripts/world_map.gd:235
 msgid "Carte"
-msgstr ""
+msgstr "Map"
 
 #. scripts/controls_text.gd:19
 #. scripts/settings.gd:532
 msgid "Ctrl"
-msgstr ""
+msgstr "Ctrl"
 
 #. scripts/controls_text.gd:19
 #. scripts/settings.gd:532
 msgid "Entrée"
-msgstr ""
+msgstr "Enter"
 
 #. scripts/controls_text.gd:19
 #. scripts/settings.gd:532
 msgid "Espace"
-msgstr ""
+msgstr "Space"
 
 #. scripts/controls_text.gd:19
 #. scripts/settings.gd:532
 msgid "Maj"
-msgstr ""
+msgstr "Shift"
 
 #. scripts/controls_text.gd:19
 #. scripts/settings.gd:532
 msgid "Retour arrière"
-msgstr ""
+msgstr "Backspace"
 
 #. scripts/controls_text.gd:19
 msgid "Échap"
-msgstr ""
+msgstr "Esc"
 
 #. scripts/controls_text.gd:36
 #. scripts/settings.gd:489
 msgid "Souris %d"
-msgstr ""
+msgstr "Mouse %d"
 
 #. scripts/controls_text.gd:7
 #. scripts/settings.gd:484
 msgid "Clic gauche"
-msgstr ""
+msgstr "Left click"
 
 #. scripts/controls_text.gd:87
 msgid "l'attaque part toute seule"
-msgstr ""
+msgstr "the attack fires on its own"
 
 #. scripts/controls_text.gd:87
 msgid "l'attaque part toute seule vers le curseur"
-msgstr ""
+msgstr "the attack fires on its own toward the cursor"
 
 #. scripts/controls_text.gd:9
 msgid "Clic molette"
-msgstr ""
+msgstr "Wheel click"
 
 #. scripts/controls_text.gd:90
 msgid "La souris guide le héros   ·   %s   ·   %s : esquive"
-msgstr ""
+msgstr "The mouse guides the hero   ·   %s   ·   %s: dodge"
 
 #. scripts/controls_text.gd:92
 msgid "Clic droit : marcher jusqu'au point   ·   %s   ·   %s : esquive"
-msgstr ""
+msgstr "Right click: walk to the spot   ·   %s   ·   %s: dodge"
 
 #. scripts/controls_text.gd:93
 msgid "%s : se déplacer   ·   %s   ·   %s : esquive"
-msgstr ""
+msgstr "%s: move   ·   %s   ·   %s: dodge"
 
 #. scripts/effects.gd:259
 msgid "Nouvelle compétence"
-msgstr ""
+msgstr "New skill"
 
 #. scripts/effects.gd:267
 msgid "%s ×%s"
-msgstr ""
+msgstr "%s ×%s"
 
 #. scripts/effects.gd:271
 msgid "%s%s %% %s"
-msgstr ""
+msgstr "%s%s%% %s"
 
 #. scripts/effects.gd:273
 msgid "%s%s %s"
-msgstr ""
+msgstr "%s%s %s"
 
 #. scripts/effects.gd:279
 msgid " (%s)"
-msgstr ""
+msgstr " (%s)"
 
 #. scripts/effects.gd:279
 #. scripts/enemy.gd:252
 msgid " et "
-msgstr ""
+msgstr " and "
 
 #. scripts/enemy.gd:252
 msgctxt "élite : nom puis modificateurs"
 msgid "%s %s"
-msgstr ""
+msgstr "%s, %s"
 
 #. scripts/enemy.gd:415
 msgid "Enragé !"
-msgstr ""
+msgstr "Enraged!"
 
 #. scripts/enemy_behaviors/burrower.gd:72
 msgid "Sous terre"
-msgstr ""
+msgstr "Underground"
 
 #. scripts/finale_arena.gd:67
 msgid "Phase 2 sur 3"
-msgstr ""
+msgstr "Phase 2 of 3"
 
 #. scripts/finale_arena.gd:67
 msgid "Phase 3 sur 3"
-msgstr ""
+msgstr "Phase 3 of 3"
 
 #. scripts/fx.gd:238
 msgid "Sève −%d"
-msgstr ""
+msgstr "Sap −%d"
 
 #. scripts/fx.gd:240
 msgid "étourdi"
-msgstr ""
+msgstr "stunned"
 
 #. scripts/game.gd:274
 #. scripts/game.gd:321
 msgid "Build %d"
-msgstr ""
+msgstr "Build %d"
 
 #. scripts/game.gd:53
 msgid "Autel ravivé"
-msgstr ""
+msgstr "Altar revived"
 
 #. scripts/game.gd:53
 msgid "Boss vaincu"
-msgstr ""
+msgstr "Boss defeated"
 
 #. scripts/game.gd:53
 #. scripts/region_ui.gd:61
 msgid "Cœur purifié"
-msgstr ""
+msgstr "Heart cleansed"
 
 #. scripts/game.gd:54
 msgid "Objectif accompli"
-msgstr ""
+msgstr "Goal reached"
 
 #. scripts/game.gd:54
 msgid "Secret découvert"
-msgstr ""
+msgstr "Secret found"
 
 #. scripts/game.gd:596
 msgid "Couvert de cendre : %s"
-msgstr ""
+msgstr "Covered in ash: %s"
 
 #. scripts/game.gd:596
 msgid "un évènement du monde doit le libérer."
-msgstr ""
+msgstr "something in the world must free it."
 
 #. scripts/game.gd:607
 msgid "Demande la compétence « %s »."
-msgstr ""
+msgstr "Requires the “%s” skill."
 
 #. scripts/game.gd:610
 msgid "Incompatible avec « %s »."
-msgstr ""
+msgstr "Incompatible with “%s”."
 
 #. scripts/heart.gd:255
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
-msgstr ""
+msgstr "Return to the zone: the blight is gaining ground"
 
 #. scripts/heart.gd:255
 msgid "Tiens la zone : %d s"
-msgstr ""
+msgstr "Hold the ground: %d s"
 
 #. scripts/hud.gd:249
 msgid "Compétence principale %d (%s)"
-msgstr ""
+msgstr "Main skill %d (%s)"
 
 #. scripts/hud.gd:250
 msgid "Compétence secondaire %d (%s)"
-msgstr ""
+msgstr "Secondary skill %d (%s)"
 
 #. scripts/hud.gd:302
 msgid "verrouillé"
-msgstr ""
+msgstr "locked"
 
 #. scripts/hud.gd:348
 msgid ""
 "%s : emplacement libre.\n"
 "Clique pour y placer une compétence acquise, ou glisse-en une dessus."
 msgstr ""
+"%s: empty slot.\n"
+"Click to place a skill you have learned, or drag one onto it."
 
 #. scripts/hud.gd:353
 msgid ""
@@ -8157,52 +8159,55 @@ msgid ""
 "%s\n"
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 msgstr ""
+"%s  (%s)\n"
+"%s\n"
+"Click to change skill, or drag it onto another slot."
 
 #. scripts/main.gd:1100
 msgid "%s vaincu"
-msgstr ""
+msgstr "%s defeated"
 
 #. scripts/main.gd:346
 #. scripts/save_game.gd:138
 #. scripts/save_game.gd:190
 msgid "aucune sauvegarde"
-msgstr ""
+msgstr "no save"
 
 #. scripts/main.gd:347
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
-msgstr ""
+msgstr "Unreadable save (%s): new game."
 
 #. scripts/options_panel.gd:119
 msgid "Volume général"
-msgstr ""
+msgstr "Master volume"
 
 #. scripts/options_panel.gd:120
 msgid "Musique"
-msgstr ""
+msgstr "Music"
 
 #. scripts/options_panel.gd:121
 msgid "Effets"
-msgstr ""
+msgstr "Effects"
 
 #. scripts/options_panel.gd:122
 msgid "Ambiance"
-msgstr ""
+msgstr "Ambience"
 
 #. scripts/options_panel.gd:126
 msgid "Plein écran"
-msgstr ""
+msgstr "Fullscreen"
 
 #. scripts/options_panel.gd:131
 msgid "Afficher les glyphes de touches (tutoriel)"
-msgstr ""
+msgstr "Show key glyphs (tutorial)"
 
 #. scripts/options_panel.gd:135
 msgid "Chiffres de dégâts"
-msgstr ""
+msgstr "Damage numbers"
 
 #. scripts/options_panel.gd:141
 msgid "Réduire les effets (secousse, micro-pause, particules)"
-msgstr ""
+msgstr "Reduce effects (shake, hit-stop, particles)"
 
 #. scripts/options_panel.gd:148
 #. scripts/options_panel.gd:150
@@ -8210,1104 +8215,1108 @@ msgstr ""
 #. scripts/settings.gd:29
 #. scripts/settings.gd:64
 msgid "Aucun"
-msgstr ""
+msgstr "None"
 
 #. scripts/options_panel.gd:148
 msgid "Éclats lumineux"
-msgstr ""
+msgstr "Bright flashes"
 
 #. scripts/options_panel.gd:149
 #. scripts/options_panel.gd:151
 #. scripts/options_panel.gd:549
 #. scripts/options_panel.gd:600
 msgid "Aucune"
-msgstr ""
+msgstr "None"
 
 #. scripts/options_panel.gd:149
 msgid "Micro-pauses"
-msgstr ""
+msgstr "Hit-stop"
 
 #. scripts/options_panel.gd:154
 msgid "Contraste renforcé"
-msgstr ""
+msgstr "High contrast"
 
 #. scripts/options_panel.gd:158
 msgid "Taille du texte"
-msgstr ""
+msgstr "Text size"
 
 #. scripts/options_panel.gd:162
 msgid "Mode daltonien"
-msgstr ""
+msgstr "Colorblind mode"
 
 #. scripts/options_panel.gd:170
 msgid "Langue"
-msgstr ""
+msgstr "Language"
 
 #. scripts/options_panel.gd:171
 msgid "Langue du système"
-msgstr ""
+msgstr "System language"
 
 #. scripts/options_panel.gd:178
 msgid "Difficulté"
-msgstr ""
+msgstr "Difficulty"
 
 #. scripts/options_panel.gd:185
 msgid "Déplacement"
-msgstr ""
+msgstr "Movement"
 
 #. scripts/options_panel.gd:192
 msgid "Visée"
-msgstr ""
+msgstr "Aiming"
 
 #. scripts/options_panel.gd:199
 msgid "Rafales"
-msgstr ""
+msgstr "Wind gusts"
 
 #. scripts/options_panel.gd:203
 msgid "Mettre en pause quand la fenêtre perd le focus"
-msgstr ""
+msgstr "Pause when the window loses focus"
 
 #. scripts/options_panel.gd:209
 msgid "Commandes des compétences"
-msgstr ""
+msgstr "Skill controls"
 
 #. scripts/options_panel.gd:219
 msgid "Principale 2, mode MOBA"
-msgstr ""
+msgstr "Main 2, MOBA mode"
 
 #. scripts/options_panel.gd:229
 msgid "Commandes du jeu"
-msgstr ""
+msgstr "Game controls"
 
 #. scripts/options_panel.gd:251
 msgid "Manette"
-msgstr ""
+msgstr "Controller"
 
 #. scripts/options_panel.gd:254
 msgid "Glyphes"
-msgstr ""
+msgstr "Glyphs"
 
 #. scripts/options_panel.gd:279
 msgid "Stick gauche : marcher. Stick droit : viser (lâché, la visée va à la cible la plus proche). Start : pause. A valide et B revient dans les menus ; LB et RB changent d'onglet."
-msgstr ""
+msgstr "Left stick: walk. Right stick: aim (when released, aim goes to the nearest target). Start: pause. A confirms and B goes back in menus; LB and RB switch tabs."
 
 #. scripts/options_panel.gd:282
 msgid "Rétablir les commandes par défaut"
-msgstr ""
+msgstr "Restore default controls"
 
 #. scripts/options_panel.gd:289
 msgid "Retour"
-msgstr ""
+msgstr "Back"
 
 #. scripts/options_panel.gd:417
 msgid "%s (ou %s)"
-msgstr ""
+msgstr "%s (or %s)"
 
 #. scripts/options_panel.gd:423
 msgid " (ou %s)"
-msgstr ""
+msgstr " (or %s)"
 
 #. scripts/options_panel.gd:432
 msgid "Appuie sur un bouton de la manette pour : %s (Start ou Échap : annuler)."
-msgstr ""
+msgstr "Press a controller button for: %s (Start or Esc: cancel)."
 
 #. scripts/options_panel.gd:434
 msgid "Appuie sur un bouton ou une gâchette de la manette pour : %s (Start ou Échap : annuler, %s : aucun)."
-msgstr ""
+msgstr "Press a controller button or trigger for: %s (Start or Esc: cancel, %s: none)."
 
 #. scripts/options_panel.gd:436
 msgid "Appuie sur une touche pour : %s (Échap : annuler)."
-msgstr ""
+msgstr "Press a key for: %s (Esc: cancel)."
 
 #. scripts/options_panel.gd:438
 msgid "Appuie sur une touche pour la compétence principale 2 en mode MOBA (Échap : annuler)."
-msgstr ""
+msgstr "Press a key for main skill 2 in MOBA mode (Esc: cancel)."
 
 #. scripts/options_panel.gd:440
 msgid "Appuie sur une touche ou un bouton de la souris pour : %s (Échap : annuler, Retour arrière : aucune)."
-msgstr ""
+msgstr "Press a key or mouse button for: %s (Esc: cancel, Backspace: none)."
 
 #. scripts/options_panel.gd:485
 msgid "%s est déjà utilisée : %s."
-msgstr ""
+msgstr "%s is already used: %s."
 
 #. scripts/options_panel.gd:490
 msgid "%s est déjà utilisée par une autre commande."
-msgstr ""
+msgstr "%s is already used by another control."
 
 #. scripts/options_panel.gd:528
 msgid "%s est déjà utilisé : %s."
-msgstr ""
+msgstr "%s is already used: %s."
 
 #. scripts/options_panel.gd:59
 #. scripts/settings.gd:809
 msgid "Affichage"
-msgstr ""
+msgstr "Display"
 
 #. scripts/options_panel.gd:59
 msgid "Commandes"
-msgstr ""
+msgstr "Controls"
 
 #. scripts/options_panel.gd:59
 msgid "Jeu"
-msgstr ""
+msgstr "Game"
 
 #. scripts/options_panel.gd:59
 msgid "Son"
-msgstr ""
+msgstr "Sound"
 
 #. scripts/options_panel.gd:615
 msgid "Les dangers, les élites et le butin changent de teinte ; les zones d'attaque annoncées sont hachurées."
-msgstr ""
+msgstr "Dangers, elites and loot change hue; telegraphed attack zones are hatched."
 
 #. scripts/options_panel.gd:617
 msgid "Textes secondaires et filets plus marqués, zones de danger plus opaques."
-msgstr ""
+msgstr "Bolder secondary text and rules, more opaque danger zones."
 
 #. scripts/options_panel.gd:619
 msgid "La taille du texte s'applique aux écrans ouverts ensuite."
-msgstr ""
+msgstr "Text size applies to screens opened afterward."
 
 #. scripts/options_panel.gd:630
 msgid "Coupées"
-msgstr ""
+msgstr "Off"
 
 #. scripts/options_panel.gd:66
 msgid "Compétence secondaire 1"
-msgstr ""
+msgstr "Secondary skill 1"
 
 #. scripts/options_panel.gd:66
 msgid "Compétence secondaire 2"
-msgstr ""
+msgstr "Secondary skill 2"
 
 #. scripts/options_panel.gd:66
 msgid "Compétence secondaire 3"
-msgstr ""
+msgstr "Secondary skill 3"
 
 #. scripts/options_panel.gd:66
 msgid "Compétence secondaire 4"
-msgstr ""
+msgstr "Secondary skill 4"
 
 #. scripts/options_panel.gd:78
 #. scripts/pause_menu.gd:51
 #. scripts/settings.gd:812
 #. scripts/title.gd:70
 msgid "Options"
-msgstr ""
+msgstr "Options"
 
 #. scripts/pause_menu.gd:108
 msgid "Niveau %d  ·  %d nœuds appris"
-msgstr ""
+msgstr "Level %d  ·  %d nodes learned"
 
 #. scripts/pause_menu.gd:31
 msgid "LE MONDE RETIENT SON SOUFFLE"
-msgstr ""
+msgstr "THE WORLD HOLDS ITS BREATH"
 
 #. scripts/pause_menu.gd:38
 msgid "Pause"
-msgstr ""
+msgstr "Pause"
 
 #. scripts/pause_menu.gd:48
 msgid "Reprendre"
-msgstr ""
+msgstr "Resume"
 
 #. scripts/pause_menu.gd:54
 msgid "Retour au titre"
-msgstr ""
+msgstr "Back to title"
 
 #. scripts/pause_menu.gd:58
 #. scripts/title.gd:76
 msgid "Quitter"
-msgstr ""
+msgstr "Quit"
 
 #. scripts/region_ui.gd:51
 msgid "%d / %d autels"
-msgstr ""
+msgstr "%d / %d altars"
 
 #. scripts/region_ui.gd:51
 msgid "%d / %d sanctuaires"
-msgstr ""
+msgstr "%d / %d sanctuaries"
 
 #. scripts/region_ui.gd:59
 msgid "région purifiée"
-msgstr ""
+msgstr "region cleansed"
 
 #. scripts/region_ui.gd:61
 msgid "Cœurs purifiés"
-msgstr ""
+msgstr "Hearts cleansed"
 
 #. scripts/region_ui.gd:63
 msgid "%d / %d Cœurs"
-msgstr ""
+msgstr "%d / %d Hearts"
 
 #. scripts/region_ui.gd:70
 msgid "Sous la graine"
-msgstr ""
+msgstr "Beneath the seed"
 
 #. scripts/region_ui.gd:77
 msgid "Flétrissure vaincue"
-msgstr ""
+msgstr "Blight defeated"
 
 #. scripts/region_ui.gd:79
 msgid "brèche ouverte"
-msgstr ""
+msgstr "breach open"
 
 #. scripts/region_ui.gd:80
 msgid "scellée"
-msgstr ""
+msgstr "sealed"
 
 #. scripts/region_ui.gd:92
 msgid "scellée  ·  %d / %d régions purifiées"
-msgstr ""
+msgstr "sealed  ·  %d / %d regions cleansed"
 
 #. scripts/sanctuary.gd:31
 msgid "de la Graine"
-msgstr ""
+msgstr "of the Seed"
 
 #. scripts/sanctuary.gd:87
 msgid "sanctuaire %s"
-msgstr ""
+msgstr "%s sanctuary"
 
 #. scripts/save_game.gd:194
 msgid "fichier illisible ou d'un autre format"
-msgstr ""
+msgstr "unreadable file or unknown format"
 
 #. scripts/save_game.gd:198
 msgid "sauvegarde créée par une version plus récente du jeu (format %d > %d)"
-msgstr ""
+msgstr "save made by a newer version of the game (format %d > %d)"
 
 #. scripts/settings.gd:117
 msgid "PlayStation (croix, rond…)"
-msgstr ""
+msgstr "PlayStation (cross, circle…)"
 
 #. scripts/settings.gd:117
 msgid "Xbox (A B X Y)"
-msgstr ""
+msgstr "Xbox (A B X Y)"
 
 #. scripts/settings.gd:138
 msgid "Clavier (Z Q S D)"
-msgstr ""
+msgstr "Keyboard (W A S D)"
 
 #. scripts/settings.gd:138
 msgid "Clic droit (MOBA)"
-msgstr ""
+msgstr "Right click (MOBA)"
 
 #. scripts/settings.gd:138
 msgid "Suivre le curseur"
-msgstr ""
+msgstr "Follow the cursor"
 
 #. scripts/settings.gd:29
 msgid "Critiques et dégâts reçus"
-msgstr ""
+msgstr "Criticals and damage taken"
 
 #. scripts/settings.gd:29
 msgid "Tous"
-msgstr ""
+msgstr "All"
 
 #. scripts/settings.gd:387
 #. scripts/settings.gd:849
 msgid "compétence %d"
-msgstr ""
+msgstr "skill %d"
 
 #. scripts/settings.gd:389
 msgid "compétence principale 2 (MOBA)"
-msgstr ""
+msgstr "main skill 2 (MOBA)"
 
 #. scripts/settings.gd:399
 msgid "le menu"
-msgstr ""
+msgstr "the menu"
 
 #. scripts/settings.gd:472
 msgid "Clic G"
-msgstr ""
+msgstr "L click"
 
 #. scripts/settings.gd:473
 msgid "Clic D"
-msgstr ""
+msgstr "R click"
 
 #. scripts/settings.gd:474
 msgid "Clic M"
-msgstr ""
+msgstr "M click"
 
 #. scripts/settings.gd:486
 msgid "Clic milieu"
-msgstr ""
+msgstr "Middle click"
 
 #. scripts/settings.gd:487
 msgid "Bouton 4"
-msgstr ""
+msgstr "Button 4"
 
 #. scripts/settings.gd:488
 msgid "Bouton 5"
-msgstr ""
+msgstr "Button 5"
 
 #. scripts/settings.gd:53
 msgid "Vers le curseur"
-msgstr ""
+msgstr "Toward the cursor"
 
 #. scripts/settings.gd:531
 msgid "Flèche bas"
-msgstr ""
+msgstr "Down arrow"
 
 #. scripts/settings.gd:531
 msgid "Flèche droite"
-msgstr ""
+msgstr "Right arrow"
 
 #. scripts/settings.gd:531
 msgid "Flèche gauche"
-msgstr ""
+msgstr "Left arrow"
 
 #. scripts/settings.gd:531
 msgid "Flèche haut"
-msgstr ""
+msgstr "Up arrow"
 
 #. scripts/settings.gd:532
 msgid "Tab"
-msgstr ""
+msgstr "Tab"
 
 #. scripts/settings.gd:64
 msgid "Deutéranopie (vert)"
-msgstr ""
+msgstr "Deuteranopia (green)"
 
 #. scripts/settings.gd:64
 msgid "Protanopie (rouge)"
-msgstr ""
+msgstr "Protanopia (red)"
 
 #. scripts/settings.gd:64
 msgid "Tritanopie (bleu)"
-msgstr ""
+msgstr "Tritanopia (blue)"
 
 #. scripts/settings.gd:68
 msgid "Grande"
-msgstr ""
+msgstr "Large"
 
 #. scripts/settings.gd:68
 msgid "Normale"
-msgstr ""
+msgstr "Normal"
 
 #. scripts/settings.gd:68
 msgid "Très grande"
-msgstr ""
+msgstr "Very large"
 
 #. scripts/settings.gd:724
 msgid "L'attaque de base part toute seule vers la souris, même sans ennemi."
-msgstr ""
+msgstr "The basic attack fires on its own toward the mouse, even with no enemy around."
 
 #. scripts/settings.gd:725
 msgid "L'attaque de base part toute seule sur l'ennemi à portée le plus proche du curseur. Sans ennemi à portée, elle ne part pas."
-msgstr ""
+msgstr "The basic attack fires on its own at the enemy in range nearest the cursor. With no enemy in range, it holds."
 
 #. scripts/settings.gd:733
 msgid "Clic droit : le héros marche jusqu'à l'endroit cliqué (un repère s'affiche au sol) ; clic droit tenu : il suit le curseur. La compétence du clic droit passe sur %s ; Espace reste l'esquive, vers le curseur."
-msgstr ""
+msgstr "Right click: the hero walks to the clicked spot (a marker shows on the ground); hold right click: the hero follows the cursor. The right-click skill moves to %s; Space stays the dodge, toward the cursor."
 
 #. scripts/settings.gd:735
 msgid "Le héros marche vers la souris et s'arrête quand elle est tout près de lui. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur. L'esquive part vers le curseur."
-msgstr ""
+msgstr "The hero walks toward the mouse and stops when it is very close. The attack fires on its own; left and right click cast skills toward the cursor. The dodge goes toward the cursor."
 
 #. scripts/settings.gd:736
 msgid "Z Q S D (W A S D en QWERTY) ou les flèches. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur."
-msgstr ""
+msgstr "W A S D (Z Q S D on AZERTY) or the arrow keys. The attack fires on its own; left and right click cast skills toward the cursor."
 
 #. scripts/settings.gd:809
 msgid "Menu"
-msgstr ""
+msgstr "Menu"
 
 #. scripts/settings.gd:810
 msgid "Stick D"
-msgstr ""
+msgstr "R stick"
 
 #. scripts/settings.gd:810
 msgid "Stick G"
-msgstr ""
+msgstr "L stick"
 
 #. scripts/settings.gd:811
 msgid "Carré"
-msgstr ""
+msgstr "Square"
 
 #. scripts/settings.gd:811
 msgid "Croix"
-msgstr ""
+msgstr "Cross"
 
 #. scripts/settings.gd:811
 msgid "Rond"
-msgstr ""
+msgstr "Circle"
 
 #. scripts/settings.gd:811
 msgid "Triangle"
-msgstr ""
+msgstr "Triangle"
 
 #. scripts/settings.gd:812
 msgid "Partage"
-msgstr ""
+msgstr "Share"
 
 #. scripts/settings.gd:814
 msgid "Croix bas"
-msgstr ""
+msgstr "D-pad down"
 
 #. scripts/settings.gd:814
 msgid "Croix gauche"
-msgstr ""
+msgstr "D-pad left"
 
 #. scripts/settings.gd:814
 msgid "Croix haut"
-msgstr ""
+msgstr "D-pad up"
 
 #. scripts/settings.gd:815
 msgid "Croix droite"
-msgstr ""
+msgstr "D-pad right"
 
 #. scripts/settings.gd:815
 msgid "Palette 1"
-msgstr ""
+msgstr "Paddle 1"
 
 #. scripts/settings.gd:815
 msgid "Palette 2"
-msgstr ""
+msgstr "Paddle 2"
 
 #. scripts/settings.gd:816
 msgid "Palette 3"
-msgstr ""
+msgstr "Paddle 3"
 
 #. scripts/settings.gd:816
 msgid "Palette 4"
-msgstr ""
+msgstr "Paddle 4"
 
 #. scripts/settings.gd:816
 msgid "Stick droit"
-msgstr ""
+msgstr "Right stick"
 
 #. scripts/settings.gd:816
 msgid "Stick gauche"
-msgstr ""
+msgstr "Left stick"
 
 #. scripts/settings.gd:817
 msgid "Croix directionnelle"
-msgstr ""
+msgstr "D-pad"
 
 #. scripts/settings.gd:82
 msgid "Aller à droite"
-msgstr ""
+msgstr "Move right"
 
 #. scripts/settings.gd:82
 msgid "Aller à gauche"
-msgstr ""
+msgstr "Move left"
 
 #. scripts/settings.gd:82
 msgid "Avancer"
-msgstr ""
+msgstr "Move up"
 
 #. scripts/settings.gd:82
 msgid "Reculer"
-msgstr ""
+msgstr "Move down"
 
 #. scripts/settings.gd:827
 msgid "Bouton %d"
-msgstr ""
+msgstr "Button %d"
 
 #. scripts/skill_tree.gd:1015
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgctxt "nœud notable : nom puis qualificatif"
 msgid "{0} {1}"
-msgstr ""
+msgstr "{1} {0}"
 
 #. scripts/skill_tree.gd:1041
 msgid " ; "
-msgstr ""
+msgstr "; "
 
 #. scripts/skill_tree.gd:36
 msgid "Mutation : %s"
-msgstr ""
+msgstr "Mutation: %s"
 
 #. scripts/skill_tree.gd:38
 msgid "Attaque"
-msgstr ""
+msgstr "Attack"
 
 #. scripts/skill_tree.gd:38
 #. scripts/tree_ui.gd:39
 msgid "Maîtrise"
-msgstr ""
+msgstr "Mastery"
 
 #. scripts/skill_tree.gd:38
 #. scripts/tree_ui.gd:38
 msgid "Nœud"
-msgstr ""
+msgstr "Node"
 
 #. scripts/skill_tree.gd:38
 #. scripts/tree_ui.gd:39
 msgid "Nœud flétri"
-msgstr ""
+msgstr "Withered node"
 
 #. scripts/skill_tree.gd:566
 #. scripts/tree_ui.gd:39
 msgid "Compétence"
-msgstr ""
+msgstr "Skill"
 
 #. scripts/skill_tree.gd:570
 #. scripts/tree_ui.gd:38
 msgid "Nœud notable"
-msgstr ""
+msgstr "Notable"
 
 #. scripts/title.gd:111
 msgid "niveau %d"
-msgstr ""
+msgstr "level %d"
 
 #. scripts/title.gd:114
 msgid "niveau %d · fin"
-msgstr ""
+msgstr "level %d · ending"
 
 #. scripts/title.gd:151
 msgid "PLANCHE I  ·  L'ARBRE DE VIE"
-msgstr ""
+msgstr "PLATE I  ·  THE TREE OF LIFE"
 
 #. scripts/title.gd:166
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
-msgstr ""
+msgstr "HERBARIUM  OF  THE  WITHERED  LANDS"
 
 #. scripts/title.gd:178
 msgid "Un monde désolé reprend vie"
-msgstr ""
+msgstr "A desolate world comes back to life"
 
 #. scripts/title.gd:179
 msgid "au rythme de ton arbre"
-msgstr ""
+msgstr "as your tree grows"
 
 #. scripts/title.gd:64
 msgid "Continuer"
-msgstr ""
+msgstr "Continue"
 
 #. scripts/title.gd:67
 msgid "Nouvelle partie"
-msgstr ""
+msgstr "New game"
 
 #. scripts/tree_builds.gd:139
 msgid "Renommer"
-msgstr ""
+msgstr "Rename"
 
 #. scripts/tree_builds.gd:147
 msgid "Charger"
-msgstr ""
+msgstr "Load"
 
 #. scripts/tree_builds.gd:147
 msgid "Nouveau"
-msgstr ""
+msgstr "New"
 
 #. scripts/tree_builds.gd:150
 msgid "Coûte %d essence hors d'un sanctuaire."
-msgstr ""
+msgstr "Costs %d essence outside a sanctuary."
 
 #. scripts/tree_builds.gd:152
 msgid "Copier ici"
-msgstr ""
+msgstr "Copy here"
 
 #. scripts/tree_builds.gd:154
 msgid "Vider"
-msgstr ""
+msgstr "Clear"
 
 #. scripts/tree_builds.gd:159
 msgid "Vide"
-msgstr ""
+msgstr "Empty"
 
 #. scripts/tree_builds.gd:161
 #. scripts/tree_planner.gd:214
 msgid "%d nœud(s) appris"
-msgstr ""
+msgstr "%d node(s) learned"
 
 #. scripts/tree_builds.gd:163
 msgid "%d prévu(s)"
-msgstr ""
+msgstr "%d planned"
 
 #. scripts/tree_builds.gd:164
 msgid "%d greffe(s)"
-msgstr ""
+msgstr "%d graft(s)"
 
 #. scripts/tree_builds.gd:181
 msgid "Nom du build"
-msgstr ""
+msgstr "Build name"
 
 #. scripts/tree_builds.gd:198
 msgid "Changer de build ici coûte %d essence : il t'en manque %d. Au sanctuaire, c'est gratuit."
-msgstr ""
+msgstr "Switching builds here costs %d essence: you are %d short. At a sanctuary, it is free."
 
 #. scripts/tree_builds.gd:203
 msgid "Build « %s » chargé"
-msgstr ""
+msgstr "Build “%s” loaded"
 
 #. scripts/tree_builds.gd:205
 msgid " (%d essence)"
-msgstr ""
+msgstr " (%d essence)"
 
 #. scripts/tree_builds.gd:207
 msgid " : %d nœud(s) attendent dans le plan"
-msgstr ""
+msgstr ": %d node(s) waiting in the plan"
 
 #. scripts/tree_builds.gd:215
 msgid "Build actif copié dans « %s »"
-msgstr ""
+msgstr "Active build copied to “%s”"
 
 #. scripts/tree_builds.gd:221
 msgid "« %s » vidé"
-msgstr ""
+msgstr "“%s” cleared"
 
 #. scripts/tree_builds.gd:47
 #. scripts/tree_panels.gd:97
 msgid "Builds"
-msgstr ""
+msgstr "Builds"
 
 #. scripts/tree_builds.gd:83
 msgid ""
 "Au sanctuaire : oublier des nœuds et changer de build est gratuit.\n"
 "« Nouveau » repart de la graine, « Copier ici » enregistre le build actif."
 msgstr ""
+"At a sanctuary, unlearning nodes and switching builds is free.\n"
+"“New” starts again from the seed; “Copy here” saves the active build."
 
 #. scripts/tree_builds.gd:84
 msgid ""
 "Près de la graine (anneaux 1 à %d), oublier est gratuit. Plus loin, cela coûte de l'essence, prise sur le niveau en cours (%d en réserve). Au sanctuaire, tout est gratuit.\n"
 "« Nouveau » repart de la graine, « Copier ici » enregistre le build actif."
 msgstr ""
+"Near the seed (rings 1 to %d), unlearning is free. Farther out, it costs essence, taken from the current level (%d in reserve). At a sanctuary, everything is free.\n"
+"“New” starts again from the seed; “Copy here” saves the active build."
 
 #. scripts/tree_grafts.gd:435
 msgid "Couronne de greffes"
-msgstr ""
+msgstr "Graft crown"
 
 #. scripts/tree_grafts.gd:437
 msgid "%d trouvée"
 msgid_plural "%d trouvées"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%d found"
+msgstr[1] "%d found"
 
 #. scripts/tree_grafts.gd:458
 msgid "%s sur un emplacement de la couronne : y poser la greffe."
-msgstr ""
+msgstr "%s on a crown slot: set the graft there."
 
 #. scripts/tree_grafts.gd:458
 msgid "Clique un emplacement de la couronne pour y poser la greffe."
-msgstr ""
+msgstr "Click a crown slot to set the graft there."
 
 #. scripts/tree_grafts.gd:460
 msgid "%s sur une greffe pour la prendre, puis sur un emplacement libre."
-msgstr ""
+msgstr "%s on a graft to pick it up, then on an empty slot."
 
 #. scripts/tree_grafts.gd:460
 msgid "Glisse une greffe dans un emplacement libre de la couronne."
-msgstr ""
+msgstr "Drag a graft into an empty crown slot."
 
 #. scripts/tree_grafts.gd:462
 msgid "%s sur un emplacement : retire sa greffe."
-msgstr ""
+msgstr "%s on a slot: removes its graft."
 
 #. scripts/tree_grafts.gd:462
 msgid "Clic sur un emplacement : retire sa greffe."
-msgstr ""
+msgstr "Click a slot: removes its graft."
 
 #. scripts/tree_grafts.gd:483
 msgid "Emplacement fermé"
-msgstr ""
+msgstr "Closed slot"
 
 #. scripts/tree_grafts.gd:484
 msgid "Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."
-msgstr ""
+msgstr "It opens when you cleanse a region's Hearts, or defeat its guardian."
 
 #. scripts/tree_grafts.gd:507
 msgid "Posée ici :"
-msgstr ""
+msgstr "Set here:"
 
 #. scripts/tree_grafts.gd:510
 msgid "Remplace « %s »."
-msgstr ""
+msgstr "Replaces “%s”."
 
 #. scripts/tree_grafts.gd:513
 msgid "Posée :"
-msgstr ""
+msgstr "Set:"
 
 #. scripts/tree_grafts.gd:516
 msgid "Retirée :"
-msgstr ""
+msgstr "Removed:"
 
 #. scripts/tree_pad.gd:523
 msgid "Croix : choisir   ·   %s : valider   ·   %s / %s : panneaux   ·   %s : revenir à l'arbre"
-msgstr ""
+msgstr "D-pad: choose   ·   %s: confirm   ·   %s / %s: panels   ·   %s: back to the tree"
 
 #. scripts/tree_pad.gd:525
 msgid "Croix : choisir   ·   %s : prendre, poser   ·   %s : retirer   ·   %s / %s : panneaux   ·   %s : revenir à l'arbre"
-msgstr ""
+msgstr "D-pad: choose   ·   %s: pick up, set   ·   %s: remove   ·   %s / %s: panels   ·   %s: back to the tree"
 
 #. scripts/tree_pad.gd:526
 msgid "%s : apprendre   ·   %s : oublier   ·   Stick G : de nœud en nœud   ·   Stick D : curseur   ·   %s / %s : zoom   ·   %s : rechercher   ·   %s / %s : panneaux   ·   %s : fermer"
-msgstr ""
+msgstr "%s: learn   ·   %s: unlearn   ·   L stick: node to node   ·   R stick: cursor   ·   %s / %s: zoom   ·   %s: search   ·   %s / %s: panels   ·   %s: close"
 
 #. scripts/tree_panels.gd:102
 msgid "Vue d'ensemble"
-msgstr ""
+msgstr "Overview"
 
 #. scripts/tree_panels.gd:112
 msgid "Valider le plan"
-msgstr ""
+msgstr "Confirm plan"
 
 #. scripts/tree_panels.gd:113
 msgid "Effacer"
-msgstr ""
+msgstr "Clear"
 
 #. scripts/tree_panels.gd:320
 msgid "%d nœud(s) retiré(s) du plan"
-msgstr ""
+msgstr "%d node(s) removed from the plan"
 
 #. scripts/tree_panels.gd:323
 msgid "%d nœud(s) ajouté(s) au plan"
-msgstr ""
+msgstr "%d node(s) added to the plan"
 
 #. scripts/tree_panels.gd:330
 msgid "Il manque %d point(s) pour ce chemin de %d nœud(s). Le mode plan permet de le préparer."
-msgstr ""
+msgstr "You are %d point(s) short for this %d-node path. Plan mode lets you prepare it."
 
 #. scripts/tree_panels.gd:332
 msgid "%d nœuds appris d'un coup"
-msgstr ""
+msgstr "%d nodes learned at once"
 
 #. scripts/tree_panels.gd:342
 msgid "Nœud oublié : %d essence"
-msgstr ""
+msgstr "Node unlearned: %d essence"
 
 #. scripts/tree_panels.gd:345
 msgid "Ce nœud en relie d'autres à la graine : oublie d'abord ceux-là."
-msgstr ""
+msgstr "This node links others to the seed: unlearn those first."
 
 #. scripts/tree_panels.gd:347
 msgid "Oublier ce nœud coûte %d essence : il t'en manque %d. Au sanctuaire, c'est gratuit."
-msgstr ""
+msgstr "Unlearning this node costs %d essence: you are %d short. At a sanctuary, it is free."
 
 #. scripts/tree_panels.gd:353
 msgid "Annulé : %s"
-msgstr ""
+msgstr "Undone: %s"
 
 #. scripts/tree_panels.gd:367
 msgid "Plan validé : %d nœuds appris"
-msgstr ""
+msgstr "Plan confirmed: %d nodes learned"
 
 #. scripts/tree_panels.gd:447
 msgid "  ·  clic droit pour l'oublier (%d essence)"
-msgstr ""
+msgstr "  ·  right click to unlearn (%d essence)"
 
 #. scripts/tree_panels.gd:447
 msgid "  ·  clic droit pour l'oublier (gratuit)"
-msgstr ""
+msgstr "  ·  right click to unlearn (free)"
 
 #. scripts/tree_panels.gd:448
 msgid "Appris%s"
-msgstr ""
+msgstr "Learned%s"
 
 #. scripts/tree_panels.gd:454
 msgid "Après ce nœud :"
-msgstr ""
+msgstr "After this node:"
 
 #. scripts/tree_panels.gd:456
 msgid "Après tout le plan (%d nœuds) :"
-msgstr ""
+msgstr "After the whole plan (%d nodes):"
 
 #. scripts/tree_panels.gd:458
 msgid "Après le plan et ce chemin (%d nœuds) :"
-msgstr ""
+msgstr "After the plan and this path (%d nodes):"
 
 #. scripts/tree_panels.gd:460
 msgid "Après ce chemin (%d nœuds) :"
-msgstr ""
+msgstr "After this path (%d nodes):"
 
 #. scripts/tree_panels.gd:465
 msgid "Dans le plan  ·  clic pour l'en retirer"
-msgstr ""
+msgstr "In the plan  ·  click to remove it"
 
 #. scripts/tree_panels.gd:467
 msgid "Clic pour ajouter au plan (%d nœud(s), %d point(s))"
-msgstr ""
+msgstr "Click to add to the plan (%d node(s), %d point(s))"
 
 #. scripts/tree_panels.gd:470
 msgid "Clic pour apprendre (1 point)"
-msgstr ""
+msgstr "Click to learn (1 point)"
 
 #. scripts/tree_panels.gd:472
 msgid "Chemin de %d nœuds, %d points  ·  clic pour tout apprendre"
-msgstr ""
+msgstr "%d-node path, %d points  ·  click to learn it all"
 
 #. scripts/tree_panels.gd:474
 msgid "Pas de point disponible : monte de niveau"
-msgstr ""
+msgstr "No point available: level up"
 
 #. scripts/tree_panels.gd:476
 msgid "Chemin de %d nœuds : il te manque %d point(s)"
-msgstr ""
+msgstr "%d-node path: you are %d point(s) short"
 
 #. scripts/tree_panels.gd:556
 msgid "%d trouvé(s)"
-msgstr ""
+msgstr "%d found"
 
 #. scripts/tree_panels.gd:562
 msgid "Mode plan : clique des nœuds pour tracer un chemin sans dépenser de points."
-msgstr ""
+msgstr "Plan mode: click nodes to trace a path without spending points."
 
 #. scripts/tree_panels.gd:564
 msgid "Plan : %d nœuds, %d points. Il t'en manque %d."
-msgstr ""
+msgstr "Plan: %d nodes, %d points. You are %d short."
 
 #. scripts/tree_panels.gd:566
 msgid "Plan : %d nœuds, %d points. Tu as de quoi le valider."
-msgstr ""
+msgstr "Plan: %d nodes, %d points. You can confirm it."
 
 #. scripts/tree_panels.gd:579
 msgid "Résumé du build"
-msgstr ""
+msgstr "Build summary"
 
 #. scripts/tree_panels.gd:580
 msgid "%d nœuds appris sur %d  ·  %d point(s) à placer"
-msgstr ""
+msgstr "%d of %d nodes learned  ·  %d point(s) to spend"
 
 #. scripts/tree_panels.gd:583
 msgid "Les valeurs après « → » tiennent compte du plan (%d nœuds)."
-msgstr ""
+msgstr "Values after “→” include the plan (%d nodes)."
 
 #. scripts/tree_panels.gd:585
 msgid "Branches"
-msgstr ""
+msgstr "Branches"
 
 #. scripts/tree_panels.gd:617
 msgid "Compétences"
-msgstr ""
+msgstr "Skills"
 
 #. scripts/tree_panels.gd:619
 msgid "Aucune pour l'instant : elles viennent des nœuds clés."
-msgstr ""
+msgstr "None yet: they come from keystones."
 
 #. scripts/tree_panels.gd:621
 #. scripts/tree_panels.gd:629
 msgid "  (plan)"
-msgstr ""
+msgstr "  (plan)"
 
 #. scripts/tree_panels.gd:623
 msgid "Nœuds clés"
-msgstr ""
+msgstr "Keystones"
 
 #. scripts/tree_panels.gd:625
 msgid "Aucun pour l'instant."
-msgstr ""
+msgstr "None yet."
 
 #. scripts/tree_panels.gd:631
 msgid "Statistiques"
-msgstr ""
+msgstr "Stats"
 
 #. scripts/tree_panels.gd:74
 msgid "Rechercher : nom, statistique, effet…"
-msgstr ""
+msgstr "Search: name, stat, effect…"
 
 #. scripts/tree_panels.gd:85
 msgid "Précédent"
-msgstr ""
+msgstr "Previous"
 
 #. scripts/tree_panels.gd:86
 msgid "Suivant"
-msgstr ""
+msgstr "Next"
 
 #. scripts/tree_panels.gd:87
 msgid "Mode plan"
-msgstr ""
+msgstr "Plan mode"
 
 #. scripts/tree_panels.gd:91
 msgid "Annuler"
-msgstr ""
+msgstr "Undo"
 
 #. scripts/tree_panels.gd:93
 msgid "Résumé"
-msgstr ""
+msgstr "Summary"
 
 #. scripts/tree_planner.gd:216
 msgid "nœud oublié"
-msgstr ""
+msgstr "node unlearned"
 
 #. scripts/tree_planner.gd:217
 msgid "modification du plan"
-msgstr ""
+msgstr "plan change"
 
 #. scripts/tree_planner.gd:27
 msgid "origine graine"
-msgstr ""
+msgstr "origin seed root"
 
 #. scripts/tree_planner.gd:28
 msgid "fletri cendre"
-msgstr ""
+msgstr "withered ash"
 
 #. scripts/tree_planner.gd:356
 msgid "%s : %s → %s"
-msgstr ""
+msgstr "%s: %s → %s"
 
 #. scripts/tree_planner.gd:365
 msgid "%s %%"
-msgstr ""
+msgstr "%s%%"
 
 #. scripts/tree_planner.gd:413
 msgid "frontière %s"
-msgstr ""
+msgstr "%s border"
 
 #. scripts/tree_ui.gd:1723
 #. scripts/tree_ui.gd:1757
 msgid "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds"
-msgstr ""
+msgstr "%d point(s) to spend  ·  Level %d  ·  %d / %d nodes"
 
 #. scripts/tree_ui.gd:1725
 #. scripts/tree_ui.gd:1759
 msgid "Chaque nœud appris ravive la région du monde située dans sa direction."
-msgstr ""
+msgstr "Each node you learn revives the part of the world that lies in its direction."
 
 #. scripts/tree_ui.gd:1735
 msgid "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer"
-msgstr ""
+msgstr "Click: learn (one node or a whole path)   ·   Right click: unlearn   ·   Drag: pan   ·   Wheel: zoom   ·   Tab / Esc: close"
 
 #. scripts/tree_ui.gd:1782
 msgid " · frontière %s et %s · anneau %d"
-msgstr ""
+msgstr " · %s and %s border · ring %d"
 
 #. scripts/tree_ui.gd:1784
 msgid " · %s · anneau %d"
-msgstr ""
+msgstr " · %s · ring %d"
 
 #. scripts/tree_ui.gd:1806
 msgid "Transforme « %s » : un seul choix"
-msgstr ""
+msgstr "Transforms “%s”: a single choice"
 
 #. scripts/tree_ui.gd:1808
 msgid "Un bonus à choisir, modifiable à tout moment"
-msgstr ""
+msgstr "A bonus to choose, changeable at any time"
 
 #. scripts/tree_ui.gd:1811
 msgid "› %s : %s"
-msgstr ""
+msgstr "› %s: %s"
 
 #. scripts/tree_ui.gd:1812
 msgid "  (choisi)"
-msgstr ""
+msgstr "  (chosen)"
 
 #. scripts/tree_ui.gd:1814
 msgid "Clic pour faire ton choix"
-msgstr ""
+msgstr "Click to make your choice"
 
 #. scripts/tree_ui.gd:1816
 msgid "Clic pour changer de bonus"
-msgstr ""
+msgstr "Click to change bonus"
 
 #. scripts/tree_ui.gd:1821
 msgid "Grappe « %s » : %d / %d nœuds"
-msgstr ""
+msgstr "Cluster “%s”: %d / %d nodes"
 
 #. scripts/tree_ui.gd:1823
 msgid "Grappe complète : %s"
-msgstr ""
+msgstr "Cluster complete: %s"
 
 #. scripts/tree_ui.gd:1838
 msgid "Résonance de %s : tous les paliers atteints (%d nœuds)"
-msgstr ""
+msgstr "%s resonance: all tiers reached (%d nodes)"
 
 #. scripts/tree_ui.gd:1840
 msgid "Résonance de %s : %d / %d nœuds, puis %s"
-msgstr ""
+msgstr "%s resonance: %d / %d nodes, then %s"
 
 #. scripts/tree_ui.gd:38
 msgid "Nœud clé"
-msgstr ""
+msgstr "Keystone"
 
 #. scripts/tree_ui.gd:38
 msgid "Origine"
-msgstr ""
+msgstr "Origin"
 
 #. scripts/tree_ui.gd:39
 msgid "Mutation"
-msgstr ""
+msgstr "Mutation"
 
 #. scripts/tree_ui.gd:40
 msgid "Attaque de base"
-msgstr ""
+msgstr "Basic attack"
 
 #. scripts/tree_ui.gd:794
 msgid "Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre."
-msgstr ""
+msgstr "A mutation is final: unlearn this node (right click) to choose another."
 
 #. scripts/tree_ui.gd:804
 msgid "Ce chemin passe par « %s ». %s"
-msgstr ""
+msgstr "This path goes through “%s”. %s"
 
 #. scripts/tree_ui.gd:873
 msgid "Choisis comment « %s » se transforme. Le choix tient tant que ce nœud reste appris."
-msgstr ""
+msgstr "Choose how “%s” transforms. The choice holds as long as this node stays learned."
 
 #. scripts/tree_ui.gd:875
 msgid "Choisis un bonus. Tu pourras en changer quand tu veux, sans rien dépenser."
-msgstr ""
+msgstr "Choose a bonus. You can change it whenever you like, at no cost."
 
 #. scripts/tree_ui.gd:885
 msgid "   (choix actuel)"
-msgstr ""
+msgstr "   (current choice)"
 
 #. scripts/tree_ui.gd:903
 msgid "Fermer"
-msgstr ""
+msgstr "Close"
 
 #. scripts/tree_ui.gd:903
 msgid "Plus tard"
-msgstr ""
+msgstr "Later"
 
 #. scripts/world_map.gd:104
 msgid "Terre ravivée"
-msgstr ""
+msgstr "Revived land"
 
 #. scripts/world_map.gd:110
 msgid "La graine"
-msgstr ""
+msgstr "The seed"
 
 #. scripts/world_map.gd:112
 msgid "Sanctuaire"
-msgstr ""
+msgstr "Sanctuary"
 
 #. scripts/world_map.gd:113
 msgid "Autel découvert"
-msgstr ""
+msgstr "Altar found"
 
 #. scripts/world_map.gd:114
 msgid "trois par région"
-msgstr ""
+msgstr "three per region"
 
 #. scripts/world_map.gd:115
 msgid "Arène du boss"
-msgstr ""
+msgstr "Boss arena"
 
 #. scripts/world_map.gd:115
 msgid "scellée tant qu'un Cœur vit"
-msgstr ""
+msgstr "sealed while a Heart lives"
 
 #. scripts/world_map.gd:116
 msgid "Toi"
-msgstr ""
+msgstr "You"
 
 #. scripts/world_map.gd:247
 msgid "Graine"
-msgstr ""
+msgstr "Seed"
 
 #. scripts/world_map.gd:251
 msgid "Brèche"
-msgstr ""
+msgstr "Breach"
 
 #. scripts/world_map.gd:283
 msgid "Arène"
-msgstr ""
+msgstr "Arena"
 
 #. scripts/world_map.gd:286
 msgid "Cœur"
-msgstr ""
+msgstr "Heart"
 
 #. scripts/world_map.gd:286
 msgid "Cœurs %d / %d"
-msgstr ""
+msgstr "Hearts %d / %d"
 
 #. scripts/world_map.gd:90
 msgid "LÉGENDE"
-msgstr ""
+msgstr "LEGEND"
 
 #. scripts/world_map.gd:94
 msgid "M ou Échap : fermer"
-msgstr ""
+msgstr "M or Esc: close"
 
