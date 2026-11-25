@@ -563,8 +563,10 @@ func _leave_remains(excess := 0.0, dot := false) -> void:
 	var r = Remains.new()
 	r.kind_id = kind_id
 	r.radius = radius
-	# Prototype des sprites : la mort part du même côté que l'image cuite.
+	# Sprites cuits : la mort part de l'image affichée, du même côté.
 	r.face = Vector2(_side, 0.0) if _sprite != null else face
+	r.sprite = Remains.enemy_frame(self)
+	r.side = _side
 	r.elite = elite
 	r.position = position
 	r.color = color

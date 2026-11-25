@@ -24,10 +24,17 @@
 ## devant, en silhouette d'une seule couleur (shaders/silhouette.gdshader appliqué à leur propre
 ## dessin : héros, Flétris, boss, Cœur). Un Flétri qui vient de mourir est redessiné depuis le cache
 ## des silhouettes (silhouette_cache.gd), puisque son nœud disparaît.
+## Sprites cuits (sprite_bake.gd, refonte des personnages) : l'image cuite d'un Flétri passe en
+## silhouette par shaders/silhouette_sprite.gdshader (atlas prémultiplié, teinte d'état dans la
+## couleur du dessin : un Flétri qui clignote sous le coup garde sa forme), et un Flétri mort est
+## redessiné depuis son image cuite (enemy_remains.gd › enemy_frame) quand il en avait une.
 extends Node2D
 
 const SilhouetteShader = preload("res://shaders/silhouette.gdshader")
 const SilhouetteCache = preload("res://scripts/silhouette_cache.gd")
+const SilhouetteSpriteShader = preload("res://shaders/silhouette_sprite.gdshader")
+const Sprites = preload("res://scripts/sprite_bake.gd")
+const Remains = preload("res://scripts/enemy_remains.gd")
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 
@@ -49,6 +56,9 @@ var _sil: Array = []
 var _ghosts: Array = []
 var _ghost_node: Node2D
 var _mat: ShaderMaterial
+## Même rôle pour les images cuites (atlas prémultiplié).
+var _ghost_sprites: Node2D
+var _mat_sprite: ShaderMaterial
 ## Instants (secondes réelles) des éclairs de la dernière seconde.
 var _flashes: Array = []
 ## Délai des impact frames de critique lourd (secondes réelles).
@@ -94,6 +104,15 @@ func _ready() -> void:
 	_ghost_node.material = _mat
 	_ghost_node.draw.connect(_draw_ghosts)
 	add_child(_ghost_node)
+	_mat_sprite = ShaderMaterial.new()
+	_mat_sprite.shader = SilhouetteSpriteShader
+	_ghost_sprites = Node2D.new()
+	_ghost_sprites.z_index = Z_SIL
+	_ghost_sprites.z_as_relative = false
+	_ghost_sprites.material = _mat_sprite
+	_ghost_sprites.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_ghost_sprites.draw.connect(_draw_ghost_sprites)
+	add_child(_ghost_sprites)
 	if main != null and main.has_signal("elite_killed"):
 		main.elite_killed.connect(on_elite_kill)
 
@@ -234,6 +253,7 @@ func _collect(cibles: Array, at: Vector2, outline: bool) -> void:
 		else:
 			_lift(n)
 	_ghost_node.queue_redraw()
+	_ghost_sprites.queue_redraw()
 
 
 ## Passe un nœud devant le fond, en silhouette (lui et ses enfants dessinés).
@@ -246,7 +266,8 @@ func _lift(n: Node2D) -> void:
 		var ci = stack.pop_back()
 		if ci is CanvasItem:
 			entry["mats"].append([ci, ci.material, ci.use_parent_material])
-			ci.material = _mat
+			# Image cuite (atlas prémultiplié) : sa propre silhouette, lue dans la texture.
+			ci.material = _mat_sprite if ci.material != null and ci.material == Sprites.material() else _mat
 		for ch in ci.get_children():
 			if ch is CanvasItem:
 				stack.append(ch)
@@ -270,6 +291,7 @@ func _end_frame() -> void:
 	_ghosts = []
 	if had and _ghost_node != null:
 		_ghost_node.queue_redraw()
+		_ghost_sprites.queue_redraw()
 	if not _frame.is_empty():
 		_frame = {}
 		queue_redraw()
@@ -319,10 +341,12 @@ func _apply_variant() -> void:
 	else:
 		shown_back = Color(cols[0], k)
 		shown_sil = cols[1]
-		_mat.set_shader_parameter("tint", cols[1])
-		_mat.set_shader_parameter("amount", k)
+		for m in [_mat, _mat_sprite]:
+			m.set_shader_parameter("tint", cols[1])
+			m.set_shader_parameter("amount", k)
 	queue_redraw()
 	_ghost_node.queue_redraw()
+	_ghost_sprites.queue_redraw()
 
 
 func _step_frame(real: float) -> void:
@@ -387,12 +411,27 @@ func _draw_ghosts() -> void:
 	if _frame.is_empty() or _frame["outline"]:
 		return
 	for g in _ghosts:
-		if str(g.get("kind", "")) == "":
+		if str(g.get("kind", "")) == "" or not g.get("sprite", {}).is_empty():
 			continue
 		_ghost_node.draw_set_transform(g["pos"])
 		SilhouetteCache.draw(_ghost_node, str(g["kind"]), float(g.get("r", 14.0)), 0.01,
 			g.get("face", Vector2.RIGHT), 0.0, {})
 	_ghost_node.draw_set_transform(Vector2.ZERO)
+
+
+## Flétris morts qui avaient une image cuite : redessinés depuis elle, du même côté, à leur taille.
+func _draw_ghost_sprites() -> void:
+	if _frame.is_empty() or _frame["outline"]:
+		return
+	for g in _ghosts:
+		var f: Dictionary = g.get("sprite", {})
+		if f.is_empty():
+			continue
+		var k := float(g.get("r", f["r"])) / maxf(float(f["r"]), 0.01)
+		_ghost_sprites.draw_set_transform(g["pos"], 0.0, Vector2(k * float(f.get("side", 1.0)), k))
+		# Couleur du dessin : rgb blanc, part de teinte nulle (pas de teinte d'état).
+		_ghost_sprites.draw_texture_rect_region(f["tex"], f["rect"], f["src"], Color(1, 1, 1, 1))
+	_ghost_sprites.draw_set_transform(Vector2.ZERO)
 
 
 # =============================================================================================
@@ -584,7 +623,8 @@ func on_crit_heavy(pos: Vector2) -> void:
 func on_elite_kill(e) -> void:
 	if e == null or not is_instance_valid(e):
 		return
-	var ghost := {"kind": str(e.get("kind_id")), "pos": e.position, "r": float(e.radius), "face": e.get("face") if e.get("face") is Vector2 else Vector2.RIGHT}
+	var ghost := {"kind": str(e.get("kind_id")), "pos": e.position, "r": float(e.radius), "face": e.get("face") if e.get("face") is Vector2 else Vector2.RIGHT,
+		"sprite": Remains.enemy_frame(e)}
 	impact_frame(feel("impact_frame", "elite_kill", 0.85), [ghost], "encre")
 	Rumble.play("elite_kill")
 	if main != null and main.player != null:
