@@ -1,0 +1,218 @@
+{
+  "_doc": "Cibles du banc de lisibilité du monde (tests/paysages_test.gd). Une mesure qui rate sa cible échoue, sauf si elle est listée dans « connus » (écart du monde d'avant la refonte) et pas pire que sa valeur notée : le test le signale « écart connu ». Quand une tâche règle un écart, le test écrit « RÉGLÉ » : refaire la liste avec --ecrire-connus. --strict ignore « connus ».",
+  "cibles": {
+    "fletri_dl_min": 8.0,
+    "heros_dl_min": 10.0,
+    "sol_sous_perso_marge": 5.0,
+    "sol_sous_decor_marge": 3.0,
+    "annonce_de_min": 9.0,
+    "densite_max": 80.0,
+    "regions_de_min": 15.0,
+    "regions_de_dalto_min": 8.0,
+    "perso_de_dalto_min": 10.0,
+    "ravive_plus_clair_min": 6.0
+  },
+  "tolerance_connus": 1.5,
+  "connus": {
+    "dalto_perso:protanopie:ronce:fletri": {
+      "valeur": 7.5,
+      "cible": 10.0
+    },
+    "dalto_perso:deuteranopie:ronce:fletri": {
+      "valeur": 9.1,
+      "cible": 10.0
+    },
+    "fletri_dl:ronce:ravive": {
+      "valeur": 0.0,
+      "cible": 8.0
+    },
+    "dalto_perso:deuteranopie:ronce:ravive": {
+      "valeur": 3.4,
+      "cible": 10.0
+    },
+    "fletri_dl:spore:ravive": {
+      "valeur": 6.2,
+      "cible": 8.0
+    },
+    "fletri_dl:vent:ravive": {
+      "valeur": 0.2,
+      "cible": 8.0
+    },
+    "heros_dl:vent:ravive": {
+      "valeur": 6.6,
+      "cible": 10.0
+    },
+    "dalto_perso:deuteranopie:vent:ravive": {
+      "valeur": 9.6,
+      "cible": 10.0
+    },
+    "dalto_perso:tritanopie:vent:ravive": {
+      "valeur": 4.0,
+      "cible": 10.0
+    },
+    "fletri_dl:seve:fletri": {
+      "valeur": 5.6,
+      "cible": 8.0
+    },
+    "dalto_perso:deuteranopie:seve:fletri": {
+      "valeur": 9.8,
+      "cible": 10.0
+    },
+    "dalto_perso:tritanopie:seve:fletri": {
+      "valeur": 7.2,
+      "cible": 10.0
+    },
+    "fletri_dl:seve:ravive": {
+      "valeur": 1.1,
+      "cible": 8.0
+    },
+    "dalto_perso:protanopie:seve:ravive": {
+      "valeur": 8.8,
+      "cible": 10.0
+    },
+    "dalto_perso:deuteranopie:seve:ravive": {
+      "valeur": 8.1,
+      "cible": 10.0
+    },
+    "dalto_perso:tritanopie:seve:ravive": {
+      "valeur": 3.4,
+      "cible": 10.0
+    },
+    "fletri_dl:aube:fletri": {
+      "valeur": 5.4,
+      "cible": 8.0
+    },
+    "dalto_perso:protanopie:aube:fletri": {
+      "valeur": 5.6,
+      "cible": 10.0
+    },
+    "dalto_perso:deuteranopie:aube:fletri": {
+      "valeur": 6.1,
+      "cible": 10.0
+    },
+    "fletri_dl:aube:ravive": {
+      "valeur": 4.8,
+      "cible": 8.0
+    },
+    "heros_dl:aube:ravive": {
+      "valeur": 3.2,
+      "cible": 10.0
+    },
+    "dalto_perso:protanopie:aube:ravive": {
+      "valeur": 6.7,
+      "cible": 10.0
+    },
+    "dalto_perso:deuteranopie:aube:ravive": {
+      "valeur": 6.5,
+      "cible": 10.0
+    },
+    "dalto_perso:tritanopie:aube:ravive": {
+      "valeur": 4.7,
+      "cible": 10.0
+    },
+    "dalto_perso:protanopie:racine:fletri": {
+      "valeur": 9.6,
+      "cible": 10.0
+    },
+    "dalto_perso:deuteranopie:racine:fletri": {
+      "valeur": 10.0,
+      "cible": 10.0
+    },
+    "dalto_perso:tritanopie:racine:fletri": {
+      "valeur": 9.7,
+      "cible": 10.0
+    },
+    "fletri_dl:racine:ravive": {
+      "valeur": 2.5,
+      "cible": 8.0
+    },
+    "dalto_perso:protanopie:racine:ravive": {
+      "valeur": 5.8,
+      "cible": 10.0
+    },
+    "dalto_perso:deuteranopie:racine:ravive": {
+      "valeur": 3.7,
+      "cible": 10.0
+    },
+    "regions_de:ronce:spore": {
+      "valeur": 10.7,
+      "cible": 15.0
+    },
+    "regions_de:ronce:vent": {
+      "valeur": 6.8,
+      "cible": 15.0
+    },
+    "regions_de_dalto:ronce:vent": {
+      "valeur": 4.8,
+      "cible": 8.0
+    },
+    "regions_de:ronce:seve": {
+      "valeur": 2.1,
+      "cible": 15.0
+    },
+    "regions_de_dalto:ronce:seve": {
+      "valeur": 1.0,
+      "cible": 8.0
+    },
+    "regions_de:ronce:aube": {
+      "valeur": 9.4,
+      "cible": 15.0
+    },
+    "regions_de:ronce:racine": {
+      "valeur": 5.6,
+      "cible": 15.0
+    },
+    "regions_de_dalto:ronce:racine": {
+      "valeur": 5.3,
+      "cible": 8.0
+    },
+    "regions_de:spore:seve": {
+      "valeur": 10.7,
+      "cible": 15.0
+    },
+    "regions_de:spore:racine": {
+      "valeur": 6.9,
+      "cible": 15.0
+    },
+    "regions_de_dalto:spore:racine": {
+      "valeur": 5.4,
+      "cible": 8.0
+    },
+    "regions_de:vent:seve": {
+      "valeur": 8.7,
+      "cible": 15.0
+    },
+    "regions_de_dalto:vent:seve": {
+      "valeur": 5.6,
+      "cible": 8.0
+    },
+    "regions_de:vent:aube": {
+      "valeur": 5.5,
+      "cible": 15.0
+    },
+    "regions_de_dalto:vent:aube": {
+      "valeur": 5.4,
+      "cible": 8.0
+    },
+    "regions_de:vent:racine": {
+      "valeur": 9.0,
+      "cible": 15.0
+    },
+    "regions_de:seve:aube": {
+      "valeur": 10.5,
+      "cible": 15.0
+    },
+    "regions_de:seve:racine": {
+      "valeur": 6.6,
+      "cible": 15.0
+    },
+    "regions_de_dalto:seve:racine": {
+      "valeur": 5.7,
+      "cible": 8.0
+    },
+    "regions_de:aube:racine": {
+      "valeur": 13.6,
+      "cible": 15.0
+    }
+  }
+}
