@@ -7199,7 +7199,7 @@ msgid "Autel de la couronne"
 msgstr "Autel de la couronne"
 
 #. data/regions/ronce.json › ronce › boss › name
-#. scripts/boss_arena.gd:34
+#. scripts/boss_arena.gd:35
 msgid "La Mère-Ronce"
 msgstr "La Mère-Ronce"
 
@@ -7861,20 +7861,20 @@ msgstr "%d formes d'attaque"
 msgid "Synergie possible « %s » : %s"
 msgstr "Synergie possible « %s » : %s"
 
-#. scripts/boss_arena.gd:36
+#. scripts/boss_arena.gd:37
 #. scripts/finale_arena.gd:67
 msgid "Phase 1 sur 3"
 msgstr "Phase 1 sur 3"
 
-#. scripts/boss_arena.gd:36
+#. scripts/boss_arena.gd:37
 msgid "Phase 2 sur 3 : les bourgeons éclosent"
 msgstr "Phase 2 sur 3 : les bourgeons éclosent"
 
-#. scripts/boss_arena.gd:36
+#. scripts/boss_arena.gd:37
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 sur 3 : les ronces se resserrent"
 
-#. scripts/boss_base.gd:284
+#. scripts/boss_base.gd:285
 msgid "Entravée"
 msgstr "Entravée"
 
