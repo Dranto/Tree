@@ -18,6 +18,7 @@ extends Node2D
 const BossBar = preload("res://scripts/boss_bar.gd")
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
+const BossEclat = preload("res://scripts/boss_eclat.gd")
 
 const SHRINK_WARN := 1.6
 const SHRINK_SPEED := 30.0
@@ -61,6 +62,8 @@ var frozen := false
 ## Forme du mur : un décalage et une taille par ronce, tirés une fois.
 var _wall: Array = []
 var rng := RandomNumberGenerator.new()
+## Arrivée, phases et mort signatures du boss (boss_eclat.gd), créé au premier combat.
+var eclat
 
 # Robot du mode « -- --autotest=boss ».
 var auto_time := 0.0
@@ -198,6 +201,11 @@ func _start_fight() -> void:
 	main.enemies_layer.add_child(boss)
 	main.enemies.append(boss)
 	main.big_enemies.append(boss)
+	# Arrivée signature : le mur pousse dans la matière de la région, le sol se fend, le boss émerge.
+	if eclat == null:
+		eclat = BossEclat.new()
+		eclat.setup(self)
+	eclat.arrive(boss)
 	main.fx.ring(center, 30.0, max_radius, 0.8, Color(1.0, 0.45, 0.3, 0.8), 6.0)
 	# Entrée dans l'arène : le mur se referme, l'écran rougit sur les bords et tremble.
 	main.screen_fx.glow(Art.c("danger"), 0.45, main.screen_fx.FADE_ARENA * 1.6)
@@ -211,6 +219,8 @@ func _fight_lost() -> void:
 	defeats += 1
 	state = "ouverte"
 	boss = null
+	if eclat != null:
+		eclat.clear()
 	radius = max_radius
 	shrinking = false
 	shrink_warn = 0.0

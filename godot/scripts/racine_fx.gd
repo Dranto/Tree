@@ -13,7 +13,7 @@ extends RefCounted
 ## Durée par défaut de chaque signature (secondes) ; l'écorce, l'ancrage et les pieux donnent la leur.
 const DUREE := {
 	"ecorce": 5.0, "ecorce_eclat": 0.5, "ecorce_riposte": 0.25,
-	"ancrage": 3.0, "ancrage_arrache": 0.55, "pieu": 0.55,
+	"ancrage": 3.0, "ancrage_arrache": 0.55, "pieu": 0.55, "pieux_fissure": 0.5,
 	"massue": 0.32, "secousse": 0.4, "aubier": 0.35,
 }
 ## Icônes de Racine : compétences, puis formes de l'attaque.
@@ -54,6 +54,8 @@ static func draw(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 			_arrache(ci, e, k, on_ground)
 		"pieu":
 			_pieu(ci, e, on_ground)
+		"pieux_fissure":
+			_fissure(ci, e, on_ground)
 		"massue":
 			_massue(ci, e, k, on_ground)
 		"secousse":
@@ -134,23 +136,54 @@ static func pieu(ci: CanvasItem, base: Vector2, h: float, w: float, lean: float,
 
 ## Bouclier d'écorce : des plaques d'écorce tournent lentement autour du héros, d'autant moins
 ## nombreuses que le bouclier s'use (e["part"]). Au sol, une ombre brune.
+## Anticipation (feel.json › skills › windup › ecorce) : la terre se fend en couronne autour du
+## héros, les plaques en sortent, montent le long de son corps et se referment d'un coup sec
+## (anneau clair et échardes au moment où la carapace se verrouille).
 static func _ecorce(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 	var p: Vector2 = e["pos"]
 	var r: float = e.get("r", 28.0)
 	var t: float = e["t"]
 	var part: float = clampf(float(e.get("part", 1.0)), 0.0, 1.0)
-	var appear := Anim.pop(clampf(t / 0.25, 0.0, 1.0))
+	var w := SkillFx.windup("ecorce", 0.3)
+	var u := clampf(t / maxf(w, 0.001), 0.0, 1.0)
+	var g := Anim.ease_out_back(u)
+	var appear := clampf(g, 0.0, 1.2)
 	var c := p + Vector2(0, -r * 0.2)
 	if on_ground:
 		ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, r * 0.35), r * 1.1 * appear + 1.0, r * 0.45 * appear + 1.0, 20), Color(BOIS, 0.25))
+		if u < 1.0:
+			# Couronne de terre fendue d'où sortent les plaques.
+			var a := 1.0 - u * u
+			ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, r * 0.35), r * 2.2, r * 0.95, 24), Color(Art.ec("racine", "sombre"), 0.3 * a))
+			for i in 7:
+				var ang := i * TAU / 7.0 + 0.2
+				var q := p + Vector2(0, r * 0.35) + Vector2(cos(ang) * r * 2.2, sin(ang) * r * 0.95)
+				ci.draw_line(q, q + Vector2(cos(ang) * r * 0.5, sin(ang) * r * 0.22), Color(Art.ec("racine", "sombre"), 0.8 * a), 2.0, true)
+		return
+	var col := BOIS.lightened(0.1)
+	var sillon := Color(Art.ec("racine", "clair"), 0.8)
+	if u < 1.0:
+		# Les sept plaques montent du sol en se resserrant sur le héros.
+		var lift := r * 1.1 * (1.0 - Anim.ease_out(u))
+		var rr := lerpf(r * 2.1, r * 0.95, g)
+		for i in 7:
+			var a0 := i * TAU / 7.0 + t * 0.5 + float(e.get("seed", 0)) * 0.01 + (1.0 - u) * 1.2
+			plaque(ci, c + Vector2(0, lift), rr, rr + r * 0.35, a0, a0 + TAU / 7.0 * 0.82, Color(col, minf(1.0, u * 2.5)), sillon)
 		return
 	var plates := 3 + int(round(4.0 * part))
 	var span := TAU / 7.0 * 0.82
-	var col := BOIS.lightened(0.1)
-	var sillon := Color(Art.ec("racine", "clair"), 0.8)
 	for i in plates:
 		var a0 := i * TAU / 7.0 + t * 0.5 + float(e.get("seed", 0)) * 0.01
 		plaque(ci, c, r * 0.95 * appear, r * 1.3 * appear, a0, a0 + span, Color(col, 0.75 + 0.2 * part), sillon)
+	# Verrouillage : un anneau clair claque et des échardes partent.
+	var lk := (t - w) / 0.2
+	if lk < 1.0:
+		var la := 1.0 - lk
+		ci.draw_arc(c, r * (1.3 + 0.5 * Anim.ease_out(lk)), 0.0, TAU, 28, Color(Art.ec("racine", "clair"), 0.9 * la), 1.0 + 3.0 * la, true)
+		for i in SkillFx._take(SkillFx.amount(6)):
+			var d := Vector2.from_angle(i * TAU / 6.0 + 0.5)
+			var q := c + d * r * (1.35 + 0.9 * Anim.ease_out(lk)) + Vector2(0, 10.0 * lk * lk)
+			ci.draw_colored_polygon(PackedVector2Array([q + d * 5.0, q + d.orthogonal() * 1.8, q - d.orthogonal() * 1.8]), Color(BOIS.lightened(0.3), la))
 	# Reflet de mousse qui glisse sur la carapace.
 	var ga := t * 1.3
 	ci.draw_arc(c, r * 1.35 * appear, ga, ga + 0.5, 6, Color(Art.ec("racine", "clair"), 0.5 * part), 2.0, true)
@@ -191,29 +224,69 @@ static func _riposte(ci: CanvasItem, e: Dictionary, k: float) -> void:
 
 ## Ancrage : au sol, des racines courent du héros jusqu'au bord de la zone et un cercle de terre
 ## remuée pulse à chaque à-coup ; au-dessus, des racines enserrent les pieds du héros.
+## Anticipation (windup › ancrage) : la terre gonfle sous ses pieds et des cailloux sautent (les
+## racines plongent), puis elles filent sous le sol, pointe claire en tête, et la terre se soulève
+## en anneau quand elles atteignent le bord.
 static func _ancrage(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 	var p: Vector2 = e["pos"]
 	var r: float = e.get("r", 190.0)
 	var t: float = e["t"]
 	var dur: float = e["dur"]
-	var grow := Anim.ease_out(clampf(t / 0.35, 0.0, 1.0))
+	var w := SkillFx.windup("ancrage", 0.2)
+	var run := 0.3
+	var sw := clampf(t / maxf(w, 0.001), 0.0, 1.0)
+	var rk := clampf((t - w) / run, 0.0, 1.0)
+	var grow := Anim.ease_out(rk)
 	var fade := 1.0 - clampf((t - (dur - 0.35)) / 0.35, 0.0, 1.0)
 	var seed := float(e.get("seed", 0))
+	var sombre := Art.ec("racine", "sombre")
+	var clair := Art.ec("racine", "clair")
 	if on_ground:
-		ci.draw_circle(p, r * grow + 1.0, Color(Art.ec("racine", "sombre"), 0.16 * fade))
+		# La terre gonfle sous les pieds, puis retombe quand les racines partent.
+		var swell := sin(PI * clampf(t / (w + run * 0.5), 0.0, 1.0))
+		if swell > 0.01:
+			ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, 8), 30.0 * swell + 4.0, 12.0 * swell + 2.0, 16), Color(sombre, 0.55 * swell))
+			for i in 5:
+				var ang := i * TAU / 5.0 + seed
+				ci.draw_line(p + Vector2(0, 8), p + Vector2(0, 8) + Vector2(cos(ang) * 38.0, sin(ang) * 15.0) * swell, Color(sombre, 0.8 * swell), 2.0, true)
+		if rk <= 0.0:
+			return
+		ci.draw_circle(p, r * grow + 1.0, Color(sombre, 0.16 * fade))
 		var pulse := fmod(t, 0.5) / 0.5
 		ci.draw_arc(p, r * (0.6 + 0.4 * pulse) * grow, 0.0, TAU, 40, Color(Art.ec("racine"), 0.35 * (1.0 - pulse) * fade), 3.0, true)
-		ci.draw_arc(p, r * grow, 0.0, TAU, 48, Color(Art.ec("racine", "clair"), 0.45 * fade), 2.0, true)
+		ci.draw_arc(p, r * grow, 0.0, TAU, 48, Color(clair, 0.45 * fade), 2.0, true)
 		for i in 9:
 			var ang := i * TAU / 9.0 + seed * 0.37
 			var len := r * (0.75 + 0.25 * sin(seed + i * 2.1))
 			racine(ci, p, p + Vector2.from_angle(ang) * len, 11.0, grow * fade, seed + i, fade)
+			if rk < 1.0:
+				# Pointe claire qui file en tête de chaque racine.
+				ci.draw_circle(p + Vector2.from_angle(ang) * len * grow, 4.0, Color(clair, 0.9))
+		# La terre se soulève au bord quand les racines y arrivent.
+		var hk := clampf((t - w - run * 0.8) / 0.3, 0.0, 1.0)
+		if hk > 0.0 and hk < 1.0:
+			ci.draw_arc(p, r * (1.0 + 0.08 * hk), 0.0, TAU, 48, Color(clair, 0.8 * (1.0 - hk)), 2.0 + 5.0 * (1.0 - hk), true)
+		return
+	if sw < 1.0:
+		# Cailloux qui sautent sur la terre qui gonfle.
+		for i in SkillFx._take(SkillFx.amount(6)):
+			var ang := i * TAU / 6.0 + seed * 0.5
+			var hop := absf(sin(sw * PI * 2.0 + i)) * 10.0 * sw
+			ci.draw_circle(p + Vector2(cos(ang) * 22.0, 8.0 + sin(ang) * 9.0 - hop), 2.5, Color(PIERRE, 0.9))
+	if rk <= 0.0:
 		return
 	# Racines autour des pieds : trois arcs qui montent sur le héros.
 	for i in 3:
 		var a0 := PI * 0.15 + i * 0.35
-		ci.draw_arc(p + Vector2(0, 6), 13.0 + i * 2.0, a0, a0 + PI * 0.7 * grow, 8, Color(Art.ec("racine", "sombre"), 0.95 * fade), 4.0, true)
+		ci.draw_arc(p + Vector2(0, 6), 13.0 + i * 2.0, a0, a0 + PI * 0.7 * grow, 8, Color(sombre, 0.95 * fade), 4.0, true)
 		ci.draw_arc(p + Vector2(0, 6), 13.0 + i * 2.0, a0, a0 + PI * 0.7 * grow, 8, Color(Art.ec("racine"), fade), 2.2, true)
+	# Mottes projetées au bord quand la terre se soulève.
+	var bk := clampf((t - w - run * 0.8) / 0.35, 0.0, 1.0)
+	if bk > 0.0 and bk < 1.0:
+		for i in SkillFx._take(SkillFx.amount(9)):
+			var ang := i * TAU / 9.0 + seed * 0.37
+			var q := p + Vector2.from_angle(ang) * r * (1.0 + 0.1 * bk) + Vector2(0, -sin(PI * bk) * 20.0)
+			ci.draw_circle(q, 3.5 * (1.0 - bk) + 1.0, Color(sombre.lightened(0.15), 1.0 - bk))
 
 
 ## Arrachement (mutation de l'ancrage) : la terre se fend en étoile, des mottes volent.
@@ -236,34 +309,90 @@ static func _arrache(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		ci.draw_circle(at, 4.0 * a + 1.5, Color(PIERRE.darkened(0.2), a))
 
 
-## Pieu : la terre se fend (au sol), puis un grand pieu et deux petits jaillissent, tiennent,
-## et redescendent dans les 0,2 dernières secondes.
+## Pieu : la terre tremble et se fend (au sol, windup › pieu), puis un grand pieu et deux petits
+## jaillissent en projetant des mottes, tiennent, et redescendent dans les 0,2 dernières secondes.
 static func _pieu(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 	var p: Vector2 = e["pos"]
 	var r: float = e.get("r", 46.0)
 	var t: float = e["t"]
 	var dur: float = e["dur"]
 	var seed := float(e.get("seed", 0))
-	var rise := Anim.pop(clampf(t / 0.12, 0.0, 1.0))
+	var w := SkillFx.windup("pieu", 0.07)
+	var tw := clampf(t / maxf(w, 0.001), 0.0, 1.0)
+	var rise := Anim.pop(clampf((t - w) / 0.12, 0.0, 1.0))
 	var sink := clampf((t - (dur - 0.2)) / 0.2, 0.0, 1.0)
 	var h := rise * (1.0 - sink)
+	var sombre := Art.ec("racine", "sombre")
 	if on_ground:
 		var a := 1.0 - sink
-		ci.draw_colored_polygon(Art.ellipse(p, r * 0.8 + 1.0, r * 0.35 + 1.0, 16), Color(Art.ec("racine", "sombre"), 0.35 * a))
+		# Tremblement : la tache de terre vibre et les fentes s'allongent avant le jaillissement.
+		var jit := Vector2(sin(t * 160.0 + seed) * 2.0 * (1.0 - rise), 0)
+		ci.draw_colored_polygon(Art.ellipse(p + jit, r * (0.5 + 0.3 * tw) + 1.0, r * (0.22 + 0.13 * tw) + 1.0, 16), Color(sombre, 0.35 * a))
 		for i in 4:
 			var ang := seed * 0.3 + i * TAU / 4.0
-			ci.draw_line(p, p + Vector2(cos(ang) * r * 0.9, sin(ang) * r * 0.4), Color(Art.ec("racine", "sombre"), 0.7 * a), 2.0, true)
+			ci.draw_line(p, p + Vector2(cos(ang) * r * 0.9, sin(ang) * r * 0.4) * (0.3 + 0.7 * tw), Color(sombre, 0.7 * a), 2.0, true)
 		# Onde de choc au jaillissement.
-		if t < 0.25:
-			var q := t / 0.25
+		var q := (t - w) / 0.25
+		if q > 0.0 and q < 1.0:
 			ci.draw_arc(p, r * (0.4 + 0.8 * q), 0.0, TAU, 24, Color(Art.ec("racine", "clair"), 0.6 * (1.0 - q)), 2.5, true)
 		return
+	if tw < 1.0:
+		# Cailloux qui sautillent sur la terre qui tremble.
+		for i in SkillFx._take(SkillFx.amount(3)):
+			var ang := seed + i * 2.1
+			ci.draw_circle(p + Vector2(cos(ang) * r * 0.5, sin(ang) * r * 0.2 - absf(sin(t * 90.0 + i)) * 5.0), 2.0, Color(PIERRE, 0.9))
+		return
+	# Mottes projetées au jaillissement.
+	var mk := (t - w) / 0.35
+	if mk < 1.0:
+		for i in SkillFx._take(SkillFx.amount(5)):
+			var ang := -PI / 2.0 + (i - 2) * 0.55 + sin(seed + i) * 0.2
+			var q := p + Vector2.from_angle(ang) * r * 0.9 * Anim.ease_out(mk) + Vector2(0, 40.0 * mk * mk)
+			ci.draw_circle(q, 3.5 * (1.0 - mk) + 1.0, Color(sombre.lightened(0.1), 1.0 - mk))
 	if h <= 0.02:
 		return
 	var big := r * 2.0
 	pieu(ci, p + Vector2(-r * 0.4, r * 0.08), big * 0.55 * h, r * 0.15, -0.35 + sin(seed) * 0.08)
 	pieu(ci, p + Vector2(r * 0.42, r * 0.1), big * 0.62 * h, r * 0.16, 0.3 + cos(seed) * 0.08)
 	pieu(ci, p + Vector2(0, r * 0.18), big * h, r * 0.22, sin(seed * 1.7) * 0.1)
+
+
+## Fissure des pieux (anticipation de la volée) : au lancer, une fente court sous le sol du héros
+## vers chaque point où un pieu va jaillir, et la terre de chaque point à venir frémit (anneau de
+## poussière qui se resserre) jusqu'à son jaillissement. « spots » : les points, « gap » : l'écart
+## entre deux pieux, « ring » : pieux en cercle (chaque fente part du héros).
+static func _fissure(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
+	var from: Vector2 = e["pos"]
+	var spots: Array = e.get("spots", [])
+	var t: float = e["t"]
+	var gap: float = maxf(float(e.get("gap", 0.05)), 0.02)
+	var ring: bool = e.get("ring", false)
+	var r: float = e.get("r", 46.0)
+	var a := 1.0 - clampf((t - (e["dur"] - 0.2)) / 0.2, 0.0, 1.0)
+	var sombre := Art.ec("racine", "sombre")
+	var clair := Art.ec("racine", "clair")
+	for i in spots.size():
+		var to: Vector2 = spots[i]
+		var start: Vector2 = from if ring or i == 0 else spots[i - 1]
+		# La fente atteint ce point au moment où son pieu jaillit.
+		var at := gap * i
+		var u := clampf((t + gap - at) / gap, 0.0, 1.0) if i > 0 else 1.0
+		var head := start.lerp(to, u)
+		if on_ground:
+			var d := to - start
+			var n := d.orthogonal().normalized() * 5.0
+			var pts := PackedVector2Array()
+			for j in 7:
+				var q := j / 6.0
+				pts.append(start.lerp(head, q) + n * sin(q * 9.0 + i) * (1.0 if j % 2 == 0 else -1.0))
+			ci.draw_polyline(pts, Color(sombre, 0.75 * a), 3.0, true)
+			ci.draw_polyline(pts, Color(clair, 0.35 * a), 1.0, true)
+			if t < at:
+				# Point à venir : la terre frémit sous un anneau de poussière qui se resserre.
+				var c := clampf(1.0 - (at - t) / maxf(at, 0.001), 0.0, 1.0)
+				ci.draw_arc(to, r * (1.2 - 0.6 * c), 0.0, TAU, 20, Color(clair, 0.3 + 0.5 * c), 1.5 + 1.5 * c, true)
+		elif u < 1.0 and u > 0.0:
+			ci.draw_circle(head, 4.0, Color(clair, 0.9 * a))
 
 
 ## Coup de massue : un secteur brun balayé, la massue (manche et tête noueuse) au bout de l'arc,

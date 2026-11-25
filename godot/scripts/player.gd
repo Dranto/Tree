@@ -439,6 +439,7 @@ func _physics_process(delta: float) -> void:
 		invuln = maxf(invuln, DASH_TIME + 0.08)
 		Sfx.play("esquive")
 		_sig("esquive", {"pos": position, "dir": dash_dir, "facing": facing().angle(), "dash": DASH_TIME, "follow": self})
+		Rumble.play("dash")
 		Game.fire("dash", {"main": main})
 
 	if dash_time > 0.0:

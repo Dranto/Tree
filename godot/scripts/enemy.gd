@@ -22,6 +22,7 @@ const FletriArt = preload("res://scripts/fletri_art.gd")
 const Remains = preload("res://scripts/enemy_remains.gd")
 const DrawBatch = preload("res://scripts/draw_batch.gd")
 const Silhouettes = preload("res://scripts/silhouette_cache.gd")
+const Sprites = preload("res://scripts/sprite_bake.gd")
 
 ## Sortes d'ennemis, dans l'ordre de enemies.json (les trois premières sont les Flétris d'origine).
 static var KINDS: Array = Content._load("enemies").get("kinds", [])
@@ -372,6 +373,8 @@ func apply_status(status: String, value: float, duration: float) -> void:
 ## Saignée : consomme tous les saignements et renvoie mult × les dégâts qu'ils auraient
 ## encore infligés (à appliquer par l'appelant).
 func burst_bleed(mult: float) -> float:
+	# L'éclatement (Saignée) frappe juste après : sa mort sera « sang » (enemy_remains.gd).
+	_burst_hint = true
 	var left := 0.0
 	for st in bleed_stacks:
 		left += st[0] * maxf(0.0, st[1])
@@ -480,6 +483,7 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 		var soak := minf(shield, amount)
 		shield -= soak
 		amount -= soak
+	var before := hp
 	hp -= amount
 	if _over:
 		_over.queue_redraw()
@@ -488,9 +492,10 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 	if hp <= 0.0:
 		dead = true
 		_behavior.on_death(self)
-		_leave_remains()
+		_leave_remains(amount - maxf(before, 0.0), dot)
 		main.on_enemy_killed(self)
 		queue_free()
+	_burst_hint = false
 
 
 ## Ressenti d'un coup direct (data/feel.json) : éclair, recul visible à l'opposé du Porte-Graine,
@@ -543,17 +548,42 @@ func _target_face() -> Vector2:
 	return to.normalized() if to.length() > 1.0 else face
 
 
-## Mort : la silhouette tombe en cendre, puis une pousse de vie sort à sa place (enemy_remains.gd).
-func _leave_remains() -> void:
+## Vrai entre Enemy.burst_bleed et le coup qui suit (éclatement de la Saignée).
+var _burst_hint := false
+
+
+## Mort : la silhouette meurt selon l'élément du coup final (enemy_remains.gd : fumée, éclats,
+## tranche, cendres au vent, lumière, pierre, sève), puis une pousse de vie sort à sa place.
+## excess : dégâts au-delà de la vie restante (surpuissance) ; dot : coup d'un état (poison, saignement).
+## Apparence seulement : rien ici ne change le jeu.
+func _leave_remains(excess := 0.0, dot := false) -> void:
 	var parent := get_parent()
 	if parent == null:
 		return
 	var r = Remains.new()
 	r.kind_id = kind_id
 	r.radius = radius
-	r.face = face
+	# Prototype des sprites : la mort part du même côté que l'image cuite.
+	r.face = Vector2(_side, 0.0) if _sprite != null else face
 	r.elite = elite
 	r.position = position
+	r.color = color
+	var fx = main.get("fx") if main != null else null
+	if fx != null and "hit_branch" in fx:
+		var by := ""
+		if _burst_hint:
+			by = "saignement"
+		elif dot:
+			by = "poison" if poison_time > 0.0 else ("saignement" if is_bleeding() else "")
+		r.style = Remains.death_style(fx.hit_branch, fx.hit_form, fx.hit_element, by)
+		var from: Vector2 = position - main.player.position if main.player != null else hit_dir
+		r.dir = from.normalized() if from.length() > 0.5 else (hit_dir if hit_dir != Vector2.ZERO else Vector2.RIGHT)
+		r.power = fx.overkill_power(excess, max_hp)
+		if elite and main.has_method("region_at"):
+			r.region = main.region_at(position)
+		# Série de tués rapprochés : seulement les coups du héros (pas la purification du Cœur).
+		if fx.player_hit or dot or _burst_hint:
+			fx.note_kill()
 	# Mort en série : les restes apparaissent au fil des pas suivants (main.death_fx).
 	if main != null and main.has_method("death_fx"):
 		main.death_fx(func(): parent.add_child.call_deferred(r))
@@ -587,9 +617,13 @@ func pose() -> Dictionary:
 class Part extends Node2D:
 	var e
 	var top := false
+	## Sprite cuit (prototype, sprite_bake.gd) : dessine l'image de l'atlas.
+	var sprite := false
 
 	func _draw() -> void:
-		if top:
+		if sprite:
+			e._draw_sprite(self)
+		elif top:
 			e._draw_over(self)
 		else:
 			e._draw_body(self)
@@ -600,12 +634,26 @@ var _body: Part
 var _over: Part
 var _body_face := Vector2.RIGHT
 var _body_clock := 0.0
+## Prototype des sprites cuits (« --sprites ») : l'image de l'atlas, son côté (1 : droite,
+## -1 : gauche), son inclinaison, et vrai si la pose du moment vient de l'atlas.
+var _sprite: Part
+var _side := 1.0
+var _tilt := 0.0
+var _baked := false
+const SPRITE_PERIOD := 1.0 / 24.0
 
 
 func _ready() -> void:
 	_body = Part.new()
 	_body.e = self
 	add_child(_body)
+	if Sprites.enabled:
+		_sprite = Part.new()
+		_sprite.e = self
+		_sprite.sprite = true
+		_sprite.material = Sprites.material()
+		_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		add_child(_sprite)
 	_over = Part.new()
 	_over.e = self
 	_over.top = true
@@ -619,6 +667,9 @@ func _redraw_parts(delta: float) -> void:
 	var busy := (state != "" and not _behavior.calm(self)) or hit_flash > 0.0 or strike_t >= 0.0 or aff_state != ""
 	if busy or behavior == "guard" or elite:
 		queue_redraw()
+	if _sprite != null and is_processing():
+		_redraw_sprite(delta, busy)
+		return
 	_body_clock -= delta
 	var turn := absf(angle_difference(_body_face.angle(), face.angle()))
 	if (busy or turn > 0.3 or _body_clock <= 0.0) and _on_screen():
@@ -636,6 +687,39 @@ func _redraw_parts(delta: float) -> void:
 	if elite or guard_time > 0.0 or root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or _over_dirty:
 		_over_dirty = root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or guard_time > 0.0
 		_over.queue_redraw()
+
+
+## Prototype des sprites cuits : retournement gauche/droite au lieu de tourner, image de l'atlas
+## redessinée 24 fois par seconde (une image ne coûte qu'un quadrilatère).
+func _redraw_sprite(delta: float, busy: bool) -> void:
+	_body_clock -= delta
+	var fc: Array = Sprites.facing(face, _side)
+	var flip: bool = fc[0] != _side
+	if (busy or flip or _body_clock <= 0.0) and _on_screen():
+		_body_clock += SPRITE_PERIOD
+		if _body_clock < 0.0:
+			_body_clock = SPRITE_PERIOD
+		_side = fc[0]
+		_tilt = fc[1]
+		var cooked := Sprites.usable(pose()) and Sprites.atlases.has(kind_id)
+		_sprite.queue_redraw()
+		if not cooked or _baked != cooked:
+			_body.queue_redraw()
+		_baked = cooked
+	_body.rotation = 0.0
+	var kk := clampf(hit_flash / maxf(hit_flash_dur, 0.01), 0.0, 1.0)
+	var knock := (hit_dir if hit_dir != Vector2.ZERO else -face) * radius * hit_kick * kk * kk
+	_body.position = knock
+	_sprite.position = knock
+	_over.position = knock
+	if elite or guard_time > 0.0 or root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or _over_dirty:
+		_over_dirty = root_time > 0.0 or poison_time > 0.0 or dazzle_time > 0.0 or not bleed_stacks.is_empty() or guard_time > 0.0
+		_over.queue_redraw()
+
+
+func _draw_sprite(ci: CanvasItem) -> void:
+	if _baked:
+		Sprites.draw(ci, kind_id, radius, _side, _tilt, t, pose())
 
 
 ## Hors de l'écran (avec une marge), la silhouette n'est pas redessinée.
@@ -665,6 +749,12 @@ static var _batch = DrawBatch.new()
 
 func _draw_body(ci: CanvasItem) -> void:
 	var f := _body_face if is_processing() else _target_face()
+	if _sprite != null and is_processing():
+		# Prototype des sprites : l'atlas dessine la pose ; sinon, dessin direct, retourné aussi.
+		if _baked:
+			return
+		Sprites.fallback += 1
+		f = Vector2(_side, 0.0)
 	# L'ombre tourne avec la silhouette entre deux dessins : on la garde ronde et centrée.
 	var sr := radius * (1.15 if behavior == "nest" else 1.0)
 	var o := pose()

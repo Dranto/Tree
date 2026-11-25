@@ -65,7 +65,7 @@ def french_like(s):
         return False
     if not re.search(f"[{LETTERS}]{{2,}}", s):
         return False
-    if re.fullmatch(r"[a-z0-9_./:%\-+*<>=\[\]{}()|,]*", s):  # identifiant, chemin, motif
+    if re.fullmatch(r"[a-z0-9_./:%\-+*<>=\[\]{}()|,@]*", s):  # identifiant, chemin, motif (son@région)
         return False
     if re.fullmatch(r"[A-Za-z0-9_]+", s) and not re.search("[À-ÿ]", s) and (s.isupper() or "_" in s):
         return False
@@ -545,6 +545,38 @@ def cmd_missing(lang):
     return 0
 
 
+PLACEHOLDER_RE = re.compile(r"\{[a-z0-9_]*\}|%[-+0-9.]*[sdif]|%%")
+
+
+def placeholders(s):
+    """Gabarits d'un texte, triés ({0}, {v}, %s, %d…) : une traduction doit garder les mêmes."""
+    return sorted(PLACEHOLDER_RE.findall(s))
+
+
+def cmd_complete(lang):
+    """Échoue si un texte manque dans la langue, ou si une traduction perd ou ajoute un gabarit."""
+    _d, total, missing = coverage()[lang]
+    po = read_po(os.path.join(LOCALE_DIR, f"{lang}.po"))
+    entries, _ = all_entries()
+    bad = []
+    for k, e in entries.items():
+        strs = po.get(k, {}).get("str", [])
+        src = [k.split("\x04", 1)[-1]] + ([e["plural"]] if e["plural"] else [])
+        for i, t in enumerate(strs):
+            if t and placeholders(t) != placeholders(src[min(i, len(src) - 1)]):
+                bad.append(f"{sorted(e['refs'])[0]} : {k!r} -> {t!r}")
+    for k in missing:
+        print(f"sans traduction : {sorted(entries[k]['refs'])[0]} : {k!r}")
+    for b in bad:
+        print("gabarits différents :", b)
+    if missing or bad:
+        print(f"{lang} : {len(missing)} texte(s) sans traduction, {len(bad)} gabarit(s) différent(s) sur {total}. "
+              f"Compléter godot/locale/{lang}.po (tools/i18n.sh --missing {lang}).")
+        return 1
+    print(f"{lang} : {total} / {total} textes traduits, gabarits identiques.")
+    return 0
+
+
 if __name__ == "__main__":
     args = sys.argv[1:] or ["extract"]
     if args[0] == "extract":
@@ -555,6 +587,8 @@ if __name__ == "__main__":
         sys.exit(cmd_lint())
     if args[0] == "coverage":
         sys.exit(cmd_coverage())
+    if args[0] == "complete":
+        sys.exit(cmd_complete(args[1] if len(args) > 1 else "en"))
     if args[0] == "missing":
         sys.exit(cmd_missing(args[1] if len(args) > 1 else "en"))
     print(__doc__)

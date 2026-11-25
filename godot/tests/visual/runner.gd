@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue", "eclat", "reaction", "demo"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "demo"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -55,9 +55,11 @@ var known: Array = []
 var seen_issues: Array = []
 
 
+var scenario := ""
+
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	var scenario := ""
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--scenario="):
 			scenario = arg.get_slice("=", 1)
@@ -89,6 +91,9 @@ func _ready() -> void:
 	if scenario == "langue":
 		# Pseudo-langue (jalon 12) : textes allongés de 40 % et accentués, pour voir ce qui déborde.
 		Loc.apply(Loc.PSEUDO)
+	elif scenario == "anglais":
+		# Mêmes écrans en anglais (jalon 12 J, partie 2).
+		Loc.apply("en")
 	if scenario == "carte5":
 		# Monde à cinq régions et plus : les régions factices des tests complètent celles des données.
 		Regions.set_extra_dirs(["res://tests/regions/"])
@@ -153,7 +158,7 @@ func _ready() -> void:
 			await _scenario_menus()
 		"manette":
 			await _scenario_manette()
-		"langue":
+		"langue", "anglais":
 			await _scenario_langue()
 		"cumul":
 			await _scenario_cumul()
@@ -267,32 +272,163 @@ func _scenario_menus() -> void:
 	await _shot("menu_titre_" + tag, "titre")
 
 
-## Pseudo-langue (jalon 12), au plus petit écran (1280 x 720) : jeu (HUD), infobulle d'un nœud de
-## l'arbre, pause et onglet « Jeu » des options (sélecteur de langue). Chaque texte est allongé de
-## 40 % et accentué : un texte coupé ou qui déborde se voit ici, et l'audit de l'interface le signale.
+## Pseudo-langue (jalon 12), aux trois tailles d'écran qui comptent : 1280 x 720, 1280 x 800 (Steam Deck :
+## texte à 1,15, glyphes Xbox, manette) et 3440 x 1440. Jeu (HUD), infobulle d'un nœud de l'arbre, pause et onglet
+## « Jeu » des options (sélecteur de langue), puis (jalon 12 J) glyphes du tutoriel, barre du Cœur, carte, arbre
+## (builds, couronne, résumé), mort, titre et les quatre onglets des options. Chaque texte est allongé de 40 %
+## et accentué : un texte coupé ou qui déborde se voit ici, et l'audit de l'interface le signale.
 func _scenario_langue() -> void:
 	var tag := _res_tag()
+	var prefix := scenario
+	var deck := tag == "1280x800"
+	if deck:
+		# Réglages d'un Steam Deck : texte « Grande », manette, glyphes Xbox.
+		Settings.set_text_scale(Settings.DECK_TEXT_SCALE)
+		Settings.set_pad_style("xbox")
+		Settings.set_device("manette")
 	await _frames(60)
 	main.hud.banner_time = 0.0
-	await _shot("langue_jeu_" + tag, "jeu")
+	await _shot(prefix + "_jeu_" + tag, "jeu")
 	main.tree_ui.toggle()
 	await _frames(10)
 	_hover(_first_neighbor_of_root())
 	await _frames(2)
-	await _shot("langue_arbre_" + tag, "arbre")
+	await _shot(prefix + "_arbre_" + tag, "arbre")
 	_hover(-1)
 	main.tree_ui.toggle()
 	await _frames(2)
 	main.pause_menu.open()
 	await _frames(10)
 	UiAudit.scan_controls("pause", main.pause_menu)
-	await _shot("langue_pause_" + tag)
+	await _shot(prefix + "_pause_" + tag)
 	main.pause_menu._open_options()
 	main.pause_menu.options.show_tab(2)
 	await _frames(6)
 	UiAudit.scan_controls("options", main.pause_menu.options)
-	await _shot("langue_options_" + tag)
+	await _shot(prefix + "_options_" + tag)
 	main.pause_menu.close()
+	await _frames(2)
+	await _langue_suite(tag, deck)
+
+
+## Suite du scénario « langue » (jalon 12 J) : le reste des écrans.
+func _langue_suite(tag: String, deck: bool) -> void:
+	var prefix := scenario
+	main.set_physics_process(false)
+	main.player.set_physics_process(false)
+	main.spawn_timer = 1.0e9
+	# Glyphes du tutoriel : une capture par étape (aucun texte, mais les noms des touches s'allongent).
+	var gl = main.hud.glyphs
+	gl.show()
+	gl.set_process(false)
+	for st in ["bouger", "competence", "arbre"]:
+		gl.step = st
+		gl.alpha = 1.0
+		gl.queue_redraw()
+		await _frames(2)
+		await _shot(prefix + "_glyphe_%s_%s" % [st, tag], "jeu")
+	gl.set_process(true)
+	gl.hide()
+	# Barre du Cœur : zone tenue, vague en cours.
+	var heart = main.heart
+	heart.frozen = true
+	main.arena.frozen = true
+	heart.state = "siege"
+	heart.progress = 17.0
+	heart.update_bar(true)
+	main.player.position = heart.center + Vector2(-190, 150)
+	main.player.reset_physics_interpolation()
+	await _frames(20)
+	await _shot(prefix + "_coeur_" + tag, "jeu")
+	heart.frozen = false
+	# Partie avancée : niveau, objectifs, sanctuaires, pour la carte et le résumé.
+	var ronce: Vector2 = main.region_center("ronce")
+	Game.flags["sanctuaire_graine"] = true
+	Game.flags["sanctuaire_lisiere"] = true
+	Game.flags["autel_ronce_1"] = true
+	Game.level = 14
+	Game.kills = 312
+	main.elapsed = 4380.0
+	main.player.position = ronce * 0.45 + Vector2(40, 60)
+	main.player.reset_physics_interpolation()
+	await _frames(20)
+	Objectives.check()
+	Objectives.main = main
+	main.quest_ui.toggle("carte")
+	await _frames(4)
+	UiAudit.scan_controls("carte", main.quest_ui)
+	await _shot(prefix + "_carte_" + tag, "carte")
+	main.quest_ui.close()
+	await _frames(2)
+	# Arbre : couronne de greffes (fiche d'une greffe), builds, résumé.
+	var ids: Array = Content.grafts().keys()
+	ids.sort()
+	for g in ids.slice(0, 14):
+		Game.give_graft(g)
+	Game.place_graft(0, ids[0])
+	Game.place_graft(1, ids[3])
+	Game.points = 4
+	Game.rename_build(0, "Épines")
+	Game.copy_build_to(2)
+	Game.rename_build(2, "Fouet lointain")
+	main.tree_ui.toggle()
+	main.tree_ui.grafts_panel.set_hover_graft(ids[5])
+	await _frames(10)
+	main.tree_ui.queue_redraw()
+	await _frames(2)
+	await _shot(prefix + "_couronne_" + tag, "arbre")
+	main.tree_ui.grafts_panel.set_hover_graft("")
+	main.tree_ui.panels.set_builds_visible(true)
+	await _frames(10)
+	main.tree_ui.queue_redraw()
+	await _frames(2)
+	await _shot(prefix + "_builds_" + tag, "arbre")
+	main.tree_ui.panels.set_builds_visible(false)
+	main.tree_ui.panels.set_summary_visible(true)
+	await _frames(10)
+	main.tree_ui.queue_redraw()
+	await _frames(2)
+	await _shot(prefix + "_resume_" + tag, "arbre")
+	main.tree_ui.panels.set_summary_visible(false)
+	if deck:
+		# Au pad : nœud visé, aide de l'en-tête, couronne parcourue.
+		main.tree_ui.pad.select(_first_neighbor_of_root(), false)
+		await _frames(6)
+		main.tree_ui.queue_redraw()
+		await _frames(2)
+		await _shot(prefix + "_arbre_pad_" + tag, "arbre")
+		main.tree_ui.pad.set_zone("couronne")
+		main.tree_ui.pad.crown_index = Game.crown_size() + 2
+		main.tree_ui.pad._crown_show()
+		await _frames(6)
+		main.tree_ui.queue_redraw()
+		await _frames(2)
+		main.tree_ui.queue_redraw()
+		await _frames(2)
+		await _shot(prefix + "_couronne_pad_" + tag, "arbre")
+	main.tree_ui.toggle()
+	await _frames(2)
+	# Écran de mort.
+	Game.xp = 37.0
+	main.player_died()
+	main.hud.banner_time = 0.0
+	await _frames(30)
+	await _shot(prefix + "_mort_" + tag, "jeu")
+	main.queue_free()
+	get_tree().paused = false
+	await _frames(2)
+	# Titre, puis les quatre onglets des options.
+	var title = TitleScene.instantiate()
+	add_child(title)
+	await _frames(30)
+	UiAudit.scan_controls("titre", title)
+	await _shot(prefix + "_titre_" + tag, "titre")
+	title.options.open()
+	for i in 4:
+		title.options.show_tab(i)
+		await _frames(6)
+		UiAudit.scan_controls("options", title.options)
+		await _shot(prefix + "_titre_options_%d_%s" % [i + 1, tag])
 
 
 ## Manette (jalon 11), à la taille de l'écran du Steam Deck (1280 x 800) : la barre et le coin avec
@@ -805,6 +941,7 @@ func _galerie_types(ui, cw: int, ch: int) -> void:
 	await _frames(2)
 	ui._choice_queue.clear()
 	ui.close_choice(false)
+	ui._clear_effects()   # la vague, les grandes fleurs et les fanages du jalon Éclat G : la planche montre l'arbre posé
 	cells = [["maîtrise choisie", mastery], ["mutation à choisir", mutation], ["flétri libéré", withered], ["attaque apprise", attack]]
 	for i in cells.size():
 		await _cell(ui, sheet, cells[i][0], cells[i][1], 4 + i, cw, ch)
@@ -1489,6 +1626,7 @@ func _audit(screen: String, strict := true, img: Image = null) -> void:
 	var issues: Array = UiAudit.check(screen, get_viewport().get_visible_rect(), strict)
 	if img != null:
 		issues.append_array(UiAudit.check_contrast(screen, img, get_viewport().get_visible_rect().size))
+	issues.append_array(UiAudit.check_size(screen, get_viewport().get_visible_rect().size, Vector2(DisplayServer.window_get_size())))
 	for issue in issues:
 		var key := "%s|%s" % [tag, issue["key"]]
 		if key in seen_issues:
@@ -1548,6 +1686,9 @@ func _shot(shot_name: String, screen := "") -> void:
 		if screen == "jeu":
 			UiAudit.begin("jeu")
 			UiAudit.scan_controls("jeu", main)
+		elif screen == "arbre" and is_instance_valid(main) and main.tree_ui.visible:
+			# Les panneaux (couronne, builds) se placent après le dessin de l'arbre : relever leurs textes à cet instant.
+			main.tree_ui._audit_texts()
 		if not screen in _screens_checked:
 			_screens_checked.append(screen)
 		_audit(screen, not shot_name.ends_with("proche"), img)

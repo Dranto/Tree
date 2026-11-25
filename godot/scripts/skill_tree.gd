@@ -1024,6 +1024,9 @@ static func node_name(n: Dictionary) -> String:
 		var args: Array = []
 		for i in range(1, tpl.size()):
 			args.append(Loc.data(str(tpl[i])))
+		# Nom de notable : l'ordre nom / qualificatif dépend de la langue (« Épine vorace », « Ravenous Thorn »).
+		if str(tpl[0]) == NOTABLE_NAME:
+			return Loc.tc("{0} {1}", "nœud notable : nom puis qualificatif").format(args)
 		return Loc.t(str(tpl[0])) % args
 	return Loc.data(str(n.get("name", "")))
 

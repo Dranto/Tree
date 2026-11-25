@@ -150,6 +150,10 @@ var benchmark := false
 ## du Cœur avec ses vagues jusqu'à la purification ; « boss » : le combat de la Mère-Ronce, du
 ## début à la victoire. Le héros a le build du robot du boss (niveau 12, points dans Ronce).
 var bench_scene := ""
+## « --bench-kinds=fletri,tireur » : seules ces sortes naissent ; « --bench-shot=x.png » : capture
+## à la fin du banc (sans le rendu direct à l'écran, qui rend l'image illisible).
+var bench_kinds := PackedStringArray()
+var bench_shot := ""
 var bench_clock := 0.0
 var bench_last_usec := 0
 var bench_frames: PackedFloat32Array = PackedFloat32Array()
@@ -168,6 +172,10 @@ func _ready() -> void:
 	autotest_boss = "--autotest=boss" in OS.get_cmdline_user_args()
 	autotest = autotest or autotest_boss or "--autotest" in OS.get_cmdline_user_args()
 	benchmark = "--benchmark" in OS.get_cmdline_user_args()
+	# Prototype des sprites cuits (refonte des personnages, réglage interne « --sprites »).
+	Enemy.Sprites.configure()
+	if Enemy.Sprites.enabled:
+		Enemy.Sprites.bake(self, Enemy.Sprites.all_kinds())
 	build_bot = BuildBot.from_cmdline()
 	if build_bot != null:
 		autotest = true
@@ -372,7 +380,7 @@ func _ready() -> void:
 	Game.tree_changed.connect(request_autosave)
 	if autotest_boss:
 		arena.autotest_begin()
-	_set_direct_to_screen(get_tree().current_scene == self and (benchmark or "--rendu-direct" in OS.get_cmdline_user_args()))
+	_set_direct_to_screen(get_tree().current_scene == self and ((benchmark and bench_shot == "") or "--rendu-direct" in OS.get_cmdline_user_args()))
 	# En jeu et dans le banc, les carrés de sol salis sont refaits peu à peu (pas pendant une capture).
 	if get_tree().current_scene == self and (not autotest or benchmark):
 		ground.tile_budget = ground.TILE_BUDGET
@@ -796,6 +804,8 @@ func _spawn_enemy() -> void:
 
 ## Sorte d'ennemi à faire naître ici : une sorte du roncier, ou un Flétri ordinaire.
 func _pick_kind(pos: Vector2):
+	if not bench_kinds.is_empty():
+		return bench_kinds[rng.randi() % bench_kinds.size()]
 	var reg := region_at(pos)
 	if region_spawn.has(reg):
 		var regional := _region_kind(reg, pos)
@@ -945,7 +955,11 @@ func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void
 		dmg *= s["crit_mult"] * (1.0 + hit_crit_extra)
 	# Les étincelles du coup prennent la couleur de son élément (charte) : racines, épines de Ronce, lumière d'Aube.
 	fx.hit_element = "racine" if root_hit_base > 0.0 or branch == "racine" else ("epine" if branch == "ronce" else ("lumiere" if branch == "aube" else ""))
+	fx.hit_branch = branch
+	fx.player_hit = true
 	e.take_damage(dmg, crit)
+	fx.player_hit = false
+	fx.hit_branch = ""
 	world_fx.on_hit(e.position, branch, fx.hit_element, crit, s["poison"] > 0.0, s["bleed"] > 0.0)
 	fx.hit_element = ""
 	Sfx.play(enemy_sound(e, "sound_crit" if crit else "sound_hit", "critique" if crit else "impact"), e.position)
@@ -1441,6 +1455,18 @@ func _finish_benchmark() -> void:
 	var sil = Enemy.Silhouettes
 	print("BENCHMARK silhouettes : %d dessins en cache, %d calculées pour le cache (%d maillages gardés), %d calculées en action" % [sil.hits, sil.misses, sil._meshes.size() + sil._old.size(), sil.live])
 	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
+	var kinds := {}
+	for e in enemies:
+		# Les boss sont aussi dans la liste, sans sorte.
+		var kid = e.get("kind_id") if is_instance_valid(e) else null
+		if kid != null:
+			kinds[kid] = kinds.get(kid, 0) + 1
+	print("BENCHMARK sortes à l'écran : %s" % str(kinds))
+	if bench_shot != "":
+		get_viewport().get_texture().get_image().save_png(bench_shot)
+	var spr = Enemy.Sprites
+	if spr.enabled:
+		print("BENCHMARK sprites ×%.0f : %d atlas, %.1f Mo, cuisson %.0f ms (calcul %.0f ms), %d images de l'atlas, %d dessins directs" % [spr.scale, spr.atlases.size(), spr.total_bytes() / 1048576.0, spr.bake_usec / 1000.0, spr.build_usec / 1000.0, spr.drawn, spr.fallback])
 	get_tree().quit()
 
 
@@ -1467,6 +1493,10 @@ func _benchmark_setup() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--bench-time="):
 			bench_time = maxf(1.0, float(a.substr(13)))
+		elif a.begins_with("--bench-kinds="):
+			bench_kinds = a.substr(14).split(",")
+		elif a.begins_with("--bench-shot="):
+			bench_shot = a.substr(13)
 	get_tree().process_frame.connect(func(): _seg_start = Time.get_ticks_usec())
 	RenderingServer.frame_pre_draw.connect(func(): _seg_pre = Time.get_ticks_usec())
 	RenderingServer.frame_post_draw.connect(func():

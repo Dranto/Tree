@@ -16,7 +16,13 @@ func cast(p, s := {}) -> void:
 		var d: Vector2 = e.position - p.position
 		if d.length() > 1.0 and absf(aim.angle_to(d)) > half_arc + e.radius / maxf(d.length(), 1.0):
 			continue
+		# Le fouet tranche (mort « tranche », enemy_remains.gd) : apparence seulement.
+		var fx = p.main.get("fx")
+		if fx != null:
+			fx.hit_form = "fouet"
 		p.main.player_hit_enemy(e, base, true, "ronce")
+		if fx != null:
+			fx.hit_form = ""
 		if e.dead:
 			continue
 		e.apply_status("saignement", base * k["bleed"], k["bleed_duration"] * s["bleed_duration"])

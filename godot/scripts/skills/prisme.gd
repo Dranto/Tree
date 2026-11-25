@@ -61,6 +61,8 @@ func _fire(p, pr: Dictionary, k: Dictionary, reach: float) -> void:
 	var near: Array = p.main.enemies_near(c, reach).filter(func(e): return not e.dead)
 	if near.is_empty():
 		return
+	if pr["fx"] is Dictionary and pr["fx"].has("t"):
+		pr["fx"]["shot"] = pr["fx"]["t"]   # le cristal s'allume à chaque tir (dessin seulement)
 	near.sort_custom(func(a, b): return a.position.distance_squared_to(c) < b.position.distance_squared_to(c))
 	var m := {"form": "prisme"}
 	if float(k.get("dazzle", 0.0)) > 0.0:
