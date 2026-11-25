@@ -5,10 +5,10 @@ extends RefCounted
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const FletriArt = preload("res://scripts/fletri_art.gd")
 const Regions = preload("res://scripts/regions.gd")
-const Tireur = preload("res://scripts/creature_art/tireur.gd")
-const Scarabee = preload("res://scripts/creature_art/scarabee.gd")
-const Menhir = preload("res://scripts/creature_art/menhir.gd")
-const PorteGraine = preload("res://scripts/creature_art/porte_graine.gd")
+const Tireur = preload("res://scripts/creature_art/ronce/tireur.gd")
+const Scarabee = preload("res://scripts/creature_art/racine/scarabee.gd")
+const Menhir = preload("res://scripts/creature_art/vent/menhir.gd")
+const Esprit = preload("res://scripts/creature_art/heros/esprit.gd")
 
 ## Échelle du jeu en 1080p (projet en 1600×900, étiré).
 const S1080 := 1080.0 / 900.0
@@ -30,7 +30,7 @@ static func art_of(id: String):
 			return Scarabee
 		"menhir":
 			return Menhir
-	return PorteGraine
+	return Esprit
 
 
 ## Couleurs du sol mort d'une région (data/regions/<id>.json › ground).
