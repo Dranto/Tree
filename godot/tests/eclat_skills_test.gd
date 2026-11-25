@@ -84,6 +84,9 @@ func _footprint(id: String) -> Dictionary:
 	for e in foes:
 		e.apply_status("saignement", 2.0, 5.0)
 		e.apply_status("poison", 2.0, 5.0)
+		# Flétris figés (ni marche ni séparation) : qui est touché ne dépend que de la compétence,
+		# pas du rythme des images sur une machine chargée.
+		e.set_physics_process(false)
 	await _frames(1)
 	p.aim = Vector2.RIGHT
 	p.aim_point = p.position + Vector2(140, 0)
@@ -103,8 +106,8 @@ func _footprint(id: String) -> Dictionary:
 			out["status"].append("")
 			continue
 		out["hp"].append(snappedf(e.hp, 0.01))
-		out["status"].append("b%d p%.2f r%.2f d%.2f @%d,%d" % [e.bleed_stacks.size(), e.poison_time, e.root_time, e.dazzle_time,
-			roundi(e.position.x), roundi(e.position.y)])
+		# Pas de position : la séparation des Flétris dépend du rythme des images (machine chargée).
+		out["status"].append("b%d p%.2f r%.2f d%.2f" % [e.bleed_stacks.size(), e.poison_time, e.root_time, e.dazzle_time])
 	return out
 
 
