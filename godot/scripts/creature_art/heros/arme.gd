@@ -26,6 +26,10 @@ const BONE := {"clair": Color("e6d2a8"), "ombre": Color("a8946a"), "reflet": Col
 const FEATHER := {"clair": Color("e8f2fa"), "ombre": Color("8fb4e0"), "reflet": Color.WHITE}
 const GOLD := {"clair": Color("e8c860"), "ombre": Color("8a6a24"), "reflet": Color("fff4c8")}
 const CAP := {"clair": Color("a07cc0"), "ombre": Color("4a3560"), "reflet": Color("e2d0f2")}
+## Formes d'attaque et modifications que ce fichier sait dessiner (vérifié contre data/attack.json
+## par tests/heros_test.gd).
+const FORMES := ["graine", "echarde", "fouet", "ronce_vive", "spore_lobee", "dard", "lame", "bourrasque", "perle", "rayon", "massue"]
+const ORNEMENTS := ["fourche", "ricochet", "eclat", "saignement", "enracine", "trainee", "renforcee", "taille", "portee", "repetition", "volee", "poison", "saut", "bouffee", "elan", "repousse", "sangsue", "rosee", "eblouit", "refraction", "incandescence", "secousse", "aubier"]
 ## Arme tenue devant le corps (sinon derrière le bras).
 const DEVANT := ["fouet", "massue", "bourrasque", "dard", "lame", "echarde"]
 
@@ -71,7 +75,8 @@ static func pose(forme: String, s: Vector2, top: float, p: float, a: float, t: f
 
 
 ## Dessine l'arme tenue en `hand`. c : {acc, gl, p, t, u, a, s (épaule), top}.
-static func draw(ci: CanvasItem, xf: Transform2D, hand: Vector2, forme: String, mods: Array, c: Dictionary) -> void:
+## Renvoie de quoi poser les ornements ensuite (ornaments()), par-dessus le bras.
+static func draw(ci: CanvasItem, xf: Transform2D, hand: Vector2, forme: String, mods: Array, c: Dictionary) -> Dictionary:
 	var sz: float = (0.75 + 0.25 * float(c["p"])) * (1.25 if mods.has("taille") else 1.0)
 	var reach := 1.22 if mods.has("portee") else 1.0
 	# L'arme est dessinée grande (lisible à l'écran) : tout son repère est agrandi autour de la main.
@@ -93,7 +98,12 @@ static func draw(ci: CanvasItem, xf: Transform2D, hand: Vector2, forme: String, 
 		"rayon": g = _prisme(ci, xf, hand, sz, reach, c)
 		"massue": g = _massue(ci, xf, hand, sz, reach, c)
 		_: g = _fronde(ci, xf, hand, sz, reach, c)
-	_ornements(ci, xf, g, mods, c)
+	return {"g": g, "xf": xf, "c": c, "mods": mods}
+
+
+## Ornements des modifications, dessinés après l'arme et le bras (jamais cachés par le corps).
+static func ornaments(ci: CanvasItem, r: Dictionary) -> void:
+	_ornements(ci, r["xf"], r["g"], r["mods"], r["c"])
 
 
 static func _stick(ci: CanvasItem, xf: Transform2D, pts: PackedVector2Array, w: float, col: Color) -> void:
@@ -373,11 +383,12 @@ static func _calice(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, reac
 	var t: float = c["t"]
 	var w := maxf(wind(a), 0.0)
 	var u: float = c["u"]
-	var cup := h + Vector2(2, -4.0 * sz)
+	var cup := h + Vector2(2, -12.0 * sz)
 	for j in 5:
 		var aa := -PI * 0.5 + (j - 2) * 0.5
 		K.leaf(ci, xf, cup + Vector2(0, 2), aa, 9.0 * sz, 6.0, {"clair": Art.ec("seve", "clair"), "ombre": Art.ec("seve"), "reflet": Color.WHITE}, 0.0, 0.9)
-	_stick(ci, xf, PackedVector2Array([h + Vector2(0, 5), cup + Vector2(0, 2)]), 2.4, Art.FEUILLES_BUILD["seve"]["ombre"])
+	_stick(ci, xf, PackedVector2Array([h + Vector2(0, 12), h, cup + Vector2(0, 2)]), 2.6, Art.FEUILLES_BUILD["seve"]["ombre"])
+	K.leaf(ci, xf, h + Vector2(0, 6), 0.6, 6.0, 3.4, K.leaves("seve"), 0.0, 0.8)
 	var f := fly(a)
 	var n := 3
 	for i in n:
@@ -393,7 +404,7 @@ static func _calice(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, reac
 		K.seed(ci, xf * q, u, 0.0, t, c["gl"], 2.8 * sz, 0.5)
 	if not Ink.mono and w > 0.0:
 		Ink.halo(ci, xf * (cup + Vector2(0, -8)), 12.0 * u * w, Art.ec("seve"), 1.5 * w)
-	return {"shaft": PackedVector2Array([h + Vector2(0, 5), cup]), "tip": cup + Vector2(0, -8), "dir": Vector2(0, -1), "base": h}
+	return {"shaft": PackedVector2Array([h + Vector2(0, 12), cup]), "tip": cup + Vector2(0, -8), "dir": Vector2(0, -1), "base": h}
 
 
 ## Prisme serti d'or : la lumière s'y concentre, puis un rayon part droit devant.
@@ -402,12 +413,12 @@ static func _prisme(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, reac
 	var t: float = c["t"]
 	var u: float = c["u"]
 	var w := maxf(wind(a), 0.0)
-	var q := h + Vector2(4.0, -6.0 * sz)
+	var q := h + Vector2(4.0, -14.0 * sz)
 	var tri := PackedVector2Array([q + Vector2(0, -9.0) * sz, q + Vector2(7.0, 5.0) * sz, q + Vector2(-7.0, 5.0) * sz])
 	var frame := PackedVector2Array([q + Vector2(0, -12.0) * sz, q + Vector2(10.0, 7.0) * sz, q + Vector2(-10.0, 7.0) * sz])
 	Ink.part(ci, xf, frame, GOLD, 1.4, 1.0, 0.6)
 	Ink.part(ci, xf, tri, {"clair": Color("fffde6"), "ombre": Color("cfe4f0"), "reflet": Color.WHITE}, 0.8, 1.0, 1.0)
-	_stick(ci, xf, PackedVector2Array([h + Vector2(0, 4), q + Vector2(0, 6) * sz]), 2.6, GOLD["ombre"])
+	_stick(ci, xf, PackedVector2Array([h + Vector2(0, 12), h, q + Vector2(0, 6) * sz]), 2.8, GOLD["ombre"])
 	if not Ink.mono:
 		Ink.halo(ci, xf * q, (8.0 + 12.0 * w) * u * sz, Art.ec("lumiere"), 0.8 + 1.6 * w)
 		for j in 3:
@@ -425,7 +436,7 @@ static func _prisme(ci: CanvasItem, xf: Transform2D, h: Vector2, sz: float, reac
 		ci.draw_line(xf * q, xf * e, Color(Art.ec("lumiere", "clair"), 0.95 * beam), 3.0 * u * sz * beam, true)
 		Ink.halo(ci, xf * e, 10.0 * u, Art.ec("lumiere"), beam * 1.5)
 		tip = e
-	return {"shaft": PackedVector2Array([h + Vector2(0, 4), q]), "tip": tip, "dir": Vector2(1, 0), "base": h}
+	return {"shaft": PackedVector2Array([h + Vector2(0, 12), q]), "tip": tip, "dir": Vector2(1, 0), "base": h}
 
 
 ## Massue de racines : sur l'épaule au repos, levée, abattue devant ; onde et éclats au sol.
@@ -497,10 +508,19 @@ static func _ornements(ci: CanvasItem, xf: Transform2D, g: Dictionary, mods: Arr
 	if mods.has("rosee"):
 		for k: float in [0.3, 0.55, 0.8]:
 			Ink.part(ci, xf, Ink.oval(a.lerp(b, k) + (b - a).normalized().orthogonal() * 2.6, 1.6, 2.0, 10), {"clair": Color("e8fbff"), "ombre": Color("8fd4e6"), "reflet": Color.WHITE}, 0.7, 1.0, 1.0)
-	if mods.has("elan") or mods.has("saut"):
+	if mods.has("elan"):
 		var q := a.lerp(b, 0.25)
 		for s: float in [-1.0, 1.0]:
 			K.leaf(ci, xf, q, (b - a).angle() + PI + s * 0.9, 7.0, 3.4, {"clair": Color("e8f2fa"), "ombre": Color("8fb4e0")}, 0.0, 0.8)
+	if mods.has("saut"):
+		# Ressort de vrille enroulé près de la main : le bond.
+		var q0 := a.lerp(b, 0.12)
+		var pts := PackedVector2Array()
+		for i in 13:
+			var k := i / 12.0
+			pts.append(q0 + Vector2(-6.0 + sin(k * TAU * 2.0) * 3.0, -6.0 * k))
+		Ink.brush(ci, xf, pts, 1.6, Color("6fae58"), 1.0, 1.0)
+		K.leaf(ci, xf, pts[12], -PI * 0.5, 4.0, 2.6, K.leaves("aucun"), 0.0, 0.6)
 	if mods.has("trainee") and not Ink.mono:
 		var rb := PackedVector2Array()
 		for i in 7:
@@ -519,9 +539,9 @@ static func _ornements(ci: CanvasItem, xf: Transform2D, g: Dictionary, mods: Arr
 		K.seed(ci, xf * q, u, 0.0, t, c["gl"], 1.8, 0.35)
 	if mods.has("ricochet"):
 		for j in 2:
-			var ring := Ink.oval(tip, 7.0 + j * 4.0, (7.0 + j * 4.0) * 0.4, 24, t * (0.5 + j))
+			var ring := Ink.oval(tip, 11.0 + j * 5.0, (11.0 + j * 5.0) * 0.45, 24, t * (0.5 + j))
 			ring.append(ring[0])
-			ci.draw_polyline(xf * ring, Color(acc, 0.7 - j * 0.25), 1.0 * u, true)
+			ci.draw_polyline(xf * ring, Color(acc, 0.85 - j * 0.25), 1.5 * u, true)
 	if mods.has("eclat"):
 		for j in 4:
 			var ang := t * 1.3 + j * TAU / 4.0
@@ -540,7 +560,13 @@ static func _ornements(ci: CanvasItem, xf: Transform2D, g: Dictionary, mods: Arr
 	if mods.has("incandescence"):
 		Ink.halo(ci, xf * tip, 10.0 * u, Art.ec("cendre"), 1.4)
 		Ink.sparks(ci, xf, tip, Vector2(0, -1), 4, t, 6.0, 1.0)
-	if mods.has("eblouit") or mods.has("refraction"):
+	if mods.has("refraction"):
+		# Éventail de rayons colorés : la lumière décomposée.
+		var cols := [Color("ff7a7a"), Color("ffd84a"), Color("7ae08a"), Color("6ab4ff"), Color("c08aff")]
+		for j in cols.size():
+			var ang := -0.5 + j * 0.25
+			ci.draw_line(xf * (tip + Vector2.from_angle(ang) * 4.0), xf * (tip + Vector2.from_angle(ang) * 13.0), Color(cols[j], 0.9), 1.1 * u, true)
+	if mods.has("eblouit"):
 		for j in 3:
 			var ang := t * 0.8 + j * 2.1
 			var q := tip + Vector2.from_angle(ang) * 12.0
@@ -551,7 +577,15 @@ static func _ornements(ci: CanvasItem, xf: Transform2D, g: Dictionary, mods: Arr
 	if mods.has("bouffee"):
 		for j in 3:
 			ci.draw_circle(xf * (tip + Vector2(-5.0 + j * 5.0, -6.0 - (j % 2) * 3.0)), (3.0 + j % 2) * u, Color(Color("e2d0f2"), 0.55))
-	if mods.has("repousse") or mods.has("secousse"):
+	if mods.has("secousse"):
+		# Fissures au sol, sous l'arme.
+		var gb: Vector2 = g["base"]
+		for j in 3:
+			var ang := PI * (0.1 + 0.4 * j)
+			var q := Vector2(gb.x, float(c["gy"]))
+			var crack := PackedVector2Array([q, q + Vector2.from_angle(ang) * Vector2(6.0, 2.4) + Vector2(1, 0), q + Vector2.from_angle(ang + 0.3) * Vector2(12.0, 4.8)])
+			Ink.brush(ci, xf, crack, 1.4, Color("3a2c24"), 1.0, 0.0)
+	if mods.has("repousse"):
 		var base: Vector2 = g["base"]
 		var k := fposmod(t * 0.8, 1.0)
 		var ring := Ink.oval(Vector2(base.x, float(c["gy"])), 6.0 + 16.0 * k, (6.0 + 16.0 * k) * 0.4, 24)

@@ -198,14 +198,16 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var hand := Arme.pose(forme, sp, top, p, a, t)
 	var c := {"p": p, "t": t, "u": u, "acc": acc, "gl": gl, "lv": lv, "a": a}
 	var devant: bool = Arme.DEVANT.has(forme)
+	var armed := {}
 	if not devant:
-		Arme.draw(ci, xf, hand, forme, mods, c)
+		armed = Arme.draw(ci, xf, hand, forme, mods, c)
 	var arm := PackedVector2Array([sp, sp.lerp(hand, 0.5) + (hand - sp).orthogonal().normalized() * -2.0, hand])
 	Ink.brush(ci, xf, arm, 8.4, Ink.encre(), 1.0, 0.5)
 	Ink.brush(ci, xf, arm, 6.2, K.CREME, 1.0, 0.5)
 	Ink.part(ci, xf, Ink.oval(hand, 2.8, 2.6, 10), {"clair": Color("5b4636"), "ombre": Color("3f3026")}, 1.0)
 	if devant:
-		Arme.draw(ci, xf, hand, forme, mods, c)
+		armed = Arme.draw(ci, xf, hand, forme, mods, c)
+	Arme.ornaments(ci, armed)
 	# Feuilles-glyphes en orbite, à maturité.
 	if p > 0.7 and not Ink.mono:
 		var k := (p - 0.7) / 0.3

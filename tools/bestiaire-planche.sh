@@ -18,6 +18,7 @@ run --xvfb --audio-driver Dummy --resolution 2560x1440 -s res://tests/bestiaire/
 run --xvfb --audio-driver Dummy --resolution 2560x1440 -s res://tests/bestiaire/pistes.gd -- "$OUT/heros_pistes.png"
 run --xvfb --audio-driver Dummy --resolution 2560x1440 -s res://tests/bestiaire/esprit.gd -- "$OUT/heros_esprit.png"
 run --xvfb --audio-driver Dummy --resolution 2560x1440 -s res://tests/bestiaire/armes.gd -- "$OUT/heros_armes.png"
+run --xvfb --audio-driver Dummy --resolution 2560x1440 -s res://tests/bestiaire/combinaisons.gd -- "$OUT/heros_combinaisons.png"
 AF="$OUT/armes_images"
 rm -rf "$AF"
 run --xvfb --audio-driver Dummy --resolution 1280x720 -s res://tests/bestiaire/armes.gd -- --gif "$AF"
