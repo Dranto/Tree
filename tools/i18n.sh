@@ -6,6 +6,7 @@
 #                                  # catalogues ne sont pas à jour (CI)
 #   tools/i18n.sh --coverage       # part des textes traduits, par langue
 #   tools/i18n.sh --missing en     # liste des textes sans traduction dans une langue
+#   tools/i18n.sh --complete en    # échoue si un texte manque en anglais ou perd un gabarit ({0}, %s) (CI)
 #   tools/i18n.sh --lint           # seulement le contrôle des textes du code
 #
 # Le test godot/tests/i18n_test.gd vérifie en jeu, en pseudo-langue (xx), qu'aucun texte visible ne
@@ -17,6 +18,7 @@ case "${1:-}" in
   --check) exec python3 "$ROOT/tools/i18n.py" check ;;
   --coverage) exec python3 "$ROOT/tools/i18n.py" coverage ;;
   --missing) exec python3 "$ROOT/tools/i18n.py" missing "${2:-en}" ;;
+  --complete) exec python3 "$ROOT/tools/i18n.py" complete "${2:-en}" ;;
   --lint) exec python3 "$ROOT/tools/i18n.py" lint ;;
-  *) sed -n '2,12p' "$0"; exit 2 ;;
+  *) sed -n '2,13p' "$0"; exit 2 ;;
 esac

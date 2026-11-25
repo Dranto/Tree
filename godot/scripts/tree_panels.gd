@@ -549,7 +549,7 @@ func _refresh() -> void:
 	if search.text.strip_edges() == "":
 		count_label.text = ""
 	elif matches.is_empty():
-		count_label.text = "aucun"
+		count_label.text = Loc.key("aucun")
 	elif match_index >= 0:
 		count_label.text = "%d / %d" % [match_index + 1, matches.size()]
 	else:

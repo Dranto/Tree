@@ -170,7 +170,14 @@ func _draw() -> void:
 	var x := w * MENU_X
 	var kicker := UiTheme.serif(500, 3)
 	draw_string(kicker, Vector2(x, 140), tr("HERBIER  DES  TERRES  FLÉTRIES"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(UiTheme.GOLD, 0.8))
-	draw_string(UiTheme.display(600, 4), Vector2(x - 5, 290), Loc.game_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, 133, UiTheme.INK)
+	# Le nom du jeu tient entre la marge et l'arbre gravé : la taille baisse si le nom est long.
+	var display := UiTheme.display(600, 4)
+	var title_size := 133
+	var title_room := maxf(base.x - h * 0.26 - x, 320.0)   # jusqu'à la cime de l'arbre gravé
+	var title_w := display.get_string_size(Loc.game_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, title_size).x
+	if title_w > title_room:
+		title_size = int(floor(title_size * title_room / title_w))
+	draw_string(display, Vector2(x - 5, 290), Loc.game_name(), HORIZONTAL_ALIGNMENT_LEFT, -1, title_size, UiTheme.INK)
 	draw_line(Vector2(x, 322), Vector2(x + 350, 322), Color(UiTheme.GOLD, 0.6), 1.0, true)
 	UiTheme.draw_diamond(self, Vector2(x + 357, 322), 3.5, UiTheme.GOLD)
 	var sub := UiTheme.serif(500)
