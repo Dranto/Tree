@@ -73,4 +73,4 @@ func _burst(sh: Dictionary) -> void:
 	if not fx.is_empty():
 		# La signature passe à l'éclatement (0,45 s).
 		fx["burst"] = fx["t"]
-		fx["dur"] = float(fx["t"]) + 0.45
+		fx["dur"] = float(fx["t"]) + 0.45 + SkillFx.windup("vesse", 0.08)   # le chapeau gonfle avant d'éclater (dessin)

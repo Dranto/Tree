@@ -372,6 +372,8 @@ func apply_status(status: String, value: float, duration: float) -> void:
 ## Saignée : consomme tous les saignements et renvoie mult × les dégâts qu'ils auraient
 ## encore infligés (à appliquer par l'appelant).
 func burst_bleed(mult: float) -> float:
+	# L'éclatement (Saignée) frappe juste après : sa mort sera « sang » (enemy_remains.gd).
+	_burst_hint = true
 	var left := 0.0
 	for st in bleed_stacks:
 		left += st[0] * maxf(0.0, st[1])
@@ -480,6 +482,7 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 		var soak := minf(shield, amount)
 		shield -= soak
 		amount -= soak
+	var before := hp
 	hp -= amount
 	if _over:
 		_over.queue_redraw()
@@ -488,9 +491,10 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 	if hp <= 0.0:
 		dead = true
 		_behavior.on_death(self)
-		_leave_remains()
+		_leave_remains(amount - maxf(before, 0.0), dot)
 		main.on_enemy_killed(self)
 		queue_free()
+	_burst_hint = false
 
 
 ## Ressenti d'un coup direct (data/feel.json) : éclair, recul visible à l'opposé du Porte-Graine,
@@ -543,8 +547,15 @@ func _target_face() -> Vector2:
 	return to.normalized() if to.length() > 1.0 else face
 
 
-## Mort : la silhouette tombe en cendre, puis une pousse de vie sort à sa place (enemy_remains.gd).
-func _leave_remains() -> void:
+## Vrai entre Enemy.burst_bleed et le coup qui suit (éclatement de la Saignée).
+var _burst_hint := false
+
+
+## Mort : la silhouette meurt selon l'élément du coup final (enemy_remains.gd : fumée, éclats,
+## tranche, cendres au vent, lumière, pierre, sève), puis une pousse de vie sort à sa place.
+## excess : dégâts au-delà de la vie restante (surpuissance) ; dot : coup d'un état (poison, saignement).
+## Apparence seulement : rien ici ne change le jeu.
+func _leave_remains(excess := 0.0, dot := false) -> void:
 	var parent := get_parent()
 	if parent == null:
 		return
@@ -554,6 +565,23 @@ func _leave_remains() -> void:
 	r.face = face
 	r.elite = elite
 	r.position = position
+	r.color = color
+	var fx = main.get("fx") if main != null else null
+	if fx != null and "hit_branch" in fx:
+		var by := ""
+		if _burst_hint:
+			by = "saignement"
+		elif dot:
+			by = "poison" if poison_time > 0.0 else ("saignement" if is_bleeding() else "")
+		r.style = Remains.death_style(fx.hit_branch, fx.hit_form, fx.hit_element, by)
+		var from: Vector2 = position - main.player.position if main.player != null else hit_dir
+		r.dir = from.normalized() if from.length() > 0.5 else (hit_dir if hit_dir != Vector2.ZERO else Vector2.RIGHT)
+		r.power = fx.overkill_power(excess, max_hp)
+		if elite and main.has_method("region_at"):
+			r.region = main.region_at(position)
+		# Série de tués rapprochés : seulement les coups du héros (pas la purification du Cœur).
+		if fx.player_hit or dot or _burst_hint:
+			fx.note_kill()
 	# Mort en série : les restes apparaissent au fil des pas suivants (main.death_fx).
 	if main != null and main.has_method("death_fx"):
 		main.death_fx(func(): parent.add_child.call_deferred(r))

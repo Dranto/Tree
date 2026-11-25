@@ -18,8 +18,8 @@ const MAX_EFFECTS := 48
 const DUREE := {
 	"graine_depart": 0.12, "graine_impact": 0.3, "epine_impact": 0.3,
 	"nova": 0.6, "fouet": 0.34, "racines": 0.6, "volee": 0.24, "saignee": 0.7,
-	"cloud": 5.0, "bloom": 1.0, "chute": 1.1,
-	"vesse": 9.0, "essaim": 0.3, "eclosion": 0.7,
+	"cloud": 5.0, "bloom": 1.1, "chute": 1.1,
+	"vesse": 9.0, "essaim": 0.36, "eclosion": 0.75,
 	"relache": 0.24, "pret": 0.5,
 }
 ## Esquive : la traînée et les images rémanentes vivent la durée de l'élan plus ESQUIVE_TRAINE,
@@ -68,7 +68,7 @@ func play(id: String, data := {}) -> Dictionary:
 		e["dur"] = float(e.get("dash", 0.16)) + maxf(feel("dash_ghost_life", 0.3), ESQUIVE_FEUILLES)
 		e["ghosts"] = []
 		e["from"] = e["pos"]
-	if Settings.reduce_effects and id in ["graine_depart", "graine_impact"]:
+	if reduced() and id in ["graine_depart", "graine_impact"]:
 		return e
 	while effects.size() >= MAX_EFFECTS:
 		effects.pop_front()
@@ -120,18 +120,39 @@ static func feel_section() -> Dictionary:
 	return Content.feel().get("skills", {})
 
 
+## Anticipation propre à une compétence, en secondes (data/feel.json › skills › windup › id, sinon
+## « default »), multipliée par le réglage commun « anticipation ». Purement visuel : l'effet en
+## jeu, lui, a lieu quand il a toujours eu lieu.
+static func windup(id: String, default := 0.2) -> float:
+	var w = feel_section().get("windup", {}).get(id)
+	return (float(w) if w != null else default) * feel("anticipation", 1.0)
+
+
+## « Réduire les effets » (Settings.reduce_effects), lu à l'exécution : les dessins des branches
+## (VentFx, AubeFx…) appellent SkillFx et sont chargés par Art, y compris dans les tests lancés sans
+## les autoloads.
+static func reduced() -> bool:
+	var loop = Engine.get_main_loop()
+	var st = loop.root.get_node_or_null("Settings") if loop is SceneTree else null
+	return st != null and bool(st.reduce_effects)
+
+
 ## Quantité d'éclats d'un effet : divisée par trois avec « réduire les effets » (au moins un).
 static func amount(n: int) -> int:
-	return maxi(1, n / 3) if Settings.reduce_effects else n
+	return maxi(1, n / 3) if reduced() else n
 
 
 ## Images rémanentes d'une esquive, et feuilles qu'elle soulève (reduce : « réduire les effets »).
-static func ghost_count(reduce := Settings.reduce_effects) -> int:
+static func ghost_count(reduce = null) -> int:
+	if reduce == null:
+		reduce = reduced()
 	var n := int(feel("dash_ghosts", 3))
 	return maxi(1, n / 3) if reduce else n
 
 
-static func leaf_count(reduce := Settings.reduce_effects) -> int:
+static func leaf_count(reduce = null) -> int:
+	if reduce == null:
+		reduce = reduced()
 	var n := int(feel("dash_leaves", 8))
 	return maxi(1, n / 3) if reduce else n
 
@@ -667,12 +688,31 @@ static func _cloud(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 	var col := Art.ec("poison")
 	var clair := Art.ec("poison", "clair")
 	var sombre := Art.ec("poison", "sombre")
-	var appear := Anim.pop(clampf(t / 0.35, 0.0, 1.0))
+	# Anticipation (windup › cloud) : une poche de spores gonfle et tremble au point visé, puis crève
+	# en lâchant le nuage (anneau clair qui file jusqu'au bord).
+	var w := windup("cloud", 0.25)
+	if t < w:
+		var u := t / w
+		var jit := Vector2(sin(t * 90.0) * 2.0 * u, 0)
+		if on_ground:
+			ci.draw_colored_polygon(Art.ellipse(p, 10.0 + r * 0.3 * u, (10.0 + r * 0.3 * u) * 0.5, 18), Color(sombre, 0.35))
+			return
+		var pr := 6.0 + r * 0.22 * Anim.ease_in(u)
+		ci.draw_circle(p + jit, pr, Color(col, 0.75))
+		ci.draw_circle(p + jit + Vector2(-pr * 0.3, -pr * 0.3), pr * 0.35, Color(clair, 0.6))
+		ci.draw_arc(p + jit, pr, 0.0, TAU, 20, Color(sombre, 0.9), 1.5, true)
+		for i in 3:
+			ci.draw_circle(p + jit + Vector2.from_angle(i * 2.1 + 0.5) * pr * 0.55, pr * 0.12, Color(sombre, 0.8))
+		return
+	var appear := Anim.pop(clampf((t - w) / 0.35, 0.0, 1.0))
 	var end_k := clampf((t - (dur - 0.6)) / 0.6, 0.0, 1.0)
 	var a := 1.0 - end_k
+	var pop_k := (t - w) / 0.35
+	if pop_k < 1.0 and not on_ground:
+		ci.draw_arc(p, r * (0.2 + 0.9 * Anim.ease_out(pop_k)), 0.0, TAU, 40, Color(clair, 0.9 * (1.0 - pop_k)), 4.0 * (1.0 - pop_k) + 1.0, true)
 	if on_ground:
 		# Tache de sol rongé et bord en pointillés (la zone qui fait mal).
-		ci.draw_colored_polygon(Art.ellipse(p, r * appear, r * appear * 0.94, 32), Color(sombre, 0.3 * a))
+		ci.draw_colored_polygon(Art.ellipse(p, r * appear + 1.0, r * appear * 0.94 + 1.0, 32), Color(sombre, 0.3 * a))
 		var segs := 20
 		for i in segs:
 			var a0 := i * TAU / segs + t * 0.25
@@ -712,6 +752,8 @@ static func _bloom(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 	var open := 0.22
 	var wave := 0.5
 	if on_ground:
+		var bud0 := windup("bloom", 0.16) / maxf(float(e["dur"]), 0.001)
+		k = clampf((k - bud0) / maxf(1.0 - bud0, 0.001), 0.0, 1.0)
 		var g := Anim.ease_out(clampf((k - open * 0.5) / (wave - open * 0.5), 0.0, 1.0))
 		var a := 1.0 - clampf((k - wave) / (1.0 - wave), 0.0, 1.0)
 		ci.draw_circle(p, r * g, Color(seve, 0.12 * a))
@@ -728,9 +770,29 @@ static func _bloom(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 			for sgn: int in [-1, 1]:
 				Art.safe_polygon(ci, HeroArt.leaf_pts(q + Vector2(sgn * h * 0.6, -h), h * 0.6, -PI / 2.0 + sgn * 0.9), gc)
 		return
+	# Anticipation (windup › bloom) : un bouton fermé gonfle sur le héros pendant que la sève monte
+	# du sol vers lui ; puis il éclate en fleur.
+	var bud := windup("bloom", 0.16) / maxf(float(e["dur"]), 0.001)
+	if k < bud:
+		var u := k / bud
+		for i in amount(8):
+			var d := Vector2.from_angle(i * TAU / 8.0 + 0.2)
+			var q := p + d * lerpf(r * 0.55, 10.0, Anim.ease_in(u)) + Vector2(0, -6.0 * u)
+			ci.draw_circle(q, 3.0, Color(clair, 0.5 + 0.5 * u))
+		Art.glow(ci, p, 18.0 + 14.0 * u, "seve")
+		for i in 4:
+			var la := -PI / 2.0 + (i - 1.5) * 0.35 * (1.0 + 0.4 * u)
+			var pl := HeroArt.leaf_pts(p + Vector2(0, -6.0) + Vector2.from_angle(la) * 6.0, 10.0 + 5.0 * u, la)
+			ci.draw_colored_polygon(pl, seve.lerp(clair, 0.3 * u))
+			Art.outline(ci, pl, Art.ec("seve", "sombre"), 1.0)
+		return
+	k = (k - bud) / maxf(1.0 - bud, 0.001)
 	# La fleur : huit pétales qui s'ouvrent, puis se détachent et s'envolent.
 	var petals := 8
 	var o := Anim.ease_out_back(clampf(k / open, 0.0, 1.0))
+	if k < 0.2:
+		# Éclatement du bouton : un anneau clair.
+		ci.draw_arc(p, 20.0 + 60.0 * Anim.ease_out(k / 0.2), 0.0, TAU, 32, Color(clair, 1.0 - k / 0.2), 4.0, true)
 	var fly := clampf((k - wave * 0.8) / (1.0 - wave * 0.8), 0.0, 1.0)
 	Art.glow(ci, p, 30.0 + 40.0 * o * (1.0 - fly), "seve")
 	for i in petals:
@@ -782,7 +844,18 @@ static func _vesse(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 	var clair := Art.ec("poison", "clair")
 	var sombre := Art.ec("poison", "sombre")
 	if e.has("burst"):
-		var bk := clampf((t - float(e["burst"])) / 0.45, 0.0, 1.0)
+		# Le chapeau gonfle et tremble un instant (windup › vesse), puis éclate.
+		var inf := windup("vesse", 0.08)
+		var it := t - float(e["burst"])
+		if it < inf:
+			if not on_ground:
+				var u := it / maxf(inf, 0.001)
+				var s0 := 13.0 * (1.0 + 0.6 * Anim.ease_in(u))
+				var jit := Vector2(sin(t * 120.0) * 2.0, 0)
+				ci.draw_colored_polygon(Art.ellipse(p + jit + Vector2(0, -13.0 * 0.6), s0, s0 * 0.8, 18), col.lerp(clair, 0.4 * u))
+				ci.draw_arc(p + jit + Vector2(0, -13.0 * 0.6), s0, 0.0, TAU, 18, Art.c("contour"), Art.TRAIT, true)
+			return
+		var bk := clampf((it - inf) / 0.45, 0.0, 1.0)
 		var g := Anim.ease_out(bk)
 		var a := 1.0 - bk
 		if on_ground:
@@ -797,14 +870,25 @@ static func _vesse(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 	var grow := Anim.pop(clampf(t / 0.3, 0.0, 1.0))
 	var armed: bool = t >= float(e.get("arm", 0.5))
 	var breathe := 1.0 + 0.06 * sin(t * 4.0)
+	var emerge := clampf(t / 0.4, 0.0, 1.0)
 	if on_ground:
-		ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, 4), 15.0 * grow, 6.0 * grow, 14), Color(Art.c("ombre"), 0.5))
+		ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, 4), 15.0 * grow + 1.0, 6.0 * grow + 1.0, 14), Color(Art.c("ombre"), 0.5))
+		if emerge < 1.0:
+			# La terre se fend là où le champignon perce.
+			for i in 4:
+				var ang := i * TAU / 4.0 + 0.4
+				ci.draw_line(p + Vector2(0, 4), p + Vector2(0, 4) + Vector2(cos(ang) * 24.0, sin(ang) * 10.0) * minf(emerge * 3.0, 1.0), Color(Art.ec("racine", "sombre"), 0.9 * (1.0 - emerge)), 2.0, true)
 		if armed:
 			var segs := 14
 			for i in segs:
 				var a0 := i * TAU / segs + t * 0.3
 				ci.draw_arc(p, r * 0.75, a0, a0 + TAU / segs * 0.4, 3, Color(clair, 0.3), Art.TRAIT_FIN, true)
 		return
+	if emerge < 1.0:
+		# Mottes de terre qui tombent du chapeau en sortant.
+		for i in _take(amount(4)):
+			var q := p + Vector2((i - 1.5) * 8.0, -16.0 * grow + 30.0 * emerge * emerge)
+			ci.draw_circle(q, 2.5 * (1.0 - emerge) + 0.5, Color(Art.ec("racine", "sombre").lightened(0.15), 1.0 - emerge))
 	# Pied clair, chapeau rond violet tacheté, contour de la charte.
 	var s := 13.0 * grow
 	ci.draw_rect(Rect2(p + Vector2(-s * 0.28, -s * 0.5), Vector2(s * 0.56, s * 0.9)), Art.ec("poison", "clair").lightened(0.3))
@@ -829,6 +913,17 @@ static func _essaim(ci: CanvasItem, e: Dictionary, k: float) -> void:
 	var to: Vector2 = e.get("to", p)
 	var col := Art.ec("poison")
 	var clair := Art.ec("poison", "clair")
+	# Premier bond (au lancer) : les spores tourbillonnent autour de la lanterne avant de partir.
+	var sw := 0.0
+	if e.get("first", false):
+		sw = clampf(windup("essaim", 0.1) / maxf(float(e["dur"]), 0.001), 0.0, 0.6)
+		if k < sw:
+			var u := k / sw
+			for i in _take(amount(6)):
+				var q := p + Vector2.from_angle(i * TAU / 6.0 + u * 7.0) * lerpf(26.0, 6.0, Anim.ease_in(u))
+				ci.draw_circle(q, 2.5, Color(clair if i % 2 == 0 else col, 0.9))
+			return
+		k = (k - sw) / (1.0 - sw)
 	var head := Anim.ease_out(clampf(k / 0.5, 0.0, 1.0))
 	var a := 1.0 - clampf((k - 0.5) / 0.5, 0.0, 1.0)
 	var d := to - p
@@ -846,6 +941,10 @@ static func _essaim(ci: CanvasItem, e: Dictionary, k: float) -> void:
 	if k > 0.45:
 		var bk := (k - 0.45) / 0.55
 		ci.draw_arc(to, 6.0 + 14.0 * Anim.ease_out(bk), 0.0, TAU, 16, Color(clair, 0.8 * (1.0 - bk)), 2.0, true)
+		# La boule crève sur sa cible : une gerbe de spores.
+		for i in _take(amount(5)):
+			var sd := Vector2.from_angle(i * TAU / 5.0 + 0.3)
+			ci.draw_circle(to + sd * 18.0 * Anim.ease_out(bk) + Vector2(0, -6.0 * bk), 2.5 * (1.0 - bk) + 0.5, Color(col, 1.0 - bk))
 
 
 ## Éclosion : un anneau violet se resserre sur le héros (anticipation), le poison de chaque Flétri
@@ -867,6 +966,14 @@ static func _eclosion(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) 
 			var bk := clampf((k - close * 0.6) / 0.5, 0.0, 1.0)
 			ci.draw_circle(q, 30.0 * Anim.ease_out(bk), Color(sombre, 0.25 * (1.0 - bk)))
 		return
+	if k < close * 0.6:
+		# Anticipation : le poison de chaque Flétri gonfle en bulle qui tremble.
+		var u := k / (close * 0.6)
+		for q: Vector2 in targets:
+			var jit := Vector2(sin(k * 300.0 + q.x) * 1.5 * u, 0)
+			ci.draw_circle(q + jit + Vector2(0, -6), 5.0 + 11.0 * Anim.ease_in(u), Color(col, 0.35 + 0.3 * u))
+			ci.draw_arc(q + jit + Vector2(0, -6), 5.0 + 11.0 * Anim.ease_in(u), 0.0, TAU, 14, Color(clair, 0.8), 1.2, true)
+		ci.draw_circle(p, 14.0 + 4.0 * sin(u * PI * 3.0), Color(col, 0.25 * u))
 	for q: Vector2 in targets:
 		var bk := clampf((k - close * 0.6) / 0.6, 0.0, 1.0)
 		if bk <= 0.0 or bk >= 1.0:

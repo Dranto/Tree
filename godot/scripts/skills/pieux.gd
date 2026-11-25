@@ -28,8 +28,12 @@ func cast(p, s := {}) -> void:
 	var hold: float = float(k["root_duration"]) * float(s.get("root_duration", 1.0))
 	var gap := float(k.get("gap", 0.05))
 	var stay := float(k.get("stay", 0.0))
-	for pos in spots(p.position, p.aim_point, k, n, r):
+	var at: Array = spots(p.position, p.aim_point, k, n, r)
+	for pos in at:
 		queue.append({"pos": pos, "wait": gap * queue.size(), "dmg": dmg, "r": r, "hold": hold, "stay": stay})
+	# Signature : la fente court sous le sol vers chaque point (purement visuel).
+	TornadeScript.fx(p, "pieux_fissure", {"pos": p.position, "spots": at, "gap": gap, "r": r,
+		"ring": bool(k.get("ring", false)), "dur": gap * maxf(n - 1, 0) + 0.45})
 
 
 ## Points où jaillissent les pieux : une ligne vers « to » (au plus « range »), ou un cercle.

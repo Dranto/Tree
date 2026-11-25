@@ -1,1 +1,4 @@
 build/
+steam/out/
+# Laissé par tools/steam-trailer.sh s il est interrompu
+godot/override.cfg

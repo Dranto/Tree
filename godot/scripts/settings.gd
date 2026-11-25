@@ -58,6 +58,9 @@ var shake_scale := 0.6
 var flash_scale := 1.0
 ## Durée des micro-pauses à l'impact, de 0 (aucune) à 1 (pleine).
 var hitstop_scale := 1.0
+## Vibration de la manette (Rumble) : 0 la coupe, 1 plein dosage. Réglage à part : « Réduire les
+## effets » ne la coupe pas.
+var rumble_scale := 0.7
 ## Accessibilité (jalon 11). Mode daltonien : palette adaptée des signaux de danger, d'élite et de
 ## butin (Art.c), et motifs ajoutés aux zones de danger annoncées. Voir COLORBLIND_MODES.
 const COLORBLIND_MODES := ["aucun", "protanopie", "deuteranopie", "tritanopie"]
@@ -186,6 +189,7 @@ func load_settings() -> void:
 	shake_scale = clampf(float(cfg.get_value("gameplay", "shake_scale", cfg.get_value("gameplay", "shake", shake_scale))), 0.0, 1.0)
 	flash_scale = clampf(float(cfg.get_value("gameplay", "flash_scale", flash_scale)), 0.0, 1.0)
 	hitstop_scale = clampf(float(cfg.get_value("gameplay", "hitstop_scale", hitstop_scale)), 0.0, 1.0)
+	rumble_scale = clampf(float(cfg.get_value("gameplay", "rumble_scale", rumble_scale)), 0.0, 1.0)
 	var cb := str(cfg.get_value("access", "colorblind_mode", colorblind_mode))
 	colorblind_mode = cb if cb in COLORBLIND_MODES else "aucun"
 	text_scale = _nearest_text_scale(float(cfg.get_value("access", "text_scale", text_scale)))
@@ -228,6 +232,7 @@ func save_settings() -> void:
 	cfg.set_value("gameplay", "shake_scale", shake_scale)
 	cfg.set_value("gameplay", "flash_scale", flash_scale)
 	cfg.set_value("gameplay", "hitstop_scale", hitstop_scale)
+	cfg.set_value("gameplay", "rumble_scale", rumble_scale)
 	cfg.set_value("access", "colorblind_mode", colorblind_mode)
 	cfg.set_value("access", "text_scale", text_scale)
 	cfg.set_value("access", "high_contrast", high_contrast)
@@ -613,6 +618,11 @@ func shows_number(crit: bool) -> bool:
 
 func set_shake(v: float) -> void:
 	shake_scale = clampf(v, 0.0, 1.0)
+	changed.emit()
+
+
+func set_rumble(v: float) -> void:
+	rumble_scale = clampf(v, 0.0, 1.0)
 	changed.emit()
 
 
