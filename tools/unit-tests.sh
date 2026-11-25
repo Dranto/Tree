@@ -37,6 +37,7 @@ TESTS=(
   "heros|--xvfb --audio-driver Dummy|"
   "sprite_bake|--xvfb --audio-driver Dummy|"
   "remains_sprite|--xvfb --audio-driver Dummy --fixed-fps 60|--sprites=3"
+  "paysages_proto|--xvfb --audio-driver Dummy|"
   "eclat_skills|--headless --fixed-fps 60|"
   "enemies|--headless|"
   "falaises|--headless --fixed-fps 60|"
