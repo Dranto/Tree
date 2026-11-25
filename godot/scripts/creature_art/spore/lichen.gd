@@ -8,7 +8,7 @@
 extends RefCounted
 
 const Ink = preload("res://scripts/creature_art/ink.gd")
-const Sp = preload("res://scripts/creature_art/spore/commun.gd")
+const Sp = preload("res://scripts/creature_art/spore/outils.gd")
 
 ## 100 unités (la hauteur) en px du jeu : ~62 px de haut et ~95 px de long en 1080p.
 const HEIGHT := 52.0
