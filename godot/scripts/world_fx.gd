@@ -85,10 +85,10 @@ func setup(m) -> void:
 	_lv = w.get("level_up", {})
 	_gf = w.get("graft", {})
 	_sc = w.get("sanctuary", {})
-	name = "WorldFx"
+	name = "WorldFx" # i18n: non
 	over = Layer.new()
 	over.fn = _draw_over
-	over.name = "WorldFxOver"
+	over.name = "WorldFxOver" # i18n: non
 
 
 func _less() -> bool:
