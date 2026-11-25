@@ -195,7 +195,8 @@ const BESTIAIRE := {
 	"os": Color("e6d2a8"),
 	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
 	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
-	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
+	"vent": {"clair": Color("a3b6c8"), "ombre": Color("5a6a80"), "reflet": Color("e4eef7"), "detail": Color("d6c27e"),
+		"plume": Color("77869c"), "duvet": Color("dfe2dc"), "aile": Color("c8d4df")},
 	# Spore (R2) : chair de champignon violet poison (assez saturée pour rester distincte de Vent et Racine
 	# pour les daltoniens, bestiaire_test), lames ocre, chapeaux pâles, vase luisante, lichen vert-de-gris.
 	"spore": {"clair": Color("ca6aeb"), "ombre": Color("6a2f86"), "reflet": Color("f2d8fb"), "detail": Color("c99a5a"),
