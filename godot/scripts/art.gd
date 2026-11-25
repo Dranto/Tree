@@ -201,6 +201,8 @@ const BESTIAIRE := {
 	"spore": {"clair": Color("ca6aeb"), "ombre": Color("6a2f86"), "reflet": Color("f2d8fb"), "detail": Color("c99a5a"),
 		"chapeau": Color("e6d8bf"), "chapeau_ombre": Color("9c8670"), "vase": Color("5e6a4a"), "vase_reflet": Color("b9c98a"),
 		"lichen": Color("9fb38a"), "lichen_ombre": Color("56684c"), "spore": Color("d9c2f0")},
+	# Sève (R4) : vert profond de mare (distinct des autres régions pour les daltoniens, bestiaire_test), loin du vert menthe de la sève vivante ; detail = vase ocre ; vase = limon du fond.
+	"seve": {"clair": Color("308533"), "ombre": Color("1e5c2a"), "reflet": Color("b0e6a8"), "detail": Color("a88d52"), "vase": Color("4a3f30")},
 }
 ## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
 ## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
@@ -213,6 +215,119 @@ const FEUILLES_BUILD := {
 	"spore": {"corps": Color("efe2f5"), "clair": Color("a07cc0"), "ombre": Color("4a3560"), "reflet": Color("e2d0f2"), "detail": Color("d9a64a"), "accent": Color("b48ae6"), "lueur": Color("e2ccff")},
 	"aube": {"corps": Color("fbf3dc"), "clair": Color("d9b860"), "ombre": Color("6e5a2e"), "reflet": Color("fff4c8"), "detail": Color("fffb3d"), "accent": Color("f0c840"), "lueur": Color("fffde6")},
 }
+
+
+## Couleurs du monde « Paysages d'herbier » (refonte du monde, vague 0 : planche W, scripts/world_art/).
+## Par région puis par état : « fletri » (le Cœur vit : couleurs bues, cendre, braise dans les fissures),
+## « apaise » (terre morte apaisée hors du bord de vie, une fois le Cœur purifié), « ravive » (dans le bord
+## de vie : la couleur propre à la région revient). Le vert sève reste réservé au bord de vie et à la graine.
+const MONDE := {
+	"commun": {
+		"seve": Color("8af5c0"), "seve_clair": Color("eafff4"), "seve_sombre": Color("1f7a56"),
+		"encre_decor": Color("1f1614"), "lumiere": Color("ffe9bf"), "nuit": Color("120c10"),
+		"pierre": {"clair": Color("948a7c"), "ombre": Color("5a524a"), "reflet": Color("cbc2b2")},
+	},
+	"ronce": {
+		# Sol en couches et décor cuit (scripts/world_bake/, ex-prototype P) : lavis, matière, détails en grappes.
+		"sol_couches": {
+			# Lavis (couche 1) : grandes formes sans bruit fin. Flétri sombre, ravivé nettement plus clair.
+			"lavis_mort_sombre": Color("2e2224"), "lavis_mort_clair": Color("47343a"),
+			"lavis_vif_sombre": Color("4f6b34"), "lavis_vif_clair": Color("86a24a"),
+			# Matière (couche 2) : encre fine des tiges rampantes, épines, fissures.
+			"encre_morte": Color("1f1318"), "tige_morte": Color("5a3442"), "fissure": Color("1a1214"),
+			"encre_vive": Color("2c3a1a"), "tige_vive": Color("3f5a26"), "feuille": Color("6f9a3a"),
+			# Détails en grappes (couche 3) : cailloux, feuilles sèches ; herbe, fleurs et baies.
+			"caillou": Color("6b5a58"), "caillou_lumiere": Color("9a8783"), "feuille_seche": Color("6e4a3a"),
+			"herbe": Color("5e8a36"), "herbe_claire": Color("a6c860"), "fleur": Color("f08a8a"),
+			"fleur_coeur": Color("ffe2a0"), "baie": Color("d4485a"), "pousse": Color("b8e070"),
+		},
+		"fletri": {
+			"sol": Color("4f3d35"), "sol_clair": Color("62493b"), "sol_sombre": Color("3b2d2a"),
+			"matiere": Color("2a1d1a"), "feuille": Color("7d4b30"), "feuille_2": Color("94603a"),
+			"cendre": Color("8c837c"), "touffe": Color("6d5a3e"), "touffe_2": Color("51442f"),
+			"bois": {"clair": Color("54403a"), "ombre": Color("2e221f"), "reflet": Color("7a6458")},
+			"ronce": {"clair": Color("4c3036"), "ombre": Color("2a1a1f"), "reflet": Color("7a5a60")},
+			"feuillage": {"clair": Color("4e3f33"), "ombre": Color("2e2520"), "reflet": Color("6e5c4a")},
+			"pierre": {"clair": Color("5c514a"), "ombre": Color("352c28"), "reflet": Color("7c6e62")},
+			"fleur": Color("8a6a5a"), "fruit": Color("2e1a24"),
+			"air": Color("5a4650"), "voile": Color("1b1216"), "particule": Color("9a8f88"),
+		},
+		"apaise": {
+			"sol": Color("67503f"), "sol_clair": Color("7a604a"), "sol_sombre": Color("523f34"),
+			"matiere": Color("3a2a22"), "feuille": Color("8e5c36"), "feuille_2": Color("a87444"),
+			"cendre": Color("a39a8e"), "touffe": Color("7e7a46"), "touffe_2": Color("5e5c32"),
+		},
+		"ravive": {
+			"sol": Color("728840"), "sol_clair": Color("8ea352"), "sol_sombre": Color("536a2e"),
+			"matiere": Color("44572a"), "feuille": Color("c2cf74"), "feuille_2": Color("6f8a3a"),
+			"cendre": Color("e8e0c8"), "touffe": Color("5f8c38"), "touffe_2": Color("3f6a28"),
+			"bois": {"clair": Color("7a5a44"), "ombre": Color("45322a"), "reflet": Color("a8866a")},
+			"ronce": {"clair": Color("6f8a3a"), "ombre": Color("39531f"), "reflet": Color("b8d27a")},
+			"feuillage": {"clair": Color("6a8c3c"), "ombre": Color("324f22"), "reflet": Color("b4cc78")},
+			"pierre": {"clair": Color("a69584"), "ombre": Color("6a5a4c"), "reflet": Color("d8cab4")},
+			"fleur": Color("f4a3b4"), "fleur_coeur": Color("f7d36a"), "fleur_2": Color("fff0e6"), "fruit": Color("4a1c42"),
+			"air": Color("ffe2c4"), "voile": Color("3a2620"), "particule": Color("ffc2cc"),
+		},
+	},
+	"spore": {
+		"fletri": {
+			"sol": Color("43384c"), "sol_clair": Color("54485c"), "sol_sombre": Color("32293b"),
+			"matiere": Color("231c2b"), "feuille": Color("6c5a74"), "feuille_2": Color("82708a"),
+			"cendre": Color("a89cb2"), "touffe": Color("5e5562"), "touffe_2": Color("463f4c"),
+			"eau": Color("2a2338"), "eau_reflet": Color("7a6e94"),
+			"bois": {"clair": Color("5a4c5c"), "ombre": Color("332a36"), "reflet": Color("8a7a8e")},
+			"chapeau": {"clair": Color("554666"), "ombre": Color("3b2f4a"), "reflet": Color("9c88ae")},
+			"pied": {"clair": Color("5e5768"), "ombre": Color("383242"), "reflet": Color("7e7688")},
+			"feuillage": {"clair": Color("5c5866"), "ombre": Color("38343f"), "reflet": Color("86808e")},
+			"pierre": {"clair": Color("5a5464"), "ombre": Color("38333f"), "reflet": Color("7a7486")},
+			"fleur": Color("8a7a96"), "fruit": Color("2a2034"), "lueur": Color("9a88b0"),
+			"air": Color("4a4060"), "voile": Color("120e1a"), "particule": Color("a898c0"),
+		},
+		"apaise": {
+			"sol": Color("4e4a5c"), "sol_clair": Color("5e5a6c"), "sol_sombre": Color("3c384a"),
+			"matiere": Color("2c2838"), "feuille": Color("6e6a7e"), "feuille_2": Color("848098"),
+			"cendre": Color("b4aec2"), "touffe": Color("5a6a6a"), "touffe_2": Color("44504e"),
+			"eau": Color("26283a"), "eau_reflet": Color("70789a"),
+		},
+		"ravive": {
+			"sol": Color("2a7069"), "sol_clair": Color("3f9184"), "sol_sombre": Color("1c5352"),
+			"matiere": Color("17423f"), "feuille": Color("7fd0b8"), "feuille_2": Color("3e9484"),
+			"cendre": Color("d8fff2"), "touffe": Color("3fa08a"), "touffe_2": Color("237062"),
+			"eau": Color("1d4a64"), "eau_reflet": Color("9fe8e2"),
+			"bois": {"clair": Color("6a5a52"), "ombre": Color("3c322e"), "reflet": Color("9a887c")},
+			"chapeau": {"clair": Color("7854a8"), "ombre": Color("50387c"), "reflet": Color("dcc2ff")},
+			"pied": {"clair": Color("aaa298"), "ombre": Color("6a625a"), "reflet": Color("d8d0c4")},
+			"feuillage": {"clair": Color("3f9a7e"), "ombre": Color("1f5e4e"), "reflet": Color("9ae8c8")},
+			"pierre": {"clair": Color("6e7a86"), "ombre": Color("414c58"), "reflet": Color("9aaab6")},
+			"fleur": Color("7ff0dc"), "fleur_coeur": Color("e8fffa"), "fleur_2": Color("c9a2ff"), "fruit": Color("e8a640"), "lueur": Color("8affea"),
+			"air": Color("c8fff0"), "voile": Color("0e2228"), "particule": Color("a8fff0"),
+		},
+	},
+}
+
+## Couleur du sol en couches et du décor cuit : mpc("ronce", "lavis_vif_clair") (MONDE[région]["sol_couches"]).
+static func mpc(region: String, key: String) -> Color:
+	var r: Dictionary = MONDE.get(region, {}).get("sol_couches", {})
+	if r.has(key):
+		return r[key]
+	push_error("Art.mpc : couleur du sol en couches inconnue « %s/%s »" % [region, key])
+	return Color.MAGENTA
+
+
+
+## Couleur du monde : mc("ronce", "fletri", "sol"), ou mc("commun", "", "seve"). Une clé absente d'un
+## état « apaise » est cherchée dans « fletri » (le décor apaisé garde ses formes mortes).
+static func mc(region: String, etat: String, cle: String):
+	var r: Dictionary = MONDE.get(region, {})
+	if etat == "":
+		return r.get(cle, Color.MAGENTA)
+	var e: Dictionary = r.get(etat, {})
+	if e.has(cle):
+		return e[cle]
+	if etat == "apaise" and r.get("fletri", {}).has(cle):
+		return r["fletri"][cle]
+	push_error("Art.mc : couleur du monde inconnue « %s/%s/%s »" % [region, etat, cle])
+	return Color.MAGENTA
 
 
 ## Couleur du bestiaire : bc("encre"), ou bc("ronce", "clair") pour la palette d'une région.
