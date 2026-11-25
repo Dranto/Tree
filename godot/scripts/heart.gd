@@ -13,11 +13,17 @@
 extends Node2D
 
 signal purified
+## Crochets visuels (sans logique de jeu), pour les événements du monde (refonte du monde, tâche E) :
+## chaque seconde tenue pendant le siège (k : avancée, 0 à 1), et l'éclosion de la purification
+## (aussi au chargement d'une partie où il l'est déjà : with_wave faux). Voir on_siege_tick, on_purified.
+signal siege_ticked(k: float)
+signal bloomed(with_wave: bool)
 
 const BossBar = preload("res://scripts/boss_bar.gd")
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 const EnemyScript = preload("res://scripts/enemy.gd")
+const LieuxBake = preload("res://scripts/world_bake/lieux_bake.gd")
 
 ## Position de repli sans scène de jeu (main.region_center) : dans la direction de la branche
 ## Ronce de l'arbre (milieu de son secteur), à mi-distance du bord du monde.
@@ -30,6 +36,8 @@ const BODY_RADIUS := 44.0
 const WAKE := 800.0
 ## Grande vague de vie à la purification : durée.
 const LIFE_TIME := 2.2
+## Éclosion visuelle de la purification : le Cœur flétri fond dans le purifié, qui s'ouvre (s).
+const BLOOM_TIME := 1.1
 
 var main
 ## Région du Cœur (data/regions/<région>.json) et son drapeau de purification.
@@ -92,6 +100,11 @@ var body: Node2D
 var bar
 ## Veines de corruption au sol : [angle, longueur, courbure], tirées une fois.
 var _veins: Array = []
+## Éclosion (1 à la purification, retombe à 0 en BLOOM_TIME) et secousse d'un battement de siège.
+var bloom := 0.0
+var jolt := 0.0
+## Secondes entières de siège déjà annoncées (on_siege_tick).
+var _ticks := 0
 
 
 ## Le Cœur lui-même, dessiné autour de son pied dans le calque trié en profondeur.
@@ -153,6 +166,7 @@ func _ready() -> void:
 	body = Body.new()
 	body.heart = self
 	body.position = center
+	LieuxBake.prepare(body)
 	main.actors_layer.add_child(body)
 	bar = BossBar.new()
 	main.hud.get_parent().add_child(bar)
@@ -169,10 +183,13 @@ func flag_set() -> bool:
 
 func _process(delta: float) -> void:
 	t += delta
+	bloom = maxf(0.0, bloom - delta / BLOOM_TIME)
+	jolt = maxf(0.0, jolt - delta * 3.0)
+	_keep_baked()
 	# Rien à animer quand le Cœur est loin de l'écran (avec trois régions, deux Cœurs tombaient
 	# souvent à moins de 1600 px du joueur sans être visibles) : on regarde le cadre de la caméra.
 	_since_draw += delta
-	if _since_draw < (1.0 / 30.0 if state == "siege" else 1.0 / 15.0) - 0.001:
+	if _since_draw < (1.0 / 30.0 if state == "siege" or bloom > 0.0 else 1.0 / 15.0) - 0.001:
 		return
 	if not frozen and main.player.position.distance_squared_to(center) < 1600.0 * 1600.0 and _near_view():
 		_since_draw = 0.0
@@ -212,8 +229,12 @@ func _physics_process(delta: float) -> void:
 			wave_index = 0
 			wave_timer = 1.0
 		progress += delta
+		if state == "siege" and int(progress) > _ticks:
+			_ticks = int(progress)
+			on_siege_tick(ratio())
 	else:
 		progress = maxf(0.0, progress - delta * DECAY)
+		_ticks = mini(_ticks, int(progress))
 		if state == "siege" and progress <= 0.0:
 			state = "fletri"
 	if state == "siege":
@@ -241,6 +262,7 @@ func reset_siege() -> bool:
 		return false
 	state = "fletri"
 	progress = 0.0
+	_ticks = 0
 	wave_index = 0
 	wave_timer = 0.0
 	spawn_timer = 2.0
@@ -306,8 +328,22 @@ func _set_purified(with_wave: bool) -> void:
 	life_step = 0.0
 	if bar != null:
 		bar.hide_bar()
+	on_purified(with_wave)
 	queue_redraw()
 	body.queue_redraw()
+
+
+## Crochet visuel : une seconde de plus tenue pendant le siège. Le Cœur sursaute (il cède) ; les
+## événements du monde s'y accrochent (siege_ticked).
+func on_siege_tick(k: float) -> void:
+	jolt = 1.0
+	siege_ticked.emit(k)
+
+
+## Crochet visuel : le Cœur éclôt (with_wave : vraie purification, faux : partie chargée).
+func on_purified(with_wave: bool) -> void:
+	bloom = 1.0 if with_wave else 0.0
+	bloomed.emit(with_wave)
 
 
 ## La vie avance en vague depuis le Cœur : le sol reverdit par anneaux de plus en plus larges.
@@ -365,17 +401,76 @@ func _draw() -> void:
 
 
 ## Le Cœur lui-même, dessiné par les dessins de sa région (Regions.art : scripts/region_art/<art>.gd,
-## region_art.gd par défaut) : flétri, il bat (plus vite pendant le siège) et vire au vert à mesure
-## qu'il cède ; purifié, il devient la plante de sa région (la rose du roncier par défaut).
+## region_art.gd par défaut), vu de trois quarts, pied au sol. Sa partie fixe est cuite en images
+## (LieuxBake : flétri, flétri qui a cédé, purifié) : le flétri fond dans celui qui a cédé à mesure que
+## la zone est tenue, il bat (plus vite pendant le siège) et sursaute à chaque seconde tenue ; purifié,
+## il éclôt (fondu et ouverture) puis respire. Sa partie animée (lueur, braises, halo) est dessinée à
+## chaque image. Sans images cuites (pas encore, ou sans rendu), tout est dessiné en direct.
 func draw_body(c: CanvasItem) -> void:
-	var art: GDScript = Regions.art(region) if Regions.exists(region) else load(Regions.BASE_ART)
-	# Dessiné un peu plus grand que son obstacle : on le repère de loin.
-	var r := body_radius * 1.25 * pulse()
-	var lift := Vector2(0, -r * 0.6)
+	var art := _art()
+	var key := _bake_key()
+	var k := ratio()
+	var p := pulse()
+	var sq := 1.0 + (p - 1.0) * 0.7 + 0.03 * jolt
+	var shake := sin(t * 60.0) * 1.5 * jolt
 	if state == "purifie":
-		art.draw_heart_purified(c, self, lift, body_radius * 1.3)
+		if bloom > 0.0:
+			# Éclosion : le flétri s'efface pendant que le purifié s'ouvre depuis le sol.
+			var u := Anim.ease_out(1.0 - bloom)
+			c.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0 + 0.08 * bloom))
+			_body_image(c, art, key, "f1", false, 1.0, Color(1, 1, 1, bloom))
+			c.draw_set_transform(Vector2.ZERO, 0.0, Vector2(0.75 + 0.25 * u, 0.55 + 0.45 * u))
+			_body_image(c, art, key, "p", true, 1.0, Color(1, 1, 1, u))
+		else:
+			var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
+			c.draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0 + 0.015 * b))
+			_body_image(c, art, key, "p", true, 1.0, Color.WHITE)
 	else:
-		art.draw_heart(c, self, lift, r)
+		c.draw_set_transform(Vector2(shake, 0.0), 0.0, Vector2(1.0 / sqrt(sq), sq))
+		_body_image(c, art, key, "f0", false, 0.0, Color.WHITE)
+		if k > 0.0:
+			_body_image(c, art, key, "f1", false, 1.0, Color(1, 1, 1, k))
+	c.draw_set_transform_matrix(Transform2D.IDENTITY)
+	art.heart_live(c, self, size)
+
+
+## Une image du Cœur : cuite si elle l'est, sinon dessinée en direct (alpha : fondu).
+func _body_image(c: CanvasItem, art: GDScript, key: String, cell: String, pur: bool, k: float, mod: Color) -> void:
+	if mod.a <= 0.01:
+		return
+	if LieuxBake.draw(c, key, cell, Vector2.ZERO, 1.0, mod):
+		return
+	if mod.a < 0.5:
+		return
+	art.heart_body(c, region, size, pur, k)
+
+
+func _art() -> GDScript:
+	return Regions.art(region) if Regions.exists(region) else load(Regions.BASE_ART)
+
+
+## Jeu d'images cuites du Cœur : par région et par taille (deux petits Cœurs d'une région le partagent).
+func _bake_key() -> String:
+	return "coeur/%s/%.2f" % [region, size]
+
+
+## Cuit les images du Cœur quand il approche de l'écran (LieuxBake rend les plus anciennes au-delà
+## de son budget).
+func _keep_baked() -> void:
+	if main == null or main.get("player") == null:
+		return
+	var key := _bake_key()
+	if LieuxBake.ready(key) or main.player.position.distance_squared_to(center) > 1600.0 * 1600.0 or not _near_view():
+		return
+	var art := _art()
+	var s := size
+	var reg := region
+	var jobs := []
+	for st in [["f0", false, 0.0], ["f1", false, 1.0], ["p", true, 1.0]]:
+		var pur: bool = st[1]
+		var kk: float = st[2]
+		jobs.append({"key": st[0], "box": art.heart_box(s), "paint": func(ci): art.heart_body(ci, reg, s, pur, kk)})
+	LieuxBake.request(self, key, jobs)
 
 
 ## Battement du Cœur (autour de 1) : plus rapide pendant le siège.

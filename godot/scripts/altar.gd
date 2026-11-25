@@ -10,6 +10,8 @@ extends Node2D
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 const Prompt = preload("res://scripts/prompt.gd")
+const Lieux = preload("res://scripts/world_art/lieux.gd")
+const LieuxBake = preload("res://scripts/world_bake/lieux_bake.gd")
 
 ## Distance où un autel commence à se dessiner, et où il est entièrement visible.
 const REVEAL := {"autel": 520.0, "secret": 230.0}
@@ -29,6 +31,16 @@ var progress := 0.0
 var seen := 0.0
 var t := 0.0
 var _was_near := false
+## La table de pierre (autel seulement), dans le calque trié en profondeur : le héros passe devant ou
+## derrière. Elle s'efface avec la visibilité (modulate).
+var body: Node2D
+
+
+class Body extends Node2D:
+	var altar
+
+	func _draw() -> void:
+		altar.draw_table(self)
 
 
 ## Crée les autels et secrets des régions (Content.rewards()) et les ajoute sous « parent ».
@@ -71,14 +83,32 @@ func _ready() -> void:
 	add_to_group(kind)
 	active = Game.flags.get(flag(), false)
 	seen = 1.0 if active or Game.flags.get(flag() + "_vu", false) else 0.0
+	if kind == "autel":
+		body = Body.new()
+		body.altar = self
+		body.name = "Table_" + id
+		LieuxBake.prepare(body)
+		var layer: Node = main.get("actors_layer") if main != null else null
+		if layer != null:
+			body.position = position
+			layer.add_child(body)
+			tree_exiting.connect(func(): if is_instance_valid(body): body.queue_free())
+		else:
+			add_child(body)
 
 
 ## Animation seulement.
 func _process(delta: float) -> void:
 	t += delta
-	if visibility() > 0.0 or _was_near:
+	var v := visibility()
+	if v > 0.0 or _was_near:
 		queue_redraw()
-	_was_near = visibility() > 0.0
+		if body != null:
+			body.modulate.a = v
+			body.visible = v > 0.01
+			body.queue_redraw()
+			_keep_baked()
+	_was_near = v > 0.0
 
 
 ## Part de visibilité (0 à 1) selon la distance au joueur ; un autel déjà vu reste discret mais visible.
@@ -141,11 +171,12 @@ func activate() -> void:
 	queue_redraw()
 
 
-## Dessin. L'autel se reconnaît à sa silhouette : une porte de deux pierres dressées au-dessus
-## d'une table d'offrande, sur une dalle hexagonale. Il donne une greffe : son accent est l'or du butin.
-## - éteint : couvert de cendre, une braise sous le tas, anneau d'or en tirets ;
-## - en cours : l'anneau d'or se remplit, la cendre s'envole, la braise devient or ;
-## - ravivé : une pousse dorée sur la table, lueur, éclats.
+## Dessin au sol. L'autel se reconnaît à sa silhouette : une table de pierre (deux pierres dressées, une
+## dalle posée dessus ; nœud Body, dans le calque trié en profondeur) sur une ombre de terre battue. Il
+## donne une greffe : son accent est l'or du butin.
+## - éteint : pierre terne, cendre sur la dalle, une braise dessous, anneau d'or en tirets ;
+## - en cours : l'anneau d'or se remplit, la cendre s'envole, la braise devient or, le signe gravé luit ;
+## - ravivé : pierre claire, herbe au pied, une pousse dorée sur la dalle, lueur, éclats.
 func _draw() -> void:
 	var v := visibility()
 	if v <= 0.01:
@@ -157,59 +188,58 @@ func _draw() -> void:
 			_draw_secret(v)
 		return
 	var k := 1.0 if active else clampf(progress / HOLD[kind], 0.0, 1.0)
-	var pierre := Art.c("interactif").darkened(0.4).lerp(Art.c("interactif"), 0.35 + 0.65 * k)
-	var or_ := Art.c("butin")
-	var ink := Color(Art.c("contour"), v)
-	# Dalle hexagonale.
-	var slab := PackedVector2Array()
-	for i in 6:
-		slab.append(Vector2.from_angle(TAU * i / 6.0) * Vector2(58, 32) + Vector2(0, 6))
-	draw_colored_polygon(slab, Color(Art.c("contour"), 0.35 * v))
-	var top := PackedVector2Array()
-	for q in slab:
-		top.append(q * 0.9 + Vector2(0, -2))
-	draw_colored_polygon(top, Color(pierre.darkened(0.55), 0.8 * v))
-	draw_polyline(top + PackedVector2Array([top[0]]), Color(pierre, 0.35 * v), Art.TRAIT_FIN, true)
-	# Anneau de la zone à fouler.
+	# Terre battue autour de la table.
+	draw_colored_polygon(Art.ellipse(Vector2(0, 2), 54.0, 26.0, 28), Color(Art.c("contour"), 0.22 * v))
 	_ring(Vector2(0, 4), ZONE, k, v)
 	if not active and progress <= 0.0:
 		_invite(ZONE, v)
-	# Porte : deux pierres dressées et un linteau.
-	for side in [-1.0, 1.0]:
-		var b := Vector2(side * 34.0, 2.0)
-		var st := PackedVector2Array([b + Vector2(-8, 0), b + Vector2(-7, -50), b + Vector2(0, -56), b + Vector2(7, -50), b + Vector2(8, 0)])
-		Art.shadow(self, b, 9.0)
-		_vol(st, pierre, v)
-		# Rune d'or gravée, qui s'allume avec l'avancée.
-		var rune := Color(Art.c("contour"), 0.6 * v).lerp(Color(or_, v), k)
-		draw_line(b + Vector2(0, -38), b + Vector2(0, -22), rune, Art.TRAIT_FIN, true)
-		draw_line(b + Vector2(-4, -32), b + Vector2(0, -27), rune, Art.TRAIT_FIN, true)
-		draw_line(b + Vector2(4, -32), b + Vector2(0, -27), rune, Art.TRAIT_FIN, true)
-	var lintel := PackedVector2Array([Vector2(-46, -54), Vector2(46, -54), Vector2(42, -64), Vector2(-42, -64)])
-	_vol(lintel, pierre.lightened(0.05), v)
-	# Table d'offrande.
-	var table := PackedVector2Array([Vector2(-20, 0), Vector2(-22, -14), Vector2(22, -14), Vector2(20, 0)])
-	Art.shadow(self, Vector2(0, 0), 20.0)
-	_vol(table, pierre.darkened(0.1), v)
-	var plate := Art.ellipse(Vector2(0, -15), 22.0, 6.0, 16)
-	draw_colored_polygon(plate, Color(pierre.lightened(0.1), v))
-	draw_polyline(plate + PackedVector2Array([plate[0]]), ink, Art.TRAIT_FIN, true)
+
+
+## Jeu d'images cuites : un par région (table éteinte et ravivée).
+func _bake_key() -> String:
+	return "autel/" + region
+
+
+func _keep_baked() -> void:
+	var key := _bake_key()
+	if LieuxBake.ready(key):
+		return
+	var reg := region
+	var jobs := []
+	for on in [0, 1]:
+		var rv: bool = on == 1
+		jobs.append({"key": "t%d" % on, "box": Lieux.altar_box(), "paint": func(ci): Lieux.altar_table(ci, reg, Vector2.ZERO, rv)})
+	LieuxBake.request(self, key, jobs)
+
+
+## La table de pierre (cuite, la ravivée fondue sur l'éteinte avec l'avancée), son signe qui luit, la
+## cendre et la braise, ou la pousse dorée.
+func draw_table(c: CanvasItem) -> void:
+	var k := 1.0 if active else clampf(progress / HOLD[kind], 0.0, 1.0)
+	var key := _bake_key()
+	if k < 1.0 and not LieuxBake.draw(c, key, "t0"):
+		Lieux.altar_table(c, region, Vector2.ZERO, false)
+	if k > 0.0 and not LieuxBake.draw(c, key, "t1", Vector2.ZERO, 1.0, Color(1, 1, 1, k)) and k >= 0.5:
+		Lieux.altar_table(c, region, Vector2.ZERO, true)
+	Lieux.altar_glyph(c, Vector2.ZERO, k, t)
+	var top := Vector2(-11, -27)
 	if active:
-		_draw_sprout(Vector2(0, -16), v)
+		_draw_sprout(c, top)
 		return
 	# Tas de cendre qui s'envole à mesure qu'on s'y tient, braise dessous qui vire à l'or.
+	var or_ := Art.c("butin")
 	var ash := Art.c("brume").lightened(0.1)
 	var heap := 1.0 - Anim.ease_in(k)
 	if heap > 0.02:
-		draw_colored_polygon(Art.ellipse(Vector2(0, -18), 16.0 * heap, 6.0 * heap, 14), Color(ash, v))
-		draw_colored_polygon(Art.ellipse(Vector2(-3, -21), 9.0 * heap, 4.0 * heap, 12), Color(ash.lightened(0.15), v))
+		c.draw_colored_polygon(Art.ellipse(top, 12.0 * heap, 4.5 * heap, 14), ash)
+		c.draw_colored_polygon(Art.ellipse(top + Vector2(-2, -2), 7.0 * heap, 3.0 * heap, 12), ash.lightened(0.15))
 	var ember := Art.ec("cendre").lerp(or_, k)
-	draw_circle(Vector2(0, -19), 3.0 + 2.0 * k + sin(t * 3.0), Color(ember, v * (0.55 + 0.25 * sin(t * 4.0))))
+	c.draw_circle(top + Vector2(0, -1), 2.5 + 2.0 * k + sin(t * 3.0) * 0.8, Color(ember, 0.55 + 0.25 * sin(t * 4.0)))
 	if k > 0.0:
 		for i in 6:
 			var u := fposmod(t * 0.9 + i / 6.0, 1.0)
-			var p := Vector2(sin(i * 2.1 + t) * 12.0 + 20.0 * u * (1.0 if i % 2 == 0 else -1.0), -20.0 - 40.0 * u)
-			draw_circle(p, 1.6, Color(ash, v * k * (1.0 - u)))
+			var p := top + Vector2(sin(i * 2.1 + t) * 10.0 + 18.0 * u * (1.0 if i % 2 == 0 else -1.0), -2.0 - 40.0 * u)
+			c.draw_circle(p, 1.6, Color(ash, k * (1.0 - u)))
 
 
 ## Anneau de progression commun aux autels et au secret : fond sombre, or qui se remplit.
@@ -239,22 +269,22 @@ func _vol(pts: PackedVector2Array, col: Color, v: float) -> void:
 
 
 ## Une pousse dorée qui sort de l'offrande, sa lueur et des éclats.
-func _draw_sprout(base: Vector2, v: float) -> void:
+func _draw_sprout(c: CanvasItem, base: Vector2) -> void:
 	var or_ := Art.c("butin")
 	var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
-	draw_circle(base + Vector2(0, -14), 34.0, Color(or_, v * (0.08 + 0.04 * b)))
-	draw_circle(base + Vector2(0, -14), 20.0, Color(or_, v * (0.12 + 0.05 * b)))
+	c.draw_circle(base + Vector2(0, -14), 34.0, Color(or_, 0.08 + 0.04 * b))
+	c.draw_circle(base + Vector2(0, -14), 20.0, Color(or_, 0.12 + 0.05 * b))
 	var sway := sin(t * 1.6) * 1.5
-	draw_line(base, base + Vector2(sway, -26), Color(Art.c("decor_vivant").lightened(0.3), v), 2.5, true)
+	c.draw_line(base, base + Vector2(sway, -26), Art.c("decor_vivant").lightened(0.3), 2.5, true)
 	for side in [-1.0, 1.0]:
 		var lf := _leaf(base + Vector2(sway * 0.6, -14 - 4 * side), 13.0, -PI / 2.0 + side * 0.9)
-		draw_colored_polygon(lf, Color(or_.darkened(0.1 if side > 0 else 0.0), v))
-		Art.outline(self, lf, Color(Art.c("contour"), 0.6 * v), Art.TRAIT_FIN)
-	draw_circle(base + Vector2(sway, -28), 3.5, Color(or_.lightened(0.5), v))
+		c.draw_colored_polygon(lf, or_.darkened(0.1 if side > 0 else 0.0))
+		Art.outline(c, lf, Color(Art.c("contour"), 0.6), Art.TRAIT_FIN)
+	c.draw_circle(base + Vector2(sway, -28), 3.5, or_.lightened(0.5))
 	for i in 3:
 		var u := fposmod(t * 0.5 + i / 3.0, 1.0)
 		var p := base + Vector2(sin(i * 2.4) * 18.0, -10.0 - 34.0 * u)
-		_sparkle(p, 3.0 * sin(PI * u), v)
+		_sparkle_on(c, p, 3.0 * sin(PI * u), 1.0)
 
 
 func _leaf(p: Vector2, l: float, a: float) -> PackedVector2Array:
@@ -272,11 +302,15 @@ func _leaf(p: Vector2, l: float, a: float) -> PackedVector2Array:
 
 ## Éclat en étoile à quatre branches.
 func _sparkle(p: Vector2, r: float, v: float) -> void:
+	_sparkle_on(self, p, r, v)
+
+
+func _sparkle_on(c: CanvasItem, p: Vector2, r: float, v: float) -> void:
 	if r <= 0.2:
 		return
 	var col := Color(Art.c("butin").lightened(0.5), v)
-	draw_colored_polygon(PackedVector2Array([p + Vector2(0, -r * 2), p + Vector2(r * 0.4, 0), p + Vector2(0, r * 2), p + Vector2(-r * 0.4, 0)]), col)
-	draw_colored_polygon(PackedVector2Array([p + Vector2(-r * 2, 0), p + Vector2(0, r * 0.4), p + Vector2(r * 2, 0), p + Vector2(0, -r * 0.4)]), col)
+	c.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -r * 2), p + Vector2(r * 0.4, 0), p + Vector2(0, r * 2), p + Vector2(-r * 0.4, 0)]), col)
+	c.draw_colored_polygon(PackedVector2Array([p + Vector2(-r * 2, 0), p + Vector2(0, r * 0.4), p + Vector2(r * 2, 0), p + Vector2(0, -r * 0.4)]), col)
 
 
 ## Secret encore enfoui : quelques étincelles d'or dans un petit tas de cendre, qui grandissent

@@ -1,10 +1,7 @@
 ## Dessins de la région d'Aube (les falaises de verre) : le Cœur de l'aurore et le cercle d'éclats de
 ## verre de l'arène de la Phalène. Voir region_art.gd (ce qui n'est pas remplacé ici reste celui du
 ## roncier).
-##   - Cœur flétri : le bulbe des Flétris serti dans une couronne de prismes de verre fumé, fêlés,
-##     d'où ne filtre qu'une lumière sale ; des éclats de verre jonchent son pied ;
-##   - Cœur purifié : une flèche de cristal clair au cœur d'or, qui jette des rayons d'aube et des
-##     reflets irisés ; des fleurs pâles poussent entre les éclats ;
+##   - Cœur : celui de world_art/lieux.gd (refonte du monde, vague 1 C), commun en attendant le sien ;
 ##   - mur de l'arène : un cercle d'aiguilles de verre plantées dans la roche ; brèche du côté du
 ##     Cœur ; pendant le combat la lumière crue y court et les arêtes brûlent ; une fois la Phalène
 ##     vaincue, le verre s'éclaircit et des fleurs d'aube s'ouvrent à son pied.
@@ -55,87 +52,6 @@ static func draw_prism(c, pts: PackedVector2Array, col: Color, edge: Color, alph
 	var closed := pts.duplicate()
 	closed.append(pts[0])
 	c.draw_polyline(closed, Color(Art.c("contour"), 0.55 * alpha), Art.TRAIT_FIN, true)
-
-
-## Le Cœur de l'aurore flétri : prismes de verre fumé, fêlés, autour du bulbe ; une lumière sale
-## filtre entre eux et se dore à mesure qu'il cède.
-static func draw_heart(c: CanvasItem, h, lift: Vector2, r: float) -> void:
-	var k: float = h.ratio()
-	var t: float = h.t
-	Art.shadow(c, Vector2(0, 2), r * 1.2)
-	var smoke := pal("verre_fume").lerp(pal("verre"), k * 0.7)
-	var light := pal("lumiere_sombre").lerp(pal("lumiere"), k)
-	# Éclats de verre au pied, à plat.
-	for i in 6:
-		var x := (i - 2.5) * r * 0.45
-		var y := r * (0.05 + 0.08 * (i % 2))
-		var pts := PackedVector2Array([Vector2(x - r * 0.18, y), Vector2(x, y - r * 0.12), Vector2(x + r * 0.2, y + r * 0.02), Vector2(x + r * 0.02, y + r * 0.1)])
-		c.draw_colored_polygon(pts, Color(smoke.darkened(0.1 * (i % 3)), 0.9))
-	# Rais de lumière sale derrière le bulbe (ils se dorent quand il cède).
-	for i in 5:
-		var a := -PI / 2.0 + (i - 2) * 0.38
-		var d := Vector2.from_angle(a)
-		var len := r * (2.0 + 0.5 * sin(t * 1.4 + i)) * (0.6 + 0.4 * k)
-		var n := d.orthogonal() * r * 0.1
-		c.draw_colored_polygon(PackedVector2Array([lift + n, lift + d * len, lift - n]), Color(light, 0.12 + 0.18 * k))
-	# Couronne de prismes fumés, derrière et sur les flancs.
-	for i in 7:
-		var a := -PI / 2.0 + (i - 3) * 0.46
-		var d := Vector2.from_angle(a)
-		var foot := lift + d * r * 0.7
-		var hgt := r * (1.05 if i % 2 == 0 else 0.75)
-		var pts := PackedVector2Array()
-		for q in prism(Vector2.ZERO, r * 0.2, hgt, 0.0):
-			pts.append(foot + q.rotated(a + PI / 2.0))
-		draw_prism(c, pts, smoke, light)
-		# Fêlure.
-		var mid := foot + d * hgt * 0.45
-		c.draw_line(mid - d.orthogonal() * r * 0.1, mid + d * r * 0.15, Color(Art.c("contour"), 0.6), 1.2, true)
-	heart_bulb(c, h, lift, r)
-
-
-## Le Cœur de l'aurore purifié : une flèche de cristal clair au cœur d'or, des rayons d'aube et des
-## reflets irisés ; quelques fleurs pâles entre les éclats.
-static func draw_heart_purified(c: CanvasItem, h, lift: Vector2, r: float) -> void:
-	var t: float = h.t
-	var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
-	Art.shadow(c, Vector2(0, 2), r * 1.3)
-	var core := Vector2(0, -r * 1.1)
-	# Rayons d'aube qui tournent lentement.
-	for i in 8:
-		var a := t * 0.12 + TAU * i / 8.0
-		var d := Vector2.from_angle(a)
-		var len := r * (2.4 + 0.3 * sin(t * 1.3 + i))
-		var n := d.orthogonal() * r * 0.12
-		c.draw_colored_polygon(PackedVector2Array([core + n, core + d * len, core - n]), Color(pal("lumiere"), 0.16 + 0.06 * b))
-	Art.glow(c, core, r * (1.8 + 0.1 * b), "seve")
-	# Petits prismes autour du pied.
-	for i in 5:
-		var x := (i - 2) * r * 0.55
-		var hgt := r * (0.55 + 0.2 * (i % 2))
-		draw_prism(c, prism(Vector2(x, r * 0.08 * ((i % 2) * 2 - 1)), r * 0.16, hgt, (i - 2) * r * 0.06), pal("verre"), pal("verre_clair"))
-	# La grande flèche de cristal.
-	var spire := prism(Vector2.ZERO, r * 0.42, r * 2.5, r * 0.04)
-	draw_prism(c, spire, pal("verre"), pal("verre_clair"), 0.92)
-	# Cœur d'or qui bat dans le cristal.
-	Art.volume_circle(c, core, r * (0.3 + 0.03 * b), pal("lumiere"), 0.9)
-	c.draw_circle(core + Vector2(-r * 0.08, -r * 0.08), r * 0.1, pal("lumiere_clair"))
-	# Reflets irisés sur les arêtes.
-	for i in 4:
-		var u := fposmod(t * 0.25 + i * 0.25, 1.0)
-		var p := Vector2(lerpf(-r * 0.3, r * 0.3, u), -r * (0.4 + 1.8 * u))
-		c.draw_line(p, p + Vector2(r * 0.16, -r * 0.08), Color(pal("iris_%d" % (i + 1)), sin(PI * u) * 0.8), 2.0, true)
-	# Fleurs pâles au pied.
-	for i in 4:
-		var p := Vector2((i - 1.5) * r * 0.7, r * 0.18)
-		for j in 5:
-			c.draw_circle(p + Vector2.from_angle(TAU * j / 5.0 + i) * 3.2, 2.6, pal("lumiere_clair"))
-		c.draw_circle(p, 1.8, pal("lumiere"))
-	# Poussière dorée qui monte.
-	for i in 5:
-		var u := fposmod(t * 0.3 + i / 5.0, 1.0)
-		var p := core + Vector2(sin(i * 2.3 + t) * r * 0.7, -90.0 * u)
-		c.draw_circle(p, 2.0, Color(pal("lumiere_clair"), sin(PI * u)))
 
 
 ## Sol de l'arène : la roche pâle, brûlée de lumière tant que la Phalène vit ; dorée ensuite.

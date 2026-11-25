@@ -179,12 +179,14 @@ func _run() -> void:
 	var h = main.heart
 	h.main = main
 	var hs0: int = m.slowmos
+	# Matériau des lieux cuits (refonte du monde, vague 1 C) : rendu tel quel après la silhouette.
+	var h_mat = h.body.material
 	h.purify()
 	check(m.slowmos == hs0 + 1 and m.last_style == "region" and m.in_impact_frame(), "Cœur purifié : impact frame « region » et ralenti")
 	check(h.body.material == m._mat, "le Cœur passe en silhouette")
 	_settle(m)
 	await _frames(1)
-	check(h.body.material == null, "le Cœur rendu tel quel")
+	check(h.body.material == h_mat, "le Cœur rendu tel quel")
 
 	print("Combat de boss simulé : au plus 3 éclairs par seconde")
 	var stamps: Array = []
