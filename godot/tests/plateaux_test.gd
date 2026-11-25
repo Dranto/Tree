@@ -290,7 +290,8 @@ func _run() -> void:
 	check(game.points == points + 2, "2 points d'arbre gagnés")
 	check(arena.state == "vaincue" and not main.spawn_paused, "l'aire refleurit, les naissances reprennent")
 	# Le ralenti de la mort du boss (moments.gd) allonge le temps réel : attendre qu'il ait disparu.
-	await _until(func(): return not is_instance_valid(boss), 600)
+	var boss_ref: WeakRef = weakref(boss)   # une capture libérée par le boss lui-même ferait une erreur au dernier appel
+	await _until(func(): return boss_ref.get_ref() == null, 600)
 	check(not is_instance_valid(boss), "le Harfang a disparu")
 
 	print("Sauvegarde")
