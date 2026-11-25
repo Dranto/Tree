@@ -1506,7 +1506,7 @@ msgid "Mutation : prisme vif"
 msgstr ""
 
 #. data/branches/aube.json › aube › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Aube"
 msgstr ""
 
@@ -2319,7 +2319,7 @@ msgid "Mutation : écorce prompte"
 msgstr ""
 
 #. data/branches/racine.json › racine › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Racine"
 msgstr ""
 
@@ -3349,7 +3349,7 @@ msgid "Mutation : volée resserrée"
 msgstr ""
 
 #. data/branches/ronce.json › ronce › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Ronce"
 msgstr ""
 
@@ -4161,7 +4161,7 @@ msgstr ""
 #. data/branches/seve.json › seve › name
 #. data/branches/seve.json › seve › notable › names
 #. data/finale.json › credits › title
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Sève"
 msgstr ""
 
@@ -5131,7 +5131,7 @@ msgstr ""
 
 #. data/branches/spore.json › spore › name
 #. data/branches/spore.json › spore › notable › names
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Spore"
 msgstr ""
 
@@ -5967,7 +5967,7 @@ msgid "Mutation : tornade rapide"
 msgstr ""
 
 #. data/branches/vent.json › vent › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Vent"
 msgstr ""
 
@@ -7765,97 +7765,97 @@ msgctxt "nom du jeu"
 msgid "Sève"
 msgstr ""
 
-#. scripts/attack.gd:1118
+#. scripts/attack.gd:1124
 msgid "Attaque de base : %s. %s"
 msgstr ""
 
-#. scripts/attack.gd:1122
+#. scripts/attack.gd:1128
 msgid "Attaque : %s"
 msgstr ""
 
-#. scripts/attack.gd:1138
-#. scripts/attack.gd:1299
+#. scripts/attack.gd:1144
+#. scripts/attack.gd:1305
 #. scripts/skill_tree.gd:1025
 #. scripts/tree_ui.gd:930
 msgid "%s : %s"
 msgstr ""
 
-#. scripts/attack.gd:1141
+#. scripts/attack.gd:1147
 msgid "En écho, %s : %s"
 msgstr ""
 
-#. scripts/attack.gd:1147
+#. scripts/attack.gd:1153
 msgid " (sans effet sur : %s)"
 msgstr ""
 
-#. scripts/attack.gd:1147
+#. scripts/attack.gd:1153
 #. scripts/options_panel.gd:423
 msgid ", "
 msgstr ""
 
-#. scripts/attack.gd:1150
-#. scripts/attack.gd:1330
+#. scripts/attack.gd:1156
+#. scripts/attack.gd:1336
 msgid "Synergie « %s » : %s"
 msgstr ""
 
-#. scripts/attack.gd:1177
+#. scripts/attack.gd:1183
 msgid "Attaque : %s → %s"
 msgstr ""
 
-#. scripts/attack.gd:1179
+#. scripts/attack.gd:1185
 msgid " (%s continue en écho)"
 msgstr ""
 
-#. scripts/attack.gd:1183
+#. scripts/attack.gd:1189
 msgid "Attaque : + %s, en écho (tire en plus, à sa cadence)"
 msgstr ""
 
-#. scripts/attack.gd:1186
-#. scripts/attack.gd:1204
+#. scripts/attack.gd:1192
+#. scripts/attack.gd:1210
 msgid "Attaque : − %s"
 msgstr ""
 
-#. scripts/attack.gd:1202
+#. scripts/attack.gd:1208
 msgid "Attaque : + %s (%s)"
 msgstr ""
 
-#. scripts/attack.gd:1206
+#. scripts/attack.gd:1212
 msgid "Attaque, %s : %s → %s"
 msgstr ""
 
-#. scripts/attack.gd:1208
+#. scripts/attack.gd:1214
 msgid " (sans effet sur cette forme)"
 msgstr ""
 
-#. scripts/attack.gd:1212
+#. scripts/attack.gd:1218
 msgid "Synergie : + %s (%s)"
 msgstr ""
 
-#. scripts/attack.gd:1215
+#. scripts/attack.gd:1221
 msgid "Synergie : − %s"
 msgstr ""
 
-#. scripts/attack.gd:1272
+#. scripts/attack.gd:1278
 msgid "une attaque au corps à corps"
 msgstr ""
 
-#. scripts/attack.gd:1272
+#. scripts/attack.gd:1278
 msgid "une attaque de zone"
 msgstr ""
 
-#. scripts/attack.gd:1272
+#. scripts/attack.gd:1278
 msgid "une attaque à projectiles"
 msgstr ""
 
-#. scripts/attack.gd:1283
+#. scripts/attack.gd:1289
 msgid "une forme de %s"
 msgstr ""
 
-#. scripts/attack.gd:1285
+#. scripts/attack.gd:1291
 msgid "%d formes d'attaque"
 msgstr ""
 
-#. scripts/attack.gd:1332
+#. scripts/attack.gd:1338
 msgid "Synergie possible « %s » : %s"
 msgstr ""
 
@@ -8061,7 +8061,7 @@ msgctxt "élite : nom puis modificateurs"
 msgid "%s %s"
 msgstr ""
 
-#. scripts/enemy.gd:415
+#. scripts/enemy.gd:417
 msgid "Enragé !"
 msgstr ""
 
@@ -8077,11 +8077,11 @@ msgstr ""
 msgid "Phase 3 sur 3"
 msgstr ""
 
-#. scripts/fx.gd:238
+#. scripts/fx.gd:306
 msgid "Sève −%d"
 msgstr ""
 
-#. scripts/fx.gd:240
+#. scripts/fx.gd:308
 msgid "étourdi"
 msgstr ""
 
@@ -8164,7 +8164,7 @@ msgid ""
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 msgstr ""
 
-#. scripts/main.gd:1124
+#. scripts/main.gd:1128
 msgid "%s vaincu"
 msgstr ""
 
