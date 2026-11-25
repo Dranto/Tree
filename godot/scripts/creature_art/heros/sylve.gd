@@ -204,5 +204,15 @@ static func _tip(ci: CanvasItem, xf: Transform2D, q: Vector2, a: float, build: S
 				ci.draw_circle(xf * q, 1.6 * xf.get_scale().abs().x, gl)
 		"vent":
 			Ink.part(ci, xf, Ink.leaf(q, a + 0.3 * sin(t * 2.5), 7.0 + 4.0 * k, 3.4), {"clair": Color("e4eef7"), "ombre": Color("a4bcd4")}, 0.8, 1.0, 0.0)
+		"spore":
+			var cap := PackedVector2Array()
+			for i in 9:
+				var aa := PI + PI * i / 8.0
+				cap.append(q + Vector2(cos(aa) * (3.0 + 1.5 * k), sin(aa) * (2.4 + k)))
+			Ink.part(ci, xf, cap, {"clair": Color("a07cc0"), "ombre": Color("4a3560"), "reflet": Color("e2d0f2")}, 0.8, 1.0, 0.4)
+		"aube":
+			Ink.part(ci, xf, Ink.thorn(q, a, 6.0 + 3.0 * k, 3.4), {"clair": Color("fffde6"), "ombre": Color("d9b860"), "reflet": Color.WHITE}, 0.7, 1.0, 1.0)
+			if not Ink.mono:
+				Ink.halo(ci, xf * q, 5.0 * xf.get_scale().abs().x, Art.ec("lumiere"), k)
 		_:
 			Ink.part(ci, xf, Ink.leaf(q, a + 0.4, 5.0 + 3.0 * k, 3.2), K.leaves(build), 0.8, 1.0, 0.3)

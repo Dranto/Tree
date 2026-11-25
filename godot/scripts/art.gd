@@ -200,11 +200,13 @@ const BESTIAIRE := {
 ## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
 ## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
 const FEUILLES_BUILD := {
-	"aucun": {"corps": Color("f3ead2"), "clair": Color("6fae58"), "ombre": Color("355e2c"), "reflet": Color("c6ecb0"), "detail": Color("8af5c0")},
-	"ronce": {"corps": Color("f2cfc4"), "clair": Color("5f7d3a"), "ombre": Color("2f3f1f"), "reflet": Color("b9cf8a"), "detail": Color("e0675e")},
-	"seve": {"corps": Color("c9f7e2"), "clair": Color("4fd69a"), "ombre": Color("1f7a56"), "reflet": Color("d6fff0"), "detail": Color("eafff4")},
-	"racine": {"corps": Color("e6d1a8"), "clair": Color("7a8a3c"), "ombre": Color("3e4a1e"), "reflet": Color("c9d68a"), "detail": Color("8a6a3e")},
-	"vent": {"corps": Color("e4eef7"), "clair": Color("a4bcd4"), "ombre": Color("4e6680"), "reflet": Color("f2f8ff"), "detail": Color("fdf6dc")},
+	"aucun": {"corps": Color("f3ead2"), "clair": Color("6fae58"), "ombre": Color("355e2c"), "reflet": Color("c6ecb0"), "detail": Color("8af5c0"), "accent": Color("8af5c0"), "lueur": Color("eafff4")},
+	"ronce": {"corps": Color("f2cfc4"), "clair": Color("5f7d3a"), "ombre": Color("2f3f1f"), "reflet": Color("b9cf8a"), "detail": Color("e0675e"), "accent": Color("d4485a"), "lueur": Color("ff9a8a")},
+	"seve": {"corps": Color("c9f7e2"), "clair": Color("4fd69a"), "ombre": Color("1f7a56"), "reflet": Color("d6fff0"), "detail": Color("eafff4"), "accent": Color("eafff4"), "lueur": Color("eafff4")},
+	"racine": {"corps": Color("e6d1a8"), "clair": Color("7a8a3c"), "ombre": Color("3e4a1e"), "reflet": Color("c9d68a"), "detail": Color("8a6a3e"), "accent": Color("c08a3e"), "lueur": Color("f2d27a")},
+	"vent": {"corps": Color("e4eef7"), "clair": Color("a4bcd4"), "ombre": Color("4e6680"), "reflet": Color("f2f8ff"), "detail": Color("fdf6dc"), "accent": Color("8fb4e0"), "lueur": Color("d8ecff")},
+	"spore": {"corps": Color("efe2f5"), "clair": Color("a07cc0"), "ombre": Color("4a3560"), "reflet": Color("e2d0f2"), "detail": Color("d9a64a"), "accent": Color("b48ae6"), "lueur": Color("e2ccff")},
+	"aube": {"corps": Color("fbf3dc"), "clair": Color("d9b860"), "ombre": Color("6e5a2e"), "reflet": Color("fff4c8"), "detail": Color("fffb3d"), "accent": Color("f0c840"), "lueur": Color("fffde6")},
 }
 
 

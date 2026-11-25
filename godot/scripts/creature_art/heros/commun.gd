@@ -12,23 +12,13 @@ static func leaves(build: String) -> Dictionary:
 	return {"clair": f["clair"], "ombre": f["ombre"], "reflet": f["reflet"]}
 
 
-## Couleur de marque de la branche (lisible sur le crème).
+## Couleur de marque de la branche (lisible sur le crème) et lueur (yeux, cœur, lames).
 static func accent(build: String) -> Color:
-	match build:
-		"ronce": return Color("d4485a")
-		"seve": return Art.ec("seve", "clair")
-		"racine": return Color("c08a3e")
-		"vent": return Color("8fb4e0")
-	return Art.ec("seve")
+	return Art.FEUILLES_BUILD.get(build, Art.FEUILLES_BUILD["aucun"])["accent"]
 
 
-## Lueur de la branche (yeux, cœur, lames).
 static func glow(build: String) -> Color:
-	match build:
-		"ronce": return Color("ff9a8a")
-		"racine": return Color("f2d27a")
-		"vent": return Color("d8ecff")
-	return Art.ec("seve", "clair")
+	return Art.FEUILLES_BUILD.get(build, Art.FEUILLES_BUILD["aucun"])["lueur"]
 
 
 static func progress(o: Dictionary) -> float:

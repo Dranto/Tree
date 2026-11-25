@@ -16,6 +16,7 @@ run --xvfb --audio-driver Dummy --resolution 2560x1440 -s res://tests/bestiaire/
 echo "== Évolution du héros"
 run --xvfb --audio-driver Dummy --resolution 2560x1440 -s res://tests/bestiaire/heros.gd -- "$OUT/heros_evolution.png"
 run --xvfb --audio-driver Dummy --resolution 2560x1440 -s res://tests/bestiaire/pistes.gd -- "$OUT/heros_pistes.png"
+run --xvfb --audio-driver Dummy --resolution 2560x1440 -s res://tests/bestiaire/esprit.gd -- "$OUT/heros_esprit.png"
 echo "== Scène de combat"
 run --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1920x1080 res://tests/bestiaire/scene.tscn -- --seed=1234 --out="$OUT"
 echo "== GIF"
