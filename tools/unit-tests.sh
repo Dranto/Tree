@@ -28,6 +28,7 @@ TESTS=(
   "death|--headless --fixed-fps 60|"
   "deaths|--headless --fixed-fps 60|"
   "difficulty|--headless|"
+  "demo|--headless --fixed-fps 60|"
   "direct_screen|--xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0|"
   "draw_batch|--xvfb --audio-driver Dummy|"
   "eclat_skills|--headless --fixed-fps 60|"
