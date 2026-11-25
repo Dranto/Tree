@@ -1,6 +1,6 @@
 ## Musique dynamique en couches et ambiance sonore.
 ##
-## Chaque région (et le monde, « ») a jusqu'à cinq couches de 12 s générées par le code (music_synth.gd) :
+## Chaque région (et le monde, « ») a jusqu'à cinq couches de 24 s générées par le code (music_synth.gd) :
 ## sombre et lumineux (exploration, mélangées selon la vie du sol), combat (percussions et basse, ajoutées
 ## quand des Flétris sont proches), coeur (pendant le siège d'un Cœur) et boss (thème du boss, seul).
 ## Toutes les couches ont la même boucle et partent toujours au même point de l'horloge musicale : elles
@@ -18,7 +18,8 @@ const BUS := "Musique" # i18n: non (bus audio)
 const AMB_BUS := "Ambiance" # i18n: non (bus audio)
 const SfxScript = preload("res://scripts/sfx.gd")
 const RegionAudio = preload("res://scripts/region_audio.gd")
-const LOOP := 12.0
+## Durée des couches de musique (music_synth.gd › LOOP) ; les nappes d'ambiance bouclent sur 12 s.
+const LOOP := 24.0
 ## Vitesses des fondus (part du mélange par seconde).
 const REGION_FADE := 0.5
 const MIX_FADE := 0.5

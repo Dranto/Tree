@@ -148,10 +148,18 @@ static func validate() -> PackedStringArray:
 
 static func _check_music(errors: PackedStringArray, w: String, m: Dictionary) -> void:
 	for k in m:
-		if not k in ["seed", "roots", "layers"] and not k in MusicSynth.DEFAULTS:
+		if not k in ["seed", "roots", "roots_b", "key", "qualities", "layers"] and not k in MusicSynth.DEFAULTS:
 			errors.append("%s, music : réglage inconnu « %s »" % [w, k])
 	if m.has("roots") and (not m["roots"] is Array or m["roots"].size() != 4):
 		errors.append("%s, music : « roots » doit avoir quatre fondamentales" % w)
+	if m.has("roots_b") and (not m["roots_b"] is Array or m["roots_b"].size() != 4):
+		errors.append("%s, music : « roots_b » (seconde moitié de la boucle) doit avoir quatre fondamentales" % w)
+	if m.has("qualities"):
+		var q = m["qualities"]
+		if not q is Array or q.size() != MusicSynth.CHORDS or q.any(func(x): return not MusicSynth.QUALITIES.has(str(x))):
+			errors.append("%s, music : « qualities » : huit couleurs d'accord parmi %s" % [w, ", ".join(MusicSynth.QUALITIES.keys())])
+	if m.has("key") and not (m["key"] is float or m["key"] is int):
+		errors.append("%s, music : « key » (transposition en demi-tons) doit être un nombre" % w)
 	if m.has("layers"):
 		if not m["layers"] is Array or m["layers"].is_empty():
 			errors.append("%s, music › layers : une liste de couches" % w)
@@ -160,7 +168,7 @@ static func _check_music(errors: PackedStringArray, w: String, m: Dictionary) ->
 				if not LAYERS.has(str(l)):
 					errors.append("%s, music › layers : couche inconnue « %s » (%s)" % [w, l, ", ".join(LAYERS.keys())])
 	for sec in MusicSynth.DEFAULTS:
-		if sec in ["seed", "roots"] or not m.has(sec):
+		if sec in ["seed", "roots", "roots_b", "key", "qualities"] or not m.has(sec):
 			continue
 		var st = m[sec]
 		if not st is Dictionary:
@@ -177,12 +185,19 @@ static func _check_music(errors: PackedStringArray, w: String, m: Dictionary) ->
 			errors.append("%s : « chord » doit être une liste de demi-tons" % where)
 		if st.has("pattern") and (not st["pattern"] is Array or st["pattern"].is_empty() or st["pattern"].size() > 24):
 			errors.append("%s : « pattern » doit avoir de 1 à 24 notes (réparties sur 3 s)" % where)
+		if st.has("pattern_b") and (not st["pattern_b"] is Array or st["pattern_b"].size() > 24):
+			errors.append("%s : « pattern_b » doit avoir de 0 à 24 notes (vide : « pattern » à l'envers)" % where)
+		if st.has("pad_tone") and not str(st["pad_tone"]) in MusicSynth.PAD_TONES:
+			errors.append("%s : timbre de nappe inconnu « %s » (%s)" % [where, st["pad_tone"], ", ".join(MusicSynth.PAD_TONES)])
+		if st.has("arp") and not str(st["arp"]) in MusicSynth.ARPS:
+			errors.append("%s : arpège inconnu « %s » (%s)" % [where, st["arp"], ", ".join(MusicSynth.ARPS)])
 		if st.has("kit") and not str(st["kit"]) in MusicSynth.KITS:
 			errors.append("%s : percussions inconnues « %s » (%s)" % [where, st["kit"], ", ".join(MusicSynth.KITS)])
 		if st.has("vowel") and not MusicSynth.VOWELS.has(str(st["vowel"])):
 			errors.append("%s : voyelle inconnue « %s »" % [where, st["vowel"]])
-		if st.has("lead_tone") and not str(st["lead_tone"]) in ["flute", "brass"]:
-			errors.append("%s : « lead_tone » vaut flute ou brass" % where)
+		for tk in ["lead_tone", "counter_tone"]:
+			if st.has(tk) and not str(st[tk]) in MusicSynth.TONES:
+				errors.append("%s : « %s » inconnu « %s » (%s)" % [where, tk, st[tk], ", ".join(MusicSynth.TONES)])
 		for part in ["kick", "snare", "hat", "tom"]:
 			if st.has(part):
 				var pat := str(st[part])
@@ -195,8 +210,10 @@ static func _check_music(errors: PackedStringArray, w: String, m: Dictionary) ->
 			var bass = st["bass"]
 			if not bass is Array or bass.is_empty() or bass.size() > 16:
 				errors.append("%s › bass : de 1 à 16 notes (demi-tons, ou null pour un silence)" % where)
-		if st.has("motif"):
-			var mo = st["motif"]
+		for mk in ["motif", "motif_b"]:
+			if not st.has(mk):
+				continue
+			var mo = st[mk]
 			if not mo is Array:
 				errors.append("%s › motif : une liste de notes [croche, note de l'accord, durée]" % where)
 			else:

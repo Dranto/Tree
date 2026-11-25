@@ -65,7 +65,7 @@ def french_like(s):
         return False
     if not re.search(f"[{LETTERS}]{{2,}}", s):
         return False
-    if re.fullmatch(r"[a-z0-9_./:%\-+*<>=\[\]{}()|,]*", s):  # identifiant, chemin, motif
+    if re.fullmatch(r"[a-z0-9_./:%\-+*<>=\[\]{}()|,@]*", s):  # identifiant, chemin, motif (son@région)
         return False
     if re.fullmatch(r"[A-Za-z0-9_]+", s) and not re.search("[À-ÿ]", s) and (s.isupper() or "_" in s):
         return False
