@@ -69,17 +69,26 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	for b in BRANCHES:
 		s[b] = w[b] * p
 	var flip := cos(look) < 0.0
+	# Couches (cuisson en jeu, hero_bake.gd) : « corps » sans le bras ni l'arme, « bras » le bras et
+	# l'arme seuls, dans le repère immobile du corps (le moteur y rejoue le rebond et la visée).
+	var couche: String = o.get("couche", "")
+	var corps := couche != "bras"
+	var bras := couche != "corps"
 	Ink.flash = o.get("hit", 0.0)
 	var base := Ink.frame(feet, h * (0.62 + 0.38 * p), flip)
-	var u := base.get_scale().y
+	var u := absf(base.get_scale().y)
 	var acc := K.accent(dom)
 	var acc2 := K.accent(sec) if sec != "" else acc
 	var gl := K.glow(dom)
 	var lv := K.leaves(dom)
 	var dark := {"clair": lv["ombre"], "ombre": lv["ombre"].darkened(0.35), "reflet": lv["clair"]}
-	K.aura(ci, base, t, p, acc)
-	Ink.ground_shadow(ci, base, Vector2.ZERO, 18.0 + 8.0 * p)
+	if corps:
+		K.aura(ci, base, t, p, acc)
+		Ink.ground_shadow(ci, base, Vector2.ZERO, 18.0 + 8.0 * p)
 	var bob := sin(t * TAU / 2.4) * 1.2 - absf(sin(walk)) * 3.0 * mv
+	if couche == "bras":
+		bob = 0.0
+		mv = 0.0
 	var xf := base * Transform2D(0.06 * mv, Vector2.ONE, 0.0, Vector2(0, bob))
 	var legl := 10.0 + 14.0 * p
 	var ch := 30.0 + 26.0 * p
@@ -89,133 +98,153 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var sway := sin(t * 1.7)
 	var sh: float = 9.0 + 5.0 * p + 3.0 * s["racine"]
 	var hem: float = 15.0 + 12.0 * p + 4.0 * s["racine"]
-	# --- Derrière ---
-	if s["aube"] > 0.1:
-		_wings(ci, xf, Vector2(-2, top + 8.0), s["aube"], t)
-	if s["seve"] > 0.1:
-		for j in 3:
-			var a := PI * (0.62 + j * 0.06) + 0.06 * sin(t * 1.5 + j)
-			K.leaf(ci, xf, Vector2(-4, top + 10.0), a, (16.0 + 30.0 * s["seve"]) * (1.0 - j * 0.18), 9.0, {"clair": Color(Art.ec("seve", "clair"), 0.8), "ombre": Color(Art.ec("seve"), 0.65), "reflet": Color.WHITE}, 0.04, 0.8)
-	if s["spore"] > 0.1:
-		for j in 5:
-			var x: float = -hem * 0.8 + j * 4.0
-			Ink.tendril(ci, xf, Vector2(x, -legl + 4.0), PI * 0.5 + 0.2, 6.0 + 10.0 * s["spore"], 1.2, 1.0, Color("e2d0f2"), sin(t * 1.3 + j))
-	# Écharpe(s) : couleur de la branche secondaire (un hybride se lit à l'écharpe).
-	if p > 0.15:
-		var ns := 2 if s["vent"] > 0.3 else 1
-		for k2 in ns:
-			var sl := (10.0 + 52.0 * p) * (1.0 - k2 * 0.25)
-			var sc := PackedVector2Array()
-			for i in 9:
-				var k := i / 8.0
-				sc.append(Vector2(-2.0 - sl * 0.8 * k, top + 4.0 + k2 * 3.0 + sin(k * 4.0 - t * 3.0 + k2) * 4.0 * k + sl * (0.55 - 0.25 * s["vent"]) * k * k))
-			Ink.brush(ci, xf, sc, 8.6, Ink.encre(), 1.0, 0.0)
-			Ink.brush(ci, xf, sc, 6.4, acc2.lerp(K.CREME, 0.15 + 0.2 * k2), 1.0, 0.0)
-			if s["vent"] > 0.3:
-				for i in [4, 6, 8]:
-					K.leaf(ci, xf, sc[i], PI * 0.75 + 0.3 * sin(t * 2.0 + i), 7.0, 3.4, {"clair": Color("e8f2fa"), "ombre": Color("8fb4e0")}, 0.0, 0.8)
-	if p > 0.25:
-		Sylve._antler(ci, xf, mc + Vector2(-rm * 0.55, -rm * 0.7), -1.0, p, _tipkind(dom), acc, gl, t, true)
-	if s["aube"] > 0.1 and not Ink.mono:
-		# Auréole derrière la tête.
-		var ring := Ink.oval(mc + Vector2(-3, -2), rm * (1.4 + 0.2 * s["aube"]), rm * (1.4 + 0.2 * s["aube"]), 40)
-		ring.append(ring[0])
-		ci.draw_polyline(xf * ring, Color(Art.FEUILLES_BUILD["aube"]["accent"], 0.9 * s["aube"]), 2.2 * u, true)
-		Ink.halo(ci, xf * (mc + Vector2(-3, -2)), rm * 1.6 * u, Art.ec("lumiere"), 0.6 * s["aube"])
-	# Capuche.
-	Ink.part(ci, xf, Ink.oval(mc + Vector2(-3.0, -1.0), rm * 1.18, rm * 1.15, 28), dark, 2.0, 1.0, 0.3)
-	# Jambes.
-	var sw := sin(walk) * 6.0 * mv
-	for j in 2:
-		var x := (3.0 if j == 0 else -4.0)
-		var f := Vector2(x + (sw if j == 0 else -sw), 0)
-		var pts := PackedVector2Array([Vector2(x, -legl - 2), Vector2(x + 1.0, -legl * 0.45), f + Vector2(0, -2)])
-		Ink.brush(ci, xf, pts, 5.6 + 1.5 * s["racine"], Ink.encre(), 1.0, 1.0)
-		Ink.brush(ci, xf, pts, 3.4 + 1.5 * s["racine"], Color("5b4636") if j == 0 else Color("3f3026"), 1.0, 1.0)
-		if s["racine"] > 0.2:
-			for k in 3:
-				var q := Vector2(x + 0.5, -legl * (0.25 + k * 0.22))
-				Ink.brush(ci, xf, PackedVector2Array([q + Vector2(-3, -1), q + Vector2(3, 1.5)]), 1.6, Art.ec("racine"), 1.0, 1.0)
-		Ink.part(ci, xf, Ink.leaf(f + Vector2(-3, -1.5), 0.0, 9.0, 4.0), {"clair": Color("5b4636"), "ombre": Color("3f3026")}, 1.0, 1.0, 0.0)
-	# --- Cape ---
-	var cape := _cape(top, legl, sh, hem, p, dom, sway)
-	var cpal := {"clair": lv["ombre"].lightened(0.12), "ombre": lv["ombre"].darkened(0.35), "reflet": lv["clair"]}
-	Ink.part(ci, xf, cape, cpal, 2.2, 1.0, 0.6)
-	var op := PackedVector2Array([Vector2(1.0, top + 5.0), Vector2(5.0, top + 5.0), Vector2(hem * 0.55, -legl + 4.0), Vector2(-hem * 0.1, -legl + 4.0)])
-	Ink.part(ci, xf, op, {"clair": K.CREME, "ombre": K.CREME.darkened(0.18), "reflet": Color.WHITE}, 1.0, 1.0, 0.4)
-	var hp := PackedVector2Array()
-	for i in range(2, cape.size()):
-		hp.append(cape[i] + Vector2(0, -3.0))
-	Ink.brush(ci, xf, hp, 2.6, acc if dom != "aube" else Art.c("or"), 1.0, 1.0)
-	_cape_overlay(ci, xf, top, legl, hem, s, t, cpal)
-	# Collerette / épaulières selon la branche.
-	_shoulders(ci, xf, Vector2(0, top + 3.0), sh, p, dom, s, lv, dark, t, sway)
-	if sec != "" and s[sec] > 0.15:
-		_shoulders(ci, xf, Vector2(-2, top + 6.0), sh * 0.8, p * 0.6, sec, s, K.leaves(sec), {"clair": K.leaves(sec)["ombre"], "ombre": K.leaves(sec)["ombre"].darkened(0.3)}, t, sway)
-	# Cœur sur la poitrine.
-	var core := Vector2(4.0, top + 16.0 + 6.0 * p)
-	if p > 0.3:
-		var k := (p - 0.3) / 0.7
-		if not Ink.mono:
-			for i in 5:
-				var a := -PI * 0.5 + (i - 2) * 0.7
-				var vein := PackedVector2Array([core, core + Vector2.from_angle(a) * 6.0 * k + Vector2(1, 2), core + Vector2.from_angle(a) * 12.0 * k])
-				Ink.brush(ci, xf, vein, 1.2, Color(gl, 0.8 * k), 1.0, 0.0)
-			Ink.halo(ci, xf * core, 8.0 * u * (0.6 + k), gl, 0.8 + k)
-		Ink.part(ci, xf, Ink.oval(core, 2.6 + 1.6 * k, 3.2 + 1.8 * k, 14), {"clair": gl, "ombre": gl.darkened(0.3), "reflet": Color.WHITE}, 1.0, 1.0, 1.0)
-	# --- Masque ---
-	var mask := PackedVector2Array()
-	for i in 32:
-		var a := TAU * i / 32.0
-		var d := Vector2(cos(a), sin(a))
-		var r := Vector2(rm * 0.86, rm)
-		if d.y > 0.0:
-			r.x *= 1.0 - 0.35 * d.y * d.y
-			r.y *= 1.0 + 0.12 * d.y
-		mask.append(mc + d * r)
-	Ink.part(ci, xf, mask, {"clair": Color("fbf6e8"), "ombre": Color("d9ccb0"), "reflet": Color.WHITE}, 2.0, 1.0, 1.0)
-	Ink.brush(ci, xf, PackedVector2Array([mc + Vector2(rm * 0.38, -rm * 0.25), mc + Vector2(rm * 0.5, rm * 0.25), mc + Vector2(rm * 0.36, rm * 0.36)]), 1.2, Color("c9b99a"), 0.4, 0.4)
-	if p > 0.2:
-		var k := clampf((p - 0.2) / 0.5, 0.0, 1.0)
-		Ink.flat(ci, xf, Ink.leaf(mc + Vector2(rm * 0.08, -rm * 0.95), PI * 0.5, rm * 0.6 * k, 3.0), acc)
-		for q: Vector2 in [mc + Vector2(-rm * 0.18, rm * 0.2), mc + Vector2(rm * 0.62, rm * 0.18)]:
-			Ink.flat(ci, xf, Ink.leaf(q, PI * 0.5 - 0.1, rm * 0.45 * k, 2.4 * (0.8 if q.x > mc.x + rm * 0.3 else 1.0)), acc2 if q.x > mc.x + rm * 0.3 else acc)
-	if p > 0.7:
-		var k := (p - 0.7) / 0.3
-		for q: Vector2 in [mc + Vector2(-rm * 0.48, -rm * 0.45), mc + Vector2(rm * 0.62, -rm * 0.5)]:
-			Ink.flat(ci, xf, Ink.oval(q, 1.4 * k, 1.4 * k, 8), acc)
-	K.slit(ci, xf, mc + Vector2(-rm * 0.12, -rm * 0.08), -0.25, 8.0 + 1.0 * p, 4.6, gl, 0.6 + 0.6 * p + cast)
-	K.slit(ci, xf, mc + Vector2(rm * 0.52, -rm * 0.1), -0.32, 5.6, 3.6, gl, 0.6 + 0.6 * p + cast)
-	# Coiffe selon la branche.
-	_headgear(ci, xf, mc, rm, s, dom, lv, t, sway, p)
-	if p > 0.25 and s["spore"] < 0.5:
-		Sylve._antler(ci, xf, mc + Vector2(rm * 0.35, -rm * 0.8), 1.0, p, _tipkind(dom), acc, gl, t, false)
-	# --- Arme : une vraie arme par forme d'attaque, animée par « a » (0 → 1 : une attaque ; < 0 : repos) ---
-	var forme: String = o.get("forme", "graine" if dom == "aucun" or p < 0.3 else FORME_DE[dom])
-	var mods: Array = o.get("mods", [])
-	var a: float = o.get("a", -1.0)
-	var sp := Vector2(sh - 3.0, top + 6.0)
-	var hand := Arme.pose(forme, sp, top, p, a, t)
-	var c := {"p": p, "t": t, "u": u, "acc": acc, "gl": gl, "lv": lv, "a": a}
-	var devant: bool = Arme.DEVANT.has(forme)
-	var armed := {}
-	if not devant:
-		armed = Arme.draw(ci, xf, hand, forme, mods, c)
-	var arm := PackedVector2Array([sp, sp.lerp(hand, 0.5) + (hand - sp).orthogonal().normalized() * -2.0, hand])
-	Ink.brush(ci, xf, arm, 8.4, Ink.encre(), 1.0, 0.5)
-	Ink.brush(ci, xf, arm, 6.2, K.CREME, 1.0, 0.5)
-	Ink.part(ci, xf, Ink.oval(hand, 2.8, 2.6, 10), {"clair": Color("5b4636"), "ombre": Color("3f3026")}, 1.0)
-	if devant:
-		armed = Arme.draw(ci, xf, hand, forme, mods, c)
-	Arme.ornaments(ci, armed)
-	# Feuilles-glyphes en orbite, à maturité.
-	if p > 0.7 and not Ink.mono:
-		var k := (p - 0.7) / 0.3
-		for i in 3:
-			var ga := t * 1.1 + i * TAU / 3.0
-			var q := Vector2(cos(ga) * (hem + 12.0), top + 10.0 + sin(ga) * 8.0)
-			Ink.halo(ci, xf * q, 6.0 * u, gl, k)
-			Ink.flat(ci, xf, Ink.leaf(q + Vector2(-3, 0), a, 7.0, 3.6), Color(gl.lerp(Color.WHITE, 0.3), k), 0.6)
+	if corps:
+		# --- Derrière ---
+		if s["aube"] > 0.1:
+			_wings(ci, xf, Vector2(-2, top + 8.0), s["aube"], t)
+		if s["seve"] > 0.1:
+			for j in 3:
+				var a := PI * (0.62 + j * 0.06) + 0.06 * sin(t * 1.5 + j)
+				K.leaf(ci, xf, Vector2(-4, top + 10.0), a, (16.0 + 30.0 * s["seve"]) * (1.0 - j * 0.18), 9.0, {"clair": Color(Art.ec("seve", "clair"), 0.8), "ombre": Color(Art.ec("seve"), 0.65), "reflet": Color.WHITE}, 0.04, 0.8)
+		if s["spore"] > 0.1:
+			for j in 5:
+				var x: float = -hem * 0.8 + j * 4.0
+				Ink.tendril(ci, xf, Vector2(x, -legl + 4.0), PI * 0.5 + 0.2, 6.0 + 10.0 * s["spore"], 1.2, 1.0, Color("e2d0f2"), sin(t * 1.3 + j))
+		# Écharpe(s) : couleur de la branche secondaire (un hybride se lit à l'écharpe).
+		if p > 0.15:
+			var ns := 2 if s["vent"] > 0.3 else 1
+			for k2 in ns:
+				var sl := (10.0 + 52.0 * p) * (1.0 - k2 * 0.25)
+				var sc := PackedVector2Array()
+				for i in 9:
+					var k := i / 8.0
+					sc.append(Vector2(-2.0 - sl * 0.8 * k, top + 4.0 + k2 * 3.0 + sin(k * 4.0 - t * 3.0 + k2) * 4.0 * k + sl * (0.55 - 0.25 * s["vent"]) * k * k))
+				Ink.brush(ci, xf, sc, 8.6, Ink.encre(), 1.0, 0.0)
+				Ink.brush(ci, xf, sc, 6.4, acc2.lerp(K.CREME, 0.15 + 0.2 * k2), 1.0, 0.0)
+				if s["vent"] > 0.3:
+					for i in [4, 6, 8]:
+						K.leaf(ci, xf, sc[i], PI * 0.75 + 0.3 * sin(t * 2.0 + i), 7.0, 3.4, {"clair": Color("e8f2fa"), "ombre": Color("8fb4e0")}, 0.0, 0.8)
+		if p > 0.25:
+			Sylve._antler(ci, xf, mc + Vector2(-rm * 0.55, -rm * 0.7), -1.0, p, _tipkind(dom), acc, gl, t, true)
+		if s["aube"] > 0.1 and not Ink.mono:
+			# Auréole derrière la tête.
+			var ring := Ink.oval(mc + Vector2(-3, -2), rm * (1.4 + 0.2 * s["aube"]), rm * (1.4 + 0.2 * s["aube"]), 40)
+			ring.append(ring[0])
+			ci.draw_polyline(xf * ring, Color(Art.FEUILLES_BUILD["aube"]["accent"], 0.9 * s["aube"]), 2.2 * u, true)
+			Ink.halo(ci, xf * (mc + Vector2(-3, -2)), rm * 1.6 * u, Art.ec("lumiere"), 0.6 * s["aube"])
+		# Capuche.
+		Ink.part(ci, xf, Ink.oval(mc + Vector2(-3.0, -1.0), rm * 1.18, rm * 1.15, 28), dark, 2.0, 1.0, 0.3)
+		# Jambes.
+		var sw := sin(walk) * 6.0 * mv
+		for j in 2:
+			var x := (3.0 if j == 0 else -4.0)
+			var f := Vector2(x + (sw if j == 0 else -sw), 0)
+			var pts := PackedVector2Array([Vector2(x, -legl - 2), Vector2(x + 1.0, -legl * 0.45), f + Vector2(0, -2)])
+			Ink.brush(ci, xf, pts, 5.6 + 1.5 * s["racine"], Ink.encre(), 1.0, 1.0)
+			Ink.brush(ci, xf, pts, 3.4 + 1.5 * s["racine"], Color("5b4636") if j == 0 else Color("3f3026"), 1.0, 1.0)
+			if s["racine"] > 0.2:
+				for k in 3:
+					var q := Vector2(x + 0.5, -legl * (0.25 + k * 0.22))
+					Ink.brush(ci, xf, PackedVector2Array([q + Vector2(-3, -1), q + Vector2(3, 1.5)]), 1.6, Art.ec("racine"), 1.0, 1.0)
+			Ink.part(ci, xf, Ink.leaf(f + Vector2(-3, -1.5), 0.0, 9.0, 4.0), {"clair": Color("5b4636"), "ombre": Color("3f3026")}, 1.0, 1.0, 0.0)
+		# --- Cape ---
+		var cape := _cape(top, legl, sh, hem, p, dom, sway)
+		var cpal := {"clair": lv["ombre"].lightened(0.12), "ombre": lv["ombre"].darkened(0.35), "reflet": lv["clair"]}
+		Ink.part(ci, xf, cape, cpal, 2.2, 1.0, 0.6)
+		var op := PackedVector2Array([Vector2(1.0, top + 5.0), Vector2(5.0, top + 5.0), Vector2(hem * 0.55, -legl + 4.0), Vector2(-hem * 0.1, -legl + 4.0)])
+		Ink.part(ci, xf, op, {"clair": K.CREME, "ombre": K.CREME.darkened(0.18), "reflet": Color.WHITE}, 1.0, 1.0, 0.4)
+		var hp := PackedVector2Array()
+		for i in range(2, cape.size()):
+			hp.append(cape[i] + Vector2(0, -3.0))
+		Ink.brush(ci, xf, hp, 2.6, acc if dom != "aube" else Art.c("or"), 1.0, 1.0)
+		_cape_overlay(ci, xf, top, legl, hem, s, t, cpal)
+		# Collerette / épaulières selon la branche.
+		_shoulders(ci, xf, Vector2(0, top + 3.0), sh, p, dom, s, lv, dark, t, sway)
+		if sec != "" and s[sec] > 0.15:
+			_shoulders(ci, xf, Vector2(-2, top + 6.0), sh * 0.8, p * 0.6, sec, s, K.leaves(sec), {"clair": K.leaves(sec)["ombre"], "ombre": K.leaves(sec)["ombre"].darkened(0.3)}, t, sway)
+		# Cœur sur la poitrine.
+		var core := Vector2(4.0, top + 16.0 + 6.0 * p)
+		if p > 0.3:
+			var k := (p - 0.3) / 0.7
+			if not Ink.mono:
+				for i in 5:
+					var a := -PI * 0.5 + (i - 2) * 0.7
+					var vein := PackedVector2Array([core, core + Vector2.from_angle(a) * 6.0 * k + Vector2(1, 2), core + Vector2.from_angle(a) * 12.0 * k])
+					Ink.brush(ci, xf, vein, 1.2, Color(gl, 0.8 * k), 1.0, 0.0)
+				Ink.halo(ci, xf * core, 8.0 * u * (0.6 + k), gl, 0.8 + k)
+			Ink.part(ci, xf, Ink.oval(core, 2.6 + 1.6 * k, 3.2 + 1.8 * k, 14), {"clair": gl, "ombre": gl.darkened(0.3), "reflet": Color.WHITE}, 1.0, 1.0, 1.0)
+		# --- Masque ---
+		var mask := PackedVector2Array()
+		for i in 32:
+			var a := TAU * i / 32.0
+			var d := Vector2(cos(a), sin(a))
+			var r := Vector2(rm * 0.86, rm)
+			if d.y > 0.0:
+				r.x *= 1.0 - 0.35 * d.y * d.y
+				r.y *= 1.0 + 0.12 * d.y
+			mask.append(mc + d * r)
+		Ink.part(ci, xf, mask, {"clair": Color("fbf6e8"), "ombre": Color("d9ccb0"), "reflet": Color.WHITE}, 2.0, 1.0, 1.0)
+		Ink.brush(ci, xf, PackedVector2Array([mc + Vector2(rm * 0.38, -rm * 0.25), mc + Vector2(rm * 0.5, rm * 0.25), mc + Vector2(rm * 0.36, rm * 0.36)]), 1.2, Color("c9b99a"), 0.4, 0.4)
+		if p > 0.2:
+			var k := clampf((p - 0.2) / 0.5, 0.0, 1.0)
+			Ink.flat(ci, xf, Ink.leaf(mc + Vector2(rm * 0.08, -rm * 0.95), PI * 0.5, rm * 0.6 * k, 3.0), acc)
+			for q: Vector2 in [mc + Vector2(-rm * 0.18, rm * 0.2), mc + Vector2(rm * 0.62, rm * 0.18)]:
+				Ink.flat(ci, xf, Ink.leaf(q, PI * 0.5 - 0.1, rm * 0.45 * k, 2.4 * (0.8 if q.x > mc.x + rm * 0.3 else 1.0)), acc2 if q.x > mc.x + rm * 0.3 else acc)
+		if p > 0.7:
+			var k := (p - 0.7) / 0.3
+			for q: Vector2 in [mc + Vector2(-rm * 0.48, -rm * 0.45), mc + Vector2(rm * 0.62, -rm * 0.5)]:
+				Ink.flat(ci, xf, Ink.oval(q, 1.4 * k, 1.4 * k, 8), acc)
+		K.slit(ci, xf, mc + Vector2(-rm * 0.12, -rm * 0.08), -0.25, 8.0 + 1.0 * p, 4.6, gl, 0.6 + 0.6 * p + cast)
+		K.slit(ci, xf, mc + Vector2(rm * 0.52, -rm * 0.1), -0.32, 5.6, 3.6, gl, 0.6 + 0.6 * p + cast)
+		# Coiffe selon la branche.
+		_headgear(ci, xf, mc, rm, s, dom, lv, t, sway, p)
+		if p > 0.25 and s["spore"] < 0.5:
+			Sylve._antler(ci, xf, mc + Vector2(rm * 0.35, -rm * 0.8), 1.0, p, _tipkind(dom), acc, gl, t, false)
+	if bras:
+		# --- Arme : une vraie arme par forme d'attaque, animée par « a » (0 → 1 : une attaque ; < 0 : repos) ---
+		var forme: String = o.get("forme", "graine" if dom == "aucun" or p < 0.3 else FORME_DE[dom])
+		var mods: Array = o.get("mods", [])
+		var a: float = o.get("a", -1.0)
+		var sp := Vector2(sh - 3.0, top + 6.0)
+		var hand := Arme.pose(forme, sp, top, p, a, t)
+		var c := {"p": p, "t": t, "u": u, "acc": acc, "gl": gl, "lv": lv, "a": a, "vol": o.get("vol", true)}
+		# Visée : le bras et l'arme pivotent autour de l'épaule vers la cible (vers le haut : négatif).
+		var vise: float = o.get("vise", 0.0)
+		if vise != 0.0:
+			xf = xf * Transform2D(vise, sp - sp.rotated(vise))
+		var devant: bool = Arme.DEVANT.has(forme)
+		var armed := {}
+		if not devant:
+			armed = Arme.draw(ci, xf, hand, forme, mods, c)
+		var arm := PackedVector2Array([sp, sp.lerp(hand, 0.5) + (hand - sp).orthogonal().normalized() * -2.0, hand])
+		Ink.brush(ci, xf, arm, 8.4, Ink.encre(), 1.0, 0.5)
+		Ink.brush(ci, xf, arm, 6.2, K.CREME, 1.0, 0.5)
+		Ink.part(ci, xf, Ink.oval(hand, 2.8, 2.6, 10), {"clair": Color("5b4636"), "ombre": Color("3f3026")}, 1.0)
+		if devant:
+			armed = Arme.draw(ci, xf, hand, forme, mods, c)
+		Arme.ornaments(ci, armed)
+	if corps:
+		# Feuilles-glyphes en orbite, à maturité.
+		if p > 0.7 and not Ink.mono:
+			var k := (p - 0.7) / 0.3
+			for i in 3:
+				var ga := t * 1.1 + i * TAU / 3.0
+				var q := Vector2(cos(ga) * (hem + 12.0), top + 10.0 + sin(ga) * 8.0)
+				Ink.halo(ci, xf * q, 6.0 * u, gl, k)
+				Ink.flat(ci, xf, Ink.leaf(q + Vector2(-3, 0), ga + PI * 0.5, 7.0, 3.6), Color(gl.lerp(Color.WHITE, 0.3), k), 0.6)
+
+
+## Repères du dessin (unités locales, pieds en 0, regard vers +x) : centre du masque, cœur, épaule,
+## haut du corps, et le facteur d'échelle du repère (h × facteur = px pour 100 unités).
+static func anchors(o: Dictionary) -> Dictionary:
+	var p := K.progress(o)
+	var w := weights(o)
+	var legl := 10.0 + 14.0 * p
+	var ch := 30.0 + 26.0 * p
+	var top := -legl - ch
+	var rm := 17.0 - 2.0 * p
+	var sh: float = 9.0 + 5.0 * p + 3.0 * w["racine"] * p
+	return {"mask": Vector2(3.0, top - rm * 0.55), "rm": rm, "core": Vector2(4.0, top + 16.0 + 6.0 * p), "shoulder": Vector2(sh - 3.0, top + 6.0), "top": top, "scale": 0.62 + 0.38 * p}
 
 
 ## Pointe des bois selon la branche dominante (Sylve._tip connaît ronce, seve, vent et le reste).
