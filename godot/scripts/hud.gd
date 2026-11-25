@@ -302,7 +302,7 @@ func _refresh() -> void:
 			slot.name_label.text = "verrouillé"
 			slot.apply(Widgets.Slot.LOCKED, "", 0.0, 0.0, "", "")
 		elif id == "":
-			slot.name_label.text = "libre"
+			slot.name_label.text = Loc.key("libre")
 			slot.as_key = _cached("slot_is_key:%d" % i, slot_is_key.bind(i))
 			slot.apply(Widgets.Slot.FREE, "", 0.0, 0.0, _cached("slot_keys:%d" % i, slot_keys_text.bind(i)), _cached("slot_free:%d" % i, _free_tip.bind(i)))
 		else:

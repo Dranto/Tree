@@ -79,4 +79,5 @@ func _strike(e, from: Vector2, hit: Dictionary) -> void:
 
 func _sig(to: Vector2, from: Vector2) -> void:
 	if player != null:
-		player._sig("essaim", {"pos": from, "to": to})
+		# Le premier bond part du héros : sa signature a son anticipation (skill_fx.gd › _essaim).
+		player._sig("essaim", {"pos": from, "to": to, "first": from == player.position})

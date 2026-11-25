@@ -7,6 +7,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const Regions = preload("res://scripts/regions.gd")
+const Demo = preload("res://scripts/demo.gd")
 const Content = preload("res://scripts/content.gd")
 const RegionUi = preload("res://scripts/region_ui.gd")
 const WorldEdge = preload("res://scripts/world_edge.gd")
@@ -238,13 +239,16 @@ func draw_map(v: Control) -> void:
 	var wr := world_rect(s)
 	v.draw_texture_rect(_tex, wr, false)
 	# Chaque région : un secteur teinté, borné par ses deux bords et le cercle intérieur.
+	_name_rects.clear()
 	for reg in Regions.ids():
 		_draw_region(v, reg, s, font)
+	if Demo.active():
+		_draw_demo_wall(v, s)
 
 	# La graine.
 	var seed_at := to_map(Vector2.ZERO, s)
 	draw_glyph(v, "seed", seed_at, UiTheme.GOLD, true, 1.0)
-	_text(v, font, seed_at + Vector2(14, 5), Loc.t("Graine"), Color(UiTheme.GOLD, 0.9))
+	_seed_label(v, font, seed_at, Loc.t("Graine"))
 	# La brèche à son pied (la finale) : un anneau qui s'allume quand toutes les régions sont purifiées.
 	draw_glyph(v, "breach", seed_at, _breach_color(), true, 1.0)
 	if bool(Game.flags.get("finale_ouverte", false)) and not bool(Game.flags.get("finale_vaincue", false)):
@@ -252,15 +256,22 @@ func draw_map(v: Control) -> void:
 
 	# Sanctuaires et autels du monde (groupes « sanctuaire » et « autel »).
 	for n in main.get_tree().get_nodes_in_group("sanctuaire"):
+		if not Demo.region_open(Regions.region_at(n.position)):
+			continue
 		var lit: bool = Game.flags.get("sanctuaire_" + str(n.get("id")), false)
 		draw_glyph(v, "sanctuary", to_map(n.position, s), Color("9ad7ff"), lit, 1.0)
 	for n in main.get_tree().get_nodes_in_group("autel"):
+		if not Demo.region_open(Regions.region_at(n.position)):
+			continue
 		if Game.flags.get("autel_" + str(n.get("id")), false):
 			draw_glyph(v, "altar", to_map(n.position, s), Color("f2d06b"), true, 1.0)
 
 	# Les Cœurs et l'arène de chaque région : l'arène est scellée tant qu'un Cœur vit, ouverte ensuite,
 	# et son sceau brisé une fois le boss vaincu.
 	for reg in main.arenas:
+		# Démo : les régions fermées n'ont ni Cœurs ni arène sur la carte, seulement la ronce.
+		if not Demo.region_open(reg):
+			continue
 		var list: Array = main.region_hearts.get(reg, [main.hearts[reg]]) if "region_hearts" in main else [main.hearts[reg]]
 		for heart in list:
 			var hc := to_map(heart.center, s)
@@ -280,7 +291,10 @@ func draw_map(v: Control) -> void:
 			draw_glyph(v, "arena", ac, RegionUi.tint(reg).lightened(0.15), true, 1.0)
 		else:
 			draw_seal(v, ac, RegionUi.tint(reg).lightened(0.15), 0.0)
-		_text(v, font, ac + Vector2(-70, 4), Loc.t("Arène"), UiTheme.INK)
+		# À gauche de l'icône ; un nom plus long (autre langue) recule pour ne pas la recouvrir.
+		var arena_label := Loc.t("Arène")
+		var arena_w := font.get_string_size(arena_label, HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_PX).x
+		_text(v, font, ac + Vector2(minf(-70.0, -16.0 - arena_w), 4), arena_label, UiTheme.INK)
 		var n := Regions.hearts_done(reg, Game.flags)
 		var total := list.size()
 		var label := Loc.t("Cœurs %d / %d") % [n, total] if total > 1 else Loc.t("Cœur")
@@ -328,6 +342,9 @@ func _draw_region(v: Control, reg: String, s: Vector2, font: Font) -> void:
 	var square := PackedVector2Array([wr.position, Vector2(wr.end.x, wr.position.y), wr.end, Vector2(wr.position.x, wr.end.y)])
 	for poly in Geometry2D.intersect_polygons(pts, square):
 		v.draw_colored_polygon(poly, Color(tint, 0.13))
+	if not Demo.region_open(reg):
+		_draw_closed(v, reg, s, font, pts, square, tint)
+		return
 	# Région purifiée : un voile vert ; à l'ouverture qui suit sa purification, il avance de la graine
 	# vers le bord du monde (la région reverdit sous les yeux du joueur).
 	if bool(Game.flags.get(Regions.boss_flag(reg), false)):
@@ -358,10 +375,62 @@ func _draw_region(v: Control, reg: String, s: Vector2, font: Font) -> void:
 	var label := RegionUi.short_name(reg)
 	var name_at := to_map(Vector2.from_angle(a) * 1000.0, s)
 	var name_w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, 15).x
+	_name_rects.append(Rect2(name_at + Vector2(-name_w / 2.0, -font.get_ascent(15)), Vector2(name_w, font.get_height(15))))
 	UiAudit.draw_text(v, "carte", font, name_at + Vector2(-name_w / 2.0, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(tint.lightened(0.25), 0.95), v.get_global_transform())
 
 
+## « Graine » : à droite de l'icône ; si ce texte (plus long dans une autre langue) recouvre le nom d'une région,
+## au-dessus, puis en dessous, centré.
+func _seed_label(v: Control, font: Font, seed_at: Vector2, label: String) -> void:
+	var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, TEXT_PX).x
+	var h := font.get_height(TEXT_PX)
+	var asc := font.get_ascent(TEXT_PX)
+	var spots := [Vector2(14, 5), Vector2(-w / 2.0, -22), Vector2(-w / 2.0, 34)]
+	var pos: Vector2 = seed_at + spots[0]
+	for sp in spots:
+		var r := Rect2(seed_at + sp + Vector2(0, -asc), Vector2(w, h))
+		var clear := true
+		for nr in _name_rects:
+			if r.intersects(nr):
+				clear = false
+		if clear:
+			pos = seed_at + sp
+			break
+	_text(v, font, pos, label, Color(UiTheme.GOLD, 0.9))
+
+
+## Démo : région fermée, voilée de sombre et bordée de ronce (demo_wall.gd) ; son nom reste, éteint.
+func _draw_closed(v: Control, reg: String, s: Vector2, font: Font, pts: PackedVector2Array, square: PackedVector2Array, tint: Color) -> void:
+	for poly in Geometry2D.intersect_polygons(pts, square):
+		v.draw_colored_polygon(poly, Color(0.035, 0.02, 0.025, 0.62))
+	var a := Regions.angle_of(reg)
+	var label := str(Regions.def(reg).get("map_name", reg.capitalize()))
+	var name_at := to_map(Vector2.from_angle(a) * 1000.0, s)
+	var name_w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, 15).x
+	UiAudit.draw_text(v, "carte", font, name_at + Vector2(-name_w / 2.0, 0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(tint.lightened(0.1), 0.55), v.get_global_transform())
+
+
+## Démo : la ronce qui ferme les autres régions (demo.gd › wall_pieces), une fois pour toute la carte.
+func _draw_demo_wall(v: Control, s: Vector2) -> void:
+	for piece in Demo.wall_pieces():
+		var line := PackedVector2Array()
+		var len := Demo.piece_length(piece)
+		var n := maxi(2, int(len / 120.0))
+		for i in n + 1:
+			line.append(to_map(Demo.wall_at(piece, len * i / n, 30.0), s))
+		v.draw_polyline(line, Color(0.06, 0.025, 0.03, 0.9), 6.0)
+		v.draw_polyline(line, Color(0.55, 0.2, 0.2, 0.9), 2.5)
+		for i in range(1, line.size() - 1, 2):
+			var dir := (line[i + 1] - line[i - 1]).normalized()
+			var nm := dir.orthogonal()
+			v.draw_colored_polygon(PackedVector2Array([line[i] - dir * 2.5, line[i] + dir * 2.5, line[i] + nm * 6.0 + dir * 2.0]), Color(0.55, 0.2, 0.2, 0.9))
+
+
 ## Texte posé sur la carte, avec un liseré sombre pour rester lisible sur toutes les teintes.
+var _name_rects: Array = []
+const TEXT_PX := 15
+
+
 func _text(v: Control, font: Font, pos: Vector2, s: String, color: Color) -> void:
 	v.draw_string_outline(font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 4, Color(0, 0, 0, 0.8))
 	UiAudit.draw_text(v, "carte", font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, color, v.get_global_transform())

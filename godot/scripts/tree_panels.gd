@@ -11,6 +11,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const TreePlanner = preload("res://scripts/tree_planner.gd")
+const Demo = preload("res://scripts/demo.gd")
 const TreeBuilds = preload("res://scripts/tree_builds.gd")
 
 const PATH_OK := Color("7fd36b")
@@ -268,7 +269,8 @@ func set_query(text: String) -> void:
 
 
 func _on_search_changed(text: String) -> void:
-	matches = _sweep(planner.search(text))
+	# Démo : les nœuds sous la ronce ne se trouvent pas (on ne lit pas ce qu'ils font).
+	matches = _sweep(planner.search(text).filter(func(id): return not Demo.node_closed(Game.tree.nodes[id])))
 	match_set = {}
 	for id in matches:
 		match_set[id] = true
@@ -422,7 +424,7 @@ func _preview_for(id: int) -> Dictionary:
 		return _preview
 	_preview_key = key
 	_preview = {"route": [], "path": [], "changes": []}
-	if id < 0 or Game.allocated.has(id):
+	if id < 0 or Game.allocated.has(id) or Demo.node_closed(Game.tree.nodes[id]):
 		return _preview
 	if planner.plan_has(id):
 		_preview["changes"] = planner.preview(planner.plan)
@@ -549,7 +551,7 @@ func _refresh() -> void:
 	if search.text.strip_edges() == "":
 		count_label.text = ""
 	elif matches.is_empty():
-		count_label.text = "aucun"
+		count_label.text = Loc.key("aucun")
 	elif match_index >= 0:
 		count_label.text = "%d / %d" % [match_index + 1, matches.size()]
 	else:
@@ -641,12 +643,12 @@ func _fill_summary() -> void:
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		label.custom_minimum_size = Vector2(200, 0)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		label.add_theme_font_size_override("font_size", 14)
+		label.add_theme_font_size_override("font_size", UiTheme.legible(14))
 		label.add_theme_color_override("font_color", UiTheme.INK if s["changed"] or after != s["value"] else DIM)
 		stats.add_child(label)
 		var value := Label.new()
 		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		value.add_theme_font_size_override("font_size", 14)
+		value.add_theme_font_size_override("font_size", UiTheme.legible(14))
 		if after != s["value"]:
 			value.text = "%s → %s" % [s["value"], after]
 			value.add_theme_color_override("font_color", PLAN)
@@ -667,6 +669,6 @@ func _text(text: String, font_size: int, col: Color) -> void:
 	var l := Label.new()
 	l.text = text
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_font_size_override("font_size", UiTheme.legible(font_size))
 	l.add_theme_color_override("font_color", col)
 	summary_box.add_child(l)

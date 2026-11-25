@@ -63,7 +63,28 @@
 			"fouet": 0.44,
 			"volee": 0.36,
 			"nova": 0.68,
-			"saignee": 0.8
+			"saignee": 0.8,
+			"aurore": 0.72,
+			"bloom": 1.1,
+			"essaim": 0.36,
+			"eclosion": 0.75
+		},
+		"windup": {
+			"_doc": "Anticipation propre à chaque compétence des autres branches (secondes, multipliées par « anticipation ») : la terre qui tremble avant les pieux, la lumière qui converge avant l'aurore… Purement visuel : l'effet en jeu a lieu quand il a toujours eu lieu. « pieu » : chaque pieu ; « vesse » : le chapeau qui gonfle avant d'éclater ; « essaim » : le premier bond.",
+			"ecorce": 0.3,
+			"ancrage": 0.2,
+			"pieu": 0.07,
+			"aurore": 0.14,
+			"prisme": 0.3,
+			"cloud": 0.25,
+			"vesse": 0.08,
+			"essaim": 0.1,
+			"tornade": 0.35,
+			"ruee": 0.06,
+			"bloom": 0.16,
+			"liane": 0.12,
+			"fontaine": 0.28,
+			"cocon": 0.3
 		},
 		"anticipation": 1.0,
 		"release_time": 0.24,
@@ -221,5 +242,150 @@
 		"heart": { "faible": 0.8, "fort": 0.8, "duree": 0.6 },
 		"level_up": { "faible": 0.35, "fort": 0.3, "duree": 0.3 },
 		"preview": { "faible": 0.4, "fort": 0.5, "duree": 0.2 }
+	},
+	"tree": {
+		"_doc": "Apprendre un nœud devient un plaisir (écran de l'Arbre de vie : scripts/tree_ui.gd, tree_art.gd, tree_grafts.gd). Purement visuel : aucun chiffre de puissance, rien dans skill_tree.gd. Durées en secondes ; distances en rayons de nœud. L'éclair d'écran suit Settings.flash_strength() (à 0 : un contour lumineux seulement) et ne se répète pas plus de « flash_per_second » fois par seconde ; « Réduire les effets » divise les quantités par trois.",
+		"flower": {
+			"_doc": "Nœud clé, maîtrise ou mutation appris : grande fleur, onde et éclair d'écran doux.",
+			"time": 1.5,
+			"petals": 14,
+			"reach": 9.0,
+			"flash_alpha": 0.14,
+			"flash_time": 0.4,
+			"flash_per_second": 3
+		},
+		"wilt": {
+			"_doc": "Nœud oublié : la sève reflue vers son voisin (part « flow » du temps), puis il se fane.",
+			"time": 0.9,
+			"flow": 0.35,
+			"stagger": 0.06,
+			"stagger_max": 0.6
+		},
+		"recompose": {
+			"_doc": "Bascule de build : une vague part de la graine ; les nœuds retirés se fanent et les nouveaux s'allument à son passage. « max » : nombre de nœuds animés ; au-delà d'« wave_min » changements sans bascule, c'est aussi une vague.",
+			"time": 1.2,
+			"glint_time": 0.5,
+			"max": 90,
+			"wave_min": 12
+		},
+		"roots": {
+			"_doc": "Greffe posée dans la couronne : des racines poussent de l'emplacement.",
+			"time": 1.1,
+			"count": 7,
+			"size": 34.0
+		}
+	},
+	"boss": {
+		"_doc": "Moments signatures des boss (boss_eclat.gd) : arrivée, phases, mort. Purement visuel ; l'entrée en scène garde sa durée (BossBase.intro_time) et rien ne change dans le combat. Durées en secondes de jeu (suivent le ralenti). « Réduire les effets » divise les quantités par trois.",
+		"max_particles": 150,
+		"materials": {
+			"_doc": "Matière dessinée pour chaque région (mur, onde, décors de phase, mort).",
+			"defaut": "ronce",
+			"ronce": "ronce",
+			"spore": "spore",
+			"vent": "vent",
+			"seve": "seve",
+			"aube": "aube",
+			"racine": "racine",
+			"finale": "finale"
+		},
+		"arrival": {
+			"wall_spikes": 56,
+			"spike_size": 52,
+			"wall_wave": 0.8,
+			"spike_rise": 0.22,
+			"spike_hold": 0.25,
+			"spike_sink": 0.5,
+			"cracks": 7,
+			"crack_len": 3.4,
+			"crack_fade": 1.6,
+			"clods": 16,
+			"gap_dust": 8,
+			"shake": 0.3
+		},
+		"emerge": {
+			"_doc": "Le boss sort du sol pendant son entrée en scène : hauteur de départ, dépassement (ease_out_back) et teinte de départ.",
+			"squash": 0.25,
+			"overshoot": 1.6,
+			"dark": 0.3
+		},
+		"phase": {
+			"wave_time": 0.7,
+			"decor": 9,
+			"decor_scale": 1.6,
+			"max_decor": 40,
+			"particles": 10
+		},
+		"death": {
+			"vines": 9,
+			"vine_out": 0.35,
+			"vine_in": 1.4,
+			"petals": 18,
+			"puffs": 16,
+			"spores": 26,
+			"feathers": 30,
+			"drops": 26,
+			"sprout_chance": 0.5,
+			"shards": 28,
+			"motes": 10,
+			"stones": 20,
+			"dust": 8,
+			"rays": 10,
+			"light_motes": 24,
+			"ray_time": 1.8,
+			"decor_hold": 2.2,
+			"decor_fade": 2.0
+		}
+	},
+	"deaths": {
+		"_doc": "Morts des Flétris selon l'élément du coup final (scripts/enemy_remains.gd, jalon Éclat B) : purement visuel, ni tués, ni expérience, ni butin. Durées en secondes. « Réduire les effets » divise les morceaux par trois.",
+		"max_styled": 14,
+		"sprout_at": 0.7,
+		"overkill": 0.75,
+		"overkill_speed": 1.9,
+		"overkill_more": 0.5,
+		"elite_wave_time": 0.9,
+		"elite_wave_reach": 4.5,
+		"elite_wave_items": 18,
+		"styles": {
+			"_doc": "Par mort : « time » durée de la mort avant la pousse de vie, « pieces » nombre de morceaux (bouffées, éclats, flocons, lueurs, cailloux, gouttes).",
+			"venin": {
+				"time": 0.6,
+				"pieces": 7
+			},
+			"sang": {
+				"time": 0.5,
+				"pieces": 12
+			},
+			"tranche": {
+				"time": 0.6,
+				"pieces": 5
+			},
+			"vent": {
+				"time": 0.6,
+				"pieces": 14
+			},
+			"aube": {
+				"time": 0.6,
+				"pieces": 8
+			},
+			"racine": {
+				"time": 0.8,
+				"pieces": 9
+			},
+			"seve": {
+				"time": 0.7,
+				"pieces": 5
+			}
+		},
+		"streak": {
+			"_doc": "Série de tués rapprochés : chaque tué ajoute « step » (de 0 à 1), tenu « hold » secondes puis retombe de « decay » par seconde ; le halo de sève du héros apparaît au-dessus de « show ».",
+			"step": 0.12,
+			"hold": 0.9,
+			"decay": 0.45,
+			"show": 0.2,
+			"radius": 30.0,
+			"motes": 9
+		}
 	}
 }

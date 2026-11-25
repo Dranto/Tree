@@ -613,6 +613,11 @@
             {
               "attack_mod": "repetition",
               "value": 1
+            },
+            {
+              "stat": "fire_rate",
+              "op": "more",
+              "value": 0.8
             }
           ]
         }

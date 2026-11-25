@@ -16,13 +16,16 @@
 ## Lancer : tools/aventure.sh (voir le README), ou à la main :
 ##   tools/godot.sh --headless --fixed-fps 60 -s res://tests/aventure_test.gd -- --autotest=aventure[:<build>] --seed=1
 ## Options : --variante=N (le N-ième build de chaque autre branche, 0 par défaut), --ordre=a,b,c,
-## --jusqua=<région> (s'arrête après cette région), --continue-on-block.
+## --jusqua=<région> (s'arrête après cette région), --continue-on-block, --niveau-max=N (niveau offert
+## au robot dans la première région, CAP_BASE par défaut), --demo (la démo : Ronce seule, puis sa fin).
 ## Sauvegarde dans user://tests/ : la partie du joueur n'est pas touchée.
 extends SceneTree
 
 
 const DT := 1.0 / 60.0
 const Regions = preload("res://scripts/regions.gd")
+## Démo (« -- --demo », jalon 12 E) : seulement les régions de la démo, puis la fin de démo.
+const Demo = preload("res://scripts/demo.gd")
 ## Ordre d'un joueur, de la région la plus facile à la plus dure (les autres, dans l'ordre des secteurs, ensuite).
 const ORDER := ["ronce", "spore", "aube", "vent", "seve", "racine"]
 ## Secondes de jeu sans objectif principal accompli au-delà desquelles c'est un blocage.
@@ -42,6 +45,8 @@ const CAP_STEP := 3
 const FINALE_MAX := 900.0
 
 var failures := 0
+## Niveau offert au robot dans la première région (CAP_BASE, ou « --niveau-max=N »).
+var cap_base := CAP_BASE
 var game
 var obj
 var save
@@ -119,6 +124,8 @@ func _args() -> void:
 					order.append(r)
 		elif a.begins_with("--jusqua="):
 			stop_after = a.trim_prefix("--jusqua=")
+		elif a.begins_with("--niveau-max="):
+			cap_base = int(a.trim_prefix("--niveau-max="))
 		elif a == "--continue-on-block":
 			keep_going = true
 
@@ -126,6 +133,15 @@ func _args() -> void:
 ## Régions jouées : l'ordre demandé (ou ORDER), complété par les autres régions du monde.
 func _order() -> Array:
 	var out: Array = []
+	if Demo.active():
+		# Démo : ses régions seules (Ronce), dans l'ordre demandé s'il y en a un.
+		for r in (order if not order.is_empty() else ORDER):
+			if r in Demo.regions() and not r in out:
+				out.append(r)
+		for r in Demo.regions():
+			if not r in out:
+				out.append(r)
+		return out
 	for r in (order if not order.is_empty() else ORDER):
 		if Regions.exists(r) and not r in out:
 			out.append(r)
@@ -158,7 +174,7 @@ func _region() -> String:
 func _start_region() -> void:
 	var r := _region()
 	bot.set_region(r, _build_for(r))
-	bot.level_cap = CAP_BASE + CAP_STEP * idx
+	bot.level_cap = cap_base + CAP_STEP * idx
 	_region_start_deaths = deaths_before + main.deaths
 	_boss_total = 0.0
 	last_progress = t
@@ -179,6 +195,8 @@ func _run() -> void:
 	save.delete_save(path)
 	game.reset()
 	order = _order()
+	if Demo.active() and stop_after == "":
+		stop_after = order[order.size() - 1]
 	bot = load("res://scripts/zone_bot.gd").new("fouet", order[0])
 	await _new_main()
 	obj.completed.connect(_on_completed)
@@ -245,7 +263,13 @@ func _fighting() -> bool:
 	return main.in_boss_fight() or (main.get("finale") != null and main.finale.in_combat())
 
 
+## Démo : instants où le héros s'est trouvé derrière la ronce qui ferme les autres régions.
+var _demo_outside := 0
+
+
 func _track() -> void:
+	if Demo.active() and not Demo.allowed(main.player.position, 0.0) and not finale_holds_player():
+		_demo_outside += 1
 	if _fighting():
 		boss_fight_time += DT
 		_boss_total += DT
@@ -420,6 +444,20 @@ func _epilogue(epi) -> void:
 	pending_reload = "après la fin de l'aventure"
 
 
+## Fin de la démo : la Mère-Ronce vaincue, la boucle continue ; la veine mène au sceau de la graine,
+## la brèche reste fermée, rien n'interrompt le jeu. Le robot va jusqu'au sceau.
+func _demo_end() -> void:
+	print("Fin de la démo")
+	check(_demo_outside == 0, "démo : le héros n'est jamais passé derrière la ronce (%d images)" % _demo_outside)
+	check(blocks.is_empty() and Demo.finished(game.flags), "démo : la Mère-Ronce est vaincue")
+	check(main.demo_wall != null, "démo : la haie est en place après les reprises")
+	check(main.finale.state == "fermee", "démo : la brèche de la graine reste scellée")
+	check(obj.is_done("demo_sceau") and game.flags.get(Demo.SEAL_SEEN, false), "démo : le robot a suivi la veine jusqu'au sceau de la graine")
+	check(obj.current().is_empty(), "démo : plus d'objectif après le sceau")
+	check(not main.quest_ui.world_ending.active and not paused, "démo : pas d'écran ni de pause")
+	check(main.spawn_paused == false or main.in_boss_fight(), "démo : la boucle continue (des Flétris naissent encore)")
+
+
 func finale_holds_player() -> bool:
 	var f = main.get("finale")
 	return f != null and f.holds(main.player.position)
@@ -584,6 +622,8 @@ func _coherence(where: String) -> void:
 
 func _final() -> void:
 	print("Bilan")
+	if Demo.active() and main != null and is_instance_valid(main):
+		await _demo_end()
 	var done := 0
 	for r in order:
 		if report.has(r) and report[r].has("fin"):
