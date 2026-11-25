@@ -92,7 +92,7 @@ Les compétences acquises se rangent dans la barre de compétences (6 emplacemen
 
 | Action | Paramètres | Effet |
 | --- | --- | --- |
-| `reduce_cooldown` | `target` (`dash` ou une compétence), `value` | Réduit une recharge |
+| `reduce_cooldown` | `target` (`dash`, une compétence, ou `skills` pour toutes), `value` | Réduit une recharge |
 | `spread_poison` | `radius`, `duration`, `color` | L'ennemi vaincu transmet son poison autour de lui |
 | `explode` | `radius`, `factor`, `color` | Le coup touche aussi les ennemis proches |
 | `survive` | `hp`, `invuln`, `label`, `color` | Le coup mortel laisse le joueur en vie |
@@ -136,7 +136,19 @@ Tout effet accepte une condition :
 {"stat": "damage", "op": "more", "value": 1.4, "if": {"state": "immobile", "min": 0.5}}
 ```
 
-L'effet ne s'applique que si l'état vaut au moins `min`. `if` peut aussi être une liste de conditions qui doivent toutes être vraies (par exemple « la cible saigne et elle est empoisonnée » : `"if": [{"state": "cible_saignante", "min": 1}, {"state": "cible_empoisonnee"}]`) ; l'infobulle les relie par « et ». États actuels : `immobile` (secondes passées sans bouger), `en_mouvement` (secondes passées à bouger sans s'arrêter), `sous_cocon` (1 tant que le Cocon de sève tient), et pour les évènements qui visent un ennemi (`kill`, `crit`, `melee_hit`, `bleed_tick`, `root`) : `cible_empoisonnee`, `cible_saignante` (nombre de piqûres), `cible_enracinee` (secondes restantes) et `cible_eblouie` (1 si la cible est éblouie).
+L'effet ne s'applique que si l'état vaut au moins `min`. `if` peut aussi être une liste de conditions qui doivent toutes être vraies (par exemple « la cible saigne et elle est empoisonnée » : `"if": [{"state": "cible_saignante", "min": 1}, {"state": "cible_empoisonnee"}]`) ; l'infobulle les relie par « et ». États actuels : `immobile` (secondes passées sans bouger), `en_mouvement` (secondes passées à bouger sans s'arrêter), `sous_cocon` (1 tant que le Cocon de sève tient), `enracine` et `sous_ecorce` (Racine), `vie_basse` (1 sous la moitié de la vie), `terre_vive` / `terre_fletrie` (1 sur une terre vivante, au-delà de 0,45 de vie du sol, ou flétrie, sous 0,15), `greffes` (nombre de greffes posées dans la couronne) et `coeurs_purifies` (Cœurs purifiés dans tout le monde), et pour les évènements qui visent un ennemi (`kill`, `crit`, `melee_hit`, `bleed_tick`, `root`) : `cible_empoisonnee`, `cible_saignante` (nombre de piqûres), `cible_enracinee` (secondes restantes) et `cible_eblouie` (1 si la cible est éblouie).
+
+## Nœuds originaux des parties générées
+
+Entre les grappes, l'arbre est généré. Pour que chaque niveau apporte un choix, un petit nœud généré qui touche déjà un petit nœud (généré ou de grappe) devient un nœud qui change le jeu : sur un chemin depuis la graine, on ne croise jamais plus de deux petits nœuds d'affilée (deux seulement dans une grappe écrite à la main). Les nœuds promus gardent leur identifiant, leur place et la statistique de leur petit nœud ; la forme de l'arbre ne change pas. Trois champs de `branches/<id>.json` les décrivent :
+
+| Champ | Rôle |
+| --- | --- |
+| `small_more` | Statistiques de plus pour les petits nœuds générés (ils prennent tour à tour celles de `small` puis de `small_more`). Les notables générés ne portent que `small`. |
+| `mutations` | Mutations générées, au format des choix d'une grappe (`mutates`, `name`, `choices` avec `id` et `name`). Chacune est posée sur un nœud promu, environ deux anneaux après la compétence qu'elle vise, de préférence en bout de chemin, et seulement si fermer toutes ces mutations ne coupe aucun nœud de la graine (une mutation reste fermée tant que sa compétence manque). |
+| `originals` | Les autres nœuds promus prennent ces originaux à tour de rôle, du plus proche de la graine au plus lointain : `names` (un nom par passage, à tour de rôle), `type` (`notable` par défaut, ou `attack`), `effects`. Un original change la façon de jouer : condition, évènement, attaque de base ; pas un simple pourcentage. Ses valeurs ne suivent pas la progression par anneau. |
+
+Le test `tests/tree_originals_test.gd` vérifie la part des petits nœuds (37 % au plus), les deux nœuds d'affilée, les mutations qui ne coupent rien, chaque original posé au moins une fois et la variété des petits nœuds. Une ancienne sauvegarde qui avait appris un petit nœud devenu mutation, sans la compétence, récupère son point (`Game.restore_allocation`).
 
 ## Grappes écrites à la main
 

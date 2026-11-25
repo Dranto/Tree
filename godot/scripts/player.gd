@@ -350,6 +350,7 @@ func _process(delta: float) -> void:
 	if _home_check <= 0.0 and main != null:
 		_home_check = 0.25
 		home = fighting_at_home()
+		_progress_states()
 	# Feuilles : tombent en tournoyant, s'effacent.
 	if dash_time > 0.0 and fposmod(t, 0.03) < delta:
 		_leaf(position - dash_dir * radius * 0.6, -dash_dir * 60.0, 0.6, Art.c("joueur_accent").darkened(0.3))
@@ -451,6 +452,8 @@ func _physics_process(delta: float) -> void:
 	Game.set_state("enracine", 1.0 if rooted > 0.0 else 0.0)
 	var bark_skill = _skill_objects.get("ecorce")
 	Game.set_state("sous_ecorce", 1.0 if bark_skill != null and bark_skill.shield > 0.0 else 0.0)
+	# Nœuds originaux (jalon 11) : sous la moitié de la vie.
+	Game.set_state("vie_basse", 1.0 if hp <= 0.5 * s["max_hp"] else 0.0)
 	s = Game.stats
 
 	# La terre vivante soigne : régénération triplée sur l'herbe.
@@ -549,6 +552,20 @@ func skill_multiplier(id: String) -> float:
 
 ## Vrai sur une terre ravivée de la région de cette branche de l'arbre (main.region_at ; sans
 ## scène de jeu, jamais) : chaque branche se bat mieux chez elle.
+## États lus par les nœuds originaux (jalon 11), relus quatre fois par seconde : terre vivante ou
+## flétrie sous les pieds, greffes posées dans la couronne, Cœurs purifiés dans tout le monde.
+func _progress_states() -> void:
+	if main.get("ground") != null and main.ground.has_method("life_at"):
+		var life: float = main.ground.life_at(position)
+		Game.set_state("terre_vive", 1.0 if life > HOME_LIFE else 0.0)
+		Game.set_state("terre_fletrie", 1.0 if life < 0.15 else 0.0)
+	Game.set_state("greffes", float(Game.placed_grafts().size()))
+	var hearts := 0
+	for id in Regions.ids():
+		hearts += Regions.hearts_done(id, Game.flags)
+	Game.set_state("coeurs_purifies", float(hearts))
+
+
 func fighting_at_home(branch := "ronce") -> bool:
 	if branch == "" or not main.has_method("region_at"):
 		return false

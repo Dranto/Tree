@@ -241,6 +241,13 @@ func restore_allocation(uids: Array) -> int:
 			refunded += 1
 		elif id != 0:
 			wanted[id] = true
+	# Une mutation dont la compétence n'est plus apprise (petit nœud d'une ancienne sauvegarde devenu
+	# mutation au jalon 11) est rendue : elle se reprendra avec sa compétence.
+	for id in wanted.keys():
+		var sid: String = tree.nodes[id]["mutates"]
+		if sid != "" and not tree.skill_sources.get(sid, []).any(func(s): return wanted.has(s)):
+			wanted.erase(id)
+			refunded += 1
 	# On ne garde que ce qui reste relié à la graine.
 	var kept := {0: true}
 	var stack: Array = [0]

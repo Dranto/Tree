@@ -194,6 +194,7 @@ func build() -> void:
 				var c: Array = rows[(bi + 1) % BRANCHES.size()][r]
 				_link(a[a.size() - 1], c[0], edge_set)
 	_insert_clusters()
+	_enliven()
 	for n in nodes:
 		by_uid[n["uid"]] = n["id"]
 	_index_rules()
@@ -784,14 +785,16 @@ func _make(id: int, ring: int, branch: int, kind: String, pos: Vector2, nm: Stri
 	}
 
 
-## Effets d'un nœud généré : un petit nœud porte une des statistiques de sa branche,
-## un nœud notable les porte toutes (renforcées) plus le bonus propre à la branche.
+## Effets d'un nœud généré : un petit nœud porte une des statistiques de sa branche (« small », puis
+## « small_more » pour la variété), un nœud notable porte toutes celles de « small » (renforcées) plus
+## le bonus propre à la branche.
 func _effects(b: Dictionary, r: int, notable: bool, i: int) -> Array:
 	var cfg := Content.tree()
 	var scale: float = 1.0 + cfg.get("ring_scale", 0.0) * r
 	var small: Array = b["small"]
 	if not notable:
-		return [Effects.scaled(small[(i + r) % small.size()], scale)]
+		var pool: Array = small + _list(b.get("small_more"))
+		return [Effects.scaled(pool[(i + r) % pool.size()], scale)]
 	var e: Array = []
 	for s in small:
 		e.append(Effects.scaled(s, cfg.get("notable_factor", 1.0) * scale))
@@ -809,6 +812,180 @@ func _link(a: int, b: int, edge_set: Dictionary) -> void:
 	edges.append(k)
 	nodes[a]["neighbors"].append(b)
 	nodes[b]["neighbors"].append(a)
+
+
+# --- Nœuds originaux (jalon 11) ---
+
+## Passe « nœuds originaux », après les grappes : un petit nœud généré qui touche déjà un petit nœud
+## devient un nœud qui change le jeu. Les petits nœuds générés sont vus du plus proche de la graine au
+## plus lointain : un petit nœud reste petit seulement si aucun de ses voisins n'est déjà un petit
+## nœud gardé (ceux des grappes écrites à la main comptent). Sur un chemin depuis la graine, on ne
+## croise donc jamais deux petits nœuds générés d'affilée.
+## Les nœuds promus prennent, dans l'ordre, les « mutations » de leur branche (sur des nœuds dont la
+## perte ne coupe rien : une mutation reste fermée tant que la compétence manque), puis ses
+## « originals » à tour de rôle. Ils gardent leur identifiant, leur place et leur statistique de petit
+## nœud : seule la nature du nœud change, et rien ne consomme de tirage du générateur.
+func _enliven() -> void:
+	var dist := _distances()
+	var order: Array = []
+	for n in nodes:
+		if n["type"] == "small" and n["cluster"] == "":
+			order.append(n["id"])
+	order.sort_custom(func(a, b): return dist[a] < dist[b] or (dist[a] == dist[b] and a < b))
+	var kept := {}
+	for n in nodes:
+		if n["type"] == "small" and n["cluster"] != "":
+			kept[n["id"]] = true
+	var promoted := {}
+	for id in order:
+		var alone := true
+		for m in nodes[id]["neighbors"]:
+			if kept.has(m):
+				alone = false
+				break
+		if alone:
+			kept[id] = true
+		else:
+			var bi: int = nodes[id]["branch"]
+			if not promoted.has(bi):
+				promoted[bi] = []
+			promoted[bi].append(id)
+	var locked := {}
+	for n in nodes:
+		if n["type"] == "withered" or n["type"] == "mutation":
+			locked[n["id"]] = true
+	var base := _reach(locked)
+	var sources := {}
+	for n in nodes:
+		for e in n["effects"]:
+			if e is Dictionary and e.has("skill"):
+				var sid := str(e["skill"])
+				sources[sid] = mini(int(sources.get(sid, 1 << 20)), int(n["ring"]))
+	for bi in promoted:
+		var b: Dictionary = BRANCHES[bi]
+		var list: Array = promoted[bi]
+		var muts: Array = _list(b.get("mutations")).filter(func(m): return m is Dictionary and sources.has(str(m.get("mutates", ""))))
+		muts.sort_custom(func(x, y): return sources[str(x["mutates"])] < sources[str(y["mutates"])])
+		var sites := _mutation_sites(list, muts, sources, locked, base)
+		for k in sites.size():
+			if sites[k] >= 0:
+				_make_mutation(sites[k], muts[k])
+				base -= 1
+		var pool: Array = _list(b.get("originals")).filter(func(o): return o is Dictionary)
+		if pool.is_empty():
+			continue
+		var k := 0
+		for id in list:
+			if id in sites:
+				continue
+			_make_original(id, pool[k % pool.size()], int(k / float(pool.size())))
+			k += 1
+
+
+## Distance (en liens) de chaque nœud à la graine.
+func _distances() -> Array:
+	var dist: Array = []
+	dist.resize(nodes.size())
+	dist.fill(1 << 20)
+	dist[0] = 0
+	var queue: Array = [0]
+	var head := 0
+	while head < queue.size():
+		var u: int = queue[head]
+		head += 1
+		for m in nodes[u]["neighbors"]:
+			if dist[m] > dist[u] + 1:
+				dist[m] = dist[u] + 1
+				queue.append(m)
+	return dist
+
+
+## Nombre de nœuds atteints depuis la graine sans traverser les nœuds de « blocked ».
+func _reach(blocked: Dictionary) -> int:
+	var seen := {0: true}
+	var stack: Array = [0]
+	while stack.size() > 0:
+		var u: int = stack.pop_back()
+		for m in nodes[u]["neighbors"]:
+			if not seen.has(m) and not blocked.has(m):
+				seen[m] = true
+				stack.append(m)
+	return seen.size()
+
+
+## Places des mutations générées d'une branche, une par mutation de « muts » : parmi ses nœuds promus,
+## le plus près possible de deux anneaux après la compétence visée (« rings » : anneau de sa source la
+## plus proche de la graine), les bouts de chemin d'abord ; jamais à côté d'un autre nœud fermé, et
+## seulement si les fermer tous à la fois laisse le reste de l'arbre relié à la graine. « locked »
+## reçoit les places prises. Renvoie une place par mutation (-1 si aucune ne convient).
+func _mutation_sites(list: Array, muts: Array, rings: Dictionary, locked: Dictionary, base: int) -> Array:
+	var sites: Array = []
+	var taken := 0
+	for m in muts:
+		var want: int = int(rings[str(m["mutates"])]) + 2
+		var cand: Array = list.filter(func(id): return not id in sites)
+		cand.sort_custom(func(a, b):
+			var sa := _site_score(a, want)
+			var sb := _site_score(b, want)
+			return sa < sb or (sa == sb and a < b))
+		var found := -1
+		for id in cand:
+			var near := false
+			for x in nodes[id]["neighbors"]:
+				if locked.has(x):
+					near = true
+					break
+			if near:
+				continue
+			locked[id] = true
+			if _reach(locked) == base - taken - 1:
+				found = id
+				taken += 1
+				break
+			locked.erase(id)
+		sites.append(found)
+	return sites
+
+
+## Écart d'une place de mutation à l'anneau voulu (un demi-anneau de plus pour un nœud à plusieurs voisins).
+func _site_score(id: int, want: int) -> int:
+	var r: int = nodes[id]["ring"]
+	# Jamais avant l'anneau qui suit la compétence : la mutation fermée ne se montre pas trop tôt.
+	var early := 100 if r < want - 1 else 0
+	return early + absi(r - want) * 2 + (0 if nodes[id]["neighbors"].size() <= 1 else 1)
+
+
+## Un nœud promu devient une mutation de la compétence « m.mutates ».
+func _make_mutation(id: int, m: Dictionary) -> void:
+	var n: Dictionary = nodes[id]
+	var sid := str(m["mutates"])
+	n["type"] = "mutation"
+	n["mutates"] = sid
+	n["name"] = str(m.get("name", "Mutation : " + str(Content.skills().get(sid, {}).get("name", sid))))
+	n["desc"] = str(m.get("desc", ""))
+	n["effects"] = []
+	n["choices"] = []
+	for ch in _list(m.get("choices")):
+		if ch is Dictionary:
+			n["choices"].append(ch)
+
+
+## Un nœud promu devient le nœud original « o » (notable, ou nœud d'attaque) ; il garde la statistique
+## de son petit nœud. « turn » : combien de fois la branche a déjà donné cet original (nom suivant).
+func _make_original(id: int, o: Dictionary, turn: int) -> void:
+	var n: Dictionary = nodes[id]
+	var kind := str(o.get("type", "notable"))
+	n["type"] = kind if kind in ["notable", "attack"] else "notable"
+	var names: Array = _list(o.get("names"))
+	if not names.is_empty():
+		n["name"] = str(names[turn % names.size()])
+	n["desc"] = str(o.get("desc", ""))
+	var effects: Array = _list(o.get("effects")).duplicate(true)
+	effects.append_array(n["effects"])
+	n["effects"] = effects
+	for e in effects:
+		if e is Dictionary and e.has("attack_form"):
+			n["attack_form"] = str(e["attack_form"])
 
 
 ## Texte lisible des effets d'un nœud.

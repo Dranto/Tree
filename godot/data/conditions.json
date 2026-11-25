@@ -7,5 +7,10 @@
   "cible_empoisonnee": {"label": "si la cible est empoisonnée"},
   "cible_saignante": {"label": "si la cible saigne ({min} piqûres ou plus)"},
   "cible_enracinee": {"label": "si la cible est enracinée"},
-  "cible_eblouie": {"label": "si la cible est éblouie"}
+  "cible_eblouie": {"label": "si la cible est éblouie"},
+  "vie_basse": {"label": "sous la moitié de ta vie"},
+  "terre_vive": {"label": "sur une terre vivante"},
+  "terre_fletrie": {"label": "sur une terre flétrie"},
+  "greffes": {"label": "avec {min} greffes posées ou plus"},
+  "coeurs_purifies": {"label": "avec {min} Cœurs purifiés ou plus"}
 }
