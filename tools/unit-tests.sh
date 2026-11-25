@@ -26,6 +26,7 @@ TESTS=(
   "builds|--headless|"
   "boss|--headless --fixed-fps 60|"
   "death|--headless --fixed-fps 60|"
+  "deaths|--headless --fixed-fps 60|"
   "difficulty|--headless|"
   "direct_screen|--xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0|"
   "draw_batch|--xvfb --audio-driver Dummy|"

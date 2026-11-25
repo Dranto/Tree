@@ -921,7 +921,11 @@ func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void
 		dmg *= s["crit_mult"] * (1.0 + hit_crit_extra)
 	# Les étincelles du coup prennent la couleur de son élément (charte) : racines, épines de Ronce, lumière d'Aube.
 	fx.hit_element = "racine" if root_hit_base > 0.0 or branch == "racine" else ("epine" if branch == "ronce" else ("lumiere" if branch == "aube" else ""))
+	fx.hit_branch = branch
+	fx.player_hit = true
 	e.take_damage(dmg, crit)
+	fx.player_hit = false
+	fx.hit_branch = ""
 	world_fx.on_hit(e.position, branch, fx.hit_element, crit, s["poison"] > 0.0, s["bleed"] > 0.0)
 	fx.hit_element = ""
 	Sfx.play(enemy_sound(e, "sound_crit" if crit else "sound_hit", "critique" if crit else "impact"), e.position)
