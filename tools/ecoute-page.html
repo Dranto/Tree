@@ -1,0 +1,813 @@
+<meta charset="utf-8">
+<title>Table de sons</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Mise en page : colonne unique de lignes ; barre de filtres collante en haut, barre « en cours » collée en bas. */
+:root {
+  --bg: #f4f6f3; --surface: #ffffff; --surface2: #eceee9; --ink: #1c261f; --muted: #5d6a61; --line: #d6dbd3;
+  --accent: #23724a; --accent-ink: #ffffff; --accent-soft: #dcefe3;
+  --keep: #23724a; --keep-soft: #dcefe3; --redo: #9a6200; --redo-soft: #f8e9c8; --drop: #b3342c; --drop-soft: #f6dcd9;
+  --sel: #e6f1ea; --play: #fff6dc;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111714; --surface: #19211c; --surface2: #222c25; --ink: #e6ede8; --muted: #9aa9a0; --line: #2f3b33;
+  --accent: #5fc58a; --accent-ink: #0c1a12; --accent-soft: #1d3a2a;
+  --keep: #5fc58a; --keep-soft: #1d3a2a; --redo: #e6b04f; --redo-soft: #3d3016; --drop: #ef7b72; --drop-soft: #432320;
+  --sel: #1f3027; --play: #3a3317; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111714; --surface: #19211c; --surface2: #222c25; --ink: #e6ede8; --muted: #9aa9a0; --line: #2f3b33;
+  --accent: #5fc58a; --accent-ink: #0c1a12; --accent-soft: #1d3a2a;
+  --keep: #5fc58a; --keep-soft: #1d3a2a; --redo: #e6b04f; --redo-soft: #3d3016; --drop: #ef7b72; --drop-soft: #432320;
+  --sel: #1f3027; --play: #3a3317; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.45;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 96px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+input[type=range] { accent-color: var(--accent); }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1100px; margin: 0 auto; }
+header.top { padding-block: 20px 8px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; justify-content: space-between; }
+h1 { font-size: 1.5rem; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 0.9rem; margin: 2px 0 0; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-top: 8px; flex-wrap: wrap; }
+.tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 14px; font-weight: 600; color: var(--muted); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 12px 10px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.row-f { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 0.85rem; font-weight: 500; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.chip .n { opacity: 0.65; margin-left: 4px; font-variant-numeric: tabular-nums; }
+select, input[type="search"], .note { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; min-width: 0; }
+input[type="search"] { flex: 1 1 200px; }
+label.chk { display: inline-flex; gap: 6px; align-items: center; font-size: 0.88rem; color: var(--muted); }
+.count { color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; margin-left: auto; }
+.help { color: var(--muted); font-size: 0.82rem; }
+kbd { font-family: var(--mono); font-size: 0.75rem; background: var(--surface2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; }
+
+/* Lignes */
+ol.list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+li.item { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 12px; position: relative; scroll-margin-top: 130px; scroll-margin-bottom: 110px; }
+li.item.var { margin-left: 22px; }
+li.item.sel { background: var(--sel); border-color: var(--accent); }
+li.item.on { background: var(--play); }
+.pb { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; }
+.pb svg { width: 20px; height: 20px; fill: currentColor; }
+.pb[aria-pressed="true"] { background: var(--drop); color: #fff; }
+.main { min-width: 0; cursor: pointer; }
+.t { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.name { font-family: var(--mono); font-weight: 600; font-size: 0.95rem; overflow-wrap: anywhere; }
+.badge { font-size: 0.72rem; border-radius: 4px; padding: 1px 7px; background: var(--surface2); color: var(--muted); font-weight: 500; white-space: nowrap; }
+.badge.warn { background: var(--redo-soft); color: var(--redo); font-weight: 600; }
+.badge.reg { background: var(--accent-soft); color: var(--accent); }
+.quand { margin: 2px 0 0; overflow-wrap: anywhere; }
+.quand.none { color: var(--redo); }
+.det { margin-top: 8px; padding: 8px 10px; background: var(--surface2); border-radius: 8px; font-size: 0.85rem; display: none; gap: 4px; }
+li.sel .det { display: grid; }
+.det .k { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.det code { font-family: var(--mono); font-size: 0.8rem; overflow-wrap: anywhere; }
+.prog { grid-column: 2 / 4; height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; display: none; }
+li.on .prog { display: block; }
+.prog i { display: block; height: 100%; width: 0; background: var(--accent); }
+.vd { display: flex; flex-direction: column; gap: 6px; align-items: stretch; min-width: 0; width: 330px; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.seg button { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 4px; font-size: 0.82rem; font-weight: 600; min-height: 36px; }
+.seg button[data-v="garder"][aria-pressed="true"] { background: var(--keep); border-color: var(--keep); color: var(--accent-ink); }
+.seg button[data-v="refaire"][aria-pressed="true"] { background: var(--redo); border-color: var(--redo); color: #fff; }
+.seg button[data-v="supprimer"][aria-pressed="true"] { background: var(--drop); border-color: var(--drop); color: #fff; }
+.note { width: 100%; font-size: 0.85rem; }
+.empty { padding: 40px 0; text-align: center; color: var(--muted); }
+@media (max-width: 760px) {
+  .bar { position: static; }
+  li.item { grid-template-columns: 48px minmax(0, 1fr); }
+  .vd { grid-column: 1 / 3; width: auto; }
+  .prog { grid-column: 1 / 3; }
+  li.item.var { margin-left: 10px; }
+}
+
+/* Mélange */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-top: 14px; }
+.panel h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.sit { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.sit button { text-align: left; border: 1px solid var(--line); background: var(--surface2); border-radius: 10px; padding: 9px 11px; font-weight: 600; font-size: 0.9rem; }
+.sit button small { display: block; font-weight: 400; color: var(--muted); font-size: 0.78rem; }
+.sit button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.sl { display: grid; grid-template-columns: 150px minmax(0, 1fr) 54px; gap: 10px; align-items: center; margin: 6px 0; font-size: 0.9rem; }
+.sl input[type=range] { width: 100%; accent-color: var(--accent); }
+.sl output { font-variant-numeric: tabular-nums; text-align: right; font-family: var(--mono); font-size: 0.85rem; }
+.mixrow { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) 54px; gap: 6px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.mixrow.off { opacity: 0.55; }
+.mixrow .why { color: var(--muted); font-size: 0.8rem; grid-column: 1 / 4; }
+.mixrow .lab { min-width: 0; }
+.mixrow .lab b { font-family: var(--mono); font-size: 0.88rem; overflow-wrap: anywhere; }
+.mixrow .lab span { display: block; color: var(--muted); font-size: 0.8rem; }
+.big { border: 0; border-radius: 10px; padding: 10px 18px; font-weight: 700; background: var(--accent); color: var(--accent-ink); min-height: 44px; }
+.big.stop { background: var(--drop); color: #fff; }
+.big.ghost { background: var(--surface2); color: var(--ink); }
+.note-box { background: var(--surface2); border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; color: var(--muted); margin-top: 10px; }
+@media (max-width: 640px) { .sl { grid-template-columns: 1fr 54px; } .sl label { grid-column: 1 / 3; } .mixrow { grid-template-columns: minmax(0, 1fr) 54px; } .mixrow .lab { grid-column: 1 / 3; } }
+
+/* Verdicts */
+.sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 12px; }
+.sum div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.sum b { font-size: 1.6rem; display: block; font-variant-numeric: tabular-nums; }
+.sum span { color: var(--muted); font-size: 0.82rem; }
+table.v { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+table.v th { text-align: left; color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 8px; }
+table.v td { padding: 7px 8px; border-top: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+.scroll { overflow-x: auto; }
+.pill { font-size: 0.75rem; font-weight: 700; border-radius: 999px; padding: 2px 9px; }
+.pill.garder { background: var(--keep-soft); color: var(--keep); }
+.pill.refaire { background: var(--redo-soft); color: var(--redo); }
+.pill.supprimer { background: var(--drop-soft); color: var(--drop); }
+textarea.exp { width: 100%; min-height: 160px; font-family: var(--mono); font-size: 0.8rem; background: var(--surface2); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.alert { border-radius: 10px; padding: 10px 12px; background: var(--redo-soft); color: var(--ink); border: 1px solid var(--redo); font-size: 0.88rem; margin-top: 12px; }
+
+/* Barre « en cours » */
+.now { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
+  padding-block: 8px calc(8px + env(safe-area-inset-bottom, 0px)); padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
+.now .in { max-width: 1100px; margin: 0 auto; display: flex; gap: 12px; align-items: center; min-width: 0; flex-wrap: wrap; }
+.now .txt { flex: 1 1 260px; min-width: 0; }
+.now .txt b { font-family: var(--mono); font-size: 0.9rem; overflow-wrap: anywhere; }
+.now .txt span { display: block; color: var(--muted); font-size: 0.82rem; max-height: 2.8em; overflow: hidden; }
+.now label { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; color: var(--muted); }
+.now input[type=range] { width: 110px; accent-color: var(--accent); }
+@media (prefers-reduced-motion: no-preference) { li.item { transition: background 0.15s, border-color 0.15s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Table de sons</h1>
+      <p class="sub" id="meta">Chargement de l'inventaire…</p>
+    </div>
+    <div class="row-f" id="saveState" aria-live="polite"></div>
+  </header>
+  <div class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-tab="liste" aria-selected="true">Écouter un son seul</button>
+    <button class="tab" role="tab" data-tab="mix" aria-selected="false">Mélange réel du jeu</button>
+    <button class="tab" role="tab" data-tab="bilan" aria-selected="false">Mes verdicts</button>
+  </div>
+
+  <section id="p-liste">
+    <div class="bar" id="filters">
+      <div class="row-f" id="famChips"></div>
+      <div class="row-f">
+        <select id="selRegion" aria-label="Région"></select>
+        <select id="selKind" aria-label="Type de son"></select>
+        <select id="selVerdict" aria-label="Verdict">
+          <option value="">Tous les verdicts</option><option value="none">Sans verdict</option>
+          <option value="garder">Garder</option><option value="refaire">Refaire</option><option value="supprimer">Supprimer</option>
+        </select>
+        <label class="chk"><input type="checkbox" id="chkUnused"> Non utilisés seulement</label>
+        <input type="search" id="q" placeholder="Chercher un nom, une compétence, un ennemi…" aria-label="Recherche">
+        <span class="count" id="count"></span>
+      </div>
+    </div>
+      <div class="help" style="margin-top:8px"><kbd>Espace</kbd> lecture / arrêt de la ligne choisie · <kbd>↓</kbd> <kbd>↑</kbd> ligne suivante / précédente · <kbd>1</kbd> garder · <kbd>2</kbd> refaire · <kbd>3</kbd> supprimer · <kbd>0</kbd> effacer · <kbd>Échap</kbd> tout arrêter</div>
+    <div id="anoms"></div>
+    <ol class="list" id="list"></ol>
+  </section>
+
+  <section id="p-mix" hidden>
+    <div class="panel">
+      <h2>Ce que le jeu joue réellement, ensemble</h2>
+      <p class="sub" style="margin:0 0 10px">Les volumes viennent des formules de <code>music.gd</code> : une situation de jeu règle quatre curseurs, et chaque couche de musique ou nappe d'ambiance en déduit son volume. Choisis une région et une situation, lance, puis touche à n'importe quel curseur.</p>
+      <div class="row-f" id="mixRegions" role="group" aria-label="Région"></div>
+    </div>
+    <div class="panel">
+      <h2>Situation</h2>
+      <div class="sit" id="sits"></div>
+      <div style="margin-top:12px">
+        <div class="sl"><label for="s_vie">Vie du sol sous le héros</label><input type="range" id="s_vie" min="0" max="100" value="0"><output id="o_vie"></output></div>
+        <div class="sl"><label for="s_combat">Combat autour du héros</label><input type="range" id="s_combat" min="0" max="100" value="0"><output id="o_combat"></output></div>
+        <div class="sl"><label for="s_coeur">Siège d'un Cœur</label><input type="range" id="s_coeur" min="0" max="100" value="0"><output id="o_coeur"></output></div>
+        <div class="sl"><label for="s_boss">Combat de boss</label><input type="range" id="s_boss" min="0" max="100" value="0"><output id="o_boss"></output></div>
+      </div>
+      <div class="row-f" style="margin-top:8px">
+        <button class="big" id="mixPlay">Lancer le mélange</button>
+        <span class="help" id="mixInfo"></span>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Ce qui sonne, et à quel volume</h2>
+      <div id="mixList"></div>
+      <div class="note-box">Dans le jeu, les changements de situation sont des fondus (0,25 à 1,2 s selon la couche) ; ici ils sont presque instantanés. Les réglages de volume des Options (musique, ambiance, effets) ne sont pas simulés : 100 % ici = plein volume du fichier. Les bruitages de combat ne font pas partie de ce mélange : écoute-les dans la première page.</div>
+    </div>
+  </section>
+
+  <section id="p-bilan" hidden>
+    <div class="sum" id="sum"></div>
+    <div class="panel">
+      <h2>Exporter mes notes</h2>
+      <p class="sub" style="margin:0 0 10px">Les verdicts sont enregistrés automatiquement sur le serveur de cette page. Ces boutons en font une copie à garder ou à coller ailleurs.</p>
+      <div class="row-f">
+        <button class="big ghost" id="exMd">Markdown</button>
+        <button class="big ghost" id="exJson">JSON</button>
+        <button class="big ghost" id="exCopy">Afficher le texte à copier</button>
+      </div>
+      <p class="help" id="exMsg" aria-live="polite"></p>
+      <textarea class="exp" id="exText" hidden readonly aria-label="Notes exportées"></textarea>
+    </div>
+    <div class="panel">
+      <h2>Lignes avec un verdict ou une note</h2>
+      <div class="scroll"><table class="v"><thead><tr><th>Verdict</th><th>Son</th><th>Quand le jeu le joue</th><th>Note</th></tr></thead><tbody id="vrows"></tbody></table></div>
+      <p class="empty" id="vempty">Aucun verdict pour l'instant. Choisis « garder », « refaire » ou « supprimer » sur une ligne.</p>
+    </div>
+  </section>
+</div>
+
+<div class="now" id="now" hidden>
+  <div class="in">
+    <button class="big stop" id="nowStop" aria-label="Tout arrêter">Arrêter</button>
+    <div class="txt"><b id="nowName"></b><span id="nowWhen"></span></div>
+    <label><input type="checkbox" id="chkMulti"> Plusieurs sons à la fois</label>
+    <label>Volume <input type="range" id="vol" min="0" max="100" value="80" aria-label="Volume général"></label>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const FAM = { combat: "Combat", competences: "Compétences", heros: "Héros", monde: "Monde", interface: "Interface", boss: "Boss", musique: "Musique", ambiance: "Ambiance" };
+  const KIND = { sfx: "Bruitages", mus: "Musique (couches)", amb: "Ambiance (nappes)", evt: "Ambiance (événements seuls)", fond: "Ambiance (fonds sans événements)" };
+  const KIND_LABEL = { sfx: "bruitage", mus: "musique", amb: "nappe", evt: "événement", fond: "fond continu" };
+  const VERD = { garder: "Garder", refaire: "Refaire", supprimer: "Supprimer" };
+  const PLAY_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const STOP_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>';
+
+  let INV = null, ITEMS = [], BYID = new Map(), BIN = null;
+  const V = new Map();            // id -> verdict doc
+  const rows = new Map();         // id -> {li, ...}
+  const filt = { fam: new Set(), region: "", kind: "", verdict: "", unused: false, q: "" };
+  let selected = null, visible = [];
+
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function norm(s) { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+  function fmtDur(s) { return s >= 10 ? s.toFixed(0) + " s" : s.toFixed(1).replace(".", ",") + " s"; }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+  /* ---------- Audio ---------- */
+  let ctx = null, master = null;
+  const buffers = new Map();
+  const solos = new Map();       // id -> {src, gain, t0, dur, loop}
+  let mixNodes = null;           // {nodes: Map(id -> {src, gain})}
+  async function ensureCtx() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      ctx = new AC();
+      master = ctx.createGain();
+      master.gain.value = Number($("vol").value) / 100;
+      master.connect(ctx.destination);
+    }
+    if (ctx.state === "suspended") await ctx.resume();
+    return ctx;
+  }
+  async function bufferOf(it) {
+    if (buffers.has(it.id)) return buffers.get(it.id);
+    const part = BIN.slice(it.off, it.off + it.len);
+    const b = await ctx.decodeAudioData(part);
+    buffers.set(it.id, b);
+    return b;
+  }
+  function stopSolo(id) {
+    const s = solos.get(id);
+    if (!s) return;
+    solos.delete(id);
+    try { s.src.onended = null; s.src.stop(); } catch (e) { /* déjà arrêté */ }
+    s.gain.disconnect();
+    refreshPlayState(id);
+  }
+  function stopAllSolos(except) { for (const id of [...solos.keys()]) if (id !== except) stopSolo(id); }
+  function stopMix() {
+    if (!mixNodes) return;
+    for (const n of mixNodes.nodes.values()) { try { n.src.stop(); } catch (e) { /* déjà arrêté */ } n.gain.disconnect(); }
+    mixNodes = null;
+    updateMixButton();
+    updateNow();
+  }
+  async function toggleSolo(it) {
+    if (!BIN) return;
+    if (solos.has(it.id)) { stopSolo(it.id); updateNow(); return; }
+    await ensureCtx();
+    if (!$("chkMulti").checked) stopAllSolos();
+    stopMix();
+    let buf;
+    try { buf = await bufferOf(it); } catch (e) { $("nowWhen").textContent = "Ce fichier n'a pas pu être lu par le navigateur."; return; }
+    const src = ctx.createBufferSource();
+    src.buffer = buf; src.loop = !!it.boucle;
+    const gain = ctx.createGain();
+    gain.gain.value = 1;
+    src.connect(gain); gain.connect(master);
+    const s = { src, gain, t0: ctx.currentTime, dur: buf.duration, loop: !!it.boucle };
+    src.onended = () => { if (solos.get(it.id) === s) { solos.delete(it.id); refreshPlayState(it.id); updateNow(); } };
+    solos.set(it.id, s);
+    src.start();
+    refreshPlayState(it.id);
+    updateNow();
+    tick();
+  }
+  function refreshPlayState(id) {
+    const r = rows.get(id);
+    if (!r) return;
+    const on = solos.has(id);
+    r.li.classList.toggle("on", on);
+    r.pb.setAttribute("aria-pressed", on ? "true" : "false");
+    r.pb.innerHTML = on ? STOP_SVG : PLAY_SVG;
+    r.pb.setAttribute("aria-label", (on ? "Arrêter " : "Écouter ") + BYID.get(id).titre);
+    if (!on) r.bar.style.width = "0";
+  }
+  let raf = 0;
+  function tick() {
+    if (raf) return;
+    const step = () => {
+      raf = 0;
+      if (!solos.size) return;
+      for (const [id, s] of solos) {
+        const r = rows.get(id);
+        if (!r) continue;
+        const el = ctx.currentTime - s.t0;
+        const p = s.loop ? (el % s.dur) / s.dur : Math.min(1, el / s.dur);
+        r.bar.style.width = (p * 100).toFixed(1) + "%";
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+  function updateNow() {
+    const bar = $("now");
+    const names = [...solos.keys()].map((id) => BYID.get(id));
+    if (mixNodes) {
+      bar.hidden = false;
+      $("nowName").textContent = "Mélange : " + mixState.regionName + " · " + (mixState.sitName || "réglage libre");
+      $("nowWhen").textContent = "Plusieurs couches ensemble, en boucle de 12 s. Voir l'onglet « Mélange réel ».";
+    } else if (names.length) {
+      bar.hidden = false;
+      $("nowName").textContent = names.length === 1 ? names[0].titre + (names[0].kind === "sfx" ? "" : "") : names.length + " sons à la fois";
+      $("nowWhen").textContent = names.length === 1 ? names[0].quand : names.map((n) => n.titre).join(", ");
+    } else {
+      bar.hidden = true;
+    }
+  }
+  function stopEverything() { stopAllSolos(); stopMix(); updateNow(); }
+  $("nowStop").addEventListener("click", stopEverything);
+  $("vol").addEventListener("input", () => { if (master) master.gain.value = Number($("vol").value) / 100; });
+
+  /* ---------- Verdicts (base de données de la page) ---------- */
+  let db = null, dbState = "attente";
+  const pending = new Map(), inflight = new Set();
+  function setStatus(txt, kind) {
+    const s = $("saveState");
+    s.textContent = "";
+    if (!txt) return;
+    const b = el("span", "badge" + (kind === "warn" ? " warn" : ""), txt);
+    s.appendChild(b);
+  }
+  function verdictOf(id) { return V.get(id) || {}; }
+  function setVerdict(it, patch) {
+    const next = Object.assign({}, verdictOf(it.id), patch, { titre: it.titre, nom: it.name, type: it.kind, famille: it.famille, region: it.region, quand: it.quand, fichier: it.fichier, maj: Date.now() });
+    if (!next.verdict && !next.note) { next.verdict = ""; next.note = ""; }
+    V.set(it.id, next);
+    refreshVerdict(it.id);
+    refreshSummary();
+    if (!db) { setStatus("Verdicts non enregistrés : base indisponible. Utilise l'export.", "warn"); return; }
+    pending.set(it.id, next);
+    flush(it.id);
+  }
+  async function flush(id) {
+    if (inflight.has(id)) return;
+    inflight.add(id);
+    setStatus("Enregistrement…");
+    try {
+      while (pending.has(id)) {
+        const data = pending.get(id);
+        pending.delete(id);
+        await db.collection("verdicts").doc(id).set(data);
+      }
+      setStatus("Enregistré");
+    } catch (e) {
+      setStatus("Erreur d'enregistrement : " + (e && e.message ? e.message : e), "warn");
+    }
+    inflight.delete(id);
+  }
+  function refreshVerdict(id) {
+    const r = rows.get(id);
+    if (!r) return;
+    const v = verdictOf(id);
+    r.seg.forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === v.verdict ? "true" : "false"));
+    if (document.activeElement !== r.note) r.note.value = v.note || "";
+  }
+
+  /* ---------- Liste ---------- */
+  function buildRow(it) {
+    const li = el("li", "item" + (it.variante && !it.variante.startsWith("1/") && it.kind === "sfx" ? " var" : ""));
+    li.dataset.id = it.id;
+    const pb = el("button", "pb");
+    pb.type = "button"; pb.innerHTML = PLAY_SVG; pb.setAttribute("aria-pressed", "false"); pb.setAttribute("aria-label", "Écouter " + it.titre);
+    pb.addEventListener("click", (e) => { select(it.id, false); toggleSolo(it); e.currentTarget.blur(); });
+    const main = el("div", "main");
+    main.addEventListener("click", () => select(it.id, false));
+    const t = el("div", "t");
+    t.appendChild(el("span", "name", it.titre));
+    t.appendChild(el("span", "badge", KIND_LABEL[it.kind]));
+    if (it.variante) t.appendChild(el("span", "badge", "variante " + it.variante));
+    t.appendChild(el("span", "badge", FAM[it.famille] || it.famille));
+    t.appendChild(el("span", "badge reg", INV.regions[it.region] || it.region));
+    t.appendChild(el("span", "badge", fmtDur(it.duree) + (it.boucle ? " · en boucle" : "")));
+    if (!it.utilise) t.appendChild(el("span", "badge warn", "non utilisé"));
+    const q = el("p", "quand" + (it.utilise ? "" : " none"), it.quand);
+    const det = el("div", "det");
+    if (it.precision) { det.appendChild(el("span", "k", "À savoir")); det.appendChild(el("span", null, it.precision)); }
+    det.appendChild(el("span", "k", "Fichier du jeu"));
+    det.appendChild(el("code", null, it.fichier));
+    det.appendChild(el("span", "k", "Nom dans le code"));
+    det.appendChild(el("code", null, it.name));
+    det.appendChild(el("span", "k", "Appelé depuis"));
+    det.appendChild(el("code", null, it.refs.length ? it.refs.join("  ·  ") : "nulle part"));
+    if (it.kind === "sfx") {
+      det.appendChild(el("span", "k", "Réglages"));
+      det.appendChild(el("code", null, "crête " + it.crete + (it.duck ? " · baisse la musique de " + Math.round(it.duck * 100) + " %" : "") + " · le jeu varie la hauteur de ±6 % à chaque lecture"));
+    }
+    main.append(t, q, det);
+    const vd = el("div", "vd");
+    const seg = el("div", "seg");
+    seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "Verdict pour " + it.titre);
+    const segBtns = [];
+    for (const k of Object.keys(VERD)) {
+      const b = el("button", null, VERD[k]);
+      b.type = "button"; b.dataset.v = k; b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", (e) => { setVerdict(it, { verdict: verdictOf(it.id).verdict === k ? "" : k }); e.currentTarget.blur(); });
+      seg.appendChild(b); segBtns.push(b);
+    }
+    const note = el("input", "note");
+    note.type = "text"; note.id = "note-" + it.id; note.placeholder = "Note : ce qui ne va pas, ce que tu veux entendre…"; note.setAttribute("aria-label", "Note pour " + it.titre);
+    let timer = 0;
+    note.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => setVerdict(it, { note: note.value }), 700); });
+    note.addEventListener("blur", () => { clearTimeout(timer); if (note.value !== (verdictOf(it.id).note || "")) setVerdict(it, { note: note.value }); });
+    note.addEventListener("focus", () => select(it.id, false));
+    vd.append(seg, note);
+    const prog = el("div", "prog"); const bar = el("i"); prog.appendChild(bar);
+    li.append(pb, main, vd, prog);
+    rows.set(it.id, { li, pb, seg: segBtns, note, bar });
+    return li;
+  }
+
+  function matches(it) {
+    if (filt.fam.size && !filt.fam.has(it.famille)) return false;
+    if (filt.region && it.region !== filt.region) return false;
+    if (filt.kind && it.kind !== filt.kind) return false;
+    if (filt.unused && it.utilise) return false;
+    const v = verdictOf(it.id).verdict || "";
+    if (filt.verdict === "none" && v) return false;
+    if (filt.verdict && filt.verdict !== "none" && v !== filt.verdict) return false;
+    if (filt.q) {
+      const hay = norm([it.titre, it.name, it.quand, it.precision, it.fichier, FAM[it.famille], INV.regions[it.region]].join(" "));
+      for (const w of norm(filt.q).split(/\s+/).filter(Boolean)) if (!hay.includes(w)) return false;
+    }
+    return true;
+  }
+  function applyFilters() {
+    visible = [];
+    for (const it of ITEMS) {
+      const ok = matches(it);
+      rows.get(it.id).li.hidden = !ok;
+      if (ok) visible.push(it.id);
+    }
+    $("count").textContent = visible.length + " sur " + ITEMS.length + " éléments";
+    document.querySelectorAll("#famChips .chip").forEach((c) => {
+      const f = c.dataset.f;
+      c.setAttribute("aria-pressed", f === "" ? String(filt.fam.size === 0) : String(filt.fam.has(f)));
+    });
+    if (selected && !visible.includes(selected)) select(visible[0] || null, false);
+    let empty = $("list").querySelector(".empty");
+    if (!visible.length && !empty) { empty = el("li", "empty", "Aucun élément ne correspond à ces filtres."); $("list").appendChild(empty); }
+    if (visible.length && empty) empty.remove();
+    store("ecoute.filtres", JSON.stringify({ fam: [...filt.fam], region: filt.region, kind: filt.kind, unused: filt.unused }));
+  }
+  function select(id, scroll) {
+    if (selected && rows.has(selected)) rows.get(selected).li.classList.remove("sel");
+    selected = id;
+    if (id && rows.has(id)) {
+      const li = rows.get(id).li;
+      li.classList.add("sel");
+      if (scroll) li.scrollIntoView({ block: "nearest" });
+    }
+  }
+  function move(d) {
+    if (!visible.length) return;
+    let i = visible.indexOf(selected);
+    i = i < 0 ? (d > 0 ? 0 : visible.length - 1) : Math.max(0, Math.min(visible.length - 1, i + d));
+    select(visible[i], true);
+  }
+
+  function buildFilters() {
+    const chips = $("famChips");
+    const mk = (f, label, n) => {
+      const b = el("button", "chip"); b.type = "button"; b.dataset.f = f;
+      b.append(label, el("span", "n", String(n)));
+      b.addEventListener("click", (e) => {
+        if (f === "") filt.fam.clear(); else if (filt.fam.has(f)) filt.fam.delete(f); else filt.fam.add(f);
+        applyFilters(); e.currentTarget.blur();
+      });
+      chips.appendChild(b);
+    };
+    mk("", "Tout", ITEMS.length);
+    for (const f of INV.familles) mk(f, FAM[f], ITEMS.filter((i) => i.famille === f).length);
+    const sr = $("selRegion");
+    sr.appendChild(new Option("Toutes les régions", ""));
+    const regs = [...new Set(ITEMS.map((i) => i.region))];
+    const order = ["monde", "ronce", "spore", "vent", "seve", "aube", "racine", "finale", "generique"];
+    regs.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    for (const r of regs) sr.appendChild(new Option(INV.regions[r] || r, r));
+    const sk = $("selKind");
+    sk.appendChild(new Option("Tous les types", ""));
+    for (const k of Object.keys(KIND)) if (ITEMS.some((i) => i.kind === k)) sk.appendChild(new Option(KIND[k], k));
+    sr.addEventListener("change", () => { filt.region = sr.value; applyFilters(); });
+    sk.addEventListener("change", () => { filt.kind = sk.value; applyFilters(); });
+    $("selVerdict").addEventListener("change", (e) => { filt.verdict = e.target.value; applyFilters(); });
+    $("chkUnused").addEventListener("change", (e) => { filt.unused = e.target.checked; applyFilters(); });
+    $("q").addEventListener("input", (e) => { filt.q = e.target.value.trim(); applyFilters(); });
+    try {
+      const saved = JSON.parse(store("ecoute.filtres") || "null");
+      if (saved) {
+        (saved.fam || []).forEach((f) => filt.fam.add(f));
+        filt.region = saved.region || ""; filt.kind = saved.kind || ""; filt.unused = !!saved.unused;
+        sr.value = filt.region; sk.value = filt.kind; $("chkUnused").checked = filt.unused;
+        if (sr.value !== filt.region) { filt.region = ""; }
+        if (sk.value !== filt.kind) { filt.kind = ""; }
+      }
+    } catch (e) { /* filtres non mémorisés */ }
+  }
+
+  /* ---------- Bilan et export ---------- */
+  function refreshSummary() {
+    const c = { garder: 0, refaire: 0, supprimer: 0 };
+    for (const it of ITEMS) { const v = verdictOf(it.id).verdict; if (c[v] !== undefined) c[v]++; }
+    const none = ITEMS.length - c.garder - c.refaire - c.supprimer;
+    const sum = $("sum");
+    sum.textContent = "";
+    for (const [k, lab] of [["garder", "À garder"], ["refaire", "À refaire"], ["supprimer", "À supprimer"], ["none", "Sans verdict"]]) {
+      const d = el("div"); d.append(el("b", null, String(k === "none" ? none : c[k])), el("span", null, lab)); sum.appendChild(d);
+    }
+    const body = $("vrows"); body.textContent = "";
+    const list = ITEMS.filter((it) => { const v = verdictOf(it.id); return v.verdict || v.note; });
+    $("vempty").hidden = list.length > 0;
+    for (const it of list) {
+      const v = verdictOf(it.id);
+      const tr = el("tr");
+      const td1 = el("td"); if (v.verdict) td1.appendChild(el("span", "pill " + v.verdict, VERD[v.verdict]));
+      const td2 = el("td"); td2.appendChild(el("b", null, it.titre)); td2.appendChild(el("div", "help", KIND_LABEL[it.kind] + " · " + (INV.regions[it.region] || it.region)));
+      const a = el("a", null, "voir"); a.href = "#"; a.addEventListener("click", (e) => { e.preventDefault(); showTab("liste"); filt.q = ""; $("q").value = ""; filt.fam.clear(); filt.region = ""; filt.kind = ""; filt.verdict = ""; filt.unused = false; $("selRegion").value = ""; $("selKind").value = ""; $("selVerdict").value = ""; $("chkUnused").checked = false; applyFilters(); select(it.id, true); });
+      td2.appendChild(a);
+      tr.append(td1, td2, el("td", null, it.quand), el("td", null, v.note || ""));
+      body.appendChild(tr);
+    }
+  }
+  function exportData() {
+    return ITEMS.filter((it) => { const v = verdictOf(it.id); return v.verdict || v.note; }).map((it) => {
+      const v = verdictOf(it.id);
+      return { id: it.id, son: it.titre, nom_dans_le_code: it.name, type: KIND_LABEL[it.kind], famille: it.famille, region: it.region, quand: it.quand, fichier: it.fichier, verdict: v.verdict || "", note: v.note || "" };
+    });
+  }
+  function exportMd() {
+    const data = exportData();
+    const out = ["# Verdicts de la table de sons", ""];
+    for (const k of Object.keys(VERD)) {
+      const sel = data.filter((d) => d.verdict === k);
+      if (!sel.length) continue;
+      out.push("## " + VERD[k] + " (" + sel.length + ")", "");
+      for (const d of sel) out.push("- **" + d.son + "** (" + d.type + ", " + (INV.regions[d.region] || d.region) + ") : " + d.quand + (d.note ? "\n  - Note : " + d.note : ""));
+      out.push("");
+    }
+    const notes = data.filter((d) => !d.verdict);
+    if (notes.length) { out.push("## Notes sans verdict", ""); for (const d of notes) out.push("- **" + d.son + "** : " + d.note); out.push(""); }
+    if (!data.length) out.push("Aucun verdict pour l'instant.");
+    return out.join("\n");
+  }
+  async function save(name, text, type) {
+    const msg = $("exMsg");
+    let dl = null;
+    try { dl = await claude.use("downloads"); } catch (e) { dl = null; }
+    if (!dl) { showText(text); msg.textContent = "L'enregistrement de fichier n'est pas disponible ici : le texte est affiché, copie-le."; return; }
+    try { await dl.save({ filename: name, data: new Blob([text], { type })}); msg.textContent = "Fichier proposé : " + name; }
+    catch (e) { if (e && e.code === "declined") msg.textContent = "Enregistrement refusé."; else { showText(text); msg.textContent = "Impossible d'enregistrer ici : le texte est affiché, copie-le."; } }
+  }
+  function showText(text) { const t = $("exText"); t.hidden = false; t.value = text; t.focus(); t.select(); }
+  $("exMd").addEventListener("click", () => save("verdicts-sons.md", exportMd(), "text/markdown"));
+  $("exJson").addEventListener("click", () => save("verdicts-sons.json", JSON.stringify(exportData(), null, 2), "application/json"));
+  $("exCopy").addEventListener("click", () => { showText(exportMd()); $("exMsg").textContent = "Texte prêt à copier (Ctrl+C)."; });
+
+  /* ---------- Mélange réel ---------- */
+  const mixState = { region: "ronce", regionName: "Ronce (le monde)", sitName: "", vie: 0, combat: 0, coeur: 0, boss: 0, manual: new Map() };
+  const SITS = [
+    { n: "Explorer, terre flétrie", d: "vie du sol < 15 %", v: { vie: 0, combat: 0, coeur: 0, boss: 0 } },
+    { n: "Explorer, terre vivante", d: "vie du sol > 60 %", v: { vie: 100, combat: 0, coeur: 0, boss: 0 } },
+    { n: "Entre les deux", d: "vie du sol ~ 38 % : fondu à mi-chemin", v: { vie: 38, combat: 0, coeur: 0, boss: 0 } },
+    { n: "Escarmouche, terre flétrie", d: "2 Flétris proches", v: { vie: 0, combat: 33, coeur: 0, boss: 0 } },
+    { n: "Mêlée, terre flétrie", d: "6 Flétris ou plus", v: { vie: 0, combat: 100, coeur: 0, boss: 0 } },
+    { n: "Mêlée, terre vivante", d: "6 Flétris ou plus", v: { vie: 100, combat: 100, coeur: 0, boss: 0 } },
+    { n: "Siège d'un Cœur", d: "le héros près du Cœur assiégé, terre flétrie", v: { vie: 0, combat: 50, coeur: 100, boss: 0 } },
+    { n: "Combat de boss", d: "dans l'arène", v: { vie: 0, combat: 50, coeur: 0, boss: 100 } },
+  ];
+  const LAYER_ORDER = ["sombre", "lumineux", "combat", "coeur", "boss"];
+  const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  function computeMix() {
+    const mix = smooth(0.15, 0.6, mixState.vie / 100);
+    const c = mixState.combat / 100, h = mixState.coeur / 100, b = mixState.boss / 100;
+    const explore = (1 - b) * (1 - 0.35 * c) * (1 - 0.5 * h);
+    const bedBoss = INV.melange.bed_boss;
+    const bedG = 1 - (1 - bedBoss) * b;
+    return {
+      mix, explore, bedG,
+      layers: {
+        sombre: { g: Math.cos(mix * Math.PI / 2) * explore, why: "sombre = cos(mélange " + pc(mix) + ") × exploration " + pc(explore) },
+        lumineux: { g: Math.sin(mix * Math.PI / 2) * explore, why: "lumineux = sin(mélange " + pc(mix) + ") × exploration " + pc(explore) },
+        combat: { g: Math.sin(c * Math.PI / 2) * (1 - b), why: "combat = sin(intensité " + pc(c) + ") × (1 − boss " + pc(b) + ")" },
+        coeur: { g: Math.sin(h * Math.PI / 2) * (1 - b), why: "cœur = sin(siège " + pc(h) + ") × (1 − boss " + pc(b) + ")" },
+        boss: { g: Math.sin(b * Math.PI / 2), why: "boss = sin(boss " + pc(b) + ")" },
+      },
+      beds: {
+        mort: { g: Math.cos(mix * Math.PI / 2) * bedG, why: "nappe flétrie = cos(mélange " + pc(mix) + ") × " + (b > 0 ? "baisse pendant un boss " + pc(bedG) : "plein") },
+        vif: { g: Math.sin(mix * Math.PI / 2) * bedG, why: "nappe vivante = sin(mélange " + pc(mix) + ") × " + (b > 0 ? "baisse pendant un boss " + pc(bedG) : "plein") },
+      },
+    };
+  }
+  const pc = (x) => Math.round(x * 100) + " %";
+  function mixElements() {
+    const reg = INV.melange.regions.find((r) => r.id === mixState.region);
+    const out = [];
+    const m = computeMix();
+    for (const l of LAYER_ORDER) {
+      const it = BYID.get("mus-" + (mixState.region === "ronce" ? "" : mixState.region + "_") + l);
+      if (it) out.push({ key: it.id, it, label: "Musique · " + l, sub: it.fichier, g: m.layers[l].g, why: m.layers[l].why });
+    }
+    for (const s of ["mort", "vif"]) {
+      const it = BYID.get("amb-" + (mixState.region === "ronce" ? "" : mixState.region + "_") + s);
+      if (it) out.push({ key: it.id, it, label: "Ambiance · nappe " + (s === "mort" ? "terre flétrie" : "terre vivante"), sub: it.fichier, g: m.beds[s].g, why: m.beds[s].why });
+    }
+    return { reg, list: out, m };
+  }
+  function buildMixUI() {
+    const box = $("mixRegions");
+    for (const r of INV.melange.regions) {
+      const b = el("button", "chip", r.nom); b.type = "button"; b.dataset.r = r.id;
+      b.addEventListener("click", (e) => { const was = !!mixNodes; stopMix(); mixState.region = r.id; mixState.regionName = r.nom; mixState.manual.clear(); renderMix(); if (was) startMix(); e.currentTarget.blur(); });
+      box.appendChild(b);
+    }
+    const sits = $("sits");
+    SITS.forEach((s, i) => {
+      const b = el("button"); b.type = "button"; b.dataset.i = String(i);
+      b.append(s.n, el("small", null, s.d));
+      b.addEventListener("click", (e) => {
+        Object.assign(mixState, s.v); mixState.sitName = s.n; mixState.manual.clear();
+        syncSliders(); renderMix(); applyMixGains();
+        if (!mixNodes) startMix();
+        e.currentTarget.blur();
+      });
+      sits.appendChild(b);
+    });
+    for (const k of ["vie", "combat", "coeur", "boss"]) {
+      $("s_" + k).addEventListener("input", (e) => { mixState[k] = Number(e.target.value); mixState.sitName = ""; mixState.manual.clear(); syncSliders(); renderMix(); applyMixGains(); });
+    }
+    $("mixPlay").addEventListener("click", () => { if (mixNodes) { stopMix(); } else startMix(); });
+    syncSliders(); renderMix();
+  }
+  function syncSliders() {
+    for (const k of ["vie", "combat", "coeur", "boss"]) { $("s_" + k).value = mixState[k]; $("o_" + k).textContent = mixState[k] + " %"; }
+    document.querySelectorAll("#sits button").forEach((b) => b.setAttribute("aria-pressed", String(SITS[Number(b.dataset.i)].n === mixState.sitName)));
+  }
+  function effGain(e) { return mixState.manual.has(e.key) ? mixState.manual.get(e.key) : e.g; }
+  function renderMix() {
+    document.querySelectorAll("#mixRegions .chip").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.r === mixState.region)));
+    const { list } = mixElements();
+    const box = $("mixList");
+    box.textContent = "";
+    for (const e of list) {
+      const g = effGain(e);
+      const row = el("div", "mixrow" + (g < 0.001 ? " off" : ""));
+      row.dataset.k = e.key;
+      const lab = el("div", "lab"); lab.append(el("b", null, e.label), el("span", null, e.sub + (mixState.manual.has(e.key) ? " · volume modifié à la main" : "")));
+      const rng = el("input"); rng.type = "range"; rng.min = "0"; rng.max = "100"; rng.value = String(Math.round(g * 100)); rng.setAttribute("aria-label", "Volume de " + e.label);
+      rng.addEventListener("input", () => { mixState.manual.set(e.key, Number(rng.value) / 100); out.textContent = rng.value + " %"; row.classList.toggle("off", Number(rng.value) < 1); applyMixGains(); });
+      const out = el("output", null, Math.round(g * 100) + " %");
+      const why = el("div", "why", (g < 0.001 ? "Silence : le jeu arrête cette couche. " : "") + e.why);
+      row.append(lab, rng, out, why);
+      box.appendChild(row);
+    }
+    const sounding = list.filter((e) => effGain(e) >= 0.001).length;
+    $("mixInfo").textContent = sounding + " élément" + (sounding > 1 ? "s" : "") + " sur " + list.length + " " + (sounding > 1 ? "sonnent" : "sonne") + ".";
+    updateMixButton();
+  }
+  function applyMixGains() {
+    if (!mixNodes) return;
+    const { list } = mixElements();
+    for (const e of list) {
+      const n = mixNodes.nodes.get(e.key);
+      if (n) n.gain.gain.setTargetAtTime(effGain(e), ctx.currentTime, 0.08);
+    }
+  }
+  async function startMix() {
+    if (!BIN) return;
+    await ensureCtx();
+    stopAllSolos();
+    stopMix();
+    const { list } = mixElements();
+    const bufs = await Promise.all(list.map((e) => bufferOf(e.it)));
+    const nodes = new Map();
+    const t0 = ctx.currentTime + 0.05;
+    list.forEach((e, i) => {
+      const src = ctx.createBufferSource(); src.buffer = bufs[i]; src.loop = true;
+      const gain = ctx.createGain(); gain.gain.value = effGain(e);
+      src.connect(gain); gain.connect(master);
+      src.start(t0);
+      nodes.set(e.key, { src, gain });
+    });
+    mixNodes = { nodes };
+    updateMixButton(); updateNow();
+  }
+  function updateMixButton() {
+    const b = $("mixPlay");
+    b.textContent = mixNodes ? "Arrêter le mélange" : "Lancer le mélange";
+    b.classList.toggle("stop", !!mixNodes);
+  }
+
+  /* ---------- Onglets, clavier ---------- */
+  function showTab(t) {
+    document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
+    $("p-liste").hidden = t !== "liste"; $("p-mix").hidden = t !== "mix"; $("p-bilan").hidden = t !== "bilan";
+    if (t === "bilan") refreshSummary();
+  }
+  document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" && e.target.type !== "checkbox" && e.target.type !== "range") { if (e.key === "Escape") e.target.blur(); return; }
+    if (tag === "TEXTAREA" || tag === "SELECT") return;
+    if (e.key === "Escape") { stopEverything(); return; }
+    if ($("p-liste").hidden) return;
+    if (e.key === "ArrowDown" || e.key === "j") { e.preventDefault(); move(1); }
+    else if (e.key === "ArrowUp" || e.key === "k") { e.preventDefault(); move(-1); }
+    else if (e.key === " " || e.key === "Spacebar") { if (tag === "BUTTON" && !e.target.classList.contains("pb")) e.target.blur(); e.preventDefault(); if (selected) toggleSolo(BYID.get(selected)); }
+    else if (selected && "0123".includes(e.key) && e.key.length === 1) {
+      const it = BYID.get(selected);
+      setVerdict(it, { verdict: ["", "garder", "refaire", "supprimer"][Number(e.key)] });
+    }
+  });
+
+  /* ---------- Démarrage ---------- */
+  async function connectDb() {
+    try {
+      db = await claude.use("db");
+    } catch (e) { db = null; }
+    if (!db) { dbState = "absente"; setStatus("Verdicts non enregistrés : base indisponible ici. Utilise l'export.", "warn"); return; }
+    const timer = setTimeout(() => { if (dbState === "attente") setStatus("La base des verdicts répond lentement…", "warn"); }, 10000);
+    db.collection("verdicts").onSnapshot((snap) => {
+      clearTimeout(timer);
+      dbState = "ok";
+      snap.docs.forEach((d) => {
+        if (pending.has(d.id) || inflight.has(d.id)) return;
+        const data = d.data();
+        if (data) V.set(d.id, data); else V.delete(d.id);
+        refreshVerdict(d.id);
+      });
+      refreshSummary();
+      if (filt.verdict) applyFilters();
+      setStatus("Verdicts synchronisés");
+    }, (err) => { clearTimeout(timer); dbState = "erreur"; setStatus("Base des verdicts : " + (err && err.message ? err.message : "erreur"), "warn"); });
+  }
+
+  async function boot() {
+    try {
+      const [inv, bin] = await Promise.all([
+        fetch("inventaire.json").then((r) => r.json()),
+        fetch("sons.ogg").then((r) => r.arrayBuffer()),
+      ]);
+      INV = inv; BIN = bin;
+    } catch (e) { $("meta").textContent = "Impossible de charger l'inventaire des sons."; return; }
+    ITEMS = INV.items;
+    ITEMS.forEach((it) => BYID.set(it.id, it));
+    const n = (k) => ITEMS.filter((i) => i.kind === k).length;
+    const unused = new Set(ITEMS.filter((i) => i.kind === "sfx" && !i.utilise).map((i) => i.name)).size;
+    $("meta").textContent = ITEMS.length + " éléments : " + n("sfx") + " fichiers de bruitages (dont " + unused + " sons que le jeu n'appelle jamais), " + n("mus") + " couches de musique, " + n("amb") + " nappes d'ambiance, " + n("evt") + " événements d'ambiance seuls, " + n("fond") + " fonds sans événements. Version du dépôt : " + (INV.genere || "?") + ".";
+    if (INV.anomalies && INV.anomalies.length) {
+      const a = el("div", "alert");
+      a.appendChild(el("b", null, "Son demandé par les données mais inexistant (muet dans le jeu) : "));
+      a.appendChild(document.createTextNode(INV.anomalies.join(" ; ") + ". Le jeu ignore ces appels sans bruit : la bourrasque (attaque de base de Vent) est muette."));
+      $("anoms").appendChild(a);
+    }
+    const list = $("list");
+    for (const it of ITEMS) list.appendChild(buildRow(it));
+    buildFilters();
+    buildMixUI();
+    applyFilters();
+    select(visible[0] || null, false);
+    refreshSummary();
+    connectDb();
+  }
+  boot();
+})();
+</script>
