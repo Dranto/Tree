@@ -443,7 +443,9 @@ func draw_body(c: CanvasItem) -> void:
 func _body_image(c: CanvasItem, art: GDScript, key: String, cell: String, pur: bool, k: float, mod: Color) -> void:
 	if mod.a <= 0.01:
 		return
-	if LieuxBake.draw(c, key, cell, Vector2.ZERO, 1.0, mod):
+	# Les images cuites ne vont que sur un nœud qui a le matériau des lieux cuits (une planche qui fait
+	# dessiner le Cœur ailleurs le dessine en direct, sans dépendre de ce qui a déjà été cuit).
+	if c.material != null and LieuxBake.draw(c, key, cell, Vector2.ZERO, 1.0, mod):
 		return
 	if mod.a < 0.5:
 		return
