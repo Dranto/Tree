@@ -58,10 +58,10 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	# Antennes en chapelet, qui tâtent l'air.
 	for j in 2:
 		var sway := sin(t * 7.0 + j * 1.7) * 0.25
-		var a0 := -1.0 - j * 0.45 + sway
-		var r0 := Vector2(24 - j * 2, -36)
-		var r1 := r0 + Vector2.from_angle(a0) * 9.0
-		var r2 := r1 + Vector2.from_angle(a0 + 0.9) * 8.0
+		var a0 := -1.25 - j * 0.4 + sway
+		var r0 := Vector2(24 - j * 2, -38)
+		var r1 := r0 + Vector2.from_angle(a0) * 12.0
+		var r2 := r1 + Vector2.from_angle(a0 + 0.9) * 10.0
 		Ink.brush(ci, hx, PackedVector2Array([r0, r1, r2]), 2.4, Ink.encre(), 1.0, 1.0)
 		if not Ink.mono:
 			for q: Vector2 in [r0.lerp(r1, 0.5), r1, r1.lerp(r2, 0.5), r2]:
