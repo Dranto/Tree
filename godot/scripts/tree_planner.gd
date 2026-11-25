@@ -111,12 +111,33 @@ func owned(with_plan := false) -> Dictionary:
 
 func route_to(target: int, with_plan := false) -> Array:
 	var set := owned(with_plan)
-	return route(game.tree, set, target, blocked(set))
+	var b := blocked(set)
+	var r := route(game.tree, set, target, with_mutations(game.tree, set, b))
+	return r if not r.is_empty() else route(game.tree, set, target, b)
 
 
 func path_to(target: int, with_plan := false) -> Array:
-	var set := owned(with_plan)
-	return shortest_path(game.tree, set, target, blocked(set))
+	var r := route_to(target, with_plan)
+	return r.slice(1) if r.size() > 1 else []
+
+
+## « blocked » plus les mutations dont la compétence manque à « set » : un chemin les contourne
+## quand il le peut (mutations générées au milieu de l'arbre, jalon 11). Sinon (mutation au milieu
+## d'une grappe, après sa compétence), le chemin sans elles est vide et on reprend « blocked » seul.
+static func with_mutations(tree, set: Dictionary, blocked: Dictionary = {}) -> Dictionary:
+	var out := blocked.duplicate()
+	for n in tree.nodes:
+		var sid: String = n["mutates"]
+		if sid == "" or set.has(n["id"]):
+			continue
+		var has := false
+		for s in tree.skill_sources.get(sid, []):
+			if set.has(s):
+				has = true
+				break
+		if not has:
+			out[n["id"]] = true
+	return out
 
 
 ## Nœuds qu'on ne peut pas apprendre pour l'instant (flétris, incompatibles avec un nœud de
@@ -206,7 +227,8 @@ func undo() -> bool:
 			ids.reverse()
 			var done: Array = []
 			for id in ids:
-				if game.refund(id):
+				# Défaire un apprentissage ne coûte pas d'essence (voir clear_undo).
+				if game.refund(id, true):
 					done.append(id)
 				else:
 					break
@@ -230,6 +252,13 @@ func undo() -> bool:
 	_expected = game.allocated.size()
 	sync()
 	return true
+
+
+## Vide la pile d'annulation (fermeture de l'arbre, changement de build) : défaire un apprentissage
+## est gratuit, mais seulement tant que l'arbre reste ouvert.
+func clear_undo() -> void:
+	_undo.clear()
+	_expected = game.allocated.size()
 
 
 func _push(entry: Dictionary) -> void:

@@ -8,6 +8,7 @@
 #
 #   tools/balance.sh                     # tous les builds de builds.json ; graines 1 2 3 ; 180 s au niveau 20
 #   BUILDS="fouet" SEEDS="1" TIME=60 tools/balance.sh
+#   JOBS=8 tools/balance.sh              # au plus 8 parties à la fois (machine à peu de mémoire)
 #
 # Mode « partie complète » (--run) : le robot part du niveau 1 avec chaque build et joue jusqu'au
 # niveau 25 (ou TIME secondes, 4200 par défaut), en avançant dans la région de Ronce. Affiche la
@@ -152,6 +153,8 @@ TMP=$(mktemp -d)
 for b in $BUILDS; do
   for s in $SEEDS; do
     "$ROOT/tools/godot.sh" --headless --fixed-fps 60 -- "--autotest=build:$b" "--build-time=$TIME" "--build-level=$LEVEL" "--seed=$s" > "$TMP/$b.$s.log" 2>&1 &
+    # JOBS : parties à la fois (0 = toutes) ; une partie prend environ 250 Mo de mémoire.
+    while (( ${JOBS:-0} > 0 && $(jobs -rp | wc -l) >= ${JOBS:-0} )); do wait -n; done
   done
 done
 wait

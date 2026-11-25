@@ -10,6 +10,8 @@ var failures := 0
 var game
 ## Nœuds que les chemins contournent (flétris, incompatibles) : voir TreePlanner.blocked.
 var _blocked := {}
+## _blocked plus les mutations dont la compétence manque : contournées quand c'est possible.
+var _blocked_mut := {}
 
 
 func check(cond: bool, what: String) -> void:
@@ -31,6 +33,7 @@ func _run() -> void:
 	game.reset()
 	var planner = TreePlanner.new(game)
 	_blocked = planner.blocked(game.allocated)
+	_blocked_mut = TreePlanner.with_mutations(tree, game.allocated, _blocked)
 
 	print("Plus court chemin")
 	var far := _node_at_ring(6)
@@ -174,6 +177,11 @@ func _first_keystone() -> int:
 
 ## Distance de référence : parcours en largeur naïf depuis la cible jusqu'au premier nœud appris.
 func _bfs_distance(target: int) -> int:
+	var d := _bfs(target, _blocked_mut)
+	return d if d >= 0 else _bfs(target, _blocked)
+
+
+func _bfs(target: int, blocked: Dictionary) -> int:
 	var dist := {target: 0}
 	var queue: Array = [target]
 	while queue.size() > 0:
@@ -181,7 +189,7 @@ func _bfs_distance(target: int) -> int:
 		if game.allocated.has(u):
 			return dist[u]
 		# Un nœud flétri ou incompatible ne se traverse pas (il peut être la cible).
-		if u != target and _blocked.has(u):
+		if u != target and blocked.has(u):
 			continue
 		for v in game.tree.nodes[u]["neighbors"]:
 			if not dist.has(v):

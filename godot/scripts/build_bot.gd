@@ -152,7 +152,10 @@ func _next(game) -> int:
 			continue
 		if game.allocated.has(target):
 			continue
-		for id in TreePlanner.shortest_path(tree, game.allocated, target):
+		var path: Array = TreePlanner.shortest_path(tree, game.allocated, target, TreePlanner.with_mutations(tree, game.allocated))
+		if path.is_empty():
+			path = TreePlanner.shortest_path(tree, game.allocated, target)
+		for id in path:
 			if game.can_allocate(id):
 				return id
 			break  # chemin bloqué (exclusion, nœud verrouillé) : cible suivante

@@ -11,6 +11,7 @@ extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
 const TreePlanner = preload("res://scripts/tree_planner.gd")
+const TreeBuilds = preload("res://scripts/tree_builds.gd")
 
 const PATH_OK := Color("7fd36b")
 const PATH_SHORT := Color("e0675e")
@@ -31,8 +32,14 @@ var match_index := -1
 var search: LineEdit
 var count_label: Label
 var plan_button: Button
+## Boutons de la barre d'outils, dans l'ordre (zone « outils » de la manette, tree_pad.gd).
+var _bar_buttons: Array = []
+var clear_button: Button
 var undo_button: Button
 var summary_button: Button
+var builds_button: Button
+## Builds enregistrés (tree_builds.gd), à la place du résumé en haut à droite.
+var builds_panel: PanelContainer
 var plan_bar: PanelContainer
 var plan_label: Label
 var commit_button: Button
@@ -75,17 +82,24 @@ func _ready() -> void:
 	count_label.custom_minimum_size = Vector2(96, 0)
 	count_label.add_theme_color_override("font_color", DIM)
 	bar.add_child(count_label)
-	_button(bar, "Précédent", func(): next_match(-1))
-	_button(bar, "Suivant", func(): next_match(1))
+	_bar_buttons.append(_button(bar, "Précédent", func(): next_match(-1)))
+	_bar_buttons.append(_button(bar, "Suivant", func(): next_match(1)))
 	plan_button = _button(bar, "Mode plan", Callable())
 	plan_button.toggle_mode = true
 	plan_button.toggled.connect(set_plan_mode)
+	_bar_buttons.append(plan_button)
 	undo_button = _button(bar, "Annuler", undo)
+	_bar_buttons.append(undo_button)
 	summary_button = _button(bar, "Résumé", Callable())
 	summary_button.toggle_mode = true
 	summary_button.toggled.connect(set_summary_visible)
+	_bar_buttons.append(summary_button)
+	builds_button = _button(bar, "Builds", Callable())
+	builds_button.toggle_mode = true
+	builds_button.toggled.connect(set_builds_visible)
+	_bar_buttons.append(builds_button)
 	# Avec près de 900 nœuds, on se perd vite en zoomant : un bouton (et la touche Origine) recadre l'arbre entier.
-	_button(bar, "Vue d'ensemble", func(): ui.glide_fit())
+	_bar_buttons.append(_button(bar, "Vue d'ensemble", func(): ui.glide_fit()))
 
 	plan_bar = PanelContainer.new()
 	plan_bar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -96,7 +110,7 @@ func _ready() -> void:
 	plan_label = Label.new()
 	row.add_child(plan_label)
 	commit_button = _button(row, "Valider le plan", commit_plan)
-	_button(row, "Effacer", func(): planner.plan_clear())
+	clear_button = _button(row, "Effacer", func(): planner.plan_clear())
 
 	message = Label.new()
 	message.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -124,6 +138,16 @@ func _ready() -> void:
 	summary_box = VBoxContainer.new()
 	summary_box.add_theme_constant_override("separation", 4)
 	margin.add_child(summary_box)
+
+	builds_panel = TreeBuilds.new()
+	builds_panel.ui = ui
+	builds_panel.panels = self
+	builds_panel.visible = false
+	add_child(builds_panel)
+	Game.build_switched.connect(func(_i): planner.clear_undo())
+	# Défaire un apprentissage est gratuit tant que l'arbre reste ouvert : la pile se vide à la fermeture.
+	if ui != null and ui.has_signal("toggled"):
+		ui.toggled.connect(_on_tree_toggled)
 
 	_refresh()
 
@@ -169,26 +193,40 @@ func _button(parent: Node, text: String, action: Callable) -> Button:
 	return b
 
 
+## Contrôles de la zone « outils » à la manette : la recherche, les boutons de la barre, puis ceux
+## de la barre du plan quand elle est visible.
+func pad_controls() -> Array:
+	var out: Array = [search]
+	out.append_array(_bar_buttons)
+	if plan_bar.visible:
+		out.append_array([commit_button, clear_button])
+	return out
+
+
 # --- Clavier ---
 
 ## Vrai pendant la saisie dans la recherche : l'écran de l'arbre ne doit pas se fermer sur « T ».
 func captures_keys() -> bool:
-	return search != null and is_visible_in_tree() and search.has_focus()
+	if not is_visible_in_tree():
+		return false
+	var f := get_viewport().gui_get_focus_owner()
+	return f is LineEdit and is_ancestor_of(f)
 
 
 func _input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		return
 	var mb := event as InputEventMouseButton
-	if mb and mb.pressed and search.has_focus() and not search.get_global_rect().has_point(mb.position):
-		search.release_focus()
+	var focused := get_viewport().gui_get_focus_owner()
+	if mb and mb.pressed and focused is LineEdit and is_ancestor_of(focused) and not focused.get_global_rect().has_point(mb.position):
+		focused.release_focus()
 		return
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:
 		return
-	if search.has_focus():
+	if focused is LineEdit and is_ancestor_of(focused):
 		if key.keycode == KEY_ESCAPE:
-			search.release_focus()
+			focused.release_focus()
 			get_viewport().set_input_as_handled()
 		return
 	if key.is_command_or_control_pressed() and key.keycode == KEY_F:
@@ -298,8 +336,15 @@ func right_click(id: int) -> void:
 	if planner.plan_has(id):
 		planner.plan_remove(id)
 	elif Game.allocated.has(id):
-		if not planner.forget(id) and id != 0:
-			say("Ce nœud en relie d'autres à la graine : oublie d'abord ceux-là.")
+		var cost: int = Game.refund_cost(id)
+		if planner.forget(id):
+			if cost > 0:
+				say("Nœud oublié : %d essence" % cost)
+		elif id != 0:
+			if not Game.can_refund(id):
+				say("Ce nœud en relie d'autres à la graine : oublie d'abord ceux-là.")
+			else:
+				say("Oublier ce nœud coûte %d essence : il t'en manque %d. Au sanctuaire, c'est gratuit." % [cost, cost - Game.essence()])
 
 
 func undo() -> void:
@@ -326,7 +371,28 @@ func commit_plan() -> void:
 func set_summary_visible(on: bool) -> void:
 	summary_panel.visible = on
 	summary_button.set_pressed_no_signal(on)
+	if on:
+		builds_panel.visible = false
+		builds_button.set_pressed_no_signal(false)
 	_refresh()
+
+
+## Panneau des builds enregistrés (même place que le résumé : l'un ferme l'autre).
+func set_builds_visible(on: bool) -> void:
+	builds_panel.visible = on
+	builds_button.set_pressed_no_signal(on)
+	if on:
+		summary_panel.visible = false
+		summary_button.set_pressed_no_signal(false)
+		builds_panel.refresh()
+	elif ui.pad != null:
+		ui.pad.builds_refreshed()
+	_refresh()
+
+
+func _on_tree_toggled(open: bool) -> void:
+	if not open:
+		planner.clear_undo()
 
 
 func _on_tree_changed() -> void:
@@ -375,7 +441,11 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 	var id: int = n["id"]
 	if st == "owned":
 		var ok: bool = Game.can_refund(id)
-		lines.append(["Appris" + ("  ·  clic droit pour l'oublier" if ok else ""), 15, UiTheme.LEAF])
+		var how := ""
+		if ok:
+			var cost: int = Game.refund_cost(id)
+			how = "  ·  clic droit pour l'oublier" + (" (%d essence)" % cost if cost > 0 else " (gratuit)")
+		lines.append(["Appris" + how, 15, UiTheme.LEAF])
 		return lines
 	var p := _preview_for(id)
 	var count: int = p["path"].size()

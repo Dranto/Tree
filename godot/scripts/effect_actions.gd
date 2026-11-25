@@ -38,11 +38,14 @@ static func run(action: String, p: Dictionary, ctx: Dictionary) -> bool:
 	return false
 
 
-## Réduit la recharge de l'esquive (« dash ») ou d'une compétence.
+## Réduit la recharge de l'esquive (« dash »), d'une compétence, ou de toutes (« skills »).
 static func _reduce_cooldown(p: Dictionary, ctx: Dictionary) -> bool:
 	var player = ctx["main"].player
 	if p["target"] == "dash":
 		player.dash_cd = maxf(0.0, player.dash_cd - p["value"])
+	elif p["target"] == "skills":
+		for k in player.cds:
+			player.cds[k] = maxf(0.0, player.cds[k] - p["value"])
 	elif player.cds.has(p["target"]):
 		player.cds[p["target"]] = maxf(0.0, player.cds[p["target"]] - p["value"])
 	return true

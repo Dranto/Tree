@@ -138,6 +138,9 @@ func _run() -> void:
 	check(ids_ok, "index et liens cohérents après la renumérotation")
 
 	print("Compétence et mutation")
+	# Oublier sans payer d'essence, comme au sanctuaire : ce test vérifie les règles des nœuds, pas le
+	# coût de l'oubli (builds_test.gd).
+	game.at_sanctuary = true
 	var planner = TreePlanner.new(game)
 	var c := _id("c")
 	check(game.lock_reason(c) != "", "la mutation est verrouillée tant que la compétence n'est pas acquise (%s)" % game.lock_reason(c))

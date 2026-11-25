@@ -1,0 +1,8 @@
+{
+  "_doc": "Oubli de nœuds et builds enregistrés (jalon 11 I, scripts/game.gd › refund_cost, switch_build ; panneau tree_builds.gd dans l'écran de l'arbre). « slots » : nombre de builds qu'on peut enregistrer (3 à 5). Oublier un nœud est gratuit jusqu'à l'anneau « free_rings » (0 = la graine) ; plus loin, il coûte de l'essence de vie, prise sur l'expérience du niveau en cours (jamais un niveau) : « cost_per_ring » de la barre du niveau en cours par anneau au-delà de free_rings, au plus « cost_max » par nœud. Au sanctuaire (dans le cercle d'un sanctuaire ravivé), oublier et changer de build sont gratuits (« free_at_sanctuary ») ; ailleurs, changer de build coûte ce que coûterait l'oubli des nœuds qui disparaissent. Valeurs indicatives : l'équilibrage final les réglera.",
+  "slots": 4,
+  "free_rings": 3,
+  "cost_per_ring": 0.04,
+  "cost_max": 0.5,
+  "free_at_sanctuary": true
+}

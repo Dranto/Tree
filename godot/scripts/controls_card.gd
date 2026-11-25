@@ -18,6 +18,7 @@ func _init(fs := 14) -> void:
 
 func _ready() -> void:
 	Settings.changed.connect(refresh)
+	Settings.device_changed.connect(refresh)
 	refresh()
 
 

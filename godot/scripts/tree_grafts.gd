@@ -41,6 +41,8 @@ var hover_graft := ""
 var hover_slot := -1
 var folded := false
 var t := 0.0
+## Manette (tree_pad.gd) : case visée, emplacements ouverts puis greffes de la grille (-1 : aucune).
+var pad_index := -1
 var crown_view: Control
 var _title: Button
 var _count: Label
@@ -129,6 +131,9 @@ class CrownView extends Control:
 			draw_circle(p, 14.5, SLOT_BG if gid != "" else Color(SLOT_BG, 0.75))
 			var ring := PLAN if target else (UiTheme.GOLD if gid != "" else Color(UiTheme.GOLD, 0.55 + 0.4 * glow))
 			draw_arc(p, 14.5, 0.0, TAU, 28, ring, 2.5 if target else 1.6, true)
+			if panel.pad_index == i:
+				# Visé à la manette : un second anneau d'or, plus large.
+				draw_arc(p, 19.5, 0.0, TAU, 32, PLAN, 2.0, true)
 			if gid != "":
 				var g: Dictionary = Content.grafts().get(gid, {})
 				GraftPickup.draw_shape(self, str(g.get("shape", "feuille")), p, 9.0, Color(str(g.get("color", "#f2d06b"))))
@@ -210,6 +215,8 @@ class Item extends Control:
 		draw_circle(c, 14.0, Color(SLOT_BG, a))
 		draw_arc(c, 14.0, 0.0, TAU, 24, PLAN if selected else Color(UiTheme.GOLD, 0.9 * a), 2.0 if selected else 1.4, true)
 		GraftPickup.draw_shape(self, str(g.get("shape", "feuille")), c, 8.5, Color(Color(str(g.get("color", "#f2d06b"))), a))
+		if panel.pad_index >= Game.crown_size() and panel.pad_index - Game.crown_size() == get_index():
+			draw_arc(c, 17.0, 0.0, TAU, 28, PLAN, 2.0, true)
 		if placed:
 			# Posée dans la couronne : une perle d'or en bas à droite.
 			draw_circle(c + Vector2(10, 10), 3.6, UiTheme.GOLD)
@@ -317,6 +324,7 @@ func _ready() -> void:
 	_hint.custom_minimum_size = Vector2(WIDTH, 0)
 	box.add_child(_hint)
 	Game.tree_changed.connect(refresh)
+	Settings.device_changed.connect(refresh)
 	if ui != null and ui.has_signal("toggled"):
 		ui.toggled.connect(_on_tree_toggled)
 	_seen = _seen_slots()
@@ -356,6 +364,15 @@ func _notification(what: int) -> void:
 		dragging = false
 		held = ""
 		refresh()
+
+
+## Manette : fait défiler la grille jusqu'à la case visée (index des greffes après les emplacements).
+func ensure_visible(index: int) -> void:
+	var gi := index - Game.crown_size()
+	for it in _grid.get_children():
+		it.queue_redraw()
+	if gi >= 0 and gi < _grid.get_child_count():
+		_scroll.ensure_control_visible(_grid.get_child(gi))
 
 
 func set_folded(on: bool) -> void:
@@ -435,12 +452,14 @@ func refresh() -> void:
 	_scroll.custom_minimum_size = Vector2(COLUMNS * (CELL + 2.0), minf(rows, ROWS_VISIBLE) * (CELL + 2.0))
 	_scroll.visible = not folded
 	_detail.visible = not folded
+	var pad := Settings.pad_active()
+	var a_name := Settings.pad_name_of(JOY_BUTTON_A)
 	if held != "":
-		_hint.text = "Clique un emplacement de la couronne pour y poser la greffe."
+		_hint.text = ("%s sur un emplacement de la couronne : y poser la greffe." % a_name) if pad else "Clique un emplacement de la couronne pour y poser la greffe."
 	elif Game.placed_grafts().size() < open and free > 0:
-		_hint.text = "Glisse une greffe dans un emplacement libre de la couronne."
+		_hint.text = ("%s sur une greffe pour la prendre, puis sur un emplacement libre." % a_name) if pad else "Glisse une greffe dans un emplacement libre de la couronne."
 	else:
-		_hint.text = "Clic sur un emplacement : retire sa greffe."
+		_hint.text = ("%s sur un emplacement : retire sa greffe." % Settings.pad_name_of(JOY_BUTTON_X)) if pad else "Clic sur un emplacement : retire sa greffe."
 	crown_view.queue_redraw()
 	_refresh_detail()
 

@@ -24,6 +24,21 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 
 L'ennemi visé par l'attaque automatique est marqué au sol par trois arcs à la couleur du héros ; quand des ennemis approchent sans être à portée (700 px, la course d.une graine), un cercle pointillé discret montre la portée.
 
+**Manette** (jalon 11, `settings.gd`, `pad_glyphs.gd`, `tree_pad.gd`) : Xbox, PlayStation, Steam Deck et toute manette reconnue par Godot. Les glyphes (barre, coin, tutoriel, rappel du titre, aide de l'arbre) passent tout seuls du clavier à la manette selon la dernière entrée, en style Xbox ou PlayStation (automatique selon la manette, ou au choix dans Options → Commandes).
+
+| Action | Manette (Xbox / PlayStation) |
+| --- | --- |
+| Se déplacer | Stick gauche (ou croix directionnelle) |
+| Viser | Stick droit : le point visé (compétences posées au sol) s'éloigne avec le stick ; lâché, la visée se pose sur la cible automatique |
+| Compétences principales | RT et LT (R2 et L2), tenues : relancées dès qu'elles sont prêtes |
+| Compétences secondaires | X, Y, B, RB (Carré, Triangle, Rond, R1) |
+| Esquive | A (Croix), dans la direction du stick gauche |
+| Arbre de vie / Carte | Affichage (Partage) / LB (L1) |
+| Pause | Menu (Options) |
+| Menus | Croix ou stick gauche, A valide, B revient, LB / RB changent d'onglet dans les options |
+
+Toutes ces liaisons, sauf les sticks, Start, A et B des menus, se changent dans Options → Commandes → Manette (Affichage retire la liaison d'une compétence). Dans l'arbre : stick gauche ou croix pour sauter de nœud en nœud (le voisin le plus proche dans la direction), stick droit pour un curseur libre aimanté par les nœuds, gâchettes pour zoomer, A apprendre, X oublier, Y rechercher, clic du stick droit vue d'ensemble, LB / RB pour passer aux outils (recherche, plan, résumé…) et à la couronne de greffes (A prend une greffe puis la pose, X la retire), B pour revenir ou fermer.
+
 **Modes de déplacement** (Options → Déplacement, enregistré avec les autres réglages ; un choix déjà enregistré est gardé) :
 
 - **Clavier** (par défaut) : Z Q S D (W A S D en QWERTY) ou les flèches ; la souris vise les compétences.

@@ -3,6 +3,7 @@
 extends RefCounted
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
+const PadGlyphs = preload("res://scripts/pad_glyphs.gd")
 
 
 ## Un emplacement de la barre de compétences : médaillon d'icône, recharge en arc, touche.
@@ -144,7 +145,10 @@ class Slot extends Control:
 					# Prête : un éclair d'anneau qui s'élargit.
 					var k := ready_t / 0.35
 					draw_arc(c, rr + 3.0 + 8.0 * Anim.ease_out(k), 0.0, TAU, 48, Color(col.lerp(Color.WHITE, 0.5), 1.0 - k), 3.0 * (1.0 - k) + 1.0, true)
-		if state != LOCKED and kind != KEY and not as_key:
+		if state != LOCKED and key_text.begins_with("pad:"):
+			# Manette : le glyphe du bouton sous le médaillon.
+			PadGlyphs.draw(self, Vector2(size.x / 2.0, diam + 13.0), int(key_text.substr(4)), 1.0 if state == SKILL else 0.6, 22.0)
+		elif state != LOCKED and kind != KEY and not as_key:
 			# Clic de la souris : une petite souris dont le bouton utilisé est allumé.
 			var on2 := state == SKILL
 			var m := Vector2(size.x / 2.0, diam + 16.0)
@@ -308,7 +312,11 @@ class Corner extends Control:
 			var s1 := "+%d" % points
 			UiTheme.draw_text(self, font, chip.position + Vector2(30, 19), s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Art.c("or"), 4)
 			var kw := font.get_string_size(s1, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
-			UiTheme.draw_text(self, soft, chip.position + Vector2(36 + kw, 19), tree_key, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE, Art.c("texte"), 4)
+			if tree_key.begins_with("pad:"):
+				var code := int(tree_key.substr(4))
+				PadGlyphs.draw(self, chip.position + Vector2(36 + kw + PadGlyphs.width(code, 18.0) / 2.0, 13), code, 1.0, 18.0)
+			else:
+				UiTheme.draw_text(self, soft, chip.position + Vector2(36 + kw, 19), tree_key, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_HUD_SIZE, Art.c("texte"), 4)
 			if points_t < 0.4:
 				var k := points_t / 0.4
 				draw_rect(chip.grow(6.0 * Anim.ease_out(k)), Color(Art.c("or"), 0.8 * (1.0 - k)), false, 2.0)

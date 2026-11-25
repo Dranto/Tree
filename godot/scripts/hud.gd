@@ -63,6 +63,7 @@ func _ready() -> void:
 	death_screen.main = main
 	add_child(death_screen)
 	Settings.changed.connect(func(): _labels.clear())
+	Settings.device_changed.connect(func(): _labels.clear())
 	_refresh()
 
 
@@ -149,7 +150,10 @@ func show_death(info: Dictionary) -> void:
 	_banner.visible = false
 	death_screen.show_death(info)
 ## Nom de la touche selon la disposition du clavier du joueur (Z sur AZERTY pour « avancer »).
+## À la manette : « pad:<code> », que les éléments du HUD dessinent en glyphe (pad_glyphs.gd).
 func key_label(action: String) -> String:
+	if Settings.pad_active():
+		return "pad:%d" % Settings.pad_code(action)
 	if not _labels.has(action):
 		_labels[action] = Controls.action_label(action, true)
 	return _labels[action]
@@ -223,6 +227,9 @@ func _on_slot_input(event: InputEvent, i: int) -> void:
 ## Touche d'un emplacement (« A · 1 ») ; vide pour un clic de souris, que l'emplacement dessine lui-même.
 ## En mode MOBA, le clic droit sert à marcher : la compétence principale 2 se lance alors à la touche.
 func slot_keys_text(i: int) -> String:
+	if Settings.pad_active():
+		var code: int = Settings.pad_bindings[i]
+		return "" if code == JOY_BUTTON_INVALID else "pad:%d" % code
 	if i < MOUSE_SLOTS:
 		return Controls.main_label(i + 1) if slot_is_key(i) else ""
 	var digit := Settings.key_name(Settings.SLOT_DIGITS[i])
@@ -231,6 +238,8 @@ func slot_keys_text(i: int) -> String:
 
 ## Commande d'un emplacement : « Clic gauche », « Clic droit » ou la touche secondaire.
 func slot_control(i: int) -> String:
+	if Settings.pad_active():
+		return Settings.pad_name_of(Settings.pad_bindings[i])
 	return Settings.binding_name(i)
 
 
@@ -243,7 +252,7 @@ func slot_title(i: int) -> String:
 
 ## Un emplacement « souris » dont l'entrée est une touche (compétence 2 en mode MOBA) s'affiche comme une touche.
 func slot_is_key(i: int) -> bool:
-	return i < MOUSE_SLOTS and not Settings.binding_is_mouse(i)
+	return i < MOUSE_SLOTS and (Settings.pad_active() or not Settings.binding_is_mouse(i))
 
 
 ## Glisser une compétence sur un autre emplacement échange les deux (voir Widgets.Slot).

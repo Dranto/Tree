@@ -120,6 +120,11 @@ func _physics_process(delta: float) -> void:
 		progress = LIGHT_TIME
 		if near and not inside:
 			rest(false)
+		# Dans le cercle d'un sanctuaire ravivé, oublier et changer de build sont gratuits (Game.refund_cost).
+		if near:
+			Game.at_sanctuary = true
+		elif inside:
+			Game.at_sanctuary = false
 		inside = near
 		return
 	inside = near
@@ -136,6 +141,7 @@ func light() -> void:
 	Game.flags["sanctuaire_" + id] = true
 	progress = LIGHT_TIME
 	inside = true
+	Game.at_sanctuary = true
 	flash = 1.0
 	Sfx.play("floraison", position)
 	main.fx.ring(position, 12.0, RADIUS * 2.4, 0.8, Color(Art.ec("seve"), 0.9), 5.0)

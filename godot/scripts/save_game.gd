@@ -2,12 +2,14 @@
 ##
 ## Format : un fichier JSON lisible dans user://saves/, versionné.
 ## {
-##   "format": "seve-save", "version": 7, "saved_at": <unix>,
+##   "format": "seve-save", "version": 8, "saved_at": <unix>,
 ##   "game":  {"level", "xp", "points", "kills", "flags"},
 ##   "tree":  {"allocated": [uid, …],            # identifiants stables, pas des index
 ##             "choices": {uid: choix},          # maîtrises et mutations (depuis la version 2)
 ##             "crown": [greffe ou "", …],       # couronne de greffes, un élément par emplacement (version 7)
-##             "inventory": [greffe, …]},        # greffes possédées, posées ou non (depuis la version 3)
+##             "inventory": [greffe, …],         # greffes possédées, posées ou non (depuis la version 3)
+##             "builds": [{} ou {"name", "allocated", "choices", "crown", "plan"}, …],  # builds enregistrés (version 8)
+##             "active_build": index},           # emplacement du build actif (ses champs = ceux du dessus)
 ##   "world": {"elapsed", "player": {"x", "y", "hp"},
 ##             "ground_grafts": [[x, y, greffe], …],   # greffes tombées, pas encore ramassées (version 3)
 ##             "life_map": <PNG en base64>, "flowers": [[x, y, couleur, taille, pétales], …]}
@@ -28,7 +30,7 @@ extends Node
 const Regions = preload("res://scripts/regions.gd")
 
 const FORMAT := "seve-save"
-const VERSION := 7
+const VERSION := 8
 const DEFAULT_PATH := "user://saves/partie.json"
 
 ## Dernière erreur de chargement, lisible (vide si tout va bien).
@@ -74,6 +76,7 @@ func capture(main) -> Dictionary:
 			"flowers": main.flora.export_flowers(),
 			"ground_grafts": main.export_ground_grafts() if main.has_method("export_ground_grafts") else [],
 		}
+	Game.store_active_build()
 	return {
 		"format": FORMAT,
 		"version": VERSION,
@@ -85,7 +88,8 @@ func capture(main) -> Dictionary:
 			"kills": Game.kills,
 			"flags": Game.flags.duplicate(true),
 		},
-		"tree": {"allocated": Game.allocated_uids(), "choices": Game.choices.duplicate(), "crown": Game.crown.duplicate(), "inventory": Game.graft_inventory.duplicate()},
+		"tree": {"allocated": Game.allocated_uids(), "choices": Game.choices.duplicate(), "crown": Game.crown.duplicate(), "inventory": Game.graft_inventory.duplicate(),
+			"builds": Game.builds.duplicate(true), "active_build": Game.active_build},
 		"world": world,
 	}
 
@@ -150,6 +154,7 @@ func apply(data: Dictionary, main) -> void:
 	var uids = t.get("allocated", [])
 	var refunded := Game.restore_allocation(uids if uids is Array else [])
 	Game.restore_extras(t.get("choices", {}), t.get("crown", []), t.get("inventory", []))
+	Game.restore_builds(t.get("builds", []), t.get("active_build", 0))
 	if refunded > 0:
 		print("Sauvegarde : %d nœud(s) absent(s) de l'arbre actuel, point(s) rendu(s)." % refunded)
 
@@ -307,6 +312,14 @@ func _migrate(data: Dictionary) -> Dictionary:
 		tr["crown"] = crown
 		tr.erase("grafts")
 		data["version"] = 7
+	# Version 8 (jalon 11, builds multiples) : plusieurs builds enregistrés. Le build de la partie
+	# devient le premier emplacement (Game.restore_builds le remplit), les autres sont vides.
+	if int(data["version"]) == 7:
+		if not data.get("tree") is Dictionary:
+			data["tree"] = {}
+		data["tree"]["builds"] = []
+		data["tree"]["active_build"] = 0
+		data["version"] = 8
 	return data
 
 
