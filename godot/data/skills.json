@@ -136,7 +136,7 @@
     "walk": 0, "heal": 0, "uproot": 0
   },
   "pieux": {
-    "name": "Pieux", "short": "Pieux", "color": "#9a7446", "cooldown": 3.0,
+    "name": "Pieux", "short": "Pieux", "color": "#9a7446", "cooldown": 3.5,
     "branch": "racine", "tags": ["zone"],
     "desc": "Nouvelle compétence : une ligne de pieux de bois jaillit du sol vers l'endroit visé ; chaque pieu blesse et cloue un instant les ennemis qu'il soulève.",
     "range": 520, "count": 6, "gap": 0.05, "radius": 46, "damage": 5.4, "root_duration": 0.6,
