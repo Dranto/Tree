@@ -10,6 +10,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]
 
+SteamBridge="*res://scripts/steam_bridge.gd"
 Game="*res://scripts/game.gd"
 SaveGame="*res://scripts/save_game.gd"
 Settings="*res://scripts/settings.gd"

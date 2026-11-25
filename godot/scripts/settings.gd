@@ -62,6 +62,8 @@ var colorblind_mode := "aucun"
 const TEXT_SCALES := [1.0, 1.15, 1.3]
 const TEXT_SCALE_NAMES := ["Normale", "Grande", "Très grande"]
 var text_scale := 1.0
+## Taille de texte par défaut sur un Steam Deck (écran de 7 pouces), tant que le joueur n'a rien choisi.
+const DECK_TEXT_SCALE := 1.15
 ## Contraste renforcé : textes secondaires en pleine encre, filets et panneaux plus marqués, zones de
 ## danger plus opaques.
 var high_contrast := false
@@ -145,6 +147,10 @@ func _ready() -> void:
 
 
 func load_settings() -> void:
+	# Sur un Steam Deck, texte plus grand par défaut (un choix enregistré l'emporte, lu plus bas).
+	# Chargé ici et non nommé : steam_bridge.gd est un autoload.
+	if load("res://scripts/steam_bridge.gd").detect_deck():
+		text_scale = DECK_TEXT_SCALE
 	var cfg := ConfigFile.new()
 	if cfg.load(PATH) != OK:
 		return
@@ -224,7 +230,8 @@ func save_settings() -> void:
 	for a in PAD_ACTIONS:
 		cfg.set_value("pad", a, pad_actions[a])
 	cfg.set_value("pad", "style", pad_style)
-	cfg.save(PATH)
+	if cfg.save(PATH) == OK:
+		SteamBridge.cloud_push(PATH)
 
 
 ## Crée ou remet à jour les actions de la barre (« skill_main_1 », « skill_main_2 », « slot_1 » à

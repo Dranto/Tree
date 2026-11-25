@@ -104,7 +104,8 @@ func refresh() -> void:
 
 
 ## Boutons du panneau, dans l'ordre de lecture, pour la manette (zone « builds » de tree_pad.gd).
-## Les noms se renomment au clavier : pas de clavier virtuel au pad.
+## Les noms se renomment au clavier ; à la manette, avec le bouton « Renommer », présent seulement
+## quand le clavier virtuel de Steam est là (Steam Deck, Big Picture).
 func pad_controls() -> Array:
 	var out: Array = []
 	if _rows == null:
@@ -130,8 +131,12 @@ func _row(i: int) -> Control:
 	name_edit.add_theme_color_override("font_color", UiTheme.GOLD if info["active"] else UiTheme.INK)
 	name_edit.text_submitted.connect(func(t): _rename(i, t, name_edit))
 	name_edit.focus_exited.connect(func(): _rename(i, name_edit.text, null))
+	# Steam Deck : un toucher sur le nom ouvre le clavier flottant de Steam (sans effet ailleurs).
+	name_edit.focus_entered.connect(func(): SteamBridge.show_keyboard(name_edit))
 	_names.append(name_edit)
 	head.add_child(name_edit)
+	if SteamBridge.text_input_available():
+		_button(head, "Renommer", func(): ask_name(i))
 	if info["active"]:
 		var tag := Label.new()
 		tag.text = "actif"
@@ -169,6 +174,13 @@ func _button(parent: Node, text: String, action: Callable) -> Button:
 	b.pressed.connect(action)
 	parent.add_child(b)
 	return b
+
+
+## Renommer à la manette : clavier virtuel plein écran de Steam, le nom est pris à la validation.
+func ask_name(i: int) -> bool:
+	return SteamBridge.ask_text("Nom du build", Game.build_name(i), 24, func(t: String):
+		_rename(i, t, null)
+		refresh())
 
 
 func _rename(i: int, text: String, edit) -> void:

@@ -422,6 +422,10 @@ func _physics_process(delta: float) -> void:
 		Music.set_mood(1.0, "generique")
 	else:
 		Music.set_mood(ground.life_at(player.position), Regions.region_at(player.position))
+	# Présence enrichie Steam : la région du héros (sans effet sans Steam).
+	if Engine.get_physics_frames() % 60 == 0:
+		var here := "finale" if under else Regions.region_at(player.position)
+		SteamBridge.set_region(here if here != "" else "graine")
 	if Music.enabled and Engine.get_physics_frames() % 6 == 0:
 		_music_state()
 	autosave_timer -= delta

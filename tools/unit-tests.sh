@@ -51,6 +51,7 @@ TESTS=(
   "seve|--headless --fixed-fps 60|"
   "skills|--headless|"
   "sound|--headless|"
+  "steam|--headless --fixed-fps 60|"
   "spore|--headless --fixed-fps 60|"
   "tree_originals|--headless|"
   "tree_ui|--xvfb --resolution 1600x900|"
