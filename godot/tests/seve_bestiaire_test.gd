@@ -3,7 +3,7 @@
 ##     repos, marche 12 images, annonce, charge, retour, frappe, coup reçu, élite, poses propres) ;
 ##   - taille à l'écran 1080p ≥ minimum de son rôle (chargeur/bondisseur/piqueur 44 px, soutien 56) ;
 ##   - l'annonce, le coup reçu, l'élite et les poses propres changent l'image ;
-##   - silhouettes distinctes deux à deux dans la région ; corps lisible sur le sol (niveaux de gris).
+##   - silhouettes distinctes deux à deux dans la région (contraste et couleurs : tests/bestiaire_test.gd).
 ## Rendu réel : tools/godot.sh --xvfb -s res://tests/seve_bestiaire_test.gd
 extends SceneTree
 
@@ -100,17 +100,6 @@ func _run() -> void:
 				var cu: Image = await _img(art, {"t": 0.3, key: 1.0})
 				check(_diff(rest, cu) > MIN_DIFF, "%s : la pose « %s » se voit" % [id, key])
 		masks[id] = _mask(rest)
-		# Lisibilité : luminance moyenne du corps contre celle du sol de la vallée.
-		var ground: Color = C.ground_colors("seve")[1]
-		var sum := 0.0
-		var n := 0
-		for y in rest.get_height():
-			for x in rest.get_width():
-				var p := rest.get_pixel(x, y)
-				if p.a > 0.95:
-					sum += p.get_luminance()
-					n += 1
-		check(n > 0 and absf(sum / n - ground.get_luminance()) > 0.08, "%s : corps lisible sur le sol (Δ lum %.2f)" % [id, (sum / maxi(n, 1)) - ground.get_luminance()])
 	# Silhouettes distinctes deux à deux (recouvrement des masques).
 	var ids := masks.keys()
 	for i in ids.size():
