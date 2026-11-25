@@ -1457,7 +1457,10 @@ func _finish_benchmark() -> void:
 	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
 	var kinds := {}
 	for e in enemies:
-		kinds[e.kind_id] = kinds.get(e.kind_id, 0) + 1
+		# Les boss sont aussi dans la liste, sans sorte.
+		var kid = e.get("kind_id") if is_instance_valid(e) else null
+		if kid != null:
+			kinds[kid] = kinds.get(kid, 0) + 1
 	print("BENCHMARK sortes à l'écran : %s" % str(kinds))
 	if bench_shot != "":
 		get_viewport().get_texture().get_image().save_png(bench_shot)
