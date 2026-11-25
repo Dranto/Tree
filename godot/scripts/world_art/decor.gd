@@ -10,9 +10,10 @@ const O = preload("res://scripts/world_art/outils.gd")
 const Sol = preload("res://scripts/world_art/sol.gd")
 
 ## Hauteur de référence de chaque sorte (px du monde, size = 1) : sert à l'ombre et au tri.
+## Réduite d'un quart après la première planche (Antoine, 25/11) : arbre ≈ 3 fois le héros.
 const HEIGHT := {
-	"arbre": 230.0, "haie": 95.0, "buisson": 58.0, "rocher": 70.0, "muret": 34.0, "ruine": 270.0,
-	"champignon": 190.0, "chapeau_geant": 330.0, "tronc": 44.0, "roseaux": 78.0, "fougere": 52.0,
+	"arbre": 172.5, "haie": 71.25, "buisson": 43.5, "rocher": 52.5, "muret": 25.5, "ruine": 202.5,
+	"champignon": 142.5, "chapeau_geant": 247.5, "tronc": 33.0, "roseaux": 58.5, "fougere": 39.0,
 }
 
 

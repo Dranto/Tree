@@ -32,8 +32,8 @@ const LISIERE := {
 		"loin": [["haie", 0.9, 1.4, 3], ["arbre", 0.85, 1.15, 2.5], ["buisson", 1.0, 1.4, 2], ["rocher", 1.0, 1.5, 0.5]],
 	},
 	"spore": {
-		"pres": [["fougere", 0.8, 1.3, 3], ["roseaux", 0.8, 1.2, 3], ["rocher", 0.6, 1.0, 1], ["champignon", 0.35, 0.5, 2]],
-		"loin": [["champignon", 0.6, 1.15, 2], ["roseaux", 1.0, 1.4, 2], ["tronc", 0.9, 1.2, 1], ["fougere", 1.1, 1.5, 2.5], ["rocher", 0.8, 1.2, 0.6]],
+		"pres": [["fougere", 0.8, 1.3, 3], ["roseaux", 0.8, 1.2, 3], ["rocher", 0.6, 1.0, 0.4], ["champignon", 0.35, 0.5, 1]],
+		"loin": [["champignon", 0.6, 1.15, 1], ["roseaux", 1.0, 1.4, 2], ["tronc", 0.9, 1.2, 1], ["fougere", 1.1, 1.5, 2.5], ["rocher", 0.8, 1.2, 0.25]],
 	},
 }
 ## Repère de la région (grand, visible de loin) et sorte des objets de premier plan.
