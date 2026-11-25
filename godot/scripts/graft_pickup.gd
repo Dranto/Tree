@@ -53,6 +53,9 @@ func pick_up() -> void:
 			main.fx.ring(position, 4.0, 46.0, 0.3, Art.c("danger_eclair"), 3.0)
 			main.fx.pickup(position, "epine", 10, main.player.position)
 			main.fx.shake(0.12)
+		# La greffe jaillit, tourne autour du héros et le rejoint (world_fx.gd).
+		if main != null and main.get("world_fx") != null:
+			main.world_fx.graft_pickup(position, graft_id)
 	queue_free()
 
 

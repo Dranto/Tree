@@ -821,7 +821,17 @@ func _draw() -> void:
 		for i in 3:
 			var q := -dash_dir * (i + 1) * 13.0
 			draw_circle(q, radius * (0.85 - i * 0.18), Color(Art.ec("seve"), 0.22 - i * 0.06))
-	HeroArt.draw(self, Vector2.ZERO, radius, facing().angle(), pose())
+	# Au repos (world_fx.gd) : le héros respire, se penche pour semer, regarde une fleur. Dessin seulement.
+	var wfx = main.get("world_fx") if main != null else null
+	var face := facing().angle()
+	if wfx != null and (wfx.breath > 0.0 or wfx.crouch > 0.0):
+		var br: float = wfx.breath * sin(t * 2.1) * 0.022 - wfx.crouch * 0.1
+		# Échelle autour des pieds : le sol ne bouge pas.
+		draw_set_transform(Vector2(0.0, -radius * br), 0.0, Vector2(1.0 - br * 0.5, 1.0 + br))
+	if wfx != null:
+		face = wfx.facing_angle(face)
+	HeroArt.draw(self, Vector2.ZERO, radius, face, pose())
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if pad_aiming:
 		# Visée au stick droit : un petit chevron d'or au point visé, sans masquer le jeu.
 		var q := aim_point - position
