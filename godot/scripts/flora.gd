@@ -85,10 +85,23 @@ class DecorTree extends Node2D:
 	var tree_seed := 0
 	var alive := false
 	var leaf := 1.0
+	## Région dont l'atlas cuit dessine l'élément (world_bake/decor_bake.gd ; "" : hors des régions).
+	var bake_region := ""
+	## Hauteur de l'élément au-dessus de son pied (px du monde) s'il est assez grand pour cacher un
+	## personnage : il passe à demi transparent quand le héros ou un Flétri est derrière lui (0 : jamais).
+	var tall := 0.0
+	## Souplesse au vent (0 : rigide ; 1 : un arbre) : le monde vivant (tâche V) la lit pour le
+	## balancement par le shader du décor.
+	var sway := 0.0
+	## Opacité (premier plan) et teinte (premier plan plus sombre, décor apaisé plus clair) : appliquées
+	## par self_modulate, sans redessin.
+	var fade := 1.0
+	var _fade_to := 1.0
+	var shade := 1.0
 	## Lot de triangles partagé par tout le décor (voir _draw).
 	static var _b = _exact_batch()
-	## Prototype du décor cuit (refonte du monde, vague 0 P : world_bake/decor_bake.gd), null par
-	## défaut : son draw(arbre) dessine l'élément depuis un atlas, ou rend faux (dessin direct).
+	## Décor cuit (refonte du monde, vague 1 D : world_bake/decor_bake.gd), branché par main.gd : son
+	## draw(arbre) dessine l'élément depuis l'atlas de sa région, ou rend faux (dessin direct).
 	static var baker = null
 
 	static func _exact_batch():
@@ -542,6 +555,11 @@ func _ready() -> void:
 		if decor_of(reg) != null:
 			decor_of(reg).spawn()
 		_spawn_landmarks(reg)
+	# Décor composé (refonte du monde, vague 1 D) : clairières, lisières, grappes, repères et premier
+	# plan à la place du semis ; les obstacles restent où ils sont (« --decor-ancien » : le semis d'avant).
+	var compose = load("res://scripts/world_bake/decor_compose.gd")
+	if compose.enabled:
+		compose.apply(self)
 	Game.seed_rng(rng, 1)
 	ground.painted.connect(_on_painted)
 	var cfg: Dictionary = Content.feel().get("world", {}).get("flowers", {})
@@ -560,6 +578,46 @@ func _add_tree(t: DecorTree) -> void:
 	if not tree_cells.has(key):
 		tree_cells[key] = []
 	tree_cells[key].append(t)
+
+
+## Retire un élément du décor (dessin seul : jamais un obstacle). Sert à la composition.
+func remove_tree(t: DecorTree) -> void:
+	trees.erase(t)
+	landmarks.erase(t)
+	var key := Vector2i(floori(t.position.x / CHUNK), floori(t.position.y / CHUNK))
+	if tree_cells.has(key):
+		tree_cells[key].erase(t)
+	t.queue_free()
+
+
+## Ajoute un élément du décor au calque trié en profondeur (ou au sol, flat) et à la grille.
+func add_decor(t: DecorTree, flat := false) -> void:
+	if flat:
+		add_child(t)
+	else:
+		trees_parent.add_child(t)
+	_add_tree(t)
+	if DecorTree.baker != null:
+		DecorTree.baker.prepare(t)
+
+
+## Éléments du décor dont le pied est dans le disque (centre, rayon) : arbres, ronces, rochers, objets
+## composés, repères et obstacles (pour les réactions du monde vivant, tâche V). Seuls les carrés de
+## CHUNK px que touche le disque sont parcourus.
+func decor_near(center: Vector2, radius: float) -> Array:
+	var out: Array = []
+	var r2 := radius * radius
+	var a := Vector2i(floori((center.x - radius) / CHUNK), floori((center.y - radius) / CHUNK))
+	var b := Vector2i(floori((center.x + radius) / CHUNK), floori((center.y + radius) / CHUNK))
+	for cy in range(a.y, b.y + 1):
+		for cx in range(a.x, b.x + 1):
+			var list = tree_cells.get(Vector2i(cx, cy))
+			if list == null:
+				continue
+			for t in list:
+				if is_instance_valid(t) and t.position.distance_squared_to(center) <= r2:
+					out.append(t)
+	return out
 
 
 ## Décor de la région (une instance par région, null si elle n'en a pas ou s'il est inconnu).
