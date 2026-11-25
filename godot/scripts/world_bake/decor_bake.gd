@@ -91,6 +91,17 @@ static var _sig := ""
 static var _flora_ref: WeakRef
 
 
+## Vide les atlas, le matériau et les cuissons en cours (fin de partie, fermeture).
+static func release() -> void:
+	atlases.clear()
+	_material = null
+	_wanted.clear()
+	_failed.clear()
+	_busy = false
+	_baking = false
+	_measuring = false
+
+
 static func configure() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a == "--decor-direct":
@@ -314,10 +325,16 @@ static func _bake_node(model, alive: bool):
 	return [t, base]
 
 
+## Image suivante rendue. Par le signal du Runtime quand c'est lui l'hôte : s'il quitte l'arbre (fin de
+## partie, fermeture), la cuisson en cours s'arrête avec lui au lieu de survivre au serveur de rendu.
+static func _drawn(host: Node) -> Signal:
+	return host.drawn if host.has_signal("drawn") else RenderingServer.frame_post_draw
+
+
 ## Cuit le décor d'une région dans un atlas. Coroutine (deux images de rendu ; aucune si le cache sert).
 static func bake(host: Node, flora, region: String) -> void:
 	while _busy:
-		await RenderingServer.frame_post_draw
+		await _drawn(host)
 	if atlases.has(region):
 		return
 	_busy = true
@@ -369,7 +386,7 @@ static func bake(host: Node, flora, region: String) -> void:
 		n.scale = Vector2(k, k)
 		vp.add_child(n)
 	host.add_child(vp)
-	await RenderingServer.frame_post_draw
+	await _drawn(host)
 	var pimg := vp.get_texture().get_image()
 	for i in jobs.size():
 		var j: Dictionary = jobs[i]
@@ -407,7 +424,7 @@ static func bake(host: Node, flora, region: String) -> void:
 		n.queue_redraw()
 	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
-	await RenderingServer.frame_post_draw
+	await _drawn(host)
 	_baking = false
 	var t1 := Time.get_ticks_usec()
 	var img := vp.get_texture().get_image()
@@ -555,8 +572,21 @@ class Runtime extends Node:
 	var _near := {}
 	const NEAR_EVERY := 6
 
+	signal drawn
+
 	func _ready() -> void:
 		process_priority = 10
+		RenderingServer.frame_post_draw.connect(_on_drawn)
+
+	func _on_drawn() -> void:
+		drawn.emit()
+
+	## Les atlas et le matériau vivent dans des variables statiques : les libérer avec la partie, sinon
+	## ils survivent au serveur de rendu à la fermeture (Godot s'arrête alors sur un abort).
+	func _exit_tree() -> void:
+		if RenderingServer.frame_post_draw.is_connected(_on_drawn):
+			RenderingServer.frame_post_draw.disconnect(_on_drawn)
+		B.release()
 
 	func _process(delta: float) -> void:
 		_tick += 1

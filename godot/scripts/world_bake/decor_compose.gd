@@ -66,7 +66,7 @@ const LISIERES := {
 		"bord": [["fougere", 0.75, 1.15, 3], ["roseaux", 0.75, 1.05, 2.5], ["champignon", 0.3, 0.45, 0.8], ["rocher", 0.55, 0.85, 0.4]],
 		"grappe": [["fougere", 1.0, 1.4, 3], ["roseaux", 1.0, 1.3, 2], ["tronc", 0.85, 1.1, 0.8], ["champignon", 0.45, 0.65, 1]],
 		"grand": [["champignon", 0.8, 1.1, 3], ["roseaux", 1.35, 1.55, 1]],
-		"repere": {"*": ["chapeau_geant", 1.0]},
+		"repere": {"*": ["chapeau_geant", 0.8]},
 	},
 	"vent": {
 		"bord": [["plateau:Grass", 0.8, 1.3, 5], ["plateau:Twisted", 0.9, 1.3, 1]],
