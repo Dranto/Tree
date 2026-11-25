@@ -195,7 +195,8 @@ const BESTIAIRE := {
 	"os": Color("e6d2a8"),
 	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
 	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
-	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
+	"vent": {"clair": Color("a3b6c8"), "ombre": Color("5a6a80"), "reflet": Color("e4eef7"), "detail": Color("d6c27e"),
+		"plume": Color("77869c"), "duvet": Color("dfe2dc"), "aile": Color("c8d4df")},
 	# Aube : verre pâle et mauve des falaises (corps, clair pour trancher sur le calcaire et se distinguer
 	# de Vent et de Racine même pour un daltonien), verre clair (ailes, aiguilles), lumière d'or sale (detail).
 	"aube": {"clair": Color("e2d8f4"), "ombre": Color("7c6c9c"), "reflet": Color("fcf9ff"), "detail": Color("e6c25a"),
