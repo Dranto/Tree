@@ -44,7 +44,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var sq := Vector2(1.0 + 0.06 * hit, 1.0 - 0.07 * hit) * Vector2(1.0, 1.0 + 0.012 * sin(t * TAU / 2.4))
 	var xf := base * Transform2D(rock + 0.04 * hit, sq, 0.0, Vector2(0, sink))
 	var body := V.pal()
-	var skin := {"clair": Art.bc("aube", "ombre").lerp(Art.bc("aube", "clair"), 0.4), "ombre": Art.bc("aube", "ombre").darkened(0.25), "reflet": Art.bc("aube", "reflet")}
+	var skin := {"clair": Art.bc("aube", "ombre").lerp(Art.bc("aube", "clair"), 0.8), "ombre": Art.bc("aube", "ombre"), "reflet": Art.bc("aube", "reflet")}
 	var far := {"clair": skin["ombre"], "ombre": skin["ombre"].darkened(0.3), "reflet": skin["clair"]}
 	# Pattes du fond (paire diagonale opposée à celles de devant).
 	_pillar(ci, base, xf, Vector2(-30, -16), Vector2(-34, 0), maxf(-sin(walk), 0.0) * 6.0 * mv, far)

@@ -74,7 +74,7 @@ static func prism(b: Vector2, hw: float, l: float, lean := 0.0) -> Array:
 static func needle(ci: CanvasItem, xf: Transform2D, b: Vector2, hw: float, l: float, lean := 0.0, glow := 0.0) -> void:
 	var p := prism(b, hw, l, lean)
 	var g := glass()
-	Ink.part(ci, xf, p[0], {"clair": g["ombre"], "ombre": g["ombre"].darkened(0.25)}, 1.6, 0.0, 0.0)
+	Ink.part(ci, xf, p[0], {"clair": g["ombre"].lerp(g["clair"], 0.45), "ombre": g["ombre"].lerp(g["clair"], 0.45)}, 1.6, 0.0, 0.0)
 	if Ink.mono:
 		return
 	Ink.flat(ci, xf, p[1], g["clair"])

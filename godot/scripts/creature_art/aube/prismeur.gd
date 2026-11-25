@@ -38,7 +38,8 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var sway := sin(walk) * 0.06 * mv + 0.08 * hit - 0.1 * fl
 	var sq := Vector2(1.0 + 0.1 * hit + 0.04 * kk, 1.0 - 0.1 * hit - 0.04 * kk)
 	var xf := base * Transform2D(sway, sq, 0.0, Vector2(-3.0 * fl, crouch + bob))
-	var legc := V.ash()
+	# Pattes de verre fumé (pas de cendre) : plus claires, le faucheux reste lisible sur le calcaire.
+	var legc := Art.bc("aube", "ombre").lightened(0.28)
 	var hip := Vector2(0, -36)
 	# Pattes du fond (deux), puis le corps, puis les pattes de devant (deux).
 	for i in 2:
