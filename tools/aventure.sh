@@ -23,7 +23,7 @@ VARIANTES=${VARIANTES:-"0 1"}
 OUT="$ROOT/godot/autotest/aventure"
 rm -rf "$OUT"; mkdir -p "$OUT"
 
-"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1
+"$ROOT/tools/import.sh"
 
 extra=("$@")
 has_auto=0
