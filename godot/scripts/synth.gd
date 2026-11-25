@@ -112,10 +112,8 @@ const SOUNDS := {
 		{"wave": SINE, "f0": 70.0, "f1": 52.0, "dur": 0.16, "att": 0.002, "vol": 0.8},
 		{"wave": SINE, "f0": 70.0, "f1": 52.0, "dur": 0.16, "att": 0.002, "delay": 0.2, "vol": 0.6}]},
 	# --- Annonces : un coup va partir (boss, élites) --------------------------------------------------------
-	"annonce": {"peak": 0.55, "verb": 0.3, "room": 0.6, "layers": [
-		{"wave": SAW, "f0": 150.0, "f1": 460.0, "dur": 0.7, "att": 0.3, "filter": "lp", "cut": [500.0, 2600.0], "res": 0.4, "vol": 0.6, "voice2": 6.0, "vib": [0.03, 11.0]},
-		{"wave": NOISE, "dur": 0.65, "att": 0.5, "filter": "hp", "cut": [800.0, 4000.0], "vol": 0.3}]},
-	"annonce_boss": {"peak": 0.72, "verb": 0.35, "room": 0.75, "duck": 0.2, "layers": [
+	# Grave pour tous les boss (choix d'Antoine à l'écoute, 25/11 : l'ancienne « annonce_boss » sert partout).
+	"annonce": {"peak": 0.72, "verb": 0.35, "room": 0.75, "layers": [
 		{"wave": METAL, "f0": 220.0, "f1": 210.0, "dur": 0.8, "att": 0.002, "vol": 0.4, "decay": 1.6},
 		{"wave": SAW, "f0": 110.0, "f1": 110.0, "dur": 0.9, "att": 0.25, "filter": "lp", "cut": [300.0, 2200.0], "res": 0.45, "vol": 0.6, "voice2": 7.0, "drive": 0.3},
 		{"wave": SINE, "f0": 55.0, "f1": 55.0, "dur": 0.9, "att": 0.2, "vol": 0.5},
@@ -513,7 +511,7 @@ static func _render_layer(out: PackedFloat32Array, l: Dictionary, seed: int, pit
 
 # --- Musique et ambiance (music_synth.gd) ------------------------------------------------------------
 
-## Durée d'un accord et nombre d'accords d'une boucle : 4 × 3 s = 12 s.
+## Durée d'un accord ; une boucle en a 8 (A puis B) : 8 × 3 s = 24 s.
 const CHORD_TIME := MusicSynth.CHORD_TIME
 const ROOTS := MusicSynth.ROOTS
 ## Couches de musique d'une région, dans l'ordre : nom de fichier → rôle.

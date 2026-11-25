@@ -9,9 +9,9 @@
       "_doc": "Marais de spores : accords bas et suspendus ; en terre vivante, un arpège de bois mou et une flûte paresseuse. Combat aux percussions d'eau ; boss (Amanite-Mère) qui rampe par demi-tons. Ambiance : bulles, gouttes, grenouilles. Les spores montent comme des bulles.",
       "music": {
         "seed": 23,
-        "roots": [-2, -7, -4, -9],
+        "roots": [-2, -7, -4, -9], "roots_b": [-9, -4, -2, -7],
         "dark": {"chord": [0, 3, 6, 10], "pad": 0.45, "pad_lp": 520.0, "drone": 0.3, "bell": 0.18, "bell_ratio": 1.41, "texture": 0.2},
-        "bright": {
+        "bright": {"arp": "marimba", "lead_tone": "clarinet", "lead_octave": 1, "counter_tone": "flute", "echo": 0.32,
           "chord": [0, 3, 7, 10],
           "pattern": [0, 3, 7, 10, 14, 10, 7, 3],
           "pluck_tone": 0.3,
@@ -21,7 +21,7 @@
         },
         "combat": {"kit": "water", "kick": "x.....x...x.....", "snare": "....x..o....x...", "hat": ".x.x.x.x.x.x.x.x", "bass": [0, null, 0, 3, null, 7, 10, 7]},
         "heart": {"vowel": "u"},
-        "boss": {
+        "boss": {"counter_tone": "clarinet",
           "chord": [0, 3, 6, 10],
           "kit": "water",
           "kick": "x..x...x..x..x..",
@@ -58,9 +58,9 @@
       "_doc": "Hauts plateaux : quintes ouvertes ; en terre vivante, un arpège vif et une mélodie qui saute haut. Combat au tambour sur cadre ; boss (Harfang) en doubles croches. Ambiance : grand vent, herbes, oiseaux. Des brins d'herbe et des rafales filent vers la droite.",
       "music": {
         "seed": 37,
-        "roots": [0, -5, -2, -7],
+        "roots": [0, -5, -2, -7], "roots_b": [-2, 0, -7, -5],
         "dark": {"chord": [0, 7, 14, 19], "pad": 0.4, "pad_lp": 900.0, "drone": 0.25, "bell": 0.2, "bell_ratio": 2.0, "texture": 0.25},
-        "bright": {
+        "bright": {"arp": "harp", "lead_tone": "flute", "lead_octave": 2, "counter_tone": "clarinet", "echo": 0.25,
           "chord": [0, 5, 7, 12],
           "pattern": [0, 7, 12, 19, 12, 7, 12, 19, 24, 19, 12, 7, 12, 7, 5, 7],
           "pluck": 0.42,
@@ -72,7 +72,7 @@
         },
         "combat": {"kit": "frame", "kick": "x.....x.x.....x.", "hat": "x.xxx.xxx.xxx.xx", "bass": [0, 0, 7, 0, 12, 0, 7, 5], "pulse": 0.35},
         "heart": {"vowel": "a"},
-        "boss": {
+        "boss": {"counter_tone": "horn",
           "chord": [0, 3, 7, 12],
           "kit": "frame",
           "kick": "x..x..x...x..x..",
@@ -98,9 +98,9 @@
       "_doc": "Vallée de Sève : accords majeurs amples ; en terre vivante, un arpège de gouttes et une mélodie qui coule par degrés. Combat aux percussions d'eau ; boss (Saule exsangue) en complainte mineure. Ambiance : ruisseau, gouttes, oiseaux. Des gouttes de rosée montent doucement.",
       "music": {
         "seed": 41,
-        "roots": [0, -3, -5, -8],
+        "roots": [0, -3, -5, -8], "roots_b": [-8, -5, -3, -5],
         "dark": {"chord": [0, 4, 7, 11], "pad": 0.45, "pad_lp": 700.0, "drone": 0.25, "bell": 0.25, "bell_ratio": 3.0, "texture": 0.1},
-        "bright": {
+        "bright": {"arp": "kalimba", "lead_tone": "horn", "lead_octave": 2, "counter_tone": "cello", "echo": 0.22,
           "chord": [0, 4, 7, 11],
           "pattern": [0, 4, 7, 11, 14, 11, 7, 4],
           "pluck_tone": 0.7,
@@ -110,7 +110,7 @@
         },
         "combat": {"kit": "water", "kick": "x.......x.......", "snare": "....o.......x...", "hat": "..x...x...x...xx", "bass": [0, null, 7, null, 11, null, 7, 4]},
         "heart": {"vowel": "o"},
-        "boss": {
+        "boss": {"counter_tone": "horn",
           "chord": [0, 3, 7, 10],
           "kit": "water",
           "kick": "x...x...x..x.x..",
@@ -140,9 +140,9 @@
       "_doc": "Rivage de l'Aube : quartes et quintes claires, cloches ; en terre vivante, un arpège lumineux. Combat aux percussions de métal ; boss (Phalène de verre) cristallin. Ambiance : vagues, carillons. Des éclats de lumière flottent et montent.",
       "music": {
         "seed": 53,
-        "roots": [2, -3, 0, -5],
+        "roots": [2, -3, 0, -5], "roots_b": [0, 2, -5, -3],
         "dark": {"chord": [0, 5, 7, 12], "pad": 0.4, "pad_lp": 800.0, "drone": 0.22, "bell": 0.35, "bell_ratio": 3.5, "texture": 0.08},
-        "bright": {
+        "bright": {"arp": "glock", "lead_tone": "glass", "lead_octave": 2, "counter_tone": "flute", "echo": 0.3,
           "chord": [0, 5, 7, 14],
           "pattern": [0, 7, 12, 14, 19, 14, 12, 7, 5, 7, 12, 17],
           "pluck": 0.42,
@@ -154,7 +154,7 @@
         },
         "combat": {"kit": "metal", "kick": "x.......x.......", "hat": "x.x.x.x.x.x.x.x.", "bass": [0, null, 7, null, 0, null, 5, 7]},
         "heart": {"vowel": "e"},
-        "boss": {
+        "boss": {"counter_tone": "horn",
           "chord": [0, 3, 7, 14],
           "kit": "metal",
           "kick": "x..x..x.x.......",
@@ -181,9 +181,9 @@
       "_doc": "Forêt pétrifiée (Racine) : accords bas et ouverts ; en terre vivante, un arpège de bois sourd. Combat aux blocs de bois ; boss aux taïkos et toms, mode phrygien. Ambiance : bois qui grince, coups de pic, oiseaux. Des cendres de bois et des poussières de mousse flottent.",
       "music": {
         "seed": 83,
-        "roots": [-4, -9, -2, -7],
+        "roots": [-4, -9, -2, -7], "roots_b": [-9, -7, -4, -2],
         "dark": {"chord": [0, 7, 12, 14], "pad": 0.45, "pad_lp": 520.0, "drone": 0.32, "bell": 0.2, "bell_ratio": 1.5, "texture": 0.15},
-        "bright": {
+        "bright": {"arp": "marimba", "octave": 0, "lead_tone": "cello", "lead_octave": 1, "counter_tone": "horn",
           "chord": [0, 7, 10, 14],
           "pattern": [0, 7, 14, 10, 12, 7, 5, 10],
           "pluck": 0.55,
@@ -195,7 +195,7 @@
         },
         "combat": {"kit": "wood", "kick": "x..x....x..x....", "bass": [0, 0, 7, 0, 0, 0, 10, 7]},
         "heart": {"vowel": "o"},
-        "boss": {
+        "boss": {"counter_tone": "cello",
           "chord": [0, 7, 12, 15],
           "kit": "taiko",
           "hat": "..x...x...x...x.",
@@ -230,12 +230,12 @@
       "_doc": "Finale sous la graine : accords diminués qui descendent, bourdon grave ; boss (la Flétrissure) aux taïkos et au chœur, sur une version sombre du thème du monde ; après la victoire, la couche lumineuse reprend le thème du monde en grand. Le creux résonne (grondement, gouttes). Sans particules de papillons.",
       "music": {
         "seed": 67,
-        "roots": [-5, -6, -10, -12],
+        "roots": [-5, -6, -10, -12], "roots_b": [-6, -5, -12, -11],
         "dark": {"chord": [0, 3, 6, 10], "pad": 0.5, "pad_lp": 450.0, "drone": 0.35, "bell": 0.3, "bell_ratio": 1.41, "texture": 0.22},
-        "bright": {"chord": [0, 4, 7, 12], "pattern": [0, 7, 12, 16, 19, 16, 12, 7, 0, 7, 12, 19], "sparkle": 0.3, "sparkle_note": 24, "lead": 0.42},
+        "bright": {"arp": "harp", "lead_tone": "horn", "lead_octave": 2, "counter_tone": "cello", "chord": [0, 4, 7, 12], "pattern": [0, 7, 12, 16, 19, 16, 12, 7, 0, 7, 12, 19], "sparkle": 0.3, "sparkle_note": 24, "lead": 0.42},
         "combat": {"kit": "taiko", "kick": "x..x..x.x..x..x.", "hat": "x.x.x.x.x.x.x.x.", "bass": [0, 0, 3, 0, 6, 0, 3, 1]},
         "heart": {"vowel": "o"},
-        "boss": {
+        "boss": {"counter_tone": "horn",
           "chord": [0, 3, 6, 10],
           "kit": "taiko",
           "kick": "x..x..x.x..x.xx.",
@@ -263,9 +263,9 @@
       "_doc": "Fin et générique joués dans le monde (world_ending.gd) : seule la couche lumineuse, qui reprend le thème du monde (flûte) sur des accords clairs.",
       "music": {
         "seed": 71,
-        "roots": [3, 0, -4, -2],
+        "roots": [3, 0, -4, -2], "roots_b": [-4, -2, 3, -2],
         "layers": ["lumineux"],
-        "bright": {"chord": [0, 4, 7, 14], "pattern": [0, 7, 14, 12, 16, 12, 7, 4, 0, 7, 12, 19], "pad": 0.45, "sparkle": 0.3, "lead": 0.45}
+        "bright": {"arp": "piano", "lead_tone": "cello", "lead_octave": 2, "counter_tone": "flute", "chord": [0, 4, 7, 14], "pattern": [0, 7, 14, 12, 16, 12, 7, 4, 0, 7, 12, 19], "pad": 0.45, "sparkle": 0.3, "lead": 0.45}
       }
     }
   }
