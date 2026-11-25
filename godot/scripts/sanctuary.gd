@@ -223,7 +223,7 @@ func _ready() -> void:
 		var pc := Piece.new()
 		pc.sanct = self
 		pc.i = i
-		pc.name = "Pierre%d" % i if i >= 0 else "Vasque"
+		pc.name = "Pierre%d" % i if i >= 0 else "Vasque"  # i18n: non (nom de nœud)
 		LieuxBake.prepare(pc)
 		if layer != null:
 			pc.position = position + _piece_pos(i)

@@ -7213,7 +7213,7 @@ msgid "Phase {0} sur {1} : les ronces se resserrent"
 msgstr ""
 
 #. data/regions/ronce.json › ronce › heart › name
-#. scripts/heart.gd:48
+#. scripts/heart.gd:56
 #. scripts/regions.gd:223
 #. scripts/world_map.gd:115
 msgid "Cœur de flétrissure"
@@ -8132,11 +8132,11 @@ msgstr ""
 msgid "Incompatible avec « %s »."
 msgstr ""
 
-#. scripts/heart.gd:255
+#. scripts/heart.gd:277
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
 msgstr ""
 
-#. scripts/heart.gd:255
+#. scripts/heart.gd:277
 msgid "Tiens la zone : %d s"
 msgstr ""
 
@@ -8474,11 +8474,11 @@ msgstr ""
 msgid "scellée  ·  %d / %d régions purifiées"
 msgstr ""
 
-#. scripts/sanctuary.gd:31
+#. scripts/sanctuary.gd:38
 msgid "de la Graine"
 msgstr ""
 
-#. scripts/sanctuary.gd:87
+#. scripts/sanctuary.gd:94
 msgid "sanctuaire %s"
 msgstr ""
 
