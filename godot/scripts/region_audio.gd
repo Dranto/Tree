@@ -181,6 +181,8 @@ static func _check_music(errors: PackedStringArray, w: String, m: Dictionary) ->
 			errors.append("%s : « pattern » doit avoir de 1 à 24 notes (réparties sur 3 s)" % where)
 		if st.has("pattern_b") and (not st["pattern_b"] is Array or st["pattern_b"].size() > 24):
 			errors.append("%s : « pattern_b » doit avoir de 0 à 24 notes (vide : « pattern » à l'envers)" % where)
+		if st.has("pad_tone") and not str(st["pad_tone"]) in MusicSynth.PAD_TONES:
+			errors.append("%s : timbre de nappe inconnu « %s » (%s)" % [where, st["pad_tone"], ", ".join(MusicSynth.PAD_TONES)])
 		if st.has("arp") and not str(st["arp"]) in MusicSynth.ARPS:
 			errors.append("%s : arpège inconnu « %s » (%s)" % [where, st["arp"], ", ".join(MusicSynth.ARPS)])
 		if st.has("kit") and not str(st["kit"]) in MusicSynth.KITS:

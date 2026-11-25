@@ -33,7 +33,7 @@ const BED_LOOP := 12.0
 const EIGHTH := CHORD_TIME / 8.0
 const SIXTEENTH := CHORD_TIME / 16.0
 ## Version des formules (empreinte des pistes) : à changer quand le rendu change.
-const VERSION := 4
+const VERSION := 5
 const BED_VERSION := 2
 
 ## Fichier (couche) → section de réglages.
@@ -45,6 +45,9 @@ const VOWELS := {"a": [800.0, 1150.0, 2900.0], "o": [450.0, 800.0, 2830.0], "u":
 ## Voix mélodiques (lead_tone, counter_tone) et instruments d'arpège (arp).
 const TONES := ["flute", "clarinet", "horn", "horns", "brass", "cello", "glass"]
 const ARPS := ["pizz", "harp", "marimba", "kalimba", "glock", "piano"]
+## Timbre des nappes (dark › pad_tone) : saw (cordes synthétiques douces), reed (anches, nasal), air (souffle
+## de flûtes), organ (orgue de bois rond), glass (verres), bow (vraie section de cordes).
+const PAD_TONES := ["saw", "reed", "air", "organ", "glass", "bow"]
 ## Modes des instruments frappés : rapports de fréquence, gains, amortissements (par seconde).
 const MODES := {
 	"marimba": [[1.0, 3.99, 9.9], [1.0, 0.32, 0.08], [2.6, 9.0, 22.0]],
@@ -62,7 +65,7 @@ const DEFAULTS := {
 	"roots": [0, -4, -9, -5],
 	"roots_b": [-2, -7, -4, -5],
 	"dark": {"chord": [0, 7, 12, 15], "pad": 0.5, "pad_lp": 650.0, "drone": 0.3, "bell": 0.3, "bell_ratio": 3.5, "texture": 0.12, "verb": 0.5,
-		"strings": 0.35, "piano": 0.22, "sweep": 0.5},
+		"strings": 0.35, "piano": 0.22, "sweep": 0.5, "pad_tone": "saw"},
 	"bright": {"chord": [0, 4, 7, 12], "octave": 1, "pattern": [0, 4, 7, 12, 16, 12, 7, 4], "pattern_b": [], "arp": "pizz", "pad": 0.32, "pad_lp": 1100.0,
 		"pluck": 0.5, "pluck_tone": 0.4, "sparkle": 0.2, "sparkle_note": 19, "lead": 0.34, "lead_tone": "cello", "lead_octave": 2, "bass": 0.2, "verb": 0.4,
 		"counter": 0.24, "counter_tone": "horn", "strings": 0.25, "echo": 0.18, "sweep": 0.4,
@@ -109,7 +112,14 @@ static func progression(style: Dictionary) -> Array:
 ## Empreinte d'une couche (formules + réglages) : gen_sounds l'écrit à côté des pistes, sound_test la compare.
 static func fingerprint(layer: String, style: Dictionary) -> int:
 	return hash([VERSION, layer, style.get("seed", DEFAULTS["seed"]), progression(style), section(style, LAYERS[layer]),
-		section(style, "dark")["chord"] if layer in ["combat", "boss"] else 0, section(style, "bright") if layer == "coeur" else 0])
+		section(style, "dark")["chord"] if layer in ["combat", "boss"] else 0, section(style, "bright"), section(style, "heart")["vowel"]])
+
+
+## Signature de la région, reprise par toutes ses couches : instrument de l'arpège, voix de la mélodie et de
+## la contre-voix (terre vivante), voyelle du chœur (Cœur).
+static func signature(style: Dictionary) -> Dictionary:
+	var br := section(style, "bright")
+	return {"arp": str(br["arp"]), "lead": str(br["lead_tone"]), "counter": str(br["counter_tone"]), "vowel": str(section(style, "heart")["vowel"])}
 
 
 static func bed_fingerprint(state: String, bed: Dictionary) -> int:
@@ -139,17 +149,18 @@ static func render(layer: String, style := {}) -> PackedFloat32Array:
 	rng.seed = int(style.get("seed", DEFAULTS["seed"])) * 31 + hash(layer)
 	var roots := progression(style)
 	var st := section(style, LAYERS[layer])
+	var sig := signature(style)
 	match layer:
 		"sombre":
-			_dark(bus, st, roots, rng)
+			_dark(bus, st, sig, roots, rng)
 		"lumineux":
 			_bright(bus, st, roots, rng)
 		"combat":
-			_combat(bus, st, section(style, "dark")["chord"], roots, rng)
+			_combat(bus, st, sig, section(style, "dark")["chord"], roots, rng)
 		"coeur":
-			_heart(bus, st, section(style, "bright"), roots, rng)
+			_heart(bus, st, sig, section(style, "bright"), roots, rng)
 		"boss":
-			_boss(bus, st, roots, rng)
+			_boss(bus, st, sig, roots, rng)
 	_chorus(bus["pads"], 0.012, 0.004, 0.5)
 	_echo(bus["lead"], EIGHTH * 3.0, 0.38, float(st.get("echo", 0.15)), 1800.0)
 	var out: PackedFloat32Array = bus["main"]
@@ -259,7 +270,8 @@ static func vary(motif: Array) -> Array:
 
 # --- Couches ---------------------------------------------------------------------------------------------
 
-static func _dark(bus: Dictionary, st: Dictionary, roots: Array, rng: RandomNumberGenerator) -> void:
+static func _dark(bus: Dictionary, st: Dictionary, sig: Dictionary, roots: Array, rng: RandomNumberGenerator) -> void:
+	var pad_tone := str(st["pad_tone"])
 	var chord: Array = st["chord"]
 	for c in roots.size():
 		var t0: float = c * CHORD_TIME
@@ -267,23 +279,30 @@ static func _dark(bus: Dictionary, st: Dictionary, roots: Array, rng: RandomNumb
 		var freqs: Array = []
 		for s in chord:
 			freqs.append(Dsp.hz(roots[c] + s, 1))
-		_pad(bus["pads"], t0, CHORD_TIME, freqs, st["pad"] * (1.0 if b else 0.85), st["pad_lp"], rng)
+		if pad_tone == "bow":
+			_ensemble(bus["pads"], t0 - 0.3, CHORD_TIME + 0.3, freqs, st["pad"] * (1.0 if b else 0.85), st["pad_lp"] * 1.4, rng, 0.8)
+		else:
+			_pad(bus["pads"], t0, CHORD_TIME, freqs, st["pad"] * (1.0 if b else 0.85), st["pad_lp"], rng, 0.006, false, pad_tone)
 		# Bourdon : fondamentale et quinte graves, qui se relaient d'un accord à l'autre.
 		_pad(bus["main"], t0, CHORD_TIME, [Dsp.hz(roots[c], 0), Dsp.hz(roots[c] + 7, 0)], st["drone"], 260.0, rng, 0.002, true)
-		# Cordes graves (B) : une section de violoncelles qui monte doucement.
+		# En B, la voix de la région tient l'accord (Ronce, Racine : des violoncelles qui montent doucement).
 		if b and st["strings"] > 0.0:
 			var sw := 0.6 + 0.4 * float(c - 4) / 3.0
-			_ensemble(bus["pads"], t0, CHORD_TIME, [Dsp.hz(roots[c], 0), Dsp.hz(roots[c] + chord[1], 1), Dsp.hz(roots[c] + chord[2], 1)], st["strings"] * sw, 900.0, rng, 0.6)
+			if not pad_tone in ["saw", "bow"]:
+				for s in [chord[0], chord[1]]:
+					_tone(bus["pads"], sig["counter"], t0 + 0.05, CHORD_TIME * 0.92, Dsp.hz(roots[c] + s, 1), st["strings"] * sw * 0.8, rng)
+			else:
+				_ensemble(bus["pads"], t0, CHORD_TIME, [Dsp.hz(roots[c], 0), Dsp.hz(roots[c] + chord[1], 1), Dsp.hz(roots[c] + chord[2], 1)], st["strings"] * sw, 900.0, rng, 0.6)
 		# Cloche grave, au début d'un accord sur deux.
 		if st["bell"] > 0.0 and c % 2 == 0:
 			_mallet(bus["main"], t0 + 0.02, Dsp.hz(roots[c] + chord[(c * 3 + 1) % chord.size()], 2), st["bell"] * 0.8, "bell", 5.0)
-		# Piano feutré : deux ou trois notes de l'accord, posées en des endroits qui changent.
+		# Notes éparses à l'instrument de la région (piano feutré si elle n'en a pas), en des endroits qui changent.
 		if st["piano"] > 0.0:
 			var count := 2 if not b else 3
 			for k in count:
 				var at := t0 + EIGHTH * float(rng.randi_range(1, 7))
 				var note: int = chord[rng.randi_range(0, chord.size() - 1)]
-				_mallet(bus["lead"], at, Dsp.hz(roots[c] + note, 2 if k < 2 else 1), st["piano"] * rng.randf_range(0.6, 1.0), "piano", 2.6)
+				_arp(bus["lead"], sig["arp"], at, Dsp.hz(roots[c] + note, 2 if k < 2 else 1), st["piano"] * rng.randf_range(0.6, 1.0), 0.3, rng)
 	if st["texture"] > 0.0:
 		_breath(bus["main"], st["texture"], 450.0, rng)
 
@@ -328,7 +347,7 @@ static func _bright(bus: Dictionary, st: Dictionary, roots: Array, rng: RandomNu
 		_melody(bus["lead"], motif, chord, roots, 4, lo, st["counter"], str(st["counter_tone"]), rng)
 
 
-static func _combat(bus: Dictionary, st: Dictionary, chord: Array, roots: Array, rng: RandomNumberGenerator) -> void:
+static func _combat(bus: Dictionary, st: Dictionary, sig: Dictionary, chord: Array, roots: Array, rng: RandomNumberGenerator) -> void:
 	_drums(bus["main"], st, rng, roots.size())
 	var bass: Array = st["bass"]
 	for c in roots.size():
@@ -343,21 +362,21 @@ static func _combat(bus: Dictionary, st: Dictionary, chord: Array, roots: Array,
 				semis = 12.0
 			_bass(bus["main"], t0 + j * (CHORD_TIME / bass.size()), CHORD_TIME / bass.size() * 0.9, Dsp.hz(roots[c] + semis, 0), st["bass_vol"], 0.5)
 		if st["pulse"] > 0.0:
-			# Cordes en spiccato : ostinato de doubles croches, qui s'arpège en B.
+			# Ostinato de doubles croches à l'instrument de la région (cordes en spiccato pour Ronce), arpégé en B.
 			for j in 16:
 				var note: float = roots[c] + (chord[1] if j % 4 == 2 else 0.0)
 				if b and j % 4 == 3:
 					note = roots[c] + chord[2]
-				_spiccato(bus["pads"], t0 + j * SIXTEENTH, SIXTEENTH * 0.8, Dsp.hz(note, 1), st["pulse"] * (1.0 if j % 4 == 0 else 0.6))
+				_ostinato(bus, sig["arp"], t0 + j * SIXTEENTH, note, st["pulse"] * (1.0 if j % 4 == 0 else 0.6), rng)
 		if b and st["horn"] > 0.0:
 			for s in chord.slice(0, 3):
-				_tone(bus["pads"], "horn", t0, EIGHTH * 3.0, Dsp.hz(roots[c] + s, 1), st["horn"] * 0.55, rng)
+				_tone(bus["pads"], sig["counter"], t0, EIGHTH * 3.0, Dsp.hz(roots[c] + s, 1), st["horn"] * 0.55, rng)
 	if st["swell"] > 0.0:
 		_swell(bus["main"], 4.0 * CHORD_TIME, 1.4, st["swell"], rng)
 		_swell(bus["main"], LOOP, 1.4, st["swell"] * 0.7, rng)
 
 
-static func _heart(bus: Dictionary, st: Dictionary, bright: Dictionary, roots: Array, rng: RandomNumberGenerator) -> void:
+static func _heart(bus: Dictionary, st: Dictionary, sig: Dictionary, bright: Dictionary, roots: Array, rng: RandomNumberGenerator) -> void:
 	var chord: Array = bright["chord"]
 	for c in roots.size():
 		var t0: float = c * CHORD_TIME
@@ -368,7 +387,7 @@ static func _heart(bus: Dictionary, st: Dictionary, bright: Dictionary, roots: A
 		if b and st["strings"] > 0.0:
 			_ensemble(bus["pads"], t0, CHORD_TIME, [Dsp.hz(roots[c], 0), Dsp.hz(roots[c] + chord[2], 1)], st["strings"], 800.0, rng, 0.5)
 		if st["shimmer"] > 0.0:
-			_tone(bus["lead"], "glass", t0, CHORD_TIME * 0.9, Dsp.hz(roots[c] + chord[chord.size() - 1], 2), st["shimmer"], rng)
+			_tone(bus["lead"], sig["lead"], t0, CHORD_TIME * 0.9, Dsp.hz(roots[c] + chord[chord.size() - 1], 1), st["shimmer"], rng)
 	# Battement de cœur : « poum-poum » à chaque noire (0,75 s) ; en B, un battement fantôme s'y ajoute.
 	if st["beat"] > 0.0:
 		for k in int(LOOP / (EIGHTH * 2.0)):
@@ -377,12 +396,12 @@ static func _heart(bus: Dictionary, st: Dictionary, bright: Dictionary, roots: A
 			_kick(bus["main"], t + 0.16, st["beat"] * 0.6, "heart")
 			if t >= LOOP * 0.5 and k % 2 == 1:
 				_kick(bus["main"], t + EIGHTH, st["beat"] * 0.3, "heart")
-	# En B, la mélodie de la terre vivante revient, au verre, très doucement.
+	# En B, la mélodie de la terre vivante revient, à l'instrument de l'arpège, très doucement.
 	if st["solo"] > 0.0:
-		_melody(bus["lead"], bright["motif"], chord, roots, 4, 2, st["solo"], "glass", rng)
+		_melody(bus["lead"], bright["motif"], chord, roots, 4, 2, st["solo"], sig["arp"], rng)
 
 
-static func _boss(bus: Dictionary, st: Dictionary, roots: Array, rng: RandomNumberGenerator) -> void:
+static func _boss(bus: Dictionary, st: Dictionary, sig: Dictionary, roots: Array, rng: RandomNumberGenerator) -> void:
 	var chord: Array = st["chord"]
 	_drums(bus["main"], st, rng, roots.size())
 	var bass: Array = st["bass"]
@@ -406,10 +425,10 @@ static func _boss(bus: Dictionary, st: Dictionary, roots: Array, rng: RandomNumb
 					_tone(bus["pads"], "brass", t0 + at, EIGHTH * 1.6, Dsp.hz(roots[c] + s, 1), st["brass"] * 0.45, rng)
 		if st["pulse"] > 0.0:
 			for j in 16:
-				_spiccato(bus["pads"], t0 + j * SIXTEENTH, SIXTEENTH * 0.7, Dsp.hz(roots[c] + (12.0 if j % 2 == 1 else 0.0), 1), st["pulse"] * (1.0 if j % 4 == 0 else 0.55))
+				_ostinato(bus, sig["arp"], t0 + j * SIXTEENTH, roots[c] + (12.0 if j % 2 == 1 else 0.0), st["pulse"] * (1.0 if j % 4 == 0 else 0.55), rng)
 		if st["choir"] > 0.0:
-			_choir(bus["pads"], t0, CHORD_TIME, Dsp.hz(roots[c] + chord[0], 1), st["choir"], "o", rng)
-			_choir(bus["pads"], t0, CHORD_TIME, Dsp.hz(roots[c] + chord[1], 1), st["choir"] * 0.8, "o", rng)
+			_choir(bus["pads"], t0, CHORD_TIME, Dsp.hz(roots[c] + chord[0], 1), st["choir"], sig["vowel"], rng)
+			_choir(bus["pads"], t0, CHORD_TIME, Dsp.hz(roots[c] + chord[1], 1), st["choir"] * 0.8, sig["vowel"], rng)
 			if b:
 				_choir(bus["pads"], t0, CHORD_TIME, Dsp.hz(roots[c] + chord[2], 1), st["choir"] * 0.7, "a", rng)
 		if st["gong"] > 0.0 and c % 4 == 0:
@@ -437,7 +456,11 @@ static func _melody(out: PackedFloat32Array, motif: Array, chord: Array, roots: 
 		var semis: float = chord[posmod(idx, chord.size())] + 12.0 * floorf(float(idx) / chord.size()) + (float(m[3]) if m.size() > 3 else 0.0)
 		var f := Dsp.hz(roots[c] + semis, octave)
 		var v := vol * rng.randf_range(0.85, 1.0) * (1.0 if stp % 4 == 0 else 0.9)
-		_tone(out, tone, first * CHORD_TIME + stp * EIGHTH + rng.randf_range(0.0, 0.012), float(m[2]) * EIGHTH, f, v, rng)
+		var at := first * CHORD_TIME + stp * EIGHTH + rng.randf_range(0.0, 0.012)
+		if tone in ARPS:
+			_arp(out, tone, at, f, v * 1.4, 0.4, rng)
+		else:
+			_tone(out, tone, at, float(m[2]) * EIGHTH, f, v, rng)
 
 
 ## Percussions : motifs de 16 doubles croches par accord (« x » frappe, « o » frappe douce, « . » rien).
@@ -494,7 +517,7 @@ static func _drums(out: PackedFloat32Array, st: Dictionary, rng: RandomNumberGen
 
 ## Nappe : trois dents de scie désaccordées par note, filtrées ; fondu d'entrée et de sortie qui chevauche
 ## l'accord suivant. soft : sinusoïdes (bourdon).
-static func _pad(out: PackedFloat32Array, t0: float, dur: float, freqs: Array, vol: float, lp: float, rng: RandomNumberGenerator, detune := 0.006, soft := false) -> void:
+static func _pad(out: PackedFloat32Array, t0: float, dur: float, freqs: Array, vol: float, lp: float, rng: RandomNumberGenerator, detune := 0.006, soft := false, tone := "saw") -> void:
 	if vol <= 0.0:
 		return
 	var n := out.size()
@@ -519,14 +542,41 @@ static func _pad(out: PackedFloat32Array, t0: float, dur: float, freqs: Array, v
 				var fr := f * (1.0 + (d - 1) * detune)
 				var idx := fi * 3 + d
 				ph[idx] = ph[idx] + fr / RATE
+				var p: float = ph[idx]
 				if soft:
-					s += sin(TAU * ph[idx]) * 0.6
+					s += sin(TAU * p) * 0.6
 				else:
-					s += Dsp.osc(Dsp.SAW, ph[idx], fr / RATE, 0.5, rng)
+					match tone:
+						"reed":
+							s += Dsp.osc(Dsp.SQUARE, p, fr / RATE, 0.42, rng) * 0.8
+						"air":
+							s += (sin(TAU * p) + 0.12 * sin(TAU * p * 2.0)) * 0.75
+						"organ":
+							s += (sin(TAU * p) + 0.5 * sin(TAU * p * 2.0) + 0.25 * sin(TAU * p * 3.0) + 0.12 * sin(TAU * p * 4.0)) * 0.6
+						"glass":
+							s += (sin(TAU * p) + 0.25 * sin(TAU * p * 2.0)) * (0.8 + 0.2 * sin(TAU * 3.0 * t + float(idx))) * 0.7
+						_:
+							s += Dsp.osc(Dsp.SAW, p, fr / RATE, 0.5, rng)
+				if tone == "air" and d == 0:
+					s += breath_noise(i0 + i) * 0.08
 		if i % 64 == 0:
 			svf.set_params(lp * (1.0 + 0.2 * sin(TAU * t / dur)), 0.1)
 		s = svf2.process(svf.process(s))
 		out[posmod(i0 + i, n)] += s * env * g
+
+
+## Bruit déterministe léger (souffle des nappes « air »), sans tirage aléatoire.
+static func breath_noise(i: int) -> float:
+	return fposmod(sin(float(i) * 12.9898) * 43758.5453, 1.0) * 2.0 - 1.0
+
+
+## Une note d'ostinato rapide (combat, boss) : cordes en spiccato pour le pizz de Ronce, sinon l'instrument
+## de l'arpège de la région, une octave au-dessus.
+static func _ostinato(bus: Dictionary, arp: String, t0: float, semis: float, vol: float, rng: RandomNumberGenerator) -> void:
+	if arp == "pizz":
+		_spiccato(bus["pads"], t0, SIXTEENTH * 0.8, Dsp.hz(semis, 1), vol)
+	else:
+		_arp(bus["main"], arp, t0, Dsp.hz(semis, 2), vol * 0.75, 0.2, rng)
 
 
 ## Section de cordes frottées : deux voix désaccordées par note, vibrato lent, archet qui s'installe
