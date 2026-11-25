@@ -1,4 +1,4 @@
-## Menu pause (direction « Herbier ») : un cadre orné au centre, entrées centrées. Échap met le jeu en pause (sauf quand l'Arbre de vie est ouvert, qui gère déjà Échap).
+## Menu pause (direction « Herbier ») : un cadre orné au centre, entrées centrées. Échap (ou Start à la manette) met le jeu en pause (sauf quand l'Arbre de vie est ouvert, qui gère déjà Échap).
 extends Control
 
 const UiTheme = preload("res://scripts/ui_theme.gd")
@@ -84,8 +84,11 @@ func _draw() -> void:
 	draw_polygon(PackedVector2Array([Vector2(0, h * 0.78), Vector2(w, h * 0.78), Vector2(w, h), Vector2(0, h)]), PackedColorArray([edge, edge, dark, dark]))
 
 
+## Échap ou Start ouvrent la pause ; Échap, Start ou B (manette) la referment. B seul n'ouvre rien :
+## en jeu, c'est une compétence.
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed("ui_cancel"):
+	var pause := InputMap.has_action("pause") and event.is_action_pressed("pause")
+	if not pause and not (visible and event.is_action_pressed("ui_cancel")):
 		return
 	if visible:
 		# Le panneau d'options gère lui-même Échap quand il est ouvert.

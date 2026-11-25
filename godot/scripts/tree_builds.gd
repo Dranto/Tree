@@ -99,6 +99,20 @@ func refresh() -> void:
 	_names = []
 	for i in Game.build_slots():
 		_rows.add_child(_row(i))
+	if ui != null and ui.pad != null:
+		ui.pad.builds_refreshed()
+
+
+## Boutons du panneau, dans l'ordre de lecture, pour la manette (zone « builds » de tree_pad.gd).
+## Les noms se renomment au clavier : pas de clavier virtuel au pad.
+func pad_controls() -> Array:
+	var out: Array = []
+	if _rows == null:
+		return out
+	for b in _rows.find_children("*", "Button", true, false):
+		if not b.is_queued_for_deletion():
+			out.append(b)
+	return out
 
 
 func _row(i: int) -> Control:

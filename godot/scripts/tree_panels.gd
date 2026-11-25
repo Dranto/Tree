@@ -32,6 +32,9 @@ var match_index := -1
 var search: LineEdit
 var count_label: Label
 var plan_button: Button
+## Boutons de la barre d'outils, dans l'ordre (zone « outils » de la manette, tree_pad.gd).
+var _bar_buttons: Array = []
+var clear_button: Button
 var undo_button: Button
 var summary_button: Button
 var builds_button: Button
@@ -79,20 +82,24 @@ func _ready() -> void:
 	count_label.custom_minimum_size = Vector2(96, 0)
 	count_label.add_theme_color_override("font_color", DIM)
 	bar.add_child(count_label)
-	_button(bar, "Précédent", func(): next_match(-1))
-	_button(bar, "Suivant", func(): next_match(1))
+	_bar_buttons.append(_button(bar, "Précédent", func(): next_match(-1)))
+	_bar_buttons.append(_button(bar, "Suivant", func(): next_match(1)))
 	plan_button = _button(bar, "Mode plan", Callable())
 	plan_button.toggle_mode = true
 	plan_button.toggled.connect(set_plan_mode)
+	_bar_buttons.append(plan_button)
 	undo_button = _button(bar, "Annuler", undo)
+	_bar_buttons.append(undo_button)
 	summary_button = _button(bar, "Résumé", Callable())
 	summary_button.toggle_mode = true
 	summary_button.toggled.connect(set_summary_visible)
+	_bar_buttons.append(summary_button)
 	builds_button = _button(bar, "Builds", Callable())
 	builds_button.toggle_mode = true
 	builds_button.toggled.connect(set_builds_visible)
+	_bar_buttons.append(builds_button)
 	# Avec près de 900 nœuds, on se perd vite en zoomant : un bouton (et la touche Origine) recadre l'arbre entier.
-	_button(bar, "Vue d'ensemble", func(): ui.glide_fit())
+	_bar_buttons.append(_button(bar, "Vue d'ensemble", func(): ui.glide_fit()))
 
 	plan_bar = PanelContainer.new()
 	plan_bar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -103,7 +110,7 @@ func _ready() -> void:
 	plan_label = Label.new()
 	row.add_child(plan_label)
 	commit_button = _button(row, "Valider le plan", commit_plan)
-	_button(row, "Effacer", func(): planner.plan_clear())
+	clear_button = _button(row, "Effacer", func(): planner.plan_clear())
 
 	message = Label.new()
 	message.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -184,6 +191,16 @@ func _button(parent: Node, text: String, action: Callable) -> Button:
 		b.pressed.connect(action)
 	parent.add_child(b)
 	return b
+
+
+## Contrôles de la zone « outils » à la manette : la recherche, les boutons de la barre, puis ceux
+## de la barre du plan quand elle est visible.
+func pad_controls() -> Array:
+	var out: Array = [search]
+	out.append_array(_bar_buttons)
+	if plan_bar.visible:
+		out.append_array([commit_button, clear_button])
+	return out
 
 
 # --- Clavier ---
@@ -368,6 +385,8 @@ func set_builds_visible(on: bool) -> void:
 		summary_panel.visible = false
 		summary_button.set_pressed_no_signal(false)
 		builds_panel.refresh()
+	elif ui.pad != null:
+		ui.pad.builds_refreshed()
 	_refresh()
 
 

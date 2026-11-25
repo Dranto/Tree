@@ -46,6 +46,13 @@ var keys_hint: Label
 var _scroll: ScrollContainer
 var _content: VBoxContainer
 const MOBA_ROW := 6
+## Manette : boutons de la barre (PAD_ROW0 + emplacement) et des commandes du jeu (PAD_ACTION_ROW0 + i,
+## Settings.PAD_ACTIONS), et choix du style des glyphes.
+const PAD_ROW0 := 200
+const PAD_ACTION_ROW0 := 300
+var pad_slot_buttons: Array = []
+var pad_action_buttons: Array = []
+var pad_style_select: OptionButton
 const TAB_NAMES := ["Son", "Affichage", "Jeu", "Commandes"]
 ## Largeur des libellés devant les curseurs et les listes.
 const LABEL_W := 170.0
@@ -225,6 +232,38 @@ func _ready() -> void:
 		b.pressed.connect(_listen.bind(ACTION_ROW0 + i))
 		grid2.add_child(b)
 		action_buttons.append(b)
+	# Manette : mêmes commandes, sur les boutons (le stick gauche marche, le stick droit vise, Start met
+	# en pause, A valide, B revient).
+	var pad_title := Label.new()
+	pad_title.text = "Manette"
+	pad_title.add_theme_color_override("font_color", UiTheme.GOLD)
+	p_cmd.add_child(pad_title)
+	pad_style_select = _select_row(p_cmd, "Glyphes")
+	for id in Settings.PAD_STYLES:
+		pad_style_select.add_item(Settings.PAD_STYLE_NAMES[id])
+	pad_style_select.item_selected.connect(func(i): Settings.set_pad_style(Settings.PAD_STYLES[i]); Settings.save_settings(); _update_keys())
+	var grid3 := GridContainer.new()
+	grid3.columns = 2
+	grid3.add_theme_constant_override("h_separation", 16)
+	grid3.add_theme_constant_override("v_separation", 8)
+	p_cmd.add_child(grid3)
+	for i in Settings.SLOT_COUNT + Settings.PAD_ACTIONS.size():
+		var l := Label.new()
+		l.text = SLOT_LABELS[i] if i < Settings.SLOT_COUNT else Settings.GAME_ACTION_NAMES[Settings.PAD_ACTIONS[i - Settings.SLOT_COUNT]]
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid3.add_child(l)
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(190, 0)
+		b.focus_mode = Control.FOCUS_ALL
+		grid3.add_child(b)
+		if i < Settings.SLOT_COUNT:
+			b.pressed.connect(_listen.bind(PAD_ROW0 + i))
+			pad_slot_buttons.append(b)
+		else:
+			b.pressed.connect(_listen.bind(PAD_ACTION_ROW0 + i - Settings.SLOT_COUNT))
+			pad_action_buttons.append(b)
+	var pad_fixed := _hint(p_cmd)
+	pad_fixed.text = "Stick gauche : marcher. Stick droit : viser (lâché, la visée va à la cible la plus proche). Start : pause. A valide et B revient dans les menus ; LB et RB changent d'onglet."
 	keys_hint = _hint(p_cmd)
 	var reset := Button.new()
 	reset.text = "Rétablir les commandes par défaut"
@@ -370,7 +409,17 @@ func _update_keys() -> void:
 		if not extra.is_empty():
 			txt += " (ou %s)" % ", ".join(extra.map(func(k): return Settings.key_name(k)))
 		action_buttons[i].text = "…" if listening == ACTION_ROW0 + i else txt
-	if listening >= ACTION_ROW0:
+	for i in pad_slot_buttons.size():
+		pad_slot_buttons[i].text = "…" if listening == PAD_ROW0 + i else Settings.pad_name_of(Settings.pad_bindings[i])
+	for i in pad_action_buttons.size():
+		pad_action_buttons[i].text = "…" if listening == PAD_ACTION_ROW0 + i else Settings.pad_name_of(Settings.pad_actions[Settings.PAD_ACTIONS[i]])
+	if pad_style_select != null:
+		pad_style_select.select(maxi(0, Settings.PAD_STYLES.find(Settings.pad_style)))
+	if listening >= PAD_ACTION_ROW0:
+		keys_hint.text = "Appuie sur un bouton de la manette pour : %s (Start ou Échap : annuler)." % Settings.GAME_ACTION_NAMES[Settings.PAD_ACTIONS[listening - PAD_ACTION_ROW0]].to_lower()
+	elif listening >= PAD_ROW0:
+		keys_hint.text = "Appuie sur un bouton ou une gâchette de la manette pour : %s (Start ou Échap : annuler, %s : aucun)." % [SLOT_LABELS[listening - PAD_ROW0].to_lower(), Settings.pad_name_of(JOY_BUTTON_BACK)]
+	elif listening >= ACTION_ROW0:
 		keys_hint.text = "Appuie sur une touche pour : %s (Échap : annuler)." % Settings.GAME_ACTION_NAMES[Settings.GAME_ACTIONS[listening - ACTION_ROW0]].to_lower()
 	elif listening == MOBA_ROW:
 		keys_hint.text = "Appuie sur une touche pour la compétence principale 2 en mode MOBA (Échap : annuler)."
@@ -384,7 +433,20 @@ func _update_keys() -> void:
 ## l'emplacement, sauf si une autre commande du jeu (déplacement, esquive, arbre) l'utilise déjà.
 ## La ligne du mode MOBA n'accepte qu'une touche (le clic droit y sert à marcher).
 func _input(event: InputEvent) -> void:
-	if listening < 0 or not visible:
+	if not visible:
+		return
+	if listening < 0:
+		# LB et RB : onglet précédent ou suivant.
+		var jb := event as InputEventJoypadButton
+		if jb != null and jb.pressed and (jb.button_index == JOY_BUTTON_LEFT_SHOULDER or jb.button_index == JOY_BUTTON_RIGHT_SHOULDER):
+			get_viewport().set_input_as_handled()
+			var n := TAB_NAMES.size()
+			show_tab((tab + (1 if jb.button_index == JOY_BUTTON_RIGHT_SHOULDER else -1) + n) % n)
+			tab_buttons[tab].grab_focus()
+			Sfx.play("clic")
+		return
+	if listening >= PAD_ROW0:
+		_listen_pad(event)
 		return
 	var code := KEY_NONE
 	var k := event as InputEventKey
@@ -422,6 +484,36 @@ func _input(event: InputEvent) -> void:
 		keys_hint.text = ""
 	_update_keys()
 	_update_move_mode()
+
+
+## Attente d'un bouton de manette (barre ou commande du jeu). Start ou Échap annulent ; pour la barre,
+## Affichage (Partage) retire la liaison.
+func _listen_pad(event: InputEvent) -> void:
+	var k := event as InputEventKey
+	var code := Settings.pad_code_of(event)
+	if k != null and k.pressed and k.physical_keycode == KEY_ESCAPE:
+		code = JOY_BUTTON_START
+	elif code == JOY_BUTTON_INVALID:
+		return
+	get_viewport().set_input_as_handled()
+	var i := listening
+	listening = -1
+	var taken := ""
+	if code == JOY_BUTTON_START:
+		pass
+	elif i >= PAD_ACTION_ROW0:
+		taken = Settings.set_pad_action(Settings.PAD_ACTIONS[i - PAD_ACTION_ROW0], code)
+	elif code == JOY_BUTTON_BACK:
+		taken = Settings.set_pad_binding(i - PAD_ROW0, JOY_BUTTON_INVALID)
+	else:
+		taken = Settings.set_pad_binding(i - PAD_ROW0, code)
+	if taken == "":
+		Settings.save_settings()
+		keys_hint.text = ""
+	else:
+		keys_hint.text = "%s est déjà utilisé : %s." % [Settings.pad_name_of(code), taken]
+	_update_keys()
+	# Le bouton relâché ne doit pas relancer l'écoute : le focus reste sur la ligne.
 
 
 func _on_difficulty(index: int) -> void:

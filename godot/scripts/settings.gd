@@ -3,6 +3,9 @@
 extends Node
 
 signal changed
+## La dernière entrée vient d'un autre appareil (clavier et souris, ou manette) : glyphes et textes
+## des commandes basculent (voir last_device).
+signal device_changed
 
 const PATH := "user://settings.cfg"
 
@@ -78,6 +81,41 @@ const ACTION_EXTRAS := {"move_up": [KEY_UP], "move_left": [KEY_LEFT], "move_down
 ## Actions dont la touche par défaut est une lettre logique (et non une position physique).
 const LOGICAL_DEFAULTS := ["toggle_map"]
 var action_keys: Dictionary = ACTION_DEFAULTS.duplicate()
+## Manette (jalon 11). Une liaison de manette est un entier : un bouton (JOY_BUTTON_*), ou une
+## gâchette codée PAD_AXIS + axe (JOY_AXIS_TRIGGER_LEFT ou JOY_AXIS_TRIGGER_RIGHT).
+## Fixes : stick gauche (et croix directionnelle) pour marcher, stick droit pour viser, Start pour la
+## pause, A pour valider et B pour revenir dans les menus.
+const PAD_AXIS := 200
+const PAD_LT := PAD_AXIS + JOY_AXIS_TRIGGER_LEFT
+const PAD_RT := PAD_AXIS + JOY_AXIS_TRIGGER_RIGHT
+## Pseudo-codes des glyphes (jamais liés) : sticks et croix directionnelle entière.
+const PAD_STICK_L := 300
+const PAD_STICK_R := 301
+const PAD_DPAD := 302
+## Barre de compétences : gâchettes droite et gauche pour les principales, X Y B et RB pour les secondaires.
+const PAD_SLOT_DEFAULTS := [PAD_RT, PAD_LT, JOY_BUTTON_X, JOY_BUTTON_Y, JOY_BUTTON_B, JOY_BUTTON_RIGHT_SHOULDER]
+var pad_bindings: Array = PAD_SLOT_DEFAULTS.duplicate()
+## Commandes du jeu réassignables à la manette (mêmes noms que GAME_ACTIONS).
+const PAD_ACTIONS := ["dash", "toggle_tree", "toggle_map"]
+const PAD_ACTION_DEFAULTS := {"dash": JOY_BUTTON_A, "toggle_tree": JOY_BUTTON_BACK, "toggle_map": JOY_BUTTON_LEFT_SHOULDER}
+var pad_actions: Dictionary = PAD_ACTION_DEFAULTS.duplicate()
+## Boutons qu'on ne peut pas lier : Start ouvre toujours la pause.
+const PAD_RESERVED := [JOY_BUTTON_START]
+## Boutons et gâchettes acceptés pour une liaison.
+const PAD_BUTTONS := [JOY_BUTTON_A, JOY_BUTTON_B, JOY_BUTTON_X, JOY_BUTTON_Y, JOY_BUTTON_LEFT_SHOULDER, JOY_BUTTON_RIGHT_SHOULDER,
+	JOY_BUTTON_LEFT_STICK, JOY_BUTTON_RIGHT_STICK, JOY_BUTTON_BACK, JOY_BUTTON_DPAD_UP, JOY_BUTTON_DPAD_DOWN, JOY_BUTTON_DPAD_LEFT,
+	JOY_BUTTON_DPAD_RIGHT, JOY_BUTTON_PADDLE1, JOY_BUTTON_PADDLE2, JOY_BUTTON_PADDLE3, JOY_BUTTON_PADDLE4, PAD_LT, PAD_RT]
+## Glyphes de la manette : « auto » (selon le nom de la manette branchée), « xbox » ou « playstation ».
+const PAD_STYLES := ["auto", "xbox", "playstation"]
+const PAD_STYLE_NAMES := {"auto": "Automatique", "xbox": "Xbox (A B X Y)", "playstation": "PlayStation (croix, rond…)"}
+var pad_style := "auto"
+## Zone morte des sticks (part de la course) : marche, visée, curseur de l'arbre.
+const STICK_DEADZONE := 0.22
+## Appareil de la dernière entrée : « clavier » (clavier et souris) ou « manette ». Les glyphes des
+## commandes (barre, tutoriel, arbre) suivent ; une partie démarre au clavier.
+var last_device := "clavier"
+## Nom de la dernière manette utilisée (Input.get_joy_name), pour le style automatique des glyphes.
+var pad_name := ""
 ## Force des rafales de vent (région de Vent, wind.gd), de 0 (coupées) à 1 (pleine) : elles poussent
 ## le joueur et dévient les projectiles. Accessibilité : on peut les couper.
 var wind := 1.0
@@ -98,6 +136,8 @@ var reduce_effects := false
 
 
 func _ready() -> void:
+	# Toujours à l'écoute (menus et arbre mettent le jeu en pause) : suit l'appareil utilisé.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	load_settings()
 	apply_bindings()
 	apply()
@@ -142,6 +182,14 @@ func load_settings() -> void:
 	difficulty = diff if diff in DIFFICULTIES else "normal"
 	var mode := str(cfg.get_value("controls", "move_mode", move_mode))
 	move_mode = mode if mode in MOVE_MODES else MOVE_MODE_DEFAULT
+	for i in SLOT_COUNT:
+		var pb := int(cfg.get_value("pad", SLOT_ACTIONS[i], pad_bindings[i]))
+		pad_bindings[i] = pb if pb == JOY_BUTTON_INVALID or pb in PAD_BUTTONS else PAD_SLOT_DEFAULTS[i]
+	for a in PAD_ACTIONS:
+		var pa := int(cfg.get_value("pad", a, pad_actions[a]))
+		pad_actions[a] = pa if pa in PAD_BUTTONS else PAD_ACTION_DEFAULTS[a]
+	var ps := str(cfg.get_value("pad", "style", pad_style))
+	pad_style = ps if ps in PAD_STYLES else "auto"
 	apply_bindings()
 
 
@@ -171,6 +219,11 @@ func save_settings() -> void:
 	cfg.set_value("gameplay", "reduce_effects", reduce_effects)
 	cfg.set_value("gameplay", "difficulty", difficulty)
 	cfg.set_value("controls", "move_mode", move_mode)
+	for i in SLOT_COUNT:
+		cfg.set_value("pad", SLOT_ACTIONS[i], pad_bindings[i])
+	for a in PAD_ACTIONS:
+		cfg.set_value("pad", a, pad_actions[a])
+	cfg.set_value("pad", "style", pad_style)
 	cfg.save(PATH)
 
 
@@ -189,6 +242,10 @@ func apply_bindings() -> void:
 		for k in ACTION_EXTRAS.get(a, []):
 			if k != action_keys[a]:
 				InputMap.action_add_event(a, _event(k))
+		for ev in _pad_events(a):
+			InputMap.action_add_event(a, ev)
+		if a in MOVE_PAD:
+			InputMap.action_set_deadzone(a, STICK_DEADZONE)
 	for i in SLOT_COUNT:
 		var action: String = SLOT_ACTIONS[i]
 		if InputMap.has_action(action):
@@ -199,6 +256,9 @@ func apply_bindings() -> void:
 			var ev := _event(code)
 			if ev != null:
 				InputMap.action_add_event(action, ev)
+		var pev := pad_event(pad_bindings[i])
+		if pev != null:
+			InputMap.action_add_event(action, pev)
 	if InputMap.has_action("dash"):
 		InputMap.action_erase_events("dash")
 	else:
@@ -207,6 +267,75 @@ func apply_bindings() -> void:
 	for k in dash_keys:
 		if not _bound(k) and InputMap.action_get_events("dash").all(func(e): return (e as InputEventKey).physical_keycode != k):
 			InputMap.action_add_event("dash", _event(k))
+	for ev in _pad_events("dash"):
+		InputMap.action_add_event("dash", ev)
+	_apply_pad_ui()
+
+
+## Actions de marche et de visée au stick : axe et sens de chaque action.
+const MOVE_PAD := {"move_up": [JOY_AXIS_LEFT_Y, -1.0, JOY_BUTTON_DPAD_UP], "move_down": [JOY_AXIS_LEFT_Y, 1.0, JOY_BUTTON_DPAD_DOWN],
+	"move_left": [JOY_AXIS_LEFT_X, -1.0, JOY_BUTTON_DPAD_LEFT], "move_right": [JOY_AXIS_LEFT_X, 1.0, JOY_BUTTON_DPAD_RIGHT]}
+const AIM_PAD := {"aim_up": [JOY_AXIS_RIGHT_Y, -1.0], "aim_down": [JOY_AXIS_RIGHT_Y, 1.0],
+	"aim_left": [JOY_AXIS_RIGHT_X, -1.0], "aim_right": [JOY_AXIS_RIGHT_X, 1.0]}
+
+
+## Évènements de manette d'une commande du jeu : stick gauche et croix pour marcher, bouton lié pour
+## l'esquive, l'arbre et la carte.
+func _pad_events(a: String) -> Array:
+	var out: Array = []
+	if MOVE_PAD.has(a):
+		out.append(_axis_event(MOVE_PAD[a][0], MOVE_PAD[a][1]))
+		var b := InputEventJoypadButton.new()
+		b.device = -1
+		b.button_index = MOVE_PAD[a][2]
+		out.append(b)
+	elif pad_actions.has(a):
+		var ev := pad_event(pad_actions[a])
+		if ev != null:
+			out.append(ev)
+	return out
+
+
+static func _axis_event(axis: int, value: float) -> InputEventJoypadMotion:
+	var m := InputEventJoypadMotion.new()
+	m.device = -1
+	m.axis = axis
+	m.axis_value = value
+	return m
+
+
+## Évènement d'une liaison de manette (bouton, ou gâchette au-delà de PAD_AXIS), sur toutes les manettes.
+static func pad_event(code: int) -> InputEvent:
+	if code >= PAD_AXIS and code < PAD_AXIS + JOY_AXIS_MAX:
+		return _axis_event(code - PAD_AXIS, 1.0)
+	if code < 0 or code >= JOY_BUTTON_MAX:
+		return null
+	var b := InputEventJoypadButton.new()
+	b.device = -1
+	b.button_index = code
+	return b
+
+
+## Actions de l'interface à la manette : A valide, B revient, Start (ou Échap) met en pause, stick
+## droit pour viser (et déplacer le curseur de l'arbre).
+func _apply_pad_ui() -> void:
+	for pair in [["ui_accept", JOY_BUTTON_A], ["ui_cancel", JOY_BUTTON_B]]:
+		var has := InputMap.action_get_events(pair[0]).any(func(e): return e is InputEventJoypadButton and e.button_index == pair[1])
+		if not has:
+			InputMap.action_add_event(pair[0], pad_event(pair[1]))
+	if not InputMap.has_action("pause"):
+		InputMap.add_action("pause")
+		InputMap.action_add_event("pause", _event(KEY_ESCAPE))
+		InputMap.action_add_event("pause", pad_event(JOY_BUTTON_START))
+	# Gâchettes lues en continu dans l'arbre (zoom), sans être des commandes réassignables.
+	for pair in [["pad_zoom_in", JOY_AXIS_TRIGGER_RIGHT], ["pad_zoom_out", JOY_AXIS_TRIGGER_LEFT]]:
+		if not InputMap.has_action(pair[0]):
+			InputMap.add_action(pair[0], 0.1)
+			InputMap.action_add_event(pair[0], _axis_event(pair[1], 1.0))
+	for a in AIM_PAD:
+		if not InputMap.has_action(a):
+			InputMap.add_action(a, STICK_DEADZONE)
+			InputMap.action_add_event(a, _axis_event(AIM_PAD[a][0], AIM_PAD[a][1]))
 
 
 ## Évènement principal d'une commande du jeu : touche physique, sauf la lettre logique par défaut
@@ -262,6 +391,8 @@ func reset_bindings() -> void:
 	bindings = BINDING_DEFAULTS.duplicate()
 	moba_main_2_key = MOBA_MAIN_2_DEFAULT
 	action_keys = ACTION_DEFAULTS.duplicate()
+	pad_bindings = PAD_SLOT_DEFAULTS.duplicate()
+	pad_actions = PAD_ACTION_DEFAULTS.duplicate()
 	apply_bindings()
 	changed.emit()
 
@@ -572,3 +703,151 @@ func flash_strength() -> float:
 ## Part réellement appliquée de la durée des arrêts sur image (0 si les effets sont réduits).
 func hitstop_strength() -> float:
 	return 0.0 if reduce_effects else hitstop_scale
+
+
+# --- Manette ---
+
+## Suit l'appareil de la dernière entrée (voir last_device) : un bouton ou un stick franchement
+## poussé passe à la manette, une touche, un clic ou un vrai mouvement de souris au clavier.
+func _input(event: InputEvent) -> void:
+	var dev := ""
+	if event is InputEventJoypadButton and event.pressed:
+		dev = "manette"
+	elif event is InputEventJoypadMotion and absf(event.axis_value) > 0.5:
+		dev = "manette"
+	elif (event is InputEventKey or event is InputEventMouseButton) and event.pressed:
+		dev = "clavier"
+	elif event is InputEventMouseMotion and event.relative.length() > 6.0:
+		dev = "clavier"
+	if dev == "manette":
+		var n := Input.get_joy_name(event.device)
+		if n != pad_name:
+			pad_name = n
+			if dev == last_device:
+				device_changed.emit()
+	if dev != "" and dev != last_device:
+		set_device(dev)
+
+
+## Change l'appareil courant (aussi pour les tests et les captures). À la manette, le pointeur de
+## la souris se cache ; il revient au premier mouvement de souris.
+func set_device(dev: String) -> void:
+	last_device = "manette" if dev == "manette" else "clavier"
+	if DisplayServer.get_name() != "headless":
+		Input.mouse_mode = Input.MOUSE_MODE_HIDDEN if last_device == "manette" else Input.MOUSE_MODE_VISIBLE
+	device_changed.emit()
+
+
+func pad_active() -> bool:
+	return last_device == "manette"
+
+
+## Style des glyphes réellement utilisé : « xbox » ou « playstation ».
+func pad_layout() -> String:
+	if pad_style != "auto":
+		return pad_style
+	var n := pad_name.to_lower()
+	for w in ["playstation", "dualsense", "dualshock", "ps3", "ps4", "ps5", "sony"]:
+		if w in n:
+			return "playstation"
+	return "xbox"
+
+
+func set_pad_style(id: String) -> void:
+	pad_style = id if id in PAD_STYLES else "auto"
+	changed.emit()
+	device_changed.emit()
+
+
+const PAD_NAMES_XBOX := {JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y",
+	JOY_BUTTON_LEFT_SHOULDER: "LB", JOY_BUTTON_RIGHT_SHOULDER: "RB", JOY_BUTTON_BACK: "Affichage", JOY_BUTTON_START: "Menu",
+	JOY_BUTTON_LEFT_STICK: "Stick G", JOY_BUTTON_RIGHT_STICK: "Stick D", PAD_LT: "LT", PAD_RT: "RT"}
+const PAD_NAMES_PS := {JOY_BUTTON_A: "Croix", JOY_BUTTON_B: "Rond", JOY_BUTTON_X: "Carré", JOY_BUTTON_Y: "Triangle",
+	JOY_BUTTON_LEFT_SHOULDER: "L1", JOY_BUTTON_RIGHT_SHOULDER: "R1", JOY_BUTTON_BACK: "Partage", JOY_BUTTON_START: "Options",
+	JOY_BUTTON_LEFT_STICK: "L3", JOY_BUTTON_RIGHT_STICK: "R3", PAD_LT: "L2", PAD_RT: "R2"}
+const PAD_NAMES_COMMON := {JOY_BUTTON_DPAD_UP: "Croix haut", JOY_BUTTON_DPAD_DOWN: "Croix bas", JOY_BUTTON_DPAD_LEFT: "Croix gauche",
+	JOY_BUTTON_DPAD_RIGHT: "Croix droite", JOY_BUTTON_PADDLE1: "Palette 1", JOY_BUTTON_PADDLE2: "Palette 2",
+	JOY_BUTTON_PADDLE3: "Palette 3", JOY_BUTTON_PADDLE4: "Palette 4", PAD_STICK_L: "Stick gauche", PAD_STICK_R: "Stick droit",
+	PAD_DPAD: "Croix directionnelle"}
+
+
+## Nom affiché d'une liaison de manette, selon le style des glyphes (« RT » ou « R2 »).
+func pad_name_of(code: int) -> String:
+	if code == JOY_BUTTON_INVALID:
+		return "—"
+	var names: Dictionary = PAD_NAMES_PS if pad_layout() == "playstation" else PAD_NAMES_XBOX
+	if names.has(code):
+		return names[code]
+	return PAD_NAMES_COMMON.get(code, "Bouton %d" % code)
+
+
+## Liaison de manette d'une commande : emplacement de la barre (« skill_main_1 »…) ou commande du jeu.
+func pad_code(action: String) -> int:
+	var i := SLOT_ACTIONS.find(action)
+	if i >= 0:
+		return pad_bindings[i]
+	if action in ["move_up", "move_left", "move_down", "move_right"]:
+		return PAD_STICK_L
+	if action == "pause":
+		return JOY_BUTTON_START
+	return pad_actions.get(action, JOY_BUTTON_INVALID)
+
+
+## Commande (barre ou jeu) qui utilise déjà ce bouton de manette, hors `except`, ou "".
+func pad_user(code: int, except := "") -> String:
+	for a in PAD_ACTIONS:
+		if a != except and pad_actions[a] == code:
+			return GAME_ACTION_NAMES[a]
+	for i in SLOT_COUNT:
+		if SLOT_ACTIONS[i] != except and pad_bindings[i] == code:
+			return "compétence %d" % (i + 1)
+	return ""
+
+
+## Réassigne la manette d'un emplacement de la barre (JOY_BUTTON_INVALID pour l'enlever). Renvoie ""
+## ou le nom de la commande du jeu qui tient déjà ce bouton ; un autre emplacement le perd.
+func set_pad_binding(i: int, code: int) -> String:
+	if i < 0 or i >= SLOT_COUNT or (code != JOY_BUTTON_INVALID and not code in PAD_BUTTONS):
+		return "?"
+	for a in PAD_ACTIONS:
+		if pad_actions[a] == code:
+			return GAME_ACTION_NAMES[a]
+	for j in SLOT_COUNT:
+		if j != i and pad_bindings[j] == code:
+			pad_bindings[j] = JOY_BUTTON_INVALID
+	pad_bindings[i] = code
+	apply_bindings()
+	changed.emit()
+	return ""
+
+
+## Réassigne le bouton de manette d'une commande du jeu (esquive, arbre, carte). Refusé (renvoie le
+## nom de la commande qui l'utilise) si le bouton est déjà pris.
+func set_pad_action(a: String, code: int) -> String:
+	if not a in PAD_ACTIONS or not code in PAD_BUTTONS:
+		return "?"
+	var user := pad_user(code, a)
+	if user != "":
+		return user
+	pad_actions[a] = code
+	apply_bindings()
+	changed.emit()
+	return ""
+
+
+## Liaison de manette lue dans un évènement (bouton pressé, ou gâchette enfoncée), ou JOY_BUTTON_INVALID.
+static func pad_code_of(event: InputEvent) -> int:
+	var b := event as InputEventJoypadButton
+	if b != null and b.pressed:
+		return b.button_index
+	var m := event as InputEventJoypadMotion
+	if m != null and (m.axis == JOY_AXIS_TRIGGER_LEFT or m.axis == JOY_AXIS_TRIGGER_RIGHT) and m.axis_value > 0.6:
+		return PAD_AXIS + m.axis
+	return JOY_BUTTON_INVALID
+
+
+## Vecteur d'un stick (« move » ou « aim »), zone morte comprise (0 sous STICK_DEADZONE).
+static func stick(which: String) -> Vector2:
+	if which == "aim":
+		return Input.get_vector("aim_left", "aim_right", "aim_up", "aim_down") if InputMap.has_action("aim_left") else Vector2.ZERO
+	return Input.get_vector("move_left", "move_right", "move_up", "move_down")

@@ -111,7 +111,10 @@ static func secondary_keys() -> String:
 
 
 ## Lignes du rappel des commandes, sous la forme [touches, action], pour le journal et l'écran titre.
+## À la manette, les noms des boutons (« RT », ou « R2 » en style PlayStation).
 static func reminder_rows() -> Array:
+	if Settings.pad_active():
+		return pad_rows()
 	var rows: Array = []
 	match Settings.move_mode:
 		"curseur":
@@ -127,3 +130,20 @@ static func reminder_rows() -> Array:
 	rows.append([action_label("dash"), "Esquive"])
 	rows.append([action_label("toggle_tree"), "Arbre de vie"])
 	return rows
+
+
+## Rappel des commandes à la manette.
+static func pad_rows() -> Array:
+	var sec: Array = []
+	for i in range(Settings.MOUSE_SLOTS, Settings.SLOT_COUNT):
+		sec.append(Settings.pad_name_of(Settings.pad_bindings[i]))
+	return [
+		[Settings.pad_name_of(Settings.PAD_STICK_L), "Se déplacer"],
+		[Settings.pad_name_of(Settings.PAD_STICK_R), "Viser (sinon, la cible la plus proche)"],
+		[Settings.pad_name_of(Settings.pad_bindings[0]), "Compétence principale 1"],
+		[Settings.pad_name_of(Settings.pad_bindings[1]), "Compétence principale 2"],
+		[" ".join(sec), "Compétences secondaires"],
+		[Settings.pad_name_of(Settings.pad_actions["dash"]), "Esquive"],
+		[Settings.pad_name_of(Settings.pad_actions["toggle_tree"]), "Arbre de vie"],
+		[Settings.pad_name_of(Settings.pad_actions["toggle_map"]), "Carte"],
+	]

@@ -324,7 +324,14 @@ static func make() -> Theme:
 	t.set_icon("grabber", "HSlider", _grabber(GOLD))
 	t.set_icon("grabber_highlight", "HSlider", _grabber(Color("f4dc9a")))
 	t.set_icon("grabber_disabled", "HSlider", _grabber(SOFT))
-	t.set_stylebox("focus", "HSlider", StyleBoxEmpty.new())
+	# Focus visible (clavier et manette) : un filet d'or autour du curseur et des listes.
+	var slider_focus := box(Color(0, 0, 0, 0), Color(GOLD, 0.8), 1)
+	slider_focus.expand_margin_left = 6
+	slider_focus.expand_margin_right = 6
+	slider_focus.expand_margin_top = 8
+	slider_focus.expand_margin_bottom = 8
+	t.set_stylebox("focus", "HSlider", slider_focus)
+	t.set_stylebox("focus", "OptionButton", box(Color(0, 0, 0, 0), GOLD, 1))
 	# Panneaux, menus déroulants, infobulles, barres de défilement.
 	t.set_stylebox("panel", "PanelContainer", cadre())
 	t.set_stylebox("panel", "PopupMenu", box(Color(PAPER, 0.98), Color(GOLD, 0.5)))
