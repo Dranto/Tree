@@ -33,6 +33,7 @@ TESTS=(
   "direct_screen|--xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0|"
   "draw_batch|--xvfb --audio-driver Dummy|"
   "heros|--xvfb --audio-driver Dummy|"
+  "seve_bestiaire|--xvfb --audio-driver Dummy|"
   "sprite_bake|--xvfb --audio-driver Dummy|"
   "eclat_skills|--headless --fixed-fps 60|"
   "enemies|--headless|"
