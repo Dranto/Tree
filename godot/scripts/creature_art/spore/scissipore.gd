@@ -81,13 +81,13 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	Sp.spore_puff(ci, xf, Vector2(15, -60), fposmod(t * 0.6 + 0.5, 1.0), 0.3 + 0.5 * kk, 3, 18.0)
 	if strike >= 0.0 and not Ink.mono:
 		var u := Anim.ease_out(strike)
-		Sp.spore_puff(ci, xf, Vector2(-14, -70), u, 1.0 - strike * 0.6, 9, 55.0)
-		Sp.spore_puff(ci, xf, Vector2(15, -60), u, 1.0 - strike * 0.6, 9, 55.0)
+		Sp.spore_puff(ci, xf, Vector2(-14, -70), u, 1.0 - strike * 0.6, 9, 34.0)
+		Sp.spore_puff(ci, xf, Vector2(15, -60), u, 1.0 - strike * 0.6, 9, 34.0)
 		# Anneau de spores qui roule au sol.
 		var s := base.get_scale().abs().x
 		for i in 16:
 			var a := TAU * i / 16.0
-			var q := base * Vector2(cos(a) * (30.0 + 80.0 * u), sin(a) * (30.0 + 80.0 * u) * Art.OMBRE_APLATI - 6.0)
+			var q := base * Vector2(cos(a) * (30.0 + 30.0 * u), sin(a) * (30.0 + 30.0 * u) * Art.OMBRE_APLATI - 6.0)
 			ci.draw_circle(q, (4.0 + 6.0 * u) * s, Color(Art.bc("spore", "spore"), 0.4 * (1.0 - strike)))
 
 

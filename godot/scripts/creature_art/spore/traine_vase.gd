@@ -14,6 +14,8 @@ const Sp = preload("res://scripts/creature_art/spore/outils.gd")
 const HEIGHT := 44.0
 ## La sorte dessine elle-même son collier d'élite (pose elite).
 const DRAWS_ELITE := true
+## Ses cornes oculaires se balancent sans viser : un seul regard cuit (atlas bien sous 5 Mo).
+const LOOKS := false
 
 
 static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
@@ -31,10 +33,9 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var base := Ink.frame(feet, h, flip)
 	var kk := Anim.ease_out(k)
 	var splat := 0.0 if strike < 0.0 else 1.0 - Anim.ease_out(strike)
-	# Flaque qui gicle à la frappe, traînée de vase derrière elle.
+	# Flaque qui gicle à la frappe (la traînée au sol est celle du comportement : marsh_puddles.gd).
 	if strike >= 0.0:
-		Sp.puddle(ci, base, Vector2(0, 2), 50.0 + 60.0 * Anim.ease_out(strike), 1.0 - 0.4 * strike, 1.3)
-	Sp.puddle(ci, base, Vector2(-92 - 4.0 * sin(walk * 0.5) * mv, 1), 28.0, 0.75, 0.4)
+		Sp.puddle(ci, base, Vector2(0, 2), 58.0 + 16.0 * Anim.ease_out(strike), 1.0 - 0.4 * strike, 1.3)
 	Ink.ground_shadow(ci, base, Vector2(-4, 0), 70.0)
 	Sp.bubbles(ci, base, Vector2(-4, 1), 64.0, t, kk, 7)
 	# Reptation : une vague court le long du pied, le corps s'allonge et se ramasse.
@@ -109,7 +110,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 		var u := Anim.ease_out(strike)
 		for i in 8:
 			var a := PI + PI * i / 7.0
-			var q := Vector2(cos(a) * (50.0 + 70.0 * u), -sin(PI * u) * 26.0 * (0.6 + 0.4 * fposmod(i * 0.61, 1.0)) + sin(a) * 4.0)
+			var q := Vector2(cos(a) * (48.0 + 26.0 * u), -sin(PI * u) * 26.0 * (0.6 + 0.4 * fposmod(i * 0.61, 1.0)) + sin(a) * 4.0)
 			var rr := 3.0 * (1.0 - u) * xf.get_scale().abs().x
 			ci.draw_circle(base * q, rr + 0.8, Ink.encre())
 			ci.draw_circle(base * q, rr, Art.bc("spore", "vase_reflet"))

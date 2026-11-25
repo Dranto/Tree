@@ -10,10 +10,12 @@ extends RefCounted
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const Sp = preload("res://scripts/creature_art/spore/outils.gd")
 
-## 100 unités (la hauteur) en px du jeu : ~62 px de haut et ~95 px de long en 1080p.
-const HEIGHT := 52.0
+## 100 unités (la hauteur) en px du jeu : ~72 px de haut et ~108 px de long en 1080p (lourd).
+const HEIGHT := 60.0
 ## La sorte dessine elle-même son collier d'élite (pose elite).
 const DRAWS_ELITE := true
+## Il ne tourne presque pas la tête : un seul regard cuit (atlas moitié moins lourd).
+const LOOKS := false
 
 
 static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
@@ -26,7 +28,6 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var look: float = o.get("look", 0.0)
 	var elite: bool = o.get("elite", false)
 	var flip := cos(look) < 0.0
-	var la := wrapf(PI - look if flip else look, -PI, PI)
 	Ink.flash = hit
 	var base := Ink.frame(feet, h, flip)
 	var kk := Anim.ease_out(k)
@@ -35,14 +36,14 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	# Onde de choc et éclats de croûte après la frappe.
 	if strike >= 0.0 and not Ink.mono:
 		var u := Anim.ease_out(strike)
-		var ring := Ink.oval(Vector2(36, 0), 30.0 + 80.0 * u, (30.0 + 80.0 * u) * Art.OMBRE_APLATI, 36)
+		var ring := Ink.oval(Vector2(36, 0), 44.0 + 26.0 * u, (44.0 + 26.0 * u) * Art.OMBRE_APLATI, 36)
 		ring.append(ring[0])
 		var s := base.get_scale().abs().x
 		ci.draw_polyline(base * ring, Color(Art.bc("braise"), 0.75 * slam), 4.0 * s, true)
 		ci.draw_polyline(base * ring, Color(Art.bc("spore", "lichen"), 0.5 * slam), 1.6 * s, true)
 		for i in 7:
 			var a := -PI * (0.15 + 0.7 * i / 6.0)
-			var q := Vector2(60, -4) + Vector2(cos(a) * 50.0 * u, sin(a) * 40.0 * sin(PI * u))
+			var q := Vector2(60, -4) + Vector2(cos(a) * 30.0 * u, sin(a) * 30.0 * sin(PI * u))
 			Ink.flat(ci, base, Ink.lumpy(q, 3.0, 2.4, 6, 0.3, 3.0, i), Art.bc("spore", "lichen_ombre").lerp(Art.bc("spore", "lichen"), 0.4 * (i % 2)), 0.8)
 	# Il se dresse (pivot sur les pattes arrière) pendant l'annonce, s'écrase à la frappe.
 	var rear := -0.38 * kk * (1.0 - slam) + 0.06 * slam
@@ -59,7 +60,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 		var x := -34.0 + i * 60.0
 		_leg(ci, base, xf, Vector2(x + 8, -22), Vector2(x + 14 + sin(step + i * PI) * 8.0 * mv, -2.0 - maxf(sin(step + i * PI), 0.0) * 6.0 * mv), leg.darkened(0.3), i == 1, kk)
 	# Tête basse sous le bord de la carapace, qui suit un peu la cible.
-	var hl := clampf(la, -0.5, 0.4) * 0.5
+	var hl := 0.0
 	var head := Transform2D(hl, Vector2(62, -24))
 	var hp := PackedVector2Array([Vector2(-8, -14), Vector2(8, -16), Vector2(20, -10), Vector2(24, 0), Vector2(18, 10), Vector2(0, 12), Vector2(-8, 8)])
 	Ink.part(ci, xf, head * hp, {"clair": leg.lightened(0.2), "ombre": leg.darkened(0.2), "reflet": leg.lightened(0.5)}, 2.2, 1.0, 0.4)
@@ -98,7 +99,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 			Ink.brush(ci, xf, crack, 2.2 + 1.2 * kk, Art.bc("ronge"), 0.0, 0.0)
 			Ink.brush(ci, xf, crack, 1.0 + 1.2 * kk, Art.bc("braise").lerp(Art.bc("braise_coeur"), 0.5 * kk), 0.0, 0.0)
 	if kk > 0.0:
-		Ink.halo(ci, xf * Vector2(0, -40), 46.0 * base.get_scale().abs().x, Art.bc("braise"), kk * 0.8)
+		Ink.halo(ci, xf * Vector2(0, -40), 34.0 * base.get_scale().abs().x, Art.bc("braise"), kk * 0.8)
 	# Le lichen : rosettes foliacées vert-de-gris en plaques sur le dos.
 	var lp := Sp.lichen_pal()
 	for q: Vector3 in [Vector3(-36, -56, 13), Vector3(-2, -70, 12), Vector3(30, -60, 10), Vector3(-60, -32, 7), Vector3(48, -34, 7), Vector3(12, -42, 8), Vector3(-22, -36, 6)]:
