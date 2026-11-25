@@ -65,7 +65,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 		var x := -52.0 + 100.0 * u
 		var swell := 1.0 + 0.35 * g + 0.05 * sin(walk * 2.0 - u * 7.0) * mv
 		# Arrière gras, tête fine (une vraie sangsue) ; petites bosses des anneaux sur le dos.
-		var w := (4.5 + 15.0 * pow(sin(PI * clampf(u * 0.97 + 0.03, 0.0, 1.0)), 0.75) * (1.08 - 0.42 * u)) * swell
+		var w := (5.0 + 17.0 * pow(sin(PI * clampf(u * 0.97 + 0.03, 0.0, 1.0)), 0.75) * (1.08 - 0.42 * u)) * swell
 		var lift := pow(clampf((u - 0.6) / 0.4, 0.0, 1.0), 2.0) * (rear + 6.0 * aim * kk)
 		var y := -w - 3.5 * sin(walk * 2.0 - u * 7.0 + 0.6) * wave * sin(PI * u) - lift
 		mid.append(Vector2(x - lift * 0.25, y))

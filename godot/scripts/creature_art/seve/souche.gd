@@ -13,8 +13,8 @@ extends RefCounted
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const S = preload("res://scripts/creature_art/seve/_seve.gd")
 
-## 100 unités en px du jeu (1600×900) : ~74 px de haut à l'écran en 1080p.
-const HEIGHT := 62.0
+## 100 unités en px du jeu (1600×900) : ~67 px de haut à l'écran en 1080p.
+const HEIGHT := 56.0
 ## Collier et liseré d'élite dessinés ici (pose « elite »).
 const DRAWS_ELITE := true
 
@@ -130,7 +130,7 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	Ink.flat(ci, xf, pool, pc, 0.8)
 	if not Ink.mono:
 		ci.draw_circle(xf * (topc + Vector2(-2, -0.4)), 1.4 * xf.get_scale().abs().x, Color(1, 1, 1, 0.5 + 0.4 * glow))
-	S.sap_glow(ci, xf, topc + Vector2(0, -6), 34.0, glow)
+	S.sap_glow(ci, xf, topc + Vector2(0, -4), 24.0, glow)
 	var splinter := PackedVector2Array([Vector2(-27, -80), Vector2(-25, -96), Vector2(-21, -88), Vector2(-17, -104), Vector2(-12, -86), Vector2(-7, -92), Vector2(-4, -84), Vector2(-8, -78)])
 	Ink.part(ci, xf, splinter, bp, 2.0, 1.0, 0.3)
 	Ink.brush(ci, xf, PackedVector2Array([Vector2(-21, -82), Vector2(-17, -100)]), 1.0, bp["ombre"].darkened(0.3))
@@ -142,13 +142,13 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	if glow > 0.0 and not Ink.mono:
 		for i in 4:
 			var u := fposmod(t * 1.1 + i / 4.0, 1.0)
-			var q := topc + Vector2((i - 1.5) * 7.0 + sin(t * 3.0 + i) * 2.0, -6.0 - u * 30.0)
+			var q := topc + Vector2((i - 1.5) * 7.0 + sin(t * 3.0 + i) * 2.0, -6.0 - u * 20.0)
 			ci.draw_circle(xf * q, (2.4 - 1.4 * u) * xf.get_scale().abs().x, Color(S.sap(), (1.0 - u) * kk))
 	if rel > 0.0 and not Ink.mono:
 		var u := 1.0 - rel
 		for i in 10:
 			var a := -PI * (0.05 + 0.9 * i / 9.0)
-			var q := topc + Vector2(cos(a) * (8.0 + 40.0 * u), sin(a) * (6.0 + 26.0 * u) + 30.0 * u * u)
+			var q := topc + Vector2(cos(a) * (8.0 + 26.0 * u), sin(a) * (6.0 + 16.0 * u) + 22.0 * u * u)
 			ci.draw_circle(xf * q, (2.6 - 1.2 * u) * xf.get_scale().abs().x, Color(S.sap(), rel))
 	if elite:
 		var rim := PackedVector2Array()
@@ -194,4 +194,4 @@ static func _pocket(ci: CanvasItem, xf: Transform2D, c: Vector2, r: float, glow:
 		Ink.brush(ci, xf, lip, 2.2, bark()["ombre"].darkened(0.2), 1.0, 1.0)
 		ci.draw_circle(xf * (c + Vector2(-r * 0.35, -r * 0.4)), r * 0.2 * xf.get_scale().abs().x, Color(1, 1, 1, 0.45 + 0.35 * glow))
 		if glow > 0.0:
-			Ink.halo(ci, xf * c, r * 2.2 * xf.get_scale().abs().x, lit, glow * (0.8 + 0.2 * sin(t * 6.0)))
+			Ink.halo(ci, xf * c, r * 1.7 * xf.get_scale().abs().x, lit, glow * (0.8 + 0.2 * sin(t * 6.0)))
