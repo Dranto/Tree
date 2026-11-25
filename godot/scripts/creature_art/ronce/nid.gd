@@ -16,6 +16,8 @@ const HEIGHT := 60.0
 ## L'élite : collier et liseré dessinés ici (contrat moteur), collier à la taille de la poche.
 const DRAWS_ELITE := true
 const NECK := Vector2(0, -26)
+## Ancré, il ne suit pas la cible : une seule direction de regard à cuire.
+const LOOKS := false
 
 ## Tiges arquées : pied gauche, pied droit, hauteur de l'arche, devant (true) ou derrière.
 const CANES := [
