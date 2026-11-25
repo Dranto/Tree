@@ -190,8 +190,10 @@ static func release(set_key: String) -> void:
 		sets.erase(set_key)
 
 
+## Rend toutes les images et le matériau (fin de partie : rien ne doit rester en mémoire à la sortie).
 static func clear() -> void:
 	sets.clear()
+	_material = null
 	_pending.clear()
 	_failed.clear()
 	bytes = 0

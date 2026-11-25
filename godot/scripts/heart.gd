@@ -172,6 +172,11 @@ func _ready() -> void:
 	main.hud.get_parent().add_child(bar)
 
 
+## La partie se ferme (retour au titre, sortie) : les images cuites des lieux sont rendues.
+func _exit_tree() -> void:
+	LieuxBake.clear()
+
+
 func is_purified() -> bool:
 	return state == "purifie"
 
