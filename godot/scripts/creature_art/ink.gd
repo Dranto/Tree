@@ -24,16 +24,18 @@ const INK := 0.72
 ## Pose courante : éclair d'un coup reçu (0 → 1), silhouette noire, niveaux de gris.
 static var flash := 0.0
 static var mono := false
+## Couleur de la silhouette (mono) : noir par défaut, blanc pour les silhouettes cuites du héros.
+static var mono_col := Color.BLACK
 
 
 static func encre() -> Color:
-	return Color.BLACK if mono else Art.bc("encre")
+	return mono_col if mono else Art.bc("encre")
 
 
 ## Couleur finale d'un remplissage (éclair blanc chaud du coup reçu).
 static func shade(col: Color) -> Color:
 	if mono:
-		return Color.BLACK
+		return mono_col
 	if flash > 0.0:
 		return col.lerp(Art.c("danger_eclair"), 0.8 * flash)
 	return col

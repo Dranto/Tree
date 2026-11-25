@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Planche de direction du « Bestiaire d'herbier » (refonte des personnages, vague 0) :
 #   planche_avant_apres.png (2560×1440), heros_evolution.png (2560×1440), scene_avant_apres.png (+ scene_avant, scene_apres, scene_zoom),
-#   marche_annonce.gif. Rien n'est comparé : c'est une planche à regarder.
+#   marche_annonce.gif, heros_jeu.png et heros_jeu.gif (le héros tel que le jeu le dessine). Rien n'est comparé : c'est une planche à regarder.
 #
 #   tools/bestiaire-planche.sh [DOSSIER]   # par défaut : godot/tests/bestiaire/out/
 set -euo pipefail
@@ -23,6 +23,13 @@ rm -rf "$AF"
 run --xvfb --audio-driver Dummy --resolution 1280x720 -s res://tests/bestiaire/armes.gd -- --gif "$AF"
 ffmpeg -loglevel error -y -framerate 24 -i "$AF/%03d.png" \
   -vf "split[a][b];[a]palettegen=max_colors=256:stats_mode=diff[p];[b][p]paletteuse=dither=sierra2_4a" "$OUT/heros_armes.gif"
+echo "== Héros en jeu (dessin cuit, selon le build)"
+run --xvfb --audio-driver Dummy --resolution 2560x1440 -s res://tests/bestiaire/heros_jeu.gd -- "$OUT/heros_jeu.png"
+HF="$OUT/heros_jeu_images"
+rm -rf "$HF"
+run --xvfb --audio-driver Dummy --resolution 1280x720 -s res://tests/bestiaire/heros_jeu.gd -- --gif "$HF"
+ffmpeg -loglevel error -y -framerate 24 -i "$HF/%03d.png" \
+  -vf "split[a][b];[a]palettegen=max_colors=256:stats_mode=diff[p];[b][p]paletteuse=dither=sierra2_4a" "$OUT/heros_jeu.gif"
 echo "== Scène de combat"
 run --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1920x1080 res://tests/bestiaire/scene.tscn -- --seed=1234 --out="$OUT"
 echo "== GIF"
