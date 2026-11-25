@@ -29,11 +29,11 @@ for b in ${BOSSES//,/ }; do
   [ -f "$a/000.png" ] || continue
   if [ -n "$OTHER" ] && [ -f "$DEST/avant/$b/000.png" ]; then
     ffmpeg -loglevel error -y -framerate 30 -i "$DEST/avant/$b/%03d.png" -framerate 30 -i "$a/%03d.png" \
-      -filter_complex "[0]scale=560:-1:flags=lanczos[l];[1]scale=560:-1:flags=lanczos[r];[l][r]hstack,split[a][b];[a]palettegen=max_colors=160[p];[b][p]paletteuse=dither=sierra2_4a" \
+      -filter_complex "[0]scale=440:-1:flags=lanczos[l];[1]scale=440:-1:flags=lanczos[r];[l][r]hstack,fps=20,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
       -loop 0 "$DEST/$b.gif"
   else
     ffmpeg -loglevel error -y -framerate 30 -i "$a/%03d.png" \
-      -vf "scale=720:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=160[p];[b][p]paletteuse=dither=sierra2_4a" \
+      -vf "scale=640:-1:flags=lanczos,fps=20,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
       -loop 0 "$DEST/$b.gif"
   fi
 done
