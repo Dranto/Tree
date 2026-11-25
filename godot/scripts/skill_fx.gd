@@ -9,6 +9,8 @@
 class_name SkillFx
 extends Node2D
 
+const Content = preload("res://scripts/content.gd")
+
 ## Au plus autant d'effets à la fois (les plus anciens partent d'abord).
 const MAX_EFFECTS := 48
 
@@ -18,7 +20,11 @@ const DUREE := {
 	"nova": 0.6, "fouet": 0.34, "racines": 0.6, "volee": 0.24, "saignee": 0.7,
 	"cloud": 5.0, "bloom": 1.0, "chute": 1.1,
 	"vesse": 9.0, "essaim": 0.3, "eclosion": 0.7,
+	"relache": 0.24, "pret": 0.5,
 }
+## Esquive : la traînée et les images rémanentes vivent la durée de l'élan plus ESQUIVE_TRAINE,
+## les feuilles soulevées ESQUIVE_FEUILLES.
+const ESQUIVE_FEUILLES := 0.75
 
 ## Vrai pour le nœud du sol, faux pour celui du dessus.
 var sol := false
@@ -26,6 +32,13 @@ var sol := false
 var effects: Array = []
 var twin: SkillFx
 var _dirty := false
+## Recharges vues au pas précédent (id -> secondes) : un lancer (la recharge remonte) pose la
+## relâche, une recharge qui s'achève pose l'éclat « prête ».
+var _seen_cds := {}
+var _last_ready := -10.0
+var _clock := 0.0
+## Budget d'éclats de l'image en cours (data/feel.json › skills › max_particles).
+static var _parts := 0
 
 
 ## Crée le nœud du dessus et son jumeau du sol (à ajouter sous les acteurs).
@@ -45,7 +58,16 @@ func play(id: String, data := {}) -> Dictionary:
 	e["id"] = id
 	e["t"] = 0.0
 	if not e.has("dur"):
-		e["dur"] = DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, SeveFx.DUREE.get(id, RacineFx.DUREE.get(id, 0.4)))))
+		var tuned = feel_section().get("durations", {}).get(id)
+		e["dur"] = float(tuned) if tuned != null else DUREE.get(id, VentFx.DUREE.get(id, AubeFx.DUREE.get(id, SeveFx.DUREE.get(id, RacineFx.DUREE.get(id, 0.4)))))
+	if id == "relache":
+		e["dur"] = feel("release_time", 0.24)
+	elif id == "pret":
+		e["dur"] = feel("ready_time", 0.5)
+	elif id == "esquive":
+		e["dur"] = float(e.get("dash", 0.16)) + maxf(feel("dash_ghost_life", 0.3), ESQUIVE_FEUILLES)
+		e["ghosts"] = []
+		e["from"] = e["pos"]
 	if Settings.reduce_effects and id in ["graine_depart", "graine_impact"]:
 		return e
 	while effects.size() >= MAX_EFFECTS:
@@ -60,6 +82,8 @@ func _process(delta: float) -> void:
 			queue_redraw()
 		_dirty = not effects.is_empty()
 		return
+	_clock += delta
+	_watch_player()
 	var i := 0
 	while i < effects.size():
 		var e: Dictionary = effects[i]
@@ -70,6 +94,8 @@ func _process(delta: float) -> void:
 				e["pos"] = f.position
 			else:
 				e.erase("follow")
+		if e["id"] == "esquive":
+			_dash_step(e)
 		if e["t"] >= e["dur"]:
 			effects.remove_at(i)
 		else:
@@ -80,8 +106,78 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	_parts = 0
 	for e in effects:
 		draw_effect(self, e, sol)
+
+
+## Réglage de data/feel.json › skills (valeur par défaut si absent).
+static func feel(key: String, default := 0.0) -> float:
+	return float(feel_section().get(key, default))
+
+
+static func feel_section() -> Dictionary:
+	return Content.feel().get("skills", {})
+
+
+## Quantité d'éclats d'un effet : divisée par trois avec « réduire les effets » (au moins un).
+static func amount(n: int) -> int:
+	return maxi(1, n / 3) if Settings.reduce_effects else n
+
+
+## Images rémanentes d'une esquive, et feuilles qu'elle soulève (reduce : « réduire les effets »).
+static func ghost_count(reduce := Settings.reduce_effects) -> int:
+	var n := int(feel("dash_ghosts", 3))
+	return maxi(1, n / 3) if reduce else n
+
+
+static func leaf_count(reduce := Settings.reduce_effects) -> int:
+	var n := int(feel("dash_leaves", 8))
+	return maxi(1, n / 3) if reduce else n
+
+
+## Prend jusqu'à n éclats dans le budget de l'image (plafond global, voir max_particles).
+static func _take(n: int) -> int:
+	var left := int(feel("max_particles", 140)) - _parts
+	var got := clampi(n, 0, maxi(left, 0))
+	_parts += got
+	return got
+
+
+## Surveille les recharges du Porte-Graine (le nœud parent est la scène de jeu) : chaque lancer
+## pose une relâche dans la couleur de l'élément, chaque longue recharge qui s'achève un éclat
+## « prête » sur le héros. Rien n'est écrit dans le jeu.
+func _watch_player() -> void:
+	var m = get_parent()
+	if m == null or not ("player" in m) or m.player == null or not is_instance_valid(m.player):
+		return
+	var p = m.player
+	var min_cd := feel("ready_min_cooldown", 2.5)
+	for id in p.cds:
+		var now: float = p.cds[id]
+		var was: float = _seen_cds.get(id, now)
+		_seen_cds[id] = now
+		# Un lancer remet la recharge à plein (player.cast) ; une recharge retouchée par un effet ne compte pas.
+		if now > was + 0.04 and now >= float(p.skill_cd.get(id, 0.0)) * 0.95:
+			play("relache", {"pos": p.position, "dir": p.aim, "follow": p, "skill": id,
+				"col": Art.ec(Art.ELEMENT_DE_COMPETENCE.get(id, "seve"))})
+		elif was > 0.0 and now <= 0.0 and id in p.bar and float(p.skill_cd.get(id, 0.0)) >= min_cd \
+				and _clock - _last_ready >= feel("ready_gap", 0.2) and p.hp > 0.0:
+			# Plusieurs compétences prêtes ensemble : un seul éclat.
+			_last_ready = _clock
+			play("pret", {"pos": p.position, "follow": p, "skill": id,
+				"col": Art.ec(Art.ELEMENT_DE_COMPETENCE.get(id, "seve"))})
+
+
+## Esquive : pendant l'élan, une image rémanente à intervalles réguliers (ghost_count en tout).
+func _dash_step(e: Dictionary) -> void:
+	var dash: float = e.get("dash", 0.16)
+	var ghosts: Array = e["ghosts"]
+	var n := ghost_count()
+	if ghosts.size() < n and e["t"] >= dash * (ghosts.size() + 0.5) / n and e["t"] <= dash + 0.02:
+		ghosts.append({"pos": e["pos"], "t": e["t"]})
+	if e["t"] <= dash:
+		e["to"] = e["pos"]
 
 
 ## Dessine un effet à son instant e["t"]. sol : la partie au sol (vrai) ou celle du dessus (faux).
@@ -134,6 +230,13 @@ static func draw_effect(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 				_essaim(ci, e, k)
 		"eclosion":
 			_eclosion(ci, e, k, on_ground)
+		"esquive":
+			_esquive(ci, e, on_ground)
+		"relache":
+			if not on_ground:
+				_relache(ci, e, k)
+		"pret":
+			_pret(ci, e, k, on_ground)
 
 
 # --- Graines ---
@@ -189,8 +292,8 @@ static func _nova(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> v
 	var col := Art.ec("epine")
 	var clair := Art.ec("epine", "clair")
 	var sombre := Art.ec("epine", "sombre")
-	var grow := 0.12   # anticipation : la couronne se forme
-	var hit := 0.45    # fin du coup : les épines sont au bord
+	var grow := 0.18 * feel("anticipation", 1.0)   # anticipation : la couronne se serre puis se forme
+	var hit := grow + 0.3    # fin du coup : les épines sont au bord
 	var n := 18
 	if on_ground:
 		# Disque balayé et fissures qui rayonnent jusqu'au bord.
@@ -205,11 +308,16 @@ static func _nova(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> v
 			ci.draw_polyline(PackedVector2Array([p + d * 16.0, mid, p + d * rad * 0.95]), Color(sombre, 0.55 * a), Art.TRAIT_FIN, true)
 		return
 	if k < grow:
-		# Les épines sortent de la capuche et se dressent en couronne.
-		var g := Anim.ease_out_back(k / grow)
+		# Les épines sortent de la capuche, se serrent contre le héros qui tremble (la tension
+		# monte), puis se dressent en couronne juste avant de partir.
+		var u := k / grow
+		var g := Anim.ease_out_back(u)
+		var squeeze := sin(u * PI) * 5.0
+		var shake := Vector2(sin(k * 140.0) * 1.5 * u, 0)
 		for i in n:
 			var d := Vector2.from_angle(i * TAU / n)
-			Art._thorn(ci, p + d * 16.0, d, 14.0 * g, clair)
+			Art._thorn(ci, p + shake + d * (16.0 - squeeze), d, 14.0 * g + 4.0 * u, clair)
+		ci.draw_arc(p, 30.0 - 10.0 * u, 0, TAU, 32, Color(Art.c("danger_eclair"), 0.45 * u), 2.0, true)
 		return
 	var g := Anim.ease_out(clampf((k - grow) / (hit - grow), 0.0, 1.0))
 	var rad := lerpf(18.0, r, g)
@@ -217,7 +325,9 @@ static func _nova(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> v
 	# Onde de choc pâle, épaisse au moment du coup.
 	if k < hit + 0.1:
 		var w := Anim.flash((k - grow) / (hit - grow + 0.1))
-		ci.draw_arc(p, rad, 0, TAU, 56, Color(Art.c("danger_eclair"), 0.75 * w), 3.0 + 7.0 * w, true)
+		ci.draw_arc(p, rad, 0, TAU, 56, Color(Art.c("danger_eclair"), 0.8 * w), 3.0 + 9.0 * w, true)
+		# Seconde onde, en retard, plus fine : l'onde a de l'épaisseur.
+		ci.draw_arc(p, rad * 0.78, 0, TAU, 48, Color(clair, 0.5 * w), 2.0 + 3.0 * w, true)
 	for i in n:
 		var d := Vector2.from_angle(i * TAU / n + 0.08 * g)
 		var len := 22.0 * (1.0 - 0.9 * Anim.ease_in(fade))
@@ -247,8 +357,8 @@ static func _fouet(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 	var arc: float = e["arc"]
 	var d: Vector2 = e["dir"]
 	var a0 := d.angle() - arc / 2.0
-	var wind := 0.14   # anticipation
-	var sweep := 0.5   # fin du balayage
+	var wind := 0.2 * feel("anticipation", 1.0)   # anticipation : la liane s'enroule
+	var sweep := 0.52  # fin du balayage
 	var col := Art.ec("epine")
 	var clair := Art.ec("epine", "clair")
 	var vine := Art.ec("racine").darkened(0.1)
@@ -266,6 +376,9 @@ static func _fouet(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 			Art.safe_polygon(ci, pts, Color(col, 0.13 * fade))
 			ci.draw_arc(p, reach, a0, cur, 24, Color(clair, 0.5 * fade), 2.0, true)
 		return
+	if k < wind:
+		_fouet_coil(ci, p, a0, Anim.ease_out(k / wind))
+		return
 	# Angle de la pointe et longueur de la liane selon le temps.
 	var tip_a: float
 	var len: float
@@ -278,7 +391,8 @@ static func _fouet(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 		len = reach * lerpf(0.35, 1.0, Anim.ease_out(minf(s * 1.6, 1.0)))
 	else:
 		var u := (k - sweep) / (1.0 - sweep)
-		tip_a = a0 + arc + 0.15 * sin(u * PI)
+		# Le bout dépasse la fin de l'arc puis revient (relâche), avant que la liane se rétracte.
+		tip_a = a0 + arc + 0.32 * sin(u * PI) * (1.0 - u)
 		len = reach * lerpf(1.0, 0.25, Anim.ease_in(u))
 	# La liane : une courbe qui traîne derrière sa pointe (le milieu est en retard sur le bout).
 	var lag := 0.55 if k < sweep else 0.2
@@ -314,10 +428,16 @@ static func _fouet(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 	if k >= wind and k < sweep:
 		var crack := Anim.flash(absf(s - 0.55) * 4.0)
 		if crack > 0.0:
-			ci.draw_circle(tip, 10.0 * crack, Color(Art.c("danger_eclair"), 0.8 * crack))
-			for i in 4:
-				var la := tdir.angle() + i * PI / 2.0 + 0.4
-				ci.draw_line(tip + Vector2.from_angle(la) * 6.0, tip + Vector2.from_angle(la) * (12.0 + 10.0 * crack), Color(Art.c("danger_eclair"), crack), 2.0, true)
+			ci.draw_circle(tip, 13.0 * crack, Color(Art.c("danger_eclair"), 0.85 * crack))
+			for i in 6:
+				var la := tdir.angle() + i * PI / 3.0 + 0.4
+				var l1 := 14.0 + (18.0 if i % 2 == 0 else 9.0) * crack
+				ci.draw_line(tip + Vector2.from_angle(la) * 6.0, tip + Vector2.from_angle(la) * l1, Color(Art.c("danger_eclair"), crack), 2.5, true)
+	# Claquement : une onde part du bout au moment du coup et s'élargit après.
+	var snap := clampf((k - (wind + (sweep - wind) * 0.5)) / 0.3, 0.0, 1.0)
+	if snap > 0.0 and snap < 1.0:
+		var sp := p + Vector2.from_angle(a0 + arc * 0.62) * reach
+		ci.draw_arc(sp, 8.0 + 30.0 * Anim.ease_out(snap), 0.0, TAU, 28, Color(clair, 0.8 * (1.0 - snap)), 3.0 * (1.0 - snap) + 0.5, true)
 	# Gouttes de sang projetées du bout, qui retombent (saignement posé par le fouet).
 	if k > sweep * 0.8:
 		var u := (k - sweep * 0.8) / (1.0 - sweep * 0.8)
@@ -328,6 +448,29 @@ static func _fouet(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 			Art._drop(ci, q, 3.2 * (1.0 - 0.5 * u), Color(blood, 1.0 - u))
 
 
+## Anticipation du fouet : la liane s'enroule en spirale derrière la main (w : 0 → 1, enroulée),
+## épines rentrées, avant de se détendre d'un coup dans l'arc.
+static func _fouet_coil(ci: CanvasItem, p: Vector2, a0: float, w: float) -> void:
+	var vine := Art.ec("racine").darkened(0.1)
+	var clair := Art.ec("epine", "clair")
+	var back := a0 - 0.9
+	var hand := p + Vector2.from_angle(a0 - 0.3) * 16.0
+	var c := p + Vector2.from_angle(back) * 26.0
+	var pts := PackedVector2Array([hand])
+	for i in range(1, 16):
+		var u := i / 15.0
+		var ang := back + PI * 0.4 + u * TAU * (0.5 + 1.1 * w)
+		pts.append(c + Vector2.from_angle(ang) * (13.0 - 8.0 * u * w) + (hand - c) * (1.0 - u) * (1.0 - w))
+	ci.draw_polyline(pts, Art.c("contour"), 7.0, true)
+	ci.draw_polyline(pts, vine, 4.5, true)
+	ci.draw_polyline(pts, vine.lightened(0.35), 1.5, true)
+	for i in range(3, 15, 3):
+		var dir := (pts[i + 1] - pts[i]).normalized()
+		Art._thorn(ci, pts[i], dir.orthogonal(), 4.0 + 3.0 * (1.0 - w), clair)
+	# La tension monte : un point de lumière au cœur de la spirale.
+	ci.draw_circle(c, 3.0 + 4.0 * w, Color(Art.c("danger_eclair"), 0.5 * w))
+
+
 ## Racines voraces : le sol se fend en cercle (anticipation), des racines noueuses jaillissent
 ## et se referment sur la zone (coup), tiennent en ondulant, puis se rétractent sous terre (fin).
 static func _racines(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> void:
@@ -335,8 +478,8 @@ static func _racines(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 	var r: float = e["r"]
 	var dur: float = e["dur"]
 	var t: float = e["t"]
-	var crack := 0.1    # s : la terre se fend
-	var rise := 0.28    # s : les racines sont dressées
+	var crack := 0.14 * feel("anticipation", 1.0)   # s : la terre se soulève et se fend
+	var rise := crack + 0.18    # s : les racines sont dressées
 	var out := 0.35     # s : retrait final
 	var col := Art.ec("racine")
 	var clair := Art.ec("racine", "clair")
@@ -354,12 +497,25 @@ static func _racines(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 			var q2 := p + d * r * 0.7 * c - d.orthogonal() * 6.0
 			ci.draw_polyline(PackedVector2Array([p + d * 10.0, q1, q2, p + d * r * c]), Color(sombre.darkened(0.3), 0.8 * a), Art.TRAIT_FIN + 0.5, true)
 		return
-	if t < crack:
-		return
 	# Racines : graine fixe par effet (même tirage d'une image à l'autre).
 	var n := clampi(int(r / 14.0), 6, 12)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(e.get("seed", 1))
+	if t < crack:
+		# Anticipation : la terre se soulève en mottes là où chaque racine va sortir, et la pointe
+		# perce. Même tirage que les racines (six nombres par racine, dans le même ordre).
+		var pk := Anim.ease_in(t / crack)
+		for i in n:
+			var a := i * TAU / n + rng.randf_range(-0.25, 0.25)
+			var dist := r * rng.randf_range(0.25, 0.92)
+			for j in 4:
+				rng.randf()
+			var base := p + Vector2.from_angle(a) * dist
+			var shake := Vector2(sin(t * 80.0 + i) * 1.5 * pk, 0)
+			ci.draw_colored_polygon(Art.ellipse(base + shake + Vector2(0, -3.0 * pk), 9.0 * pk + 1.0, 5.0 * pk + 0.5, 10), sombre.lightened(0.1))
+			if pk > 0.5:
+				Art._thorn(ci, base + shake + Vector2(0, -4.0), Vector2.UP, 10.0 * (pk - 0.5), clair)
+		return
 	var hold_k := clampf((t - rise) / maxf(dur - out - rise, 0.01), 0.0, 1.0)
 	for i in n:
 		var a := i * TAU / n + rng.randf_range(-0.25, 0.25)
@@ -389,10 +545,14 @@ static func _racines(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		# Mottes de terre projetées à la sortie.
 		var burst := clampf((t - crack - delay) / 0.2, 0.0, 1.0)
 		if burst < 1.0:
-			for j in 3:
-				var la := -PI / 2.0 + (j - 1) * 0.9
-				var q := base + Vector2.from_angle(la) * 14.0 * burst + Vector2(0, 30.0 * burst * burst)
-				ci.draw_circle(q, 2.5 * (1.0 - burst), sombre.lightened(0.15))
+			for j in amount(5):
+				var la := -PI / 2.0 + (j - 2) * 0.6
+				var q := base + Vector2.from_angle(la) * 24.0 * burst + Vector2(0, 34.0 * burst * burst)
+				ci.draw_circle(q, 3.2 * (1.0 - burst), sombre.lightened(0.15))
+	# Prise : au moment où les racines se referment, un anneau se serre sur la zone.
+	var grab := clampf((t - rise + 0.04) / 0.22, 0.0, 1.0)
+	if grab > 0.0 and grab < 1.0:
+		ci.draw_arc(p, r * lerpf(0.95, 0.45, Anim.ease_out(grab)), 0.0, TAU, 40, Color(clair, 0.85 * (1.0 - grab)), 4.0 * (1.0 - grab) + 1.0, true)
 
 
 ## Volée d'épines : un éventail d'os s'ouvre devant le héros au moment du tir (les épines elles-mêmes
@@ -405,15 +565,30 @@ static func _volee(ci: CanvasItem, e: Dictionary, k: float) -> void:
 	var a := 1.0 - k
 	var g := Anim.ease_out(k)
 	var clair := Art.ec("epine", "clair")
+	var sombre := Art.ec("epine", "sombre")
+	var lantern := p + d * 20.0
+	# Départ : une bouffée claire et un anneau de recul derrière le héros.
+	var burst := clampf(k / 0.35, 0.0, 1.0)
+	if burst < 1.0:
+		ci.draw_circle(lantern, 14.0 * Anim.flash(burst), Color(Art.c("danger_eclair"), 0.85 * (1.0 - burst)))
+		ci.draw_arc(p - d * 6.0, 14.0 + 26.0 * Anim.ease_out(burst), d.angle() + PI - 1.1, d.angle() + PI + 1.1, 16, Color(clair, 0.7 * (1.0 - burst)), 3.0, true)
 	for i in count:
 		var la := d.angle() + ((i / float(maxi(count - 1, 1))) - 0.5) * spread
 		var u := Vector2.from_angle(la)
-		ci.draw_line(p + u * (18.0 + 30.0 * g), p + u * (40.0 + 110.0 * g), Color(clair, 0.45 * a), 2.0, true)
-	# Collerette d'épines qui s'ouvre comme un éventail.
+		ci.draw_line(p + u * (18.0 + 50.0 * g), p + u * (46.0 + 150.0 * g), Color(clair, 0.55 * a), 2.5 * a + 0.5, true)
+	# Collerette d'épines qui s'ouvre comme un éventail en tirant, puis se recharge : de nouvelles
+	# épines repoussent une à une autour de la lanterne.
 	for i in 7:
 		var la := d.angle() + (i / 6.0 - 0.5) * (spread + 0.8) * (0.5 + 0.5 * g)
-		Art._thorn(ci, p + Vector2.from_angle(la) * 16.0, Vector2.from_angle(la), 13.0 * a, Color(clair, a))
-	ci.draw_circle(p + d * 20.0, 8.0 * Anim.flash(k * 1.5), Color(Art.c("danger_eclair"), 0.8 * a))
+		Art._thorn(ci, p + Vector2.from_angle(la) * (16.0 + 10.0 * g), Vector2.from_angle(la), 15.0 * (1.0 - burst), Color(clair, 1.0 - burst))
+	if k > 0.3:
+		var rk := (k - 0.3) / 0.7
+		for i in 5:
+			var gi := clampf(rk * 1.6 - i * 0.15, 0.0, 1.0)
+			if gi <= 0.0:
+				continue
+			var la := d.angle() + (i / 4.0 - 0.5) * 1.4
+			Art._thorn(ci, lantern + Vector2.from_angle(la) * 4.0, Vector2.from_angle(la), 7.0 * Anim.ease_out_back(gi) * (1.0 - Anim.ease_in(clampf((rk - 0.75) * 4.0, 0.0, 1.0))), sombre.lerp(clair, gi))
 
 
 ## Saignée : un anneau rouge sombre se resserre sur le héros (anticipation), les saignements des
@@ -430,7 +605,8 @@ static func _saignee(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		var c := Anim.ease_in(clampf(k / close, 0.0, 1.0))
 		var a := 1.0 - clampf((k - close) / 0.3, 0.0, 1.0)
 		ci.draw_circle(p, r, Color(sombre, 0.18 * a))
-		ci.draw_arc(p, lerpf(r, 24.0, c), 0, TAU, 56, Color(col, 0.75 * a), 5.0, true)
+		ci.draw_circle(p, lerpf(r, 24.0, c), Color(sombre, 0.16 * a * c))
+		ci.draw_arc(p, lerpf(r, 24.0, c), 0, TAU, 56, Color(col, 0.85 * a), 5.0 + 4.0 * c, true)
 		ci.draw_arc(p, r, 0, TAU, 56, Color(clair, 0.35 * a), Art.TRAIT_FIN, true)
 		return
 	# Gouttes entraînées par l'anneau qui se resserre.
@@ -444,7 +620,12 @@ static func _saignee(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		var bk := clampf((k - close * 0.6) / 0.3, 0.0, 1.0)
 		if bk > 0.0 and bk < 1.0:
 			var b := Anim.ease_out(bk)
-			ci.draw_circle(q, 16.0 * b, Color(clair, 0.5 * (1.0 - bk)))
+			ci.draw_circle(q, 22.0 * b, Color(clair, 0.55 * (1.0 - bk)))
+			# Étoile de sang : six pointes qui jaillissent du Flétri.
+			for i in 6:
+				var sd := Vector2.from_angle(i * TAU / 6.0 + 0.3)
+				var sn := sd.orthogonal() * 4.0 * (1.0 - bk)
+				ci.draw_colored_polygon(PackedVector2Array([q + sn, q + sd * 30.0 * b, q - sn]), Color(col, 0.9 * (1.0 - bk)))
 			for i in 7:
 				var la := i * TAU / 7.0 - PI / 2.0
 				var dq: Vector2 = q + Vector2.from_angle(la) * 24.0 * b + Vector2(0, 14.0 * bk * bk)
@@ -453,16 +634,27 @@ static func _saignee(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		if fk > 0.0 and fk < 1.0:
 			var from: Vector2 = q
 			var ctrl: Vector2 = from.lerp(p, 0.5) + (p - from).orthogonal().normalized() * 30.0
+			# Le filet lui-même : un trait sombre le long de la courbe, derrière les gouttes.
+			var head := clampf(fk * 1.4, 0.0, 1.0)
+			var line := PackedVector2Array()
+			for j in 9:
+				var u := lerpf(maxf(head - 0.45, 0.0), head, j / 8.0)
+				line.append(from.lerp(ctrl, u).lerp(ctrl.lerp(p, u), u))
+			ci.draw_polyline(line, Color(sombre, 0.7 * (1.0 - fk)), 2.5, true)
 			for j in 4:
 				var u := clampf(fk * 1.4 - j * 0.12, 0.0, 1.0)
 				if u <= 0.0 or u >= 1.0:
 					continue
 				var pos := from.lerp(ctrl, u).lerp(ctrl.lerp(p, u), u)
 				Art._drop(ci, pos, 3.0, Color(clair, 1.0 - u * 0.5))
-	# Le héros boit : un battement rouge clair à la fin.
+	# Le héros boit : deux battements rouge clair à la fin, et le corps s'empourpre.
 	if k > 0.6:
 		var hk := (k - 0.6) / 0.4
-		ci.draw_arc(p, 18.0 + 16.0 * Anim.ease_out(hk), 0, TAU, 32, Color(clair, 0.8 * (1.0 - hk)), 3.0, true)
+		ci.draw_circle(p, 15.0, Color(clair, 0.35 * Anim.flash(hk * 1.5)))
+		ci.draw_arc(p, 18.0 + 18.0 * Anim.ease_out(hk), 0, TAU, 32, Color(clair, 0.85 * (1.0 - hk)), 3.5, true)
+		if hk > 0.25:
+			var h2 := (hk - 0.25) / 0.75
+			ci.draw_arc(p, 18.0 + 12.0 * Anim.ease_out(h2), 0, TAU, 32, Color(col, 0.7 * (1.0 - h2)), 2.5, true)
 
 
 ## Nuage de spores : des volutes violettes gonflent (apparition), tournent lentement en crachant
@@ -692,3 +884,122 @@ static func _eclosion(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) 
 	if k > 0.6:
 		var hk := (k - 0.6) / 0.4
 		ci.draw_arc(p, 18.0 + 16.0 * Anim.ease_out(hk), 0, TAU, 32, Color(clair, 0.7 * (1.0 - hk)), 3.0, true)
+
+
+# --- Esquive, relâche, compétence prête (jalon Éclat) ---
+
+## Esquive : au sol, une traînée de sève du point de départ jusqu'au héros (elle se resserre et
+## pâlit derrière lui) et 2 ou 3 images rémanentes de sa silhouette qui s'effacent ; au-dessus,
+## des feuilles soulevées au départ qui tournoient puis retombent.
+static func _esquive(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
+	var t: float = e["t"]
+	var dash: float = e.get("dash", 0.16)
+	var from: Vector2 = e.get("from", e["pos"])
+	var to: Vector2 = e.get("to", e["pos"])
+	var d: Vector2 = e.get("dir", Vector2.RIGHT)
+	var seve := Art.ec("seve")
+	var clair := Art.ec("seve", "clair")
+	var trail_k := feel("dash_trail", 1.0)
+	var life := feel("dash_ghost_life", 0.3)
+	if on_ground:
+		# Traînée : un fuseau qui part du départ et s'arrête au héros ; il se retire vers lui.
+		var fade := clampf((t - dash) / 0.22, 0.0, 1.0)
+		var span := to - from
+		if trail_k > 0.0 and fade < 1.0 and span.length() > 4.0:
+			var tail := from.lerp(to, Anim.ease_in(fade))
+			var n := span.orthogonal().normalized()
+			var w := 9.0 * trail_k * (1.0 - fade)
+			var a := 0.5 * (1.0 - fade)
+			ci.draw_colored_polygon(PackedVector2Array([tail, to + n * w, to + d * w * 0.6, to - n * w]), Color(seve, a * 0.55))
+			ci.draw_line(tail, to, Color(clair, a), maxf(2.5 * (1.0 - fade), 1.0), true)
+			# Trois filets de vitesse de part et d'autre.
+			for j in 3:
+				var off := n * (j - 1) * w * 0.9
+				var u := 0.25 + 0.2 * j
+				ci.draw_line(tail.lerp(to, u) + off, to.lerp(tail, 0.15) + off, Color(clair, a * 0.6), 1.2, true)
+		# Images rémanentes : la silhouette du héros, en sève pâle, qui se défait.
+		var facing: float = e.get("facing", d.angle())
+		var ghosts: Array = e.get("ghosts", [])
+		for i in ghosts.size():
+			var g: Dictionary = ghosts[i]
+			var gk := clampf((t - float(g["t"])) / life, 0.0, 1.0)
+			if gk >= 1.0:
+				continue
+			var ga := (0.5 - 0.1 * (ghosts.size() - 1 - i)) * (1.0 - Anim.ease_in(gk))
+			HeroArt.draw_ghost(ci, g["pos"] + Vector2(0, -2.0 * gk), 14.0 * (1.0 + 0.12 * gk), facing, Color(clair.lerp(seve, gk), ga))
+		return
+	# Feuilles soulevées au départ : jaillissent à l'opposé de l'élan, tournoient, retombent.
+	var n_leaves := _take(leaf_count())
+	var lk := clampf(t / ESQUIVE_FEUILLES, 0.0, 1.0)
+	if lk >= 1.0:
+		return
+	var leaf_col := Art.c("joueur_accent").darkened(0.25)
+	var grass := Art.c("decor_vivant").lightened(0.2)
+	for i in n_leaves:
+		var h := fposmod(i * 0.618 + 0.17, 1.0)
+		var la := d.angle() + PI + (h - 0.5) * 2.2
+		var sp := 40.0 + 70.0 * fposmod(i * 0.382 + 0.5, 1.0)
+		var q := from + Vector2.from_angle(la) * sp * Anim.ease_out(lk) + Vector2(0, -34.0 * sin(lk * PI) * (0.6 + h) + 10.0 * lk)
+		q.x += sin(lk * 9.0 + i) * 5.0 * lk
+		var col := leaf_col if i % 3 != 0 else grass
+		ci.draw_colored_polygon(HeroArt.leaf_pts(q, 4.0 + 1.5 * h, la + lk * (6.0 + 4.0 * h) * (1.0 if i % 2 == 0 else -1.0)), Color(col, 1.0 - lk * lk))
+
+
+## Relâche d'un lancer : à la lanterne, un anneau dans la couleur de l'élément s'ouvre d'un coup,
+## des rais filent vers la visée et une onde courte part au sol sous les pieds. Toutes les
+## compétences l'ont : leur départ se voit même au milieu de la mêlée.
+static func _relache(ci: CanvasItem, e: Dictionary, k: float) -> void:
+	var p: Vector2 = e["pos"]
+	var d: Vector2 = e.get("dir", Vector2.RIGHT)
+	var col: Color = e.get("col", Art.ec("seve"))
+	var hi := col.lerp(Color.WHITE, 0.45)
+	var lantern := p + d * 20.0
+	var g := Anim.ease_out(k)
+	var a := 1.0 - k
+	ci.draw_circle(lantern, 13.0 * Anim.flash(k * 1.6), Color(hi, 0.55 * a))
+	ci.draw_arc(lantern, 6.0 + 22.0 * g, 0.0, TAU, 28, Color(hi, 0.85 * a), 1.0 + 3.0 * a, true)
+	# Onde au sol, écrasée en ellipse sous le héros.
+	var ring := Art.ellipse(p + Vector2(0, 10), 12.0 + 26.0 * g, (12.0 + 26.0 * g) * 0.42, 24)
+	ring.append(ring[0])
+	ci.draw_polyline(ring, Color(col, 0.5 * a), 2.0 * a + 0.5, true)
+	var rays := _take(amount(int(feel("release_rays", 7))))
+	for i in rays:
+		var la := d.angle() + (i / float(maxi(rays - 1, 1)) - 0.5) * 1.3
+		var u := Vector2.from_angle(la)
+		var l0 := 10.0 + 26.0 * g
+		var l1 := l0 + 14.0 * (1.0 - g) + 4.0
+		ci.draw_line(lantern + u * l0, lantern + u * l1, Color(hi, a), 2.0, true)
+
+
+## Compétence de nouveau prête : un anneau dans la couleur de l'élément se resserre sur le héros,
+## puis la lanterne lance un éclat en étoile. Pas d'éclair d'écran : le héros seul s'allume.
+static func _pret(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> void:
+	var p: Vector2 = e["pos"]
+	var col: Color = e.get("col", Art.ec("seve"))
+	var hi := col.lerp(Color.WHITE, 0.5)
+	var close := 0.45
+	if on_ground:
+		var c := Anim.ease_in(clampf(k / close, 0.0, 1.0))
+		ci.draw_arc(p, lerpf(52.0, 18.0, c), 0.0, TAU, 40, Color(hi, 0.75 * (1.0 - c * 0.4)), 3.5, true)
+		if k > close:
+			var u := (k - close) / (1.0 - close)
+			ci.draw_circle(p, 18.0 + 10.0 * Anim.ease_out(u), Color(col, 0.18 * (1.0 - u)))
+		return
+	if k < close:
+		# Quatre lueurs aspirées vers le héros avec l'anneau.
+		var c := Anim.ease_in(k / close)
+		for i in amount(4):
+			var la := i * TAU / 4.0 + 0.6 + c * 1.4
+			ci.draw_circle(p + Vector2.from_angle(la) * lerpf(46.0, 16.0, c), 2.6, Color(hi, 0.9))
+		return
+	var u := (k - close) / (1.0 - close)
+	var a := 1.0 - u
+	var star := p + Vector2(0, -26.0)
+	var s := 6.0 + 16.0 * Anim.ease_out(minf(u * 2.0, 1.0)) * a
+	for i in 4:
+		var la := i * PI / 2.0
+		var dir := Vector2.from_angle(la)
+		ci.draw_colored_polygon(PackedVector2Array([star + dir * s * 1.6, star + dir.orthogonal() * s * 0.28, star - dir * 0.0, star - dir.orthogonal() * s * 0.28]), Color(hi, a))
+	ci.draw_circle(star, 2.5 * a + 1.0, Color(Color.WHITE, a))
+	ci.draw_circle(p, 15.0, Color(hi, 0.3 * a))
+	ci.draw_arc(p, 16.0 + 14.0 * u, 0.0, TAU, 32, Color(hi, 0.9 * a), 3.0 * a + 0.5, true)

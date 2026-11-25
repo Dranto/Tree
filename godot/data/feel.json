@@ -56,6 +56,27 @@
 		"elite_flash": 0.22,
 		"boss_flash": 0.4
 	},
+	"skills": {
+		"_doc": "Compétences et esquive à l'œil (scripts/skill_fx.gd, jalon Éclat D) : purement visuel, ni dégâts, ni recharges, ni portées. Durées en secondes. « Réduire les effets » divise les quantités (images, feuilles, éclats) par trois.",
+		"durations": {
+			"_doc": "Durée de la signature de certaines compétences (l'effet en jeu, lui, a lieu au lancer).",
+			"fouet": 0.44,
+			"volee": 0.36,
+			"nova": 0.68,
+			"saignee": 0.8
+		},
+		"anticipation": 1.0,
+		"release_time": 0.24,
+		"release_rays": 7,
+		"dash_ghosts": 3,
+		"dash_ghost_life": 0.3,
+		"dash_leaves": 8,
+		"dash_trail": 1.0,
+		"ready_min_cooldown": 2.5,
+		"ready_time": 0.5,
+		"ready_gap": 0.2,
+		"max_particles": 140
+	},
 	"world": {
 		"_doc": "Un monde qui réagit (scripts/world_fx.gd) : herbe et fleurs qui se couchent, traces de combat, repos du héros, montée de niveau, greffe ramassée, sanctuaire ravivé. Réglages d'image seulement : aucun chiffre de puissance. Durées en secondes ; distances en pixels du monde. « Réduire les effets » (Settings.reduce_effects) divise par trois les traces, les particules et les brins.",
 		"grass": {

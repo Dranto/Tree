@@ -29,6 +29,7 @@ TESTS=(
   "difficulty|--headless|"
   "direct_screen|--xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0|"
   "draw_batch|--xvfb --audio-driver Dummy|"
+  "eclat_skills|--headless --fixed-fps 60|"
   "enemies|--headless|"
   "falaises|--headless --fixed-fps 60|"
   "feel|--headless|"
@@ -104,6 +105,8 @@ run_one() {
     echo "ok     $name ($((SECONDS - t0)) s)"
   else
     echo "ÉCHEC  $name (code $code, $((SECONDS - t0)) s) : $OUT/$name.log"
+    # Les premières lignes en échec, pour lire la cause dans le journal de la CI sans l'artefact.
+    grep -E "ÉCHEC|SCRIPT ERROR" "$OUT/$name.log" | head -8 | cut -c1-600 | sed 's/^/       /'
   fi
 }
 
