@@ -617,7 +617,7 @@
             {
               "stat": "fire_rate",
               "op": "more",
-              "value": 0.8
+              "value": 0.7
             }
           ]
         }
