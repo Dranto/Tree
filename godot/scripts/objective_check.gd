@@ -5,7 +5,7 @@ extends RefCounted
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 const CONDITION_TYPES := ["nodes", "flag", "flag_count", "keystone", "counter", "hearts"]
-const TARGET_TYPES := ["none", "group", "heart", "arena", "seed", "finale"]
+const TARGET_TYPES := ["none", "group", "heart", "arena", "seed", "finale", "demo_seal"]
 ## Listes du générique remplies par le jeu (data/finale.json › credits › auto).
 const CREDIT_AUTO := ["regions", "bosses"]
 
