@@ -30,7 +30,7 @@ const PULSE_PERIOD := 2.6
 const SEAL := Vector2(0.0, 150.0)
 const SEAL_RADIUS := 58.0
 ## Ligne discrète écrite dans l'herbe près du sceau, après la fin de la démo (une seule).
-const END_LINE := "La suite pousse dans le jeu complet."
+const END_LINE := "La suite pousse dans le jeu complet." # i18n
 
 var main
 ## Tuiles : [pièce, rang, rectangle, nœud ou null].
@@ -309,7 +309,8 @@ class Seal extends Node2D:
 			var k: float = wall.line_k
 			var font := UiTheme.font()
 			var size_px := 22
-			var w := font.get_string_size(END_LINE, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
+			var line := Loc.t(END_LINE)
+			var w := font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
 			var o := Vector2(c.x - w / 2.0, c.y + r + 46.0 + (1.0 - k) * 8.0)
-			draw_string_outline(font, o, END_LINE, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, 7, Color(0.93, 0.95, 0.82, 0.5 * k))
-			draw_string(font, o, END_LINE, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, Color(0.1, 0.14, 0.07, 0.9 * k))
+			draw_string_outline(font, o, line, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, 7, Color(0.93, 0.95, 0.82, 0.5 * k))
+			draw_string(font, o, line, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, Color(0.1, 0.14, 0.07, 0.9 * k))

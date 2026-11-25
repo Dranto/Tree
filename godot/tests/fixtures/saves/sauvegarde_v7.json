@@ -1,0 +1,89 @@
+{
+	"format": "seve-save",
+	"game": {
+		"flags": {
+			"fin_aventure_vue": true,
+			"finale_vaincue": true,
+			"plan_arbre": "ronce:4:3",
+			"ronce_boss_vaincu": true,
+			"ronce_coeur1_purifie": true,
+			"ronce_coeur2_purifie": true,
+			"ronce_coeur3_purifie": true,
+			"ronce_coeur_purifie": true,
+			"spore_boss_vaincu": true,
+			"spore_coeur1_purifie": true,
+			"spore_coeur2_purifie": true,
+			"spore_coeur3_purifie": true,
+			"spore_coeur_purifie": true
+		},
+		"kills": 700,
+		"level": 70,
+		"points": 7,
+		"xp": 87.5
+	},
+	"saved_at": 1763000007,
+	"tree": {
+		"allocated": [
+			"ronce:1:1",
+			"ronce:2:2",
+			"c:ronce-spore:dard:d1",
+			"spore:1:0",
+			"c:spore:graines:a4",
+			"key:cloud"
+		],
+		"choices": {
+			"ronce:4:3": "fouet_sanglant"
+		},
+		"crown": [
+			"greffe_ecorce",
+			"greffe_sillage",
+			"",
+			"greffe_mere"
+		],
+		"inventory": [
+			"greffe_ecorce",
+			"greffe_sillage",
+			"greffe_mere"
+		]
+	},
+	"version": 7,
+	"world": {
+		"elapsed": 4200.0,
+		"flowers": [
+			[
+				10.0,
+				20.0,
+				"ff0000",
+				1.2,
+				5
+			],
+			[
+				-40.5,
+				66.0,
+				"f2c75a",
+				0.9,
+				6
+			],
+			[
+				300.0,
+				-120.0,
+				"7ac0ff",
+				1.0,
+				4
+			]
+		],
+		"ground_grafts": [
+			[
+				10.0,
+				10.0,
+				"greffe_tracante"
+			]
+		],
+		"life_map": "iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAAAAAA7VNdtAAAAU0lEQVR4nO3UQQoAIAhEUe9/Rg8TrSIya4aQCv/atzITybJn0ho6r4DSPlxsmEEsjSFWBiem8E0ImQjP/ESu3UvQs2TuhblK5vaF+GGaAuaz7GAFPgGdbJay+gYAAAAASUVORK5CYII=",
+		"player": {
+			"hp": 55.0,
+			"x": 321.0,
+			"y": -654.0
+		}
+	}
+}

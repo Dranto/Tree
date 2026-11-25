@@ -246,8 +246,8 @@ func slot_control(i: int) -> String:
 ## Nom d'un emplacement pour l'infobulle : « Compétence principale 1 (Clic gauche) ».
 func slot_title(i: int) -> String:
 	if i < MOUSE_SLOTS:
-		return "Compétence principale %d (%s)" % [i + 1, slot_control(i)]
-	return "Compétence secondaire %d (%s)" % [i - MOUSE_SLOTS + 1, slot_control(i)]
+		return Loc.t("Compétence principale %d (%s)") % [i + 1, slot_control(i)]
+	return Loc.t("Compétence secondaire %d (%s)") % [i - MOUSE_SLOTS + 1, slot_control(i)]
 
 
 ## Un emplacement « souris » dont l'entrée est une touche (compétence 2 en mode MOBA) s'affiche comme une touche.
@@ -308,7 +308,7 @@ func _refresh() -> void:
 		else:
 			var cd: float = p.cds.get(id, 0.0)
 			var maxcd: float = maxf(0.01, p.skill_cd.get(id, 1.0))
-			slot.name_label.text = _cached("short:" + id, func(): return Content.skills()[id].get("short", id))
+			slot.name_label.text = _cached("short:" + id, func(): return Loc.data(str(Content.skills()[id].get("short", id))))
 			slot.apply(Widgets.Slot.SKILL, id, cd / maxcd if cd > 0.0 else 0.0, cd, _cached("slot_keys:%d" % i, slot_keys_text.bind(i)), _cached("slot_tip:%d:%s" % [i, id], _skill_tip.bind(i, id)))
 
 	_refresh_attack()
@@ -345,9 +345,9 @@ func _cached(key: String, make: Callable):
 
 
 func _free_tip(i: int) -> String:
-	return "%s : emplacement libre.\nClique pour y placer une compétence acquise, ou glisse-en une dessus." % slot_title(i)
+	return Loc.t("%s : emplacement libre.\nClique pour y placer une compétence acquise, ou glisse-en une dessus.") % slot_title(i)
 
 
 func _skill_tip(i: int, id: String) -> String:
 	var k: Dictionary = Content.skills()[id]
-	return "%s  (%s)\n%s\nClique pour changer de compétence, ou glisse-la sur un autre emplacement." % [k.get("name", id), slot_control(i), k.get("desc", "")]
+	return Loc.t("%s  (%s)\n%s\nClique pour changer de compétence, ou glisse-la sur un autre emplacement.") % [Loc.data(str(k.get("name", id))), slot_control(i), Loc.data(str(k.get("desc", "")))]

@@ -214,6 +214,25 @@ emplacements reçoivent la souris et les infobulles).
   Références visuelles refaites (décors et marais : 0,07 à 0,14 % de pixels, l'anneau du Cœur à un
   autre instant).
 
+## Jalon 12 (tâche G) : fiabilité avant la démo
+
+- **Banc en 1280×800** : `RESOLUTION=1280x800 tools/bench.sh` (et une étape de `benchmark.yml`, mesurée en
+  paires avec la base comme le banc principal). Machine du conteneur du 25/11 (4 cœurs, ~1,8 fois plus lente
+  que la CI) : **1600×900 : 44,0 ms ; 1280×800 : 41,5 ms** (−6 %), le coût du rendu logiciel suit les pixels.
+  La fenêtre 1280×800 se met à l'échelle 0,8 : la vue logique est de 1600×1000.
+- **Où va le temps** (mêmes conditions, 120 Flétris, `--hide`) : Flétris ~19 ms (dont ~7 de scripts),
+  sol ~10 ms, décor ~6 ms, héros ~5 ms, interface ~4 ms, ambiance ~3 ms, fleurs ~3 ms, effets ~1 ms.
+  Scripts : `enemy.Part._draw` 3,8 ms, `main._physics_process` 3,3 ms (dont `_separate` 1,4 et
+  `_push_out_of_bushes` 0,6) pour ~2,9 pas de jeu par image, `player._physics_process` 1,4 ms (le robot du
+  banc), `enemy._physics_process` 1,2 ms.
+- **Essai refusé** : ne réécrire la position d'un Flétri ou du joueur dans `_push_out_of_bushes` que quand
+  un buisson la change. Gain non mesurable (44,0 contre 44,6 ms, bruit de ±5 %) et **les images ne sont plus
+  identiques** (les tests visuels `roncier_purifie` et `bord_aube` bougent de 1,5 et 2,8 % des pixels) : écrire
+  la position, même inchangée, a un effet sur l'interpolation physique. Ne pas y revenir sans les références.
+- Chantiers restants pour passer sous 26 ms sur la CI (aucun n'est sans changer d'image) : interface en texture
+  (estimé à ~2,4 ms sur la CI d'après les 4,3 ms mesurés ici avec `--hide=hud`), mutualiser la grille de `_rebuild_grid` et celle de
+  `_separate` (~0,5 ms), clé de cache des silhouettes en entier plutôt qu'en texte (~0,2 ms).
+
 ## Pistes suivantes
 
 - **Objectif de 20 ms** : atteint à ~2 ms près sur la machine des tests du jalon 7 (22,3 ms, dont

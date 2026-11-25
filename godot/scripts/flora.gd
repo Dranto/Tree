@@ -15,6 +15,7 @@ extends Node2D
 
 const Regions = preload("res://scripts/regions.gd")
 const DrawBatch = preload("res://scripts/draw_batch.gd")
+const Content = preload("res://scripts/content.gd")
 
 const MAX_FLOWERS := 900
 const TREE_COUNT := 260
@@ -57,6 +58,19 @@ var bloom_timer := 0.0
 var landmarks: Array = []
 var _decors: Dictionary = {}
 const BLOOM_STEP := 0.25
+## Délai avant que le carré d'une fleur couchée cesse de la dessiner (secondes) : un carré se
+## redessine au plus tous les LEAN_HOLD, même si dix fleurs se couchent à la suite.
+const LEAN_HOLD := 0.1
+## Fleurs couchées (dictionnaires des fleurs, avec « lean » et « tgt »), dans l'ordre où elles se
+## sont couchées, et leur calque de dessin (tâche F : un monde qui réagit, data/feel.json › world).
+var leaning: Array = []
+var lean_max := 64
+var lean_relax := 1.8
+var lean_shift := 2.2
+var _lean_layer: LeanLayer
+## Carrés à redessiner bientôt : FlowerChunk -> secondes restantes.
+var _lean_dirty: Dictionary = {}
+var _tick := 0.0
 
 
 ## Un arbre du décor, dessiné autour de son pied (l'origine sert au tri en profondeur).
@@ -457,6 +471,9 @@ class FlowerChunk extends Node2D:
 		var b = DecorTree._b
 		var heart := Art.c("or").lightened(0.3)
 		for f in items:
+			# Une fleur couchée est dessinée par LeanLayer, le temps qu'elle se relève.
+			if f.has("hide"):
+				continue
 			var p: Vector2 = f["pos"]
 			var sz: float = f["size"]
 			var n: int = f["petals"]
@@ -464,6 +481,35 @@ class FlowerChunk extends Node2D:
 				b.draw_circle(p + Vector2.from_angle(TAU * i / n) * sz, sz * 0.8, f["color"])
 			b.draw_circle(p, sz * 0.6, heart)
 		b.flush(self)
+
+
+## Les fleurs couchées sous les pas, l'esquive ou un coup (voir Flora.disturb) : dessinées ici, à
+## chaque image, pendant qu'elles se relèvent ; leur carré ne les dessine plus entre-temps. Lot
+## « économe » (petits disques) : au plus « flowers.max » fleurs, jamais celles de tout un carré.
+class LeanLayer extends Node2D:
+	var flora
+	var _b := DrawBatch.new()
+
+	func _init() -> void:
+		_b.lean = true
+
+	func _draw() -> void:
+		var heart := Art.c("or").lightened(0.3)
+		var stem := Art.c("decor_vivant").darkened(0.1)
+		for f in flora.leaning:
+			var p: Vector2 = f["pos"]
+			var l: Vector2 = f["lean"]
+			var sz: float = f["size"]
+			var m := l.length()
+			var head: Vector2 = p + l * sz * flora.lean_shift
+			if m > 0.12:
+				_b.draw_line(p, head, stem, 1.2)
+			var k := 1.0 - 0.22 * minf(m, 1.0)
+			var n: int = f["petals"]
+			for i in n:
+				_b.draw_circle(head + Vector2.from_angle(TAU * i / n) * sz * k, sz * 0.8 * k, f["color"])
+			_b.draw_circle(head, sz * 0.6 * k, heart)
+		_b.flush(self)
 
 
 func _ready() -> void:
@@ -493,6 +539,14 @@ func _ready() -> void:
 		_spawn_landmarks(reg)
 	Game.seed_rng(rng, 1)
 	ground.painted.connect(_on_painted)
+	var cfg: Dictionary = Content.feel().get("world", {}).get("flowers", {})
+	lean_max = int(cfg.get("max", lean_max))
+	lean_relax = float(cfg.get("relax", lean_relax))
+	lean_shift = float(cfg.get("shift", lean_shift))
+	_lean_layer = LeanLayer.new()
+	_lean_layer.flora = self
+	add_child(_lean_layer)
+	set_process(false)
 
 
 func _add_tree(t: DecorTree) -> void:
@@ -624,6 +678,9 @@ func _chunk_for(p: Vector2) -> FlowerChunk:
 		var c := FlowerChunk.new()
 		chunks[key] = c
 		add_child(c)
+		# Les fleurs couchées restent dessinées par-dessus celles de leur carré.
+		if _lean_layer != null:
+			move_child(_lean_layer, get_child_count() - 1)
 	return chunks[key]
 
 
@@ -649,6 +706,7 @@ func _insert(f: Dictionary) -> void:
 		var oc: FlowerChunk = old["chunk"]
 		oc.items.erase(old)
 		oc.queue_redraw()
+		leaning.erase(old)
 
 
 ## Sème des fleurs dans un disque. Avec wave_time > 0, elles éclosent au passage d'une vague de vie
@@ -688,6 +746,8 @@ func export_flowers() -> Array:
 func import_flowers(list: Array) -> void:
 	pending = []
 	flowers = []
+	leaning = []
+	_lean_dirty.clear()
 	for c in chunks.values():
 		c.items = []
 		c.queue_redraw()
@@ -697,3 +757,80 @@ func import_flowers(list: Array) -> void:
 		if not (e is Array) or e.size() < 5:
 			continue
 		_insert({"pos": Vector2(float(e[0]), float(e[1])), "color": Color.from_string(str(e[2]), Color.WHITE), "size": float(e[3]), "petals": int(e[4])})
+
+
+# --- Fleurs couchées (tâche F) ---
+
+## Couche les fleurs du disque (centre, rayon) : elles s'inclinent à l'opposé du centre (ou, avec
+## « dir », dans son sens, à demi), d'autant plus qu'elles sont près, de « force » (1 = couchée
+## d'une demi-hauteur de pétale par taille), puis se relèvent en lean_relax secondes. Seuls les
+## carrés de CHUNK px que touche le disque sont parcourus ; au plus lean_max fleurs couchées.
+func disturb(center: Vector2, radius: float, dir := Vector2.ZERO, force := 1.0) -> void:
+	var a := Vector2i(floori((center.x - radius) / CHUNK), floori((center.y - radius) / CHUNK))
+	var b := Vector2i(floori((center.x + radius) / CHUNK), floori((center.y + radius) / CHUNK))
+	var r2 := radius * radius
+	for cy in range(a.y, b.y + 1):
+		for cx in range(a.x, b.x + 1):
+			var c = chunks.get(Vector2i(cx, cy))
+			if c == null:
+				continue
+			for f in c.items:
+				var p: Vector2 = f["pos"]
+				var d2 := p.distance_squared_to(center)
+				if d2 > r2:
+					continue
+				var fall := 1.0 - sqrt(d2) / radius
+				var away := (p - center).normalized() if d2 > 0.01 else Vector2.RIGHT
+				var tgt := (away + dir * 0.5).normalized() * minf(1.0, force * fall * 1.4)
+				if not f.has("lean"):
+					if leaning.size() >= lean_max:
+						continue
+					f["lean"] = Vector2.ZERO
+					f["tgt"] = tgt
+					leaning.append(f)
+				elif tgt.length() > f["tgt"].length():
+					f["tgt"] = tgt
+	if not leaning.is_empty():
+		set_process(true)
+
+
+## Plante une fleur sans toucher au hasard du monde (celle du Porte-Graine qui se repose).
+func plant(p: Vector2, color: Color, size: float, petals: int) -> void:
+	_insert({"pos": p, "color": color, "size": size, "petals": petals})
+
+
+func _process(delta: float) -> void:
+	var k := 1.0 - exp(-delta / maxf(lean_relax, 0.05))
+	var follow := clampf(delta * 14.0, 0.0, 1.0)
+	# Les carrés ne changent qu'à chaque « tic » : une fleur qui se couche ou se relève attend le suivant.
+	_tick -= delta
+	var tic := _tick <= 0.0
+	if tic:
+		_tick = LEAN_HOLD
+	var done: Array = []
+	for f in leaning:
+		f["tgt"] = f["tgt"] * (1.0 - k)
+		f["lean"] = f["lean"].lerp(f["tgt"], follow)
+		var rested: bool = f["tgt"].length() < 0.03 and f["lean"].length() < 0.05
+		if not tic:
+			continue
+		if rested:
+			done.append(f)
+		elif not f.has("hide"):
+			# Couchée : son carré cesse de la dessiner (ici, par LeanLayer).
+			f["hide"] = true
+			_lean_dirty[f["chunk"]] = true
+	for f in done:
+		leaning.erase(f)
+		f.erase("lean")
+		f.erase("tgt")
+		# Debout : le carré la redessine, ce même instant.
+		if f.has("hide"):
+			f.erase("hide")
+			_lean_dirty[f["chunk"]] = true
+	for c in _lean_dirty.keys():
+		c.queue_redraw()
+	_lean_dirty.clear()
+	_lean_layer.queue_redraw()
+	if leaning.is_empty():
+		set_process(false)

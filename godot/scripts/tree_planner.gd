@@ -23,11 +23,12 @@ const Demo = preload("res://scripts/demo.gd")
 ## Drapeau de Game.flags qui porte le plan : les uid des nœuds prévus, séparés par des virgules.
 const FLAG := "plan_arbre"
 const UNDO_MAX := 50
+## Mots de recherche par type de nœud (sans accents ; traduits avec la langue). # i18n (début)
 const KIND_WORDS := {
 	"root": "origine graine", "small": "noeud", "notable": "notable", "keystone": "cle",
 	"skill": "competence", "mutation": "mutation", "mastery": "maitrise", "withered": "fletri cendre",
 	"attack": "attaque",
-}
+} # i18n (fin)
 const ACCENTS := {
 	"à": "a", "â": "a", "ä": "a", "ç": "c", "é": "e", "è": "e", "ê": "e", "ë": "e", "î": "i", "ï": "i",
 	"ô": "o", "ö": "o", "ù": "u", "û": "u", "ü": "u", "œ": "oe", "’": "'",
@@ -42,6 +43,7 @@ var _undo: Array = []
 ## Nombre de nœuds appris attendu par la pile d'annulation : s'il a changé sans passer par ici
 ## (chargement d'une partie, nouvelle partie), la pile ne vaut plus rien et elle est vidée.
 var _expected := -1
+var _hay_lang := ""
 var _haystacks: PackedStringArray = PackedStringArray()
 
 
@@ -211,10 +213,10 @@ func undo_label() -> String:
 	var n: int = e.get("ids", []).size()
 	match e["type"]:
 		"learn":
-			return "%d nœud(s) appris" % n
+			return Loc.t("%d nœud(s) appris") % n
 		"forget":
-			return "nœud oublié"
-	return "modification du plan"
+			return Loc.t("nœud oublié")
+	return Loc.t("modification du plan")
 
 
 ## Défait le dernier choix : rend les points d'un apprentissage, réapprend un nœud oublié,
@@ -352,8 +354,8 @@ static func diff(before: Dictionary, after: Dictionary) -> Array:
 		if ta == tb:
 			continue
 		out.append({
-			"stat": name, "label": defs[name].get("label", name), "before": a, "after": b,
-			"text": "%s : %s → %s" % [defs[name].get("label", name), ta, tb],
+			"stat": name, "label": Loc.data(str(defs[name].get("label", name))), "before": a, "after": b,
+			"text": Loc.t("%s : %s → %s") % [Loc.data(str(defs[name].get("label", name))), ta, tb],
 		})
 	return out
 
@@ -362,7 +364,7 @@ static func diff(before: Dictionary, after: Dictionary) -> Array:
 static func format_stat(name: String, v: float) -> String:
 	var def: Dictionary = Content.stats().get(name, {})
 	if def.get("percent", false):
-		return Effects.number(v * 100.0, 1) + " %"
+		return Loc.t("%s %%") % Effects.number(v * 100.0, 1)
 	if def.get("round", "") == "floor":
 		return str(int(v))
 	return Effects.number(v, 2 if absf(v) < 10.0 else 1)
@@ -400,22 +402,23 @@ func search(query: String) -> Array:
 
 func _index() -> void:
 	var nodes: Array = game.tree.nodes
-	if _haystacks.size() == nodes.size():
+	if _haystacks.size() == nodes.size() and _hay_lang == Loc.lang():
 		return
+	_hay_lang = Loc.lang()
 	_haystacks = PackedStringArray()
 	var defs := Content.stats()
 	for n in nodes:
-		var parts: Array = [n["name"], KIND_WORDS.get(n["type"], "")]
+		var parts: Array = [SkillTree.node_name(n), Loc.t(KIND_WORDS.get(n["type"], ""))]
 		if n["branch"] >= 0:
-			parts.append(SkillTree.BRANCHES[n["branch"]]["name"])
+			parts.append(Loc.data(SkillTree.BRANCHES[n["branch"]]["name"]))
 		if int(n.get("border", -1)) >= 0:
-			parts.append("frontière " + SkillTree.BRANCHES[n["border"]]["name"])
+			parts.append(Loc.t("frontière %s") % Loc.data(SkillTree.BRANCHES[n["border"]]["name"]))
 		parts.append_array(SkillTree.describe(n))
 		for e in n["effects"]:
 			if e.has("stat"):
-				parts.append(defs.get(e["stat"], {}).get("label", ""))
+				parts.append(Loc.data(str(defs.get(e["stat"], {}).get("label", ""))))
 			elif e.has("skill"):
-				parts.append(Content.skills().get(e["skill"], {}).get("name", ""))
+				parts.append(Loc.data(str(Content.skills().get(e["skill"], {}).get("name", ""))))
 		_haystacks.append(normalize(" | ".join(parts)))
 
 
@@ -434,17 +437,17 @@ func summary(extra: Array = []) -> Dictionary:
 	for name in defs:
 		var v := format_stat(name, float(sim["stats"][name]))
 		var b := format_stat(name, float(base[name]))
-		stats.append({"stat": name, "label": defs[name].get("label", name), "value": v, "base": b, "changed": v != b})
+		stats.append({"stat": name, "label": Loc.data(str(defs[name].get("label", name))), "value": v, "base": b, "changed": v != b})
 	var skills: Array = []
 	for k in Content.skills():
 		if sim["skills"].has(k):
-			skills.append(Content.skills()[k].get("name", k))
+			skills.append(Loc.data(str(Content.skills()[k].get("name", k))))
 	var set := owned()
 	for id in extra:
 		set[id] = true
 	var branches: Array = []
 	for b in SkillTree.BRANCHES:
-		branches.append({"name": b["name"], "color": Color(b["color"]), "count": 0, "total": 0})
+		branches.append({"name": Loc.data(b["name"]), "color": Color(b["color"]), "count": 0, "total": 0})
 	var keystones: Array = []
 	for n in game.tree.nodes:
 		if n["branch"] < 0:
@@ -458,7 +461,7 @@ func summary(extra: Array = []) -> Dictionary:
 				branches[bi]["count"] += 1
 		if set.has(n["id"]):
 			if n["type"] == "keystone":
-				keystones.append({"name": n["name"], "branch": n["branch"]})
+				keystones.append({"name": SkillTree.node_name(n), "branch": n["branch"]})
 	return {
 		"nodes": set.size() - 1, "total": game.tree.nodes.size() - 1, "points": game.points,
 		"stats": stats, "skills": skills, "keystones": keystones, "branches": branches,

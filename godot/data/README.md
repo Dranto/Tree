@@ -506,3 +506,20 @@ SEEDS="1 2 3 4 5 6 7 8 9 10" tools/balance.sh
 ```
 
 Pendant la mesure, le niveau reste figé (mêmes points et même difficulté pour tous les builds) et une mort ne vide pas l'écran : le robot repart sur place avec toute sa vie, et chaque mort compte 10 s de plus dans le temps de jeu. Le score est le nombre d'ennemis vaincus par minute ; `tools/balance.sh` compare les builds d'une même branche (échec si le meilleur dépasse le moins bon de plus de 30 %) puis les branches entre elles (moyenne de chaque branche, échec au-delà de 35 %). `tools/zone.sh --region=<id>` joue une région de bout en bout. Une cible absente de l'arbre est ignorée et signalée.
+
+## Traduction
+
+Les textes des données (champs `name`, `text`, `desc`, `title`, `label`, `short`, `head`, `lines`,
+`map_name`, `phases`, `requires_text`…) restent écrits en français dans les JSON : **on ne réécrit
+jamais un JSON pour la traduction**. `tools/i18n.sh` les lit et les range dans les catalogues
+`godot/locale/` (`tree.pot`, `fr.po` identique à la source, `en.po` à remplir). Chaque nombre d'un
+texte devient `{0}`, `{1}`… dans le catalogue : régler un chiffre dans un JSON ne casse pas sa
+traduction, et le nombre est réécrit à la façon de la langue (1,5 en français, 1.5 en anglais).
+Un champ dont la clé commence par `_` est un commentaire, jamais extrait.
+
+Dans le code, un texte des données s'affiche avec `Loc.data(texte)` ; un texte du code avec `tr()`,
+`Loc.t()` (gabarit `%s`, jamais de concaténation), `Loc.tn()` (pluriel), `Loc.tc()` (contexte) ou
+`Loc.key()` (texte posé dans un Control, qui se traduit lui-même). Un littéral jamais montré se marque
+`# i18n: non`. Après un ajout de texte : `tools/i18n.sh` (la CI échoue sur `tools/i18n.sh --check`
+si les catalogues ne sont pas à jour). `tools/i18n.sh --missing en` liste ce qui reste à traduire.
+Le nom du jeu se lit dans `project.godot` (`Loc.game_name()`), jamais écrit en dur.

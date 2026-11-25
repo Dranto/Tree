@@ -80,8 +80,8 @@ func _signature() -> String:
 func rule_text() -> String:
 	var r: Dictionary = preload("res://scripts/content.gd").respec()
 	if Game.at_sanctuary and bool(r.get("free_at_sanctuary", true)):
-		return "Au sanctuaire : oublier des nœuds et changer de build est gratuit.\n« Nouveau » repart de la graine, « Copier ici » enregistre le build actif."
-	return "Près de la graine (anneaux 1 à %d), oublier est gratuit. Plus loin, cela coûte de l'essence, prise sur le niveau en cours (%d en réserve). Au sanctuaire, tout est gratuit.\n« Nouveau » repart de la graine, « Copier ici » enregistre le build actif." % [int(r.get("free_rings", 3)), Game.essence()]
+		return Loc.t("Au sanctuaire : oublier des nœuds et changer de build est gratuit.\n« Nouveau » repart de la graine, « Copier ici » enregistre le build actif.")
+	return Loc.t("Près de la graine (anneaux 1 à %d), oublier est gratuit. Plus loin, cela coûte de l'essence, prise sur le niveau en cours (%d en réserve). Au sanctuaire, tout est gratuit.\n« Nouveau » repart de la graine, « Copier ici » enregistre le build actif.") % [int(r.get("free_rings", 3)), Game.essence()]
 
 
 func refresh() -> void:
@@ -104,7 +104,8 @@ func refresh() -> void:
 
 
 ## Boutons du panneau, dans l'ordre de lecture, pour la manette (zone « builds » de tree_pad.gd).
-## Les noms se renomment au clavier : pas de clavier virtuel au pad.
+## Les noms se renomment au clavier ; à la manette, avec le bouton « Renommer », présent seulement
+## quand le clavier virtuel de Steam est là (Steam Deck, Big Picture).
 func pad_controls() -> Array:
 	var out: Array = []
 	if _rows == null:
@@ -130,8 +131,12 @@ func _row(i: int) -> Control:
 	name_edit.add_theme_color_override("font_color", UiTheme.GOLD if info["active"] else UiTheme.INK)
 	name_edit.text_submitted.connect(func(t): _rename(i, t, name_edit))
 	name_edit.focus_exited.connect(func(): _rename(i, name_edit.text, null))
+	# Steam Deck : un toucher sur le nom ouvre le clavier flottant de Steam (sans effet ailleurs).
+	name_edit.focus_entered.connect(func(): SteamBridge.show_keyboard(name_edit))
 	_names.append(name_edit)
 	head.add_child(name_edit)
+	if SteamBridge.text_input_available():
+		_button(head, Loc.key("Renommer"), func(): ask_name(i))
 	if info["active"]:
 		var tag := Label.new()
 		tag.text = "actif"
@@ -139,25 +144,25 @@ func _row(i: int) -> Control:
 		head.add_child(tag)
 	else:
 		var cost: int = Game.switch_cost(i)
-		var load_b: Button = _button(head, "Nouveau" if info["empty"] else "Charger", func(): load_build(i))
+		var load_b: Button = _button(head, Loc.key("Nouveau") if info["empty"] else Loc.key("Charger"), func(): load_build(i))
 		if cost > 0:
-			load_b.text += " · %d" % cost
-			load_b.tooltip_text = "Coûte %d essence hors d'un sanctuaire." % cost
+			load_b.text = Loc.t(load_b.text) + " · %d" % cost
+			load_b.tooltip_text = Loc.t("Coûte %d essence hors d'un sanctuaire.") % cost
 		load_b.disabled = cost > Game.essence()
-		_button(head, "Copier ici", func(): copy_here(i))
+		_button(head, Loc.key("Copier ici"), func(): copy_here(i))
 		if not info["empty"]:
-			_button(head, "Vider", func(): clear(i))
+			_button(head, Loc.key("Vider"), func(): clear(i))
 	var detail := Label.new()
 	detail.add_theme_font_size_override("font_size", 13)
 	detail.add_theme_color_override("font_color", DIM)
 	if info["empty"]:
 		detail.text = "Vide"
 	else:
-		var parts := PackedStringArray(["%d nœud(s) appris" % info["nodes"]])
+		var parts := PackedStringArray([Loc.t("%d nœud(s) appris") % info["nodes"]])
 		if info["planned"] > 0:
-			parts.append("%d prévu(s)" % info["planned"])
-		parts.append("%d greffe(s)" % info["grafts"])
-		detail.text = "  ·  ".join(parts)
+			parts.append(Loc.t("%d prévu(s)") % info["planned"])
+		parts.append(Loc.t("%d greffe(s)") % info["grafts"])
+		detail.text = "  ·  ".join(parts) # i18n: non (morceaux déjà traduits)
 	col.add_child(detail)
 	return col
 
@@ -169,6 +174,13 @@ func _button(parent: Node, text: String, action: Callable) -> Button:
 	b.pressed.connect(action)
 	parent.add_child(b)
 	return b
+
+
+## Renommer à la manette : clavier virtuel plein écran de Steam, le nom est pris à la validation.
+func ask_name(i: int) -> bool:
+	return SteamBridge.ask_text(tr("Nom du build"), Game.build_name(i), 24, func(t: String):
+		_rename(i, t, null)
+		refresh())
 
 
 func _rename(i: int, text: String, edit) -> void:
@@ -183,16 +195,16 @@ func _rename(i: int, text: String, edit) -> void:
 func load_build(i: int) -> bool:
 	var cost: int = Game.switch_cost(i)
 	if not Game.switch_build(i):
-		_say("Changer de build ici coûte %d essence : il t'en manque %d. Au sanctuaire, c'est gratuit." % [cost, cost - Game.essence()])
+		_say(Loc.t("Changer de build ici coûte %d essence : il t'en manque %d. Au sanctuaire, c'est gratuit.") % [cost, cost - Game.essence()])
 		return false
 	if panels != null:
 		panels.planner.clear_undo()
 	var info: Dictionary = Game.build_info(i)
-	var text := "Build « %s » chargé" % info["name"]
+	var text := Loc.t("Build « %s » chargé") % info["name"]
 	if cost > 0:
-		text += " (%d essence)" % cost
+		text += Loc.t(" (%d essence)") % cost
 	if info["planned"] > 0:
-		text += " : %d nœud(s) attendent dans le plan" % info["planned"]
+		text += Loc.t(" : %d nœud(s) attendent dans le plan") % info["planned"]
 	_say(text)
 	_autosave()
 	return true
@@ -200,13 +212,13 @@ func load_build(i: int) -> bool:
 
 func copy_here(i: int) -> void:
 	if Game.copy_build_to(i):
-		_say("Build actif copié dans « %s »" % Game.build_name(i))
+		_say(Loc.t("Build actif copié dans « %s »") % Game.build_name(i))
 		_autosave()
 
 
 func clear(i: int) -> void:
 	if Game.clear_build(i):
-		_say("« %s » vidé" % Game.build_name(i))
+		_say(Loc.t("« %s » vidé") % Game.build_name(i))
 		_autosave()
 
 

@@ -51,8 +51,8 @@ var active_build := 0
 var at_sanctuary := false
 ## Libellés des sources de points hors niveau (annonce du HUD).
 const POINT_SOURCES := {
-	"boss": "Boss vaincu", "coeur": "Cœur purifié", "autel": "Autel ravivé",
-	"secret": "Secret découvert", "quete": "Objectif accompli",
+	"boss": "Boss vaincu", "coeur": "Cœur purifié", "autel": "Autel ravivé", # i18n
+	"secret": "Secret découvert", "quete": "Objectif accompli", # i18n
 }
 ## Tirages des greffes (élites, autels sans greffe fixée) : rejouables avec « --seed ».
 var graft_rng := RandomNumberGenerator.new()
@@ -96,8 +96,9 @@ func _ready() -> void:
 	reset()
 
 
-## Vrai quand le jeu tourne en démo (nom convenu au jalon 12) : fonctionnalité d'export « demo »,
-## ou « -- --demo » pour les tests. Voir demo.gd.
+## Vrai dans la démo : preset d'export avec la fonctionnalité « demo » (tools/export.sh démo-*),
+## ou « -- --demo » pour la tester depuis l'éditeur et dans les tests. Seul accès à connaître ;
+## ce que la démo ouvre est dans demo.gd et data/demo.json.
 func is_demo() -> bool:
 	return Demo.active()
 
@@ -142,7 +143,7 @@ func grant_points(n: int, source: String, key := "") -> bool:
 
 ## Libellé d'une source de points (« autel ravivé »…), la source telle quelle si elle est inconnue.
 func point_source_label(source: String) -> String:
-	return str(POINT_SOURCES.get(source, source))
+	return Loc.t(str(POINT_SOURCES.get(source, source)))
 
 
 ## Ajoute une greffe à l'inventaire. Renvoie false si elle n'existe pas ou si elle est déjà possédée.
@@ -272,7 +273,7 @@ func build_name(i: int) -> String:
 	if i < 0 or i >= builds.size():
 		return ""
 	var nm := str(builds[i].get("name", "")).strip_edges()
-	return nm if nm != "" else "Build %d" % (i + 1)
+	return nm if nm != "" else Loc.t("Build %d") % (i + 1)
 
 
 ## L'état vivant, sous la forme d'un emplacement de build.
@@ -319,7 +320,7 @@ func rename_build(i: int, nm: String) -> void:
 	nm = nm.strip_edges().left(24)
 	if i == active_build and not builds[i].has("allocated"):
 		builds[i] = capture_build()
-	if nm == "" or nm == "Build %d" % (i + 1):
+	if nm == "" or nm == Loc.t("Build %d") % (i + 1) or nm == "Build %d" % (i + 1): # i18n: non (nom par défaut en français)
 		builds[i].erase("name")
 	else:
 		builds[i]["name"] = nm
@@ -587,7 +588,7 @@ func refund(id: int, free := false) -> bool:
 # --- Nœuds à règles : flétris, mutations, exclusions, maîtrises, greffes ---
 
 ## Raison donnée en démo pour un nœud que seul le jeu complet ouvre (une ligne, voir demo.gd).
-const DEMO_LOCK := "Dans le jeu complet."
+const DEMO_LOCK := "Dans le jeu complet." # i18n
 
 ## Raison pour laquelle un nœud ne peut pas être appris, même voisin d'un nœud appris ("" s'il est libre) :
 ## nœud flétri dont le drapeau n'est pas levé, mutation d'une compétence pas encore acquise,
@@ -595,11 +596,11 @@ const DEMO_LOCK := "Dans le jeu complet."
 func lock_reason(id: int, owned = null) -> String:
 	var n: Dictionary = tree.nodes[id]
 	if Demo.node_closed(n) and not allocated.has(id):
-		return DEMO_LOCK
+		return Loc.t(DEMO_LOCK)
 	var flag: String = n["requires_flag"]
 	if flag != "" and not flags.get(flag, false):
 		var why: String = n["requires_text"]
-		return "Couvert de cendre : " + (why if why != "" else "un évènement du monde doit le libérer.")
+		return Loc.t("Couvert de cendre : %s") % (Loc.data(why) if why != "" else Loc.t("un évènement du monde doit le libérer."))
 	if n["mutates"] == "" and not tree.exclusions.has(id):
 		return ""
 	var set: Dictionary = allocated if owned == null else owned
@@ -610,10 +611,10 @@ func lock_reason(id: int, owned = null) -> String:
 				has = true
 				break
 		if not has:
-			return "Demande la compétence « %s »." % Content.skills().get(n["mutates"], {}).get("name", n["mutates"])
+			return Loc.t("Demande la compétence « %s ».") % Loc.data(str(Content.skills().get(n["mutates"], {}).get("name", n["mutates"])))
 	for other in tree.exclusions.get(id, []):
 		if set.has(other):
-			return "Incompatible avec « %s »." % tree.nodes[other]["name"]
+			return Loc.t("Incompatible avec « %s ».") % SkillTree.node_name(tree.nodes[other])
 	return ""
 
 

@@ -7,3 +7,6 @@ tests/unit-out/
 
 # Identifiants de scripts générés par Godot 4.7 : non suivis.
 *.uid
+
+# GodotSteam (facultatif), posé par tools/steam-fetch.sh : jamais dans le dépôt.
+addons/godotsteam/

@@ -15,7 +15,7 @@ OUT="$ROOT/godot/tests/visual/out"
 SEED=1234
 # Scénarios : « nom » ou « nom:LARGEURxHAUTEUR » (résolution de la fenêtre, 1600x900 par défaut).
 # Seul le premier est joué si TEST_ONLY est défini (ex. TEST_ONLY=galerie tools/visual-tests.sh).
-SCENARIOS=(depart combat galerie competences boss roncier resolution:1280x720 resolution:1920x1080 resolution:2560x1440 resolution:3440x1440 quetes:1280x720 quetes:1920x1080 quetes:2560x1440 quetes:3440x1440 charte:2560x1440 interactions heros:2560x1440 monde attaque regions marais plateaux carte5:1280x720 carte5:1920x1080 falaises vallee finale foret bord menus:1280x720 menus:3440x1440 cumul manette:1280x800 demo:1280x720 demo:1280x800)
+SCENARIOS=(depart combat galerie competences boss roncier resolution:1280x720 resolution:1920x1080 resolution:2560x1440 resolution:3440x1440 quetes:1280x720 quetes:1920x1080 quetes:2560x1440 quetes:3440x1440 charte:2560x1440 interactions heros:2560x1440 monde attaque regions marais plateaux carte5:1280x720 carte5:1920x1080 falaises vallee finale foret bord menus:1280x720 menus:3440x1440 cumul manette:1280x800 langue:1280x720 eclat reaction demo:1280x720 demo:1280x800)
 
 # Durée approximative de chaque scénario (s, machine des tests du 24/11 : 444 s en tout), pour répartir les parts : chaque scénario
 # va à la part la moins chargée, du plus long au plus court. Un scénario absent compte 20 s.
@@ -25,7 +25,8 @@ declare -A WEIGHT=(
   [quetes:1920x1080]=11 [quetes:2560x1440]=7 [quetes:3440x1440]=9 [charte:2560x1440]=5
   [interactions]=18 [heros:2560x1440]=7 [monde]=4 [attaque]=3 [regions]=17 [marais]=21
   [plateaux]=18 [carte5:1280x720]=5 [carte5:1920x1080]=5 [falaises]=19 [vallee]=22 [finale]=10
-  [foret]=21 [bord]=19 [menus:1280x720]=9 [menus:3440x1440]=20 [cumul]=6 [manette:1280x800]=10 [demo:1280x720]=8 [demo:1280x800]=8
+  [foret]=21 [bord]=19 [menus:1280x720]=9 [menus:3440x1440]=20 [cumul]=6 [manette:1280x800]=10
+  [langue:1280x720]=8 [eclat]=7 [reaction]=6 [demo:1280x720]=8 [demo:1280x800]=8
 )
 
 # SHARD=k/n : garde les scénarios de la part k sur n.
@@ -70,6 +71,9 @@ touch "$OUT/.gdignore"   # Godot n'importe pas les captures comme ressources
 
 # Rendu logiciel (llvmpipe) partout, pour que la machine de dev et la CI donnent les mêmes pixels.
 export LIBGL_ALWAYS_SOFTWARE=1
+# Langue du jeu forcée (Settings.forced_locale) : les tests vérifient le texte français, quelle que soit
+# la langue de la machine ou celle choisie dans les options du développeur.
+export TREE_LANG="${TREE_LANG:-fr}"
 # Importe le projet (ressources, cache de scripts) avant de lancer les scénarios.
 # Le journal d'import est gardé dans out/import.log : un import qui plante (vu en CI : segfault,
 # polices non importées, toutes les captures avec du texte en écart) est signalé et refait une fois.
