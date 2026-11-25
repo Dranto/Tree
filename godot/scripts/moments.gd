@@ -271,7 +271,7 @@ func _lift(n: Node2D) -> void:
 		if ci is CanvasItem:
 			entry["mats"].append([ci, ci.material, ci.use_parent_material])
 			# Image cuite (atlas prémultiplié) : sa propre silhouette, lue dans la texture.
-			ci.material = _mat_sprite if ci.material != null and ci.material == Sprites.material() else _mat
+			ci.material = _mat_sprite if ci.material != null and (ci.material == Sprites.material() or ci.material == Sprites.material(true)) else _mat
 		for ch in ci.get_children():
 			if ch is CanvasItem:
 				stack.append(ch)

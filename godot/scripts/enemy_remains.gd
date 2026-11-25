@@ -349,18 +349,10 @@ func _r() -> float:
 ## Les teintes d'état et l'éclair ne comptent pas (la mort a les siennes) ; une pose qui n'est pas
 ## cuite prend l'image du repos.
 static func frame_for(kind: String, o := {}, t := 0.0) -> Dictionary:
-	var a = Sprites.atlases.get(kind)
-	if a == null or a.tex == null:
-		return {}
 	var oo: Dictionary = o.duplicate()
 	oo.erase("flash")
 	oo.erase("tint")
-	if not Sprites.usable(oo):
-		oo = {}
-	var i: int = Sprites.frame_of(a, oo, t)
-	var s: float = Sprites.scale
-	# « shadow » : le prototype (#125) cuit l'ombre au sol dans la case ; elle tombe au dessin.
-	return {"tex": a.tex, "src": a.src(i), "rect": Rect2(-a.anchor / s, a.cell / s), "r": a.base_r, "shadow": true}
+	return Sprites.frame(kind, oo, t)
 
 
 ## Image cuite d'un Flétri tel qu'il est affiché (vide s'il est dessiné autrement), avec son côté.
@@ -387,7 +379,7 @@ func _setup_sprite() -> void:
 	_vc = Vector2(cu.x * side, cu.y)
 	_vr = maxf(radius, (_rect.size.x + _rect.size.y) * 0.25 * (0.85 if sprite.get("shadow", false) else 1.0))
 	# Pieds : en bas du dessin ; la pousse sort là (draw_at ajoute r × 0,35).
-	_feet = _rect.end.y - _rect.size.y * 0.1 - _vr * 0.35 - _vc.y
+	_feet = _rect.end.y - _rect.size.y * 0.08 - radius * 0.35
 	var tone := tone_of(sprite)
 	if tone.a > 0.0:
 		color = tone
@@ -876,7 +868,7 @@ func _seve(ci: CanvasItem, pos: Vector2, time: float) -> void:
 func _draw_sprout(ci: CanvasItem, pos: Vector2, time: float) -> void:
 	if time <= _sprout:
 		return
-	var r := _r()
+	var r := radius   # la pousse garde sa taille d'avant, quelle que soit la taille du dessin
 	var u := (time - _sprout) / SPROUT_LIFE
 	var grow := Anim.pop(clampf(u / 0.45, 0.0, 1.0))
 	var fade := 1.0 - Anim.ease_in(clampf((u - 0.6) / 0.4, 0.0, 1.0))

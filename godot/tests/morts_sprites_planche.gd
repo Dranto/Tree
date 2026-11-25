@@ -1,11 +1,10 @@
 ## Planche animée des morts depuis les sprites cuits (refonte des personnages, tâche M) : les huit
 ## morts d'Éclat B, image par image, en trois lignes :
 ##   1. avant : la silhouette calculée (fletri_art.gd), comme aujourd'hui en jeu ;
-##   2. l'ancien dessin cuit (sprite_bake.gd, ×3) : la mort part de l'image cuite ;
-##   3. les nouvelles créatures (scripts/creature_art/, cuites ici de la même façon) : la mort part de
-##      leur image (le moteur de la tâche A fera cette cuisson en jeu).
+##   2. après : les nouvelles créatures cuites par le moteur (sprite_bake.gd, scripts/creature_art/) :
+##      la mort part de leur image.
 ## Chaque colonne sur le sol de la région de sa créature, à ×2 de la taille du jeu. Rien n'est comparé.
-## Lancer : tools/godot.sh --xvfb --audio-driver Dummy --resolution 1800x840 -s res://tests/morts_sprites_planche.gd -- --out=DOSSIER
+## Lancer : tools/godot.sh --xvfb --audio-driver Dummy --resolution 1800x590 -s res://tests/morts_sprites_planche.gd -- --out=DOSSIER
 extends SceneTree
 
 const C = preload("res://tests/bestiaire/commun.gd")
@@ -20,7 +19,6 @@ const CH := 255
 const TOP := 34
 const LEFT := 120
 const ZOOM := 2.0
-const SS := 2
 
 ## [façon, sorte, élite, surpuissance]
 const CASES := [
@@ -28,7 +26,7 @@ const CASES := [
 	["tranche", "tireur", false, 0.6], ["vent", "menhir", false, 0.0], ["aube", "scarabee", false, 0.0],
 	["racine", "menhir", true, 0.0], ["seve", "tireur", false, 0.0],
 ]
-const ROWS := ["avant", "ancien cuit", "nouveau cuit"]
+const ROWS := ["avant", "après"]
 
 
 func _initialize() -> void:
@@ -50,36 +48,6 @@ func _radius(kind: String) -> float:
 	return 14.0
 
 
-## Cuit le nouveau dessin d'une sorte (pose de repos) comme sprite_bake.gd : ×scale, suréchantillonné,
-## alpha prémultiplié, mipmaps. Rend {tex, src, rect, r, shadow}.
-func _bake_new(kind: String) -> Dictionary:
-	var art = C.art_of(kind)
-	var h: float = art.HEIGHT
-	var s := Sprites.scale
-	var box := Rect2(-1.1 * h, -1.4 * h, 2.2 * h, 1.8 * h)
-	var size := Vector2i((box.size * s).ceil())
-	var vp := SubViewport.new()
-	vp.size = size * SS
-	vp.transparent_bg = true
-	vp.disable_3d = true
-	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
-	root.add_child(vp)
-	var n := Node2D.new()
-	n.scale = Vector2.ONE * s * SS
-	n.position = -box.position * s * SS
-	n.draw.connect(func(): art.draw(n, Vector2.ZERO, h, {"t": 0.3, "look": 0.0}))
-	vp.add_child(n)
-	await RenderingServer.frame_post_draw
-	var img := vp.get_texture().get_image()
-	vp.queue_free()
-	img.resize(size.x, size.y, Image.INTERPOLATE_TRILINEAR)
-	var used := img.get_used_rect().grow(3).intersection(Rect2i(Vector2i.ZERO, size))
-	var crop := img.get_region(used)
-	crop.generate_mipmaps()
-	var rect := Rect2(box.position + Vector2(used.position) / s, Vector2(used.size) / s)
-	return {"tex": ImageTexture.create_from_image(crop), "src": Rect2(Vector2.ZERO, Vector2(used.size)), "rect": rect, "r": _radius(kind), "shadow": true}
-
-
 func _label(text: String, at: Vector2, size := 20) -> void:
 	var l := Label.new()
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
@@ -97,13 +65,10 @@ func _run() -> void:
 		if a.begins_with("--out="):
 			out = a.get_slice("=", 1)
 	DirAccess.make_dir_recursive_absolute(out)
-	Sprites.scale = 3.0
 	var kinds := []
-	var fresh := {}
 	for c in CASES:
-		if not fresh.has(c[1]):
+		if not kinds.any(func(k): return k[0] == c[1]):
 			kinds.append([c[1], _radius(c[1])])
-			fresh[c[1]] = await _bake_new(c[1])
 	await Sprites.bake(root, kinds)
 	var bg := ColorRect.new()
 	bg.color = Color("1d1a17")
@@ -137,8 +102,6 @@ func _run() -> void:
 			r._styled = true
 			if row == 1:
 				r.sprite = Remains.frame_for(c[1], {}, 0.3)
-			elif row == 2:
-				r.sprite = fresh[c[1]]
 			r.position = (Vector2(LEFT + (i + 0.5) * CW, TOP + row * CH + CH * 0.62) - Vector2.ZERO) / ZOOM
 			var holder := Node2D.new()
 			holder.scale = Vector2(ZOOM, ZOOM)

@@ -73,10 +73,8 @@ func _run() -> void:
 	main.player.invuln = 1.0e9
 	main.player.set_physics_process(false)
 	check(Sprites.enabled, "sprites cuits activés (-- --sprites=3)")
-	for i in 30:
-		if Sprites.atlases.has("fletri"):
-			break
-		await _frames(1)
+	# Les sortes d'une région ne sont cuites qu'à l'entrée : on cuit d'avance celles du test.
+	await Sprites.bake(main, ["fletri", "menhir", "tireur", "scarabee", "colosse", "chargeur", "gardien"])
 	check(Sprites.atlases.has("fletri") and Sprites.atlases.has("menhir"), "sortes cuites au chargement")
 
 	print("Restes depuis l'image cuite")
