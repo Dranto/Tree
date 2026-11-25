@@ -5,7 +5,11 @@
 ##   - chaque arme × chaque tenue (6 branches, 15 hybrides, la graine) × trois paliers × repos et coup ;
 ##   - chaque arme × chaque modification seule, et toutes les modifications cumulées, à trois instants ;
 ##   - les tenues sont différentes deux à deux, un hybride diffère de ses deux branches ;
-##   - les armes sont différentes deux à deux, chaque modification change l'image et diffère des autres.
+##   - les armes sont différentes deux à deux, chaque modification change l'image et diffère des autres ;
+##   - en jeu (hero_look.gd, hero_bake.gd, HeroArt) : le build donne la tenue (parts par branche, frontières,
+##     paliers) et l'attaque l'arme ; chaque branche, hybride, palier et arme, avec toutes les
+##     modifications, se cuit sans case vide ni dessin coupé ; chaque pose de l'ancien héros existe ;
+##     la taille à l'écran reste celle voulue.
 ## Rendu réel : tools/godot.sh --xvfb -s res://tests/heros_test.gd
 extends SceneTree
 
@@ -13,6 +17,9 @@ const Bake = preload("res://tests/bestiaire/bake.gd")
 const Esprit = preload("res://scripts/creature_art/heros/esprit.gd")
 const Arme = preload("res://scripts/creature_art/heros/arme.gd")
 const Ink = preload("res://scripts/creature_art/ink.gd")
+const HeroLook = preload("res://scripts/hero_look.gd")
+const HeroBake = preload("res://scripts/hero_bake.gd")
+const SkillTree = preload("res://scripts/skill_tree.gd")
 
 const CW := 340
 const CH := 170
@@ -130,11 +137,137 @@ func _run() -> void:
 	for k in mimgs.size():
 		check(_ink(mimgs[k]) > 300, "%s : silhouette retournée dessinée" % mono[k]["forme"])
 
+	await _en_jeu()
+
 	if failures == 0:
 		print("OK : toutes les combinaisons du héros existent et se voient.")
 	else:
 		print("ÉCHEC : %d vérification(s)" % failures)
 	quit(1 if failures > 0 else 0)
+
+
+## Le héros en jeu : apparence lue sur le build, cuisson, poses de HeroArt.
+func _en_jeu() -> void:
+	print("Le build donne l'apparence (hero_look.gd)")
+	var bi := {}
+	for i in SkillTree.BRANCHES.size():
+		bi[SkillTree.BRANCHES[i]["id"]] = i
+	var nodes := []
+	var mk := func(br: String, ring: int, border: String) -> int:
+		nodes.append({"branch": bi[br], "ring": ring, "border": bi[border] if border != "" else -1})
+		return nodes.size() - 1
+	var r1: int = mk.call("ronce", 1, "")
+	var r2: int = mk.call("ronce", 2, "")
+	var r5: int = mk.call("ronce", 5, "")
+	var r9: int = mk.call("ronce", 9, "")
+	var r12: int = mk.call("ronce", 12, "")
+	var v2: int = mk.call("vent", 2, "")
+	var v3: int = mk.call("vent", 3, "")
+	var fr: int = mk.call("ronce", 3, "vent")
+	var att := {"form": "fouet", "mods": {"saignement": 0.3, "fourche": 1.0, "taille": 0.0}}
+	var none := HeroLook.compute(nodes, [], {"form": "graine", "mods": {}})
+	check(none["voie"].is_empty() and none["evol"] == 0.0 and none["forme"] == "graine" and none["mods"].is_empty(), "sans nœud : la graine, au départ")
+	var lk := HeroLook.compute(nodes, [r1, r2], att)
+	check(lk["voie"] == {"ronce": 1.0} and lk["evol"] == 0.0, "deux nœuds de Ronce : tenue de Ronce, premier palier")
+	check(lk["forme"] == "fouet" and lk["mods"] == ["fourche", "saignement"], "l'arme suit l'attaque (modifications actives, triées)")
+	var ev := []
+	for last in [r5, r9, r12]:
+		ev.append(HeroLook.compute(nodes, [r1, last], att)["evol"])
+	check(ev[0] > 0.0 and ev[0] < ev[1] and ev[1] < ev[2] and ev[2] == 1.0, "paliers des anneaux 4, 8 et 12 : la tenue se renforce (%s)" % [ev])
+	var hy := HeroLook.compute(nodes, [r1, r2, v2, v3], att)
+	check(hy["voie"] == {"ronce": 0.5, "vent": 0.5}, "hybride : parts des branches (%s)" % [hy["voie"]])
+	var bo := HeroLook.compute(nodes, [fr], att)
+	check(bo["voie"] == {"ronce": 0.5, "vent": 0.5}, "un nœud de frontière compte dans ses deux branches")
+	var other := HeroLook.compute(nodes, [r1, r2], {"form": "massue", "mods": {}})
+	check(HeroLook.body_key(other) == HeroLook.body_key(lk) and HeroLook.key(other) != HeroLook.key(lk), "changer d'attaque ne change que l'arme")
+	check(HeroLook.key(hy) != HeroLook.key(lk), "changer de build change l'apparence")
+
+	print("Cuisson (hero_bake.gd) : chaque branche, hybride, palier, chaque arme avec toutes les modifications")
+	var host := Node.new()
+	root.add_child(host)
+	# Échelle fixe (en jeu, elle suit la fenêtre) : ×2,5, celle d'un écran 2560×1440.
+	HeroBake.scale = 2.5
+	var looks := []
+	for br in Esprit.BRANCHES:
+		looks.append({"voie": {br: 1.0}, "evol": 1.0, "forme": Esprit.FORME_DE[br], "mods": []})
+	looks.append({"voie": {}, "evol": 0.0, "forme": "graine", "mods": []})
+	looks.append({"voie": {"ronce": 0.6, "vent": 0.4}, "evol": 0.4, "forme": "echarde", "mods": ["fourche"]})
+	looks.append({"voie": {"seve": 0.5, "aube": 0.5}, "evol": 0.72, "forme": "rayon", "mods": ["refraction", "rosee"]})
+	for f in Arme.FORMES:
+		looks.append({"voie": {"racine": 0.5, "aube": 0.5}, "evol": 1.0, "forme": f, "mods": Arme.ORNEMENTS.duplicate()})
+	var t0 := Time.get_ticks_msec()
+	var worst := 0
+	var heights := {}
+	for look in looks:
+		HeroBake.clear()
+		var sp: Dictionary = await HeroBake.bake(host, look)
+		var what := "%s %.2f %s%s" % [_name(look["voie"]), look["evol"], look["forme"], " + toutes" if look["mods"].size() > 3 else ""]
+		if not check_bool(sp.has("corps") and sp.has("bras"), what + " : cuit"):
+			continue
+		worst = maxi(worst, HeroBake.total_bytes())
+		for layer in ["corps", "bras"]:
+			var a = sp[layer]
+			var img: Image = a.tex.get_image()
+			img.clear_mipmaps()
+			var imgs := {}
+			for anim in a.anims:
+				for i in a.anims[anim]:
+					var cell := img.get_region(Rect2i(a.src(i)))
+					imgs[i] = cell
+					var used := cell.get_used_rect()
+					check(used.size.x * used.size.y > 400, "%s : %s/%s case %d dessinée" % [what, layer, anim, i])
+					# Rien de coupé : le dessin ne touche pas le bord de sa case.
+					var inside := used.position.x > 0 and used.position.y > 0 and used.end.x < cell.get_width() and used.end.y < cell.get_height()
+					check(inside, "%s : %s/%s case %d tient dans sa case (%s dans %s)" % [what, layer, anim, i, used, cell.get_size()])
+					if layer == "corps" and anim == "idle" and i == 0:
+						heights[what] = used.size.y / a.k
+			var moves := "walk" if layer == "corps" else "attack"
+			var seen := false
+			for i in a.anims[moves]:
+				seen = seen or _diff(imgs[i], imgs[a.anims["idle"][0]]) > MIN_DIFF
+			check(seen, "%s : %s animé (%s)" % [what, layer, moves])
+	print("  %d apparences cuites en %d ms, mémoire la plus haute %.1f Mo" % [looks.size(), Time.get_ticks_msec() - t0, worst / 1e6])
+	check(worst < 30e6, "mémoire d'une apparence < 30 Mo")
+	var h0: float = heights.get("graine 0.00 graine", 0.0)
+	check(h0 >= 40.0 and h0 <= 56.0, "taille au départ : %.0f px du jeu (%.0f px en 1080p)" % [h0, h0 * 1.2])
+	for k in heights:
+		check(heights[k] <= 72.0, "%s : taille %.0f px du jeu (≤ 72)" % [k, heights[k]])
+
+	print("Poses de HeroArt (dessin cuit et dessin direct)")
+	HeroBake.clear()
+	HeroArt.sprites = await HeroBake.bake(host, {"voie": {"ronce": 0.7, "vent": 0.3}, "evol": 0.72, "forme": "fouet", "mods": ["fourche", "saignement"]})
+	var poses := [{}, {"walk": 1.0, "step": 1.2}, {"dash": 0.8}, {"a": 0.2}, {"a": 0.52}, {"a": 0.9}, {"cast": 0.7, "cast_col": Art.ec("epine")},
+		{"hurt": 0.7}, {"low": 1.0}, {"invuln": 1.0}, {"home": true}, {"wither": 0.5}, {"wither": 1.0}, {"appear": 0.3}, {"appear": 0.8}, {"morph": 0.5}]
+	for direct in [false, true]:
+		var cells := []
+		for po in poses:
+			for face in [0.4, PI - 0.4, -PI * 0.5]:
+				var st: Dictionary = po.duplicate()
+				st["t"] = 0.4
+				if direct:
+					st["apparence"] = {"voie": {"seve": 1.0}, "evol": 0.4, "forme": "perle", "mods": ["rosee"]}
+				cells.append([st, face])
+		HeroArt.prev_sprites = HeroArt.sprites
+		var big: Image = await b.bake(Vector2i(cells.size() * 120, 140), func(ci):
+			for k in cells.size():
+				HeroArt.draw(ci, Vector2(60 + k * 120, 80), 14.0, cells[k][1], cells[k][0])
+			ci.draw_set_transform_matrix(Transform2D.IDENTITY), 1)
+		HeroArt.prev_sprites = {}
+		for k in cells.size():
+			var img := big.get_region(Rect2i(k * 120, 0, 120, 140))
+			check(_ink(img) > 200, "%s pose %s, regard %.1f : dessinée" % ["direct" if direct else "cuit", cells[k][0].keys(), cells[k][1]])
+	var ghost: Image = await b.bake(Vector2i(120, 140), func(ci):
+		HeroArt.draw_ghost(ci, Vector2(60, 80), 14.0, 0.0, Color(0.5, 1.0, 0.6, 0.5)), 1)
+	check(_ink(ghost) > 200, "silhouette des images rémanentes (cases mono)")
+	HeroArt.sprites = {}
+	HeroBake.clear()
+	HeroBake.scale = 0.0
+	host.queue_free()
+
+
+func check_bool(cond: bool, what: String) -> bool:
+	check(cond, what)
+	return cond
 
 
 ## Dessine les poses dans une grille (une cuisson) et rend une image par case.

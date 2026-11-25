@@ -64,7 +64,9 @@ static func draw_ground(ci: CanvasItem, rect: Rect2, region: String, seed := 7) 
 static func draw_before(ci: CanvasItem, id: String, r: float, pos: Vector2, s: float, o := {}, face := Vector2(1, 0.3).normalized()) -> void:
 	if id == "heros":
 		HeroArt.base = Transform2D(0.0, Vector2(s, s), 0.0, pos)
+		HeroArt.legacy = true
 		HeroArt.draw(ci, Vector2.ZERO, r, face.angle(), o)
+		HeroArt.legacy = false
 		HeroArt.base = Transform2D.IDENTITY
 		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 		return
