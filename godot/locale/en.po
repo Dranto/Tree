@@ -1508,7 +1508,7 @@ msgid "Mutation : prisme vif"
 msgstr "Mutation: quick prism"
 
 #. data/branches/aube.json › aube › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Aube"
 msgstr "Dawn"
 
@@ -2321,7 +2321,7 @@ msgid "Mutation : écorce prompte"
 msgstr "Mutation: prompt bark"
 
 #. data/branches/racine.json › racine › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Racine"
 msgstr "Root"
 
@@ -3351,7 +3351,7 @@ msgid "Mutation : volée resserrée"
 msgstr "Mutation: tight volley"
 
 #. data/branches/ronce.json › ronce › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Ronce"
 msgstr "Bramble"
 
@@ -4163,7 +4163,7 @@ msgstr "Mutation: tenacious vine"
 #. data/branches/seve.json › seve › name
 #. data/branches/seve.json › seve › notable › names
 #. data/finale.json › credits › title
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Sève"
 msgstr "Sap"
 
@@ -5133,7 +5133,7 @@ msgstr "Mutation: far hatching"
 
 #. data/branches/spore.json › spore › name
 #. data/branches/spore.json › spore › notable › names
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Spore"
 msgstr "Spore"
 
@@ -5969,7 +5969,7 @@ msgid "Mutation : tornade rapide"
 msgstr "Mutation: fast tornado"
 
 #. data/branches/vent.json › vent › name
-#. scripts/attack.gd:1271
+#. scripts/attack.gd:1277
 msgid "Vent"
 msgstr "Wind"
 
@@ -7768,97 +7768,97 @@ msgctxt "nom du jeu"
 msgid "Arborescence"
 msgstr "Arborescence"
 
-#. scripts/attack.gd:1118
+#. scripts/attack.gd:1124
 msgid "Attaque de base : %s. %s"
 msgstr "Basic attack: %s. %s"
 
-#. scripts/attack.gd:1122
+#. scripts/attack.gd:1128
 msgid "Attaque : %s"
 msgstr "Attack: %s"
 
-#. scripts/attack.gd:1138
-#. scripts/attack.gd:1299
+#. scripts/attack.gd:1144
+#. scripts/attack.gd:1305
 #. scripts/skill_tree.gd:1028
 #. scripts/tree_ui.gd:930
 msgid "%s : %s"
 msgstr "%s: %s"
 
-#. scripts/attack.gd:1141
+#. scripts/attack.gd:1147
 msgid "En écho, %s : %s"
 msgstr "As an echo, %s: %s"
 
-#. scripts/attack.gd:1147
+#. scripts/attack.gd:1153
 msgid " (sans effet sur : %s)"
 msgstr " (no effect on: %s)"
 
-#. scripts/attack.gd:1147
+#. scripts/attack.gd:1153
 #. scripts/options_panel.gd:423
 msgid ", "
 msgstr ", "
 
-#. scripts/attack.gd:1150
-#. scripts/attack.gd:1330
+#. scripts/attack.gd:1156
+#. scripts/attack.gd:1336
 msgid "Synergie « %s » : %s"
 msgstr "Synergy “%s”: %s"
 
-#. scripts/attack.gd:1177
+#. scripts/attack.gd:1183
 msgid "Attaque : %s → %s"
 msgstr "Attack: %s → %s"
 
-#. scripts/attack.gd:1179
+#. scripts/attack.gd:1185
 msgid " (%s continue en écho)"
 msgstr " (%s carries on as an echo)"
 
-#. scripts/attack.gd:1183
+#. scripts/attack.gd:1189
 msgid "Attaque : + %s, en écho (tire en plus, à sa cadence)"
 msgstr "Attack: + %s, as an echo (fires as well, at its own rate)"
 
-#. scripts/attack.gd:1186
-#. scripts/attack.gd:1204
+#. scripts/attack.gd:1192
+#. scripts/attack.gd:1210
 msgid "Attaque : − %s"
 msgstr "Attack: − %s"
 
-#. scripts/attack.gd:1202
+#. scripts/attack.gd:1208
 msgid "Attaque : + %s (%s)"
 msgstr "Attack: + %s (%s)"
 
-#. scripts/attack.gd:1206
+#. scripts/attack.gd:1212
 msgid "Attaque, %s : %s → %s"
 msgstr "Attack, %s: %s → %s"
 
-#. scripts/attack.gd:1208
+#. scripts/attack.gd:1214
 msgid " (sans effet sur cette forme)"
 msgstr " (no effect on this form)"
 
-#. scripts/attack.gd:1212
+#. scripts/attack.gd:1218
 msgid "Synergie : + %s (%s)"
 msgstr "Synergy: + %s (%s)"
 
-#. scripts/attack.gd:1215
+#. scripts/attack.gd:1221
 msgid "Synergie : − %s"
 msgstr "Synergy: − %s"
 
-#. scripts/attack.gd:1272
+#. scripts/attack.gd:1278
 msgid "une attaque au corps à corps"
 msgstr "a melee attack"
 
-#. scripts/attack.gd:1272
+#. scripts/attack.gd:1278
 msgid "une attaque de zone"
 msgstr "an area attack"
 
-#. scripts/attack.gd:1272
+#. scripts/attack.gd:1278
 msgid "une attaque à projectiles"
 msgstr "a projectile attack"
 
-#. scripts/attack.gd:1283
+#. scripts/attack.gd:1289
 msgid "une forme de %s"
 msgstr "a %s form"
 
-#. scripts/attack.gd:1285
+#. scripts/attack.gd:1291
 msgid "%d formes d'attaque"
 msgstr "%d attack forms"
 
-#. scripts/attack.gd:1332
+#. scripts/attack.gd:1338
 msgid "Synergie possible « %s » : %s"
 msgstr "Possible synergy “%s”: %s"
 
@@ -8064,7 +8064,7 @@ msgctxt "élite : nom puis modificateurs"
 msgid "%s %s"
 msgstr "%s, %s"
 
-#. scripts/enemy.gd:415
+#. scripts/enemy.gd:417
 msgid "Enragé !"
 msgstr "Enraged!"
 
@@ -8080,11 +8080,11 @@ msgstr "Phase 2 of 3"
 msgid "Phase 3 sur 3"
 msgstr "Phase 3 of 3"
 
-#. scripts/fx.gd:238
+#. scripts/fx.gd:306
 msgid "Sève −%d"
 msgstr "Sap −%d"
 
-#. scripts/fx.gd:240
+#. scripts/fx.gd:308
 msgid "étourdi"
 msgstr "stunned"
 
@@ -8172,7 +8172,7 @@ msgstr ""
 "%s\n"
 "Click to change skill, or drag it onto another slot."
 
-#. scripts/main.gd:1124
+#. scripts/main.gd:1128
 msgid "%s vaincu"
 msgstr "%s defeated"
 

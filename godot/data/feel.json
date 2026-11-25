@@ -219,5 +219,56 @@
 		"heart_speed": 0.35,
 		"boss_kill": 1.6,
 		"boss_kill_speed": 0.25
+	},
+	"deaths": {
+		"_doc": "Morts des Flétris selon l'élément du coup final (scripts/enemy_remains.gd, jalon Éclat B) : purement visuel, ni tués, ni expérience, ni butin. Durées en secondes. « Réduire les effets » divise les morceaux par trois.",
+		"max_styled": 14,
+		"sprout_at": 0.7,
+		"overkill": 0.75,
+		"overkill_speed": 1.9,
+		"overkill_more": 0.5,
+		"elite_wave_time": 0.9,
+		"elite_wave_reach": 4.5,
+		"elite_wave_items": 18,
+		"styles": {
+			"_doc": "Par mort : « time » durée de la mort avant la pousse de vie, « pieces » nombre de morceaux (bouffées, éclats, flocons, lueurs, cailloux, gouttes).",
+			"venin": {
+				"time": 0.6,
+				"pieces": 7
+			},
+			"sang": {
+				"time": 0.5,
+				"pieces": 12
+			},
+			"tranche": {
+				"time": 0.6,
+				"pieces": 5
+			},
+			"vent": {
+				"time": 0.6,
+				"pieces": 14
+			},
+			"aube": {
+				"time": 0.6,
+				"pieces": 8
+			},
+			"racine": {
+				"time": 0.8,
+				"pieces": 9
+			},
+			"seve": {
+				"time": 0.7,
+				"pieces": 5
+			}
+		},
+		"streak": {
+			"_doc": "Série de tués rapprochés : chaque tué ajoute « step » (de 0 à 1), tenu « hold » secondes puis retombe de « decay » par seconde ; le halo de sève du héros apparaît au-dessus de « show ».",
+			"step": 0.12,
+			"hold": 0.9,
+			"decay": 0.45,
+			"show": 0.2,
+			"radius": 30.0,
+			"motes": 9
+		}
 	}
 }
