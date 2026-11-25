@@ -35,6 +35,7 @@ TESTS=(
   "draw_batch|--xvfb --audio-driver Dummy|"
   "bestiaire|--xvfb --audio-driver Dummy|"
   "heros|--xvfb --audio-driver Dummy|"
+  "seve_bestiaire|--xvfb --audio-driver Dummy|"
   "sprite_bake|--xvfb --audio-driver Dummy|"
   "remains_sprite|--xvfb --audio-driver Dummy --fixed-fps 60|--sprites=3"
   "paysages_proto|--xvfb --audio-driver Dummy|"
