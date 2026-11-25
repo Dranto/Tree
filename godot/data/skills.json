@@ -9,7 +9,7 @@
     "name": "Nuage de spores", "short": "Spores", "color": "#b48ae0", "cooldown": 9,
     "branch": "spore", "tags": ["zone"],
     "desc": "Nouvelle compétence : un nuage toxique ronge les ennemis à l'endroit visé.",
-    "range": 420, "radius": 120, "duration": 5, "damage": 1.2
+    "range": 420, "radius": 120, "duration": 5, "damage": 1.35
   },
   "bloom": {
     "name": "Floraison", "short": "Floraison", "color": "#7fd36b", "cooldown": 18,
@@ -66,7 +66,7 @@
     "name": "Tornade", "short": "Tornade", "color": "#a4bcd4", "cooldown": 4,
     "branch": "vent", "tags": ["zone"],
     "desc": "Nouvelle compétence : une tornade part vers l'endroit visé, aspire les ennemis qu'elle croise et les blesse sans cesse.",
-    "damage": 3.6, "duration": 4, "speed": 150, "radius": 90, "tick": 0.3, "pull": 110,
+    "damage": 4.2, "duration": 4, "speed": 150, "radius": 90, "tick": 0.3, "pull": 110,
     "count": 1, "orbit": false, "orbit_radius": 130, "orbit_speed": 2.6
   },
   "ruee": {
@@ -80,7 +80,7 @@
     "name": "Appel d'air", "short": "Appel", "color": "#8fb0cc", "cooldown": 7,
     "branch": "vent", "tags": ["zone"],
     "desc": "Nouvelle compétence : un tourbillon aspire les ennemis vers l'endroit visé, puis éclate sur eux.",
-    "damage": 3.2, "range": 420, "radius": 230, "pull_time": 0.6, "root": 0
+    "damage": 3.5, "range": 420, "radius": 230, "pull_time": 0.6, "root": 0
   },
   "liane": {
     "name": "Liane buveuse", "short": "Liane", "color": "#5fc48a", "cooldown": 5,
