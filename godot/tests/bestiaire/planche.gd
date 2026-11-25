@@ -115,7 +115,7 @@ func _row(i: int, c: Dictionary, y: int) -> void:
 	for k in builds.size():
 		var bw := 420 / builds.size()
 		var o := {"t": 0.4, "look": 0.25, "build": builds[k]}
-		var img: Image = await b.bake(Vector2i(bw, 300), func(ci): C.draw_after(ci, id, Vector2(bw * 0.5 - (8 if hero else 0), 268), BIG, o))
+		var img: Image = await b.bake(Vector2i(bw, 300), func(ci): C.draw_after(ci, id, Vector2(bw * 0.5 - (8 if hero else 0), 238 if hero else 268), BIG * (0.85 if hero else 1.0), o))
 		_blit(img, COLS["apres"][0] + k * bw, cy)
 		after_big.append(img)
 		if hero:

@@ -197,11 +197,14 @@ const BESTIAIRE := {
 	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
 	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
 }
-## Feuilles du Porte-Graine selon la branche dominante du build.
+## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
+## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
 const FEUILLES_BUILD := {
-	"aucun": {"clair": Color("6fae58"), "ombre": Color("355e2c"), "reflet": Color("c6ecb0"), "detail": Color("8af5c0")},
-	"ronce": {"clair": Color("5f7d3a"), "ombre": Color("2f3f1f"), "reflet": Color("b9cf8a"), "detail": Color("e0675e")},
-	"seve": {"clair": Color("4fd69a"), "ombre": Color("1f7a56"), "reflet": Color("d6fff0"), "detail": Color("eafff4")},
+	"aucun": {"corps": Color("f3ead2"), "clair": Color("6fae58"), "ombre": Color("355e2c"), "reflet": Color("c6ecb0"), "detail": Color("8af5c0")},
+	"ronce": {"corps": Color("f2cfc4"), "clair": Color("5f7d3a"), "ombre": Color("2f3f1f"), "reflet": Color("b9cf8a"), "detail": Color("e0675e")},
+	"seve": {"corps": Color("c9f7e2"), "clair": Color("4fd69a"), "ombre": Color("1f7a56"), "reflet": Color("d6fff0"), "detail": Color("eafff4")},
+	"racine": {"corps": Color("e6d1a8"), "clair": Color("7a8a3c"), "ombre": Color("3e4a1e"), "reflet": Color("c9d68a"), "detail": Color("8a6a3e")},
+	"vent": {"corps": Color("e4eef7"), "clair": Color("a4bcd4"), "ombre": Color("4e6680"), "reflet": Color("f2f8ff"), "detail": Color("fdf6dc")},
 }
 
 
