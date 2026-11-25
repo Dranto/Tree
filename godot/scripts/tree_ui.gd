@@ -1063,6 +1063,7 @@ func _draw_world(c: CanvasItem) -> void:
 			continue
 		draw_node(c, n, p, r, st, w, level)
 		_draw_seam(c, n, p, r * (1.12 if kind == "keystone" else 1.0), st, w)
+	_draw_demo_thicket(c, z, level, keep)
 	_draw_test_marks(c, "world", 3.0 / z)
 
 
@@ -1263,21 +1264,70 @@ func _draw_ash(c: CanvasItem, n: Dictionary, p: Vector2, r: float, w: float) -> 
 		c.draw_circle(p + Vector2.from_angle(a) * d, r * (0.07 + 0.05 * ((h >> (i * 2)) & 3) / 3.0), Color(ASH, 0.55))
 
 
-## Démo : un nœud que seul le jeu complet ouvre est cerclé d'une ronce sombre à épines (sans texte ;
-## l'infobulle dit seulement « Dans le jeu complet. »).
-func _draw_demo_mark(c: CanvasItem, p: Vector2, r: float, level: int) -> void:
-	var w := maxf(1.4 / zoom, r * 0.12)
-	var rr := r * 1.32 + w
-	c.draw_arc(p, rr, 0.0, TAU, 24, Color(0.05, 0.02, 0.03, 0.8), w * 2.2)
-	c.draw_arc(p, rr, 0.0, TAU, 24, Color(LOCK_COLOR.darkened(0.35), 0.9), w)
-	if level == LOD_OVERVIEW:
+## Démo : les nœuds que seul le jeu complet ouvre disparaissent sous une ronce épaisse, comme les
+## régions fermées du monde (demo_wall.gd) : masses sombres, tiges à épines et baies, d'un nœud fermé
+## à l'autre le long de leurs liens. Dessiné dans la couche fixe (une fois par vue). L'infobulle
+## dit seulement « Dans le jeu complet. ».
+const THICKET_DARK := Color(0.075, 0.04, 0.05, 0.94)
+const THICKET_STEM := Color(0.17, 0.085, 0.1)
+const THICKET_LIGHT := Color(0.3, 0.15, 0.17, 0.85)
+const THICKET_THORN := Color(0.36, 0.19, 0.2)
+const THICKET_BERRY := Color(0.72, 0.17, 0.2)
+
+
+func _draw_demo_thicket(c: CanvasItem, z: float, level: int, keep: Rect2) -> void:
+	if _demo_ids.is_empty():
 		return
+	var tree = Game.tree
+	var closed := {}
+	for id in _demo_ids:
+		closed[id] = true
+	var w := 1.0 / z
+	# Les liens entre deux nœuds fermés : une haie continue.
+	for e in tree.edges:
+		if not (closed.has(e.x) and closed.has(e.y)):
+			continue
+		var a: Vector2 = tree.nodes[e.x]["pos"]
+		var b: Vector2 = tree.nodes[e.y]["pos"]
+		if not (keep.has_point(a) or keep.has_point(b)):
+			continue
+		var r := minf(_radius(tree.nodes[e.x], z), _radius(tree.nodes[e.y], z))
+		c.draw_line(a, b, THICKET_DARK, r * 2.6, true)
+		_thorny_stem(c, a, b, maxf(r * 0.35, 1.5 * w), hash([e.x, e.y]))
+	for id in _demo_ids:
+		var n: Dictionary = tree.nodes[id]
+		var p: Vector2 = n["pos"]
+		if not keep.has_point(p):
+			continue
+		var r := _radius(n, z)
+		var h: int = absi(hash(n["uid"]))
+		c.draw_colored_polygon(Art.ellipse(p, r * 1.75, r * 1.5, 14), THICKET_DARK)
+		for k in 3:
+			var a := float((h >> (k * 4)) & 15) / 16.0 * PI + k * 1.1
+			var dir := Vector2.from_angle(a)
+			_thorny_stem(c, p - dir * r * 1.9, p + dir * r * 1.9, maxf(r * 0.3, 1.5 * w), h + k)
+		if h % 3 == 0:
+			var bp := p + Vector2.from_angle(float(h % 628) / 100.0) * r * 0.9
+			c.draw_circle(bp, maxf(r * 0.2, 1.2 * w), THICKET_BERRY)
+			c.draw_circle(bp - Vector2(1, 1) * r * 0.06, maxf(r * 0.07, 0.6 * w), Color(1, 0.7, 0.7, 0.7))
+
+
+## Tige de ronce légèrement courbée de « a » à « b », épines de part et d'autre.
+func _thorny_stem(c: CanvasItem, a: Vector2, b: Vector2, width: float, salt: int) -> void:
+	var dir := (b - a).normalized()
+	var nm := dir.orthogonal()
+	var bend := (float(absi(salt) % 7) - 3.0) / 3.0 * a.distance_to(b) * 0.12
+	var pts := PackedVector2Array()
 	for i in 6:
-		var a := TAU * i / 6.0 + 0.4
-		var dir := Vector2.from_angle(a)
-		var base := p + dir * rr
-		var tip := base + (dir + dir.orthogonal() * 0.6).normalized() * r * 0.42
-		c.draw_colored_polygon(PackedVector2Array([base - dir.orthogonal() * w * 1.3, base + dir.orthogonal() * w * 1.3, tip]), Color(LOCK_COLOR.darkened(0.2), 0.95))
+		var t := i / 5.0
+		pts.append(a.lerp(b, t) + nm * sin(t * PI) * bend)
+	c.draw_polyline(pts, THICKET_STEM, width, true)
+	c.draw_polyline(pts, THICKET_LIGHT, width * 0.35, true)
+	for i in range(1, 5):
+		var d := (pts[i + 1] - pts[i - 1]).normalized()
+		var o := d.orthogonal() * (1.0 if (i + salt) % 2 == 0 else -1.0)
+		var base := pts[i]
+		c.draw_colored_polygon(PackedVector2Array([base - d * width * 0.7, base + d * width * 0.7, base + (o + d * 0.6).normalized() * width * 2.4]), THICKET_THORN)
 
 
 # --- Couche animée ---
@@ -1566,10 +1616,6 @@ func _draw_life(c: CanvasItem) -> void:
 			var n: Dictionary = tree.nodes[id]
 			if view.has_point(n["pos"]):
 				TreeArt.embers(c, n["pos"], _radius(n, zoom), t, id)
-	for id in _demo_ids:
-		var n: Dictionary = tree.nodes[id]
-		if view.has_point(n["pos"]):
-			_draw_demo_mark(c, n["pos"], _radius(n, zoom), level)
 	_draw_sap(c)
 	_draw_blooms(c)
 	_draw_test_marks(c, "life", 3.0 / zoom)
@@ -1661,8 +1707,14 @@ func layout_labels() -> Array:
 	# Les disques des nœuds importants à l'écran sont des obstacles : aucun texte ne les recouvre.
 	var discs: Array[Rect2] = []
 	# Les petits nœuds appris ou disponibles (ceux sur lesquels on clique) aussi.
+	var hidden := {}
+	for id in _demo_ids:
+		hidden[id] = true
 	for n in tree.nodes:
 		if n["type"] == "small" and _states.get(n["id"], "locked") == "locked":
+			continue
+		# Démo : un nœud sous la ronce n'a pas d'étiquette.
+		if hidden.has(n["id"]):
 			continue
 		var sp := to_screen(n["pos"])
 		var sr := _radius(n, zoom) * zoom

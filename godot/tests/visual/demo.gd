@@ -2,6 +2,7 @@
 ## avant la création du jeu) : la ronce épaisse qui ferme les autres régions (au bord du secteur de
 ## Ronce et autour de l'oasis), l'arbre avec un nœud que seul le jeu complet ouvre, la carte, puis la
 ## fin de la démo : la Mère-Ronce vaincue, le sceau de la graine qui pulse et la ligne dans l'herbe.
+## L'arbre : les nœuds hors démo sous une ronce épaisse, de près et en vue d'ensemble.
 ## Joué à 1280x720 et 1280x800 (captures suffixées de la résolution). Jeu figé.
 extends RefCounted
 
@@ -41,6 +42,11 @@ func run(runner) -> void:
 	await r._frames(3)
 	await r._shot("demo_arbre_" + tag, "arbre")
 	r._hover(-1)
+	# Vue d'ensemble : les parties fermées de l'arbre sous la ronce.
+	main.tree_ui.zoom = 0.3
+	main.tree_ui.cam = Game.tree.nodes[closed]["pos"] * 0.6
+	await r._frames(4)
+	await r._shot("demo_arbre_ensemble_" + tag, "arbre")
 	main.tree_ui.toggle()
 	await r._frames(2)
 	# La carte : les régions fermées voilées, bordées de ronce.
