@@ -94,28 +94,32 @@
       "valeur": 4.7,
       "cible": 10.0
     },
+    "fletri_dl:racine:fletri": {
+      "valeur": 3.4,
+      "cible": 8.0
+    },
     "dalto_perso:protanopie:racine:fletri": {
-      "valeur": 9.6,
+      "valeur": 3.6,
       "cible": 10.0
     },
     "dalto_perso:deuteranopie:racine:fletri": {
-      "valeur": 10.0,
+      "valeur": 4.1,
       "cible": 10.0
     },
     "dalto_perso:tritanopie:racine:fletri": {
-      "valeur": 9.7,
+      "valeur": 4.3,
       "cible": 10.0
     },
     "fletri_dl:racine:ravive": {
-      "valeur": 2.5,
+      "valeur": 1.4,
       "cible": 8.0
     },
     "dalto_perso:protanopie:racine:ravive": {
-      "valeur": 5.8,
+      "valeur": 6.2,
       "cible": 10.0
     },
     "dalto_perso:deuteranopie:racine:ravive": {
-      "valeur": 3.7,
+      "valeur": 3.9,
       "cible": 10.0
     },
     "regions_de:ronce:spore": {
