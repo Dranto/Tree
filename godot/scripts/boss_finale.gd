@@ -103,6 +103,13 @@ var rays: Array = []
 var roots: Array = []
 ## Rejetons annoncés (positions).
 var buds: Array = []
+## Marqué « boss final » : son dernier coup est le plus grand moment du jeu (moments.gd › _final_blow).
+var grand_finale := true
+## Temps du morceau où tombe la frappe annoncée, et où commence l'attaque suivante ; -1 : sans grille.
+var _strike_beat := -1.0
+var _begin_beat := -1.0
+## Attaques qui tombent sur un temps fort (le premier ou le troisième temps de la mesure).
+const HEAVY := ["siphon", "rafale", "tempete", "lumiere", "aurore", "floraison"]
 ## Éclair de la dernière frappe (rafale, lumière), de 0 à FLASH ; -1 : aucun.
 var strike_flash := -1.0
 var flash_kind := ""
@@ -110,6 +117,11 @@ var flash_kind := ""
 var morph_time := -1.0
 ## Seconde forme atteinte (phase 3 entamée).
 var unbound := false
+## Durée de la transformation : TRANSFORM › time, ou tout le drop de la musique (boss_sync.gd).
+var morph_len := 3.6
+## Mue de la phase 2 sur le drop de la musique : durée totale (s) et avancée (0 → 1) ; -1 hors mue.
+var mue_total := 0.0
+var mue_k := -1.0
 
 
 func _setup() -> void:
@@ -125,10 +137,24 @@ func _setup() -> void:
 
 
 func _projectiles_step(delta: float) -> void:
+	var on_drop: bool = music_waiting() and sync.stage == "drop"
 	if morph_time >= 0.0:
 		morph_time += delta
-		if morph_time >= TRANSFORM["time"]:
+		if on_drop:
+			# La transformation dure tout le drop : elle s'achève au retour de la batterie, et le creux
+			# s'effondre au même rythme.
+			morph_len = morph_time + sync.left()
+			if arena.get("collapse_t") != null and arena.collapse_t >= 0.0:
+				arena.collapse_time = maxf(0.5, morph_len)
+		if morph_time >= morph_len and not on_drop:
 			morph_time = -1.0
+	# Mue de la phase 2 : elle se recroqueville et boit la cendre de l'arène pendant le drop.
+	if on_drop and phase == 2:
+		mue_total = maxf(mue_total, sync.left())
+		mue_k = sync.wait_k(mue_total)
+	else:
+		mue_total = 0.0
+		mue_k = -1.0
 	_update_thorns(delta)
 	_update_clouds(delta)
 	_update_roots(delta)
@@ -145,13 +171,20 @@ func _fight_step(delta: float) -> void:
 		if wanted > phase:
 			_enter_phase(wanted)
 			return
-		gap -= delta * cad
+		if _begin_beat >= 0.0 and on_music_grid():
+			gap = (_begin_beat - beats_now()) * beat_len()
+		else:
+			gap -= delta * cad
 		if gap <= 0.0:
+			_begin_beat = -1.0
 			var order: Array = PHASES[phase]["order"]
 			_begin(order[cycle % order.size()])
 			cycle += 1
 	elif stage == "annonce":
-		timer -= delta * cad
+		if _strike_beat >= 0.0 and on_music_grid():
+			timer = (_strike_beat - beats_now()) * beat_len()
+		else:
+			timer -= delta * cad
 		_announce_step()
 		if timer <= 0.0:
 			_strike()
@@ -193,7 +226,7 @@ func form_k() -> float:
 		return 0.0
 	if morph_time < 0.0:
 		return 1.0
-	return Anim.ease_out(clampf(morph_time / (TRANSFORM["time"] * TRANSFORM["morph"]), 0.0, 1.0))
+	return Anim.ease_out(clampf(morph_time / (morph_len * TRANSFORM["morph"]), 0.0, 1.0))
 
 
 # --- Attaques ---
@@ -240,7 +273,7 @@ func _begin(kind: String) -> void:
 						var at: Vector2 = anchor + dir * (DAWN["first"] + DAWN["spacing"] * i)
 						if at.distance_to(arena.center) > arena.radius - ROOTS["radius"] * 0.5:
 							break
-						roots.append({"pos": at, "fuse": LIGHT["annonce"] + DAWN["delay"] + ROOTS["step"] * i, "burst": -1.0})
+						roots.append({"pos": at, "fuse": LIGHT["annonce"] + DAWN["delay"] + ROOTS["step"] * i, "burst": -1.0, "i": i})
 		"racines":
 			_set_timer(ROOTS["annonce"])
 			roots = []
@@ -248,7 +281,7 @@ func _begin(kind: String) -> void:
 				var at: Vector2 = anchor + aim * (ROOTS["first"] + ROOTS["spacing"] * i)
 				if at.distance_to(arena.center) > arena.radius - ROOTS["radius"] * 0.5:
 					break
-				roots.append({"pos": at, "fuse": ROOTS["annonce"] + ROOTS["step"] * i, "burst": -1.0})
+				roots.append({"pos": at, "fuse": ROOTS["annonce"] + ROOTS["step"] * i, "burst": -1.0, "i": i})
 		"rejetons":
 			_set_timer(SPROUTS["annonce"])
 			buds = []
@@ -256,6 +289,25 @@ func _begin(kind: String) -> void:
 			for i in n:
 				var a := aim.angle() + PI + (i - (n - 1) / 2.0) * 0.8
 				buds.append(_in_arena(anchor + Vector2.from_angle(a) * 180.0, 60.0))
+	_sync_announce()
+
+
+## L'annonce qui vient d'être posée tombe sur la grille du morceau : la frappe sur un temps (un temps
+## fort pour les grosses attaques), les racines en doubles croches derrière elle.
+func _sync_announce() -> void:
+	_strike_beat = -1.0
+	if not on_music_grid():
+		return
+	_strike_beat = beat_target(timer, 2.0 if attack in HEAVY else 1.0)
+	var synced := (_strike_beat - beats_now()) * beat_len()
+	timer = synced
+	stage_time = synced
+	if attack == "racines" or attack == "aurore":
+		var step := beat_step(ROOTS["step"])
+		var lead := beat_step(DAWN["delay"]) if attack == "aurore" else 0.0
+		for r in roots:
+			r["fuse"] = synced + lead + step * int(r.get("i", 0))
+			r["total"] = r["fuse"]
 
 
 func _set_timer(v: float) -> void:
@@ -289,6 +341,7 @@ func _announce_step() -> void:
 
 func _strike() -> void:
 	stage = "frappe"
+	_strike_beat = -1.0
 	var p = main.player
 	match attack:
 		"epines":
@@ -348,7 +401,7 @@ func _strike_step(delta: float) -> void:
 		"epines", "tempete":
 			volley_timer -= delta
 			if volleys_left > 0 and volley_timer <= 0.0:
-				volley_timer = THORNS["between"]
+				volley_timer = beat_step(THORNS["between"]) if on_music_grid() else THORNS["between"]
 				var storm := attack == "tempete"
 				var speed: float = THORNS["speed"] * (STORM["thorn_speed"] if storm else 1.0)
 				for dir in thorn_dirs(volleys_left % 2 == 0, STORM["spread"] if storm else 1.0):
@@ -393,6 +446,7 @@ func _end_attack() -> void:
 	attack = ""
 	stage = ""
 	gap = PHASES[phase]["gap"]
+	_begin_beat = beat_target(gap, 1.0) if on_music_grid() else -1.0
 
 
 func _update_thorns(delta: float) -> void:
@@ -473,6 +527,7 @@ func _enter_phase(n: int) -> void:
 func _unbind() -> void:
 	unbound = true
 	morph_time = 0.0
+	morph_len = TRANSFORM["time"]
 	transition = TRANSFORM["time"]
 	_clear_attacks()
 	strike_flash = -1.0
@@ -586,6 +641,9 @@ func _announce_k() -> float:
 
 ## Éveil pendant l'entrée en scène (0 : endormie comme dans le creux, 1 : dressée).
 func _wake_k() -> float:
+	if mue_k >= 0.0:
+		# Mue : elle se replie sur elle-même, puis se redresse d'un coup sur la dernière mesure.
+		return 1.0 - 0.45 * sin(PI * clampf(mue_k * 1.15, 0.0, 1.0))
 	if intro_time <= 0.0:
 		return 1.0
 	return Anim.ease_out(clampf(1.0 - intro / intro_time, 0.0, 1.0))
@@ -601,7 +659,299 @@ func _draw() -> void:
 		lit = COMBO_ARMS[attack][0]
 		lit2 = COMBO_ARMS[attack][1]
 	var die := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
+	var charging := sync != null and music_waiting() and charge >= 0.0
+	if charging:
+		_draw_charge_back()
+		# Elle gonfle sur chaque impulsion et tremble de plus en plus : l'énergie la déborde.
+		var e := charge_energy()
+		var sw := 1.0 + 0.05 * e + 0.05 * e * charge_pulse() + 0.08 * charge_overflow()
+		var h := Vector2(0, -radius * 0.45)
+		draw_set_transform(charge_jitter() + h - h * sw, 0.0, Vector2(sw, sw))
 	draw_colossus(self, Vector2.ZERO, radius, t, phase, _announce_k(), lit, die, _wake_k(), _color, lit2, form_k())
+	if charging:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		_draw_charge_front()
+
+
+func _charge_color() -> Color:
+	return Art.ec("cendre", "clair")
+
+
+## Sa mort : la cendre de son corps s'envole par flocons, la sève jaillit de ses fentes en étincelles,
+## puis, à mesure qu'elle s'efface, des pétales et des lueurs de sève montent de ce qui reste.
+var _die_rng := RandomNumberGenerator.new()
+
+
+func _ready() -> void:
+	super._ready()
+	_die_rng.seed = 2323
+
+
+func _dying_step(_delta: float) -> void:
+	if Settings.reduce_effects:
+		return
+	var k := clampf(dying / death_time, 0.0, 1.0)
+	var h := anchor + Vector2(0, -radius * 0.45)
+	var fx = main.fx
+	for i in 3:
+		var a := _die_rng.randf() * TAU
+		var at := h + Vector2.from_angle(a) * radius * _die_rng.randf_range(0.2, 1.1)
+		fx.glow_mote(at, Vector2(_die_rng.randf_range(-40.0, 40.0), -_die_rng.randf_range(60.0, 160.0)), _die_rng.randf_range(1.2, 2.2), _die_rng.randf_range(2.0, 4.0), Color(FletriArt.ash_color().lightened(0.2), 0.85))
+	if _die_rng.randf() < 0.8:
+		var a := _die_rng.randf() * TAU
+		fx.mote(h + Vector2.from_angle(a) * radius * 0.3, Vector2.from_angle(a) * _die_rng.randf_range(250.0, 520.0), _die_rng.randf_range(0.3, 0.6), _die_rng.randf_range(2.0, 3.5), Color(Art.ec("seve", "clair"), 0.95))
+	if k > 0.35:
+		var tint := Art.ec(str(ARMS[_die_rng.randi() % ARMS.size()]["element"]), "clair")
+		fx.petal(h + Vector2(_die_rng.randf_range(-1.0, 1.0), _die_rng.randf_range(-0.6, 0.6)) * radius, Vector2(_die_rng.randf_range(-90.0, 90.0), -_die_rng.randf_range(120.0, 240.0)), _die_rng.randf_range(1.6, 2.6), _die_rng.randf_range(6.0, 10.0), Color(tint, 0.95))
+		fx.glow_mote(anchor + Vector2(_die_rng.randf_range(-1.0, 1.0) * radius, 0.0), Vector2(0.0, -_die_rng.randf_range(40.0, 110.0)), 2.0, 3.0, Color(Art.ec("seve", "clair"), 0.9))
+
+
+## La charge, derrière elle : le sol qui se creuse d'anneaux qui se resserrent sur la grille, la cendre
+## de l'arène aspirée en spirale (de plus en plus vite, de plus en plus dense), et les six éléments
+## de ses bras qui tournent autour d'elle en se rapprochant.
+func _draw_charge_back() -> void:
+	var e := charge_energy()
+	var pulse := charge_pulse()
+	var hot := Art.ec("cendre", "clair")
+	var ember := Art.ec("cendre")
+	var h := Vector2(0, -radius * 0.45)
+	var beat: float = fposmod(sync.bars_now() * sync.beats * charge_rate(), 1.0)
+	_draw_charge_cracks(e, pulse)
+	_draw_charge_sigil(e, pulse)
+	_draw_charge_streams(e, pulse)
+	_draw_charge_debris(e, pulse)
+	# Anneaux au sol qui se referment : un par impulsion.
+	for j in 3:
+		var f := fposmod(beat + j / 3.0, 1.0)
+		var rr := radius * lerpf(5.5, 0.9, f)
+		draw_arc(Vector2.ZERO, rr, 0.0, TAU, 64, Color(ember, (0.12 + 0.4 * e) * sin(PI * f)), 2.0 + 4.0 * e, true)
+	# Cendre aspirée : de 28 à 76 brins, de plus en plus vite.
+	var n := 28 + int(48.0 * e)
+	for i in n:
+		var f := fposmod(charge_spin * 0.3 + i * 0.6180339, 1.0)
+		var a := TAU * i / float(n) + f * (2.4 + 2.0 * e)
+		var r := lerpf(radius * 5.5, radius * 0.4, f)
+		var p := h + Vector2.from_angle(a) * r
+		var q := h + Vector2.from_angle(a - 0.12 - 0.2 * e) * (r + radius * (0.3 + 0.6 * e))
+		var c := Art.ec("cendre", "clair").lerp(ember, 0.5) if i % 3 else hot
+		draw_line(q, p, Color(c, 0.55 * sin(PI * f) * (0.3 + 0.7 * charge)), 2.0 + 3.0 * e, true)
+	# Les six éléments de ses bras : des orbes qui tournent et se resserrent, avec leur traîne.
+	for i in ARMS.size():
+		var col := Art.ec(str(ARMS[i]["element"]), "clair")
+		var a0 := charge_spin * (1.0 + 0.5 * e) * 1.4 + TAU * i / ARMS.size()
+		var rr := radius * lerpf(3.6, 0.75, Anim.ease_in(charge))
+		for k in 6:
+			var a := a0 - k * (0.07 + 0.08 * e)
+			var p := h + Vector2.from_angle(a) * rr * Vector2(1.0, 0.62)
+			draw_circle(p, radius * (0.11 - 0.014 * k) * (1.0 + 0.6 * pulse * e), Color(col, (0.85 - 0.13 * k) * (0.4 + 0.6 * charge)))
+
+
+static func _rand(i: float) -> float:
+	return fposmod(sin(i * 12.9898 + 78.233) * 43758.5453, 1.0)
+
+
+## Le sol se fend autour d'elle : des failles de braise qui partent de son pied et gagnent l'arène à
+## mesure qu'elle charge ; elles s'allument sur chaque impulsion et blanchissent à la fin.
+func _draw_charge_cracks(e: float, pulse: float) -> void:
+	var ember := Art.ec("cendre")
+	var hot := Art.ec("cendre", "clair")
+	var white := Color(1.0, 0.97, 0.9)
+	var reach := radius * lerpf(1.2, 7.0, Anim.ease_out(charge))
+	if arena != null and arena.get("max_radius") != null:
+		reach = minf(reach, arena.max_radius * 0.85)
+	for i in 14:
+		var a := TAU * i / 14.0 + 0.4 * _rand(i)
+		var pts := PackedVector2Array([Vector2.from_angle(a) * radius * 0.5])
+		var dir := a
+		var l := 0.0
+		var seg := radius * 0.45
+		var k := 0
+		while l < reach * (0.6 + 0.4 * _rand(i + 50)):
+			dir += (_rand(i * 7 + k) - 0.5) * 0.9
+			l += seg
+			pts.append(pts[pts.size() - 1] + Vector2.from_angle(dir) * seg * Vector2(1.0, 0.62))
+			k += 1
+			if k > 24:
+				break
+		if pts.size() < 2:
+			continue
+		var w := 2.0 + 5.0 * e
+		draw_polyline(pts, Color(Art.ec("cendre", "sombre"), 0.55 * (0.3 + 0.7 * charge)), w + 5.0, true)
+		draw_polyline(pts, Color(ember.lerp(hot, pulse), 0.35 + 0.6 * pulse * (0.4 + 0.6 * e)), w, true)
+		if e > 0.5:
+			draw_polyline(pts, Color(white, (e - 0.5) * 1.6 * pulse), 1.5, true)
+
+
+## Le cercle de la charge, au sol : trois anneaux de glyphes qui tournent en sens contraires (de plus
+## en plus vite) et un compte à rebours : un segment s'allume sur chaque temps jusqu'au drop.
+func _draw_charge_sigil(e: float, pulse: float) -> void:
+	var hot := Art.ec("cendre", "clair")
+	var ember := Art.ec("cendre")
+	var white := Color(1.0, 0.97, 0.9)
+	var sq := Vector2(1.0, 0.62)
+	var total := maxi(1, int(round(_charge_total / (sync.bar / float(sync.beats)))))
+	var done := clampi(total - int(ceil(charge_beats_left())), 0, total)
+	var r0 := radius * 2.2
+	var al := 0.25 + 0.6 * minf(1.0, charge * 3.0)
+	# Compte à rebours : un segment par temps.
+	for i in total:
+		var a0 := -PI / 2.0 + TAU * i / total + 0.03
+		var a1 := -PI / 2.0 + TAU * (i + 1) / total - 0.03
+		var lit := i < done
+		var col := hot.lerp(white, e) if lit else Art.ec("cendre", "sombre")
+		var pts := PackedVector2Array()
+		for k in 7:
+			pts.append(Vector2.from_angle(lerpf(a0, a1, k / 6.0)) * r0 * sq)
+		draw_polyline(pts, Color(col, al * (1.0 if lit else 0.6)), (5.0 + 4.0 * e) * (1.0 + (0.6 * pulse if i == done - 1 else 0.0)), true)
+	# Anneaux de glyphes.
+	for j in 3:
+		var rr := radius * (1.3 + 0.55 * j + 0.25 * e)
+		var spin := charge_spin * (1.0 + 0.6 * j) * (1.0 if j % 2 == 0 else -1.0)
+		var n := 12 + 6 * j
+		var pts := PackedVector2Array()
+		for k in 65:
+			pts.append(Vector2.from_angle(TAU * k / 64.0) * rr * sq)
+		draw_polyline(pts, Color(ember, al * 0.6), 1.5 + 1.5 * e, true)
+		for k in n:
+			var a := spin + TAU * k / n
+			var p := Vector2.from_angle(a) * rr * sq
+			var d := Vector2.from_angle(a) * sq
+			var o := d.orthogonal()
+			var g := radius * (0.07 + 0.03 * pulse)
+			match (k + j) % 3:
+				0:
+					draw_line(p - d * g, p + d * g, Color(hot, al), 2.0, true)
+				1:
+					draw_polyline(PackedVector2Array([p - o * g, p + d * g, p + o * g]), Color(hot, al), 2.0, true)
+				_:
+					draw_circle(p, g * 0.45, Color(hot.lerp(white, e), al))
+	# Hexagramme qui relie les six bras, quand la charge est à mi-chemin.
+	if charge > 0.35:
+		var hk := clampf((charge - 0.35) / 0.3, 0.0, 1.0)
+		var rr := radius * 1.9
+		for k in 6:
+			var a := -charge_spin * 0.5 + TAU * k / 6.0
+			var b := a + TAU * 2.0 / 6.0
+			var p := Vector2.from_angle(a) * rr * sq
+			var q := Vector2.from_angle(b) * rr * sq
+			draw_line(p, p.lerp(q, hk), Color(Art.ec(str(ARMS[k]["element"]), "clair"), al * 0.9), 2.0 + 2.5 * e, true)
+
+
+## Six courants d'énergie, un par élément de ses bras, qui viennent du bord de l'arène et coulent vers
+## son cœur : des traits qui filent de plus en plus vite le long de courbes qui se tordent.
+func _draw_charge_streams(e: float, pulse: float) -> void:
+	var h := Vector2(0, -radius * 0.45)
+	var far: float = (arena.max_radius if arena != null and arena.get("max_radius") != null else radius * 7.0) * 0.95
+	for i in ARMS.size():
+		var col := Art.ec(str(ARMS[i]["element"]), "clair")
+		var a := TAU * i / ARMS.size() + 0.3 + 0.25 * sin(charge_spin * 0.3 + i)
+		var from := Vector2.from_angle(a) * far * Vector2(1.0, 0.62)
+		var ctrl := Vector2.from_angle(a + 0.9 + 0.4 * e) * far * 0.55
+		var pts := PackedVector2Array()
+		for k in 25:
+			var f := k / 24.0
+			pts.append(from.lerp(ctrl, f).lerp(ctrl.lerp(h, f), f))
+		var al := smoothstep(0.05, 0.4, charge)
+		draw_polyline(pts, Color(col, 0.12 * al + 0.18 * e * pulse), 10.0 + 14.0 * e, true)
+		draw_polyline(pts, Color(col, 0.3 * al + 0.3 * e), 2.0 + 2.0 * e, true)
+		# Paquets d'énergie qui filent le long du courant.
+		var m := 4 + int(10.0 * e)
+		for k in m:
+			var f := fposmod(charge_spin * (0.5 + 0.6 * e) + k / float(m) + i * 0.13, 1.0)
+			var idx := int(f * 23.0)
+			var p := pts[idx].lerp(pts[idx + 1], f * 23.0 - idx)
+			draw_circle(p, (3.0 + 4.0 * e) * (0.5 + f), Color(col.lerp(Color.WHITE, f * e), al * (0.4 + 0.6 * f)))
+
+
+## Des blocs du sol arrachés qui lévitent autour d'elle, tremblent, et sont aspirés vers elle à la fin.
+func _draw_charge_debris(e: float, pulse: float) -> void:
+	var stone := Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.2).darkened(0.3)
+	var hot := Art.ec("cendre", "clair")
+	var h := Vector2(0, -radius * 0.45)
+	for i in 16:
+		var born := 0.05 + 0.5 * _rand(i + 3)
+		if charge < born:
+			continue
+		var up := clampf((charge - born) / 0.3, 0.0, 1.0)
+		var a := TAU * _rand(i + 11) + charge_spin * (0.15 + 0.2 * _rand(i)) * (1.0 + 2.0 * charge_overflow())
+		var d := radius * lerpf(2.0 + 3.0 * _rand(i + 23), 0.5, pow(charge_overflow(), 0.7))
+		var ground := Vector2.from_angle(a) * d * Vector2(1.0, 0.62)
+		var lift := radius * (0.3 + 0.9 * _rand(i + 31)) * Anim.ease_out(up) + sin(t * 2.0 + i) * radius * 0.05
+		var p := ground + Vector2(0, -lift) + Vector2(sin(t * 47.0 + i), cos(t * 53.0 + i)) * radius * 0.02 * e
+		var s := radius * (0.08 + 0.1 * _rand(i + 41))
+		draw_circle(ground, s * 0.9, Color(0, 0, 0, 0.25 * up))
+		var rot := t * (0.5 + _rand(i + 5)) + i
+		var poly := PackedVector2Array()
+		for k in 5:
+			poly.append(p + Vector2.from_angle(rot + TAU * k / 5.0) * s * (0.7 + 0.4 * _rand(i * 5 + k)))
+		draw_colored_polygon(poly, stone)
+		poly.append(poly[0])
+		draw_polyline(poly, Color(hot, 0.3 + 0.6 * pulse * e), 1.5 + 1.5 * e, true)
+		if e > 0.3:
+			draw_line(p, p.lerp(h, 0.25), Color(hot, 0.25 * e * pulse), 1.5, true)
+
+
+## La charge, devant elle : le cœur qui s'embrase et blanchit, la couronne de rayons, les éclairs
+## qui crépitent (plus nombreux à chaque impulsion), les veines qui battent ; sur le dernier temps,
+## elle déborde : un halo blanc qui vibre et des rayons qui fendent l'écran.
+func _draw_charge_front() -> void:
+	var e := charge_energy()
+	var pulse := charge_pulse()
+	var over := charge_overflow()
+	var hot := Art.ec("cendre", "clair")
+	var ember := Art.ec("cendre")
+	var white := Color(1.0, 0.97, 0.9)
+	var h := Vector2(0, -radius * 0.45) + charge_jitter()
+	# Veines de braise sur le corps, qui battent sur les impulsions.
+	for i in 9:
+		var a := TAU * i / 9.0 + 0.5
+		var from := h + Vector2.from_angle(a) * radius * 0.15
+		var to := h + Vector2.from_angle(a + 0.3 * sin(i * 2.1)) * radius * (0.55 + 0.6 * e)
+		draw_line(from, to, Color(ember.lerp(white, over), 0.35 + 0.6 * pulse), 3.0 + 6.0 * pulse + 4.0 * e, true)
+	# Éclairs : 2 à 12, retirés à chaque impulsion.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(_charge_hit) if _charge_hit >= 0 else 7
+	var bolts := 2 + int(10.0 * e)
+	for b in bolts:
+		var a := rng.randf() * TAU
+		var length := radius * rng.randf_range(1.0, 1.6 + 1.6 * e)
+		var pts := PackedVector2Array([h])
+		var steps := 6
+		for k in range(1, steps + 1):
+			var f := float(k) / steps
+			var side := Vector2.from_angle(a).orthogonal() * rng.randf_range(-1.0, 1.0) * radius * 0.22 * f
+			pts.append(h + Vector2.from_angle(a) * length * f + side)
+		var al := (0.25 + 0.75 * pulse) * (0.4 + 0.6 * e)
+		draw_polyline(pts, Color(hot, al * 0.5), 6.0 + 4.0 * e, true)
+		draw_polyline(pts, Color(white, al), 2.0, true)
+	# Couronne de rayons autour du cœur.
+	var rays := 12 + int(12.0 * e)
+	for i in rays:
+		var a := TAU * i / rays + charge_spin * 0.5
+		var l := radius * (0.5 + 0.9 * e * (0.6 + 0.4 * sin(t * 9.0 + i * 1.7)) + 0.5 * pulse * e)
+		draw_line(h + Vector2.from_angle(a) * radius * 0.3, h + Vector2.from_angle(a) * (radius * 0.3 + l), Color(hot.lerp(white, e), 0.2 + 0.45 * e), 2.0 + 2.0 * e, true)
+	# Le cœur : il grossit, blanchit, bat.
+	var core := radius * (0.16 + 0.18 * e + 0.1 * pulse * (0.3 + e) + 0.15 * over)
+	draw_circle(h, core * 1.9, Color(ember, 0.18 + 0.25 * e))
+	draw_circle(h, core * 1.3, Color(hot, 0.3 + 0.4 * e))
+	draw_circle(h, core, Color(hot.lerp(white, 0.4 + 0.6 * e), 0.55 + 0.45 * e))
+	# Fissures de lumière sur son corps, de plus en plus nombreuses.
+	var fissures := int(3.0 + 14.0 * e)
+	for i in fissures:
+		var a0 := TAU * _rand(i + 101)
+		var p0 := h + Vector2.from_angle(a0) * radius * 0.35 * _rand(i + 102)
+		var pts := PackedVector2Array([p0])
+		for k in 3:
+			pts.append(pts[k] + Vector2.from_angle(a0 + (_rand(i * 3 + k + 7) - 0.5) * 1.6) * radius * (0.12 + 0.1 * e))
+		draw_polyline(pts, Color(hot.lerp(white, pulse), 0.4 + 0.6 * pulse), 2.0 + 2.0 * e, true)
+	# Le dernier temps : elle déborde.
+	if over > 0.0:
+		var flick := 0.6 + 0.4 * sin(t * 90.0)
+		draw_circle(h, radius * (1.0 + 1.6 * over), Color(white, 0.18 * over * flick))
+		for i in 10:
+			var a := TAU * i / 10.0 + 0.3 * sin(i * 4.1) + t * 0.7
+			var l := radius * (2.0 + 10.0 * over)
+			draw_line(h, h + Vector2.from_angle(a) * l, Color(white, 0.55 * over * flick), 3.0 + 8.0 * over, true)
 
 
 ## Le sol autour d'elle, sous les annonces (draw_marks) : une flaque de brume de cendre et les
@@ -1109,7 +1459,7 @@ func draw_marks(c: CanvasItem) -> void:
 	for r in roots:
 		var forme := {"type": "cercle", "centre": r["pos"], "rayon": ROOTS["radius"]}
 		if r["burst"] < 0.0:
-			var total: float = ROOTS["annonce"] + ROOTS["step"] * roots.find(r)
+			var total: float = r.get("total", ROOTS["annonce"] + ROOTS["step"] * roots.find(r))
 			Art.telegraph(c, forme, clampf(1.0 - float(r["fuse"]) / maxf(total, 0.01), 0.0, 1.0), -1.0, t)
 		else:
 			var f: float = r["burst"] / FLASH
@@ -1167,3 +1517,11 @@ static func draw_victory(a: Node2D) -> void:
 		var tip := base + Vector2.from_angle(ang) * (34.0 + 4.0 * sin(a.t * 1.5 + i)) * k
 		a.draw_line(base, tip, bark, 4.0, true)
 		Art.volume(a, Art.ellipse(tip, 11.0 * k, 7.0 * k, 12), Art.ec(str(ARMS[i]["element"])).lerp(Art.c("decor_vivant"), 0.25), 0.6)
+
+
+## Le retour de la batterie : elle se dresse d'un coup, une onde dans les couleurs des bras éveillés.
+func _music_resume() -> void:
+	super._music_resume()
+	for i in mini(ARMS.size(), phase * 2):
+		main.fx.ring(anchor, radius * 0.8, 260.0 + 70.0 * i, 0.5 + 0.08 * i, Color(Art.ec(ARMS[i]["element"], "clair"), 0.8), 5.0)
+	main.screen_fx.glow(Art.ec("cendre"), 0.5, 0.8)
