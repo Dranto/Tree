@@ -225,6 +225,9 @@ func _ready() -> void:
 	add_child(ambience)
 
 	var cam := Camera2D.new()
+	# Avec l'interpolation physique, Godot force ce mode et le dit dans la sortie : on le choisit
+	# avant d'activer le lissage (qui le vérifie).
+	cam.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
 	cam.position_smoothing_enabled = true
 	cam.position_smoothing_speed = 8.0
 	player.add_child(cam)

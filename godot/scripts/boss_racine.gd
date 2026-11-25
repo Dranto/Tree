@@ -495,7 +495,8 @@ func draw_marks(c: CanvasItem) -> void:
 					var at: Vector2 = anchor + d * (radius + 60.0 + j * 75.0)
 					var n: Vector2 = d.orthogonal() * ((j % 2) * 2 - 1)
 					var tip: Vector2 = at + Vector2(0, -26.0 * (1.0 - f)) + n * 8.0
-					c.draw_colored_polygon(PackedVector2Array([at - d * 9.0, tip, at + d * 9.0]), rock.darkened(0.1 * (j % 2)))
+					# Pour certains angles la pointe tombe sur la base : triangle plat, rien à dessiner.
+					Art.safe_polygon(c, PackedVector2Array([at - d * 9.0, tip, at + d * 9.0]), rock.darkened(0.1 * (j % 2)))
 		"eboulis":
 			for p in flash_circles:
 				Art.telegraph(c, {"type": "cercle", "centre": p, "rayon": STONES["radius"]}, 1.0, f, t)
