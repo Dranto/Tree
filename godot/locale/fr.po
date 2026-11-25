@@ -8774,15 +8774,15 @@ msgstr "niveau %d · fin"
 msgid "PLANCHE I  ·  L'ARBRE DE VIE"
 msgstr "PLANCHE I  ·  L'ARBRE DE VIE"
 
-#. scripts/title.gd:166
+#. scripts/title.gd:172
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
 msgstr "HERBIER  DES  TERRES  FLÉTRIES"
 
-#. scripts/title.gd:178
+#. scripts/title.gd:184
 msgid "Un monde désolé reprend vie"
 msgstr "Un monde désolé reprend vie"
 
-#. scripts/title.gd:179
+#. scripts/title.gd:185
 msgid "au rythme de ton arbre"
 msgstr "au rythme de ton arbre"
 
@@ -9309,23 +9309,23 @@ msgstr "scellée tant qu'un Cœur vit"
 msgid "Toi"
 msgstr "Toi"
 
-#. scripts/world_map.gd:250
+#. scripts/world_map.gd:251
 msgid "Graine"
 msgstr "Graine"
 
-#. scripts/world_map.gd:254
+#. scripts/world_map.gd:255
 msgid "Brèche"
 msgstr "Brèche"
 
-#. scripts/world_map.gd:293
+#. scripts/world_map.gd:295
 msgid "Arène"
 msgstr "Arène"
 
-#. scripts/world_map.gd:296
+#. scripts/world_map.gd:300
 msgid "Cœur"
 msgstr "Cœur"
 
-#. scripts/world_map.gd:296
+#. scripts/world_map.gd:300
 msgid "Cœurs %d / %d"
 msgstr "Cœurs %d / %d"
 

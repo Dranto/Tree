@@ -38,6 +38,7 @@ TESTS=(
   "flow|--headless|"
   "foret|--headless --fixed-fps 60|"
   "i18n|--headless --fixed-fps 60|"
+  "legibility|--headless|"
   "grafts|--headless --fixed-fps 60|"
   "marais|--headless --fixed-fps 60|"
   "moments|--headless|"

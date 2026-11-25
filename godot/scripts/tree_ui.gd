@@ -1800,8 +1800,8 @@ func _draw_overlay(c: CanvasItem) -> void:
 	c.draw_string(font, Vector2(24, 30), tr("Arbre de vie"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, UiTheme.INK)
 	var pts_col := UiTheme.GOLD if Game.points > 0 else UiTheme.SOFT
 	c.draw_string(font, Vector2(24, 57), tr("%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds") % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, pts_col)
-	c.draw_string(font, Vector2(0, 30), help_text(), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Color(0.785, 0.733, 0.616))
-	c.draw_string(font, Vector2(0, 52), tr("Chaque nœud appris ravive la région du monde située dans sa direction."), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, UiTheme.GOLD)
+	c.draw_string(font, Vector2(0, 30), help_text(), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, UiTheme.legible(14), Color(0.785, 0.733, 0.616))
+	c.draw_string(font, Vector2(0, 52), tr("Chaque nœud appris ravive la région du monde située dans sa direction."), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, UiTheme.legible(14), UiTheme.GOLD)
 	if hover >= 0:
 		_draw_tooltip(c, tree.nodes[hover], _states.get(hover, _state(hover)))
 	_audit_texts()
@@ -1834,8 +1834,8 @@ func _audit_texts() -> void:
 	var tree = Game.tree
 	UiAudit.text_at("arbre", font, Vector2(24, 30), tr("Arbre de vie"), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Transform2D.IDENTITY, "entete", true)
 	UiAudit.text_at("arbre", font, Vector2(24, 57), tr("%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds") % [Game.points, Game.level, Game.allocated.size(), tree.nodes.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Transform2D.IDENTITY, "entete", true)
-	UiAudit.text_at("arbre", font, Vector2(0, 30), help_text(), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
-	UiAudit.text_at("arbre", font, Vector2(0, 52), tr("Chaque nœud appris ravive la région du monde située dans sa direction."), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, 14, Transform2D.IDENTITY, "entete", true)
+	UiAudit.text_at("arbre", font, Vector2(0, 30), help_text(), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, UiTheme.legible(14), Transform2D.IDENTITY, "entete", true)
+	UiAudit.text_at("arbre", font, Vector2(0, 52), tr("Chaque nœud appris ravive la région du monde située dans sa direction."), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24, UiTheme.legible(14), Transform2D.IDENTITY, "entete", true)
 	if hover >= 0:
 		var lines := tooltip_lines(tree.nodes[hover], _states.get(hover, _state(hover)))
 		var rect := tooltip_rect(lines)
@@ -1927,8 +1927,9 @@ func tooltip_lines(n: Dictionary, st: String) -> Array:
 	var maxw := minf(TOOLTIP_MAX_W, size.x - 2.0 * MARGIN - 28.0)
 	var lines: Array = []
 	for l in raw:
-		for part in _wrap(l[0], l[1], maxw):
-			lines.append([part, l[1], l[2]])
+		var fs: int = UiTheme.legible(l[1])
+		for part in _wrap(l[0], fs, maxw):
+			lines.append([part, fs, l[2]])
 	return lines
 
 

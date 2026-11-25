@@ -8774,15 +8774,15 @@ msgstr "level %d · ending"
 msgid "PLANCHE I  ·  L'ARBRE DE VIE"
 msgstr "PLATE I  ·  THE TREE OF LIFE"
 
-#. scripts/title.gd:166
+#. scripts/title.gd:172
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
 msgstr "HERBARIUM  OF  THE  WITHERED  LANDS"
 
-#. scripts/title.gd:178
+#. scripts/title.gd:184
 msgid "Un monde désolé reprend vie"
 msgstr "A desolate world comes back to life"
 
-#. scripts/title.gd:179
+#. scripts/title.gd:185
 msgid "au rythme de ton arbre"
 msgstr "as your tree grows"
 
@@ -9309,23 +9309,23 @@ msgstr "sealed while a Heart lives"
 msgid "Toi"
 msgstr "You"
 
-#. scripts/world_map.gd:250
+#. scripts/world_map.gd:251
 msgid "Graine"
 msgstr "Seed"
 
-#. scripts/world_map.gd:254
+#. scripts/world_map.gd:255
 msgid "Brèche"
 msgstr "Breach"
 
-#. scripts/world_map.gd:293
+#. scripts/world_map.gd:295
 msgid "Arène"
 msgstr "Arena"
 
-#. scripts/world_map.gd:296
+#. scripts/world_map.gd:300
 msgid "Cœur"
 msgstr "Heart"
 
-#. scripts/world_map.gd:296
+#. scripts/world_map.gd:300
 msgid "Cœurs %d / %d"
 msgstr "Hearts %d / %d"
 
