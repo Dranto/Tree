@@ -156,18 +156,43 @@ func _run() -> void:
 			away = p
 			break
 	main.player.position = away
-	# Les apparitions tombent à 760-980 px du joueur, parfois dans une région voisine : on ne
-	# compte que les Flétris nés hors de toute région (plusieurs salves, pour ne pas dépendre
-	# d'un seul tirage).
+	# Règle elle-même, sans hasard de position : hors de toute région, le tirage ne donne jamais
+	# une sorte régionale (seul le choix parmi les sortes ordinaires dépend du hasard).
+	var regional_kinds := {}
+	for reg in main.region_spawn:
+		for k in main.region_spawn[reg].get("kinds", {}):
+			regional_kinds[k] = true
+	var picked_regional := 0
+	for i in 200:
+		var q: Vector2 = away + Vector2.from_angle(i * TAU / 200.0) * 120.0
+		if main.region_at(q) == "" and regional_kinds.has(str(main._pick_kind(q))):
+			picked_regional += 1
+	check(picked_regional == 0, "hors des régions, le tirage ne donne que des sortes ordinaires (%d régionales)" % picked_regional)
+	# Puis par le vrai chemin des apparitions. Les Flétris déjà là (des régionaux ont pu sortir de
+	# leur région en marchant) sont retirés d'abord ; on ne compte que ceux nés pendant les salves,
+	# à l'endroit où ils naissent, loin des bords (les apparitions tombent à 760-980 px du joueur,
+	# parfois dans une région voisine ou tout contre son bord).
+	for e in main.enemies:
+		e.queue_free()
+	main.enemies.clear()
+	await _steps(1)
 	var born_outside := 0
 	for burst in 8:
+		var seen := {}
+		for e in main.enemies:
+			seen[e] = true
 		main.spawn_timer = 0.0
-		await _steps(2)
+		await _steps(1)
 		main.spawn_timer = 1.0e9
 		for e in main.enemies:
-			if main.region_at(e.position) != "" or e.has_meta("compte"):
+			if seen.has(e):
 				continue
-			e.set_meta("compte", true)
+			var clear := true
+			for d in [Vector2.ZERO, Vector2(90, 0), Vector2(-90, 0), Vector2(0, 90), Vector2(0, -90)]:
+				if main.region_at(e.position + d) != "":
+					clear = false
+			if not clear:
+				continue
 			born_outside += 1
 			if e.region != "":
 				outside += 1
