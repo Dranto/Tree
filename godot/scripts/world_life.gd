@@ -85,6 +85,8 @@ var _enemy_tick := 0.0
 var _fauna_tick := 0.0
 var _step_clock := 0.0
 var _step_side := 1.0
+## Un pas de Flétri sur deux laisse sa cendre.
+var _ash_n := 0
 var _last_pos := {}       # instance_id -> Vector2 (Flétris)
 var _cooldown := {}       # instance_id -> temps (décor, Flétris)
 var _region_hooks := {}   # région -> script ou null
@@ -362,7 +364,7 @@ func _update_gust(delta: float) -> void:
 			var at: Vector2 = p.position + Vector2(rng.randf_range(-700, 500), rng.randf_range(-420, 420)) - gust_dir * 200.0
 			var reg := _region_of(at)
 			add_bit(_bit_kind(reg, null), at, rng.randf_range(20.0, 60.0), gust_dir * rng.randf_range(180.0, 260.0), 10.0,
-				_bit_col(reg, at), 0.9, 3.5, 1.0)
+				_bit_col(reg, at), 0.75, 3.5, 1.0)
 
 
 ## Pose les uniforms du balancement sur chaque matériau du décor.
@@ -510,7 +512,7 @@ func _shed(pos: Vector2, r: float, n: int, reg: String, to := Vector2.INF) -> vo
 			var at := top + Vector2(rng.randf_range(-12, 12), 0)
 			var heavy := k in ["caillou", "eclat", "sciure"]
 			add_bit(k, at, h * rng.randf_range(0.7, 1.2), (dest - at) * 0.6, 30.0 if not heavy else 70.0, c,
-				rng.randf_range(0.8, 1.1), 2.6 if not heavy else 1.8, 0.0 if heavy else 1.0)
+				rng.randf_range(0.65, 0.85), 2.6 if not heavy else 1.8, 0.0 if heavy else 1.0)
 			done += 1
 
 
@@ -536,7 +538,7 @@ func _hero_step(p) -> void:
 				var dir: Vector2 = p.move_dir if p.move_dir != Vector2.ZERO else Vector2.RIGHT
 				for i in _qty(2 if dash else 1):
 					add_bit(k, t.position + Vector2(rng.randf_range(-10, 10), 0), h * rng.randf_range(0.5, 0.9),
-						dir * rng.randf_range(20.0, 50.0) + Vector2(rng.randf_range(-20, 20), 0), 25.0, c, 0.9, 2.6, 1.0)
+						dir * rng.randf_range(20.0, 50.0) + Vector2(rng.randf_range(-20, 20), 0), 25.0, c, 0.75, 2.6, 1.0)
 		if _is_water(t) and t.position.distance_to(feet) < _water_r(t) and _ready_again(t, 0.35):
 			splash(feet, 1.2 if dash else 0.8)
 	if soft:
@@ -616,7 +618,9 @@ func _enemies(p) -> void:
 		var spd: float = last.distance_to(e.position) / dt
 		var feet: Vector2 = e.position + Vector2(0.0, e.radius * 0.6)
 		# Cendre sous les pas, sur la terre vivante.
-		if spd > 20.0 and ash_left > 0 and main.ground.life_at(feet) > 0.45 and rng.randf() < 0.5:
+		if spd > 20.0 and ash_left > 0 and main.ground.life_at(feet) > 0.45:
+			_ash_n += 1
+		if spd > 20.0 and ash_left > 0 and main.ground.life_at(feet) > 0.45 and _ash_n % 2 == 0:
 			ash_left -= 1
 			add_mark("cendre", feet + Vector2(rng.randf_range(-4, 4), 0), _num("enemies", "ash_time", 2.6), col(_region_of(feet), "cendre"), clampf(e.radius / 16.0, 0.6, 1.6), 0.0)
 		# Charge : bien plus vite que son pas, ou un état de charge.

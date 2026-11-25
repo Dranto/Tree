@@ -140,9 +140,11 @@ func _run() -> void:
 			Input.action_release("move_right")
 			await _steps(60)
 		"charge":
-			_put(spot + Vector2(0, 140))
-			await _steps(20, false)
-			var e = main.spawn_enemy_at(spot + Vector2(-380, -10), 0)
+			main.ground.paint(spot, 520.0, 1.0)
+			main.flora.finish_pending()
+			_put(spot + Vector2(0, 90))
+			await _steps(90, false)
+			var e = main.spawn_enemy_at(spot + Vector2(-380, 30), 0)
 			e.hp = 1.0e9
 			e.max_hp = 1.0e9
 			e.set_physics_process(false)

@@ -4,11 +4,11 @@
 # assemble « avant | après » côte à côte (ffmpeg). La scène « vivant » (tout à la suite) n'est faite que
 # sur la branche : c'est le GIF « monde vivant ».
 #   BASE_DIR=/chemin/de/develop tools/vivant-film.sh [scène…]   (par défaut : toutes)
-#   Sortie : godot/tests/visual/out/vivant/<scène>.gif
+#   Sortie : godot/tests/visual/out/vivant/<scène>.gif (ou OUT=dossier ; tools/visual-tests.sh vide out/)
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BASE_DIR="${BASE_DIR:?BASE_DIR : copie de develop}"
-OUT="$ROOT/godot/tests/visual/out/vivant"
+OUT="${OUT:-$ROOT/godot/tests/visual/out/vivant}"
 SCENES=("$@")
 [ ${#SCENES[@]} -eq 0 ] && SCENES=(buisson charge coup faune marais vivant)
 mkdir -p "$OUT"; touch "$ROOT/godot/tests/visual/out/.gdignore"

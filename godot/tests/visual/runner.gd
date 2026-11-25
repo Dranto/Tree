@@ -792,7 +792,7 @@ func _scenario_vivant() -> void:
 	life._push[1]["t"] = 0.6
 	var leaf: Color = life.col("ronce", "bris_vif")
 	for i in 9:
-		life.add_bit("feuille", at + Vector2(-60 + i * 14, -10 + (i % 3) * 8), 14.0 + i * 6.0, Vector2.ZERO, 0.0, leaf, 1.0, 9.0, 1.0)
+		life.add_bit("feuille", at + Vector2(-60 + i * 14, -10 + (i % 3) * 8), 14.0 + i * 6.0, Vector2.ZERO, 0.0, leaf, 0.75, 9.0, 1.0)
 		life.bits[-1]["rot"] = i * 0.7
 		life.bits[-1]["t"] = 0.3 + i * 0.11
 	for i in 6:
