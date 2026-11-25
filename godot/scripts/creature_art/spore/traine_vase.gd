@@ -10,8 +10,8 @@ extends RefCounted
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const Sp = preload("res://scripts/creature_art/spore/outils.gd")
 
-## 100 unités (la hauteur, champignons compris) en px du jeu : ~43 px de haut et ~70 px de long en 1080p.
-const HEIGHT := 36.0
+## 100 unités (la hauteur, champignons compris) en px du jeu : ~53 px de haut et ~85 px de long en 1080p (massive, demandé le 25/11).
+const HEIGHT := 44.0
 ## La sorte dessine elle-même son collier d'élite (pose elite).
 const DRAWS_ELITE := true
 
@@ -123,6 +123,8 @@ static func _body(walk: float, mv: float, _t: float) -> PackedVector2Array:
 	for i in top.size():
 		var p: Vector2 = top[i]
 		# La vague de reptation soulève le dos d'avant en arrière.
+		# Dos plus haut (massive) : la bosse monte de 12 %.
+		p.y *= 1.12
 		p.y -= 3.0 * mv * maxf(sin(p.x * 0.05 - walk * 2.0), 0.0) * (1.0 if p.y < -10.0 else 0.0)
 		pts.append(p)
 	pts.append(Vector2(50, 1))
