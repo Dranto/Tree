@@ -160,8 +160,24 @@ func _drop_bars(clip: String) -> int:
 	return int(c.get("boucle_depuis", 4))
 
 
+## Les robots (« -- --autotest… ») suivent le temps du jeu même quand le morceau joue : l'horloge
+## audio avance en temps réel, et une machine chargée changerait leur combat d'une partie à l'autre.
+static var _robot := -1
+
+
+static func robot() -> bool:
+	if _robot < 0:
+		_robot = 0
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--autotest"):
+				_robot = 1
+	return _robot == 1
+
+
 ## Lecteur qui joue ce morceau (null : horloge du jeu).
 func _hand():
+	if robot():
+		return null
 	var music = Engine.get_main_loop().root.get_node_or_null("Music") if Engine.get_main_loop() is SceneTree else null
 	if music == null or music.get("hand") == null:
 		return null

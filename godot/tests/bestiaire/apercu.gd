@@ -17,7 +17,7 @@ func _run() -> void:
 	var kind: String = args[1]
 	var art = load("res://scripts/creature_art/%s.gd" % kind)
 	var b := Bake.new(self)
-	var poses := [{}, {"walk": 1.2, "moving": 1.0}, {"k": 0.8, "t": 0.3}, {"hit": 1.0}, {"look": PI * 0.8}, {"look": -0.6, "k": 0.4}]
+	var poses := [{}, {"walk": 1.2, "moving": 1.0}, {"k": 0.8, "t": 0.3, "state": "windup"}, {"hit": 1.0}, {"strike": 0.3}, {"look": -0.6, "elite": true, "region": "ronce"}]
 	if args.size() > 2:
 		for p in poses:
 			p["build"] = args[2]
@@ -25,7 +25,7 @@ func _run() -> void:
 	canvas.fill(Color("3b3631"))
 	for i in poses.size():
 		var o: Dictionary = poses[i]
-		var img := await b.bake(Vector2i(300, 300), func(ci): art.draw(ci, Vector2(150, 250), 220.0, o))
+		var img := await b.bake(Vector2i(300, 300), func(ci): art.draw(ci, Vector2(150, 262), 170.0 if art.HEIGHT > 50.0 else 220.0, o))
 		canvas.blend_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i(i * 300, 0))
 		var small := await b.bake(Vector2i(120, 120), func(ci): art.draw(ci, Vector2(60, 90), art.HEIGHT * 1.2, o))
 		canvas.blend_rect(small, Rect2i(Vector2i.ZERO, small.get_size()), Vector2i(i * 300 + 90, 320))
