@@ -262,7 +262,8 @@ const MONDE := {
 		"ronce": {"bris_vif": Color("8fb04c"), "bris_mort": Color("7d4b30"), "pas": Color("f4a3b4"), "papillon": Color("ffb0c0")},
 		"spore": {"bris_vif": Color("7fd0b8"), "bris_mort": Color("82708a"), "pas": Color("7ff0dc"), "spore": Color("c9fff0"),
 			"eau": Color("9fe8e2"), "luciole": Color("8affea"), "luciole_mort": Color("b8a0e0")},
-		"vent": {"bris_vif": Color("e8e2d0"), "bris_mort": Color("a8a8b0"), "pas": Color("d8e8ff"), "oiseau": Color("c8ccd4")},
+		"vent": {"bris_vif": Color("e8e2d0"), "bris_mort": Color("a8a8b0"), "pas": Color("d8e8ff"), "oiseau": Color("c8ccd4"),
+			"plume": Color("f4f8fc"), "plume_mort": Color("8a8e98")},
 		"seve": {"bris_vif": Color("7ee0a8"), "bris_mort": Color("6a8070"), "pas": Color("eafff4"), "papillon": Color("b8ffe0"), "eau": Color("c8fff0")},
 		"aube": {"bris_vif": Color("f6e5db"), "bris_mort": Color("8a8c98"), "pas": Color("ffd162"), "papillon": Color("fff0b0"), "luciole": Color("ffd770")},
 		"racine": {"bris_vif": Color("c8a878"), "bris_mort": Color("8a7a66"), "pas": Color("e8d090"), "oiseau": Color("9a7a5a")},
@@ -355,7 +356,41 @@ const MONDE := {
 	# fletri, apaise, ravive ; sol_couches au besoin), sous son repère, sans toucher aux autres. Tant
 	# qu'une région n'a pas de bloc, son sol et son décor tirent leurs tons de data/regions/<id>.json.
 	# -- vent (Plateaux) --
-
+	# Hauts plateaux balayés par le vent (vague 2, P3). Flétri : ardoise bleu-gris sous la cendre, herbe
+	# sèche grège couchée, lichen gris sur les dalles. Ravivé : pâle et lumineux, du bleu-gris vers le blanc,
+	# herbe argentée à plumets, plumes blanches, petites fleurs blanches et bleu pâle (pas de vert sève).
+	"vent": {
+		"fletri": {
+			"sol": Color("3f434d"), "sol_clair": Color("4d525c"), "sol_sombre": Color("30333c"),
+			"matiere": Color("1c1e24"), "feuille": Color("6c6e72"), "feuille_2": Color("82827c"),
+			"cendre": Color("8e929a"), "touffe": Color("6e6b5e"), "touffe_2": Color("4f4d45"),
+			"bois": {"clair": Color("545763"), "ombre": Color("2b2d35"), "reflet": Color("7c7f8a")},
+			"feuillage": {"clair": Color("55574f"), "ombre": Color("33342f"), "reflet": Color("76786c")},
+			"herbe": {"clair": Color("706d60"), "ombre": Color("48463e"), "reflet": Color("8e8b7c")},
+			"pierre": {"clair": Color("5c616c"), "ombre": Color("33363f"), "reflet": Color("7f8590")},
+			"lichen": Color("777c76"), "plume": Color("6a6e78"), "plume_ombre": Color("3c3f48"),
+			"fleur": Color("7a7a84"), "fruit": Color("2a2a30"), "orage": Color("2a2c36"), "orage_reflet": Color("565a6a"),
+			"air": Color("56687a"), "voile": Color("141a22"), "particule": Color("9aa0a8"),
+		},
+		"apaise": {
+			"sol": Color("51555f"), "sol_clair": Color("60646e"), "sol_sombre": Color("41444e"),
+			"matiere": Color("2a2c34"), "feuille": Color("7c7e82"), "feuille_2": Color("909088"),
+			"cendre": Color("a8acb4"), "touffe": Color("7e7b68"), "touffe_2": Color("5e5c50"),
+		},
+		"ravive": {
+			"sol": Color("989074"), "sol_clair": Color("b3ad92"), "sol_sombre": Color("78735c"),
+			"matiere": Color("4a5f74"), "feuille": Color("e4ebf0"), "feuille_2": Color("aebfcc"),
+			"cendre": Color("f2f6fa"), "touffe": Color("bcc6b4"), "touffe_2": Color("8a9888"),
+			"bois": {"clair": Color("8c8374"), "ombre": Color("524a40"), "reflet": Color("bcb09c")},
+			"feuillage": {"clair": Color("a3b8b2"), "ombre": Color("5f7674"), "reflet": Color("dbe9e4")},
+			"herbe": {"clair": Color("cdd2ba"), "ombre": Color("8e967f"), "reflet": Color("f2f2e2")},
+			"pierre": {"clair": Color("9ba5b1"), "ombre": Color("5d6773"), "reflet": Color("d6dee6")},
+			"lichen": Color("d9e0c6"), "plume": Color("f4f8fc"), "plume_ombre": Color("9fb0c4"),
+			"fleur": Color("f2f6ff"), "fleur_coeur": Color("f6e4a0"), "fleur_2": Color("b6d2f2"), "fruit": Color("5c7ca8"),
+			"orage": Color("4f6f96"), "orage_reflet": Color("d4ecff"), "lueur": Color("cfe6ff"),
+			"air": Color("eaf3ff"), "voile": Color("080b0e"), "particule": Color("e8f0ff"),
+		},
+	},
 	# -- fin vent --
 	#
 	# -- seve (Vallée) --
