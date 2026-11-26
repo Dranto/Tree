@@ -827,6 +827,26 @@ func _scenario_vivant() -> void:
 	life.air.queue_redraw()
 	await _frames(3)
 	await _shot("monde_vivant")
+	# Événements du monde (vague 2 E) : le front d'une vague de vie traverse le décor à gauche (il pousse,
+	# s'éclaire, se relève), un élite vient de mourir à droite (la flore se fane et se tasse).
+	life.fauna.clear()
+	life.bits.clear()
+	life.marks.clear()
+	life._push.clear()
+	life.gust["force"] = 0.0
+	var base := {"src": null, "k": 0.0, "last": 0.0, "reg": "ronce"}
+	life.events = [
+		base.merged({"kind": "bloom", "pos": p.position + Vector2(-520, -40), "t": 0.9, "dur": 3.0, "r": 820.0}),
+		base.merged({"kind": "fane", "pos": p.position + Vector2(240, 30), "t": 0.7, "dur": 2.6, "r": 220.0}),
+	]
+	life._apply_uniforms(p)
+	main.world_fx.queue_redraw()
+	life.queue_redraw()
+	life.air.queue_redraw()
+	await _frames(3)
+	await _shot("monde_evenements")
+	life.events = []
+	life._apply_uniforms(p)
 
 
 ## Attaques cumulées (jalon 10) : rayon d'aube principal, lames de vent et massue en écho, trois
