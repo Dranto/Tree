@@ -26,6 +26,8 @@ static var flash := 0.0
 static var mono := false
 ## Couleur de la silhouette (mono) : noir par défaut, blanc pour les silhouettes cuites du héros.
 static var mono_col := Color.BLACK
+## Cendre (0 → 1) : la créature se change en cendre grise (mort d'un boss dessiné en direct).
+static var ash := 0.0
 ## Cuisson (sprite_bake.gd) : l'ombre au sol n'est pas dessinée mais relevée (pixels du dessin),
 ## le moteur la dessine à part, sous tous les acteurs.
 static var no_shadow := false
@@ -40,6 +42,8 @@ static func encre() -> Color:
 static func shade(col: Color) -> Color:
 	if mono:
 		return mono_col
+	if ash > 0.0:
+		col = Color(col.lerp(Color("8a8580").lerp(Art.bc("ronge"), 0.25), ash), col.a)
 	if flash > 0.0:
 		return col.lerp(Art.c("danger_eclair"), 0.8 * flash)
 	return col

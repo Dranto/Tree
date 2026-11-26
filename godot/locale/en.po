@@ -7879,7 +7879,7 @@ msgstr "Phase 3 of 3: the brambles close in"
 msgid "Entravée"
 msgstr "Snared"
 
-#. scripts/boss_vent.gd:113
+#. scripts/boss_vent.gd:116
 #. scripts/enemy_behaviors/glider.gd:70
 msgid "Hors d'atteinte"
 msgstr "Out of reach"
