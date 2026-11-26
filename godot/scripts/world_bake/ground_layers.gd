@@ -4,7 +4,7 @@
 ## trois tons par région et par état) et le front net du bord de vie. Chaque carré de sol en cache
 ## (ground.gd, TILE_PX) reçoit par-dessus un calque dessiné une fois, à sa construction :
 ##   - couche 2, la matière de la région à l'encre fine : craquelures et feuilles mortes, tiges à
-##     épines (Roncier) ; rides de vase et mycélium (Marais) ; craquelures (autres régions, matière
+##     épines (Roncier, sol/ronce.gd) ; rides de vase et mycélium (Marais, sol/spore.gd) ; craquelures (autres régions, matière
 ##     provisoire commune en attendant la vague 2) ; herbe rase couchée sur la terre ravivée ;
 ##   - couche 3, les détails en grappes de 3 à 9 avec un plus grand : cailloux éclairés d'en haut à
 ##     gauche, touffes sèches ; touffes, fleurs de la région, baies, petits chapeaux du Marais ;
@@ -22,6 +22,17 @@
 extends RefCounted
 
 const Regions = preload("res://scripts/regions.gd")
+## Matière propre d'une région (refonte du monde, vague 2) : un fichier par région,
+## scripts/world_bake/sol/<id>.gd, dont les fonctions dessinent à la place de la matière provisoire
+## commune (voir sol/vent.gd pour le contrat).
+const SOL_REGION := {
+	"ronce": preload("res://scripts/world_bake/sol/ronce.gd"),
+	"spore": preload("res://scripts/world_bake/sol/spore.gd"),
+	"vent": preload("res://scripts/world_bake/sol/vent.gd"),
+	"seve": preload("res://scripts/world_bake/sol/seve.gd"),
+	"aube": preload("res://scripts/world_bake/sol/aube.gd"),
+	"racine": preload("res://scripts/world_bake/sol/racine.gd"),
+}
 
 ## Sortes d'éléments (bits du masque d'un carré).
 const DEAD := 1
@@ -337,7 +348,7 @@ class TileLayer extends Node2D:
 
 	## Éléments d'une case (origine o) pour une sorte : toujours les mêmes tirages, quelle que soit la vie.
 	func _cell(o: Vector2, ri: int, kind: int) -> void:
-		var style := _reg if _reg == "ronce" or _reg == "spore" else ""
+		var S = SOL_REGION.get(_reg)
 		if kind == 0:
 			# Terre morte : matière (deux tirages) et une grappe.
 			for i in 3:
@@ -350,19 +361,11 @@ class TileLayer extends Node2D:
 				_e.seed = sd
 				elements += 1
 				if i == 2:
-					_dead_cluster(p, style)
-				elif style == "spore":
-					if i == 0:
-						_rides(p)
-					else:
-						_mycelium(p, Color(_p["fletri"]["cendre"], 0.22))
-				elif style == "ronce" and i == 1:
-					if sd & 1:
-						_thorns(p)
-					else:
-						_leaves(p, _p["fletri"])
+					_dead_cluster(p, S)
+				elif S != null and S.dead_matter(self, p, i, sd, _e):
+					pass
 				else:
-					_crack(p, style == "ronce")
+					_crack(p, false)
 		elif kind == 1:
 			# Terre ravivée : une grappe et la matière vivante de la région (l'herbe rase est peinte par
 			# le shader du sol).
@@ -376,11 +379,9 @@ class TileLayer extends Node2D:
 				_e.seed = sd
 				elements += 1
 				if i == 1:
-					_alive_cluster(p, style)
-				elif style == "spore":
-					_mycelium(p, Color(Art.mc("spore", "ravive", "lueur"), 0.32))
-				elif style == "ronce":
-					_leafy_runner(p)
+					_alive_cluster(p, S)
+				elif S != null and S.alive_matter(self, p, _e):
+					pass
 				else:
 					_leaves(p, _p["ravive"])
 		else:
@@ -391,7 +392,7 @@ class TileLayer extends Node2D:
 				var r := _r.randf_range(2.6, 4.4)
 				_anchor(p, 2, ri)
 				elements += 1
-				_region_flower(p + Vector2(0, -r * 1.6), r)
+				_region_flower(p + Vector2(0, -r * 1.6), r, S)
 
 	## Point d'ancrage (et sorte) des sommets qui suivent.
 	func _anchor(p: Vector2, kind: int, ri: int) -> void:
@@ -472,31 +473,14 @@ class TileLayer extends Node2D:
 		_fan(pts, petal)
 		_oval(q, r0 * 0.4, r0 * 0.4, heart, 4)
 
-	## Petit chapeau du Marais (de la taille d'une touffe). lit : luit (ravivé) ; sinon sombre et terne.
-	func _cap(p: Vector2, r: float, lit: bool) -> void:
-		var etat := "ravive" if lit else "fletri"
-		var pied: Dictionary = Art.mc("spore", etat, "pied")
-		var cap: Color = Art.mc("spore", "ravive", "fleur") if lit else Art.mc("spore", "fletri", "chapeau")["ombre"]
-		if lit:
-			_oval(p + Vector2(0, -r * 1.2), r * 2.2, r * 1.8, Color(cap, 0.1), 8)
-		_line(p, p + Vector2(0, -r * 1.3), maxf(r * 0.45, 1.0), pied["ombre"])
-		var c := p + Vector2(0, -r * 1.3)
-		var dome := PackedVector2Array()
-		for i in 7:
-			var a := PI + PI * i / 6.0
-			dome.append(c + Vector2(cos(a) * r, sin(a) * r * 0.8))
-		_fan(dome, cap.darkened(0.25))
-		_oval(c + Vector2(-r * 0.2, -r * 0.35), r * 0.45, r * 0.22, cap.lightened(0.3) if lit else cap, 6)
-
-	func _region_flower(p: Vector2, r: float) -> void:
-		if _reg == "spore":
-			_cap(p, r * 0.8, true)
-		else:
-			_flower(p, r, _p["ravive"]["fleur"], _p["ravive"]["fleur_coeur"])
+	func _region_flower(p: Vector2, r: float, S = null) -> void:
+		if S != null and S.flower(self, p, r, _p, _e):
+			return
+		_flower(p, r, _p["ravive"]["fleur"], _p["ravive"]["fleur_coeur"])
 
 	# --- Matière et grappes ---
 
-	## Craquelure : un trait brisé fin qui se divise ; braise au fond de certaines (Roncier flétri).
+	## Craquelure : un trait brisé fin qui se divise ; ember : braise au fond de certaines (Roncier flétri).
 	func _crack(c: Vector2, ember: bool) -> void:
 		var ink: Color = _p["fletri"]["matiere"]
 		var p := c
@@ -519,65 +503,8 @@ class TileLayer extends Node2D:
 			var col: Color = pal["feuille" if i % 2 == 0 else "feuille_2"]
 			_leaf(p, _e.randf() * TAU, _e.randf_range(4.0, 7.0), Color(col, 0.85))
 
-	## Tige rampante à épines (Roncier flétri), ombre d'encre en bas à droite (lumière d'en haut à gauche).
-	func _thorns(p: Vector2) -> void:
-		var a := _e.randf() * TAU
-		var pts := PackedVector2Array([p])
-		for i in 4 + _e.randi() % 3:
-			a += _e.randf_range(-0.5, 0.5)
-			pts.append(pts[-1] + Vector2.from_angle(a) * _e.randf_range(13.0, 20.0))
-		var ink := Art.mpc("ronce", "encre_morte")
-		var shadow := PackedVector2Array()
-		for q in pts:
-			shadow.append(q + Vector2(1.0, 1.3))
-		_polyline(shadow, 2.0, Color(ink, 0.5))
-		_polyline(pts, 1.3, Art.mpc("ronce", "tige_morte"))
-		for i in range(1, pts.size() - 1):
-			var d: Vector2 = (pts[i + 1] - pts[i - 1]).normalized()
-			var nn := d.orthogonal() * (1.0 if i % 2 == 0 else -1.0)
-			var q: Vector2 = pts[i]
-			_tri(q + d * 1.4, q + nn * 3.4 + d * 0.8, q - d * 1.0, ink)
-
-	## Tige de ronce ravivée : courte, couverte de petites feuilles.
-	func _leafy_runner(p: Vector2) -> void:
-		var a := _e.randf() * TAU
-		var pts := PackedVector2Array([p])
-		for i in 3:
-			a += _e.randf_range(-0.5, 0.5)
-			pts.append(pts[-1] + Vector2.from_angle(a) * _e.randf_range(13.0, 19.0))
-		_polyline(pts, 1.4, Art.mpc("ronce", "tige_vive"))
-		for i in range(1, pts.size()):
-			var d: Vector2 = (pts[i] - pts[i - 1]).normalized()
-			var side := 1.0 if i % 2 == 0 else -1.0
-			_leaf(pts[i], d.angle() + 0.9 * side, _e.randf_range(5.0, 7.0), Art.mpc("ronce", "feuille"))
-
-	## Rides de vase (Marais) : arcs plats concentriques autour d'un creux.
-	func _rides(c: Vector2) -> void:
-		var ink: Color = _p["fletri"]["matiere"]
-		var a0 := _e.randf_range(-0.6, 0.2)
-		for k in _e.randi_range(2, 3):
-			var rad := 8.0 + k * 6.0
-			var pts := PackedVector2Array()
-			for i in 6:
-				var a := a0 + PI * 0.9 * i / 5.0
-				pts.append(c + Vector2(cos(a) * rad * 1.6, sin(a) * rad * 0.55))
-			_polyline(pts, 1.0, Color(ink, 0.4 - k * 0.07))
-
-	## Mycélium : fils pâles qui se ramifient (lumineux une fois ravivé).
-	func _mycelium(c: Vector2, col: Color) -> void:
-		var p := c
-		var a := _e.randf() * TAU
-		var pts := PackedVector2Array([p])
-		for i in _e.randi_range(4, 7):
-			a += _e.randf_range(-0.9, 0.9)
-			p += Vector2.from_angle(a) * _e.randf_range(6.0, 12.0)
-			pts.append(p)
-			if _e.randf() < 0.3:
-				_line(p, p + Vector2.from_angle(a + _e.randf_range(-1.6, 1.6)) * _e.randf_range(5.0, 9.0), 0.7, Color(col, col.a * 0.7))
-		_polyline(pts, 0.8, col)
-
-	## Grappe de la terre morte : cailloux, touffes sèches ou feuilles ; petits chapeaux ternes au Marais.
-	func _dead_cluster(c: Vector2, style: String) -> void:
+	## Grappe de la terre morte : cailloux, touffes sèches ou cendre (la région peut remplacer chaque objet).
+	func _dead_cluster(c: Vector2, S = null) -> void:
 		var pal: Dictionary = _p["fletri"]
 		var kind := _e.randi() % 3
 		var n := _e.randi_range(3, 5)
@@ -590,23 +517,17 @@ class TileLayer extends Node2D:
 		for it in items:
 			var p: Vector2 = it[0]
 			var big: float = it[1]
-			if style == "spore" and kind == 2:
-				# Champignons du Marais assombris et moins nombreux (retour d'Antoine, 25/11).
-				if big > 0.9 or _e.randf() < 0.4:
-					_cap(p, 2.0 + 2.6 * big, false)
-				else:
-					_pebble(p, 2.5 + 3.5 * big, pal["pierre"])
-			elif kind == 0:
+			if S != null and S.dead_item(self, p, big, kind, pal, _e):
+				continue
+			if kind == 0:
 				_tuft(p, 11.0 * big, pal["touffe"], pal["touffe_2"])
 			elif kind == 1:
 				_pebble(p, 2.6 + 4.0 * big, pal["pierre"])
 			else:
 				_oval(p, 3.5 + 4.5 * big, 1.8 + 2.0 * big, Color(pal["cendre"], 0.4), 6)
-				if style == "ronce" and _e.randf() < 0.2:
-					_oval(p + Vector2(0, -0.5), 1.2 * big, 1.2 * big, Art.bc("braise"), 5)
 
-	## Grappe de la terre ravivée : touffes, fleurs et baies de la région, chapeaux luisants au Marais.
-	func _alive_cluster(c: Vector2, style: String) -> void:
+	## Grappe de la terre ravivée : touffes, fleurs et cailloux (la région peut remplacer chaque objet).
+	func _alive_cluster(c: Vector2, S = null) -> void:
 		var pal: Dictionary = _p["ravive"]
 		var n := _e.randi_range(3, 6)
 		var items := []
@@ -619,16 +540,12 @@ class TileLayer extends Node2D:
 			var p: Vector2 = it[0]
 			var big: float = it[1]
 			var k: float = it[2]
+			if S != null and S.alive_item(self, p, big, k, pal, _e):
+				continue
 			if k < 0.55:
 				_tuft(p, 13.0 * big, pal["touffe"], pal["touffe_2"])
 			elif k < 0.85:
-				if style == "spore":
-					_cap(p, 2.0 + 2.4 * big, true)
-				else:
-					_tuft(p, 9.0 * big, pal["touffe"], pal["touffe_2"])
-					_flower(p + Vector2(0, -8.0 * big), 2.2 + 2.0 * big, pal["fleur"], pal["fleur_coeur"])
-			elif style == "ronce":
-				_oval(p, 1.8 * big + 0.6, 1.8 * big + 0.6, Art.mpc("ronce", "baie"), 6)
-				_oval(p + Vector2(-0.6, -0.6), 0.6, 0.6, Art.mpc("ronce", "fleur_coeur"), 4)
+				_tuft(p, 9.0 * big, pal["touffe"], pal["touffe_2"])
+				_flower(p + Vector2(0, -8.0 * big), 2.2 + 2.0 * big, pal["fleur"], pal["fleur_coeur"])
 			else:
 				_pebble(p, 2.4 + 3.0 * big, pal["pierre"])
