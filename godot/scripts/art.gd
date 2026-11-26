@@ -254,6 +254,10 @@ const MONDE := {
 			"cendre": Color(0.55, 0.52, 0.5, 0.75), "eau": Color("bfe4ee"), "spore": Color("e6d8ff"),
 			"oiseau": Color("b08a66"), "oiseau_mort": Color("5a5058"), "grenouille": Color("7fae58"), "grenouille_mort": Color("6a6a58"),
 			"papillon": Color("ffd890"), "papillon_mort": Color("a89a90"), "luciole": Color("ffe9a0"), "luciole_mort": Color("c8b4e0"),
+			# Événements du monde (vague 2 E) : teintes qui multiplient le décor proche (éclairantes ×
+			# gain de data/feel.json › world › life › events) et lueurs des lieux.
+			"pousse": Color("d8f0c0"), "siege": Color("8c80a0"), "fane": Color("a09888"), "souffle": Color("f4f8e8"),
+			"lueur_lieu": Color("ffe9bf"), "lueur_autel": Color("ffd98a"),
 		},
 		"ronce": {"bris_vif": Color("8fb04c"), "bris_mort": Color("7d4b30"), "pas": Color("f4a3b4"), "papillon": Color("ffb0c0")},
 		"spore": {"bris_vif": Color("7fd0b8"), "bris_mort": Color("82708a"), "pas": Color("7ff0dc"), "spore": Color("c9fff0"),

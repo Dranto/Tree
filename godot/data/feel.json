@@ -268,6 +268,16 @@
 					"away": 2.0
 				}
 			},
+			"events": {
+				"_doc": "Événements du monde (world_life.gd › event, vague 2 E) : zones du shader du décor (4 à la fois). Par sorte : radius (rayon de la zone), dur (durée), tint (part de la teinte), gain (teinte éclairante : couleur × gain), lift (pousse : l'élément grandit, < 0 il se tasse), lean (penchant vers l'extérieur, < 0 vers le centre), puff (gonflement en largeur), push (souffle du balancement), bits (débris). bloom : vague de vie (rayon et durée pris au Cœur), width (largeur du front), bits_every. siege : twist (torsion à chaque seconde tenue), fade (apaisement après le siège).",
+				"bloom": {"width": 150.0, "tint": 0.6, "gain": 1.4, "lift": 0.18, "lean": 0.5, "puff": 0.06, "bits": 2, "bits_every": 0.08},
+				"siege": {"tint": 0.6, "lift": 0.05, "lean": 0.35, "twist": 0.9, "fade": 1.6, "bits": 3},
+				"lit": {"radius": 320.0, "dur": 4.0, "tint": 0.6, "gain": 1.5, "lift": 0.04, "push": 1.4, "bits": 10},
+				"altar": {"radius": 220.0, "dur": 3.0, "tint": 0.55, "gain": 1.5, "lift": 0.04, "push": 1.1, "bits": 6},
+				"level": {"radius": 260.0, "dur": 1.4, "tint": 0.35, "gain": 1.2, "lean": 0.9, "push": 1.8, "bits": 8},
+				"graft": {"radius": 180.0, "dur": 1.0, "tint": 0.3, "gain": 1.2, "lean": 0.7, "push": 1.2, "bits": 4},
+				"fane": {"radius": 220.0, "dur": 2.6, "tint": 0.65, "lift": 0.16, "lean": 0.25}
+			},
 			"regions": {
 				"_doc": "Par région : débris de la région, faune, force des rafales et leur rythme, souffle de fond, angle du vent.",
 				"ronce": {

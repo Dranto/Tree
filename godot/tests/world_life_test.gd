@@ -210,12 +210,93 @@ func _run() -> void:
 	check(life._hook("ronce") != null, "réactions propres du Roncier (world_art/ronce_vivant.gd)")
 	check(life._hook("vent") == null or ResourceLoader.exists("res://scripts/world_art/vent_vivant.gd"), "pas de crochet pour une région qui n'en a pas")
 
+	print("Événements du monde")
+	var h = main.all_hearts[0]
+	check(h.siege_ticked.get_connections().size() > 0 and h.bloomed.get_connections().size() > 0, "les Cœurs sont branchés (siège, purification)")
+	check(main.sanctuaries.is_empty() or main.sanctuaries[0].lit.get_connections().size() > 0, "les sanctuaires sont branchés")
+	check(main.altars.is_empty() or main.altars[0].activated.get_connections().size() > 0, "les autels sont branchés")
+	life.events.clear()
+	life._push.clear()
+	h.on_siege_tick(0.5)
+	check(life.events.any(func(q): return q["kind"] == "siege"), "une seconde de siège ouvre l'événement")
+	check(life._push.any(func(q): return q["f"] < 0.0), "le décor proche du Cœur se tord")
+	h.on_siege_tick(0.6)
+	check(life.events.filter(func(q): return q["kind"] == "siege").size() == 1, "un seul siège par Cœur")
+	player.position = h.center
+	var ev: Array = life._event_uniforms(player)
+	var sl: Array = life._ev_slot(life.events[0])
+	check(ev[0][0].z > 0.0 and sl[1].x < 1.0 and sl[1].w > 0.0, "siège : le décor proche s'assombrit")
+	check(sl[2].y < 0.0, "siège : le décor penche vers le Cœur")
+	# Vague de vie : un élément encore flétri pousse en fondu quand la vague l'atteint.
+	var dead = null
+	for t in life.decor_near(h.center, h.life_radius):
+		if not t.alive:
+			dead = t
+			break
+	h.on_purified(true)
+	check(not life.events.any(func(q): return q["kind"] == "siege"), "la purification clôt le siège")
+	check(life.events.any(func(q): return q["kind"] == "bloom"), "la purification lance la vague de vie")
+	if dead != null:
+		check(life._bloom_watch.has(dead.get_instance_id()), "le décor flétri est guetté par la vague")
+		dead.alive = true
+		dead.leaf = 1.0
+		main.ground.painted.emit(dead.position, 20.0)
+		check(dead.leaf < 1.0, "le décor atteint par la vague pousse en fondu (sans recuisson)")
+	var bloom: Dictionary = life.events.filter(func(q): return q["kind"] == "bloom")[0]
+	var f0: float = life._bloom_front(bloom)
+	bloom["t"] = 1.0
+	check(life._bloom_front(bloom) > f0, "le front de la vague avance depuis le Cœur")
+	sl = life._ev_slot(bloom)
+	check(sl[0].w > 0.0 and sl[1].x > 1.0 and sl[2].x > 0.0, "front : le décor s'éclaire et pousse")
+	life.bits.clear()
+	life._ev_bits = 0.0
+	player.position = bloom["pos"] + Vector2(life._bloom_front(bloom), 0)
+	life._update_events(player, 0.02)
+	check(not life.bits.is_empty(), "pétales ou spores au front de la vague")
+	life.events.clear()
+	life.event("fane", player.position)
+	var fane: Dictionary = life.events[0]
+	fane["t"] = 0.6
+	sl = life._ev_slot(fane)
+	check(sl[2].x < 0.0 and sl[1].w > 0.3, "mort d'un élite : la flore se fane et se tasse")
+	fane["t"] = fane["dur"] * 0.62
+	sl = life._ev_slot(fane)
+	check(sl[2].x > 0.0, "puis se relève")
+	life.events.clear()
+	life._push.clear()
+	main.world_fx.level_up()
+	check(life.events.any(func(q): return q["kind"] == "level") and not life._push.is_empty(), "montée de niveau : souffle autour du héros")
+	life.event("lit", player.position)
+	sl = life._ev_slot(life.events[-1])
+	life.events[-1]["t"] = 0.3
+	sl = life._ev_slot(life.events[-1])
+	check(sl[1].x > 1.0 and sl[1].w > 0.2, "sanctuaire : lueur sur le décor proche")
+	for i in 6:
+		life.events.append({"kind": "fane", "pos": player.position + Vector2(400 * i, 0), "t": 0.5, "dur": 2.6, "r": 200.0, "reg": "ronce", "src": null, "k": 0.0, "last": 0.0})
+	ev = life._event_uniforms(player)
+	check(ev[0].size() == 4, "au plus 4 zones dans le shader")
+	for i in 400:
+		life._update_events(player, 0.05)
+	check(life.events.is_empty(), "les événements s'éteignent")
+	life._apply_uniforms(player)
+	life._apply_uniforms(player)
+	check(not life._ev_dirty, "zones remises à zéro quand tout est calme")
+	settings.reduce_effects = true
+	life.event("level", player.position)
+	var lv_less: float = life._ev_slot(life.events[-1])[2].y
+	settings.reduce_effects = false
+	life.events[-1]["t"] = 0.0
+	check(lv_less < life._ev_slot(life.events[-1])[2].y * 0.5, "réduire les effets : un tiers")
+	life.events.clear()
+
 	print("Tests visuels figés")
 	WorldLife.still = true
 	life.bits.clear()
 	life._push.clear()
 	life.react("heavy", player.position, 1.0)
 	check(life.bits.is_empty() and life._push.is_empty(), "figé : react ne pose rien")
+	life.event("bloom", player.position)
+	check(life.events.is_empty(), "figé : aucun événement")
 	WorldLife.still = false
 
 	print("Coût")

@@ -6,5 +6,8 @@ shader_type canvas_item;
 
 void vertex() {
 	VERTEX += decor_sway(VERTEX, MODEL_MATRIX);
+	vec3 ev = COLOR.rgb;
+	VERTEX += decor_event(VERTEX, MODEL_MATRIX, ev);
+	COLOR.rgb = ev;
 	COLOR.rgb *= decor_light(VERTEX, MODEL_MATRIX);
 }
