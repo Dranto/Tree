@@ -78,7 +78,7 @@ func _run() -> void:
 		_put(pos)
 		await _prepare(pos)
 		await _steps(45)
-		Game.flags[Regions.heart_flag(scene)] = true
+		root.get_node("Game").flags[Regions.heart_flag(scene)] = true
 		await _steps(260)
 	print("images dans ", out, " : ", _n)
 	quit()
