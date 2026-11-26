@@ -74,6 +74,9 @@ func _init(p_tree: SceneTree, p_main) -> void:
 func figer() -> void:
 	main.autotest = false
 	main.spawn_timer = 1.0e9
+	# Monde vivant figé (comme les tests visuels) : la faune, les pétales et les pas fleuris qui passent
+	# dans le cadre brouillent la mesure des couleurs ; le banc juge la palette, pas l'animation.
+	load("res://scripts/world_life.gd").still = true
 	main.player.set_physics_process(false)
 	main.hud.glyphs.visible = false
 	main.hud.banner_queue = []
