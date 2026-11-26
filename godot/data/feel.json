@@ -170,6 +170,7 @@
 			"caps": {
 				"_doc": "Plafonds d'éléments animés à la fois.",
 				"fauna": 10,
+				"gueri": 5,
 				"bits": 72,
 				"marks": 60
 			},
@@ -226,55 +227,161 @@
 				"chance": 0.35
 			},
 			"fauna": {
-				"_doc": "Faune ambiante : vie du sol où elle apparaît, taille des groupes, distance de fuite, vitesse et durée de la fuite.",
-				"papillon": {
+				"_doc": "Faune ambiante (dessinée par creature_art/<région>/vie/faune.gd) : mouvement (flutter voletant, glow luciole, glide voilier, perch oiseau posé, hop bondisseur, crawl rampant, dash marcheur qui détale), vie du sol où elle apparaît, taille des groupes, distance de fuite, vitesse et durée de la fuite, vitesse de marche, amplitude du vol.",
+				"pieride": {
+					"move": "flutter",
 					"min_life": 0.45,
-					"group": [
-						1,
-						2
-					],
+					"group": [1, 2],
 					"scare": 70.0,
 					"flee_speed": 150.0,
 					"away": 2.5
 				},
-				"oiseau": {
+				"fauvette": {
+					"move": "perch",
 					"min_life": 0.0,
-					"group": [
-						1,
-						3
-					],
+					"group": [1, 3],
 					"scare": 120.0,
 					"flee_speed": 260.0,
 					"away": 4.5
 				},
-				"grenouille": {
+				"coccinelle": {
+					"move": "crawl",
+					"min_life": 0.3,
+					"group": [1, 2],
+					"scare": 50.0,
+					"flee_speed": 70.0,
+					"speed": 10.0,
+					"away": 1.5
+				},
+				"luciole": {
+					"move": "glow",
 					"min_life": 0.0,
-					"group": [
-						1,
-						2
-					],
+					"group": [2, 4],
+					"scare": 60.0,
+					"flee_speed": 90.0,
+					"away": 2.0
+				},
+				"rainette": {
+					"move": "hop",
+					"min_life": 0.0,
+					"group": [1, 2],
 					"scare": 80.0,
 					"flee_speed": 110.0,
 					"away": 0.45
 				},
-				"luciole": {
-					"min_life": 0.0,
-					"group": [
-						2,
-						4
-					],
+				"escargot": {
+					"move": "crawl",
+					"min_life": 0.2,
+					"group": [1, 1],
 					"scare": 60.0,
-					"flee_speed": 90.0,
+					"flee_speed": 36.0,
+					"speed": 5.0,
+					"away": 2.0
+				},
+				"alouette": {
+					"move": "perch",
+					"min_life": 0.0,
+					"group": [1, 3],
+					"scare": 120.0,
+					"flee_speed": 260.0,
+					"away": 4.5
+				},
+				"martinet": {
+					"move": "glide",
+					"min_life": 0.0,
+					"group": [1, 2],
+					"scare": 150.0,
+					"flee_speed": 300.0,
+					"away": 3.5
+				},
+				"lievre": {
+					"move": "dash",
+					"min_life": 0.3,
+					"group": [1, 1],
+					"scare": 130.0,
+					"flee_speed": 300.0,
+					"speed": 55.0,
+					"away": 2.0
+				},
+				"grenouille": {
+					"move": "hop",
+					"min_life": 0.0,
+					"group": [1, 2],
+					"scare": 80.0,
+					"flee_speed": 110.0,
+					"away": 0.45
+				},
+				"libellule": {
+					"move": "flutter",
+					"min_life": 0.45,
+					"group": [1, 2],
+					"scare": 90.0,
+					"flee_speed": 230.0,
+					"amp": 1.8,
+					"away": 2.5
+				},
+				"triton": {
+					"move": "crawl",
+					"min_life": 0.0,
+					"group": [1, 1],
+					"scare": 50.0,
+					"flee_speed": 60.0,
+					"speed": 9.0,
+					"away": 1.5
+				},
+				"papillon_nacre": {
+					"move": "flutter",
+					"min_life": 0.45,
+					"group": [1, 2],
+					"scare": 70.0,
+					"flee_speed": 150.0,
+					"away": 2.5
+				},
+				"colombe": {
+					"move": "perch",
+					"min_life": 0.0,
+					"group": [1, 3],
+					"scare": 120.0,
+					"flee_speed": 260.0,
+					"away": 4.5
+				},
+				"pic": {
+					"move": "perch",
+					"min_life": 0.0,
+					"group": [1, 2],
+					"scare": 120.0,
+					"flee_speed": 260.0,
+					"away": 4.5
+				},
+				"ecureuil": {
+					"move": "dash",
+					"min_life": 0.2,
+					"group": [1, 1],
+					"scare": 110.0,
+					"flee_speed": 280.0,
+					"speed": 45.0,
 					"away": 2.0
 				}
+			},
+			"gueri": {
+				"_doc": "Formes guéries (creature_art/<région>/vie/gueri.gd) : une par sorte de Flétri, dans les régions ravivées (vie du sol au-dessus de min_life). chance : part des naissances de faune qui sont une forme guérie ; commun : part des formes guéries des Flétris communs ; group : taille des groupes ; elles fuient le héros (vitesse de marche × flee_mult, au moins flee_min), puis reviennent. Aucune collision, aucun effet de jeu.",
+				"min_life": 0.6,
+				"chance": 0.4,
+				"commun": 0.35,
+				"group": [1, 2],
+				"scare": 110.0,
+				"away": 2.6,
+				"flee_mult": 4.5,
+				"flee_min": 90.0
 			},
 			"regions": {
 				"_doc": "Par région : débris de la région, faune, force des rafales et leur rythme, souffle de fond, angle du vent.",
 				"ronce": {
 					"bits": "feuille",
 					"fauna": [
-						"papillon",
-						"oiseau"
+						"pieride",
+						"fauvette",
+						"coccinelle"
 					],
 					"gust": 0.7,
 					"gust_every": [
@@ -287,8 +394,9 @@
 				"spore": {
 					"bits": "spore",
 					"fauna": [
-						"grenouille",
-						"luciole"
+						"luciole",
+						"rainette",
+						"escargot"
 					],
 					"gust": 0.4,
 					"gust_every": [
@@ -301,7 +409,9 @@
 				"vent": {
 					"bits": "plume",
 					"fauna": [
-						"oiseau"
+						"alouette",
+						"martinet",
+						"lievre"
 					],
 					"gust": 1.0,
 					"gust_every": [
@@ -314,8 +424,9 @@
 				"seve": {
 					"bits": "feuille",
 					"fauna": [
-						"papillon",
-						"grenouille"
+						"grenouille",
+						"libellule",
+						"triton"
 					],
 					"gust": 0.6,
 					"gust_every": [
@@ -328,8 +439,9 @@
 				"aube": {
 					"bits": "eclat",
 					"fauna": [
-						"papillon",
-						"luciole"
+						"luciole",
+						"papillon_nacre",
+						"colombe"
 					],
 					"gust": 0.6,
 					"gust_every": [
@@ -342,7 +454,8 @@
 				"racine": {
 					"bits": "sciure",
 					"fauna": [
-						"oiseau",
+						"pic",
+						"ecureuil",
 						"luciole"
 					],
 					"gust": 0.5,

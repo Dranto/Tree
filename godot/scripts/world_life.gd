@@ -33,6 +33,7 @@ const Flora = preload("res://scripts/flora.gd")
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 const Atlas = preload("res://scripts/world_life_atlas.gd")
+const Vie = preload("res://scripts/world_life_vie.gd")
 const DecorMarais = preload("res://scripts/decor_marais.gd")
 const DecorPlateau = preload("res://scripts/decor_plateau.gd")
 const DecorVallee = preload("res://scripts/decor_vallee.gd")
@@ -78,7 +79,8 @@ var _scan_i := 0
 var bits: Array = []
 ## Marques au sol : {f, pos, t, dur, col, s, grow}.
 var marks: Array = []
-## Faune : {sp, pos, z, state, t, timer, home, v, face, col, seed}.
+## Faune non hostile et formes guéries (make_beast) : {sp, key, reg, gueri, move, pos, z, state, t, timer,
+## home, dest, v, face, col, seed, vz, ph}. Dessins cuits en couleur : world_life_vie.gd.
 var fauna: Array = []
 var _tick := 0.0
 var _enemy_tick := 0.0
@@ -124,6 +126,7 @@ func _ready() -> void:
 ## matériau du décor oubliées (DecorBake.release() en refait un neuf à la partie suivante).
 func _exit_tree() -> void:
 	Atlas.clear()
+	Vie.clear()
 	_tabs = []
 	_variants.clear()
 
@@ -316,6 +319,7 @@ func _process(delta: float) -> void:
 	if p == null:
 		return
 	_region = _region_of(p.position)
+	_ensure_sheets(delta)
 	_update_gust(delta)
 	for e in _push:
 		e["t"] += delta
@@ -569,7 +573,7 @@ func _hero_step(p) -> void:
 		add_mark("fleur_pas", feet + side, _num("hero", "bloom_time", 3.6), col(reg, "pas"), rng.randf_range(0.75, 1.0), 0.0)
 	# La faune proche s'envole.
 	for a in fauna:
-		if a["pos"].distance_squared_to(p.position) < pow(_scare_r(a["sp"]) * (1.6 if dash else 1.0), 2):
+		if a["pos"].distance_squared_to(p.position) < pow(_scare_r(a) * (1.6 if dash else 1.0), 2):
 			_flee(a, p.position)
 
 
@@ -648,7 +652,7 @@ func _enemies(p) -> void:
 			push(e.position, 70.0 + er * 2.0, -0.55)
 		# La faune fuit.
 		for a in fauna:
-			if a["pos"].distance_squared_to(e.position) < pow(_scare_r(a["sp"]) * 0.8, 2):
+			if a["pos"].distance_squared_to(e.position) < pow(_scare_r(a) * 0.8, 2):
 				_flee(a, e.position)
 	for id in _last_pos.keys():
 		if not seen.has(id):
@@ -675,137 +679,320 @@ func _projectiles() -> void:
 		world_fx.disturb(sh.position + Vector2(0, 6), _num("projectiles", "radius", 18.0), v.normalized(), 1.0)
 
 
-# ---------------------------------------------------------------- faune
+# ---------------------------------------------------------------- faune et formes guéries
 
-func _scare_r(sp: String) -> float:
-	return float(cfg.get("fauna", {}).get(sp, {}).get("scare", 90.0))
+var _keep_clock := 0.0
+
+
+## Atlas de couleur utiles : la région du héros, « commun » et celles où des bêtes sont encore ; refaits si le
+## mode daltonien change.
+func _ensure_sheets(delta: float) -> void:
+	if not Vie.sheets.is_empty() and Vie.baked_mode != Art.mode_daltonien:
+		Vie.invalidate()
+	_keep_clock -= delta
+	if _keep_clock > 0.0:
+		return
+	_keep_clock = 0.5
+	var want: Array = [_region, "commun"]
+	for a in fauna:
+		if not (a["reg"] in want):
+			want.append(a["reg"])
+	Vie.keep(want)
+	for r in want:
+		Vie.bake(self, r)
+
+
+## Réglages d'une bête : sa section de feel.json (faune › espèce, ou « gueri » pour une forme guérie).
+func _beast_cfg(a: Dictionary) -> Dictionary:
+	if a.get("gueri", false):
+		return cfg.get("gueri", {})
+	return cfg.get("fauna", {}).get(a["sp"], {})
+
+
+## Dessin d'une bête (hauteur, vitesse de marche, poses) : lu dans le script de sa région.
+func _beast_info(a: Dictionary) -> Dictionary:
+	return Vie.info(a["reg"], a["key"])
+
+
+func _scare_r(a: Dictionary) -> float:
+	return float(_beast_cfg(a).get("scare", 90.0))
+
+
+## Vitesse de marche d'une bête (px/s) et de fuite.
+func _walk_speed(a: Dictionary) -> float:
+	var fc := _beast_cfg(a)
+	if a.get("gueri", false):
+		return float(_beast_info(a).get("v", 30.0))
+	return float(fc.get("speed", 30.0))
+
+
+func _flee_speed(a: Dictionary) -> float:
+	var fc := _beast_cfg(a)
+	if a.get("gueri", false):
+		return maxf(float(fc.get("flee_min", 90.0)), _walk_speed(a) * float(fc.get("flee_mult", 4.5)))
+	return float(fc.get("flee_speed", 200.0))
+
+
+## Une bête neuve : « sp » de la faune de « reg » (ou forme guérie de la sorte « sp » si « gueri »), posée en « at ».
+## Les bêtes nées sur la terre flétrie sont ternes ; une forme guérie ne naît que sur la terre ravivée.
+func make_beast(sp: String, gueri: bool, at: Vector2, reg: String) -> Dictionary:
+	var info := Vie.info(reg, Vie.key(sp, gueri))
+	var poses: Dictionary = info.get("poses", {})
+	var fc: Dictionary = cfg.get("gueri", {}) if gueri else cfg.get("fauna", {}).get(sp, {})
+	var move := str(fc.get("move", "dash"))
+	if gueri:
+		move = "flutter" if poses.has("vol") and not poses.has("marche") else "dash"
+	var life := 1.0
+	if main != null and main.get("ground") != null:
+		life = main.ground.life_at(at)
+	var z := 0.0
+	match move:
+		"flutter":
+			z = rng.randf_range(14.0, 30.0)
+		"glow":
+			z = rng.randf_range(20.0, 34.0)
+		"glide":
+			z = rng.randf_range(90.0, 130.0)
+	return {"sp": sp, "key": Vie.key(sp, gueri), "reg": reg, "gueri": gueri, "move": move, "pos": at, "z": z,
+		"state": "repos", "t": rng.randf() * 4.0, "timer": rng.randf_range(0.5, 3.0), "home": at, "dest": at,
+		"v": Vector2.ZERO, "face": 1.0 if rng.randf() < 0.5 else -1.0,
+		"col": Color.WHITE if (gueri or life > 0.45) else Color(0.68, 0.64, 0.7), "seed": rng.randf() * TAU, "vz": 0.0, "ph": 0.0}
 
 
 func _fauna_spawn(p) -> void:
 	var cap := _qty(int(_num("caps", "fauna", 10)))
+	var cap_g := _qty(int(_num("caps", "gueri", 5)))
 	var far := _num("near", "despawn", 1000.0)
 	fauna = fauna.filter(func(a): return a["pos"].distance_squared_to(p.position) < far * far)
-	if fauna.size() >= cap:
-		return
+	var n_g := 0
+	for a in fauna:
+		if a["gueri"]:
+			n_g += 1
+	var n_f := fauna.size() - n_g
 	var at: Vector2 = p.position + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(260.0, 620.0)
 	if main.has_method("clamp_to_world"):
 		at = main.clamp_to_world(at)
 	var reg := _region_of(at)
+	var life: float = main.ground.life_at(at)
+	# Une forme guérie une fois sur trois quand la terre est ravivée ; sinon la faune de la région.
+	if life > float(cfg.get("gueri", {}).get("min_life", 0.6)) and n_g < cap_g and rng.randf() < float(cfg.get("gueri", {}).get("chance", 0.4)):
+		_spawn_gueri(at, reg, cap_g - n_g)
+		return
+	if n_f >= cap:
+		return
 	var list: Array = _region_cfg(reg).get("fauna", [])
 	if list.is_empty():
 		return
 	var sp: String = list[rng.randi() % list.size()]
+	if not (sp in Vie.faune_ids(reg)):
+		return
 	var fc: Dictionary = cfg.get("fauna", {}).get(sp, {})
-	var life: float = main.ground.life_at(at)
 	if life < float(fc.get("min_life", 0.0)) or life > float(fc.get("max_life", 1.1)):
 		return
 	var count := rng.randi_range(int(fc.get("group", [1, 1])[0]), int(fc.get("group", [1, 1])[1]))
 	for i in count:
-		if fauna.size() >= cap:
+		if n_f >= cap:
 			break
+		n_f += 1
 		var q := at + Vector2(rng.randf_range(-30, 30), rng.randf_range(-16, 16))
-		var alive := life > 0.45
-		var c := col(reg, sp + ("" if alive else "_mort"))
-		fauna.append({"sp": sp, "pos": q, "z": 0.0 if sp in ["oiseau", "grenouille"] else rng.randf_range(14.0, 30.0),
-			"state": "repos", "t": rng.randf() * 4.0, "timer": rng.randf_range(0.5, 3.0), "home": q,
-			"v": Vector2.ZERO, "face": 1.0 if rng.randf() < 0.5 else -1.0, "col": c, "seed": rng.randf() * TAU, "vz": 0.0})
+		fauna.append(make_beast(sp, false, q, reg))
+
+
+## Une forme guérie (le plus souvent d'une sorte de la région, parfois d'un Flétri commun) naît en « at ».
+func _spawn_gueri(at: Vector2, reg: String, room: int) -> void:
+	var src := reg
+	var ids: Array = Vie.gueri_ids(reg)
+	var share := float(cfg.get("gueri", {}).get("commun", 0.35))
+	if ids.is_empty() or rng.randf() < share:
+		src = "commun"
+		ids = Vie.gueri_ids("commun")
+	if ids.is_empty():
+		return
+	var sp: String = ids[rng.randi() % ids.size()]
+	var g: Array = cfg.get("gueri", {}).get("group", [1, 2])
+	for i in mini(rng.randi_range(int(g[0]), int(g[1])), room):
+		var q := at + Vector2(rng.randf_range(-34, 34), rng.randf_range(-18, 18))
+		fauna.append(make_beast(sp, true, q, src))
 
 
 func _flee(a: Dictionary, from: Vector2) -> void:
 	if a["state"] == "fuite":
 		return
 	var away: Vector2 = (a["pos"] - from).normalized() if a["pos"].distance_squared_to(from) > 1.0 else Vector2.UP
-	var fc: Dictionary = cfg.get("fauna", {}).get(a["sp"], {})
+	var fc := _beast_cfg(a)
 	a["state"] = "fuite"
 	a["timer"] = float(fc.get("away", 3.0))
-	a["v"] = (away + Vector2(rng.randf_range(-0.4, 0.4), -0.3)).normalized() * float(fc.get("flee_speed", 200.0))
+	var spd := _flee_speed(a)
+	match a["move"]:
+		"hop":
+			a["vz"] = 120.0
+			a["timer"] = 0.45
+			a["v"] = away * 110.0
+		"flutter", "glow", "glide", "perch":
+			a["v"] = (away + Vector2(rng.randf_range(-0.4, 0.4), -0.3)).normalized() * spd
+		_:
+			a["v"] = away.rotated(rng.randf_range(-0.4, 0.4)) * spd
 	a["face"] = signf(a["v"].x) if absf(a["v"].x) > 1.0 else a["face"]
-	if a["sp"] == "grenouille":
-		a["vz"] = 120.0
-		a["timer"] = 0.45
-		a["v"] = away * 110.0
 
 
 func _update_fauna(p, delta: float) -> void:
-	var gone: Array = []
 	for a in fauna:
 		a["t"] += delta
 		a["timer"] -= delta
-		var sp: String = a["sp"]
-		match a["state"]:
-			"repos":
-				_idle(a, delta)
-			"fuite":
-				if sp == "grenouille":
-					a["pos"] += a["v"] * delta
-					a["vz"] -= 520.0 * delta
-					a["z"] = maxf(0.0, a["z"] + a["vz"] * delta)
-					if a["z"] <= 0.0 and a["vz"] < 0.0:
-						a["z"] = 0.0
-						a["state"] = "repos"
-						a["timer"] = rng.randf_range(1.5, 4.0)
-						if rng.randf() < 0.3:
-							splash(a["pos"], 0.4)
-				else:
-					a["pos"] += a["v"] * delta
-					a["v"] *= 1.0 + 0.6 * delta
-					if sp == "oiseau":
-						a["z"] = minf(a["z"] + 120.0 * delta, 220.0)
-					else:
-						a["z"] = minf(a["z"] + 40.0 * delta, 90.0)
-					if a["timer"] <= 0.0:
-						if sp == "oiseau":
-							a["state"] = "retour"
-							# Revient se poser plus loin, hors de portée du héros.
-							a["home"] = p.position + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(240.0, 420.0)
-							a["pos"] = a["home"] + (a["pos"] - a["home"]).normalized() * 520.0
-						else:
-							a["state"] = "repos"
-							a["home"] = a["pos"]
-							a["v"] = Vector2.ZERO
-			"retour":
-				var to: Vector2 = a["home"] - a["pos"]
-				var d := to.length()
-				a["face"] = signf(to.x) if absf(to.x) > 1.0 else a["face"]
-				a["pos"] += to.normalized() * minf(d, 180.0 * delta)
-				a["z"] = minf(a["z"], d * 0.35)
-				if d < 2.0:
-					a["state"] = "repos"
-					a["z"] = 0.0
-					a["timer"] = rng.randf_range(1.0, 3.0)
-	for a in gone:
-		fauna.erase(a)
+		match a["move"]:
+			"hop":
+				_upd_hop(a, p, delta)
+			"perch":
+				_upd_perch(a, p, delta)
+			"glide":
+				_upd_glide(a, p, delta)
+			"flutter", "glow":
+				_upd_flutter(a, delta)
+			_:
+				_upd_walk(a, delta)
 
 
-func _idle(a: Dictionary, delta: float) -> void:
-	match a["sp"]:
-		"papillon":
-			var s: float = a["seed"]
-			var tt: float = a["t"]
-			var tgt: Vector2 = a["home"] + Vector2(sin(tt * 0.7 + s) * 46.0, sin(tt * 1.1 + s * 2.0) * 22.0)
-			var dv: Vector2 = tgt - a["pos"]
-			a["face"] = signf(dv.x) if absf(dv.x) > 0.5 else a["face"]
-			a["pos"] += dv * minf(1.0, delta * 2.0)
-			a["z"] = 20.0 + 8.0 * sin(tt * 2.3 + s)
-		"luciole":
-			var s: float = a["seed"]
-			var tt: float = a["t"]
-			a["pos"] = a["pos"].lerp(a["home"] + Vector2(sin(tt * 0.4 + s) * 34.0, cos(tt * 0.5 + s) * 18.0), minf(1.0, delta))
-			a["z"] = 26.0 + 10.0 * sin(tt * 0.9 + s)
-		"oiseau":
-			# Picore, sautille de temps en temps.
+## Bondisseur (rainette, grenouille) : saute de temps en temps, s'éclabousse en retombant près de l'eau.
+func _upd_hop(a: Dictionary, _p, delta: float) -> void:
+	if a["state"] == "repos":
+		if a["timer"] <= 0.0:
+			a["timer"] = rng.randf_range(3.0, 7.0)
+			a["state"] = "fuite"
+			a["vz"] = 90.0
+			a["v"] = Vector2.from_angle(rng.randf() * TAU) * 50.0
+			a["face"] = signf(a["v"].x) if absf(a["v"].x) > 1.0 else a["face"]
+		return
+	a["pos"] += a["v"] * delta
+	a["vz"] -= 520.0 * delta
+	a["z"] = maxf(0.0, a["z"] + a["vz"] * delta)
+	if a["z"] <= 0.0 and a["vz"] < 0.0:
+		a["z"] = 0.0
+		a["state"] = "repos"
+		a["timer"] = rng.randf_range(1.5, 4.0)
+		if a["sp"] == "grenouille" and rng.randf() < 0.3:
+			splash(a["pos"], 0.4)
+
+
+## Oiseau posé (fauvette, alouette, colombe, pic) : picore, sautille ; s'envole si on approche, revient se poser plus loin.
+func _upd_perch(a: Dictionary, p, delta: float) -> void:
+	match a["state"]:
+		"repos":
 			if a["timer"] <= 0.0:
 				a["timer"] = rng.randf_range(0.8, 2.4)
 				if rng.randf() < 0.4:
 					a["face"] = -a["face"]
 				a["pos"] += Vector2(a["face"] * rng.randf_range(4.0, 10.0), rng.randf_range(-3.0, 3.0))
-		"grenouille":
+		"fuite":
+			a["pos"] += a["v"] * delta
+			a["v"] *= 1.0 + 0.6 * delta
+			a["z"] = minf(a["z"] + 120.0 * delta, 220.0)
 			if a["timer"] <= 0.0:
-				a["timer"] = rng.randf_range(3.0, 7.0)
-				a["state"] = "fuite"
-				a["vz"] = 90.0
-				a["v"] = Vector2.from_angle(rng.randf() * TAU) * 50.0
-				a["face"] = signf(a["v"].x) if absf(a["v"].x) > 1.0 else a["face"]
+				a["state"] = "retour"
+				# Revient se poser plus loin, hors de portée du héros.
+				a["home"] = p.position + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(240.0, 420.0)
+				a["pos"] = a["home"] + (a["pos"] - a["home"]).normalized() * 520.0
+		"retour":
+			var to: Vector2 = a["home"] - a["pos"]
+			var d := to.length()
+			a["face"] = signf(to.x) if absf(to.x) > 1.0 else a["face"]
+			a["pos"] += to.normalized() * minf(d, 180.0 * delta)
+			a["z"] = minf(a["z"], d * 0.35)
+			if d < 2.0:
+				a["state"] = "repos"
+				a["z"] = 0.0
+				a["timer"] = rng.randf_range(1.0, 3.0)
+
+
+## Voilier (martinet) : tourne sans cesse en l'air autour de son point d'attache ; fuit vite, puis revient.
+func _upd_glide(a: Dictionary, p, delta: float) -> void:
+	match a["state"]:
+		"repos":
+			var u: float = a["t"] * 0.45 + a["seed"]
+			var tgt: Vector2 = a["home"] + Vector2(cos(u) * 90.0, sin(u) * 40.0)
+			var dv: Vector2 = tgt - a["pos"]
+			a["face"] = signf(dv.x) if absf(dv.x) > 0.5 else a["face"]
+			a["pos"] += dv * minf(1.0, delta * 3.0)
+			a["z"] = 105.0 + 14.0 * sin(a["t"] * 0.8 + a["seed"])
+		"fuite":
+			a["pos"] += a["v"] * delta
+			a["v"] *= 1.0 + 0.5 * delta
+			a["z"] = minf(a["z"] + 50.0 * delta, 200.0)
+			if a["timer"] <= 0.0:
+				a["state"] = "retour"
+				a["home"] = p.position + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(260.0, 460.0)
+				a["pos"] = a["home"] + (a["pos"] - a["home"]).normalized() * 560.0
+		"retour":
+			var to: Vector2 = a["home"] - a["pos"]
+			var d := to.length()
+			a["face"] = signf(to.x) if absf(to.x) > 1.0 else a["face"]
+			a["pos"] += to.normalized() * minf(d, 200.0 * delta)
+			if d < 4.0:
+				a["state"] = "repos"
+				a["timer"] = rng.randf_range(1.0, 3.0)
+
+
+## Voletant (papillon, libellule, luciole, formes guéries ailées) : flotte autour de son point d'attache, fuit en montant.
+func _upd_flutter(a: Dictionary, delta: float) -> void:
+	if a["state"] == "fuite":
+		a["pos"] += a["v"] * delta
+		a["v"] *= 1.0 + 0.6 * delta
+		a["z"] = minf(a["z"] + 40.0 * delta, 90.0)
+		if a["timer"] <= 0.0:
+			a["state"] = "repos"
+			a["home"] = a["pos"]
+			a["v"] = Vector2.ZERO
+		return
+	var s: float = a["seed"]
+	var tt: float = a["t"]
+	var amp := float(_beast_cfg(a).get("amp", 1.0))
+	if a["move"] == "glow":
+		a["pos"] = a["pos"].lerp(a["home"] + Vector2(sin(tt * 0.4 + s) * 34.0, cos(tt * 0.5 + s) * 18.0), minf(1.0, delta))
+		a["z"] = 26.0 + 10.0 * sin(tt * 0.9 + s)
+		return
+	var tgt: Vector2 = a["home"] + Vector2(sin(tt * 0.7 + s) * 46.0 * amp, sin(tt * 1.1 + s * 2.0) * 22.0 * amp)
+	var dv: Vector2 = tgt - a["pos"]
+	a["face"] = signf(dv.x) if absf(dv.x) > 0.5 else a["face"]
+	a["pos"] += dv * minf(1.0, delta * 2.0)
+	a["z"] = 20.0 + 8.0 * sin(tt * 2.3 + s)
+
+
+## Marcheur (coccinelle, escargot, triton, lièvre, écureuil, formes guéries) : erre près de chez lui par petits trajets,
+## s'enfuit droit devant s'il est surpris, puis revient lentement (sauf les rampants, qui s'installent là où ils sont).
+func _upd_walk(a: Dictionary, delta: float) -> void:
+	var spd := _walk_speed(a)
+	var info := _beast_info(a)
+	var stride := maxf(float(info.get("h", 30.0)) * 0.2, 4.0)
+	match a["state"]:
+		"repos":
+			if a["timer"] <= 0.0:
+				var r := 36.0 if a["move"] == "crawl" else 70.0
+				a["dest"] = a["home"] + Vector2(rng.randf_range(-r, r), rng.randf_range(-r * 0.5, r * 0.5))
+				a["state"] = "marche"
+				a["timer"] = 8.0
+		"marche", "retour":
+			var to: Vector2 = a["dest"] - a["pos"]
+			var d := to.length()
+			var sp := spd * (2.4 if a["state"] == "retour" else 1.0)
+			if d > 1.0:
+				a["face"] = signf(to.x) if absf(to.x) > 1.0 else a["face"]
+				a["pos"] += to.normalized() * minf(d, sp * delta)
+				a["ph"] += sp * delta / stride
+			if d < 2.0 or a["timer"] <= 0.0:
+				a["state"] = "repos"
+				a["timer"] = rng.randf_range(1.5, 4.5)
+		"fuite":
+			a["pos"] += a["v"] * delta
+			a["ph"] += a["v"].length() * delta / stride
+			if a["timer"] <= 0.0:
+				a["v"] = Vector2.ZERO
+				if a["move"] == "crawl":
+					a["home"] = a["pos"]
+					a["state"] = "repos"
+					a["timer"] = rng.randf_range(1.0, 3.0)
+				else:
+					a["dest"] = a["home"]
+					a["state"] = "retour"
+					a["timer"] = 14.0
 
 
 # ---------------------------------------------------------------- débris et marques
@@ -894,17 +1081,9 @@ func _draw() -> void:
 			_quad(b["f"], b["pos"], b["s"] * 0.85, b["rot"], Color(b["col"], _bit_alpha(b)), false, 0.6)
 		elif b["z"] < 80.0:
 			_quad("cendre", b["pos"], 0.22 * b["s"], 0.0, Color(shadow, 0.5 * _bit_alpha(b)))
-	for a in fauna:
-		if a["z"] > 1.0:
-			_quad("cendre", a["pos"], 0.35, 0.0, Color(shadow, clampf(1.0 - a["z"] / 120.0, 0.0, 1.0) * 0.6))
-			continue
-		match a["sp"]:
-			"oiseau":
-				var peck := int(fmod(a["t"] * 1.7 + a["seed"], 2.0) > 1.6)
-				_quad("oiseau_sol_%d" % peck, a["pos"] + Vector2(0, -7), 0.9, 0.0, a["col"], a["face"] < 0.0)
-			"grenouille":
-				_quad("grenouille_0", a["pos"] + Vector2(0, -6), 0.9, 0.0, a["col"], a["face"] < 0.0)
+	_draw_beasts(false, shadow)
 	_flush(self)
+	_flush_beasts(self)
 
 
 func _bit_alpha(b: Dictionary) -> float:
@@ -922,25 +1101,128 @@ func _draw_air(ci: CanvasItem) -> void:
 			if b["flutter"] > 0.0:
 				sy = 0.35 + 0.65 * absf(sin(b["t"] * 5.0 + b["seed"]))
 			_quad(b["f"], b["pos"] + Vector2(0, -b["z"]), b["s"], b["rot"], Color(b["col"], _bit_alpha(b)), false, sy)
-	for a in fauna:
-		var at: Vector2 = a["pos"] + Vector2(0, -a["z"])
-		match a["sp"]:
-			"papillon":
-				var fr := int(fmod(a["t"] * (14.0 if a["state"] == "fuite" else 9.0) + a["seed"], 4.0))
-				_quad("papillon_%d" % fr, at, 0.75, 0.0, a["col"], a["face"] < 0.0)
-			"luciole":
-				var blink := 0.5 + 0.5 * sin(a["t"] * 2.6 + a["seed"] * 3.0)
-				var c: Color = a["col"]
-				_quad("luciole", at, 0.9, 0.0, Color(c.r * blink, c.g * blink, c.b * blink, 0.0))
-				_quad("lueur", at, 0.55, 0.0, Color(c.r * blink * 0.25, c.g * blink * 0.25, c.b * blink * 0.25, 0.0))
-			"oiseau":
-				if a["z"] > 1.0:
-					var fr := int(fmod(a["t"] * 12.0 + a["seed"], 4.0))
-					_quad("oiseau_vol_%d" % fr, at, 0.9, 0.0, a["col"], a["face"] < 0.0)
-			"grenouille":
-				if a["z"] > 1.0:
-					_quad("grenouille_%d" % (1 if a["vz"] > 0.0 else 2), at + Vector2(0, -6), 0.9, 0.0, a["col"], a["face"] < 0.0)
+	_draw_beasts(true, Color.WHITE)
 	_flush(ci)
+	_flush_beasts(ci)
+
+
+# --- Dessin des bêtes : quadrilatères texturés de l'atlas de leur région, un appel de rendu par région.
+var _vb := {}   # région -> {pts, cols, uvs, idx}
+
+
+func _vquad(reg: String, src: Rect2, at: Vector2, scale: float, flip: bool, c: Color) -> void:
+	var sh = Vie.sheet(reg)
+	var tsz := Vector2(sh.tex.get_width(), sh.tex.get_height())
+	if not _vb.has(reg):
+		_vb[reg] = {"pts": PackedVector2Array(), "cols": PackedColorArray(), "uvs": PackedVector2Array(), "idx": PackedInt32Array()}
+	var q: Dictionary = _vb[reg]
+	var base: int = q["pts"].size()
+	var x0 := -Vie.ANCHOR.x
+	var x1 := Vie.CELL - Vie.ANCHOR.x
+	var y0 := -Vie.ANCHOR.y
+	var y1 := Vie.CELL - Vie.ANCHOR.y
+	var corners := [Vector2(x0, y0), Vector2(x1, y0), Vector2(x1, y1), Vector2(x0, y1)]
+	var uv := [src.position, src.position + Vector2(src.size.x, 0), src.position + src.size, src.position + Vector2(0, src.size.y)]
+	for i in 4:
+		var k: Vector2 = corners[i]
+		q["pts"].append(at + Vector2(-k.x if flip else k.x, k.y) * scale)
+		q["cols"].append(c)
+		q["uvs"].append(uv[i] / tsz)
+	q["idx"].append_array([base, base + 1, base + 2, base, base + 2, base + 3])
+
+
+func _flush_beasts(ci: CanvasItem) -> void:
+	for reg in _vb:
+		var q: Dictionary = _vb[reg]
+		if not q["idx"].is_empty() and Vie.ready(reg):
+			RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), q["idx"], q["pts"], q["cols"], q["uvs"], PackedInt32Array(), PackedFloat32Array(), Vie.sheet(reg).tex.get_rid())
+		q["pts"].clear()
+		q["cols"].clear()
+		q["uvs"].clear()
+		q["idx"].clear()
+
+
+## Pose et image d'une bête à cet instant : [pose, numéro], ou [] si rien n'est dessiné pour elle.
+func _beast_pose(a: Dictionary) -> Array:
+	var reg: String = a["reg"]
+	var k: String = a["key"]
+	var move: String = a["move"]
+	var pose := "repos"
+	var i := 0
+	var airborne: bool = a["z"] > 1.0
+	match move:
+		"flutter", "glow", "glide":
+			pose = "vol"
+			i = int(fmod(a["t"] * (14.0 if a["state"] == "fuite" else 9.0) + a["seed"] * 3.0, 4.0))
+		"perch":
+			if airborne:
+				pose = "vol"
+				i = int(fmod(a["t"] * 12.0 + a["seed"], 4.0))
+			else:
+				i = int(fmod(a["t"] * 1.7 + a["seed"], 2.0) > 1.6)
+		"hop":
+			if airborne:
+				pose = "saut"
+				i = 0 if a["vz"] > 0.0 else 1
+			else:
+				i = int(a["t"] * 0.8 + a["seed"]) % 2
+		_:
+			if a["state"] != "repos":
+				pose = "marche"
+				i = int(a["ph"])
+			else:
+				i = int(a["t"] * 0.8 + a["seed"]) % 2
+	var n := Vie.count(reg, k, pose)
+	if n == 0:
+		pose = "repos" if Vie.count(reg, k, "repos") > 0 else ("vol" if Vie.count(reg, k, "vol") > 0 else "marche")
+		n = Vie.count(reg, k, pose)
+		if n == 0:
+			return []
+	return [pose, i % n]
+
+
+## Bêtes d'un calque : « air » pour ce qui vole (corps au-dessus des acteurs), sinon celles du sol (rangées par
+## profondeur) ; les ombres de ce qui vole sont sur le sol.
+func _draw_beasts(air_layer: bool, shadow: Color) -> void:
+	var list := fauna
+	if not air_layer:
+		list = fauna.duplicate()
+		list.sort_custom(func(x, y): return x["pos"].y < y["pos"].y)
+	for a in list:
+		var reg: String = a["reg"]
+		if not Vie.ready(reg):
+			continue
+		var pi := _beast_pose(a)
+		if pi.is_empty():
+			continue
+		var h := Vie.height_of(reg, a["key"])
+		var flying: bool = a["z"] > 1.0 or a["move"] in ["flutter", "glow", "glide"]
+		if not air_layer:
+			# Ombre sous tout ce qui est posé ou qui vole.
+			var sz := clampf(h * 0.028, 0.35, 1.5)
+			var lift := clampf(1.0 - a["z"] / 140.0, 0.25, 1.0)
+			if _is_dim(a):
+				sz *= 0.9
+			var cs := Color(shadow, 0.5 * lift) if flying else Color(shadow, 0.9)
+			_quad("cendre", a["pos"], sz * (0.55 if flying else 1.0), 0.0, cs)
+			if flying:
+				continue
+		elif not flying:
+			continue
+		var at: Vector2 = a["pos"] + Vector2(0, -a["z"])
+		var c: Color = a["col"]
+		_vquad(reg, Vie.frame(reg, a["key"], pi[0], pi[1]), at, 1.0, a["face"] < 0.0, c)
+		if a["move"] == "glow" and air_layer:
+			# Lueur de la luciole : un halo qui palpite autour de sa lanterne (additif).
+			var blink := 0.5 + 0.5 * sin(a["t"] * 2.6 + a["seed"] * 3.0)
+			var gc := col(a["reg"], "luciole")
+			var lamp := at + Vector2(-3.0 * (1.0 if a["face"] >= 0.0 else -1.0), -h * 0.4)
+			_quad("lueur", lamp, 0.55 + 0.25 * blink, 0.0, Color(gc.r * blink * 0.3, gc.g * blink * 0.3, gc.b * blink * 0.3, 0.0))
+
+
+## Bête terne (terre flétrie) ?
+func _is_dim(a: Dictionary) -> bool:
+	return a["col"] != Color.WHITE
 
 
 # ---------------------------------------------------------------- régions
