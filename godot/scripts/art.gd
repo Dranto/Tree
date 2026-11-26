@@ -394,7 +394,58 @@ const MONDE := {
 	# -- fin vent --
 	#
 	# -- seve (Vallée) --
-
+	# Vallée des sources (vague 2, P4) : flétri = limon gris-vert et sève figée en ruisselets ambrés, sous la
+	# brume ; ravivé = prairie humide vert d'eau, mousses, fougères et eau claire (le vert sève, plus vif,
+	# reste au bord de vie et à la graine).
+	"seve": {
+		"sol_couches": {
+			# Matière (couche 2) : ruisselets de sève figée (morte), d'eau claire bordée de mousse (vive).
+			"encre_morte": Color("161a17"), "seve_figee": Color("4f4428"), "seve_figee_reflet": Color("85714a"),
+			"vase": Color("262b25"), "fissure": Color("141713"),
+			"encre_vive": Color("143326"), "ruisselet": Color("2f7f86"), "ruisselet_reflet": Color("c8fff0"),
+			"mousse": Color("3f8a54"), "mousse_claire": Color("7cc486"),
+			# Détails en grappes (couche 3) : crosses sèches, croûtes de vase ; frondes, coussins de mousse,
+			# myosotis d'eau, gouttes de rosée.
+			"crosse": Color("5e5440"), "croute": Color("5a5c50"),
+			"fronde": Color("3f9a62"), "fronde_claire": Color("86d49a"), "goutte": Color("e6fff8"),
+		},
+		"fletri": {
+			"sol": Color("3c403a"), "sol_clair": Color("4b5048"), "sol_sombre": Color("2c302b"),
+			"matiere": Color("1c201c"), "feuille": Color("6a6446"), "feuille_2": Color("57553c"),
+			"cendre": Color("8e958a"), "touffe": Color("5e5a44"), "touffe_2": Color("464634"),
+			"eau": Color("23292a"), "eau_reflet": Color("6c7a76"),
+			"bois": {"clair": Color("4c4a42"), "ombre": Color("2a2a25"), "reflet": Color("6e6c60")},
+			"saule": {"clair": Color("5a5c50"), "ombre": Color("34372f"), "reflet": Color("7e8072")},
+			"feuillage": {"clair": Color("5a5c4a"), "ombre": Color("363829"), "reflet": Color("7a7c66")},
+			"fougere": {"clair": Color("6a5e42"), "ombre": Color("41392a"), "reflet": Color("8a7c5c")},
+			"liane": {"clair": Color("54503e"), "ombre": Color("302e24"), "reflet": Color("767058")},
+			"pierre": {"clair": Color("595d56"), "ombre": Color("343833"), "reflet": Color("7a7f76")},
+			"seve": {"clair": Color("7a6232"), "ombre": Color("47381e"), "reflet": Color("b8955a")},
+			"fleur": Color("7e7c6c"), "fruit": Color("2a2a22"),
+			"air": Color("3e5a50"), "voile": Color("0e1a16"), "particule": Color("98a89e"),
+		},
+		"apaise": {
+			"sol": Color("454c44"), "sol_clair": Color("566052"), "sol_sombre": Color("343a33"),
+			"matiere": Color("252b25"), "feuille": Color("6e7250"), "feuille_2": Color("5c6446"),
+			"cendre": Color("a2aea2"), "touffe": Color("5c6a4a"), "touffe_2": Color("46523a"),
+			"eau": Color("26333a"), "eau_reflet": Color("7a929a"),
+		},
+		"ravive": {
+			"sol": Color("4a8c00"), "sol_clair": Color("61a11c"), "sol_sombre": Color("347700"),
+			"matiere": Color("1d5440"), "feuille": Color("8fdcae"), "feuille_2": Color("4fa47a"),
+			"cendre": Color("e6fff4"), "touffe": Color("3fa06a"), "touffe_2": Color("267550"),
+			"eau": Color("1f6a72"), "eau_reflet": Color("c8fff0"),
+			"bois": {"clair": Color("6e5c48"), "ombre": Color("40342a"), "reflet": Color("9c8670")},
+			"saule": {"clair": Color("5cbf8a"), "ombre": Color("2a7a56"), "reflet": Color("b4f0cc")},
+			"feuillage": {"clair": Color("4fae7c"), "ombre": Color("24704e"), "reflet": Color("a6e8c2")},
+			"fougere": {"clair": Color("46a868"), "ombre": Color("226e44"), "reflet": Color("9ee2b0")},
+			"liane": {"clair": Color("5a9a5a"), "ombre": Color("2e5e36"), "reflet": Color("a2d89a")},
+			"pierre": {"clair": Color("7c8a84"), "ombre": Color("4a5852"), "reflet": Color("b0c2ba")},
+			"seve": {"clair": Color("9ff0dc"), "ombre": Color("3aa08e"), "reflet": Color("eafffa")},
+			"fleur": Color("a8e8ff"), "fleur_coeur": Color("fff1a0"), "fleur_2": Color("f2fff8"), "fruit": Color("e86a8a"),
+			"air": Color("d6fff0"), "voile": Color("0f2a22"), "particule": Color("c8fff0"),
+		},
+	},
 	# -- fin seve --
 	#
 	# -- aube (Falaises) --

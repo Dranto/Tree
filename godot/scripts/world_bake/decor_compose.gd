@@ -75,9 +75,10 @@ const LISIERES := {  # i18n: non (début)
 		"repere": {"grand_arbre": ["plateau:Twisted", 4.4], "rocher": ["plateau:Cairn", 6.5], "ruine": ["plateau:Dolmen", 6.0]},
 	},
 	"seve": {
-		"bord": [["vallee:Fern", 0.8, 1.3, 1]],
-		"grappe": [["vallee:Fern", 1.0, 1.5, 3], ["vallee:Willow", 1.3, 1.8, 1]],
+		"bord": [["vallee:Fern", 0.8, 1.25, 3], ["vallee:Cattail", 0.8, 1.2, 2], ["vallee:Liana", 0.7, 1.0, 1]],
+		"grappe": [["vallee:Fern", 1.0, 1.5, 3], ["vallee:Cattail", 1.0, 1.4, 1.5], ["vallee:Liana", 1.0, 1.4, 1.5], ["vallee:Willow", 1.3, 1.8, 1]],
 		"grand": [["vallee:Willow", 2.6, 3.4, 1]],
+		"repere": {"*": ["vallee:Willow", 4.6]},
 	},
 	"aube": {
 		# Falaises (vague 2 P5) : éclats de cristal et arbres blanchis ; Cluster, Spire et Arch font
@@ -96,7 +97,7 @@ const LISIERES := {  # i18n: non (début)
 ## Souplesse au vent par sorte (lue par le monde vivant, tâche V).
 const SWAY := {
 	"arbre": 1.0, "haie": 0.7, "buisson": 0.6, "champignon": 0.25, "chapeau_geant": 0.15, "grand_arbre": 0.5, "roseaux": 1.2,
-	"fougere": 0.9, "Twisted": 0.9, "Grass": 1.1, "plateau:Twisted": 0.5, "plateau:Cairn": 0.3, "plateau:Dolmen": 0.3, "Willow": 1.0, "Fern": 0.9, "Bleached": 0.7,
+	"fougere": 0.9, "Twisted": 0.9, "Grass": 1.1, "plateau:Twisted": 0.5, "plateau:Cairn": 0.3, "plateau:Dolmen": 0.3, "Willow": 1.0, "Fern": 0.9, "Cattail": 1.2, "Liana": 0.5, "Bleached": 0.7,
 	"StoneTree": 0.1, "DecorTree": 1.0, "DecorBramble": 0.8, "DecorBush": 0.35, "DecorReeds": 1.2, "DecorMushroom": 0.25,
 	# Falaises : cristaux et repères rigides (0,01 et non 0, qui laisse la table du monde vivant décider).
 	"Cluster": 0.01, "falaise:Spire": 0.01, "falaise:Arch": 0.01,
