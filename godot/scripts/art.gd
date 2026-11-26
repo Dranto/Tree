@@ -275,6 +275,15 @@ const MONDE := {
 		# Cœur commun (régions sans Cœur à elles, world_art/lieux.gd) : écorce morte, puis vivante.
 		"ecorce": {"clair": Color("4d413c"), "ombre": Color("251c1b"), "reflet": Color("76645c")},
 		"ecorce_vive": {"clair": Color("7a5a44"), "ombre": Color("45322a"), "reflet": Color("a8866a")},
+		# Creux sous la graine (finale, vague 3 F ; world_art/finale_creux.gd) : terre autour, lèvre, strates de
+		# la paroi (haut → bas), sol de cendre tassée puis ravivé, lumière du puits, poussière qui tombe.
+		"creux": {
+			"terre": Color("1c1513"), "terre_vive": Color("2a2119"), "croute": Color("3d322c"), "croute_vive": Color("5e4a38"),
+			"strate_haut": Color("4a3c36"), "strate_bas": Color("241c1a"), "strate_haut_vive": Color("7a6048"), "strate_bas_vive": Color("3a2c22"),
+			"fissure": Color("140e0d"), "lumiere": Color("ffe6b0"), "cendre": Color("8c837c"), "mousse": Color("5f7a3a"),
+			"sol": Color("332b29"), "sol_clair": Color("4a403b"), "sol_vif": Color("4a4a30"), "sol_vif_clair": Color("6c6c42"),
+			"racine_terre": Color("2c2220"), "racine_terre_vive": Color("4a3628"), "poussiere": Color("b8a898"),
+		},
 	},
 	"ronce": {
 		# Sol en couches et décor cuit (scripts/world_bake/, ex-prototype P) : lavis, matière, détails en grappes.

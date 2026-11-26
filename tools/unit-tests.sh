@@ -51,6 +51,7 @@ TESTS=(
   "falaises|--headless --fixed-fps 60|"
   "feel|--headless|"
   "finale|--headless --fixed-fps 60|"
+  "finale_creux|--xvfb --audio-driver Dummy --fixed-fps 60|"
   "flow|--headless|"
   "foret|--headless --fixed-fps 60|"
   "i18n|--headless --fixed-fps 60|"

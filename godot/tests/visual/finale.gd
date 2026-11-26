@@ -39,6 +39,8 @@ func run(runner) -> void:
 	finale.descend()
 	main.screen_fx.fade(Color(0, 0, 0), 0.0, 0.0, 0.01)
 	await _shot_at("finale_arene", finale.landing() + Vector2(0, -20), finale.center)
+	# La paroi du fond : strates, poches des six régions, racines de la graine.
+	await _shot_at("finale_paroi", finale.center + Vector2(-60, -400), finale.center)
 
 	# Le combat. Le joueur se tient au sud-est d'elle.
 	var pos: Vector2 = finale.center + Vector2(150, 160)
@@ -162,6 +164,8 @@ func run(runner) -> void:
 	finale.radius = finale.max_radius
 	main.fx.rings = []
 	await _shot_at("finale_vaincue", pos, finale.center)
+	# La paroi refleurie : les six poches dans leurs couleurs ravivées.
+	await _shot_at("finale_paroi_vive", finale.center + Vector2(-60, -400), finale.center)
 
 	# La fin jouée dans le monde (world_ending.gd) : le joueur au pied de la graine, les vagues de
 	# vie, le générique qui s'écrit dans l'herbe, puis tous les noms écrits.
