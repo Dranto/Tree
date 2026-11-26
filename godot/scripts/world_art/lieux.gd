@@ -227,6 +227,16 @@ static func _coeur_roncier(ci: CanvasItem, c: Vector2, s: float, purified: bool,
 		for i in 7:
 			var a := PI * (1.05 + 0.9 * i / 6.0)
 			Ink.part(ci, Transform2D.IDENTITY, Ink.leaf(bud + Vector2(0, h * 0.05), a, h * 0.34, h * 0.16, 0.08), leaf, 1.3, 1.0, 0.6)
+		# Le buisson refleurit autour : petites églantines et mûres sur les tiges écartées.
+		for i in 9:
+			var a := PI * (0.8 + 1.4 * i / 8.0)
+			var p := bud + Vector2(cos(a) * h * 0.68, sin(a) * h * 0.34 + h * 0.2)
+			if i % 3 == 1:
+				for b in 3:
+					ci.draw_circle(p + Vector2(b * 2.6 - 2.6, (b % 2) * 2.2) * s, 2.3 * s, Art.mc("ronce", "ravive", "fruit"))
+				ci.draw_circle(p + Vector2(-3.0, -1.0) * s, 0.8 * s, Color(1, 1, 1, 0.5))
+			else:
+				O.flower(ci, p, h * 0.055, Art.mc("ronce", "ravive", "fleur" if i % 2 else "fleur_2"), Art.mc("ronce", "ravive", "fleur_coeur"), a)
 		var petal := {"clair": Art.mc("ronce", "ravive", "fleur"), "ombre": Art.mc("ronce", "ravive", "fleur").darkened(0.25), "reflet": Color("fff0f2")}
 		for i in 5:
 			var a := -PI * 0.5 + TAU * i / 5.0

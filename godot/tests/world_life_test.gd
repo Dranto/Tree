@@ -207,7 +207,8 @@ func _run() -> void:
 
 	print("Région")
 	check(life._hook("spore") != null, "réactions propres du Marais (world_art/spore_vivant.gd)")
-	check(life._hook("ronce") == null, "pas de crochet pour une région qui n'en a pas")
+	check(life._hook("ronce") != null, "réactions propres du Roncier (world_art/ronce_vivant.gd)")
+	check(life._hook("vent") == null or ResourceLoader.exists("res://scripts/world_art/vent_vivant.gd"), "pas de crochet pour une région qui n'en a pas")
 
 	print("Événements du monde")
 	var h = main.all_hearts[0]
