@@ -347,6 +347,24 @@ const MONDE := {
 			"air": Color("c8fff0"), "voile": Color("0e2228"), "particule": Color("a8fff0"),
 		},
 	},
+	# Vague 2 : chaque région ajoute ici sa palette complète (mêmes clés que « ronce » et « spore » :
+	# fletri, apaise, ravive ; sol_couches au besoin), sous son repère, sans toucher aux autres. Tant
+	# qu'une région n'a pas de bloc, son sol et son décor tirent leurs tons de data/regions/<id>.json.
+	# -- vent (Plateaux) --
+
+	# -- fin vent --
+	#
+	# -- seve (Vallée) --
+
+	# -- fin seve --
+	#
+	# -- aube (Falaises) --
+
+	# -- fin aube --
+	#
+	# -- racine (Forêt) --
+
+	# -- fin racine --
 }
 
 ## Air des six régions (refonte du monde, tâche L) : teinte de l'air et voile de bord, côté flétri et côté
