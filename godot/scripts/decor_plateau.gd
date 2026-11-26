@@ -149,7 +149,7 @@ class Twisted extends Flora.DecorTree:
 		r.seed = tree_seed
 		var etat := P.etat_of(self)
 		var bois: Dictionary = P.pal(etat, "bois")
-		var h := r.randf_range(46.0, 56.0) * size
+		var h := r.randf_range(40.0, 47.0) * size
 		var side := signf(lean) if lean != 0.0 else 1.0
 		var bend := 0.55 + 0.45 * absf(lean)
 		var w := h * 0.085
@@ -181,7 +181,7 @@ class Twisted extends Flora.DecorTree:
 			var base: Vector2 = trunk[clampi(int(k * 10.0), 3, 10)]
 			var up := r.randf_range(-0.55, 0.15)
 			var dir := Vector2(side, up).normalized()
-			var l := h * r.randf_range(0.26, 0.42)
+			var l := h * r.randf_range(0.22, 0.36)
 			var tip := base + dir * l
 			var mid := base.lerp(tip, 0.5) + Vector2(0, -l * r.randf_range(0.05, 0.2))
 			var br := O.curve(base, mid, tip, 6)
@@ -189,7 +189,7 @@ class Twisted extends Flora.DecorTree:
 			tips.append(tip)
 			tips.append(mid + Vector2(side * l * 0.1, -l * 0.12))
 			if r.randf() < 0.6:
-				var tw := tip + Vector2(side * l * 0.35, -l * r.randf_range(0.05, 0.3))
+				var tw := tip + Vector2(side * l * 0.25, -l * r.randf_range(0.05, 0.3))
 				O.brush(self, O.curve(tip, tip.lerp(tw, 0.5) + Vector2(0, -2), tw, 4), maxf(0.8, w * 0.2), bois["ombre"], 1.0, 0.0)
 				tips.append(tw)
 		tips.append(top + Vector2(side * h * 0.08, -h * 0.04))
@@ -198,17 +198,17 @@ class Twisted extends Flora.DecorTree:
 			var leaf: Dictionary = P.pal(etat, "feuillage")
 			var masses := []
 			for t in tips:
-				var p: Vector2 = t + Vector2(side * h * 0.07, r.randf_range(-0.04, 0.04) * h)
+				var p: Vector2 = t + Vector2(side * h * 0.04, r.randf_range(-0.04, 0.04) * h)
 				masses.append([p, h * r.randf_range(0.12, 0.17)])
 			masses.sort_custom(func(x, y): return x[0].y < y[0].y)
 			for ms in masses:
 				var c: Vector2 = ms[0]
 				var rr: float = ms[1]
-				O.part(self, O.Ink.lumpy(c, rr * 1.55, rr * 0.62, 26, 0.12, 8.0, c.x * 0.1), leaf, 1.2, 1.0, 0.7)
+				O.part(self, O.Ink.lumpy(c, rr * 1.3, rr * 0.62, 26, 0.12, 8.0, c.x * 0.1), leaf, 1.2, 1.0, 0.7)
 				# Pointes de la mèche, peignées par le vent.
 				for j in 3:
-					var q := c + Vector2(side * rr * 1.2, (j - 1) * rr * 0.32)
-					O.brush(self, PackedVector2Array([q, q + Vector2(side * rr * 0.7, -rr * 0.05 + (j - 1) * rr * 0.12)]), rr * 0.2, leaf["clair"], 1.0, 0.0)
+					var q := c + Vector2(side * rr * 1.0, (j - 1) * rr * 0.32)
+					O.brush(self, PackedVector2Array([q, q + Vector2(side * rr * 0.5, -rr * 0.05 + (j - 1) * rr * 0.12)]), rr * 0.2, leaf["clair"], 1.0, 0.0)
 			for i in 7:
 				var ms: Array = masses[r.randi() % masses.size()]
 				var p: Vector2 = ms[0] + Vector2(r.randf_range(-1.0, 0.9) * ms[1], r.randf_range(-0.5, 0.2) * ms[1])
