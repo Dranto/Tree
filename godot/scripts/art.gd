@@ -205,6 +205,10 @@ const BESTIAIRE := {
 	"spore": {"clair": Color("ca6aeb"), "ombre": Color("6a2f86"), "reflet": Color("f2d8fb"), "detail": Color("c99a5a"),
 		"chapeau": Color("e6d8bf"), "chapeau_ombre": Color("9c8670"), "vase": Color("5e6a4a"), "vase_reflet": Color("b9c98a"),
 		"lichen": Color("9fb38a"), "lichen_ombre": Color("56684c"), "spore": Color("d9c2f0")},
+	# Aube : verre nacré des falaises (corps : face claire perle, ombre mauve ; clair pour trancher sur le calcaire et se distinguer
+	# de Vent et de Racine même pour un daltonien), verre clair (ailes, aiguilles), lumière d'or sale (detail).
+	"aube": {"clair": Color("f4e4d8"), "ombre": Color("7c6c9c"), "reflet": Color("fcf9ff"), "detail": Color("e6c25a"),
+		"verre": Color("bfe0ea"), "verre_ombre": Color("587886"), "lueur": Color("fff2c4")},
 	# Sève (R4) : vert profond de mare (distinct des autres régions pour les daltoniens, bestiaire_test), loin du vert menthe de la sève vivante ; detail = vase ocre ; vase = limon du fond.
 	"seve": {"clair": Color("308533"), "ombre": Color("1e5c2a"), "reflet": Color("b0e6a8"), "detail": Color("a88d52"), "vase": Color("4a3f30")},
 }

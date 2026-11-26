@@ -74,22 +74,6 @@
       "valeur": 3.4,
       "cible": 10.0
     },
-    "fletri_dl:aube:fletri": {
-      "valeur": 5.4,
-      "cible": 8.0
-    },
-    "dalto_perso:protanopie:aube:fletri": {
-      "valeur": 5.6,
-      "cible": 10.0
-    },
-    "dalto_perso:deuteranopie:aube:fletri": {
-      "valeur": 6.1,
-      "cible": 10.0
-    },
-    "fletri_dl:aube:ravive": {
-      "valeur": 4.8,
-      "cible": 8.0
-    },
     "heros_dl:aube:ravive": {
       "valeur": 3.2,
       "cible": 10.0
