@@ -808,19 +808,37 @@ func _scenario_vivant() -> void:
 	life.marks[-1]["t"] = 0.5
 	life.add_mark("eclabous", p.position + Vector2(-170, -40), 0.45, life.col("ronce", "eau"), 1.0, 0.4)
 	life.marks[-1]["t"] = 0.15
+	# Faune et formes guéries (tâche F) : atlas de couleur cuits à la main (le monde vivant est figé ici).
+	var Vie = load("res://scripts/world_life_vie.gd")
+	Vie.clear()
+	await Vie.bake(life, "ronce")
+	await Vie.bake(life, "commun")
+	await _frames(2)
 	var beasts := [
-		["papillon", Vector2(110, -80), 22.0, "repos", life.col("ronce", "papillon")],
-		["papillon", Vector2(150, -60), 18.0, "fuite", life.col("ronce", "papillon")],
-		["oiseau", Vector2(-120, 90), 0.0, "repos", life.col("ronce", "oiseau")],
-		["oiseau", Vector2(-40, -150), 120.0, "fuite", life.col("ronce", "oiseau")],
-		["grenouille", Vector2(-230, -60), 0.0, "repos", life.col("spore", "grenouille")],
-		["luciole", Vector2(70, 110), 26.0, "repos", life.col("ronce", "luciole")],
-		["luciole", Vector2(90, 130), 34.0, "repos", life.col("ronce", "luciole")],
+		["pieride", false, "ronce", Vector2(110, -80), 22.0, "repos", 0.0],
+		["pieride", false, "ronce", Vector2(150, -60), 18.0, "fuite", 0.0],
+		["fauvette", false, "ronce", Vector2(-120, 90), 0.0, "repos", 0.0],
+		["fauvette", false, "ronce", Vector2(-40, -150), 120.0, "fuite", 0.0],
+		["coccinelle", false, "ronce", Vector2(-90, 130), 0.0, "repos", 0.0],
+		["luciole", false, "spore", Vector2(70, 110), 26.0, "repos", 0.0],
+		["tireur", true, "ronce", Vector2(210, 40), 0.0, "repos", 0.0],
+		["chargeur", true, "ronce", Vector2(-210, 20), 0.0, "fuite", 1.3],
+		["rejeton", true, "ronce", Vector2(60, 70), 0.0, "repos", 0.0],
+		["fletri", true, "commun", Vector2(-260, -70), 0.0, "repos", 0.0],
 	]
 	for i in beasts.size():
 		var b: Array = beasts[i]
-		life.fauna.append({"sp": b[0], "pos": p.position + b[1], "z": b[2], "state": b[3], "t": 0.4 + i * 0.37, "timer": 9.0,
-			"home": p.position + b[1], "v": Vector2.ZERO, "face": 1.0 if i % 2 == 0 else -1.0, "col": b[4], "seed": i * 1.3, "vz": 0.0})
+		var a: Dictionary = life.make_beast(b[0], b[1], p.position + b[3], b[2])
+		a["z"] = b[4]
+		a["state"] = b[5]
+		a["t"] = 0.4 + i * 0.37
+		a["timer"] = 9.0
+		a["face"] = 1.0 if i % 2 == 0 else -1.0
+		a["seed"] = i * 1.3
+		a["ph"] = b[6]
+		if b[5] == "fuite":
+			a["v"] = Vector2(a["face"] * 120.0, 0.0)
+		life.fauna.append(a)
 	life._apply_uniforms(p)
 	main.world_fx.queue_redraw()
 	life.queue_redraw()

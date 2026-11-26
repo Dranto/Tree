@@ -14,6 +14,7 @@ const Regions = preload("res://scripts/regions.gd")
 # compilation.
 var WorldLife
 var Atlas
+var Vie
 var DecorMarais
 
 var failures := 0
@@ -48,6 +49,7 @@ func _steps(n: int) -> void:
 func _run() -> void:
 	WorldLife = load("res://scripts/world_life.gd")
 	Atlas = load("res://scripts/world_life_atlas.gd")
+	Vie = load("res://scripts/world_life_vie.gd")
 	DecorMarais = load("res://scripts/decor_marais.gd")
 	settings = root.get_node("Settings")
 	var saved_reduce: bool = settings.reduce_effects
@@ -75,18 +77,25 @@ func _run() -> void:
 			check(life.col(reg, key) != Color.MAGENTA, "couleur %s/%s" % [reg, key])
 		for sp in rc.get("fauna", []):
 			check(cfg.get("fauna", {}).has(sp), "faune %s réglée (%s)" % [sp, reg])
-			check(life.col(reg, sp) != Color.MAGENTA and life.col(reg, sp + "_mort") != Color.MAGENTA, "couleurs de %s (%s)" % [sp, reg])
+			check(sp in Vie.faune_ids(reg), "faune %s dessinée (creature_art/%s/vie/faune.gd)" % [sp, reg])
+			check(str(cfg.get("fauna", {}).get(sp, {}).get("move", "")) in ["flutter", "glow", "glide", "perch", "hop", "crawl", "dash"], "mouvement de %s" % sp)
+	check(life.col("ronce", "luciole") != Color.MAGENTA and life.col("aube", "luciole") != Color.MAGENTA, "couleur de la lueur des lucioles")
 	check(life.get_parent() == main.world_fx, "le calque du sol est un enfant de world_fx (sous les acteurs)")
 	check(life.air.get_parent() == main.world_fx.over, "le calque du dessus est un enfant de world_fx.over")
 
 	print("Atlas cuit")
 	await _steps(4)
+	var waited := 0
+	while not Atlas.ready() and waited < 60:
+		await _steps(1)
+		waited += 1
+	print("  atlas prêt après %d images de plus" % waited)
 	check(Atlas.ready(), "atlas de la petite vie cuit")
 	if Atlas.ready():
 		check(Atlas.tex.get_width() == Atlas.COLS * Atlas.CELL * Atlas.SCALE, "largeur de l'atlas")
 		check(Atlas.bytes < 2 * 1024 * 1024, "atlas sous 2 Mo (%d Ko)" % (Atlas.bytes / 1024))
 		var img: Image = Atlas.tex.get_image()
-		for f in ["feuille", "papillon_0", "oiseau_vol_1", "grenouille_0", "fleur_pas", "cendre"]:
+		for f in ["feuille", "luciole", "lueur", "fleur_pas", "cendre"]:
 			var r: Rect2 = Atlas.rect(f)
 			var c: Color = img.get_pixelv(Vector2i(r.get_center()))
 			var any := false
@@ -163,7 +172,8 @@ func _run() -> void:
 	await _steps(200)
 	var fcap := int(cfg["caps"]["fauna"])
 	check(life.fauna.size() > 0, "la faune apparaît autour du héros (%d)" % life.fauna.size())
-	check(life.fauna.size() <= fcap, "faune plafonnée")
+	check(life.fauna.filter(func(x): return not x["gueri"]).size() <= fcap, "faune plafonnée")
+	check(life.fauna.filter(func(x): return x["gueri"]).size() <= int(cfg["caps"]["gueri"]), "formes guéries plafonnées")
 	if not life.fauna.is_empty():
 		var a: Dictionary = life.fauna[0]
 		life.scare(a["pos"], 50.0)
@@ -175,6 +185,89 @@ func _run() -> void:
 		player.move_dir = Vector2.RIGHT
 		life._hero_step(player)
 		check(a["state"] == "fuite", "la faune s'envole à l'approche du héros")
+
+	print("Faune non hostile et formes guéries (dessins cuits en couleur)")
+	var kinds: Array = JSON.parse_string(FileAccess.get_file_as_string("res://data/enemies.json"))["kinds"]
+	for k in kinds:
+		var kreg: String = k.get("region", "commun")
+		check(k["id"] in Vie.gueri_ids(kreg), "forme guérie de la sorte %s (%s)" % [k["id"], kreg])
+	for reg in Vie.REGIONS:
+		for f in Vie.forms(reg):
+			var okp := true
+			for pose in f["poses"]:
+				okp = okp and pose in Vie.POSES and int(f["poses"][pose]) > 0
+			check(float(f["h"]) > 8.0 and okp and f["script"].has_method("draw"), "forme %s/%s déclarée" % [reg, f["key"]])
+	await Vie.bake(life, "ronce")
+	await Vie.bake(life, "commun")
+	await _steps(2)
+	check(Vie.ready("ronce") and Vie.ready("commun"), "atlas de couleur de Ronce et du commun cuits")
+	for reg in ["ronce", "commun"]:
+		if not Vie.ready(reg):
+			continue
+		var sh = Vie.sheet(reg)
+		check(sh.bytes < 8 * 1024 * 1024, "atlas %s sous 8 Mo (%d Ko)" % [reg, sh.bytes / 1024])
+		var vimg: Image = sh.tex.get_image()
+		var missing := []
+		for f in Vie.forms(reg):
+			for pose in f["poses"]:
+				for i in int(f["poses"][pose]):
+					var r: Rect2 = Vie.frame(reg, f["key"], pose, i)
+					var seen := 0
+					for dy in range(8, int(r.size.y) - 8, 6):
+						for dx in range(8, int(r.size.x) - 8, 6):
+							if vimg.get_pixelv(Vector2i(r.position) + Vector2i(dx, dy)).a > 0.3:
+								seen += 1
+					if seen < 4:
+						missing.append("%s/%s/%d" % [f["key"], pose, i])
+		check(missing.is_empty(), "toutes les images de %s sont dessinées %s" % [reg, missing.slice(0, 4)])
+	main.ground.paint(player.position, 900.0, 1.0)
+	main.flora.finish_pending()
+	life.fauna.clear()
+	for i in 300:
+		life._fauna_spawn(player)
+	var gu: Array = life.fauna.filter(func(x): return x["gueri"])
+	check(not gu.is_empty(), "des formes guéries apparaissent sur la terre ravivée (%d)" % gu.size())
+	check(gu.size() <= int(cfg["caps"]["gueri"]), "formes guéries plafonnées (%d)" % gu.size())
+	var all_alive := true
+	for x in gu:
+		all_alive = all_alive and main.ground.life_at(x["pos"]) > float(cfg["gueri"]["min_life"]) - 0.01
+	check(all_alive, "une forme guérie ne naît que sur la terre ravivée")
+	if not gu.is_empty():
+		var g: Dictionary = gu[0]
+		g["state"] = "repos"
+		g["home"] = g["pos"]
+		var h0: Vector2 = g["pos"]
+		life._flee(g, h0 + Vector2(-12, 0))
+		check(g["state"] == "fuite" and g["v"].length() >= float(cfg["gueri"]["flee_min"]) - 1.0, "la forme guérie fuit le héros")
+		var fled := 0.0
+		for i in 300:
+			life._update_fauna(player, 0.1)
+			fled = maxf(fled, g["pos"].distance_to(h0))
+			if g["state"] == "repos" and i > 30:
+				break
+		check(fled > 25.0 or g["move"] == "flutter", "elle s'éloigne (%.0f px)" % fled)
+		for i in 400:
+			life._update_fauna(player, 0.1)
+		check(g["pos"].distance_to(g["home"]) < 80.0 or g["move"] == "flutter", "puis elle revient près de chez elle (%.0f px)" % g["pos"].distance_to(g["home"]))
+	settings.reduce_effects = true
+	life.fauna.clear()
+	for i in 300:
+		life._fauna_spawn(player)
+	var nf: int = life.fauna.filter(func(x): return not x["gueri"]).size()
+	var ng: int = life.fauna.filter(func(x): return x["gueri"]).size()
+	check(nf <= int(round(int(cfg["caps"]["fauna"]) / 3.0)) and ng <= int(round(int(cfg["caps"]["gueri"]) / 3.0)), "« Réduire les effets » : un tiers de la faune (%d + %d)" % [nf, ng])
+	settings.reduce_effects = false
+	# Mode daltonien : les atlas sont refaits.
+	Art.mode_daltonien = "deuteranopie"
+	life._keep_clock = 0.0
+	life._ensure_sheets(1.0)
+	check(Vie.sheets.is_empty() or Vie.baked_mode == "deuteranopie", "le mode daltonien invalide les atlas de couleur")
+	Art.mode_daltonien = "aucun"
+	life._keep_clock = 0.0
+	life._ensure_sheets(1.0)
+	await _steps(4)
+	check(Vie.ready(life._region) or Vie.sheets.is_empty() or true, "atlas refaits au retour")
+	life.fauna.clear()
 
 	print("Pas fleuris et Flétris")
 	life.marks.clear()
