@@ -5,36 +5,47 @@ name: Tests de logique
 
 on:
   pull_request:
+    # Documentation seule : rien à tester.
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "prototype-web/**"
+      - ".claude/**"
   push:
     branches: [main, master, develop, "claude/project-thread-9liy48"]
   workflow_dispatch:
 
+# Un nouveau push sur une PR annule les jobs en cours de l'ancien commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # Deux parts jouées en parallèle (tools/unit-tests.sh, SHARD=k/2, réparties selon la durée de
+  # chaque test) : environ 2 minutes 30 de tests chacune au lieu de 5 minutes pour un seul job.
   tests:
+    name: tests (part ${{ matrix.shard }} sur 2)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Installer l'écran virtuel et le rendu logiciel
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1
-
-      - name: Cache de Godot
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/godot
-          key: godot-4.7-stable
+      - uses: ./.github/actions/godot
 
       - name: Catalogues de traduction à jour, aucun texte hors traduction
+        if: matrix.shard == 1
         run: tools/i18n.sh --check
 
       - name: Anglais complet (100 %, gabarits identiques)
+        if: matrix.shard == 1
         run: tools/i18n.sh --complete en
 
-      - name: Lancer les tests
-        run: tools/unit-tests.sh
+      - name: Lancer les tests (part ${{ matrix.shard }} sur 2)
+        run: SHARD=${{ matrix.shard }}/2 tools/unit-tests.sh
 
       - name: Résumé du job
         if: always()
@@ -45,7 +56,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tests-logique
+          name: tests-logique-part-${{ matrix.shard }}
           path: |
             godot/tests/unit-out/*.log
             godot/tests/unit-out/resume.md
