@@ -34,14 +34,6 @@
       "valeur": 9.9,
       "cible": 10.0
     },
-    "fletri_dl:seve:ravive": {
-      "valeur": 1.7,
-      "cible": 8.0
-    },
-    "dalto_perso:protanopie:seve:ravive": {
-      "valeur": 7.7,
-      "cible": 10.0
-    },
     "fletri_dl:aube:ravive": {
       "valeur": 7.2,
       "cible": 8.0
@@ -78,16 +70,8 @@
       "valeur": 14.2,
       "cible": 15.0
     },
-    "regions_de_dalto:vent:seve": {
-      "valeur": 6.1,
-      "cible": 8.0
-    },
     "regions_de:vent:racine": {
       "valeur": 11.7,
-      "cible": 15.0
-    },
-    "regions_de:seve:racine": {
-      "valeur": 12.0,
       "cible": 15.0
     }
   }
