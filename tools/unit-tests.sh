@@ -52,7 +52,7 @@ TESTS=(
   "legibility|--headless|"
   "grafts|--headless --fixed-fps 60|"
   "marais|--headless --fixed-fps 60|"
-  "moments|--headless|"
+  "moments|--headless --fixed-fps 60|"
   "move|--xvfb --fixed-fps 60 --audio-driver Dummy|"
   "node_types|--headless|"
   "pad|--xvfb --fixed-fps 60 --audio-driver Dummy|"
@@ -91,7 +91,7 @@ export LIBGL_ALWAYS_SOFTWARE=1
 export TREE_LANG="${TREE_LANG:-fr}"
 
 if [ ! -d "$ROOT/godot/.godot" ] || [ "${IMPORT:-1}" = 1 ]; then
-  "$GODOT" --headless --import >"$OUT/import.log" 2>&1 || { echo "Import en échec :"; tail -30 "$OUT/import.log"; }
+  "$ROOT/tools/import.sh" "$OUT/import.log" || echo "Import en échec : les tests peuvent échouer faute de ressources."
 fi
 
 # Lignes d'erreur ou d'avertissement de Godot qui ne sont pas des défauts du jeu :
