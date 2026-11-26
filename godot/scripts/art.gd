@@ -209,6 +209,9 @@ const BESTIAIRE := {
 	# de Vent et de Racine même pour un daltonien), verre clair (ailes, aiguilles), lumière d'or sale (detail).
 	"aube": {"clair": Color("f4e4d8"), "ombre": Color("7c6c9c"), "reflet": Color("fcf9ff"), "detail": Color("e6c25a"),
 		"verre": Color("bfe0ea"), "verre_ombre": Color("587886"), "lueur": Color("fff2c4")},
+	# Flétris communs : la Flétrissure pure, cendre encore chaude sur écorce brûlée (lisible sur tous les sols sombres ;
+	# teinte ocre pour rester distincte de la nacre d'Aube, de Vent et de Racine, même pour un daltonien).
+	"commun": {"clair": Color("f0bc8a"), "ombre": Color("8a6a58"), "reflet": Color("fbeedd"), "detail": Color("2e2428"), "charbon": Color("3d3236")},
 	# Sève (R4) : vert profond de mare (distinct des autres régions pour les daltoniens, bestiaire_test), loin du vert menthe de la sève vivante ; detail = vase ocre ; vase = limon du fond.
 	"seve": {"clair": Color("308533"), "ombre": Color("1e5c2a"), "reflet": Color("b0e6a8"), "detail": Color("a88d52"), "vase": Color("4a3f30")},
 }
