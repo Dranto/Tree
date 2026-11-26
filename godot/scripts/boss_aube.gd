@@ -17,6 +17,9 @@ extends BossBase
 
 const Enemy = preload("res://scripts/enemy.gd")
 const A = preload("res://scripts/region_art/aube.gd")
+const Phalene = preload("res://scripts/creature_art/aube/_phalene.gd")
+const Ink = preload("res://scripts/creature_art/ink.gd")
+const PoseCache = preload("res://scripts/pose_cache.gd")
 
 const RADIUS := 60.0
 const INTRO := 1.6
@@ -377,159 +380,172 @@ func bot_ring(arena_radius: float) -> float:
 
 # --- Dessin ---
 #
-# Charte graphique : les Flétris sont anguleux, en volume, contour clair, braise dans les fentes.
-# La Phalène est vue de dessus, ailes ouvertes : un corps de cendre velu, deux grandes ailes
-# antérieures de verre fumé à facettes, deux postérieures plus petites, des antennes en plumes,
-# deux yeux de braise. Phase 2 : la lumière court dans les nervures ; phase 3 : les ailes se
-# fendent et des éclats s'en détachent.
+# « Bestiaire d'herbier » (refonte des personnages, vague 2) : la Phalène est une grande phalène de
+# trois quarts, fourrure d'or et ailes de vitre, dessinée par scripts/creature_art/aube/_phalene.gd
+# (encre commune avec le héros et les Flétris d'Aube, braise = ennemi), tournée vers le joueur.
+# Le dessin direct coûte plusieurs ms : chaque animation est découpée en quelques images (TRACKS), et
+# chaque image n'est dessinée qu'une fois (pose_cache.gd). Ce fichier choisit l'animation et l'image ;
+# l'ombre et les états restent dessinés à chaque image.
 
-## Aile du côté sgn (-1 gauche, 1 droite) : antérieure (fore) ou postérieure, ouverte de « open »
-## (0,6 repliée à 1,2 grande ouverte), en coordonnées locales du corps (y vers le bas).
-static func wing_shape(r: float, sgn: float, open: float, fore: bool) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	if fore:
-		pts.append(Vector2(0.18 * sgn, -0.35) * r)
-		pts.append(Vector2(0.9 * sgn, -1.05) * r)
-		pts.append(Vector2(1.9 * sgn, -1.15) * r)
-		pts.append(Vector2(2.3 * sgn, -0.75) * r)
-		pts.append(Vector2(1.95 * sgn, -0.1) * r)
-		pts.append(Vector2(0.95 * sgn, 0.12) * r)
-		pts.append(Vector2(0.22 * sgn, 0.0) * r)
-	else:
-		pts.append(Vector2(0.2 * sgn, 0.05) * r)
-		pts.append(Vector2(1.15 * sgn, 0.2) * r)
-		pts.append(Vector2(1.45 * sgn, 0.75) * r)
-		pts.append(Vector2(0.95 * sgn, 1.2) * r)
-		pts.append(Vector2(0.35 * sgn, 0.85) * r)
-	var out := PackedVector2Array()
-	var root: Vector2 = pts[0]
-	for q in pts:
-		var rel: Vector2 = q - root
-		out.append(root + Vector2(rel.x * open, rel.y * (0.85 + 0.15 * open)))
-	return out
+## Hauteur du thorax au-dessus du centre du boss (px) : les rayons partent de là.
+const BODY_Y := 76.0
+## Images par animation.
+const TRACKS := {"vol": 12, "eclair": 8, "eclair_f": 6, "rayons": 6, "rayons_f": 6, "pluie": 8, "pluie_f": 6,
+	"ecailles": 6, "nuee": 6, "mort": 16}
+## Animations qui vont d'un bout à l'autre (pas en boucle).
+const ONCE := ["eclair", "eclair_f", "rayons", "rayons_f", "pluie", "pluie_f", "ecailles", "nuee", "mort"]
+## Écart minimal (px) avant de se retourner vers le joueur.
+const TURN_MARGIN := 24.0
+## Teinte du coup reçu (sur la pose déjà dessinée).
+const HIT_TINT := Color(1.7, 1.5, 1.3)
+
+var facing := 1.0
+var _over: Node2D
+var _body_at := Vector2.ZERO
+
+
+func _beat_speed() -> float:
+	return 5.0 + 1.5 * (phase - 1)
+
+
+## Animation en cours et son avancement u (0 → 1).
+func _track() -> Array:
+	if dead:
+		return ["mort", clampf(dying / DEATH_TIME, 0.0, 1.0)]
+	var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
+	var ann := stage == "annonce"
+	match attack:
+		"eclair":
+			return ["eclair", k] if ann else ["eclair_f", k]
+		"rayons":
+			return ["rayons", k] if ann else ["rayons_f", k]
+		"pluie":
+			return ["pluie", k] if ann else ["pluie_f", k]
+		"ecailles":
+			if ann:
+				return ["ecailles", k]
+		"nuee":
+			if ann:
+				return ["nuee", k]
+	return ["vol", fposmod(t * _beat_speed() / TAU, 1.0)]
+
+
+## Pose du dessin (clés de _phalene.gd) pour l'image u d'une animation.
+func pose_at(track: String, u: float) -> Dictionary:
+	var rage: float = [0.0, 0.5, 1.0][phase - 1]
+	var o := {"rage": rage, "alt": 0.0, "beat": 0.15, "open": 1.0, "t": u}
+	var tremble := sin(u * 40.0) * u
+	match track:
+		"vol":
+			o["t"] = u * TAU / _beat_speed()
+			o["beat"] = 0.15 + 0.45 * sin(TAU * u)
+			o["open"] = 1.0 + 0.05 * sin(TAU * u)
+		"eclair":
+			o["open"] = lerpf(1.0, 1.25, Anim.ease_out(u))
+			o["beat"] = lerpf(0.15, 0.35, u) + 0.04 * tremble
+			o["glow"] = Anim.ease_in(u)
+			o["k"] = u
+		"eclair_f":
+			o["t"] = 1.0 + u
+			o["open"] = 1.25
+			o["beat"] = 0.35
+			o["glow"] = 1.0 - u
+		"rayons":
+			o["glow"] = 0.6 * u
+			o["beat"] = lerpf(0.15, 0.7, u)
+			o["k"] = u
+		"rayons_f":
+			o["t"] = 1.0 + u
+			o["glow"] = 0.8 * (1.0 - u)
+			o["beat"] = lerpf(0.7, 0.15, u)
+		"pluie":
+			o["beat"] = lerpf(0.15, 1.0, Anim.ease_out(u)) + 0.05 * tremble
+			o["glow"] = 0.5 * u
+			o["k"] = u
+		"pluie_f":
+			o["t"] = 1.0 + u
+			o["beat"] = lerpf(1.0, -0.6, Anim.ease_out(u))
+		"ecailles":
+			o["beat"] = 0.2 + 0.6 * sin(u * 22.0) * u
+			o["k"] = u
+		"nuee":
+			o["beat"] = 0.2 + 0.7 * sin(u * 18.0)
+			o["k"] = 0.5 * u
+		"mort":
+			o["t"] = u * 2.0
+			o["dk"] = u
+			o["crack"] = Anim.ease_out(u)
+			o["open"] = lerpf(1.0, 0.6, Anim.ease_out(clampf(u * 1.6, 0.0, 1.0)))
+			o["beat"] = lerpf(0.15, -0.4, u)
+	return o
 
 
 func _draw() -> void:
 	var wake := 1.0 - clampf(intro / INTRO, 0.0, 1.0)
 	var dk := clampf(dying / DEATH_TIME, 0.0, 1.0) if dead else 0.0
 	var r := RADIUS
-	var alt := r * HOVER + r * 0.1 * sin(t * 2.0)
-	var open := 1.0 + 0.08 * sin(t * (2.6 + 0.8 * (phase - 1)))
-	var glow := 0.0
-	if attack == "eclair":
-		var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
-		if stage == "annonce":
-			open = lerpf(1.0, 1.22, Anim.ease_out(k)) + 0.02 * sin(t * 30.0)
-			glow = Anim.ease_in(k)
-		else:
-			open = 1.22
-			glow = 1.0 - k
-	elif attack == "rayons":
-		var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
-		glow = 0.6 * k if stage == "annonce" else 0.8 * (1.0 - k)
+	var art_h: float = Phalene.HEIGHT
+	var feet := Vector2(0, r * 0.15)
+	var body_y := BODY_Y + r * 0.1 * sin(t * 2.0)
 	if dead:
-		open = lerpf(open, 0.6, Anim.ease_out(clampf(dk * 1.6, 0.0, 1.0)))
-		alt = lerpf(alt, r * 0.1, Anim.ease_in(clampf(dk * 1.3, 0.0, 1.0)))
+		body_y = lerpf(body_y, art_h * 0.3, Anim.ease_in(clampf(dk * 1.3, 0.0, 1.0)))
 	var s := lerpf(0.35, 1.0, Anim.ease_out(wake)) * (1.0 - 0.15 * Anim.ease_in(dk))
 	modulate.a = 1.0 - Anim.ease_in(clampf((dk - 0.6) / 0.4, 0.0, 1.0))
-	draw_colored_polygon(Art.ellipse(Vector2(0, r * 0.15), r * 2.0 * s, r * 0.6 * s, 24), Color(Art.c("ombre"), 0.35))
-	var shift := Vector2(0, -alt)
+	draw_colored_polygon(Art.ellipse(feet, r * 1.9 * s, r * 0.6 * s, 24), Color(Art.c("ombre"), 0.35))
+	if main != null and main.player != null:
+		var dx: float = main.player.position.x - position.x
+		if absf(dx) > TURN_MARGIN:
+			facing = signf(dx)
+	var shift := Vector2.ZERO
 	if transition > 0.0:
 		shift += Vector2(sin(t * 50.0), cos(t * 43.0)) * 4.0
-	draw_set_transform(shift, 0.0, Vector2(s, s))
-	_paint_body(self, r, open, glow, dk)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var tr: Array = _track()
+	var n: int = TRACKS[tr[0]]
+	var i := clampi(int(tr[1] * n), 0, n - 1)
+	var u := float(i) / maxf(1.0, n - 1.0) if tr[0] in ONCE else float(i) / n
+	var o := pose_at(tr[0], u)
+	o["look"] = 0.25
+	# Retourné par le nœud (comme les sprites des Flétris) : une seule pose cuite pour les deux sens.
+	var key := "%s/%d/%d" % [tr[0], i, phase]
+	var mod := _tint()
+	if hit_flash > 0.0 and not dead:
+		mod = mod * HIT_TINT
+	var drawer := func(ci: CanvasItem) -> void:
+		Phalene.draw(ci, Vector2.ZERO, art_h, o)
+		Ink.flash = 0.0
+		Ink.ash = 0.0
+	# Le dessin est posé de sorte que le thorax soit à body_y au-dessus du centre (alt = 0 : thorax à
+	# 30 unités au-dessus des pieds).
+	var lift := body_y + feet.y - art_h * 0.3
+	PoseCache.on(self).show_pose(key, drawer, Transform2D(0.0, Vector2(s * facing, s), 0.0, feet + shift + Vector2(0, -lift * s)), mod)
+	_body_at = Vector2(0, -body_y * s)
+	if _over == null:
+		_over = Node2D.new()
+		_over.draw.connect(_draw_over)
+		add_child(_over)
+	_over.queue_redraw()
 
 
-## Le corps, les ailes et la tête, centrés sur le thorax (déjà décalés de l'altitude).
-func _paint_body(c: CanvasItem, r: float, open: float, glow: float, dk: float) -> void:
-	var rage: float = [0.0, 0.5, 1.0][phase - 1]
-	var contour := _color(Art.c("ennemi_contour"))
-	var fur := Art.c("ennemi").lerp(A.pal("verre_fume"), 0.3)
-	var glass := A.pal("verre_fume").lerp(A.pal("verre"), 0.25 + 0.5 * glow)
-	var light := A.pal("lumiere")
-	var pulse := 0.5 + 0.5 * sin(t * (3.0 + 4.0 * rage))
-	# Ailes postérieures, puis antérieures (devant).
-	for fore in [false, true]:
-		for sgn in [-1.0, 1.0]:
-			var w := wing_shape(r, sgn, open, fore)
-			c.draw_colored_polygon(w, Color(_color(glass), 0.82 * (1.0 - dk * 0.5)))
-			# Facettes : deux nervures qui partent de la racine.
-			var root: Vector2 = w[0]
-			for i in range(2, w.size() - 1, 2):
-				var vein := Color(_color(A.pal("verre_sombre")), 0.8)
-				if rage > 0.0:
-					vein = vein.lerp(Color(light, 0.9), (0.3 + 0.5 * rage) * (0.6 + 0.4 * pulse))
-				c.draw_line(root, w[i], vein, 2.0, true)
-			var closed := w.duplicate()
-			closed.append(w[0])
-			c.draw_polyline(closed, contour, Art.TRAIT, true)
-			if fore:
-				# Ocelle de lumière sale au milieu de l'aile (l'« œil » de la phalène).
-				var eye: Vector2 = w[0].lerp(w[3], 0.55)
-				c.draw_circle(eye, r * 0.22, _color(A.pal("lumiere_sombre").lerp(light, 0.3 + 0.7 * glow)))
-				c.draw_circle(eye, r * 0.1, _color(Art.c("ennemi").darkened(0.3)))
-				c.draw_arc(eye, r * 0.22, 0.0, TAU, 18, contour, Art.TRAIT_FIN, true)
-				# Phase 3 : l'aile est fendue, un morceau manque au bord.
-				if rage >= 1.0 or dead:
-					var a2: Vector2 = w[3]
-					var b2: Vector2 = w[4]
-					c.draw_polyline(PackedVector2Array([a2.lerp(b2, 0.3), eye.lerp(a2, 0.5), eye]), Color(light, 0.8 * (1.0 - dk)), 2.0, true)
-	# Lueur de l'éclair : les ailes blanchissent.
-	if glow > 0.05:
-		for i in 3:
-			c.draw_circle(Vector2(0, -0.2 * r), r * (1.0 + 0.6 * i) * (0.6 + 0.6 * glow), Color(A.pal("lumiere"), 0.16 * glow))
-		c.draw_circle(Vector2(0, -0.2 * r), r * 0.9 * glow, Color(A.pal("lumiere_clair"), 0.35 * glow))
-	# Abdomen velu, annelé.
-	var abdo := Art.ellipse(Vector2(0, 0.55 * r), r * 0.3, r * 0.68, 18)
-	Art.volume(c, abdo, _color(fur), 0.6)
-	for i in 4:
-		var y := (0.15 + 0.22 * i) * r
-		var hw := r * 0.28 * (1.0 - 0.12 * i)
-		c.draw_line(Vector2(-hw, y), Vector2(hw, y), _color(fur.darkened(0.3)), 2.0, true)
-	Art.outline(c, abdo, contour, Art.TRAIT)
-	# Thorax et tête.
-	var thorax := Art.ellipse(Vector2(0, -0.25 * r), r * 0.36, r * 0.38, 18)
-	Art.volume(c, thorax, _color(fur.lightened(0.05)), 0.6)
-	Art.outline(c, thorax, contour, Art.TRAIT)
-	var head := Vector2(0, -0.72 * r)
-	var skull := Art.ellipse(head, r * 0.26, r * 0.2, 14)
-	Art.volume(c, skull, _color(fur.darkened(0.05)), 0.6)
-	Art.outline(c, skull, contour, Art.TRAIT_FIN)
-	# Antennes en plumes.
-	for sgn in [-1.0, 1.0]:
-		var base := head + Vector2(0.1 * sgn, -0.12) * r
-		var tip := head + Vector2(0.55 * sgn, -0.75) * r
-		c.draw_line(base, tip, _color(F_bone()), 2.0, true)
-		for j in 5:
-			var q := base.lerp(tip, 0.25 + 0.15 * j)
-			c.draw_line(q, q + Vector2(0.12 * sgn, 0.02) * r, _color(F_bone().darkened(0.2)), 1.5, true)
-	# Yeux de braise, plus vifs pendant une annonce.
-	var bright := 0.4 + (0.45 if stage == "annonce" else 0.0)
-	var eye_col := Art.c("ennemi_oeil")
-	for sgn in [-1.0, 1.0]:
-		var e := head + Vector2(0.15 * sgn * r, 0.0)
-		c.draw_circle(e, r * 0.11, Color(eye_col, bright * 0.5 * (1.0 - dk)))
-		c.draw_circle(e, r * 0.07, _color(eye_col.lerp(Art.ec("cendre"), 0.3 * rage)))
-	# Phase 3 et mort : des éclats de verre se détachent et tombent.
-	var flakes := 0 if phase < 3 and not dead else 8
-	for i in flakes:
-		var u := fposmod(t * 0.5 + i / 8.0, 1.0)
-		var q := Vector2(sin(i * 2.4) * r * 1.8, -r * 0.6 + r * 1.6 * u)
-		var sz := 5.0 * (1.0 - 0.4 * u)
-		c.draw_colored_polygon(PackedVector2Array([q + Vector2(0, -sz), q + Vector2(sz * 0.5, 0), q + Vector2(0, sz), q + Vector2(-sz * 0.5, 0)]), Color(A.pal("verre"), 1.0 - u))
+## États visibles (motifs des éléments, charte § 3) et lueur de la mort, par-dessus le dessin.
+func _draw_over() -> void:
+	var r := RADIUS
 	if statuses.has("saignement"):
-		Art.status(c, "saignement", Vector2.ZERO, r * 0.7, t * 1.25)
+		Art.status(_over, "saignement", _body_at, r * 0.7, t * 1.25)
 	if statuses.has("enracine"):
-		Art.status(c, "racine", Vector2(0, r * 0.3), r * 0.9, t)
+		Art.status(_over, "racine", _body_at + Vector2(0, r * 0.3), r * 0.9, t)
 	if poison_time > 0.0:
-		Art.status(c, "poison", Vector2.ZERO, r * 0.7, t)
+		Art.status(_over, "poison", _body_at, r * 0.7, t)
+	var dk := clampf(dying / DEATH_TIME, 0.0, 1.0) if dead else 0.0
 	if dead and dk > 0.5:
-		Art.glow(c, Vector2.ZERO, r * 0.9 * Anim.ease_out((dk - 0.5) / 0.5), "seve")
+		Art.glow(_over, _body_at, r * 0.9 * Anim.ease_out((dk - 0.5) / 0.5), "seve")
 
 
-static func F_bone() -> Color:
-	return Art.ec("epine", "clair").darkened(0.15)
+## Teinte d'ensemble : poison (la cendre de la mort est dans le dessin, Ink.ash).
+func _tint() -> Color:
+	var c := Color.WHITE
+	if poison_time > 0.0:
+		c = c.lerp(Art.ec("poison", "clair"), 0.3)
+	return c
 
 
 ## Annonces au sol, en coordonnées monde (Art.telegraph). La nuée (qui ne blesse pas) n'est pas
@@ -606,7 +622,7 @@ func draw_overlay(c: CanvasItem) -> void:
 		var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
 		var ln := beam_length()
 		for d in beams:
-			var a: Vector2 = anchor + d * radius * 0.6 + Vector2(0, -RADIUS * HOVER)
+			var a: Vector2 = anchor + d * radius * 0.6 + Vector2(0, -BODY_Y)
 			var b: Vector2 = anchor + d * ln
 			c.draw_line(a, b, Color(A.pal("lumiere"), 0.6 * (1.0 - k)), BEAM["width"] * (1.0 - 0.4 * k), true)
 			c.draw_line(a, b, Color(A.pal("lumiere_clair"), 0.95 * (1.0 - k)), BEAM["width"] * 0.35, true)
@@ -621,28 +637,29 @@ func draw_overlay(c: CanvasItem) -> void:
 # --- Dessinés par l'arène (boss_arena.gd), coordonnées de l'arène ---
 
 ## La Phalène endormie : posée sur une aiguille de cristal au centre du cercle, ailes repliées en
-## toit, yeux clos.
+## toit, yeux clos ; ils couvent quand le cercle est ouvert.
 static func draw_sleeper(a: Node2D) -> void:
 	var r := RADIUS * 0.8
 	var c: Vector2 = a.center
 	a.draw_colored_polygon(Art.ellipse(c + Vector2(0, r * 0.25), r * 1.4, r * 0.4, 18), Color(Art.c("ombre"), 0.3))
 	A.draw_prism(a, A.prism(c + Vector2(0, r * 0.2), r * 0.45, r * 1.1, 0.0), A.pal("verre_fume"), A.pal("verre"))
-	var moth := c + Vector2(0, -r * 1.25)
-	var glass := A.pal("verre_fume").lerp(A.pal("verre"), 0.2)
-	for sgn in [-1.0, 1.0]:
-		var w := PackedVector2Array([moth + Vector2(0.05 * sgn, -0.55) * r, moth + Vector2(0.75 * sgn, 0.1) * r, moth + Vector2(0.55 * sgn, 0.6) * r, moth + Vector2(0.05 * sgn, 0.45) * r])
-		a.draw_colored_polygon(w, Color(glass, 0.9))
-		var closed := w.duplicate()
-		closed.append(w[0])
-		a.draw_polyline(closed, Color(Art.c("ennemi_contour"), 0.5), Art.TRAIT_FIN, true)
-	var head := moth + Vector2(0, -r * 0.62)
-	a.draw_circle(head, r * 0.2, Art.c("ennemi").lerp(A.pal("verre_fume"), 0.3).darkened(0.2))
 	var open: bool = a.state == "ouverte"
-	for sgn in [-1.0, 1.0]:
-		var e := head + Vector2(0.09 * sgn, 0.0) * r
-		if open:
-			a.draw_circle(e, r * 0.07, Color(Art.c("ennemi_oeil"), 0.45 + 0.35 * sin(a.t * 2.0)))
-		a.draw_line(e - Vector2(0.06, 0) * r, e + Vector2(0.06, 0) * r, Art.c("contour"), 2.0, true)
+	# Ouverte : les yeux couvent (8 images sur une période de π s).
+	var i := int(fposmod(a.t * 2.0 / TAU, 1.0) * 8.0) if open else 0
+	var o := {"t": i * 0.4, "alt": -20.0, "beat": -0.1, "open": 0.6, "sleep": 0.0 if open else 1.0, "k": 0.2 + 0.2 * sin(TAU * i / 8.0) if open else 0.0}
+	var drawer := func(ci: CanvasItem) -> void:
+		Phalene.draw(ci, Vector2.ZERO, Phalene.HEIGHT * 0.75, o)
+		Ink.flash = 0.0
+		Ink.ash = 0.0
+	_arena_cache(a).show_pose("dort/%d" % i if open else "dort", drawer, Transform2D(0.0, c + Vector2(0, -r * 0.6)))
+
+
+## Cache des poses dessinées dans l'arène (endormie, victoire) : masqué pendant le combat.
+static func _arena_cache(a: Node2D) -> Node2D:
+	var cache := PoseCache.on(a)
+	if not cache.visible_if.is_valid():
+		cache.visible_if = func() -> bool: return a.state in ["ouverte", "fermee", "vaincue"]
+	return cache
 
 
 ## Après la victoire : un lys de cristal clair au cœur d'or, entouré de fleurs d'aube et d'éclats
@@ -664,3 +681,12 @@ static func draw_victory(a: Node2D) -> void:
 		a.draw_colored_polygon(pet, Color(A.pal("verre_clair"), 0.85))
 		a.draw_polyline(PackedVector2Array([pet[0], pet[2]]), A.pal("verre_sombre"), 1.2, true)
 	Art.volume_circle(a, top, r * 0.16, A.pal("lumiere"), 0.9)
+	# Une petite phalène guérie, aux yeux sombres, qui tourne autour du lys.
+	var ang: float = a.t * 0.8
+	var at := top + Vector2(cos(ang) * r * 0.9, -r * 0.2 + sin(ang) * r * 0.3)
+	var i := int(fposmod(a.t * 14.0 / TAU, 1.0) * 6.0)
+	var flip := sin(ang) > 0.0
+	var o := {"t": i * 0.1, "alt": 0.0, "beat": sin(TAU * i / 6.0) * 0.7, "gueri": true, "flip": flip}
+	var drawer := func(ci: CanvasItem) -> void:
+		Phalene.draw(ci, Vector2.ZERO, Phalene.HEIGHT * 0.2, o)
+	_arena_cache(a).show_pose("gueri/%d/%d" % [i, 1 if flip else 0], drawer, Transform2D(0.0, at + Vector2(0, 30)))
