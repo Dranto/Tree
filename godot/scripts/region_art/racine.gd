@@ -210,3 +210,41 @@ static func _crown(ci: CanvasItem, c: Vector2, rx: float, ry: float, n: int, mas
 		O.poly(ci, Ink.lumpy(p, rr, rr * 0.82, 20, 0.12, 8.0, p.x), pal["ombre"])
 		O.poly(ci, Ink.lumpy(p + Vector2(-0.18, -0.22) * rr, rr * 0.8, rr * 0.62, 18, 0.14, 7.0, p.y), pal["clair"])
 		O.poly(ci, Ink.lumpy(p + Vector2(-0.38, -0.42) * rr, rr * 0.32, rr * 0.22, 12, 0.2, 5.0, p.x), Color(pal["reflet"], 0.75))
+
+
+# --- Arène en décor (vague 3b A2, world_art/arenes_racine.gd) : la clairière de l'Ancien ---
+# draw_arena_floor et draw_arena_wall (l'ancienne palissade) ne servent plus qu'aux comparaisons.
+
+const ArenesRacine = preload("res://scripts/world_art/arenes_racine.gd")
+
+
+static func arena_baked(region: String) -> bool:
+	return true
+
+
+static func arena_pieces(region: String, a) -> Array:
+	return arena_ring(a, 42, ArenesRacine.MUR_VARIANTES, [["r0", 0.0, 76.0]], 73)
+
+
+static func arena_piece_keys(region: String) -> Array:
+	return ArenesRacine.keys()
+
+
+static func arena_piece_box(region: String, key: String) -> Rect2:
+	return ArenesRacine.piece_box(key)
+
+
+static func arena_piece(ci: CanvasItem, region: String, key: String, etat: String) -> void:
+	ArenesRacine.piece(ci, key, etat)
+
+
+static func arena_piece_live(ci: CanvasItem, region: String, key: String, a, i: int) -> void:
+	ArenesRacine.piece_live(ci, key, a, i)
+
+
+static func arena_floor(ci: CanvasItem, a, etat: String) -> void:
+	ArenesRacine.ground(ci, a, etat)
+
+
+static func arena_live(ci: CanvasItem, a) -> void:
+	ArenesRacine.live(ci, a)
