@@ -120,10 +120,12 @@ func _ready() -> void:
 		Atlas.bake(self)
 
 
-## Sortie du jeu : rien de gardé dans des variables statiques (atlas, tables de scripts).
+## Sortie du jeu : rien de gardé dans des variables statiques (atlas, tables de scripts), et les copies du
+## matériau du décor oubliées (DecorBake.release() en refait un neuf à la partie suivante).
 func _exit_tree() -> void:
 	Atlas.clear()
 	_tabs = []
+	_variants.clear()
 
 
 func _less() -> bool:
