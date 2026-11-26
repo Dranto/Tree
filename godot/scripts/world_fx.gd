@@ -218,6 +218,9 @@ func level_up() -> void:
 	if level_ups.size() >= 2:
 		level_ups.pop_front()
 	level_ups.append({"t": 0.0, "dur": float(_lv.get("dur", 1.5))})
+	# Souffle sur le décor autour du héros (world_life.gd › event).
+	if life != null and main != null and main.player != null:
+		life.event("level", main.player.position)
 
 
 ## Greffe ramassée à « pos » : elle jaillit, tourne autour du héros et le rejoint.
@@ -227,6 +230,8 @@ func graft_pickup(pos: Vector2, graft_id: String) -> void:
 	var from: Vector2 = main.player.position if main != null and main.player != null else pos
 	graft_flights.append({"id": graft_id, "pos": pos, "a0": (pos - from).angle() if pos.distance_squared_to(from) > 1.0 else 0.0,
 		"r0": clampf(pos.distance_to(from), 18.0, 40.0), "t": 0.0})
+	if life != null:
+		life.event("graft", from)
 
 
 ## Sanctuaire ravivé à « pos » : colonne de lumière qui s'élève, puis pluie de lueurs.
