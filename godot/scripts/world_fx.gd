@@ -19,10 +19,14 @@ const Content = preload("res://scripts/content.gd")
 const DrawBatch = preload("res://scripts/draw_batch.gd")
 const Flora = preload("res://scripts/flora.gd")
 const GraftPickup = preload("res://scripts/graft_pickup.gd")
+const WorldLife = preload("res://scripts/world_life.gd")
 
 var main
 ## Calque du dessus (créé par setup).
 var over: Layer
+## Monde vivant (refonte du monde, vague 1 V) : balancement du décor, petite vie, faune, réactions
+## (world_life.gd). Son calque du sol est un enfant de ce nœud, celui du dessus un enfant de « over ».
+var life
 
 ## Calque de dessin : appelle une fonction avec lui-même comme toile.
 class Layer extends Node2D:
@@ -89,6 +93,10 @@ func setup(m) -> void:
 	over = Layer.new()
 	over.fn = _draw_over
 	over.name = "WorldFxOver" # i18n: non
+	life = WorldLife.new()
+	life.setup(m, self)
+	add_child(life)
+	over.add_child(life.air)
 
 
 func _less() -> bool:
@@ -98,6 +106,12 @@ func _less() -> bool:
 ## Quantité divisée par trois avec « Réduire les effets » (au moins 1).
 func _qty(n: int) -> int:
 	return maxi(1, int(round(n / 3.0))) if _less() else n
+
+
+## Le monde réagit à « pos » (coup lourd, charge, mort, éclaboussure… voir world_life.gd › react).
+func react(kind: String, pos: Vector2, force := 1.0) -> void:
+	if life != null:
+		life.react(kind, pos, force)
 
 
 # ---------------------------------------------------------------- herbe et fleurs
@@ -192,6 +206,8 @@ func add_trace(kind: String, pos: Vector2, angle: float, size := 1.0) -> bool:
 	_trace_clock = float(_tr.get("every", 0.1))
 	traces.append({"kind": kind, "pos": pos, "a": angle, "size": size, "t": 0.0,
 		"dur": float(_tr.get(kind, 4.0)), "seed": _rng.randi()})
+	# Le décor proche de la trace frémit et y lâche quelques débris (world_life.gd).
+	react("trace", pos, size)
 	return true
 
 
@@ -247,7 +263,8 @@ func _process(delta: float) -> void:
 	# Calque du sol : redessiné quand le héros a avancé de quelques pixels, qu'il y a de quoi animer
 	# (couchage, traces, graine) ou, au repos, douze fois par seconde (le balancement des brins).
 	var moved: bool = p != null and p.position.distance_squared_to(_last_draw_pos) > 25.0
-	busy = moved or not _bent.is_empty() or not traces.is_empty() or not sprout.is_empty()
+	busy = moved or not _bent.is_empty() or not traces.is_empty() or not sprout.is_empty() \
+		or (life != null and life.gust["force"] > 0.0)
 	if busy or _since_draw > 1.0 / 12.0:
 		_since_draw = 0.0
 		if p != null:
@@ -362,6 +379,8 @@ func _draw_blades() -> void:
 	var c1 := Vector2i(floori((p.position.x + radius) / cell), floori((p.position.y + radius) / cell))
 	var base_col := Art.c("decor_vivant")
 	var ground = main.ground
+	# Rafale du monde vivant (world_life.gd) : l'herbe se couche à son passage.
+	var gusty: bool = life != null and not WorldLife.still and life.gust["force"] > 0.0
 	for cy in range(c0.y, c1.y + 1):
 		for cx in range(c0.x, c1.x + 1):
 			var h := (cx * 73856093) ^ (cy * 19349663)
@@ -378,6 +397,8 @@ func _draw_blades() -> void:
 			var hgt := 9.0 + float((h >> 24) & 15) * 0.6
 			var lean: Vector2 = _bent.get(Vector2i(cx, cy), Vector2.ZERO)
 			lean.x += sin(clock * 1.4 + float(h & 1023) * 0.01) * 0.1
+			if gusty:
+				lean += life.gust_at(at) * 0.9
 			var m := minf(lean.length(), 1.2)
 			var up := hgt * (1.0 - 0.6 * minf(m, 1.0))
 			var tint := float((h >> 4) & 7) / 7.0
@@ -703,8 +724,8 @@ func _draw_column(e: Dictionary) -> void:
 		var rnd2 := fposmod(sin(i * 12.9898 + 4.1) * 43758.5453, 1.0)
 		var rnd3 := fposmod(sin(i * 39.346 + 9.2) * 43758.5453, 1.0)
 		var start := hold * 0.7 + rnd * 1.1
-		var life := 1.0 + rnd2 * 0.6
-		var u := (t - start) / life
+		var life_t := 1.0 + rnd2 * 0.6
+		var u := (t - start) / life_t
 		if u <= 0.0 or u >= 1.0:
 			continue
 		var x := (rnd2 - 0.5) * 56.0 + sin(u * 5.0 + i) * 4.0

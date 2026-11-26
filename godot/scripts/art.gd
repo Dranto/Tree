@@ -230,6 +230,24 @@ const FEUILLES_BUILD := {
 ## « apaise » (terre morte apaisée hors du bord de vie, une fois le Cœur purifié), « ravive » (dans le bord
 ## de vie : la couleur propre à la région revient). Le vert sève reste réservé au bord de vie et à la graine.
 const MONDE := {
+	# Monde vivant (refonte du monde, vague 1 V ; scripts/world_life.gd) : teintes de la petite vie (les
+	# images cuites sont en gris, le blanc prend ces couleurs). bris : débris lâchés par le décor secoué,
+	# sur terre morte ou vivante ; pas : fleurs des pas du héros sur la terre ravivée ; cendre : pas des
+	# Flétris sur la terre vivante ; faune ambiante (clé + « _mort » : sur la terre flétrie).
+	"vivant": {
+		"commun": {
+			"cendre": Color(0.55, 0.52, 0.5, 0.75), "eau": Color("bfe4ee"), "spore": Color("e6d8ff"),
+			"oiseau": Color("b08a66"), "oiseau_mort": Color("5a5058"), "grenouille": Color("7fae58"), "grenouille_mort": Color("6a6a58"),
+			"papillon": Color("ffd890"), "papillon_mort": Color("a89a90"), "luciole": Color("ffe9a0"), "luciole_mort": Color("c8b4e0"),
+		},
+		"ronce": {"bris_vif": Color("8fb04c"), "bris_mort": Color("7d4b30"), "pas": Color("f4a3b4"), "papillon": Color("ffb0c0")},
+		"spore": {"bris_vif": Color("7fd0b8"), "bris_mort": Color("82708a"), "pas": Color("7ff0dc"), "spore": Color("c9fff0"),
+			"eau": Color("9fe8e2"), "luciole": Color("8affea"), "luciole_mort": Color("b8a0e0")},
+		"vent": {"bris_vif": Color("e8e2d0"), "bris_mort": Color("a8a8b0"), "pas": Color("d8e8ff"), "oiseau": Color("c8ccd4")},
+		"seve": {"bris_vif": Color("7ee0a8"), "bris_mort": Color("6a8070"), "pas": Color("eafff4"), "papillon": Color("b8ffe0"), "eau": Color("c8fff0")},
+		"aube": {"bris_vif": Color("ffe6a8"), "bris_mort": Color("a89a80"), "pas": Color("ffd770"), "papillon": Color("fff0b0"), "luciole": Color("ffd770")},
+		"racine": {"bris_vif": Color("c8a878"), "bris_mort": Color("8a7a66"), "pas": Color("e8d090"), "oiseau": Color("9a7a5a")},
+	},
 	"commun": {
 		"seve": Color("8af5c0"), "seve_clair": Color("eafff4"), "seve_sombre": Color("1f7a56"),
 		"encre_decor": Color("1f1614"), "lumiere": Color("ffe9bf"), "nuit": Color("120c10"),

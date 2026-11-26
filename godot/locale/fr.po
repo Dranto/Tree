@@ -8080,11 +8080,11 @@ msgstr "Phase 2 sur 3"
 msgid "Phase 3 sur 3"
 msgstr "Phase 3 sur 3"
 
-#. scripts/fx.gd:309
+#. scripts/fx.gd:312
 msgid "Sève −%d"
 msgstr "Sève −%d"
 
-#. scripts/fx.gd:311
+#. scripts/fx.gd:314
 msgid "étourdi"
 msgstr "étourdi"
 
@@ -8172,7 +8172,7 @@ msgstr ""
 "%s\n"
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 
-#. scripts/main.gd:1191
+#. scripts/main.gd:1193
 msgid "%s vaincu"
 msgstr "%s vaincu"
 

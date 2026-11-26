@@ -123,6 +123,9 @@ func impact(pos: Vector2, amount: float, crit: bool, radius := 14.0, element := 
 		hitstop(feel("hitstop", "heavy", 0.035))
 	elif boss:
 		shake(feel("shake", "boss_hit", 0.05))
+	# Monde vivant (world_life.gd) : le décor proche tremble et lâche feuilles, cailloux ou éclats.
+	if (crit or heavy) and main != null and main.get("world_fx") != null:
+		main.world_fx.react("heavy" if heavy else "hit", pos, 1.25 if crit and heavy else 1.0)
 
 
 ## Chiffre de dégâts : le coup normal reste discret, le critique est gras, doré et plus grand.

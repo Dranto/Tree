@@ -1093,6 +1093,8 @@ func on_enemy_killed(e) -> void:
 	Game.kills += 1
 	# Une élite laisse une gerbe d'essences, et parfois une greffe (tâche B).
 	var is_elite: bool = e.get("elite") == true
+	# Monde vivant (world_life.gd) : l'herbe se redresse, la faune proche s'enfuit.
+	world_fx.react("death", e.position, 1.5 if is_elite else 1.0)
 	# Une élite meurt avec un son à elle (s'il existe, sinon celui de sa sorte).
 	Sfx.play("mort_elite" if is_elite and Sfx.has_sound("mort_elite") else enemy_sound(e, "sound_death", "mort"), e.position)
 	var n_orbs := 6 if is_elite else 1
