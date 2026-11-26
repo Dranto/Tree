@@ -85,6 +85,11 @@ func _run() -> void:
 
 	print("Atlas cuit")
 	await _steps(4)
+	var waited := 0
+	while not Atlas.ready() and waited < 60:
+		await _steps(1)
+		waited += 1
+	print("  atlas prêt après %d images de plus" % waited)
 	check(Atlas.ready(), "atlas de la petite vie cuit")
 	if Atlas.ready():
 		check(Atlas.tex.get_width() == Atlas.COLS * Atlas.CELL * Atlas.SCALE, "largeur de l'atlas")
