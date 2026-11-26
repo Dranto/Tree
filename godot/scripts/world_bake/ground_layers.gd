@@ -123,7 +123,7 @@ const RAVIVE_CONTRAST := 0.35
 ## Gain (linéaire) du sol ravivé par région, avant le plafond.
 const RAVIVE_GAIN := {"seve": 1.3}
 ## Gain (linéaire) de la terre morte par région.
-const FLETRI_GAIN := {"ronce": 0.72, "spore": 0.75, "aube": 0.62, "racine": 0.6}
+const FLETRI_GAIN := {"ronce": 0.72, "spore": 0.75, "racine": 0.6}
 
 
 static func _lum(c: Color) -> float:

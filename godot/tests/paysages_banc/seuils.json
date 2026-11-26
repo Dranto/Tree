@@ -42,10 +42,6 @@
       "valeur": 7.7,
       "cible": 10.0
     },
-    "annonce:aube:fletri": {
-      "valeur": 8.8,
-      "cible": 9.0
-    },
     "fletri_dl:aube:ravive": {
       "valeur": 7.2,
       "cible": 8.0
@@ -56,10 +52,6 @@
     },
     "dalto_perso:protanopie:aube:ravive": {
       "valeur": 9.5,
-      "cible": 10.0
-    },
-    "dalto_perso:deuteranopie:aube:ravive": {
-      "valeur": 9.3,
       "cible": 10.0
     },
     "dalto_perso:tritanopie:aube:ravive": {
@@ -82,24 +74,12 @@
       "valeur": 5.4,
       "cible": 8.0
     },
-    "regions_de:ronce:aube": {
-      "valeur": 12.6,
-      "cible": 15.0
-    },
     "regions_de:ronce:racine": {
       "valeur": 14.2,
       "cible": 15.0
     },
     "regions_de_dalto:vent:seve": {
       "valeur": 6.1,
-      "cible": 8.0
-    },
-    "regions_de:vent:aube": {
-      "valeur": 7.7,
-      "cible": 15.0
-    },
-    "regions_de_dalto:vent:aube": {
-      "valeur": 7.1,
       "cible": 8.0
     },
     "regions_de:vent:racine": {
