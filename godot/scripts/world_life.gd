@@ -984,6 +984,7 @@ func _projectiles() -> void:
 # ---------------------------------------------------------------- faune et formes guéries
 
 var _keep_clock := 0.0
+var _recent: Array = []
 
 
 ## Atlas de couleur utiles : la région du héros, « commun » et celles où des bêtes sont encore ; refaits si le
@@ -995,11 +996,19 @@ func _ensure_sheets(delta: float) -> void:
 	if _keep_clock > 0.0:
 		return
 	_keep_clock = 0.5
-	var want: Array = [_region, "commun"]
+	# Seules les régions qui ont des bêtes (leur naissance a lieu à 260-620 px du héros : l'atlas a le temps de cuire).
+	var want: Array = []
 	for a in fauna:
 		if not (a["reg"] in want):
 			want.append(a["reg"])
-	Vie.keep(want)
+	# Gardés (sans être cuits d'avance) : l'atlas du héros et celui des communs, pour ne pas les refaire à chaque bête.
+	# Les trois dernières régions vues restent aussi (aller-retour à la frontière : pas de nouvelle cuisson).
+	for r in want:
+		_recent.erase(r)
+		_recent.push_front(r)
+	if _recent.size() > 3:
+		_recent.resize(3)
+	Vie.keep(want + _recent + [_region, "commun"])
 	for r in want:
 		Vie.bake(self, r)
 
