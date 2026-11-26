@@ -106,7 +106,7 @@ static func world_palette(id: String) -> Dictionary:
 ## au moins 10 L* au-dessus.
 ## Par région (« » : les autres), réglé au banc de lisibilité (tests/paysages_test.gd) : le Marais plus
 ## sombre, les Falaises plus claires (distinctes des Plateaux et de la Forêt, Flétris lisibles).
-const RAVIVE_Y_MAX := {"": 0.125, "spore": 0.10, "aube": 0.17, "seve": 0.14}
+const RAVIVE_Y_MAX := {"": 0.125, "spore": 0.085, "aube": 0.17, "seve": 0.14}
 ## Écart des tons sombre et clair du lavis ravivé autour du ton moyen (1 : celui de la palette).
 const RAVIVE_CONTRAST := 0.35
 ## Gain (linéaire) du sol ravivé par région, avant le plafond.
