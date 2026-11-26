@@ -22,6 +22,15 @@
 extends RefCounted
 
 const Regions = preload("res://scripts/regions.gd")
+## Matière propre d'une région (refonte du monde, vague 2) : un fichier par région,
+## scripts/world_bake/sol/<id>.gd, dont les fonctions dessinent à la place de la matière provisoire
+## commune (voir sol/vent.gd pour le contrat). Le Roncier et le Marais sont encore dans ce fichier.
+const SOL_REGION := {
+	"vent": preload("res://scripts/world_bake/sol/vent.gd"),
+	"seve": preload("res://scripts/world_bake/sol/seve.gd"),
+	"aube": preload("res://scripts/world_bake/sol/aube.gd"),
+	"racine": preload("res://scripts/world_bake/sol/racine.gd"),
+}
 
 ## Sortes d'éléments (bits du masque d'un carré).
 const DEAD := 1
@@ -338,6 +347,7 @@ class TileLayer extends Node2D:
 	## Éléments d'une case (origine o) pour une sorte : toujours les mêmes tirages, quelle que soit la vie.
 	func _cell(o: Vector2, ri: int, kind: int) -> void:
 		var style := _reg if _reg == "ronce" or _reg == "spore" else ""
+		var S = SOL_REGION.get(_reg)
 		if kind == 0:
 			# Terre morte : matière (deux tirages) et une grappe.
 			for i in 3:
@@ -350,7 +360,9 @@ class TileLayer extends Node2D:
 				_e.seed = sd
 				elements += 1
 				if i == 2:
-					_dead_cluster(p, style)
+					_dead_cluster(p, style, S)
+				elif S != null and S.dead_matter(self, p, i, sd, _e):
+					pass
 				elif style == "spore":
 					if i == 0:
 						_rides(p)
@@ -376,7 +388,9 @@ class TileLayer extends Node2D:
 				_e.seed = sd
 				elements += 1
 				if i == 1:
-					_alive_cluster(p, style)
+					_alive_cluster(p, style, S)
+				elif S != null and S.alive_matter(self, p, _e):
+					pass
 				elif style == "spore":
 					_mycelium(p, Color(Art.mc("spore", "ravive", "lueur"), 0.32))
 				elif style == "ronce":
@@ -391,7 +405,7 @@ class TileLayer extends Node2D:
 				var r := _r.randf_range(2.6, 4.4)
 				_anchor(p, 2, ri)
 				elements += 1
-				_region_flower(p + Vector2(0, -r * 1.6), r)
+				_region_flower(p + Vector2(0, -r * 1.6), r, S)
 
 	## Point d'ancrage (et sorte) des sommets qui suivent.
 	func _anchor(p: Vector2, kind: int, ri: int) -> void:
@@ -488,7 +502,9 @@ class TileLayer extends Node2D:
 		_fan(dome, cap.darkened(0.25))
 		_oval(c + Vector2(-r * 0.2, -r * 0.35), r * 0.45, r * 0.22, cap.lightened(0.3) if lit else cap, 6)
 
-	func _region_flower(p: Vector2, r: float) -> void:
+	func _region_flower(p: Vector2, r: float, S = null) -> void:
+		if S != null and S.flower(self, p, r, _p, _e):
+			return
 		if _reg == "spore":
 			_cap(p, r * 0.8, true)
 		else:
@@ -577,7 +593,7 @@ class TileLayer extends Node2D:
 		_polyline(pts, 0.8, col)
 
 	## Grappe de la terre morte : cailloux, touffes sèches ou feuilles ; petits chapeaux ternes au Marais.
-	func _dead_cluster(c: Vector2, style: String) -> void:
+	func _dead_cluster(c: Vector2, style: String, S = null) -> void:
 		var pal: Dictionary = _p["fletri"]
 		var kind := _e.randi() % 3
 		var n := _e.randi_range(3, 5)
@@ -590,6 +606,8 @@ class TileLayer extends Node2D:
 		for it in items:
 			var p: Vector2 = it[0]
 			var big: float = it[1]
+			if S != null and S.dead_item(self, p, big, kind, pal, _e):
+				continue
 			if style == "spore" and kind == 2:
 				# Champignons du Marais assombris et moins nombreux (retour d'Antoine, 25/11).
 				if big > 0.9 or _e.randf() < 0.4:
@@ -606,7 +624,7 @@ class TileLayer extends Node2D:
 					_oval(p + Vector2(0, -0.5), 1.2 * big, 1.2 * big, Art.bc("braise"), 5)
 
 	## Grappe de la terre ravivée : touffes, fleurs et baies de la région, chapeaux luisants au Marais.
-	func _alive_cluster(c: Vector2, style: String) -> void:
+	func _alive_cluster(c: Vector2, style: String, S = null) -> void:
 		var pal: Dictionary = _p["ravive"]
 		var n := _e.randi_range(3, 6)
 		var items := []
@@ -619,6 +637,8 @@ class TileLayer extends Node2D:
 			var p: Vector2 = it[0]
 			var big: float = it[1]
 			var k: float = it[2]
+			if S != null and S.alive_item(self, p, big, k, pal, _e):
+				continue
 			if k < 0.55:
 				_tuft(p, 13.0 * big, pal["touffe"], pal["touffe_2"])
 			elif k < 0.85:
