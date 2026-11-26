@@ -77,12 +77,7 @@ export TREE_LANG="${TREE_LANG:-fr}"
 # Importe le projet (ressources, cache de scripts) avant de lancer les scénarios.
 # Le journal d'import est gardé dans out/import.log : un import qui plante (vu en CI : segfault,
 # polices non importées, toutes les captures avec du texte en écart) est signalé et refait une fois.
-if ! "$ROOT/tools/godot.sh" --headless --import >"$OUT/import.log" 2>&1; then
-  echo "Import du projet en échec (code $?), fin du journal :"
-  tail -40 "$OUT/import.log"
-  echo "Nouvel essai d'import."
-  "$ROOT/tools/godot.sh" --headless --import >"$OUT/import2.log" 2>&1 || { echo "Import encore en échec :"; tail -40 "$OUT/import2.log"; }
-fi
+"$ROOT/tools/import.sh" "$OUT/import.log" || echo "Import encore en échec : captures probablement fausses."
 
 START=$SECONDS
 status=0
