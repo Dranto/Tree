@@ -7,6 +7,9 @@
 ## Un secret n'apparaît qu'à courte distance, presque invisible : une lueur dans la cendre.
 extends Node2D
 
+## L'autel vient d'être ravivé (crochet visuel : world_life.gd, événements du monde).
+signal activated
+
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 const Prompt = preload("res://scripts/prompt.gd")
@@ -172,6 +175,12 @@ func activate() -> void:
 	main.screen_fx.glow(Art.c("or"), 0.3, 1.0)
 	main.request_autosave()
 	queue_redraw()
+	on_activated()
+
+
+## Crochet visuel : l'autel vient d'être ravivé (les événements du monde s'y accrochent, world_life.gd).
+func on_activated() -> void:
+	activated.emit()
 
 
 ## Dessin au sol. L'autel se reconnaît à sa silhouette : une table de pierre (deux pierres dressées, une
