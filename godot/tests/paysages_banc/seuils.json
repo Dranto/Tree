@@ -14,16 +14,16 @@
   },
   "tolerance_connus": 1.5,
   "connus": {
-    "dalto_perso:protanopie:ronce:fletri": {
-      "valeur": 7.9,
-      "cible": 10.0
-    },
     "fletri_dl:ronce:ravive": {
       "valeur": 2.7,
       "cible": 8.0
     },
+    "dalto_perso:protanopie:ronce:ravive": {
+      "valeur": 8.9,
+      "cible": 10.0
+    },
     "dalto_perso:deuteranopie:ronce:ravive": {
-      "valeur": 9.7,
+      "valeur": 9.5,
       "cible": 10.0
     },
     "annonce:spore:ravive": {
