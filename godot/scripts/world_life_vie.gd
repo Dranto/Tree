@@ -18,7 +18,7 @@ const CELL := 72
 const ANCHOR := Vector2(36.0, 60.0)
 ## Pixels de l'atlas par pixel du jeu, et suréchantillonnage du dessin.
 const SCALE := 2
-const SS := 1
+const SS := 2
 const COLS := 8
 ## Régions, dans l'ordre des planches (commun : formes guéries des Flétris sans région, pas de faune).
 const REGIONS := ["commun", "ronce", "spore", "vent", "seve", "aube", "racine"]
@@ -190,7 +190,6 @@ static func bake(host: Node, reg: String) -> void:
 	vp.size = Vector2i(COLS * CELL * k, rows * CELL * k)
 	vp.transparent_bg = true
 	vp.disable_3d = true
-	vp.msaa_2d = Viewport.MSAA_4X   # lissage du dessin sans cuire à une taille double
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	vp.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
 	var painter := Painter.new()
@@ -205,8 +204,7 @@ static func bake(host: Node, reg: String) -> void:
 	_pending.erase(reg)
 	if img == null or img.is_empty():
 		return
-	if SS > 1:
-		img.resize(img.get_width() / SS, img.get_height() / SS, Image.INTERPOLATE_TRILINEAR)
+	img.resize(img.get_width() / SS, img.get_height() / SS, Image.INTERPOLATE_TRILINEAR)
 	img.generate_mipmaps()
 	sh.tex = ImageTexture.create_from_image(img)
 	sh.bytes = img.get_data_size()
