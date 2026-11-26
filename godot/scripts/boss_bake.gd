@@ -17,6 +17,7 @@
 extends RefCounted
 
 const Ink = preload("res://scripts/creature_art/ink.gd")
+const Cuisson = preload("res://scripts/boss_art/cuisson.gd")
 const UNPREMUL = preload("res://shaders/hero_unpremul.gdshader")
 
 const SS := 2
@@ -106,16 +107,12 @@ static var last_usec := 0
 static func auto_scale() -> float:
 	if scale > 0.0:
 		return scale
-	var ml := Engine.get_main_loop()
-	var hgt := 900.0
-	if ml is SceneTree:
-		hgt = float((ml as SceneTree).root.size.y)
-	return clampf(snappedf(hgt / 900.0 * 1.1, 0.25), 1.0, MAX_SCALE)
+	return Cuisson.window_scale(1.1, 1.0, MAX_SCALE)
 
 
 ## Sans rendu (--headless : tests de logique, robots) : rien ne se voit, le dessin direct est sauté.
 static func no_render() -> bool:
-	return DisplayServer.get_name() == "headless"
+	return Cuisson.no_render()
 
 
 static func key_of(art: GDScript) -> String:
@@ -125,7 +122,7 @@ static func key_of(art: GDScript) -> String:
 ## Atlas prêt pour ce dessin, ou null. Lance la cuisson s'il n'existe pas encore (host : un nœud de
 ## l'arbre). Sans rendu (--headless) ou réglage --no-sprites : toujours null (dessin direct).
 static func get_atlas(host: Node, art: GDScript) -> Atlas:
-	if not enabled or no_render():
+	if not enabled or not Cuisson.active():
 		return null
 	var key := key_of(art)
 	if _cache.has(key):

@@ -3,7 +3,8 @@
 ## (« --no-sprites » puis rendu cuit), elle donne l'avant/après de tools/creatures-film.sh.
 ##
 ##   tools/godot.sh --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 \
-##     res://tests/creatures_film.tscn -- --seed=1234 --out=DOSSIER [--no-sprites] [--scene=melee|elites]
+##     res://tests/creatures_film.tscn -- --seed=1234 --out=DOSSIER [--no-sprites] [--scene=melee|elites|<famille>]
+## Familles : commun, ronce, spore, vent, seve, aube, racine (posées dans leur région).
 ## Rien n'est comparé : c'est un outil.
 extends Node
 
@@ -14,22 +15,39 @@ const Content = preload("res://scripts/content.gd")
 const FRAMES := 150
 const ORIGIN := Vector2(0, 320)
 ## Scènes : [sorte, décalage depuis le héros, élite (modificateurs)].
-const SCENES := {
+var SCENES := {
 	"melee": [
 		["tireur", Vector2(260, -120), []], ["tireur", Vector2(300, 60), []], ["scarabee", Vector2(-280, 40), []],
 		["scarabee", Vector2(200, 170), []], ["menhir", Vector2(-220, -150), []], ["menhir", Vector2(120, -230), []],
 		["fletri", Vector2(-120, 200), []], ["chargeur", Vector2(330, -10), []],
 	],
-	"aube": [
-		["miroitier", Vector2(260, -120), []], ["prismeur", Vector2(320, 80), []], ["quartz", Vector2(-240, 40), []],
-		["luciole", Vector2(200, 170), []], ["luciole", Vector2(230, 200), []], ["luciole", Vector2(-180, -150), []],
-		["miroitier", Vector2(-200, 180), ["rapide"]], ["prismeur", Vector2(-300, -100), ["ecorce"]], ["quartz", Vector2(120, -230), ["enrage"]],
-	],
+	# Une scène par famille (refonte des personnages, fusion finale I) : posée au cœur de sa région.
+	"commun": _famille(["fletri", "cendreux", "colosse", "cracheur", "gardien", "boursoufle"]),
+	"ronce": _famille(["tireur", "chargeur", "nid", "rejeton"]),
+	"spore": _famille(["traine_vase", "scissipore", "sporule", "lichen"]),
+	"vent": _famille(["plongeur", "souffleur", "planeur", "menhir"]),
+	"seve": _famille(["sangsue_vase", "crapaud", "libellule", "souche"]),
+	"aube": _famille(["luciole", "miroitier", "prismeur", "quartz"]),
+	"racine": _famille(["termite", "mandragore", "scarabee", "tertre"]),
 	"elites": [
 		["tireur", Vector2(240, -90), ["rapide"]], ["scarabee", Vector2(-240, 30), ["ecorce"]],
 		["menhir", Vector2(160, 170), ["enrage"]], ["fletri", Vector2(-150, -160), ["rapide"]],
 	],
 }
+
+## Scènes posées au cœur de leur région (main.region_center × 0,62, comme la vitrine Steam).
+const IN_REGION := ["ronce", "spore", "vent", "seve", "aube", "racine"]
+const SPOTS := [Vector2(260, -120), Vector2(300, 60), Vector2(-280, 40), Vector2(200, 170), Vector2(-220, -150),
+	Vector2(120, -230), Vector2(-120, 200), Vector2(330, -10)]
+
+
+## Deux de chaque sorte (la seconde en élite), réparties autour du héros.
+static func _famille(kinds: Array) -> Array:
+	var out := []
+	for i in mini(kinds.size() * 2, SPOTS.size()):
+		out.append([kinds[i % kinds.size()], SPOTS[i], ["rapide"] if i >= kinds.size() else []])
+	return out
+
 
 var main
 var game
@@ -69,12 +87,15 @@ func _run() -> void:
 			e.queue_free()
 	main.enemies.clear()
 	var p = main.player
-	p.position = ORIGIN
+	var origin := ORIGIN
+	if scene in IN_REGION:
+		origin = main.region_center(scene) * 0.62
+	p.position = origin
 	p.reset_physics_interpolation()
 	main.camera.zoom = Vector2.ONE * 1.5
 	main.camera.reset_smoothing()
 	for s in SCENES[scene]:
-		var e = main.spawn_enemy_kind(s[0], ORIGIN + s[1], 2.0)
+		var e = main.spawn_enemy_kind(s[0], origin + s[1], 2.0)
 		if not s[2].is_empty():
 			e.make_elite(s[2])
 	# Le temps que les sortes de la scène soient cuites (rendu cuit) : la même attente sans.

@@ -2,13 +2,22 @@
 # Avant/après du moteur de créatures (refonte des personnages, vague 1 A) : la même scène de combat
 # du vrai jeu (tests/creatures_film.gd, graine et pas fixes), filmée avec l'ancien rendu
 # (« --no-sprites ») puis avec le rendu cuit.
-#   tools/creatures-film.sh DOSSIER [scène,scène…]   (scènes : melee, elites ; les deux par défaut)
+#   tools/creatures-film.sh DOSSIER [scène,scène…] [AUTRE_DEPOT]
+#     scènes : melee, elites (par défaut), et une par famille : commun, ronce, spore, vent, seve, aube, racine
+#     AUTRE_DEPOT : copie du dépôt à une version antérieure (git worktree) : « avant » y est filmé (le
+#     script de film y est copié le temps du tournage) au lieu de l'ancien rendu « --no-sprites ».
 # Dans DOSSIER : <scène>_avant_apres.gif (côte à côte, recadré sur le combat) et
 # <scène>_avant_apres.png (une image en grand, puis un zoom ×2 du centre).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="$(realpath -m "${1:?dossier de sortie}")"
 SCENES="${2:-melee,elites}"
+OTHER="${3:-}"
+if [ -n "$OTHER" ]; then
+  OTHER="$(realpath "$OTHER")"
+  cp "$ROOT/godot/tests/creatures_film.gd" "$ROOT/godot/tests/creatures_film.tscn" "$OTHER/godot/tests/"
+  "$OTHER/tools/godot.sh" --headless --import >/dev/null 2>&1 || true
+fi
 mkdir -p "$DEST"
 export LIBGL_ALWAYS_SOFTWARE=1
 export TREE_LANG="${TREE_LANG:-fr}"
@@ -16,10 +25,13 @@ export TREE_LANG="${TREE_LANG:-fr}"
 for sc in ${SCENES//,/ }; do
   for mode in avant apres; do
     flag=()
-    [ "$mode" = avant ] && flag=(--no-sprites)
+    repo="$ROOT"
+    if [ "$mode" = avant ]; then
+      if [ -n "$OTHER" ]; then repo="$OTHER"; else flag=(--no-sprites); fi
+    fi
     rm -rf "$DEST/$sc/$mode"
     mkdir -p "$DEST/$sc/$mode"
-    "$ROOT/tools/godot.sh" --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0 \
+    timeout 600 "$repo/tools/godot.sh" --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0 \
       res://tests/creatures_film.tscn -- --seed=1234 --scene="$sc" --out="$DEST/$sc/$mode" "${flag[@]}" 2>&1 \
       | grep -E "FILM|SCRIPT ERROR" || true
   done

@@ -9,6 +9,8 @@
 ## direct). Cache LRU de MAX poses.
 extends RefCounted
 
+const Cuisson = preload("res://scripts/boss_art/cuisson.gd")
+
 ## Rendu suréchantillonné (lissage des bords, comme la cuisson des Flétris).
 const SS := 1.5
 const MAX := 24
@@ -22,20 +24,15 @@ var scale := 1.0
 var entries := {}
 var shown := ""
 var misses := 0
+## Palette des poses cuites (Cuisson.epoch) : le mode daltonien change, tout est refait.
+var _epoch := Cuisson.epoch
 
 
 func _init(h: Node, r: Rect2, fn: Callable) -> void:
 	host = h
 	rect = r
 	draw_fn = fn
-	scale = clampf(snappedf(_window_h() / 900.0 * 1.1, 0.25), 1.0, 3.0) * SS
-
-
-static func _window_h() -> float:
-	var ml := Engine.get_main_loop()
-	if ml is SceneTree:
-		return float((ml as SceneTree).root.size.y)
-	return 900.0
+	scale = Cuisson.window_scale(1.1, 1.0, 3.0) * SS
 
 
 class Painter extends Node2D:
@@ -49,6 +46,9 @@ class Painter extends Node2D:
 ## Texture de la pose (clé key), ou null si aucune n'est encore prête (dessiner en direct).
 func texture(key: String, pose: Dictionary) -> Texture2D:
 	var now := Engine.get_process_frames()
+	if _epoch != Cuisson.epoch:
+		clear()
+		_epoch = Cuisson.epoch
 	if not entries.has(key):
 		_make(key, pose, now)
 	var e: Dictionary = entries[key]
@@ -136,6 +136,6 @@ func paint(ci: CanvasItem, art, h: float, feet: Vector2, pose: Dictionary, xf: T
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 
-## Sans écran (tests --headless), rien n'est rendu : dessiner en direct.
+## Sans écran (tests --headless) ou cuisson coupée (« --no-sprites ») : dessiner en direct.
 static func headless() -> bool:
-	return DisplayServer.get_name() == "headless"
+	return not Cuisson.active()
