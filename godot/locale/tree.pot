@@ -6393,7 +6393,7 @@ msgid "Traîne-vase"
 msgstr ""
 
 #. data/finale.json › boss › name
-#. scripts/finale_arena.gd:84
+#. scripts/finale_arena.gd:94
 #. scripts/world_ending.gd:79
 msgid "La Flétrissure"
 msgstr ""
@@ -7861,7 +7861,7 @@ msgid "Synergie possible « %s » : %s"
 msgstr ""
 
 #. scripts/boss_arena.gd:38
-#. scripts/finale_arena.gd:86
+#. scripts/finale_arena.gd:96
 msgid "Phase 1 sur 3"
 msgstr ""
 
@@ -8070,11 +8070,11 @@ msgstr ""
 msgid "Sous terre"
 msgstr ""
 
-#. scripts/finale_arena.gd:86
+#. scripts/finale_arena.gd:96
 msgid "Phase 2 sur 3"
 msgstr ""
 
-#. scripts/finale_arena.gd:86
+#. scripts/finale_arena.gd:96
 msgid "Phase 3 sur 3"
 msgstr ""
 
