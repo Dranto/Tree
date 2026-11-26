@@ -97,10 +97,11 @@ static func colors(m: String) -> Array:
 		"aube":
 			return [Color(Art.ec("lumiere", "clair"), 0.8), Art.ec("lumiere"), Color("8c7f3a")]
 		"racine":
-			return [Art.ec("racine"), Color("c9b98f"), Art.ec("racine", "sombre")]
+			return [Art.bc("racine", "clair"), Art.bc("racine", "cendre"), Art.bc("racine", "ombre")]
 		"finale":
 			return [Color("5a4632"), Art.ec("cendre", "clair"), Art.ec("cendre", "sombre")]
-	return [Art.c("ennemi").lerp(Art.ec("saignement"), 0.35), Art.ec("saignement", "clair"), Art.ec("saignement", "sombre")]
+	# Ronce : les couleurs de la Mère-Ronce (palette du bestiaire, mode daltonien compris).
+	return [Art.bc("ronce", "clair"), Art.bc("ronce", "reflet"), Art.bc("ronce", "ombre")]
 
 
 func setup(a) -> void:
@@ -579,13 +580,13 @@ func _draw_vine(v: Dictionary, ext: float, back: float, c: Array) -> void:
 		var sway := 0.35 * sin(u * 6.0 + float(v["seed"]) + death_t * 5.0) * u
 		pts.append(death_at + Vector2.from_angle(a + sway) * (death_r * 0.4 + float(v["len"]) * u * ext))
 	var w := 9.0 * (1.0 - back * 0.6)
-	draw_polyline(pts, Art.c("contour"), w + 3.0, true)
-	draw_polyline(pts, c[2].lerp(c[0], 0.4), w, true)
+	draw_polyline(pts, Art.bc("encre"), w + 3.0, true)
+	draw_polyline(pts, Art.bc("ronce", "detail").lerp(Art.bc("ronce", "ombre"), 0.4), w, true)
 	# Épines le long de la liane.
 	for j in range(1, pts.size() - 1, 2):
 		var d := (pts[j + 1] - pts[j]).normalized()
 		var side := d.orthogonal() * (1.0 if j % 4 == 1 else -1.0)
-		_tri(self, pts[j] + side * w * 0.4, pts[j] + side * w * 1.3 + d * 3.0, pts[j] + d * w * 0.6, c[1])
+		_tri(self, pts[j] + side * w * 0.4, pts[j] + side * w * 1.3 + d * 3.0, pts[j] + d * w * 0.6, Art.bc("os"))
 	# Trou où elle rentre.
 	var tip := pts[pts.size() - 1]
 	draw_colored_polygon(Art.ellipse(tip, 9.0, 5.0, 12), Color(Art.c("contour"), 0.7 * ext))

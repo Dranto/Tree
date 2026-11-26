@@ -589,3 +589,35 @@ func _color(base: Color) -> Color:
 	if dead:
 		c = c.lerp(FletriArt.ash_color(), Anim.ease_out(clampf(dying / death_time * 1.4, 0.0, 1.0)))
 	return c
+
+
+# --- Boss cuits en sprites (« Bestiaire d'herbier », boss_bake.gd) ---
+
+const TINT_SHADER = preload("res://shaders/boss_tint.gdshader")
+
+
+## Un boss cuit ne peut plus teinter chaque forme (_color) : la teinte d'état (poison, cendre de la
+## mort) et l'éclair du coup reçu passent par un shader sur tout son nœud. À appeler dans _ready.
+func use_tint_material() -> void:
+	var m := ShaderMaterial.new()
+	m.shader = TINT_SHADER
+	m.set_shader_parameter("flash_col", Art.c("danger_eclair"))
+	material = m
+
+
+## Met la teinte du shader à jour (au début de _draw) : mêmes dosages que _color.
+func update_tint() -> void:
+	var m := material as ShaderMaterial
+	if m == null:
+		return
+	var tint := 0.0
+	var col := Art.ec("poison")
+	if dead:
+		# La cendre gagne, sans tout noyer : la forme du boss se lit encore.
+		tint = 0.72 * Anim.ease_out(clampf(dying / death_time * 1.4, 0.0, 1.0))
+		col = FletriArt.ash_color()
+	elif poison_time > 0.0:
+		tint = 0.3
+	m.set_shader_parameter("tint", tint)
+	m.set_shader_parameter("tint_col", col)
+	m.set_shader_parameter("flash", 0.6 if hit_flash > 0.0 else 0.0)
