@@ -79,9 +79,12 @@ const LISIERES := {  # i18n: non (début)
 		"grand": [["vallee:Willow", 2.6, 3.4, 1]],
 	},
 	"aube": {
-		"bord": [["falaise:Shards", 0.8, 1.4, 1]],
-		"grappe": [["falaise:Shards", 1.0, 1.5, 2], ["falaise:Bleached", 1.3, 1.8, 2]],
-		"grand": [["falaise:Bleached", 2.6, 3.4, 1]],
+		# Falaises (vague 2 P5) : éclats de cristal et arbres blanchis ; Cluster, Spire et Arch font
+		# 16 × size de haut (height_of), Bleached 52 × size.
+		"bord": [["falaise:Shards", 0.8, 1.4, 2], ["falaise:Cluster", 1.6, 2.6, 2]],
+		"grappe": [["falaise:Cluster", 2.4, 3.8, 3], ["falaise:Bleached", 1.2, 1.7, 2], ["falaise:Shards", 1.0, 1.5, 1]],
+		"grand": [["falaise:Bleached", 2.5, 3.2, 3], ["falaise:Cluster", 5.5, 7.0, 1]],
+		"repere": {"ruine": ["falaise:Arch", 11.0], "rocher": ["falaise:Spire", 14.0], "grand_arbre": ["falaise:Spire", 16.0], "*": ["falaise:Spire", 14.0]},
 	},
 	"racine": {
 		"bord": [["foret:Stump", 0.8, 1.1, 1]],
@@ -94,6 +97,8 @@ const SWAY := {
 	"arbre": 1.0, "haie": 0.7, "buisson": 0.6, "champignon": 0.25, "chapeau_geant": 0.15, "roseaux": 1.2,
 	"fougere": 0.9, "Twisted": 0.9, "Grass": 1.1, "Willow": 1.0, "Fern": 0.9, "Bleached": 0.7,
 	"StoneTree": 0.1, "DecorTree": 1.0, "DecorBramble": 0.8, "DecorBush": 0.35, "DecorReeds": 1.2, "DecorMushroom": 0.25,
+	# Falaises : cristaux et repères rigides (0,01 et non 0, qui laisse la table du monde vivant décider).
+	"Cluster": 0.01, "falaise:Spire": 0.01, "falaise:Arch": 0.01,
 }  # i18n: non (fin)
 ## Décor de région -> son script (pour « plateau:Twisted »).
 const SCRIPTS := {
@@ -453,9 +458,10 @@ static func _reperes(flora, reg: String, lis: Dictionary, placed: Array) -> int:
 	var n := 0
 	for s in spots:
 		var spec: Array = rep.get(s[1], rep.get("*", ["arbre", 1.4]))
-		var o := Objet.new()
-		o.kind = spec[0]
-		o.region = reg
+		var o = _make(spec[0], reg) if ":" in spec[0] else Objet.new()
+		if o is Objet:
+			o.kind = spec[0]
+			o.region = reg
 		o.size = spec[1]
 		o.tree_seed = hash([reg, s[1], n])
 		o.position = s[0]

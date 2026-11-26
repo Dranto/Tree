@@ -260,7 +260,7 @@ const MONDE := {
 			"eau": Color("9fe8e2"), "luciole": Color("8affea"), "luciole_mort": Color("b8a0e0")},
 		"vent": {"bris_vif": Color("e8e2d0"), "bris_mort": Color("a8a8b0"), "pas": Color("d8e8ff"), "oiseau": Color("c8ccd4")},
 		"seve": {"bris_vif": Color("7ee0a8"), "bris_mort": Color("6a8070"), "pas": Color("eafff4"), "papillon": Color("b8ffe0"), "eau": Color("c8fff0")},
-		"aube": {"bris_vif": Color("ffe6a8"), "bris_mort": Color("a89a80"), "pas": Color("ffd770"), "papillon": Color("fff0b0"), "luciole": Color("ffd770")},
+		"aube": {"bris_vif": Color("f6e5db"), "bris_mort": Color("8a8c98"), "pas": Color("ffd162"), "papillon": Color("fff0b0"), "luciole": Color("ffd770")},
 		"racine": {"bris_vif": Color("c8a878"), "bris_mort": Color("8a7a66"), "pas": Color("e8d090"), "oiseau": Color("9a7a5a")},
 	},
 	"commun": {
@@ -359,7 +359,43 @@ const MONDE := {
 	# -- fin seve --
 	#
 	# -- aube (Falaises) --
-
+	# Falaises de verre (refonte du monde, vague 2 P5) : flétri, calcaire froid et verre fumé sous une brume
+	# grise ; ravivé, une prairie de miel doré semée d'éclats de nacre (palette nacre f4e4d8 du bestiaire R5).
+	# roche : blocs et strates ; verre : cristaux (fumés, puis clairs) ; nacre : intérieur des géodes, fleurs.
+	"aube": {
+		"fletri": {
+			"sol": Color("4c4a50"), "sol_clair": Color("59565a"), "sol_sombre": Color("403f46"),
+			"matiere": Color("292a2e"), "feuille": Color("70675e"), "feuille_2": Color("857a6e"),
+			"cendre": Color("878c94"), "touffe": Color("686052"), "touffe_2": Color("534d44"),
+			"bois": {"clair": Color("76716d"), "ombre": Color("474443"), "reflet": Color("9c958d")},
+			"feuillage": {"clair": Color("675d50"), "ombre": Color("443c36"), "reflet": Color("867a6b")},
+			"pierre": {"clair": Color("646365"), "ombre": Color("3d3d42"), "reflet": Color("84868b")},
+			"roche": {"clair": Color("625d5d"), "ombre": Color("3c383b"), "reflet": Color("7d7b7e")},
+			"verre": {"clair": Color("595868"), "ombre": Color("323442"), "reflet": Color("939bae")},
+			"nacre": {"clair": Color("7a7378"), "ombre": Color("4a454c"), "reflet": Color("a49ca2")},
+			"fleur": Color("7f7570"), "fruit": Color("3b383c"), "lueur": Color("a39388"),
+			"air": Color("6c5c48"), "voile": Color("1c1612"), "particule": Color("a8a4a8"),
+		},
+		"apaise": {
+			"sol": Color("605851"), "sol_clair": Color("6d645c"), "sol_sombre": Color("534c47"),
+			"matiere": Color("373433"), "feuille": Color("817566"), "feuille_2": Color("978977"),
+			"cendre": Color("9f9a98"), "touffe": Color("7c6e58"), "touffe_2": Color("665a4a"),
+		},
+		"ravive": {
+			"sol": Color("856016"), "sol_clair": Color("926f1f"), "sol_sombre": Color("785413"),
+			"matiere": Color("5c3d13"), "feuille": Color("dab14b"), "feuille_2": Color("eed9ca"),
+			"cendre": Color("f8e6ca"), "touffe": Color("ae8c2f"), "touffe_2": Color("906c24"),
+			"bois": {"clair": Color("d7cabb"), "ombre": Color("a18d7a"), "reflet": Color("f2eadf")},
+			"feuillage": {"clair": Color("d9a93d"), "ombre": Color("a67528"), "reflet": Color("fee092")},
+			"pierre": {"clair": Color("c3b09a"), "ombre": Color("92775a"), "reflet": Color("ecdecd")},
+			"roche": {"clair": Color("cdb99e"), "ombre": Color("9e8160"), "reflet": Color("f0e0cc")},
+			"verre": {"clair": Color("c0d8e3"), "ombre": Color("879eb0"), "reflet": Color("f2f7fa")},
+			"nacre": {"clair": Color("f6e5db"), "ombre": Color("ceb5bc"), "reflet": Color("fefcf8")},
+			"fleur": Color("fae8da"), "fleur_coeur": Color("ebb243"), "fleur_2": Color("f6cd58"), "fruit": Color("d18523"),
+			"lueur": Color("ffd162"),
+			"air": Color("fff1c2"), "voile": Color("3a2c14"), "particule": Color("ffe9a8"),
+		},
+	},
 	# -- fin aube --
 	#
 	# -- racine (Forêt) --
@@ -376,7 +412,7 @@ const MONDE_AIR := {
 	"vent": {"fletri": [Color("56687a"), Color("141a22")], "ravive": [Color("eaf3ff"), Color("080b0e")]},
 	"seve": {"fletri": [Color("3e5a50"), Color("0e1a16")], "ravive": [Color("d6fff0"), Color("0f2a22")]},
 	"racine": {"fletri": [Color("5e4c38"), Color("1a120c")], "ravive": [Color("ffdfa6"), Color("33220f")]},
-	"aube": {"fletri": [Color("6c5c48"), Color("1c1612")], "ravive": [Color("fff1c2"), Color("3a2c14")]},
+	"aube": {"fletri": [Color("5e5a64"), Color("16141a")], "ravive": [Color("fff1c2"), Color("3a2c14")]},
 	"finale": {"fletri": [Color("4e303e"), Color("160c14")], "ravive": [Color("ffe6b0"), Color("301c20")]},
 }
 ## Force de l'air par état : opacité de la vignette, de la lumière en haut à gauche, du voile en bas à droite,
