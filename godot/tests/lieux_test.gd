@@ -155,8 +155,11 @@ func _run() -> void:
 		await _steps(3)
 		white = maxi(white, await _white_near(s))
 	check(white == 0, "une fois recuit : pas de tache blanche (%d px)" % white)
-	await _steps(70)
-	check(LieuxBake._grave.is_empty() or Time.get_ticks_msec() - int(LieuxBake._grave[0][0]) < 5000, "les textures rendues ne s'accumulent pas")
+	var t0 := Time.get_ticks_msec()
+	while not LieuxBake._grave.is_empty() and Time.get_ticks_msec() - t0 < LieuxBake.GRAVE_MSEC * 3:
+		await _steps(5)
+		LieuxBake.ready(s._bake_key())
+	check(LieuxBake._grave.is_empty(), "les textures rendues ne s'accumulent pas")
 
 	print("Libération")
 	var n: int = main.actors_layer.get_children().filter(func(c): return c.get("sanct") != null).size()

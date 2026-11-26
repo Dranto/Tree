@@ -78,6 +78,8 @@ static func prepare(n: CanvasItem) -> void:
 
 
 static func ready(set_key: String) -> bool:
+	# Appelé à chaque passage des lieux : de quoi vider le cimetière des textures sans minuterie.
+	_empty_grave()
 	return sets.has(set_key)
 
 
