@@ -41,7 +41,7 @@ func _run() -> void:
 	if args.size() > 1:
 		modes.append(args[1])
 	var b := Bake.new(self)
-	var cell := 460
+	var cell := 620
 	for mode in modes:
 		Art.set_access(mode)
 		for id in BOSSES:
@@ -51,7 +51,7 @@ func _run() -> void:
 			canvas.fill(Color(0, 0, 0, 0))
 			for i in poses.size():
 				var o: Dictionary = poses[i]
-				var img := await b.bake(Vector2i(cell, cell), func(ci): art.draw(ci, Vector2(cell / 2.0, cell - 30.0), art.HEIGHT * 1.45, o))
+				var img := await b.bake(Vector2i(cell, cell), func(ci): art.draw(ci, Vector2(cell / 2.0, cell - 40.0), art.HEIGHT * 1.45, o))
 				canvas.blend_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i(i * cell, 0))
 				Ink.flash = 0.0
 				Ink.ash = 0.0
