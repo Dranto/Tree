@@ -452,8 +452,10 @@ func _scan_decor() -> void:
 
 ## Souplesse d'un élément : sa propriété « sway » si le décor la donne, sinon selon sa sorte.
 static func sway_of(t) -> float:
+	# La souplesse posée par le décor composé (D) l'emporte ; 0 (valeur par défaut de DecorTree) laisse
+	# la table par sorte décider.
 	var v = t.get("sway")
-	if v != null:
+	if v != null and float(v) > 0.0:
 		return float(v)
 	var s = t.get_script()
 	var tab: Dictionary = _tables()[0]
