@@ -1167,7 +1167,7 @@ func _make_art() -> void:
 		add_child(n)
 		_layers.append(n)
 	_front = Node2D.new()
-	_front.name = "ChargeDevant"
+	_front.name = "ChargeDevant"  # i18n: non
 	_front.draw.connect(func():
 		if sync != null and music_waiting() and charge >= 0.0:
 			_draw_charge_front(_front))
@@ -1184,7 +1184,7 @@ func _make_art() -> void:
 		_bakes[key].rate = 0.001
 	# Le sol (racines, brume) : cuit à chaque changement de phase, de forme ou de mort, sous les annonces.
 	_floor_node = Node2D.new()
-	_floor_node.name = "Sol"
+	_floor_node.name = "Sol"  # i18n: non
 	_floor_node.material = mat
 	_floor_node.show_behind_parent = true
 	_floor_node.position = anchor
@@ -1740,10 +1740,10 @@ static func draw_sleeper(a: Node2D) -> void:
 	var c: Vector2 = a.center
 	var r := BODY_RADIUS
 	# Cuite comme en combat (~10 i/s) dans un enfant de l'arène, qui ne se montre qu'avant le combat.
-	var node: Node2D = a.get_node_or_null("FletrissureEndormie")
+	var node: Node2D = a.get_node_or_null("FletrissureEndormie")  # i18n: non
 	if node == null and LiveBake.available():
 		node = Node2D.new()
-		node.name = "FletrissureEndormie"
+		node.name = "FletrissureEndormie"  # i18n: non
 		var mat := ShaderMaterial.new()
 		mat.shader = TINT_SHADER
 		node.material = mat
