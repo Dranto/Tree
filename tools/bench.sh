@@ -16,6 +16,9 @@
 #                                   # dépôt, ex. develop) et celui-ci. Échoue seulement si ce banc dépasse
 #                                   # la limite ET la base de plus de REGRESSION (8 % par défaut) : la
 #                                   # vitesse de la machine de la CI varie de ±15 % d'un job à l'autre.
+#   INFO_ONLY=1 tools/bench.sh      # mesure pour information : un dépassement de budget n'échoue pas
+#                                   # (bancs à budget fixe sur machine lente) ; une erreur de script ou
+#                                   # l'absence de résultat échouent toujours.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # Budget du temps moyen par image (ms) sur la machine de référence, et marge tolérée.
@@ -28,6 +31,7 @@ REGIONS="${REGIONS:-}"
 BASE_DIR="${BASE_DIR:-}"
 REGRESSION="${REGRESSION:-0.08}"
 RESOLUTION="${RESOLUTION:-}"
+INFO_ONLY="${INFO_ONLY:-}"
 WIN_ARG=()
 [ -n "$RESOLUTION" ] && WIN_ARG=(--resolution "$RESOLUTION")
 SCENE_ARG=()
@@ -43,20 +47,21 @@ TAG="${SCENE:+_$SCENE}${REGIONS:+_six}${RESOLUTION:+_$RESOLUTION}"
 OUT="$ROOT/godot/autotest/bench"
 mkdir -p "$OUT"
 export LIBGL_ALWAYS_SOFTWARE=1
-# L'import plante parfois sur la machine de la CI (segmentation, fréquent depuis le 20/11) : le
-# jeu se lance alors sans ses ressources importées (polices nulles, erreurs de script). On réessaie.
-for attempt in 1 2 3; do
-  if "$ROOT/tools/godot.sh" --headless --import > "$OUT/import.log" 2>&1; then
-    break
-  fi
-  echo "Import du projet : échec (essai $attempt), fin du journal :"
-  tail -n 15 "$OUT/import.log"
-done
+# L'import plante parfois sur la machine de la CI : tools/import.sh le relance (3 essais).
+"$ROOT/tools/import.sh" "$OUT/import.log"
 if [ -n "$BASE_DIR" ]; then
   BASE_DIR="$(cd "$BASE_DIR" && pwd)"
-  "$BASE_DIR/tools/godot.sh" --headless --import > "$OUT/import_base.log" 2>&1 || \
-    "$BASE_DIR/tools/godot.sh" --headless --import > "$OUT/import_base.log" 2>&1 || true
+  "$ROOT/tools/import.sh" "$OUT/import_base.log" "$BASE_DIR" || true
 fi
+# Dépassement de budget : échec, sauf en mode information (INFO_ONLY=1).
+overrun() {
+  if [ -n "$INFO_ONLY" ]; then
+    echo "INFORMATION : $1 (mesure pour information, n'échoue pas ; voir docs/performances.md)"
+  else
+    echo "ÉCHEC : $1 (voir docs/performances.md)"
+    exit 1
+  fi
+}
 best=""
 best_p99=""
 base_best=""
@@ -86,15 +91,13 @@ if awk -v a="$best" -v l="$limit" 'BEGIN{exit !(a > l)}'; then
     blimit=$(awk -v b="$base_best" -v r="$REGRESSION" 'BEGIN{printf "%.2f", b * (1 + r)}')
     echo "Base mesurée sur la même machine : ${base_best} ms (au-delà de ${blimit} ms : régression)"
     if awk -v a="$best" -v l="$blimit" 'BEGIN{exit !(a > l)}'; then
-      echo "ÉCHEC : le jeu dépasse son budget et ralentit par rapport à la base (voir docs/performances.md)"
-      exit 1
+      overrun "le jeu dépasse son budget et ralentit par rapport à la base"
     fi
     echo "AVERTISSEMENT : au-dessus de la limite, mais pas plus lent que la base sur cette machine (machine lente)"
     echo "OK : pas de régression"
     exit 0
   else
-    echo "ÉCHEC : le jeu dépasse son budget de temps par image (voir docs/performances.md)"
-    exit 1
+    overrun "le jeu dépasse son budget de temps par image"
   fi
 elif [ -n "$base_best" ]; then
   echo "Base mesurée sur la même machine : ${base_best} ms"
@@ -103,8 +106,7 @@ if [ -n "$P99_MS" ]; then
   plimit=$(awk -v b="$P99_MS" -v t="$TOLERANCE" 'BEGIN{printf "%.2f", b * (1 + t)}')
   echo "99e centile : ${best_p99} ms (budget ${P99_MS} ms, limite ${plimit} ms)"
   if awk -v a="$best_p99" -v l="$plimit" 'BEGIN{exit !(a > l)}'; then
-    echo "ÉCHEC : les pics dépassent leur budget (voir docs/performances.md)"
-    exit 1
+    overrun "les pics dépassent leur budget"
   fi
 fi
 echo "OK : dans le budget"

@@ -94,7 +94,7 @@ compare() {
 MODE=build
 [[ "${1:-}" == "--run" ]] && MODE=run
 
-"$ROOT/tools/godot.sh" --headless --import >/dev/null 2>&1
+"$ROOT/tools/import.sh"
 
 if [[ $MODE == run ]]; then
   SEEDS=${SEEDS:-"1"}

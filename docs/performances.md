@@ -47,7 +47,7 @@ du jalon 6 : la base y mesurait ~28 ms (23,5 ms au jalon 6).
 | --- | --- | --- |
 | Socle : image vide, logique de jeu (pas fixe) | ~4 ms | moteur, `main.gd`, `enemy.gd` |
 | Flétris (silhouettes en cache, états, élites) | ~6,5 ms (~0,6 ms de calcul des silhouettes, le reste en rendu) | `enemy.gd`, `silhouette_cache.gd`, `fletri_art.gd` |
-| Sol (carrés en cache, une texture plein écran) | ~5,5 ms (~9 ms sans le cache) ; la recopie opaque des carrés (tâche A) retire ~1 ms | `ground.gd`, `shaders/ground.gdshader`, `shaders/ground_tile.gdshader` |
+| Sol (carrés en cache, une texture plein écran) | ~5,5 ms (~9 ms sans le cache) ; la recopie opaque des carrés (tâche A) retire ~1 ms. Sol en couches (refonte du monde S, 25/11) : chaque carré porte un calque d'éléments tiré une fois (géométrie des cases en cache, état choisi par le shader du calque), l'herbe du front et l'herbe rase sont peintes par le shader du sol ; banc en paires sans écart mesurable | `ground.gd`, `shaders/ground.gdshader`, `shaders/ground_layer.gdshader`, `shaders/ground_tile.gdshader`, `world_bake/ground_layers.gd` |
 | Interface (HUD) | ~2,3 ms (~0,2 ms de scripts, le reste : ~240 appels de rendu, traits lissés) | `hud.gd`, `hud_widgets.gd` |
 | Héros | ~2,5 ms (traits lissés, ~80 appels de rendu) | `player.gd`, `hero_art.gd` |
 | Décor et fleurs | ~1,5 ms | `flora.gd` |
@@ -297,8 +297,24 @@ Mesures et recommandation complètes dans la PR.
 
 Réglages internes, éteints par défaut (aucune référence visuelle ne change) : `--paysage-sol`
 (scripts/world_bake/ground_layers.gd : lavis dans le shader, matière et détails dessinés une fois par
-carré de sol), `--paysage-decor` (scripts/world_bake/decor_bake.gd : décor cuit dans un atlas ;
-decor_compose.gd : lisière composée autour d'une clairière de test). Bancs : `--bench-at=ronce`,
+carré de sol), le décor cuit et composé est passé en rendu par défaut en vague 1 D (section suivante). Bancs : `--bench-at=ronce`,
 `--bench-run=1400`. Mesures en paires (Roncier, 120 Flétris) : sol en couches +5 %, décor composé en
 direct +19 %, cuit +8 % ; un carré de sol 5,5 ms au lieu de 2,5. Tableau complet et recommandation :
 /mnt/project-files/captures/refonte-monde/P/mesures.md (projet). Test : tests/paysages_proto_test.gd.
+
+## Décor composé et cuit (refonte du monde, vague 1 D, 25/11)
+
+Rendu par défaut ; `--decor-direct` revient au dessin direct, `--decor-ancien` au semis d'avant.
+- Composition (scripts/world_bake/decor_compose.gd) : clairières autour des lieux, clairières de combat,
+  passages entre les lieux ; lisières en grappes autour d'un grand élément ; repères du fichier ; au plus
+  80 éléments debout par écran (fenêtres d'un écran et un cinquième ; les détails plats au sol ne comptent
+  pas). Les obstacles du semis restent où ils sont (test : tests/decor_test.gd).
+- Cuisson (scripts/world_bake/decor_bake.gd) : un atlas par région, ×1,5 lissé (ss 2), 3 variantes,
+  paliers de taille ×1,6, images morte et vivante ; un quadrilatère par élément, un seul matériau.
+  Cuite quand la région entre dans le champ (Runtime) ; cache `user://decor/` (zstd) invalidé par une
+  empreinte des scripts de dessin. Première cuisson ~0,5-1,3 s par région, relue du cache en ~50 ms.
+  Mémoire 10 à 22 Mo par région (budget 96 Mo, régions hors du champ rendues au-delà).
+- Pousse d'une vague de vie : fondu de l'image morte à la vivante, sans dessin direct.
+- Premier plan : grands éléments à demi transparents (self_modulate, sans redessin) quand le héros ou
+  un Flétri passe derrière ; relevé des voisins toutes les 6 images, des Flétris toutes les 3.
+- `--decor-verbeux` : une ligne par région cuite. Vues : tests/paysages/decor_vues.gd.
