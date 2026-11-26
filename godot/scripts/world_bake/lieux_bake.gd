@@ -20,8 +20,8 @@ static var ss := 2
 const PAD := 4
 const ATLAS_W := 2048
 ## Mémoire des images gardées : au-delà, les jeux qui n'ont pas servi depuis UNUSED_MSEC sont rendus
-## (recuits s'ils reviennent à l'écran).
-const BUDGET := 24 * 1024 * 1024
+## (recuits s'ils reviennent à l'écran). 28 Mo depuis les arènes (vague 3 A : ~3,5 Mo par arène à l'écran).
+const BUDGET := 28 * 1024 * 1024
 const UNUSED_MSEC := 4000
 
 ## Jeu -> {"tex": ImageTexture, "cells": {clé: [src (Rect2, pixels de l'atlas), box (Rect2, monde)]}, "bytes": int}
@@ -76,8 +76,11 @@ static func ready(set_key: String) -> bool:
 
 ## Demande la cuisson d'un jeu. jobs : [{"key", "box" (Rect2 autour du pied, pixels du monde),
 ## "paint" (Callable(ci) qui dessine pied en (0, 0))}]. host : un nœud de l'arbre. Sans effet si le jeu
-## est cuit, en cours, ou impossible à cuire.
-static func request(host: Node, set_key: String, jobs: Array) -> void:
+## est cuit, en cours, ou impossible à cuire. opts (arènes, vague 3 A) : « scale » (résolution propre au
+## jeu, ex. un grand sol doux cuit plus bas), « trim » (chaque image est rognée à ce qui est dessiné :
+## moins de pixels transparents à remplir à l'écran, ce qui compte en rendu logiciel), « mipmaps » (faux :
+## pas de mipmaps, pour un jeu lu en filtrage linéaire simple ; un quart de mémoire en moins).
+static func request(host: Node, set_key: String, jobs: Array, opts := {}) -> void:
 	configure()
 	if not enabled or sets.has(set_key) or _pending.has(set_key) or _failed.has(set_key):
 		return
@@ -86,10 +89,10 @@ static func request(host: Node, set_key: String, jobs: Array) -> void:
 		return
 	_pending[set_key] = true
 	trim()
-	_bake(host, set_key, jobs)
+	_bake(host, set_key, jobs, float(opts.get("scale", scale)), bool(opts.get("trim", false)), bool(opts.get("mipmaps", true)))
 
 
-static func _bake(host: Node, set_key: String, jobs: Array) -> void:
+static func _bake(host: Node, set_key: String, jobs: Array, sc := scale, rogne := false, mips := true) -> void:
 	var t0 := Time.get_ticks_usec()
 	# Rangement en étagères, les plus hautes d'abord.
 	var order := jobs.duplicate()
@@ -100,14 +103,14 @@ static func _bake(host: Node, set_key: String, jobs: Array) -> void:
 	var placed := []
 	for j in order:
 		var box: Rect2 = j["box"]
-		var cell: Vector2 = (box.size * scale).ceil() + Vector2.ONE * PAD * 2
+		var cell: Vector2 = (box.size * sc).ceil() + Vector2.ONE * PAD * 2
 		if x + cell.x > ATLAS_W and x > 0.0:
 			x = 0.0
 			y += shelf
 			shelf = 0.0
 		var src := Rect2(Vector2(x, y), cell)
 		placed.append({"key": j["key"], "box": box, "src": src, "paint": j["paint"],
-			"origin": src.position + Vector2.ONE * PAD - box.position * scale, "scale": scale})
+			"origin": src.position + Vector2.ONE * PAD - box.position * sc, "scale": sc})
 		x += cell.x
 		shelf = maxf(shelf, cell.y)
 	var w := 0.0
@@ -137,11 +140,23 @@ static func _bake(host: Node, set_key: String, jobs: Array) -> void:
 		return
 	if ss > 1:
 		img.resize(img.get_width() / ss, img.get_height() / ss, Image.INTERPOLATE_TRILINEAR)
-	img.generate_mipmaps()
+	if mips:
+		img.generate_mipmaps()
 	var cells := {}
 	for p in placed:
-		cells[p["key"]] = [p["src"], p["box"]]
-	sets[set_key] = {"tex": ImageTexture.create_from_image(img), "cells": cells, "bytes": img.get_data_size(), "used": Time.get_ticks_msec()}
+		var src: Rect2 = p["src"]
+		var box: Rect2 = p["box"]
+		if rogne:
+			# Rognée à ce qui est dessiné (plus une marge pour le filtrage) ; la place dans le monde suit.
+			var used := img.get_region(Rect2i(src)).get_used_rect()
+			if used.size.x > 0 and used.size.y > 0:
+				var u := Rect2(Vector2(used.position) - Vector2.ONE * 2.0, Vector2(used.size) + Vector2.ONE * 4.0).intersection(Rect2(Vector2.ZERO, src.size))
+				box = Rect2(box.position + (u.position - Vector2.ONE * PAD) / sc, u.size / sc)
+				src = Rect2(src.position + u.position, u.size)
+				cells[p["key"]] = [src, box, true]
+				continue
+		cells[p["key"]] = [src, box]
+	sets[set_key] = {"tex": ImageTexture.create_from_image(img), "cells": cells, "bytes": img.get_data_size(), "used": Time.get_ticks_msec(), "scale": sc}
 	bytes += img.get_data_size()
 	baked += 1
 	bake_usec = Time.get_ticks_usec() - t0
@@ -159,8 +174,14 @@ static func draw(ci: CanvasItem, set_key: String, key: String, at := Vector2.ZER
 	s["used"] = Time.get_ticks_msec()
 	var src: Rect2 = c[0]
 	var box: Rect2 = c[1]
-	var pad := PAD / scale
-	var dst := Rect2(at + (box.position - Vector2(pad, pad)) * k, (src.size / scale) * k)
+	var sc: float = s.get("scale", scale)
+	var dst: Rect2
+	if c.size() > 2:
+		# Image rognée : box est déjà sa place exacte.
+		dst = Rect2(at + box.position * k, box.size * k)
+	else:
+		var pad := PAD / sc
+		dst = Rect2(at + (box.position - Vector2(pad, pad)) * k, (src.size / sc) * k)
 	ci.draw_texture_rect_region(s["tex"], dst, src, mod)
 	return true
 

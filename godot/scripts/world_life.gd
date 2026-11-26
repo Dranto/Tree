@@ -26,6 +26,10 @@
 ##   - « lit » (sanctuaire), « altar » (autel ravivé) : lueur sur le décor proche, qui s'efface ;
 ##   - « level », « graft » : souffle autour du héros (le décor se couche puis revient, feuilles) ;
 ##   - « fane » (mort d'un élite) : la flore proche se fane, se tasse, puis se relève.
+## Arènes des boss (vague 3 A, boss_arena.gd › _watch_boss) :
+##   - « boss_phase » : le boss change de phase : le décor autour de l'arène se couche vers elle et
+##     s'assombrit, la faune fuit, débris de la région qui tombent du mur (data : r, wall : rayon du mur) ;
+##   - « boss_hit » : le boss est touché : un souffle bref autour de lui (sans zone du shader).
 ## Le décor les reçoit par shader (life_zone/life_tint/life_shape de shaders/decor_sway.gdshaderinc,
 ## 4 zones à la fois) ; une région ajoute les siens par <région>_vivant.gd › event (facultatif).
 ## API : world_fx.react(kind, pos, force) ; une région ajoute ses réactions propres dans
@@ -654,6 +658,14 @@ func event(kind: String, pos: Vector2, data := {}) -> void:
 		"fane":
 			scare(pos, e["r"] * 1.4)
 			_shed(pos, e["r"] * 0.6, _qty(4), reg)
+		"boss_phase":
+			scare(pos, e["r"] * 1.3)
+			push(pos, e["r"], -_ev("push", 2.0, kind))
+			_shed(pos, e["r"], _qty(int(_ev("bits", 6, kind))), reg, pos)
+			_wall_bits(e, float(data.get("wall", e["r"] / 1.35)), _qty(int(_ev("wall_bits", 14, kind))))
+		"boss_hit":
+			push(pos, float(data.get("r", _ev("radius", 160.0, kind))), _ev("push", 0.6, kind))
+			return
 	if events.size() >= 8:
 		events.pop_front()
 	events.append(e)
@@ -690,6 +702,17 @@ func _siege_tick(e: Dictionary) -> void:
 		var at: Vector2 = t.position + Vector2(rng.randf_range(-10, 10), 0)
 		add_bit("cendre", at, 24.0 * float(t.get("size") if t.get("size") != null else 1.0),
 			(e["pos"] - at) * 0.35, 16.0, col(e["reg"], "cendre"), 0.8, 2.0, 0.8)
+
+
+## Débris de la région qui tombent du mur d'une arène (rayon w autour de e.pos) vers l'intérieur.
+func _wall_bits(e: Dictionary, w: float, n: int) -> void:
+	var reg: String = e["reg"]
+	for i in n:
+		var a := rng.randf() * TAU
+		var at: Vector2 = e["pos"] + Vector2.from_angle(a) * w
+		var k := _bit_kind(reg, null)
+		var c := col(reg, "spore") if k == "spore" else col(reg, "bris_mort")
+		add_bit(k, at, rng.randf_range(50.0, 90.0), -Vector2.from_angle(a) * rng.randf_range(30.0, 70.0), 20.0, c, rng.randf_range(0.7, 0.9), 2.2, 1.0)
 
 
 func _glow_bits(e: Dictionary, n: int) -> void:
@@ -793,6 +816,12 @@ func _ev_slot(e: Dictionary) -> Array:
 			var ring := lerpf(40.0, r, minf(1.0, t / 0.5))
 			return [Vector4(pos.x, pos.y, ring, r * 0.5), Vector4(c.r, c.g, c.b, _ev("tint", 0.35, e["kind"]) * env),
 				Vector4(0.0, _ev("lean", 0.9, e["kind"]) * env * less, 0.0, 0.0), 1.0]
+		"boss_phase":
+			# Le décor se couche vers l'arène et s'assombrit d'un coup, puis se relève.
+			var env := smoothstep(0.0, 0.15, t) * exp(-maxf(0.0, t - 0.15) * 3.0 / e["dur"])
+			var c := col(e["reg"], "siege")
+			return [Vector4(pos.x, pos.y, r, 0.0), Vector4(c.r, c.g, c.b, _ev("tint", 0.55, "boss_phase") * env),
+				Vector4(-_ev("lift", 0.06, "boss_phase") * env * less, -_ev("lean", 0.8, "boss_phase") * env * less, 0.0, 0.0), 2.0]
 		"fane":
 			# Se fane (0,35 s), reste fanée, puis se relève en dépassant un peu.
 			var dur: float = e["dur"]
