@@ -17,6 +17,17 @@
 ##     tordent près d'un élite, faune qui fuit ;
 ##   - aux combats : secousse du décor proche sur un coup lourd, chute de feuilles, cailloux ou éclats
 ##     selon la région, le décor proche d'une trace de combat (world_fx.add_trace) frémit aussi.
+## Événements du monde (vague 2 E) : world_life.event(kind, pos, data) ; branchés ici sur les crochets
+## des lieux (heart.gd › siege_ticked, bloomed ; sanctuary.gd › lit ; altar.gd › activated), sur
+## main.elite_killed et sur world_fx.level_up/graft_pickup :
+##   - « bloom » : vague de vie depuis le Cœur purifié : le décor reverdit au passage du front (fondu de
+##     l'image cuite morte à la vivante, sans recuisson), pousse, se relève et s'éclaire, pétales et spores ;
+##   - « siege » : chaque seconde tenue, le décor proche du Cœur se tord et s'assombrit un peu plus ;
+##   - « lit » (sanctuaire), « altar » (autel ravivé) : lueur sur le décor proche, qui s'efface ;
+##   - « level », « graft » : souffle autour du héros (le décor se couche puis revient, feuilles) ;
+##   - « fane » (mort d'un élite) : la flore proche se fane, se tasse, puis se relève.
+## Le décor les reçoit par shader (life_zone/life_tint/life_shape de shaders/decor_sway.gdshaderinc,
+## 4 zones à la fois) ; une région ajoute les siens par <région>_vivant.gd › event (facultatif).
 ## API : world_fx.react(kind, pos, force) ; une région ajoute ses réactions propres dans
 ## res://scripts/world_art/<région>_vivant.gd (fonctions statiques facultatives react et ambient,
 ## voir world_art/spore_vivant.gd), sans registre partagé.
@@ -42,6 +53,7 @@ const Wind = preload("res://scripts/wind.gd")
 const DecorBake = preload("res://scripts/world_bake/decor_bake.gd")
 const SWAY_SHADER = preload("res://shaders/decor_sway.gdshader")
 const LIFE_SHADER = preload("res://shaders/world_life.gdshader")
+const Heart = preload("res://scripts/heart.gd")
 
 ## Tests visuels : tout figé (aucun matériau posé, rien dessiné). Le scénario « vivant » le rouvre.
 static var still := false
@@ -113,6 +125,8 @@ func setup(m, wfx) -> void:
 	material = mat
 	air.material = mat
 	_gust_wait = _num("gust", "first", 3.0)
+	# Les lieux et les élites naissent après le monde vivant (main._ready) : branchés à la fin de l'image.
+	_connect_events.call_deferred()
 
 
 func _ready() -> void:
@@ -289,6 +303,15 @@ func splash(pos: Vector2, force := 1.0) -> void:
 		add_bit("goutte", pos, 2.0, Vector2.from_angle(a) * rng.randf_range(30.0, 60.0), rng.randf_range(60.0, 110.0), col(reg, "eau"), 0.7, 0.6)
 
 
+## Mélange avec le hasard du monde vivant (Array.shuffle tirerait le hasard global, celui du jeu).
+func _shuffle(a: Array) -> void:
+	for i in range(a.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var v = a[i]
+		a[i] = a[j]
+		a[j] = v
+
+
 ## Débris (image de l'atlas) lâché à « pos », hauteur « z », vitesse au sol « v », vitesse montante « vz ».
 func add_bit(f: String, pos: Vector2, z: float, v: Vector2, vz: float, c: Color, s := 1.0, dur := 2.2, flutter := 0.0) -> void:
 	var cap := _qty(int(_num("caps", "bits", 72)))
@@ -343,6 +366,7 @@ func _process(delta: float) -> void:
 	_update_bits(delta)
 	_update_marks(delta)
 	_update_fauna(p, delta)
+	_update_events(p, delta)
 	_apply_uniforms(p)
 	queue_redraw()
 	air.queue_redraw()
@@ -391,6 +415,17 @@ func _apply_uniforms(p) -> void:
 			pushes.append(Vector4(0, 0, 0, 0))
 			forces.append(0.0)
 	var light := Vector4(p.position.x, p.position.y - p.radius, _num("lantern", "radius", 180.0), _light)
+	# Événements : posés aussi sur le matériau de base du décor cuit (rochers, falaises : couleur seule).
+	if not events.is_empty() or _ev_dirty:
+		_ev_dirty = not events.is_empty()
+		var ev := _event_uniforms(p)
+		var mats: Array = _variants.values()
+		if DecorBake.enabled:
+			mats.append(DecorBake.material())
+		for m in mats:
+			m.set_shader_parameter("life_zone", ev[0])
+			m.set_shader_parameter("life_tint", ev[1])
+			m.set_shader_parameter("life_shape", ev[2])
 	for m in _variants.values():
 		m.set_shader_parameter("sway_wind", wind)
 		m.set_shader_parameter("sway_gust", g)
@@ -505,7 +540,7 @@ func _bit_col(reg: String, at: Vector2) -> Color:
 func _shed(pos: Vector2, r: float, n: int, reg: String, to := Vector2.INF) -> void:
 	var near := decor_near(pos, r)
 	var done := 0
-	near.shuffle()
+	_shuffle(near)
 	for t in near:
 		if done >= n:
 			break
@@ -524,6 +559,273 @@ func _shed(pos: Vector2, r: float, n: int, reg: String, to := Vector2.INF) -> vo
 			add_bit(k, at, h * rng.randf_range(0.7, 1.2), (dest - at) * 0.6, 30.0 if not heavy else 70.0, c,
 				rng.randf_range(0.65, 0.85), 2.6 if not heavy else 1.8, 0.0 if heavy else 1.0)
 			done += 1
+
+
+# ---------------------------------------------------------------- événements du monde
+
+const EVENT_SLOTS := 4
+## Événements en cours : {kind, pos, t, dur, r, reg, src (Cœur…), k (siège), last (dernier tic)}.
+var events: Array = []
+## Décor encore flétri au départ d'une vague de vie (instance_id -> élément) : il pousse en fondu
+## quand la vague l'atteint (flora.gd le réveille d'un coup quand le Cœur peint le sol par disques).
+var _bloom_watch := {}
+var _ev_dirty := false
+var _ev_bits := 0.0
+
+
+func _connect_events() -> void:
+	if main == null or not is_instance_valid(main):
+		return
+	for h in main.get("all_hearts") if main.get("all_hearts") != null else []:
+		if h.has_signal("siege_ticked") and not h.siege_ticked.is_connected(_on_siege_tick):
+			h.siege_ticked.connect(_on_siege_tick.bind(h))
+			h.bloomed.connect(_on_bloomed.bind(h))
+	for sc in main.get("sanctuaries") if main.get("sanctuaries") != null else []:
+		if sc.has_signal("lit"):
+			sc.lit.connect(func(): event("lit", sc.position))
+	for a in main.get("altars") if main.get("altars") != null else []:
+		if a.has_signal("activated"):
+			a.activated.connect(func(): event("altar", a.position))
+	if main.has_signal("elite_killed"):
+		main.elite_killed.connect(func(e): event("fane", e.position))
+	if main.get("ground") != null and main.ground.has_signal("painted"):
+		main.ground.painted.connect(_on_painted)
+
+
+func _on_siege_tick(k: float, h) -> void:
+	event("siege", h.center, {"src": h, "k": k, "r": h.zone * 1.7})
+
+
+func _on_bloomed(with_wave: bool, h) -> void:
+	# Une partie chargée ne rejoue rien : le décor y est déjà vivant.
+	if not with_wave:
+		return
+	event("bloom", h.center, {"src": h, "r": h.life_radius, "dur": Heart.LIFE_TIME})
+
+
+func _ev(key: String, default: float, kind := "") -> float:
+	var e: Dictionary = cfg.get("events", {})
+	var s = e.get(kind, {}) if kind != "" else e
+	return float(s.get(key, default)) if s is Dictionary else default
+
+
+## Un événement du monde à « pos » : bloom, siege, lit, altar, level, graft, fane (voir l'en-tête).
+## « data » : r (rayon), dur (durée), src (le lieu), k (avancée du siège).
+func event(kind: String, pos: Vector2, data := {}) -> void:
+	if still or main == null:
+		return
+	var reg := _region_of(pos)
+	var hook = _hook(reg)
+	if hook != null and hook.has_method("event") and hook.event(self, kind, pos, data):
+		return
+	var e := {"kind": kind, "pos": pos, "t": 0.0, "reg": reg, "src": data.get("src"),
+		"r": float(data.get("r", _ev("radius", 260.0, kind))), "dur": float(data.get("dur", _ev("dur", 2.5, kind))),
+		"k": float(data.get("k", 0.0)), "last": 0.0}
+	match kind:
+		"siege":
+			# Un siège par Cœur : le même événement, ravivé à chaque seconde tenue.
+			for o in events:
+				if o["kind"] == "siege" and o["src"] == e["src"]:
+					o["k"] = e["k"]
+					o["last"] = o["t"]
+					_siege_tick(o)
+					return
+			events.append(e)
+			_siege_tick(e)
+			return
+		"bloom":
+			events = events.filter(func(o): return not (o["kind"] == "siege" and o["src"] == e["src"]))
+			_bloom_watch.clear()
+			for t in decor_near(pos, e["r"] + 40.0):
+				if not t.alive:
+					_bloom_watch[t.get_instance_id()] = t
+			e["dur"] += 0.8
+			scare(pos, e["r"])
+		"lit", "altar":
+			push(pos, e["r"] * 0.85, _ev("push", 1.4, kind))
+			_glow_bits(e, _qty(int(_ev("bits", 10, kind))))
+		"level", "graft":
+			push(pos, e["r"], _ev("push", 1.8, kind))
+			_breath_bits(e, _qty(int(_ev("bits", 8, kind))))
+		"fane":
+			scare(pos, e["r"] * 1.4)
+			_shed(pos, e["r"] * 0.6, _qty(4), reg)
+	if events.size() >= 8:
+		events.pop_front()
+	events.append(e)
+
+
+## Vague de vie : flora.gd réveille d'un coup le décor que le Cœur peint ; celui qui était flétri au
+## départ de la vague pousse en fondu (l'image cuite vivante éclot sur la morte).
+func _on_painted(center: Vector2, radius: float) -> void:
+	if _bloom_watch.is_empty() or radius == INF:
+		return
+	var r2 := (radius + 4.0) * (radius + 4.0)
+	for id in _bloom_watch.keys():
+		var t = _bloom_watch[id]
+		if not is_instance_valid(t):
+			_bloom_watch.erase(id)
+			continue
+		if t.alive and t.position.distance_squared_to(center) <= r2:
+			_bloom_watch.erase(id)
+			if t.leaf >= 1.0:
+				t.revive(true)
+
+
+func _siege_tick(e: Dictionary) -> void:
+	var k: float = e["k"]
+	push(e["pos"], e["r"] * 0.9, -_ev("twist", 0.9, "siege") * (0.5 + k))
+	# Un peu de cendre arrachée au décor proche, qui monte vers le Cœur.
+	var near := decor_near(e["pos"], e["r"] * 0.9)
+	_shuffle(near)
+	var n := 0
+	for t in near:
+		if n >= _qty(int(_ev("bits", 3, "siege"))):
+			break
+		n += 1
+		var at: Vector2 = t.position + Vector2(rng.randf_range(-10, 10), 0)
+		add_bit("cendre", at, 24.0 * float(t.get("size") if t.get("size") != null else 1.0),
+			(e["pos"] - at) * 0.35, 16.0, col(e["reg"], "cendre"), 0.8, 2.0, 0.8)
+
+
+func _glow_bits(e: Dictionary, n: int) -> void:
+	var c := col(e["reg"], "lueur_lieu")
+	for i in n:
+		var at: Vector2 = e["pos"] + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(20.0, e["r"] * 0.45)
+		add_bit("lueur", at, rng.randf_range(4.0, 20.0), Vector2(rng.randf_range(-10, 10), rng.randf_range(-6, 6)), 40.0,
+			c, rng.randf_range(0.35, 0.55), 2.6, 0.4)
+
+
+func _breath_bits(e: Dictionary, n: int) -> void:
+	var reg: String = e["reg"]
+	for i in n:
+		var a := rng.randf() * TAU
+		var at: Vector2 = e["pos"] + Vector2.from_angle(a) * rng.randf_range(30.0, 60.0)
+		add_bit("petale" if i % 2 == 0 else _bit_kind(reg, null), at, rng.randf_range(10.0, 30.0),
+			Vector2.from_angle(a + 0.9) * rng.randf_range(90.0, 150.0), 50.0, _bit_col(reg, at), 0.75, 2.2, 1.0)
+
+
+## Avance les événements, lâche les pétales du front des vagues.
+func _update_events(p, delta: float) -> void:
+	if events.is_empty():
+		if not _bloom_watch.is_empty():
+			_bloom_watch.clear()
+		return
+	var near2 := pow(_num("near", "radius", 900.0), 2)
+	_ev_bits -= delta
+	var shed := _ev_bits <= 0.0
+	if shed:
+		_ev_bits = _ev("bits_every", 0.08, "bloom")
+	for e in events:
+		e["t"] += delta
+		if e["kind"] == "bloom" and shed and e["t"] < e["dur"] - 0.8:
+			var front := _bloom_front(e)
+			for i in _qty(int(_ev("bits", 2, "bloom"))):
+				var at: Vector2 = e["pos"] + Vector2.from_angle(rng.randf() * TAU) * front
+				if at.distance_squared_to(p.position) > near2:
+					continue
+				var reg := _region_of(at)
+				var k := "spore" if _bit_kind(reg, null) == "spore" else "petale"
+				var c := col(reg, "spore") if k == "spore" else col(reg, "pas")
+				add_bit(k, at, rng.randf_range(6.0, 24.0), (at - e["pos"]).normalized() * rng.randf_range(20.0, 50.0), 60.0, c, 0.75, 2.6, 1.0)
+	var before := events.size()
+	events = events.filter(func(e): return e["t"] < _ev_end(e))
+	if events.is_empty() and before > 0:
+		_bloom_watch.clear()
+
+
+## Fin d'un événement : le siège dure tant que les secondes tombent, puis s'apaise.
+func _ev_end(e: Dictionary) -> float:
+	if e["kind"] == "siege":
+		return e["t"] + 1.0 if _siege_held(e) else e["last"] + _ev("fade", 1.6, "siege")
+	return e["dur"]
+
+
+## Le siège tient : le Cœur est encore assiégé et une seconde est tombée il y a peu.
+func _siege_held(e: Dictionary) -> bool:
+	var h = e["src"]
+	return h != null and is_instance_valid(h) and h.get("state") == "siege" and e["t"] - e["last"] < 2.0
+
+
+## Couleur de la palette (≤ 1) changée en multiplicateur qui éclaire (× gain).
+static func _gain(c: Color, g: float) -> Color:
+	return Color(c.r * g, c.g * g, c.b * g, 1.0)
+
+
+func _bloom_front(e: Dictionary) -> float:
+	var k := clampf(e["t"] / maxf(e["dur"] - 0.8, 0.01), 0.0, 1.0)
+	return lerpf(140.0, e["r"], k)
+
+
+## Zone du shader d'un événement : [zone, teinte, forme, poids] (forme : pousse, penchant, éclosion).
+func _ev_slot(e: Dictionary) -> Array:
+	var t: float = e["t"]
+	var less := 0.34 if _less() else 1.0
+	var pos: Vector2 = e["pos"]
+	var r: float = e["r"]
+	match e["kind"]:
+		"bloom":
+			var fade := 1.0 - smoothstep(e["dur"] - 0.8, e["dur"], t)
+			var c := _gain(col(e["reg"], "pousse"), _ev("gain", 1.4, "bloom"))
+			return [Vector4(pos.x, pos.y, _bloom_front(e), _ev("width", 150.0, "bloom")),
+				Vector4(c.r, c.g, c.b, _ev("tint", 0.55, "bloom") * fade),
+				Vector4(_ev("lift", 0.14, "bloom") * fade * less, _ev("lean", 0.5, "bloom") * fade * less, _ev("puff", 0.06, "bloom") * fade * less, 0.0), 3.0]
+		"siege":
+			var calm := 1.0 if _siege_held(e) else 1.0 - smoothstep(e["last"], e["last"] + _ev("fade", 1.6, "siege"), t)
+			var tick := exp(-(t - e["last"]) * 5.0)
+			var s := (0.35 + 0.65 * clampf(e["k"], 0.0, 1.0)) * calm
+			var c := col(e["reg"], "siege")
+			return [Vector4(pos.x, pos.y, r, 0.0), Vector4(c.r, c.g, c.b, _ev("tint", 0.6, "siege") * s + 0.2 * tick * calm),
+				Vector4(-_ev("lift", 0.05, "siege") * s * less, -_ev("lean", 0.35, "siege") * (s + 0.5 * tick) * less, 0.0, 0.0), 2.0]
+		"lit", "altar":
+			var env := smoothstep(0.0, 0.25, t) * exp(-maxf(0.0, t - 0.25) * 3.0 / e["dur"])
+			var c := col(e["reg"], "lueur_lieu" if e["kind"] == "lit" else "lueur_autel")
+			c = _gain(c, _ev("gain", 1.5, e["kind"]))
+			var glow := Vector4(c.r, c.g, c.b, _ev("tint", 0.6, e["kind"]) * env)
+			return [Vector4(pos.x, pos.y, r, 0.0), glow, Vector4(_ev("lift", 0.04, e["kind"]) * env * less, 0.0, 0.0, 0.0), 1.5]
+		"level", "graft":
+			var env := exp(-t * 3.0 / e["dur"])
+			var c := _gain(col(e["reg"], "souffle"), _ev("gain", 1.2, e["kind"]))
+			var ring := lerpf(40.0, r, minf(1.0, t / 0.5))
+			return [Vector4(pos.x, pos.y, ring, r * 0.5), Vector4(c.r, c.g, c.b, _ev("tint", 0.35, e["kind"]) * env),
+				Vector4(0.0, _ev("lean", 0.9, e["kind"]) * env * less, 0.0, 0.0), 1.0]
+		"fane":
+			# Se fane (0,35 s), reste fanée, puis se relève en dépassant un peu.
+			var dur: float = e["dur"]
+			var down := smoothstep(0.0, 0.35, t) * (1.0 - smoothstep(dur * 0.4, dur * 0.6, t))
+			var back := smoothstep(dur * 0.5, dur * 0.65, t) * (1.0 - smoothstep(dur * 0.7, dur, t))
+			var c := col(e["reg"], "fane")
+			return [Vector4(pos.x, pos.y, r, 0.0), Vector4(c.r, c.g, c.b, _ev("tint", 0.65, "fane") * down),
+				Vector4((-_ev("lift", 0.16, "fane") * down + 0.05 * back) * less, -_ev("lean", 0.25, "fane") * down * less, 0.0, 0.0), 2.0]
+	return []
+
+
+## Les 4 zones les plus proches du héros, posées sur les matériaux du décor (rien quand tout est calme).
+func _event_uniforms(p) -> Array:
+	var slots: Array = []
+	for e in events:
+		var sl := _ev_slot(e)
+		if sl.is_empty():
+			continue
+		var d: float = maxf(0.0, (e["pos"] as Vector2).distance_to(p.position) - float(sl[0].z))
+		sl.append(d / float(sl[3]))
+		slots.append(sl)
+	if slots.size() > EVENT_SLOTS:
+		slots.sort_custom(func(a, b): return a[4] < b[4])
+		slots.resize(EVENT_SLOTS)
+	var z: Array = []
+	var tn: Array = []
+	var sh: Array = []
+	for i in EVENT_SLOTS:
+		if i < slots.size():
+			z.append(slots[i][0])
+			tn.append(slots[i][1])
+			sh.append(slots[i][2])
+		else:
+			z.append(Vector4.ZERO)
+			tn.append(Vector4.ZERO)
+			sh.append(Vector4.ZERO)
+	return [z, tn, sh]
 
 
 # ---------------------------------------------------------------- héros
