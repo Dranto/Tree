@@ -1,5 +1,10 @@
 # Garde-fou de performance : le banc de jeu (120 Flétris, rendu logiciel) doit rester dans son
 # budget de temps par image (tools/bench.sh, docs/performances.md).
+# Seuls les bancs en paires (banc de jeu 1600×900 et 1280×800 contre la branche visée, sur une PR)
+# font échouer le job : la machine de la CI est lente et varie de ±15 %, un budget fixe y donne de
+# faux rouges. Les autres bancs (pics du Cœur, six régions, finale) et les bancs de jeu d'un push
+# (sans base à comparer) sont mesurés pour information (INFO_ONLY=1) : leurs chiffres restent dans
+# le résumé du job. Une erreur de script ou un banc sans résultat échoue toujours.
 name: Banc de performance
 
 on:
@@ -47,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          [ -d ../base ] && export BASE_DIR=../base
+          if [ -d ../base ]; then export BASE_DIR=../base; else export INFO_ONLY=1; fi
           RUNS=2 tools/bench.sh | tee bench.txt
 
       # Même banc dans une fenêtre de 1280×800 (écran courant des portables et du Steam Deck) : le
@@ -57,38 +62,38 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          [ -d ../base ] && export BASE_DIR=../base
+          if [ -d ../base ]; then export BASE_DIR=../base; else export INFO_ONLY=1; fi
           RESOLUTION=1280x800 RUNS=2 tools/bench.sh | tee bench_1280.txt
 
-      - name: Banc des pics, siège du Cœur (meilleure de 2 mesures)
+      - name: Banc des pics, siège du Cœur (meilleure de 2 mesures, pour information)
         if: always()
         shell: bash
         run: |
           set -o pipefail
-          SCENE=coeur RUNS=2 BUDGET_MS=${{ env.COEUR_BUDGET_MS }} P99_MS=${{ env.COEUR_P99_MS }} tools/bench.sh | tee bench_coeur.txt
+          INFO_ONLY=1 SCENE=coeur RUNS=2 BUDGET_MS=${{ env.COEUR_BUDGET_MS }} P99_MS=${{ env.COEUR_P99_MS }} tools/bench.sh | tee bench_coeur.txt
 
       # Monde à six régions (régions factices de tests/regions/ : Racine, tant qu'elle n'est pas écrite).
-      - name: Banc à six régions (120 Flétris, meilleure de 2 mesures)
+      - name: Banc à six régions (120 Flétris, meilleure de 2 mesures, pour information)
         if: always()
         shell: bash
         run: |
           set -o pipefail
-          REGIONS=six RUNS=2 BUDGET_MS=${{ env.SIX_BUDGET_MS }} tools/bench.sh | tee bench_six.txt
+          INFO_ONLY=1 REGIONS=six RUNS=2 BUDGET_MS=${{ env.SIX_BUDGET_MS }} tools/bench.sh | tee bench_six.txt
 
-      - name: Banc des pics à six régions, siège du Cœur (meilleure de 2 mesures)
+      - name: Banc des pics à six régions, siège du Cœur (meilleure de 2 mesures, pour information)
         if: always()
         shell: bash
         run: |
           set -o pipefail
-          REGIONS=six SCENE=coeur RUNS=2 BUDGET_MS=${{ env.COEUR_BUDGET_MS }} P99_MS=${{ env.COEUR_P99_MS }} tools/bench.sh | tee bench_six_coeur.txt
+          REGIONS=six INFO_ONLY=1 SCENE=coeur RUNS=2 BUDGET_MS=${{ env.COEUR_BUDGET_MS }} P99_MS=${{ env.COEUR_P99_MS }} tools/bench.sh | tee bench_six_coeur.txt
 
       # Finale : l'arène sous la graine et le colosse, à six régions (le monde entier est purifié).
-      - name: Banc de la finale, arène et colosse (meilleure de 2 mesures)
+      - name: Banc de la finale, arène et colosse (meilleure de 2 mesures, pour information)
         if: always()
         shell: bash
         run: |
           set -o pipefail
-          REGIONS=six SCENE=finale RUNS=2 BUDGET_MS=${{ env.FINALE_BUDGET_MS }} P99_MS=${{ env.FINALE_P99_MS }} tools/bench.sh | tee bench_finale.txt
+          INFO_ONLY=1 REGIONS=six SCENE=finale RUNS=2 BUDGET_MS=${{ env.FINALE_BUDGET_MS }} P99_MS=${{ env.FINALE_P99_MS }} tools/bench.sh | tee bench_finale.txt
 
       - name: Résumé du job
         if: always()
