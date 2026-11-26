@@ -86,9 +86,10 @@ const LISIERES := {  # i18n: non (début)
 	"racine": {
 		# Forêt pétrifiée (vague 2, P6) : souches et racines en arceaux au bord, arbres de pierre dans les
 		# grappes, grands arbres de pierre au centre ; repère : l'arbre de pierre géant (size × 16 px).
-		"bord": [["foret:Stump", 0.8, 1.15, 3], ["foret:RootArch", 2.2, 2.8, 1.5], ["rocher", 0.5, 0.8, 0.6]],
-		"grappe": [["foret:Stump", 1.0, 1.5, 2], ["foret:StoneTree", 1.3, 1.8, 2], ["foret:RootArch", 2.6, 3.4, 1.5], ["rocher", 0.7, 1.1, 0.5]],
-		"grand": [["foret:StoneTree", 2.6, 3.4, 3], ["foret:RootArch", 4.2, 4.8, 0.6]],
+		# Peu de paliers de taille par sorte : l'atlas de la région reste petit (budget commun des atlas).
+		"bord": [["foret:Stump", 0.8, 1.15, 3], ["foret:RootArch", 2.3, 2.9, 1.5]],
+		"grappe": [["foret:Stump", 1.0, 1.5, 2], ["foret:StoneTree", 1.3, 1.8, 2], ["foret:RootArch", 2.5, 3.0, 1.5]],
+		"grand": [["foret:StoneTree", 2.7, 3.2, 1]],
 		"repere": {"grand_arbre": ["foret:Ancient", 14.5], "ruine": ["foret:RootArch", 7.5], "rocher": ["rocher", 2.4]},
 	},
 }
