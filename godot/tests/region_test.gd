@@ -85,7 +85,12 @@ func _run() -> void:
 	check(main.flora.push_out(Vector2.ZERO, 14.0) == Vector2.ZERO, "rien ne gêne à la graine")
 
 	print("Vague de vie")
+	# Au pied du décor le plus proche : le décor composé laisse les clairières (le Cœur) dégagées.
 	var spot: Vector2 = c + Vector2(0, 200)
+	var close: Array = main.flora.decor_near(spot, 900.0)
+	close.sort_custom(func(a, b): return a.position.distance_to(spot) < b.position.distance_to(spot))
+	if not close.is_empty():
+		spot = close[0].position
 	main.ground.finish_waves()   # vagues des nœuds appris au lancement
 	var before: float = main.ground.total
 	main.ground.paint_wave(spot, 300.0, 0.9)

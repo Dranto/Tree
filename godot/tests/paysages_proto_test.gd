@@ -1,17 +1,13 @@
-## Test du sol en trois couches (refonte du monde, vague 1 S : world_bake/ground_layers.gd, par défaut)
-## et du prototype du décor (vague 0 P) : décor cuit (world_bake/decor_bake.gd) et composé
-## (world_bake/decor_compose.gd). Sol : chaque carré a son calque, tiré une fois ; une vague de vie et
-## la purification ne refont que le rendu ; chaque région a sa palette. Décor : l'atlas couvre toutes
-## les sortes, la composition laisse la clairière libre et n'ajoute aucun obstacle.
+## Test du sol en trois couches (refonte du monde, vague 1 S : world_bake/ground_layers.gd, par défaut).
+## Chaque carré a son calque, tiré une fois ; une vague de vie et la purification ne refont que le rendu ;
+## chaque région a sa palette. Le décor composé et cuit (vague 1 D) a son test : tests/decor_test.gd.
 ## Rendu réel : tools/godot.sh --xvfb --audio-driver Dummy -s res://tests/paysages_proto_test.gd
 extends SceneTree
 
 const Ground = preload("res://scripts/ground.gd")
 const GroundLayers = preload("res://scripts/world_bake/ground_layers.gd")
 const Regions = preload("res://scripts/regions.gd")
-# flora.gd nomme l'autoload Game : chargé à l'exécution (un préchargement ne compile pas avec -s).
-var Flora
-var DecorBake
+# decor_compose.gd charge flora.gd, qui nomme l'autoload Game : chargé à l'exécution (pas de préchargement avec -s).
 var DecorCompose
 
 var failures := 0
@@ -41,8 +37,6 @@ func _ground(center: Vector2):
 
 
 func _run() -> void:
-	Flora = load("res://scripts/flora.gd")
-	DecorBake = load("res://scripts/world_bake/decor_bake.gd")
 	DecorCompose = load("res://scripts/world_bake/decor_compose.gd")
 	var center: Vector2 = DecorCompose.test_center()
 	# Sol en couches (vague 1 S) : allumé par défaut, un calque par carré.
@@ -99,37 +93,5 @@ func _run() -> void:
 	for i in rv.size():
 		for j in range(i + 1, rv.size()):
 			_check(not rv[i].is_equal_approx(rv[j]), "deux régions ravivées de même couleur : %s et %s" % [Regions.ids()[i], Regions.ids()[j]])
-	# Décor cuit : un atlas pour toutes les sortes, vivantes et mortes.
-	await DecorBake.bake(root)
-	_check(DecorBake.tex != null, "pas d'atlas du décor")
-	var expected := 0
-	for sd in DecorBake.sorts():
-		expected += (DecorBake.variants if sd[2][0] == "" else sd[2].size()) * sd[1].size() * 2
-	_check(DecorBake.cells.size() == expected, "atlas : %d images sur %d" % [DecorBake.cells.size(), expected])
-	var img: Image = DecorBake.tex.get_image()
-	_check(img.get_height() > 64 and img.is_invisible() == false, "atlas vide")
-	# Composition : clairière libre, aucun obstacle, éléments cuits.
-	var flora = Flora.new()
-	flora.ground = g
-	var layer := Node2D.new()
-	root.add_child(layer)
-	flora.trees_parent = layer
-	var placed: Array = DecorCompose.spawn(flora, center)
-	_check(placed.size() > 60, "composition trop pauvre : %d éléments" % placed.size())
-	_check(flora.bushes.is_empty(), "la composition ajoute des obstacles")
-	var inside := 0
-	for t in placed:
-		if t.position.distance_to(center) < DecorCompose.CLEAR - 1.0:
-			inside += 1
-	_check(inside == 0, "%d éléments dans la clairière" % inside)
-	DecorBake.install(flora)
-	await process_frame
-	await RenderingServer.frame_post_draw
-	_check(DecorBake.drawn > 0, "aucun élément dessiné depuis l'atlas")
-	var grow = placed[1]
-	grow.revive(true)
-	_check(not DecorBake.draw(grow), "un arbre qui pousse doit rester dessiné en direct")
-	Flora.DecorTree.baker = null
-	flora.free()
 	print("PAYSAGES %s" % ("réussi" if failures == 0 else "%d échecs" % failures))
 	quit(1 if failures > 0 else 0)

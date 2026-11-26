@@ -39,6 +39,7 @@ TESTS=(
   "sprite_bake|--xvfb --audio-driver Dummy|"
   "remains_sprite|--xvfb --audio-driver Dummy --fixed-fps 60|--sprites=3"
   "paysages_proto|--xvfb --audio-driver Dummy|"
+  "decor|--xvfb --audio-driver Dummy --fixed-fps 60|"
   "paysages|--xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0|"
   "eclat_skills|--headless --fixed-fps 60|"
   "enemies|--headless|"
