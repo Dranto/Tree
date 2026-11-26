@@ -225,7 +225,7 @@ const BESTIAIRE := {
 const BESTIAIRE_DALTONIEN := {
 	"protanopie": {"ronce": Color("d44160"), "vent": Color("549fe3"), "seve": Color("69d674"), "aube": Color("facd3f"), "racine": Color("cc916b")},
 	"deuteranopie": {"ronce": Color("be367a"), "vent": Color("7a9fcb"), "seve": Color("48c97d"), "aube": Color("f9d074"), "racine": Color("bc6f2a"), "commun": Color("d8d6da")},
-	"tritanopie": {"spore": Color("b15bef"), "vent": Color("2d80c3"), "seve": Color("70dd76"), "racine": Color("b47648"), "commun": Color("d4d7e2")},
+	"tritanopie": {"spore": Color("b15bef"), "vent": Color("2d80c3"), "seve": Color("70dd76"), "racine": Color("b47648"), "commun": Color("f6f4f8")},
 }
 ## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
 ## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
