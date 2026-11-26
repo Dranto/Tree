@@ -14,56 +14,28 @@
   },
   "tolerance_connus": 1.5,
   "connus": {
-    "dalto_perso:protanopie:ronce:fletri": {
-      "valeur": 7.9,
-      "cible": 10.0
-    },
     "fletri_dl:ronce:ravive": {
       "valeur": 2.7,
       "cible": 8.0
-    },
-    "dalto_perso:deuteranopie:ronce:ravive": {
-      "valeur": 9.7,
-      "cible": 10.0
     },
     "annonce:spore:ravive": {
       "valeur": 8.4,
       "cible": 9.0
     },
     "fletri_dl:vent:ravive": {
-      "valeur": 1.6,
+      "valeur": 0.7,
       "cible": 8.0
     },
     "heros_dl:vent:ravive": {
       "valeur": 9.9,
       "cible": 10.0
     },
-    "dalto_perso:tritanopie:vent:ravive": {
-      "valeur": 6.7,
-      "cible": 10.0
-    },
-    "fletri_dl:seve:fletri": {
-      "valeur": 7.4,
-      "cible": 8.0
-    },
-    "dalto_perso:tritanopie:seve:fletri": {
-      "valeur": 9.8,
-      "cible": 10.0
-    },
     "fletri_dl:seve:ravive": {
-      "valeur": 3.1,
+      "valeur": 1.7,
       "cible": 8.0
     },
     "dalto_perso:protanopie:seve:ravive": {
-      "valeur": 8.8,
-      "cible": 10.0
-    },
-    "dalto_perso:deuteranopie:seve:ravive": {
-      "valeur": 8.3,
-      "cible": 10.0
-    },
-    "dalto_perso:tritanopie:seve:ravive": {
-      "valeur": 3.9,
+      "valeur": 7.7,
       "cible": 10.0
     },
     "annonce:aube:fletri": {
@@ -71,7 +43,7 @@
       "cible": 9.0
     },
     "fletri_dl:aube:ravive": {
-      "valeur": 7.9,
+      "valeur": 7.2,
       "cible": 8.0
     },
     "heros_dl:aube:ravive": {
@@ -91,20 +63,12 @@
       "cible": 10.0
     },
     "fletri_dl:racine:ravive": {
-      "valeur": 5.8,
+      "valeur": 5.3,
       "cible": 8.0
     },
     "sol_sous_decor:racine:ravive": {
       "valeur": 12.0,
       "cible": 9.5
-    },
-    "dalto_perso:protanopie:racine:ravive": {
-      "valeur": 8.9,
-      "cible": 10.0
-    },
-    "dalto_perso:deuteranopie:racine:ravive": {
-      "valeur": 8.2,
-      "cible": 10.0
     },
     "regions_de:ronce:vent": {
       "valeur": 11.7,

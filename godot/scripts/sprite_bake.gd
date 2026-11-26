@@ -252,10 +252,10 @@ static func _scripts_in(dir: String) -> PackedStringArray:
 	return out
 
 
-## Ce dont dépend tout dessin : ce moteur, les couleurs, l'encre, l'ancien dessin, les réglages.
+## Ce dont dépend tout dessin : ce moteur, les couleurs (et le mode daltonien), l'encre, l'ancien dessin, les réglages.
 static func _common() -> String:
 	if _common_sig == "":
-		var parts := [FORMAT, scale, ss, walk_frames, idle_frames, windup_frames, strike_frames, LOOKS, HIT_POSES, FEET]
+		var parts := [FORMAT, scale, ss, walk_frames, idle_frames, windup_frames, strike_frames, LOOKS, HIT_POSES, FEET, Art.mode_daltonien]
 		for p in ["res://scripts/sprite_bake.gd", "res://scripts/art.gd", "res://scripts/anim.gd", "res://scripts/fletri_art.gd", "res://scripts/draw_batch.gd"]:
 			parts.append(_sig(p))
 		for p in _scripts_in("res://scripts/enemy_art/"):
@@ -959,6 +959,15 @@ static func total_bytes() -> int:
 	for a in atlases.values():
 		n += a.bytes
 	return n
+
+
+## Le mode daltonien a changé : les couleurs des Flétris aussi, tout est recuit (les sortes visibles
+## redemandent leur atlas, dessin direct en attendant).
+static func palette_changed() -> void:
+	forget_signatures()
+	atlases.clear()
+	_wanted.clear()
+	_failed.clear()
 
 
 static func clear() -> void:

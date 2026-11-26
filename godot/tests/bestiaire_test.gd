@@ -7,8 +7,8 @@
 ##     pas trop, pieds alignés, à la taille réelle ;
 ##   - sol : le corps tranche sur le sol mort de sa région en niveaux de gris (une sorte commune : sur
 ##     chaque région) ;
-##   - couleur : les tons de région sont distincts deux à deux (ΔE d'art_test.gd) en vision normale et pour
-##     chaque daltonisme d'Art ; la braise reste lisible sur le corps ; le corps tranche sur le sol.
+##   - couleur : les tons de région sont distincts deux à deux en vision normale (ΔE ≥ 30) et, pour chaque
+##     daltonisme d'Art, avec le mode daltonien correspondant actif (ΔE ≥ 25) ; la braise reste lisible sur le corps ; le corps tranche sur le sol.
 ## Les sortes sans script sont listées, pas en échec. Rendu réel (xvfb) :
 ##   tools/godot.sh --xvfb --audio-driver Dummy -s res://tests/bestiaire_test.gd
 extends SceneTree
@@ -23,8 +23,12 @@ const TOLERANCE_TAILLE := 0.80
 const MAX_RECOUVREMENT := 0.78
 ## Écart minimal de luminance (0 → 1, niveaux de gris) entre le corps et le sol mort de la région.
 const MIN_ECART_GRIS := 0.10
-## Écart minimal (ΔE 1976) : mêmes seuils qu'art_test.gd.
+## Écart minimal (ΔE 1976) : mêmes seuils qu'art_test.gd (braise sur le corps).
 const MIN_DELTA_E := 20.0
+## Régions entre elles : en vision normale, des teintes franches ; pour un daltonien, avec son mode
+## daltonien actif (Art.BESTIAIRE_DALTONIEN). La palette normale n'a pas à passer les daltonismes seule.
+const MIN_DELTA_E_NORMAL := 30.0
+const MIN_DELTA_E_MODE := 25.0
 ## Écart minimal entre le corps d'une sorte et le sol, vu par un daltonien (ΔE). Réglé sur les trois créatures
 ## validées de la planche V3 (pire cas : tireur d'épines sur Ronce, déutéranopie, 11) : elles doivent passer.
 const MIN_DELTA_E_SOL := 10.0
@@ -122,14 +126,16 @@ func _run() -> void:
 		# Information seulement : l'encre est fine et les sols sont sombres ; c'est le corps qui doit trancher.
 		print("  (info) encre sur le sol de %s : écart de luminance %.2f" % [reg, worst])
 
-	print("Couleur : régions, sol, braise (vision normale et daltonismes)")
-	var tons := {}
-	for reg in Art.BESTIAIRE:
-		var v = Art.BESTIAIRE[reg]
-		if v is Dictionary and v.has("clair"):
-			tons[reg] = v["clair"]
+	print("Couleur : régions, sol, braise (vision normale ; chaque daltonisme avec son mode actif)")
 	for kind in [""] + Art.DALTONISMES.keys():
-		var label: String = kind if kind != "" else "vision normale"
+		var label: String = "vision normale" if kind == "" else "%s, mode %s" % [kind, kind]
+		# Le mode daltonien (Settings.colorblind_mode) décale les couleurs des régions qui se confondent.
+		Art.set_access(kind if kind != "" else "aucun")
+		var tons := {}
+		for reg in Art.BESTIAIRE:
+			var v = Art.BESTIAIRE[reg]
+			if v is Dictionary and v.has("clair"):
+				tons[reg] = Art.bc(reg, "clair")
 		var worst := 1000.0
 		var pair := ""
 		var names := tons.keys()
@@ -139,10 +145,16 @@ func _run() -> void:
 				if d < worst:
 					worst = d
 					pair = "%s / %s" % [names[i], names[j]]
+		var seuil := MIN_DELTA_E_NORMAL if kind == "" else MIN_DELTA_E_MODE
 		if names.size() >= 2:
-			check(worst >= MIN_DELTA_E, "régions distinctes, %s (pire paire %s : ΔE %.1f)" % [label, pair, worst])
+			check(worst >= seuil, "régions distinctes, %s (pire paire %s : ΔE %.1f ≥ %.0f)" % [label, pair, worst, seuil])
+		var col_mode := col
+		if kind != "":
+			col_mode = {}
+			for k in drawn:
+				col_mode[k["id"]] = await _render(k["script"], false)
 		for k in drawn:
-			var body := _body_color(col[k["id"]], sil[k["id"]])
+			var body := _body_color(col_mode[k["id"]], sil[k["id"]])
 			var regions := Sortes.REGIONS.slice(1) if k["region"] == "commun" else [k["region"]]
 			for reg in regions:
 				var g: Array = C.ground_colors(reg)
@@ -151,6 +163,7 @@ func _run() -> void:
 		for reg in tons:
 			var d := Art.delta_e(_sim(Art.bc("braise"), kind), _sim(tons[reg], kind))
 			check(d >= MIN_DELTA_E, "braise sur le corps %s, %s : ΔE %.1f" % [reg, label, d])
+	Art.set_access("aucun")
 
 	print("")
 	print("ÉCHEC : %d test(s)" % failures if failures > 0 else "OK : banc de lisibilité (%d sortes dessinées)" % drawn.size())

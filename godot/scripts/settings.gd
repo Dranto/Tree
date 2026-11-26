@@ -632,8 +632,12 @@ func set_flash(v: float) -> void:
 
 
 func set_colorblind_mode(id: String) -> void:
+	var before := colorblind_mode
 	colorblind_mode = id if id in COLORBLIND_MODES else "aucun"
 	_apply_access()
+	if colorblind_mode != before:
+		# Les Flétris prennent les couleurs du mode (Art.BESTIAIRE_DALTONIEN) : leurs images cuites sont refaites.
+		load("res://scripts/sprite_bake.gd").palette_changed()
 	changed.emit()
 
 
