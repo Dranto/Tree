@@ -7879,7 +7879,7 @@ msgstr "Phase 3 sur 3 : les ronces se resserrent"
 msgid "Entravée"
 msgstr "Entravée"
 
-#. scripts/boss_vent.gd:113
+#. scripts/boss_vent.gd:116
 #. scripts/enemy_behaviors/glider.gd:70
 msgid "Hors d'atteinte"
 msgstr "Hors d'atteinte"

@@ -18,6 +18,9 @@ extends BossBase
 
 const Enemy = preload("res://scripts/enemy.gd")
 const Wind = preload("res://scripts/wind.gd")
+const Harfang = preload("res://scripts/creature_art/vent/_harfang.gd")
+const Ink = preload("res://scripts/creature_art/ink.gd")
+const PoseCache = preload("res://scripts/pose_cache.gd")
 
 const RADIUS := 62.0
 const INTRO := 1.6
@@ -435,42 +438,131 @@ func bot_ring(arena_radius: float) -> float:
 
 # --- Dessin ---
 #
-# Charte graphique : les Flétris sont anguleux, en volume, contour clair, braise dans les fentes.
-# Le Harfang est un grand rapace de cendre vu de face, ailes ouvertes : plumage d'ardoise barré de
-# chevrons, disque facial pâle, deux grands yeux de braise. Phase 2 : bords des ailes qui couvent ;
-# phase 3 : rémiges en braise, cendres qui s'envolent.
+# « Bestiaire d'herbier » (refonte des personnages, vague 2) : le Harfang est une chouette des neiges
+# géante vue de trois quarts, dessinée par scripts/creature_art/vent/_harfang.gd (encre commune avec le
+# héros et les Flétris de Vent, bleu de la région, braise = ennemi), tournée vers le joueur.
+# Le dessin direct coûte plusieurs ms : chaque animation est découpée en quelques images (TRACKS), et
+# chaque image n'est dessinée qu'une fois (pose_cache.gd). Ce fichier choisit l'animation et l'image ;
+# l'ombre et les états (saignement, racines, poison) restent dessinés à chaque image.
 
-## Aile du côté sgn (-1 gauche, 1 droite), en coordonnées locales du corps (y vers le bas) ;
-## flap : battement (radians), fold : repli (0 ouverte, 1 repliée), torn : plumes déchirées (phase 3).
-static func wing_shape(r: float, sgn: float, flap: float, fold: float, torn: float) -> PackedVector2Array:
-	var span := lerpf(1.0, 0.35, fold)
-	var pts := PackedVector2Array()
-	var shoulder := Vector2(0.32 * sgn, -0.35) * r
-	pts.append(shoulder)
-	pts.append(Vector2(1.15 * sgn * span, -0.78 - 0.1 * fold) * r)
-	pts.append(Vector2(2.25 * sgn * span, -0.42 + 0.3 * fold) * r)
-	# Rémiges : cinq doigts le long du bord de fuite, du bout de l'aile vers le corps.
-	for i in 5:
-		var u := i / 4.0
-		var base := Vector2(lerpf(2.2, 0.75, u) * sgn * span, lerpf(-0.2, 0.42, u) + 0.25 * fold) * r
-		var tip := base + Vector2(0.08 * sgn, 0.34 - 0.12 * torn * float(i % 2)) * r
-		pts.append(tip)
-		pts.append(base + Vector2(-0.16 * sgn * span, 0.06) * r)
-	pts.append(Vector2(0.38 * sgn, 0.35) * r)
-	# Battement : l'aile tourne autour de l'épaule.
-	var out := PackedVector2Array()
-	for q in pts:
-		out.append(shoulder + (q - shoulder).rotated(flap * sgn))
-	return out
+## Images par animation (une animation = une pose qui varie de u = 0 à 1).
+const TRACKS := {"vol": 16, "plumes": 8, "plumes_f": 4, "batt": 8, "batt_f": 6, "nuee": 6, "tempete": 6,
+	"vite": 8, "chute": 1, "pose": 8, "mort": 16}
+## Écart minimal (px) avant de se retourner vers le joueur : pas de clignotement quand il passe dessous.
+const TURN_MARGIN := 24.0
+## Teinte du coup reçu (sur la pose déjà dessinée).
+const HIT_TINT := Color(1.7, 1.5, 1.3)
+
+var facing := 1.0
+var _over: Node2D
+
+
+## Vitesse du battement en vol (rad/s) selon la phase.
+func _flap_speed() -> float:
+	return 3.2 + 1.2 * (phase - 1)
+
+
+## Animation en cours et son avancement u (0 → 1).
+func _track() -> Array:
+	if dead:
+		return ["mort", clampf(dying / DEATH_TIME, 0.0, 1.0)]
+	var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
+	var ann := stage == "annonce"
+	match attack:
+		"plumes":
+			if ann:
+				return ["plumes", k]
+			var since: float = stage_time - timer
+			if since < 0.3:
+				return ["plumes_f", since / 0.3]
+		"battement":
+			return ["batt", k] if ann else ["batt_f", k]
+		"nuee":
+			if ann:
+				return ["nuee", k]
+		"tempete":
+			if ann:
+				return ["tempete", k]
+		"pique":
+			match dive_step:
+				"envol", "retour":
+					return ["vite", fposmod(t * 15.0 / TAU, 1.0)]
+				"chute":
+					return ["chute", 0.0]
+				"pose":
+					return ["pose", fposmod(t * 6.0 / TAU, 1.0)]
+	return ["vol", fposmod(t * _flap_speed() / TAU, 1.0)]
+
+
+## Pose du dessin (clés de _harfang.gd) pour l'image u d'une animation ; t du dessin tiré de u, pour
+## que la même image donne toujours le même dessin.
+func pose_at(track: String, u: float) -> Dictionary:
+	var rage: float = [0.0, 0.5, 1.0][phase - 1]
+	var o := {"rage": rage, "alt": 0.0, "flap": 0.3, "fold": 0.0}
+	var tremble := sin(u * 40.0) * u
+	match track:
+		"vol":
+			o["t"] = u * TAU / _flap_speed()
+			o["flap"] = 0.3 + 0.5 * sin(TAU * u)
+		"plumes":
+			o["t"] = u * 1.2
+			o["bristle"] = Anim.ease_out(u)
+			o["flap"] = lerpf(0.3, 0.9, u) + 0.05 * tremble
+			o["k"] = u
+		"plumes_f":
+			o["t"] = 1.2 + u * 0.3
+			o["bristle"] = 1.0 - u
+			o["flap"] = 0.9 - 0.8 * u
+		"batt":
+			o["t"] = u * 1.1
+			o["flap"] = 1.4 * Anim.ease_out(u) + 0.06 * tremble
+			o["k"] = u
+			o["cri"] = 0.4 * u
+		"batt_f":
+			o["t"] = 1.1 + u * 0.3
+			o["flap"] = lerpf(1.4, -0.9, Anim.ease_out(u))
+			o["bristle"] = 0.6
+		"nuee":
+			o["t"] = u
+			o["cri"] = Anim.ease_out(u)
+			o["flap"] = lerpf(0.3, 1.1, u)
+			o["k"] = 0.6 * u
+		"tempete":
+			o["t"] = u
+			o["flap"] = lerpf(0.3, 1.25, u) + 0.08 * tremble
+			o["k"] = u
+			o["bristle"] = u
+		"vite":
+			o["t"] = u * TAU / 15.0
+			o["flap"] = 0.4 + 0.9 * sin(TAU * u)
+		"chute":
+			o["t"] = 0.0
+			o["fold"] = 1.0
+			o["dive"] = 1.0
+			o["k"] = 1.0
+		"pose":
+			o["t"] = u * TAU / 6.0
+			o["tired"] = 1.0
+			o["flap"] = -0.45 + 0.1 * sin(TAU * u)
+			o["fold"] = 0.55
+		"mort":
+			o["t"] = u * 2.0
+			o["dk"] = u
+			o["fold"] = Anim.ease_out(clampf(u * 1.6, 0.0, 1.0))
+			o["flap"] = lerpf(0.3, -0.3, u)
+			o["tired"] = u
+	return o
 
 
 func _draw() -> void:
 	var wake := 1.0 - clampf(intro / INTRO, 0.0, 1.0)
 	var dk := clampf(dying / DEATH_TIME, 0.0, 1.0) if dead else 0.0
 	var r := RADIUS
-	var alt := r * HOVER + r * 0.08 * sin(t * 2.4)
-	var fold := 0.0
-	var flap := 0.32 * sin(t * (3.2 + 1.2 * (phase - 1)))
+	var art_h: float = Harfang.HEIGHT
+	# Altitude en px au-dessus des pieds : les serres flottent au-dessus de l'ombre.
+	var hover := art_h * 0.36 + r * 0.08 * sin(t * 2.4)
+	var landed_alt := art_h * 0.08
+	var alt := hover
 	var fade := 1.0
 	var shadow := 1.0
 	if attack == "pique":
@@ -478,7 +570,6 @@ func _draw() -> void:
 			"envol":
 				var k := 1.0 - clampf(dive_t / DIVE["rise"], 0.0, 1.0)
 				alt += SKY * Anim.ease_in(k)
-				flap = 0.55 * sin(t * 16.0)
 				fade = 1.0 - Anim.ease_in(k)
 				shadow = 1.0 - k
 			"suit", "fige":
@@ -486,123 +577,79 @@ func _draw() -> void:
 				shadow = 0.0
 			"chute":
 				var k := 1.0 - clampf(dive_t / DIVE["fall"], 0.0, 1.0)
-				alt = lerpf(SKY, r * 0.25, Anim.ease_in(k))
-				fold = 1.0 - k * 0.6
+				alt = lerpf(SKY, landed_alt, Anim.ease_in(k))
 				fade = k
 				shadow = k
 			"pose":
-				alt = r * 0.25
-				fold = 0.2
-				flap = 0.1 * sin(t * 6.0)
+				alt = landed_alt
 			"retour":
-				alt = lerpf(r * 0.25, r * HOVER, 1.0 - clampf(dive_t / DIVE["back"], 0.0, 1.0))
-				flap = 0.45 * sin(t * 12.0)
-	if attack == "battement":
-		var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
-		if stage == "annonce":
-			# Il lève les ailes très haut avant de les rabattre.
-			flap = -0.55 * Anim.ease_out(k) + 0.05 * sin(t * 30.0)
-		else:
-			flap = lerpf(-0.55, 0.6, Anim.ease_out(k))
+				alt = lerpf(landed_alt, hover, 1.0 - clampf(dive_t / DIVE["back"], 0.0, 1.0))
 	if dead:
-		fold = Anim.ease_out(clampf(dk * 1.6, 0.0, 1.0))
-		alt = lerpf(alt, r * 0.1, Anim.ease_in(clampf(dk * 1.3, 0.0, 1.0)))
-		flap = 0.0
+		alt = lerpf(alt, landed_alt, Anim.ease_in(clampf(dk * 1.3, 0.0, 1.0)))
 	var s := lerpf(0.35, 1.0, Anim.ease_out(wake)) * (1.0 - 0.15 * Anim.ease_in(dk))
 	modulate.a = (1.0 - Anim.ease_in(clampf((dk - 0.6) / 0.4, 0.0, 1.0))) * (0.15 + 0.85 * fade)
+	var feet := Vector2(0, r * 0.15)
 	if shadow > 0.0:
-		draw_colored_polygon(Art.ellipse(Vector2(0, r * 0.15), r * 1.7 * s * (0.6 + 0.4 * shadow), r * 0.55 * s * (0.6 + 0.4 * shadow), 24), Color(Art.c("ombre"), 0.35 * shadow))
+		draw_colored_polygon(Art.ellipse(feet, r * 1.7 * s * (0.6 + 0.4 * shadow), r * 0.55 * s * (0.6 + 0.4 * shadow), 24), Color(Art.c("ombre"), 0.35 * shadow))
+	var cache := PoseCache.on(self)
 	if fade <= 0.01:
+		cache.hide_all()
 		return
-	# Tremblement pendant un changement de phase.
-	var shift := Vector2(0, -alt)
+	# Tourné vers le joueur (avec une marge, pour ne pas clignoter quand il passe dessous).
+	if main != null and main.player != null:
+		var dx: float = main.player.position.x - position.x
+		if absf(dx) > TURN_MARGIN:
+			facing = signf(dx)
+	var shift := Vector2.ZERO
 	if transition > 0.0:
 		shift += Vector2(sin(t * 50.0), cos(t * 43.0)) * 4.0
-	draw_set_transform(shift, 0.0, Vector2(s, s))
-	_paint_body(self, r, flap, fold, dk)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var tr: Array = _track()
+	var n: int = TRACKS[tr[0]]
+	var i := clampi(int(tr[1] * n), 0, n - 1)
+	var u := float(i) / maxf(1.0, n - 1.0) if tr[0] in ["plumes", "plumes_f", "batt", "batt_f", "nuee", "tempete", "mort"] else float(i) / n
+	var o := pose_at(tr[0], u)
+	o["look"] = 0.25
+	# Retourné par le nœud (comme les sprites des Flétris) : une seule pose cuite pour les deux sens.
+	var key := "%s/%d/%d" % [tr[0], i, phase]
+	var mod := _tint()
+	if hit_flash > 0.0 and not dead:
+		mod = mod * HIT_TINT
+	var drawer := func(ci: CanvasItem) -> void:
+		Harfang.draw(ci, Vector2.ZERO, art_h, o)
+		Ink.flash = 0.0
+		Ink.ash = 0.0
+	cache.show_pose(key, drawer, Transform2D(0.0, Vector2(s * facing, s), 0.0, feet + shift + Vector2(0, -alt * s)), mod)
+	_body_at = feet + Vector2(0, -alt * s - art_h * 0.4 * s)
+	if _over == null:
+		_over = Node2D.new()
+		_over.draw.connect(_draw_over)
+		add_child(_over)
+	_over.queue_redraw()
 
 
-## Le corps, les ailes et la tête, centrés sur le ventre (déjà décalés de l'altitude).
-func _paint_body(c: CanvasItem, r: float, flap: float, fold: float, dk: float) -> void:
-	var rage: float = [0.0, 0.5, 1.0][phase - 1]
-	var contour := _color(Art.c("ennemi_contour"))
-	var plumage := Art.c("ennemi").lerp(Art.c("brume"), 0.35).lerp(Art.ec("vent", "sombre"), 0.3)
-	var pale := Art.c("brume").lerp(Art.ec("vent", "clair"), 0.35)
-	var ember := Art.ec("cendre")
-	var pulse := 0.5 + 0.5 * sin(t * (3.0 + 4.0 * rage))
-	# Ailes, en volume, bord de fuite qui couve en phase 2 et brûle en phase 3.
-	for sgn in [-1.0, 1.0]:
-		var w := wing_shape(r, sgn, flap, fold, rage)
-		Art.volume(c, w, _color(plumage.darkened(0.12)), 0.5)
-		Art.outline(c, w, contour, Art.TRAIT)
-		# Barres claires des couvertures (chevrons du harfang), et rémiges.
-		for i in 3:
-			var u := (i + 1) / 4.0
-			var a := w[0].lerp(w[2], u * 0.9)
-			var b := a + Vector2(0.0, 0.32 * r).rotated(flap * sgn)
-			c.draw_line(a, b, _color(pale.darkened(0.15)), 3.0, true)
-		for i in 5:
-			var tip: Vector2 = w[3 + i * 2]
-			var base: Vector2 = w[4 + i * 2]
-			if rage > 0.0:
-				c.draw_line(base, tip, Color(ember, (0.25 + 0.5 * rage) * (0.7 + 0.3 * pulse) * (1.0 - dk)), 3.0, true)
-	# Serres d'os sous le ventre.
-	for sgn in [-1.0, 1.0]:
-		var foot := Vector2(0.22 * sgn, 0.7) * r
-		for j in 3:
-			var d := Vector2((j - 1) * 0.35 + 0.15 * sgn, 1.0).normalized()
-			var tip := foot + d * r * 0.28
-			var side := d.orthogonal() * r * 0.06
-			c.draw_colored_polygon(PackedVector2Array([foot + side, tip, foot - side]), _color(Art.ec("epine", "clair").darkened(0.15)))
-	# Corps : un œuf de plumes, ventre pâle barré de chevrons.
-	var body := Art.ellipse(Vector2(0, -0.05 * r), r * 0.62, r * 0.85, 22)
-	Art.volume(c, body, _color(plumage), 0.6)
-	var belly := Art.ellipse(Vector2(0, 0.12 * r), r * 0.4, r * 0.58, 18)
-	c.draw_colored_polygon(belly, _color(pale.darkened(0.08)))
-	for row in 3:
-		for col in 3 - row % 2:
-			var p := Vector2((col - (2 - row % 2) / 2.0) * r * 0.22, (-0.15 + row * 0.22) * r)
-			c.draw_polyline(PackedVector2Array([p + Vector2(-0.07, -0.04) * r, p, p + Vector2(0.07, -0.04) * r]), _color(plumage.darkened(0.2)), 2.0, true)
-	Art.outline(c, body, contour, Art.TRAIT)
-	# Tête : disque facial pâle, deux aigrettes, deux grands yeux de braise, bec d'os.
-	var head := Vector2(0, -0.92 * r)
-	for sgn in [-1.0, 1.0]:
-		var base := head + Vector2(0.3 * sgn, -0.3) * r
-		var tip := base + Vector2(0.18 * sgn, -0.42) * r
-		var side := Vector2(0.09, 0.0) * r
-		c.draw_colored_polygon(PackedVector2Array([base - side, tip, base + side]), _color(plumage.darkened(0.25)))
-	var skull := Art.ellipse(head, r * 0.5, r * 0.44, 20)
-	Art.volume(c, skull, _color(plumage.lightened(0.04)), 0.6)
-	Art.outline(c, skull, contour, Art.TRAIT)
-	for sgn in [-1.0, 1.0]:
-		c.draw_colored_polygon(Art.ellipse(head + Vector2(0.2 * sgn, 0.02 * r), r * 0.2, r * 0.22, 14), _color(pale))
-	var glare := 0.4 + (0.45 if stage == "annonce" or dive_step in ["chute", "pose"] else 0.0)
-	var eye_col := Art.c("ennemi_oeil")
-	for sgn in [-1.0, 1.0]:
-		var e := head + Vector2(0.2 * sgn * r, 0.02 * r)
-		c.draw_circle(e, r * 0.17, Color(eye_col, glare * 0.45 * (1.0 - dk)))
-		c.draw_circle(e, r * 0.11, _color(eye_col.lerp(ember, 0.3 * rage)))
-		# Pupille fendue en biais, qui se ferme à la mort.
-		c.draw_line(e + Vector2(-0.07 * sgn, -0.08) * r, e + Vector2(0.05 * sgn, 0.08) * r, Art.c("contour"), lerpf(3.5, 1.0, dk), true)
-	var beak := PackedVector2Array([head + Vector2(-0.07, 0.12) * r, head + Vector2(0, 0.34) * r, head + Vector2(0.07, 0.12) * r])
-	c.draw_colored_polygon(beak, _color(Art.ec("epine", "clair").darkened(0.2)))
-	Art.outline(c, beak, Color(Art.c("contour"), 0.8), Art.TRAIT_FIN)
-	# Phase 3 et mort : des plumes de cendre s'arrachent et s'envolent.
-	var flakes := 0 if phase < 3 and not dead else 9
-	for i in flakes:
-		var u := fposmod(t * 0.6 + i / 9.0, 1.0)
-		var q := Vector2(sin(i * 2.4 + t) * r * 1.4, -r * (0.2 + 1.6 * u))
-		FletriArt._flake(c, q, 4.0 * (1.0 - 0.5 * u), Color(Art.ec("cendre", "clair") if i % 3 == 0 else FletriArt.ash_color(), 1.0 - u))
-	# États visibles : motifs des éléments (charte, § 3).
+var _body_at := Vector2.ZERO
+
+
+## États visibles (motifs des éléments, charte § 3) et lueur de la mort, par-dessus le dessin.
+func _draw_over() -> void:
+	var r := RADIUS
 	if statuses.has("saignement"):
-		Art.status(c, "saignement", Vector2.ZERO, r * 0.7, t * 1.25)
+		Art.status(_over, "saignement", _body_at, r * 0.7, t * 1.25)
 	if statuses.has("enracine"):
-		Art.status(c, "racine", Vector2(0, r * 0.3), r * 0.9, t)
+		Art.status(_over, "racine", _body_at + Vector2(0, r * 0.3), r * 0.9, t)
 	if poison_time > 0.0:
-		Art.status(c, "poison", Vector2.ZERO, r * 0.7, t)
+		Art.status(_over, "poison", _body_at, r * 0.7, t)
+	var dk := clampf(dying / DEATH_TIME, 0.0, 1.0) if dead else 0.0
 	if dead and dk > 0.5:
-		Art.glow(c, Vector2.ZERO, r * 0.9 * Anim.ease_out((dk - 0.5) / 0.5), "seve")
+		Art.glow(_over, _body_at, r * 0.9 * Anim.ease_out((dk - 0.5) / 0.5), "seve")
+
+
+## Teinte d'ensemble : poison (la cendre de la mort est dans le dessin, Ink.ash).
+func _tint() -> Color:
+	var c := Color.WHITE
+	if poison_time > 0.0:
+		c = c.lerp(Art.ec("poison", "clair"), 0.3)
+	return c
 
 
 ## Annonces au sol, en coordonnées monde (Art.telegraph). La nuée (qui ne blesse pas) n'est pas
@@ -716,7 +763,8 @@ func _draw_tornado(c: CanvasItem, tw: Dictionary) -> void:
 
 # --- Dessinés par l'arène (boss_arena.gd), coordonnées de l'arène ---
 
-## Le Harfang endormi : perché sur un rocher au centre de l'aire, ailes repliées, yeux clos.
+## Le Harfang endormi : perché sur un rocher au centre de l'aire, ailes repliées, yeux clos ; la
+## braise couve sous les paupières quand l'aire est ouverte.
 static func draw_sleeper(a: Node2D) -> void:
 	var r := RADIUS * 0.8
 	var c: Vector2 = a.center
@@ -725,22 +773,24 @@ static func draw_sleeper(a: Node2D) -> void:
 	a.draw_colored_polygon(Art.ellipse(c + Vector2(0, r * 0.3), r * 1.4, r * 0.4, 18), Color(Art.c("ombre"), 0.3))
 	Art.volume(a, rock, stone, 0.5)
 	Art.outline(a, rock, Color(Art.c("contour"), 0.7), Art.TRAIT)
-	var plumage := Art.c("ennemi").lerp(Art.c("brume"), 0.35).lerp(Art.ec("vent", "sombre"), 0.3).darkened(0.25)
-	var bird := c + Vector2(0, -r * 1.2)
-	var body := Art.ellipse(bird, r * 0.55, r * 0.75, 18)
-	Art.volume(a, body, plumage, 0.4)
-	for sgn in [-1.0, 1.0]:
-		var w := PackedVector2Array([bird + Vector2(0.35 * sgn, -0.5) * r, bird + Vector2(0.7 * sgn, 0.0) * r, bird + Vector2(0.5 * sgn, 0.75) * r, bird + Vector2(0.25 * sgn, 0.6) * r])
-		Art.volume(a, w, plumage.darkened(0.12), 0.3)
-	var head := bird + Vector2(0, -r * 0.8)
-	a.draw_circle(head, r * 0.42, plumage)
-	Art.outline(a, body, Color(Art.c("ennemi_contour"), 0.5), Art.TRAIT_FIN)
 	var open: bool = a.state == "ouverte"
-	for sgn in [-1.0, 1.0]:
-		var e := head + Vector2(0.17 * sgn, 0.02) * r
-		if open:
-			a.draw_circle(e, r * 0.1, Color(Art.c("ennemi_oeil"), 0.45 + 0.35 * sin(a.t * 2.0)))
-		a.draw_line(e - Vector2(0.1, 0) * r, e + Vector2(0.1, 0) * r, Art.c("contour"), 2.5, true)
+	# Ouverte : la braise couve sous les paupières (8 images sur une période de π s).
+	var i := int(fposmod(a.t * 2.0 / TAU, 1.0) * 8.0) if open else 0
+	var o := {"t": i * 0.4, "alt": 8.0, "fold": 1.0, "flap": -0.2, "sleep": 0.0 if open else 1.0, "k": 0.25 + 0.2 * sin(TAU * i / 8.0) if open else 0.0, "tired": 0.3}
+	var cache := _arena_cache(a)
+	var drawer := func(ci: CanvasItem) -> void:
+		Harfang.draw(ci, Vector2.ZERO, Harfang.HEIGHT * 0.85, o)
+		Ink.flash = 0.0
+		Ink.ash = 0.0
+	cache.show_pose("dort/%d" % i if open else "dort", drawer, Transform2D(0.0, c + Vector2(0, -r * 0.55)))
+
+
+## Cache des poses dessinées dans l'arène (endormi, victoire) : masqué pendant le combat.
+static func _arena_cache(a: Node2D) -> Node2D:
+	var cache := PoseCache.on(a)
+	if not cache.visible_if.is_valid():
+		cache.visible_if = func() -> bool: return a.state in ["ouverte", "fermee", "vaincue"]
+	return cache
 
 
 ## Après la victoire : un cercle de pierres levées couvertes de lichen, un jeune arbre couché par
@@ -769,3 +819,10 @@ static func draw_victory(a: Node2D) -> void:
 	for i in 4:
 		var p := c + Vector2.from_angle(i * 1.7) * r * 0.9
 		a.draw_line(p, p + Vector2.from_angle(i * 2.1) * 12.0, Art.ec("vent", "clair"), 3.0, true)
+	# Une petite chouette des neiges guérie, posée sur la pierre de droite, qui tourne la tête.
+	var perch := c + Vector2.from_angle(0.3) * r * 1.6 * Vector2(1.0, 0.6) + Vector2(0, -40)
+	var i := int(fposmod(a.t * 0.7 / TAU, 1.0) * 12.0)
+	var o := {"t": i * 0.3, "alt": 8.0, "fold": 1.0, "flap": -0.2, "gueri": true, "look": 0.4 * sin(TAU * i / 12.0), "flip": true}
+	var drawer := func(ci: CanvasItem) -> void:
+		Harfang.draw(ci, Vector2.ZERO, Harfang.HEIGHT * 0.32, o)
+	_arena_cache(a).show_pose("gueri/%d" % i, drawer, Transform2D(0.0, perch))
