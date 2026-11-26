@@ -33,6 +33,7 @@ static var _noise: Image
 static var _nres := 0
 ## Normales des bords de chaque région (Regions.edge_normals), gardées tant que les régions ne changent pas.
 static var _normals := {}
+static var _neigh := {}
 static var _ids: Array = []
 
 
@@ -42,8 +43,11 @@ static func _regions() -> Array:
 	if ids != _ids:
 		_ids = ids.duplicate()
 		_normals = {}
+		_neigh = {}
 		for id in _ids:
 			_normals[id] = Regions.edge_normals(id)
+		for id in _ids:
+			_neigh[id] = [_neighbour(id, true), _neighbour(id, false)]
 	return _ids
 
 
@@ -108,8 +112,10 @@ static func mix(p: Vector2) -> Dictionary:
 	# Région du secteur (sur la demi-droite même, celle dont on est le moins loin).
 	var a := ""
 	var best := -INF
+	var plen := p.length()
 	for id in _regions():
-		var d := Regions.inside_distance(p, id)
+		var nn: Array = _normals[id]
+		var d := minf(minf(p.dot(nn[0]), p.dot(nn[1])), plen - Regions.INNER)
 		if d > best:
 			best = d
 			a = id
@@ -136,6 +142,13 @@ static func weight_s(s: float, half := HALF) -> float:
 
 ## Région voisine de « id » de l'autre côté de son premier bord (first) ou du second.
 static func neighbour(id: String, first: bool) -> String:
+	_regions()
+	if _neigh.has(id):
+		return _neigh[id][0 if first else 1]
+	return _neighbour(id, first)
+
+
+static func _neighbour(id: String, first: bool) -> String:
 	var a := Regions.angle_of(id) + (-1.0 if first else 1.0) * Regions.half_width() * 2.0
 	var q := Vector2.from_angle(a) * (Regions.INNER + 400.0)
 	return Regions.region_at(q)

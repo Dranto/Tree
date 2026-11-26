@@ -22,6 +22,8 @@
 extends RefCounted
 
 const Regions = preload("res://scripts/regions.gd")
+## Frontières entre régions (vague 3 B) : dans la bande, chaque élément prend la région de son îlot.
+const Frontieres = preload("res://scripts/world_art/frontieres.gd")
 ## Matière propre d'une région (refonte du monde, vague 2) : un fichier par région,
 ## scripts/world_bake/sol/<id>.gd, dont les fonctions dessinent à la place de la matière provisoire
 ## commune (voir sol/vent.gd pour le contrat).
@@ -281,6 +283,7 @@ class TileLayer extends Node2D:
 	var mask := DEAD | ALIVE | FRONT
 	var _p: Dictionary
 	var _reg := ""
+	var _band := false
 
 	func _draw() -> void:
 		var t0 := Time.get_ticks_usec()
@@ -322,10 +325,14 @@ class TileLayer extends Node2D:
 	## [points, couleurs, ancrages]. Gardée en cache (les carrés voisins partagent leurs cases de bord).
 	func _gen(cell: Vector2i, kind: int) -> Array:
 		var o := Vector2(cell) * CELL
-		var reg := Regions.region_at(o + Vector2(CELL, CELL) * 0.5)
+		var mid := o + Vector2(CELL, CELL) * 0.5
+		var reg := Regions.region_at(mid)
 		var ri := _ids.find(reg)
 		_reg = reg if ri >= 0 else ""
 		_p = pals[_reg]
+		# Bande de frontière : les éléments de la case n'ont pas tous la même région (îlots).
+		var mx := Frontieres.mix(mid)
+		_band = not mx.is_empty() and absf(mx["s"]) < Frontieres.HALF + CELL * 0.75
 		_r.seed = hash(cell) ^ (0x5ca1ab1e + kind * 7919)
 		_cell(o, ri if ri >= 0 else COMMUN, kind)
 		var tp := PackedVector2Array()
@@ -353,6 +360,9 @@ class TileLayer extends Node2D:
 			# Terre morte : matière (deux tirages) et une grappe.
 			for i in 3:
 				var p := o + Vector2(_r.randf(), _r.randf()) * CELL
+				if _band:
+					ri = _island(p)
+					S = SOL_REGION.get(_reg)
 				var roll := _r.randf()
 				var sd := _r.randi()
 				if roll > (0.62 if i < 2 else 0.4) * dens:
@@ -371,6 +381,9 @@ class TileLayer extends Node2D:
 			# le shader du sol).
 			for i in range(1, 3):
 				var p := o + Vector2(_r.randf(), _r.randf()) * CELL
+				if _band:
+					ri = _island(p)
+					S = SOL_REGION.get(_reg)
 				var roll := _r.randf()
 				var sd := _r.randi()
 				if roll > (0.5 if i == 1 else 0.4) * dens:
@@ -389,10 +402,22 @@ class TileLayer extends Node2D:
 			# la région, visibles seulement juste derrière le front.
 			for i in int(1.5 * dens + _r.randf()):
 				var p := o + Vector2(_r.randf(), _r.randf()) * CELL
+				if _band:
+					ri = _island(p)
+					S = SOL_REGION.get(_reg)
 				var r := _r.randf_range(2.6, 4.4)
 				_anchor(p, 2, ri)
 				elements += 1
 				_region_flower(p + Vector2(0, -r * 1.6), r, S)
+
+	## Région de l'îlot d'un élément de la bande (Frontieres.region_at) : change la palette ; rend son
+	## indice pour le shader du calque (COMMUN : l'oasis).
+	func _island(p: Vector2) -> int:
+		var reg := Frontieres.region_at(p)
+		var ri := _ids.find(reg)
+		_reg = reg if ri >= 0 else ""
+		_p = pals[_reg]
+		return ri if ri >= 0 else COMMUN
 
 	## Point d'ancrage (et sorte) des sommets qui suivent.
 	func _anchor(p: Vector2, kind: int, ri: int) -> void:

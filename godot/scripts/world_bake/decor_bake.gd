@@ -51,8 +51,9 @@ static var verbose := false
 ## Enveloppe par atlas (vague 2, 26/11) : ENVELOPE ; 6 régions et l'oasis tiennent sous le plafond.
 static var budget := 128 * 1024 * 1024
 ## Taille d'atlas visée par région (octets, mipmaps comprises), vérifiée par tests/decor_test.gd :
-## Roncier et Marais 24 Mo, les quatre autres 18 Mo, l'oasis 6 Mo (24 + 24 + 4 × 18 + 6 = 126 Mo).
-const ENVELOPE := {"ronce": 24 << 20, "spore": 24 << 20, "commun": 6 << 20, "": 18 << 20}
+## Roncier 26 Mo (éléments de passage des frontières, vague 3 B), Marais 24 Mo, les quatre autres 18 Mo,
+## l'oasis 4 Mo (elle en prend 1,9) : 26 + 24 + 4 × 18 + 4 = 126 Mo.
+const ENVELOPE := {"ronce": 26 << 20, "spore": 24 << 20, "commun": 4 << 20, "": 18 << 20}
 ## Régions du champ de la caméra (Runtime._want) : trim() ne les rend pas.
 static var in_view := {}
 const PAD := 3
