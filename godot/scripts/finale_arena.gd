@@ -72,6 +72,16 @@ var descending := false
 const SHAFT_DROP := 520.0
 var _fell := false
 var _last_bar := -1
+## Décor du creux et de la brèche (world_art/finale_creux.gd) : deux enfants derrière l'arène, cuits.
+const FinaleCreux = preload("res://scripts/world_art/finale_creux.gd")
+var _creux
+var _breche
+## Secousse du creux (racines qui frémissent, poussière qui tombe) : instant (t) et force (0 → 1) ;
+## lancée par un changement de phase, l'effondrement, ou une percussion de la batterie (lue sur le boss).
+var _shake_at := -100.0
+var _shake_power := 0.0
+var _last_phase := 0
+var _last_drum := -1.0
 
 
 func configure(_id: String) -> void:
@@ -96,10 +106,6 @@ func configure(_id: String) -> void:
 func _ready() -> void:
 	configure(FINALE_PATH)
 	center = CAVE
-	var shape := RandomNumberGenerator.new()
-	shape.seed = 61
-	for i in 72:
-		_wall.append([shape.randf_range(-0.03, 0.03), shape.randf_range(0.7, 1.3), shape.randf_range(-1.0, 1.0)])
 	Game.seed_rng(rng, 77)
 	bar = BossBar.new()
 	var probe = boss_script.new()
@@ -108,6 +114,18 @@ func _ready() -> void:
 	main.hud.get_parent().add_child(bar)
 	if Game.flags.get(flag, false):
 		bloom = 1.0
+	for m in ["creux", "breche"]:
+		var n = FinaleCreux.new()
+		n.name = "Creux" if m == "creux" else "Breche"  # i18n: non
+		n.mode = m
+		n.arena = self
+		n.r = max_radius
+		n.visible = false
+		add_child(n)
+		if m == "creux":
+			_creux = n
+		else:
+			_breche = n
 
 
 ## La position est-elle sous la graine (dans le creux de la finale, mur compris) ?
@@ -140,6 +158,7 @@ func _process(delta: float) -> void:
 	t += delta
 	if frozen:
 		return
+	_react_step()
 	var p: Vector2 = main.player.position
 	if holds(p) or (state != "fermee" and p.distance_squared_to(DESCENT) < 1600.0 * 1600.0):
 		queue_redraw()
@@ -232,6 +251,7 @@ func _collapse_step(delta: float) -> void:
 	var u := collapse_t / collapse_time
 	if before < COLLAPSE_WARN and u >= COLLAPSE_WARN:
 		main.fx.shake(9.0)
+		shake_creux(1.0)
 		main.fx.ring(center, collapse_radius, max_radius + 40.0, 0.7, Color(Art.ec("cendre", "clair"), 0.8), 8.0)
 	var fall := clampf((u - COLLAPSE_WARN) / COLLAPSE_FALL, 0.0, 1.0)
 	collapse_k = Anim.ease_out(fall)
@@ -312,6 +332,9 @@ func begin_descent() -> void:
 		descend()
 		return
 	var first := defeats == 0 and int(Game.flags.get("stat_finale_essais", 0)) == 0
+	# Le creux se cuit pendant la plongée (l'éclair de sève cache l'image de la cuisson).
+	if _creux != null:
+		_creux.request("fletri")
 	sync.start("intro" if first else "intro_court")
 	descending = true
 	_fell = false
@@ -515,10 +538,10 @@ func _life_wave_step(delta: float) -> void:
 
 # --- Dessin ---
 #
-# Charte : le fond reste sourd et sombre. Le creux est une terre noire de cendre, nervurée de
-# veines de sève éteintes qui convergent vers le centre ; un mur de grosses racines brunes le borde,
-# des radicelles pendent du plafond (au bord). La racine pivot de la graine plonge au nord, jusqu'au
-# boss. Une fois vaincue, les veines s'allument de sève, des fleurs et des pousses claires naissent.
+# Le décor fixe (paroi en strates, six poches des régions, racines de la graine, sol en couches,
+# brèche) est dessiné et cuit par world_art/finale_creux.gd, dans deux enfants derrière l'arène.
+# Ici, en direct : la lueur de la brèche, le gouffre de l'effondrement, les radicelles qui frémissent
+# et la poussière qui tombe (secousses : phases, percussions), le puits de lumière, le front de vie.
 
 func _draw() -> void:
 	if state != "fermee":
@@ -556,21 +579,10 @@ func _draw_breach() -> void:
 	var won := state == "vaincue"
 	var glow_col := Art.ec("seve") if won else Art.ec("cendre")
 	var pulse := 0.5 + 0.5 * sin(t * 2.4)
-	draw_colored_polygon(Art.ellipse(c, DESCENT_RADIUS * 1.25, DESCENT_RADIUS * 0.62, 24), Color(Art.c("contour"), 0.55))
-	draw_colored_polygon(Art.ellipse(c, DESCENT_RADIUS * 0.95, DESCENT_RADIUS * 0.42, 24), Color(0.02, 0.015, 0.012))
-	draw_colored_polygon(Art.ellipse(c + Vector2(0, 3), DESCENT_RADIUS * 0.6, DESCENT_RADIUS * 0.2, 18), Color(glow_col, 0.25 + 0.25 * pulse))
-	# Racines de la graine qui bordent la fente.
-	var bark := Art.ec("racine", "sombre").lerp(Art.c("decor"), 0.3)
-	for i in 7:
-		var a := PI + PI * (i + 0.5) / 7.0
-		var from := c + Vector2(cos(a) * DESCENT_RADIUS * 1.5, sin(a) * DESCENT_RADIUS * 0.7)
-		var to := c + Vector2(cos(a) * DESCENT_RADIUS * 0.75, sin(a) * DESCENT_RADIUS * 0.3 + 4.0)
-		draw_line(from, to, bark, 7.0 - 0.6 * (i % 3), true)
-		draw_line(from, to, bark.lightened(0.15), 2.0, true)
-	for i in 3:
-		var a := PI * (0.2 + 0.3 * i)
-		var from := c + Vector2(cos(a) * DESCENT_RADIUS * 1.4, sin(a) * DESCENT_RADIUS * 0.66)
-		draw_line(from, from.lerp(c, 0.4), bark, 5.0, true)
+	# La terre ouverte et les racines sont cuites (finale_creux.gd › paint_breche, nœud « Breche ») ;
+	# ici, la lueur qui monte du fond.
+	draw_colored_polygon(Art.ellipse(c + Vector2(0, 11), DESCENT_RADIUS * 0.62, DESCENT_RADIUS * 0.17, 18), Color(glow_col, 0.22 + 0.22 * pulse))
+	draw_colored_polygon(Art.ellipse(c + Vector2(0, 12), DESCENT_RADIUS * 0.3, DESCENT_RADIUS * 0.08, 14), Color(glow_col.lightened(0.3), 0.25 + 0.3 * pulse))
 	# Braises (ou gouttes de sève) qui montent de la fente.
 	for i in 6:
 		var f := fposmod(t * 0.45 + i * 0.17, 1.0)
@@ -699,63 +711,8 @@ var _floor_batch = DrawBatch.new()
 func _draw_cave() -> void:
 	var c := center
 	var r := max_radius
-	var life := bloom
-	# Terre autour du creux : tout ce que l'écran peut voir, sourd et sombre.
-	var earth := Art.c("decor").darkened(0.35)
-	# Une couronne de 4 000 px de rayon (qui contient le carré de 5 600 px de côté) jusqu'au bord du
-	# sol du creux, que le sol recouvre de toute façon : mêmes pixels, sans remplir deux fois le centre.
-	_floor_batch.exact = true
-	_floor_batch.ring(c, 4000.0, r, earth)
-	_floor_batch.flush(self)
-	var rng_d := RandomNumberGenerator.new()
-	rng_d.seed = 5
-	# Racines enfouies dans la terre, qui rayonnent du creux.
-	var deep := Art.ec("racine", "sombre").darkened(0.45)
-	for i in 26:
-		var a := TAU * i / 26.0 + rng_d.randf_range(-0.1, 0.1)
-		var from := c + Vector2.from_angle(a) * (r + 40.0)
-		var mid := c + Vector2.from_angle(a + rng_d.randf_range(-0.2, 0.2)) * (r + rng_d.randf_range(300.0, 700.0))
-		var to := c + Vector2.from_angle(a + rng_d.randf_range(-0.3, 0.3)) * (r + rng_d.randf_range(900.0, 1700.0))
-		draw_polyline(PackedVector2Array([from, mid, to]), deep, rng_d.randf_range(6.0, 16.0), true)
-	for i in 70:
-		var q := c + Vector2.from_angle(rng_d.randf() * TAU) * rng_d.randf_range(r + 80.0, r + 1800.0)
-		draw_circle(q, rng_d.randf_range(3.0, 9.0), Color(earth.lightened(0.12), 0.6))
-	# Sol du creux : cendre tassée, plus claire au centre ; verdit avec la floraison.
-	var floor_dead := Art.c("sol_mort").darkened(0.25)
-	var floor_alive := Art.c("sol_vivant")
-	# Dix teintes concentriques, tracées en couronnes (lot « exact » : mêmes pixels que des disques
-	# empilés, mais sans redessiner dix fois le centre : le coût en rendu logiciel suit les pixels).
-	_floor_batch.exact = true
-	# Effondrement fini : le sol s'arrête au bord de l'île (le gouffre recouvre le reste ; en rendu
-	# logiciel, le coût suit les pixels remplis).
-	var keep := radius + 2.0 if collapse_k >= 1.0 else r
-	for i in 10:
-		var col := floor_dead.lerp(floor_alive, life).lightened(0.016 * i)
-		var outer_i := minf(r * (1.0 - i / 10.0), keep)
-		if i < 9 and outer_i > r * (1.0 - (i + 1) / 10.0):
-			_floor_batch.ring(c, outer_i, r * (1.0 - (i + 1) / 10.0), col)
-		else:
-			_floor_batch.draw_circle(c, r * 0.1, col)
-	_floor_batch.flush(self)
-	# Veines de sève qui convergent vers le centre : éteintes, puis allumées.
-	var vein_off := Art.ec("seve", "sombre").darkened(0.5)
-	for i in 12:
-		var a := TAU * i / 12.0 + 0.13
-		var pts := PackedVector2Array()
-		for j in 7:
-			var u := j / 6.0
-			pts.append(c + Vector2.from_angle(a + 0.25 * sin(u * 4.0 + i)) * lerpf(r * 0.95, 70.0, u))
-		draw_polyline(pts, vein_off.lerp(Art.ec("seve", "sombre").lerp(Art.ec("seve"), 0.45), life), 3.0 + 0.5 * life, true)
-		if life > 0.0:
-			draw_polyline(pts, Color(Art.ec("seve", "clair"), 0.3 * life), 1.0, true)
-	# Taches de cendre, qui pâlissent avec la floraison.
-	for i in 18:
-		var q := c + Vector2.from_angle(rng_d.randf() * TAU) * rng_d.randf_range(90.0, r * 0.88)
-		draw_colored_polygon(Art.ellipse(q, rng_d.randf_range(14.0, 30.0), rng_d.randf_range(8.0, 16.0), 12), Color(Art.ec("cendre", "sombre"), 0.35 * (1.0 - life)))
+	# Le creux (terre, paroi en strates, sol, racines) est cuit : nœud « Creux », derrière l'arène.
 	_draw_abyss()
-	# La racine pivot de la graine plonge du nord jusqu'au centre.
-	var tap := PackedVector2Array([c + Vector2(-34, -r - 60), c + Vector2(-20, -r * 0.55), c + Vector2(-10, -90), c + Vector2(10, -90), c + Vector2(22, -r * 0.55), c + Vector2(40, -r - 60)])
-	Art.volume(self, tap, Art.ec("racine", "sombre").lerp(Art.ec("racine"), 0.3 + 0.4 * life), 0.4)
 	# Annonce du resserrement (phase 3) : le futur bord clignote au sol.
 	if shrinking:
 		var blink := 0.5 + 0.5 * sin(t * 12.0)
@@ -763,32 +720,65 @@ func _draw_cave() -> void:
 		for i in 24:
 			var dir := Vector2.from_angle(TAU * i / 24.0)
 			draw_line(c + dir * (radius - 24.0), c + dir * lerpf(radius - 24.0, min_radius + 8.0, 0.3 + 0.2 * blink), Color(Art.c("danger"), 0.35), 3.0)
-	_draw_wall()
+	# Ce qui bouge sur la paroi : radicelles qui frémissent, poussière qui tombe après une secousse.
+	var sk := _shake_now()
+	FinaleCreux.draw_hanging(self, c, r, t, sk, bloom)
+	FinaleCreux.draw_dust(self, c, r, t - _shake_at, _shake_power)
+	# Lueurs de sève prises dans les racines du pied de la paroi (éteintes avant la victoire).
+	for i in 12:
+		var q := c + Vector2.from_angle(TAU * (i + 0.5) / 12.0) * (r + 12.0)
+		var on := 0.25 + 0.75 * bloom
+		draw_circle(q, 3.0 + 1.5 * sk, Color(Art.ec("seve" if bloom > 0.0 else "cendre", "clair"), (0.2 + 0.2 * sin(t * 1.7 + i) + 0.3 * sk) * on))
 	# Le puits de lumière où l'on arrive (et d'où l'on remonte, hors combat).
 	if state != "combat":
 		var lp := landing()
 		var col := Art.ec("seve", "clair") if state == "vaincue" else Art.c("interactif")
+		# La lumière qui tombe de la brèche, très haut au-dessus.
+		var beam := Color(FinaleCreux.cc("lumiere"), 0.05 + 0.015 * sin(t * 1.3))
+		draw_colored_polygon(PackedVector2Array([lp + Vector2(-30, -230), lp + Vector2(30, -230), lp + Vector2(DESCENT_RADIUS * 1.1, 0), lp + Vector2(-DESCENT_RADIUS * 1.1, 0)]), beam)
+		for i in 7:
+			var f := fposmod(t * 0.12 + i * 0.143, 1.0)
+			draw_circle(lp + Vector2(18.0 * sin(i * 2.1 + t * 0.4) * (0.4 + f), -230.0 * (1.0 - f)), 1.6, Color(FinaleCreux.cc("lumiere"), 0.5 * sin(PI * f)))
 		draw_colored_polygon(Art.ellipse(lp, DESCENT_RADIUS * 1.1, DESCENT_RADIUS * 0.5, 22), Color(col, 0.16 + 0.06 * sin(t * 2.0)))
 		draw_arc(lp, DESCENT_RADIUS, 0.0, TAU, 36, Color(col, 0.4), Art.TRAIT_FIN, true)
 		if armed and hold > 0.0:
 			draw_arc(lp, DESCENT_RADIUS + 8.0, -PI / 2.0, -PI / 2.0 + TAU * clampf(hold / DESCENT_HOLD, 0.0, 1.0), 36, col, Art.TRAIT, true)
-	# Floraison : fleurs et pousses claires sur le sol ravivé.
-	if life > 0.0:
-		var rf := RandomNumberGenerator.new()
-		rf.seed = 19
-		for i in 90:
-			var q := c + Vector2.from_angle(rf.randf() * TAU) * sqrt(rf.randf()) * r * 0.92
-			if rf.randf() > life:
-				continue
-			var tint: Color = [life_color, Art.ec("lumiere", "clair"), Art.ec("poison", "clair"), Art.ec("epine", "clair")][i % 4]
-			for k in 5:
-				draw_circle(q + Vector2.from_angle(TAU * k / 5.0) * 3.2, 2.4, Color(tint, 0.85))
-			draw_circle(q, 1.8, Art.c("butin"))
 	# Le boss endormi, puis ce qui pousse à sa place : dessinés par son script (BossBase).
 	if state == "ouverte" or state == "fermee":
 		boss_script.draw_sleeper(self)
 	elif state == "vaincue":
 		boss_script.draw_victory(self)
+
+
+## Secousse du creux (0 → 1) : changement de phase, effondrement, percussion.
+func shake_creux(power: float) -> void:
+	if Settings.reduce_effects:
+		power *= 0.4
+	if power >= _shake_now():
+		_shake_at = t
+		_shake_power = power
+
+
+func _shake_now() -> float:
+	var u := t - _shake_at
+	return 0.0 if u < 0.0 else _shake_power * exp(-u * 3.0)
+
+
+## Le décor réagit au combat (lecture seule : la phase du boss, l'éclair de ses coups de batterie).
+func _react_step() -> void:
+	if state != "combat" or not is_instance_valid(boss):
+		_last_phase = 0
+		_last_drum = -1.0
+		return
+	var ph: int = boss.phase
+	if _last_phase > 0 and ph != _last_phase:
+		shake_creux(1.0)
+	_last_phase = ph
+	var df = boss.get("drum_flash")
+	if df != null:
+		if float(df) >= 0.0 and (_last_drum < 0.0 or float(df) < _last_drum):
+			shake_creux(0.35)
+		_last_drum = float(df)
 
 
 ## L'effondrement (seconde forme du boss) : d'abord le futur bord clignote et le sol se fend, puis
@@ -813,31 +803,59 @@ func _draw_abyss() -> void:
 			var to := c + Vector2.from_angle(a + rng_a.randf_range(-0.1, 0.1)) * lerpf(collapse_radius, max_radius, u)
 			draw_line(from, to, Color(crack, 0.5 + 0.4 * blink), 3.0, true)
 		return
-	var outer := max_radius + 30.0
+	# Le gouffre s'ouvre jusqu'au pied de la paroi (la paroi cuite continue de descendre dedans).
+	var outer := max_radius + 6.0
 	var inner := radius
 	var abyss := Color(0.025, 0.018, 0.02)
 	_floor_batch.exact = true
 	_floor_batch.ring(c, outer, inner, abyss)
 	_floor_batch.flush(self)
-	# La lueur des braises au fond, plus vive près de l'île.
+	var n := 72
+	var strata := [FinaleCreux.cc("strate_bas").darkened(0.2), FinaleCreux.cc("strate_bas").darkened(0.45)]
+	# Au nord, la paroi plonge dans le gouffre (vue de face) ; au sud, la falaise de l'île (vue de face
+	# aussi) : deux bandes de strates qui s'enfoncent dans le noir, plus profondes à mesure qu'il s'ouvre.
+	var depth := 70.0 * k
+	for i in n:
+		var a0 := TAU * i / n
+		var a1 := TAU * (i + 1) / n
+		var hn := maxf(0.0, -sin((a0 + a1) * 0.5))
+		var hs := maxf(0.0, sin((a0 + a1) * 0.5))
+		var d0 := Vector2.from_angle(a0)
+		var d1 := Vector2.from_angle(a1)
+		if hn > 0.05 and depth > 2.0:
+			var e0 := c + d0 * outer
+			var e1 := c + d1 * outer
+			for j in 2:
+				var dd := Vector2(0, depth * hn * (j + 1) * 0.5)
+				draw_colored_polygon(PackedVector2Array([e0 + Vector2(0, depth * hn * j * 0.5), e1 + Vector2(0, depth * hn * j * 0.5), e1 + dd, e0 + dd]), Color(strata[j], 0.9 * (1.0 - 0.4 * j)))
+		if hs > 0.05 and depth > 2.0:
+			var i0 := c + d0 * inner
+			var i1 := c + d1 * inner
+			for j in 2:
+				var dd := Vector2(0, depth * hs * (j + 1) * 0.5)
+				var col: Color = FinaleCreux.cc("strate_haut").darkened(0.1) if j == 0 else strata[1]
+				draw_colored_polygon(PackedVector2Array([i0 + Vector2(0, depth * hs * j * 0.5), i1 + Vector2(0, depth * hs * j * 0.5), i1 + dd, i0 + dd]), col)
 	# Le fond rougeoie : des bandes de braise, plus vives au milieu du gouffre, qui ondulent.
+	# (loin en dessous : décalées vers le bas, sourdes, la braise vive seulement au fond)
 	var glow := Art.ec("cendre", "sombre")
 	var mid := (inner + outer) * 0.5
-	for j in 2:
-		var w := (outer - inner) * (0.6 - 0.3 * j)
-		draw_arc(c, mid + 6.0 * sin(t * 0.8 + j), 0.0, TAU, 96, Color(glow.lerp(Art.ec("cendre"), 0.4 * j), (0.4 + 0.15 * j) * k), w, true)
-	# Sous la lèvre de l'île, l'ombre de la falaise, puis son bord éclairé par en dessous.
-	draw_arc(c, inner + 10.0, 0.0, TAU, 96, Color(0.0, 0.0, 0.0, 0.6 * k), 18.0, true)
-	# La lèvre de l'île : de la terre arrachée, en dents irrégulières sous le mur.
-	var lip := Art.c("sol_mort").darkened(0.5)
+	for j in 3:
+		var w := (outer - inner) * (0.42 - 0.12 * j)
+		draw_arc(c + Vector2(0, depth * (0.8 + 0.3 * j)), mid + 4.0 * sin(t * 0.8 + j), 0.0, TAU, 96, Color(glow.lerp(Art.ec("cendre"), 0.35 * j).darkened(0.35 - 0.15 * j), (0.16 + 0.08 * j) * k), w, true)
+	# La lèvre de l'île : de la terre arrachée, en dents irrégulières, bord éclairé.
+	var lip := FinaleCreux.cc("sol").darkened(0.35)
 	for i in 40:
 		var a := TAU * i / 40.0
 		var a2 := a + TAU / 40.0
-		var drop := rng_a.randf_range(14.0, 34.0) * k
-		draw_colored_polygon(PackedVector2Array([c + Vector2.from_angle(a) * inner, c + Vector2.from_angle(a2) * inner, c + Vector2.from_angle((a + a2) * 0.5) * (inner + drop)]), lip)
-	draw_arc(c, inner, 0.0, TAU, 96, Color(Art.ec("cendre", "clair"), 0.65 * k), 3.0, true)
+		var drop := rng_a.randf_range(10.0, 26.0) * k * (0.4 + 0.6 * maxf(0.0, sin(a)))
+		if drop > 1.0:
+			draw_colored_polygon(PackedVector2Array([c + Vector2.from_angle(a) * inner, c + Vector2.from_angle(a2) * inner, c + Vector2.from_angle((a + a2) * 0.5) * (inner + drop * 0.5) + Vector2(0, drop * 0.6)]), lip)
+	draw_arc(c, inner, 0.0, TAU, 96, Color(Art.c("contour"), 0.8 * k), 4.0, true)
+	# Le bord de l'île, lisible tout autour (on tomberait), plus clair face à la lumière.
+	draw_arc(c, inner - 3.0, 0.0, TAU, 96, Color(Art.ec("cendre", "clair"), 0.35 * k), 2.0, true)
+	draw_arc(c, inner - 3.0, PI * 1.05, PI * 1.75, 48, Color(FinaleCreux.cc("lumiere"), 0.4 * k), 2.0, true)
 	# Les blocs qui tombent (puis flottent, très bas, en dérivant), de plus en plus petits.
-	var earth := Art.c("sol_mort").darkened(0.3)
+	var earth := FinaleCreux.cc("strate_haut")
 	for i in 30:
 		var a := rng_a.randf() * TAU
 		var d0 := rng_a.randf_range(collapse_radius + 20.0, max_radius - 10.0)
@@ -851,7 +869,8 @@ func _draw_abyss() -> void:
 		var block := PackedVector2Array()
 		for v in 5:
 			block.append(q + Vector2.from_angle(TAU * v / 5.0 + i + 0.3 * f) * size * shrink * (0.7 + 0.3 * ((v + i) % 3) / 2.0))
-		draw_colored_polygon(block, col)
+		draw_colored_polygon(block, col.darkened(0.35))
+		draw_colored_polygon(Transform2D(0.0, Vector2(0.7, 0.7), 0.0, q * 0.3 + Vector2(-2, -3)) * block, col)
 		if f < 1.0:
 			draw_polyline(block + PackedVector2Array([block[0]]), Color(Art.c("contour"), 0.6 * (1.0 - f)), 1.5, true)
 	# Des braises montent du gouffre.
@@ -860,40 +879,6 @@ func _draw_abyss() -> void:
 		var a := TAU * i / 24.0 + 0.4 * sin(i * 3.1)
 		var q := c + Vector2.from_angle(a) * lerpf(inner + 30.0, outer - 20.0, fposmod(i * 0.618, 1.0)) - Vector2(0, f * 60.0)
 		draw_circle(q, 2.0 + 1.5 * (1.0 - f), Color(Art.ec("cendre", "clair"), 0.7 * sin(PI * f) * k))
-
-
-## Le mur de racines : de grosses racines brunes couchées en cercle, des radicelles qui pendent.
-## Il suit le rayon courant (resserrement), ou reste au bord du gouffre après l'effondrement.
-func _draw_wall() -> void:
-	var c := center
-	# Après l'effondrement, le mur reste de l'autre côté du gouffre (l'île n'a plus que sa lèvre).
-	var wr := lerpf(radius, max_radius, collapse_k)
-	var bark := Art.ec("racine", "sombre").lerp(Art.c("decor"), 0.25)
-	var light := Art.ec("racine").darkened(0.15)
-	var n := _wall.size()
-	draw_arc(c, wr + 26.0, 0.0, TAU, 96, Color(Art.c("contour"), 0.8), 46.0, true)
-	for i in n:
-		var w: Array = _wall[i]
-		var a := TAU * i / n + float(w[0])
-		var a2 := a + TAU / n * 1.6
-		var rr := wr + 18.0 + 8.0 * float(w[2])
-		var p1 := c + Vector2.from_angle(a) * rr
-		var p2 := c + Vector2.from_angle(a2) * (rr + 6.0)
-		var width := 18.0 * float(w[1])
-		draw_line(p1, p2, bark, width, true)
-		draw_line(p1 + Vector2(0, -width * 0.25), p2 + Vector2(0, -width * 0.25), Color(light, 0.45), width * 0.25, true)
-		# Radicelles qui pendent vers l'intérieur, une racine sur trois.
-		if i % 3 == 0:
-			var tip := c + Vector2.from_angle(a + 0.02) * (rr - 30.0 - 14.0 * float(w[1]))
-			draw_line(p1, tip, bark.lightened(0.05), 3.0, true)
-			if bloom > 0.0:
-				draw_circle(tip, 3.5 * bloom, Color(Art.ec("seve", "clair"), 0.8 * bloom))
-	# Lueurs de sève prisonnières des racines (éteintes avant la victoire).
-	for i in 12:
-		var a := TAU * (i + 0.5) / 12.0
-		var q := c + Vector2.from_angle(a) * (wr + 20.0)
-		var on := 0.25 + 0.75 * bloom
-		draw_circle(q, 5.0, Color(Art.ec("seve" if bloom > 0.0 else "cendre", "clair"), (0.25 + 0.2 * sin(t * 1.7 + i)) * on))
 
 
 # --- Robot (mode « -- --autotest=boss --region=finale » et robot d'aventure) ---
