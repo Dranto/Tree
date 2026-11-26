@@ -22,6 +22,7 @@ const Regions = preload("res://scripts/regions.gd")
 ## Sol en trois couches (refonte du monde « Paysages d'herbier », vague 1 S) : matière, détails et
 ## pousses du bord de vie dessinés une fois par carré de sol en cache.
 const GroundLayers = preload("res://scripts/world_bake/ground_layers.gd")
+const Frontieres = preload("res://scripts/world_art/frontieres.gd")
 
 static var _noise_tex: ImageTexture
 
@@ -99,7 +100,12 @@ func _ready() -> void:
 	mat.set_shader_parameter("noise_tex", noise_texture())
 	mat.set_shader_parameter("noise_period", NOISE_PERIOD)
 	mat.set_shader_parameter("region_inner", Regions.INNER)
-	mat.set_shader_parameter("region_edge", Regions.EDGE)
+	# Frontières entre régions (vague 3 B) : bande d'îlots, mêmes constantes que world_art/frontieres.gd.
+	mat.set_shader_parameter("border_half", Frontieres.HALF)
+	mat.set_shader_parameter("border_inner", Frontieres.HALF_INNER)
+	mat.set_shader_parameter("border_amp", Frontieres.AMP)
+	mat.set_shader_parameter("border_scale", Frontieres.NOISE_SCALE)
+	mat.set_shader_parameter("border_offset", Frontieres.NOISE_OFFSET)
 	mat.set_shader_parameter("front", FRONT)
 	var pal := palette()
 	for k in PALETTE_SOL:

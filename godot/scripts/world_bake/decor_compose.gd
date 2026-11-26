@@ -26,6 +26,8 @@ extends RefCounted
 const Flora = preload("res://scripts/flora.gd")
 const Regions = preload("res://scripts/regions.gd")
 const Decor = preload("res://scripts/world_art/decor.gd")
+## Frontières entre régions (vague 3 B) : bande où les deux décors s'entremêlent, éléments de passage.
+const Frontieres = preload("res://scripts/world_art/frontieres.gd")
 
 ## « --decor-ancien » : le semis d'avant (comparaisons).
 static var enabled := true
@@ -115,6 +117,15 @@ const SCRIPTS := {
 
 ## Dernière composition (tests, banc) : région -> {clearings, paths, placed, removed}.
 static var report := {}
+## Zones dégagées de chaque région (clearings), et objets posés dans une bande de frontière : une région
+## n'y pose rien sur les clairières ni sur les objets de sa voisine.
+static var _geos := {}
+static var _band_placed := []
+## Éléments de passage posés (tests, banc) : [{pair, kind, pos}].
+static var passages := []
+## Les éléments de passage restent à cette distance du bord du monde (le bord du monde, K, dessine sa
+## lisière sur les 180 derniers px).
+const PASSAGE_EDGE := 200.0
 
 
 ## Un objet de la planche W (world_art/decor.gd) posé dans le jeu : mort (« fletri ») ou vivant
@@ -141,6 +152,16 @@ class Etat extends RefCounted:
 
 	func decor_etat_at(_p: Vector2) -> String:
 		return etat
+
+
+## Élément de passage d'une frontière (world_art/frontieres.gd › draw_passage) : mêle les matières des
+## deux régions voisines ; dessin seul, sans collision, cuit avec le décor de la région « bake_region ».
+class Passage extends Flora.DecorTree:
+	var kind := "ronces_chapeaux"
+	var flip := false
+
+	func _paint() -> void:
+		Frontieres.draw_passage(self, kind, Vector2.ZERO, size, tree_seed, "ravive" if alive and growth() > 0.5 else "fletri", flip)
 
 
 static func configure() -> void:
@@ -250,9 +271,15 @@ static func apply(flora) -> void:
 		removed[reg] = removed.get(reg, 0) + 1
 		flora.remove_tree(t)
 	var all := []
+	_geos = {}
+	_band_placed = []
+	for reg in Regions.ids():
+		if LISIERES.has(reg):
+			_geos[reg] = clearings(reg)
 	for reg in Regions.ids():
 		if LISIERES.has(reg):
 			all.append_array(_compose(flora, reg, removed.get(reg, 0)))
+	all.append_array(frontier_passages(flora, all))
 	var thinned := _thin(flora, all)
 	for reg in report:
 		report[reg]["thinned"] = thinned.get(reg, 0)
@@ -278,7 +305,7 @@ static func _tall(t, h: float) -> void:
 
 static func _compose(flora, reg: String, removed: int) -> Array:
 	var lis: Dictionary = LISIERES[reg]
-	var geo := clearings(reg)
+	var geo: Dictionary = _geos[reg] if _geos.has(reg) else clearings(reg)
 	var r := RandomNumberGenerator.new()
 	r.seed = hash([reg, "lisiere"])
 	var placed := []
@@ -296,7 +323,7 @@ static func _compose(flora, reg: String, removed: int) -> Array:
 	for gy in range(-n, n + 1):
 		for gx in range(-n, n + 1):
 			var c := Vector2(gx + r.randf_range(-0.45, 0.45), gy + r.randf_range(-0.45, 0.45)) * CLUSTER_STEP
-			if Regions.region_weighted(c) != reg or not _in_world(c, 20.0):
+			if _owner(c) != reg or not _in_world(c, 20.0):
 				continue
 			var e := clear_dist(c, geo)
 			if e < 18.0:
@@ -384,11 +411,14 @@ static func _try(flora, reg: String, pick: Array, p: Vector2, r: RandomNumberGen
 	var size := r.randf_range(pick[1], pick[2])
 	var seed := r.randi()
 	var flip := r.randf() < 0.5
-	if Regions.region_weighted(p) != reg or not _in_world(p, 10.0):
+	if _owner(p) != reg or not _in_world(p, 10.0):
 		return null
 	var foot := foot_of(sort, size)
 	var h := height_of(sort, size)
 	if clear_dist(p, geo) < foot * 0.55 + 6.0:
+		return null
+	var band := _in_band(p, reg)
+	if band != "" and not _band_free(p, foot, band, fg > 0.0):
 		return null
 	for b in obstacles:
 		if p.distance_to(b.position) < float(b.radius) + foot * 0.45 + 6.0:
@@ -422,7 +452,123 @@ static func _try(flora, reg: String, pick: Array, p: Vector2, r: RandomNumberGen
 	t.set_meta("centre", fg > 0.0)
 	flora.add_decor(t)
 	placed.append(t)
+	if band != "":
+		_band_placed.append(t)
 	return t
+
+
+# --- Frontières entre régions (vague 3 B) ---
+
+## Région du décor en un point : celle de l'îlot de sol (Frontieres.region_at). Dans la bande de
+## frontière, le décor d'une région se raréfie à mesure qu'on avance chez sa voisine, celui de la voisine
+## s'épaissit, en suivant les langues et les îlots du sol.
+static func _owner(p: Vector2) -> String:
+	return Frontieres.region_at(p)
+
+
+## Si p est dans la bande d'une frontière (avec une marge de BIG_GAP : grands éléments espacés), l'autre région de la
+## paire que « reg » ; "" sinon.
+static func _in_band(p: Vector2, reg: String) -> String:
+	var mx := Frontieres.mix(p)
+	if mx.is_empty() or mx["b"] == "" or absf(mx["s"]) > Frontieres.HALF + BIG_GAP:
+		return ""
+	return mx["b"] if mx["a"] == reg else mx["a"]
+
+
+## Place libre dans la bande : hors des clairières et des lieux de la région voisine, et loin des objets
+## que les deux régions y ont déjà posés.
+static func _band_free(p: Vector2, foot: float, other: String, big: bool) -> bool:
+	if _geos.has(other) and clear_dist(p, _geos[other]) < foot * 0.55 + 6.0:
+		return false
+	for o in _band_placed:
+		if not is_instance_valid(o):
+			continue
+		var d := p.distance_to(o.position)
+		if d < (foot + o.get_meta("foot")) * 0.42 or (big and o.get_meta("centre", false) and d < BIG_GAP):
+			return false
+	return true
+
+
+## Éléments de passage (data/world_borders.json) : deux ou trois par frontière, sur la demi-droite ou
+## tout près, dans une place libre de la bande (hors des clairières des deux régions, des obstacles et
+## des lieux). Les petits objets trop proches leur laissent la place. Rend les éléments posés.
+static func frontier_passages(flora, placed: Array) -> Array:
+	passages = []
+	var out := []
+	var obstacles := []
+	for b in flora.bushes:
+		obstacles.append(b)
+	for pr in Frontieres.pairs():
+		var a: String = pr[0]
+		var b: String = pr[1]
+		var def := Frontieres.pair_def(a, b)
+		if def.is_empty() or not LISIERES.has(a) or not LISIERES.has(b):
+			continue
+		var dir := Vector2.from_angle(pr[2])
+		var across := dir.orthogonal()
+		var lo := Regions.INNER + 380.0
+		var hi := Regions.reach(pr[2]) - PASSAGE_EDGE - 60.0
+		var r := RandomNumberGenerator.new()
+		r.seed = hash([a, b, "passage"])
+		var size := float(def.get("size", 1.0))
+		var h := Frontieres.PASSAGE_H * size
+		var foot := h * 0.55
+		var n := 0
+		for f in def.get("spots", []):
+			var base := dir * lerpf(lo, hi, float(f))
+			var best = null
+			# Cherche autour du point prévu : d'abord sur la demi-droite, puis de plus en plus loin.
+			for k in 24:
+				var q := base + dir * r.randf_range(-1.0, 1.0) * 30.0 * k + across * r.randf_range(-1.0, 1.0) * minf(12.0 * k, Frontieres.HALF * 0.5)
+				if _passage_ok(q, foot, a, b, obstacles, out):
+					best = q
+					break
+			if best == null:
+				continue
+			var t := Passage.new()
+			t.kind = str(def.get("passage", ""))
+			t.position = best
+			t.size = size
+			# Une seule image par paire et par état dans l'atlas (même germe, sans miroir) : les deux ou
+			# trois éléments d'une frontière sont loin les uns des autres.
+			t.tree_seed = 1
+			t.bake_region = str(def.get("atlas", _owner(best) if _owner(best) != "" else a))
+			t.alive = flora.ground.life_at(best) > flora.ALIVE
+			t.sway = 0.15
+			_tall(t, h)
+			t.set_meta("foot", foot)
+			t.set_meta("centre", true)
+			# Les petits objets composés trop proches lui laissent la place.
+			for o in placed.duplicate():
+				if is_instance_valid(o) and not o.get_meta("centre", false) and o.position.distance_to(best) < foot + o.get_meta("foot") * 0.5:
+					placed.erase(o)
+					_band_placed.erase(o)
+					flora.remove_tree(o)
+			flora.add_decor(t)
+			out.append(t)
+			passages.append({"pair": a + "-" + b, "kind": t.kind, "pos": best})
+			n += 1
+	return out
+
+
+static func _passage_ok(q: Vector2, foot: float, a: String, b: String, obstacles: Array, done: Array) -> bool:
+	var lim := Regions.WORLD_HALF - PASSAGE_EDGE
+	if absf(q.x) > lim or absf(q.y) > lim or not _in_world(q, 10.0):
+		return false
+	for reg in [a, b]:
+		if _geos.has(reg) and clear_dist(q, _geos[reg]) < foot + 20.0:
+			return false
+	for o in obstacles:
+		if q.distance_to(o.position) < float(o.radius) + foot * 0.6 + 10.0:
+			return false
+	for o in done:
+		if q.distance_to(o.position) < 400.0:
+			return false
+	# Pas sur un grand élément déjà posé (centres de grappe, repères).
+	for o in _band_placed:
+		if is_instance_valid(o) and o.get_meta("centre", false) and q.distance_to(o.position) < foot + o.get_meta("foot") * 0.6:
+			return false
+	return true
 
 
 static func _make(sort: String, reg: String):

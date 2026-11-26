@@ -41,6 +41,20 @@ func _put(pos: Vector2) -> void:
 	main.camera.reset_smoothing()
 
 
+## Pixels d'un blanc franc (aucun lieu n'en dessine) dans le carré de 260 px autour du sanctuaire.
+func _white_near(s) -> int:
+	await RenderingServer.frame_post_draw
+	var img: Image = root.get_viewport().get_texture().get_image()
+	var c: Vector2 = root.get_viewport().get_canvas_transform() * s.position
+	var n := 0
+	for y in range(maxi(0, int(c.y) - 130), mini(img.get_height(), int(c.y) + 130)):
+		for x in range(maxi(0, int(c.x) - 130), mini(img.get_width(), int(c.x) + 130)):
+			var px := img.get_pixel(x, y)
+			if px.r > 0.99 and px.g > 0.99 and px.b > 0.99:
+				n += 1
+	return n
+
+
 func _run() -> void:
 	Sanctuary = load("res://scripts/sanctuary.gd")
 	Heart = load("res://scripts/heart.gd")
@@ -116,6 +130,36 @@ func _run() -> void:
 	await _steps(10)
 	check(LieuxBake.ready(a._bake_key()), "table cuite")
 	check(a.body.visible and a.body.modulate.a > 0.9, "visible de près")
+
+	print("Pas de tache blanche quand les images cuites sont rendues (téléportation)")
+	# Les pierres du sanctuaire ne se redessinent pas à chaque image : leurs commandes de dessin gardent
+	# la texture de l'atlas. Rendue (budget dépassé après une téléportation), elle ne doit pas s'afficher
+	# en tache blanche, ni tout de suite, ni une fois l'atlas recuit.
+	s.frozen = true
+	_put(s.position + Vector2(0, 250))
+	await _steps(10)
+	check(LieuxBake.ready(s._bake_key()) and (await _white_near(s)) == 0, "de près, pierres et vasque sans tache blanche")
+	var epoch0: int = LieuxBake.epoch
+	_put(Vector2(5000, 5000))
+	await _steps(10)
+	for sk in LieuxBake.sets.keys().duplicate():
+		LieuxBake.release(sk)
+	check(LieuxBake.epoch > epoch0, "rendre un jeu change le numéro des lieux cuits")
+	_put(s.position + Vector2(0, 250))
+	await _steps(2)
+	check((await _white_near(s)) == 0, "juste après le rendu : pas de tache blanche (%d px)" % (await _white_near(s)))
+	await _steps(40)
+	check(LieuxBake.ready(s._bake_key()), "l'atlas est recuit")
+	var white := 0
+	for i in 5:
+		await _steps(3)
+		white = maxi(white, await _white_near(s))
+	check(white == 0, "une fois recuit : pas de tache blanche (%d px)" % white)
+	var t0 := Time.get_ticks_msec()
+	while not LieuxBake._grave.is_empty() and Time.get_ticks_msec() - t0 < LieuxBake.GRAVE_MSEC * 3:
+		await _steps(5)
+		LieuxBake.ready(s._bake_key())
+	check(LieuxBake._grave.is_empty(), "les textures rendues ne s'accumulent pas")
 
 	print("Libération")
 	var n: int = main.actors_layer.get_children().filter(func(c): return c.get("sanct") != null).size()
