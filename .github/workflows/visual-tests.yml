@@ -143,7 +143,7 @@ jobs:
             n=$((n + 1))
           done < <(cat parts/*/results.txt 2>/dev/null)
           echo "n=$n" >> "$GITHUB_OUTPUT"
-          { echo "### Références prises dans la CI : $n"; cat liste.md 2>/dev/null; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "### Références prises dans la CI : $n"; cat liste.md 2>/dev/null || true; } >> "$GITHUB_STEP_SUMMARY"
 
       # Un push fait avec le jeton du workflow ne relance aucun workflow : les tests visuels sont
       # relancés à la main sur le nouveau commit, pour vérifier que tout correspond.
