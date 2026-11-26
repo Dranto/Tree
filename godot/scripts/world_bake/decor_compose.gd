@@ -55,7 +55,7 @@ const TALL := 80.0
 ## world_art/decor.gd (« arbre », « haie »…) ou une classe d'un décor de région (« plateau:Twisted »).
 ## « bord » : au bord des clairières ; « grappe » : autour d'un grand ; « grand » : le centre d'une
 ## grappe dans la lisière dense ; « repere » : dessin des repères du fichier (par sorte, « * » : tous).
-const LISIERES := {
+const LISIERES := {  # i18n: non (début)
 	"ronce": {
 		"bord": [["buisson", 0.75, 1.1, 4], ["rocher", 0.6, 1.0, 1.2], ["muret", 0.85, 1.05, 1]],
 		"grappe": [["haie", 0.85, 1.25, 3], ["buisson", 0.95, 1.3, 2.5], ["rocher", 0.8, 1.25, 0.8], ["muret", 0.9, 1.1, 0.4]],
@@ -94,7 +94,7 @@ const SWAY := {
 	"arbre": 1.0, "haie": 0.7, "buisson": 0.6, "champignon": 0.25, "chapeau_geant": 0.15, "roseaux": 1.2,
 	"fougere": 0.9, "Twisted": 0.9, "Grass": 1.1, "Willow": 1.0, "Fern": 0.9, "Bleached": 0.7,
 	"StoneTree": 0.1, "DecorTree": 1.0, "DecorBramble": 0.8, "DecorBush": 0.35, "DecorReeds": 1.2, "DecorMushroom": 0.25,
-}
+}  # i18n: non (fin)
 ## Décor de région -> son script (pour « plateau:Twisted »).
 const SCRIPTS := {
 	"plateau": "res://scripts/decor_plateau.gd", "vallee": "res://scripts/decor_vallee.gd",
@@ -347,9 +347,9 @@ static func height_of(sort: String, size: float) -> float:
 		return Decor.HEIGHT[sort] * size
 	# Anciens dessins : un arbre de taille 1 fait ~60 px, une touffe ~18 px.
 	match sort.get_slice(":", 1):
-		"Twisted", "Willow", "Bleached", "StoneTree":
+		"Twisted", "Willow", "Bleached", "StoneTree":  # i18n: non
 			return 52.0 * size
-		"Stump":
+		"Stump":  # i18n: non
 			return 26.0 * size
 		_:
 			return 16.0 * size
