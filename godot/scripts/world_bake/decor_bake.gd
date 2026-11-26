@@ -46,8 +46,15 @@ static var use_cache := true
 ## Une ligne par région cuite (« --decor-verbeux »).
 static var verbose := false
 ## Mémoire des atlas gardés (octets, mipmaps comprises) : au-delà, la région la plus ancienne hors du
-## champ est rendue et relue du cache si elle revient.
-static var budget := 96 * 1024 * 1024
+## champ est rendue et relue du cache si elle revient. Une région du champ n'est jamais rendue (sinon
+## elle se recuit en boucle) : le plafond peut être dépassé tant qu'elle est en vue.
+## Enveloppe par atlas (vague 2, 26/11) : ENVELOPE ; 6 régions et l'oasis tiennent sous le plafond.
+static var budget := 128 * 1024 * 1024
+## Taille d'atlas visée par région (octets, mipmaps comprises), vérifiée par tests/decor_test.gd :
+## Roncier et Marais 24 Mo, les quatre autres 18 Mo, l'oasis 6 Mo (24 + 24 + 4 × 18 + 6 = 126 Mo).
+const ENVELOPE := {"ronce": 24 << 20, "spore": 24 << 20, "commun": 6 << 20, "": 18 << 20}
+## Régions du champ de la caméra (Runtime._want) : trim() ne les rend pas.
+static var in_view := {}
 const PAD := 3
 ## Largeur de l'atlas (pixels).
 const ATLAS_W := 2048
@@ -94,6 +101,7 @@ static var _flora_ref: WeakRef
 ## Vide les atlas, le matériau et les cuissons en cours (fin de partie, fermeture).
 static func release() -> void:
 	atlases.clear()
+	in_view.clear()
 	_material = null
 	_wanted.clear()
 	_failed.clear()
@@ -480,7 +488,7 @@ static func trim(flora, keep := {}) -> void:
 		return
 	var old := []
 	for r in atlases:
-		if not keep.has(r):
+		if not keep.has(r) and not in_view.has(r):
 			old.append([atlases[r].last_used, r])
 	old.sort()
 	for it in old:
@@ -618,6 +626,7 @@ class Runtime extends Node:
 					reg = COMMUN
 				if not B.atlases.has(reg):
 					_keep[reg] = true
+					B.in_view[reg] = true
 					B.request(reg)
 
 	## Régions du champ de la caméra (et un peu au-delà) : demandées, gardées en mémoire.
@@ -637,6 +646,7 @@ class Runtime extends Node:
 			else:
 				B.request(reg)
 		_keep = keep
+		B.in_view = keep
 		B.trim(flora, keep)
 
 	## Premier plan : les grands éléments proches du héros, à demi transparents si le héros ou un
@@ -691,3 +701,8 @@ class Runtime extends Node:
 		var box: Rect2 = t.get_meta("box", Rect2(-t.tall * 0.4, -t.tall, t.tall * 0.8, t.tall))
 		var body := Rect2(pos - t.position - Vector2(r, r * 2.2), Vector2(r * 2.0, r * 2.4))
 		return box.grow_individual(-box.size.x * 0.18, -box.size.y * 0.08, -box.size.x * 0.18, 0.0).intersects(body)
+
+
+## Enveloppe d'atlas d'une région (ENVELOPE).
+static func envelope(region: String) -> int:
+	return ENVELOPE.get(region, ENVELOPE[""])
