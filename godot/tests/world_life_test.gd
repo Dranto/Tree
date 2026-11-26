@@ -33,6 +33,13 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
+## Grille des Flétris refaite à la main (la boucle du jeu ne tourne pas entre deux appels), sans ceux
+## qu'une autre partie du jeu a libérés entre-temps.
+func _grid() -> void:
+	main.enemies = main.enemies.filter(func(x): return is_instance_valid(x))
+	main._rebuild_grid()
+
+
 func _steps(n: int) -> void:
 	for i in n:
 		await physics_frame
@@ -184,11 +191,11 @@ func _run() -> void:
 	e.set_physics_process(false)
 	e.hp = 1.0e9
 	e.max_hp = 1.0e9
-	main._rebuild_grid()
+	_grid()
 	life._enemies(player)
 	for i in 6:
 		e.position += Vector2(60, 0)
-		main._rebuild_grid()
+		_grid()
 		life._enemies(player)
 	check(life._push.any(func(q): return q["f"] > 0.0), "un Flétri qui charge secoue le décor")
 	check(life.marks.any(func(m): return m["f"] == "cendre"), "un Flétri laisse de la cendre sur la terre vivante")
