@@ -2,7 +2,7 @@
 ## « region », priorités (un moment plus fort remplace un plus faible, jamais l'inverse), options à 0
 ## (contour sans éclair, caméra immobile, vitesse normale), plafond de 3 éclairs par seconde sur un
 ## combat de boss simulé, ralenti réservé aux Cœurs et aux boss, et vitesse du jeu toujours revenue à 1.
-## Lancer : tools/godot.sh --headless -s res://tests/moments_test.gd
+## Lancer : tools/godot.sh --headless --fixed-fps 60 -s res://tests/moments_test.gd
 extends SceneTree
 
 const Content = preload("res://scripts/content.gd")
@@ -29,10 +29,15 @@ func _frames(n: int) -> void:
 		await process_frame
 
 
-## Attend « sec » secondes réelles (les moments comptent en temps réel).
+## Attend « sec » secondes du temps réel des moments (leur horloge : delta ramené à l'échelle du jeu,
+## plafonné à 0,1 s par image). Pas l'horloge murale : sur une machine chargée, une image longue
+## faisait dépasser l'attente alors que les moments n'avaient pas encore avancé.
+## Garde-fou : au plus 20 images par seconde attendue, plus 120.
 func _wait_real(sec: float) -> void:
-	var end := Time.get_ticks_msec() + int(sec * 1000.0)
-	while Time.get_ticks_msec() < end:
+	var end: float = main.moments._clock + sec
+	var guard := int(sec * 20.0) + 120
+	while main.moments._clock < end and guard > 0:
+		guard -= 1
 		await process_frame
 
 
@@ -188,9 +193,11 @@ func _run() -> void:
 
 	print("Combat de boss simulé : au plus 3 éclairs par seconde")
 	var stamps: Array = []
-	var end := Time.get_ticks_msec() + 2600
+	var end: float = m._clock + 2.6
 	var i := 0
-	while Time.get_ticks_msec() < end:
+	var guard := 600
+	while m._clock < end and guard > 0:
+		guard -= 1
 		i += 1
 		var before: int = m._flashes.size()
 		match i % 4:

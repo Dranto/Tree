@@ -159,15 +159,25 @@ func _power(start: int, n: int, f: float) -> float:
 
 
 ## Section qui sonne autour d'un échantillon ("" : silence).
+## Le seuil est relatif : la note doit porter au moins la moitié de l'énergie de la fenêtre (une note
+## pure donne 1). L'ancien seuil absolu échouait quand le début du morceau sonnait faiblement
+## (niveau variable d'une exécution à l'autre : amplitude 0,004 au lieu de 0,03).
 func _label(start: int, n := 220) -> String:
 	if start < 0 or start + n > recorded.size():
 		return "?"
+	var energy := 0.0
+	for i in n:
+		var x: float = recorded[start + i].x
+		energy += x * x
+	# Silence : amplitude de crête moyenne sous 0,001.
+	if energy < n * 5.0e-7:
+		return ""
 	var best := ""
-	var best_p := 0.5
+	var best_r := 0.5
 	for name in TONES:
-		var p := _power(start, n, TONES[name])
-		if p > best_p:
-			best_p = p
+		var r := _power(start, n, TONES[name]) / (energy * n / 2.0)
+		if r > best_r:
+			best_r = r
 			best = name
 	return best
 

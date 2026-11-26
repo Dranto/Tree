@@ -23,14 +23,15 @@ static func draw(ci: CanvasItem, feet: Vector2, h: float, o := {}) -> void:
 	var strike: float = p["strike"]
 	Ink.flash = hit
 	var base := Ink.frame(feet, h, p["flip"])
-	Ink.ground_shadow(ci, base, Vector2(0, 0), 50.0)
+	# Ombre serrée sous le corps : une grande ombre noyait ce petit Flétri dans le sol sombre de la forêt.
+	Ink.ground_shadow(ci, base, Vector2(-6, 0), 24.0)
 	# Morsure : élan vers l'avant, puis retour. Trot : petit rebond rapide.
 	var bite := 0.0 if strike < 0.0 else sin(PI * clampf(strike * 1.6, 0.0, 1.0))
 	var bob := -absf(sin(walk * 2.0)) * 2.4 * mv
 	var sq := Vector2(1.0 + 0.12 * hit + 0.08 * bite, 1.0 - 0.14 * hit - 0.04 * bite)
 	var xf := base * Transform2D(-0.05 * bite + 0.06 * hit, sq, 0.0, Vector2(8.0 * bite, bob))
 	var cen := R.pal("cendre")
-	var legc := Art.bc("racine", "bois_ombre").lightened(0.1)
+	var legc := Art.bc("racine", "bois").lightened(0.1)
 	# Pattes du fond : trépied alterné, battement rapide.
 	for i in 3:
 		var ph := walk * 2.0 + (0.0 if i % 2 else PI)

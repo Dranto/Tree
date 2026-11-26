@@ -28,7 +28,7 @@ jobs:
           key: godot-4.7-stable
 
       - name: Importer le projet
-        run: tools/godot.sh --headless --import
+        run: tools/import.sh   # relance l'import s'il plante (3 essais)
 
       - name: Calage de l'arbre pendant les déplacements (1280x720 et 3440x1440)
         run: |
