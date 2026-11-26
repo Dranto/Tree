@@ -14,6 +14,7 @@ const Sol = preload("res://scripts/world_art/sol.gd")
 const HEIGHT := {
 	"arbre": 172.5, "haie": 71.25, "buisson": 43.5, "rocher": 52.5, "muret": 25.5, "ruine": 202.5,
 	"champignon": 142.5, "chapeau_geant": 247.5, "tronc": 33.0, "roseaux": 58.5, "fougere": 39.0,
+	"grand_arbre": 270.0,
 }
 
 
@@ -44,6 +45,8 @@ static func draw(ci: CanvasItem, o: Dictionary, m) -> void:
 	match o["kind"]:
 		"arbre":
 			_arbre(ci, at, h, fl, r, P, etat, reg, k)
+		"grand_arbre":
+			_grand_arbre(ci, at, h, fl, r, P, etat, reg, k)
 		"haie":
 			_haie(ci, at, h, fl, r, P, etat, reg, k)
 		"buisson":
@@ -54,8 +57,10 @@ static func draw(ci: CanvasItem, o: Dictionary, m) -> void:
 			_muret(ci, at, h, fl, r, P, etat, reg)
 		"ruine":
 			_ruine(ci, at, h, fl, r, P, etat, reg)
-		"champignon", "chapeau_geant":
-			_champignon(ci, at, h, fl, r, P, etat, k, o["kind"] == "chapeau_geant")
+		"champignon":
+			_champignon(ci, at, h, fl, r, P, etat, k, false)
+		"chapeau_geant":
+			_chapeau_geant(ci, at, h, fl, r, P, etat, k)
 		"tronc":
 			_tronc(ci, at, h, fl, r, P, etat)
 		"roseaux":
@@ -131,6 +136,105 @@ static func _arbre(ci: CanvasItem, at: Vector2, h: float, fl: float, r: RandomNu
 			O.brush(ci, pts, 1.0, ron["clair"], 0.5, 0.0)
 			for j in range(1, 10, 2):
 				O.poly(ci, O.Ink.thorn(pts[j], -PI * 0.5 + (0.9 if j % 4 == 1 else -0.9) + PI * 0.5 * (1 if j % 4 == 1 else -1), 3.5, 1.6), ron["ombre"])
+
+
+## Grand arbre (repère du Roncier) : un vieux chêne trapu, plus grand que tout le reste et d'une
+## silhouette unique : contreforts de racines, tronc creux, houppier large et plat. Flétri : branches
+## nues ligotées de grosses tiges de ronce, braise au fond du creux. Ravivé : houppier épais piqué
+## d'églantines, mûres pendantes, et le creux devient un nid de lumière douce.
+static func _grand_arbre(ci: CanvasItem, at: Vector2, h: float, fl: float, r: RandomNumberGenerator, P: Callable, etat: String, reg: String, k: float) -> void:
+	var bois: Dictionary = P.call("bois")
+	var ron: Dictionary = P.call("ronce")
+	var w := h * 0.085
+	var top := at + Vector2(h * 0.03 * fl, -h * 0.42)
+	# Contreforts : racines épaisses qui s'étalent à plat (vue de trois quarts).
+	for i in 6:
+		var a := PI * (0.02 + 0.96 * i / 5.0)
+		var tip := at + Vector2(cos(a) * w * 4.2, sin(a) * w * 0.9 + 2.0) * Vector2(fl, 1.0)
+		var base := at + Vector2(cos(a) * w * 0.8, -h * 0.05)
+		O.part(ci, PackedVector2Array([base + Vector2(-w * 0.4, 0), tip + Vector2(0, -2), tip + Vector2(2, 1), base + Vector2(w * 0.4, h * 0.03)]), bois, 1.3, 1.0, 0.3)
+	var trunk := PackedVector2Array([
+		at + Vector2(-w * 2.0, 3), at + Vector2(-w * 1.4, -h * 0.12), top + Vector2(-w * 1.0, h * 0.04), top + Vector2(-w * 1.2, -h * 0.02),
+		top + Vector2(w * 1.1, -h * 0.03), top + Vector2(w * 0.95, h * 0.05), at + Vector2(w * 1.5, -h * 0.12), at + Vector2(w * 2.1, 3)])
+	O.part(ci, trunk, bois, 1.8, 1.0, 0.4)
+	# Écorce : sillons verticaux sur le flanc à l'ombre.
+	for i in 5:
+		var x := -w * 0.9 + w * 0.45 * i
+		var a0 := at + Vector2(x, -h * 0.04)
+		var a1 := top + Vector2(x * 0.75 + r.randf_range(-2, 2), h * 0.03)
+		ci.draw_line(a0, a1, Color(bois["ombre"], 0.55), 1.1, true)
+	# Le creux : une ogive sombre au pied du tronc.
+	var hc := at + Vector2(w * 0.15 * fl, -h * 0.13)
+	var hollow := PackedVector2Array()
+	for i in 13:
+		var a := PI * i / 12.0
+		var y := -sin(a) * h * 0.075 - pow(sin(a), 6.0) * h * 0.03
+		hollow.append(hc + Vector2(-cos(a) * w * 0.55 * (1.0 - 0.15 * sin(a)), y))
+	hollow.append(hc + Vector2(w * 0.5, h * 0.06))
+	hollow.append(hc + Vector2(-w * 0.5, h * 0.06))
+	O.poly(ci, hollow, Art.mc("commun", "", "encre_decor"))
+	if etat == "ravive":
+		ci.draw_circle(hc + Vector2(0, h * 0.01), w * 0.5, Color(O.fg(Art.mc(reg, "ravive", "fleur_coeur"), k), 0.35))
+		ci.draw_circle(hc + Vector2(0, h * 0.015), w * 0.22, O.fg(Art.mc(reg, "ravive", "fleur_coeur"), k))
+	elif etat == "fletri":
+		ci.draw_circle(hc + Vector2(0, h * 0.02), w * 0.5, Color(Art.bc("braise"), 0.16))
+		ci.draw_circle(hc + Vector2(0, h * 0.03), w * 0.16, Art.bc("braise"))
+	# Charpentières : grosses branches presque horizontales, qui se divisent.
+	var tips := []
+	_branch(ci, top, Vector2(-1.0 * fl, -0.45).normalized(), h * 0.3, w * 0.95, 3, r, bois, tips)
+	_branch(ci, top, Vector2(1.0 * fl, -0.5).normalized(), h * 0.3, w * 0.95, 3, r, bois, tips)
+	_branch(ci, top + Vector2(0, -h * 0.02), Vector2(0.1 * fl, -1.0).normalized(), h * 0.22, w * 0.8, 3, r, bois, tips)
+	# Grosses tiges de ronce qui montent en spirale le long du tronc et retombent des branches.
+	for i in 2:
+		var pts := PackedVector2Array()
+		for j in 15:
+			var u := j / 14.0
+			pts.append(at.lerp(top, u) + Vector2(sin(u * 9.0 + i * 3.1) * w * (1.5 - 0.5 * u), 0))
+		O.brush(ci, pts, 4.2 if etat == "fletri" else 3.2, ron["ombre"], 0.6, 0.2)
+		O.brush(ci, pts, 1.6, ron["clair"], 0.6, 0.2)
+		for j in range(1, 14, 2):
+			O.poly(ci, O.Ink.thorn(pts[j], PI * (0.0 if (j + i) % 4 < 2 else 1.0) + r.randf_range(-0.4, 0.4), 5.0, 2.2), ron["ombre"])
+	if etat == "ravive":
+		var leaf: Dictionary = P.call("feuillage")
+		var crown := top + Vector2(0, -h * 0.26)
+		var masses := []
+		for i in 13:
+			var a := -PI + PI * i / 12.0
+			var c := crown + Vector2(cos(a) * h * 0.4, sin(a) * h * 0.18 + h * 0.08) + Vector2(r.randf_range(-8, 8), r.randf_range(-6, 6))
+			masses.append([c, h * r.randf_range(0.1, 0.135)])
+		for i in 5:
+			masses.append([crown + Vector2(r.randf_range(-0.25, 0.25) * h, r.randf_range(-0.06, 0.08) * h), h * r.randf_range(0.12, 0.15)])
+		masses.sort_custom(func(x, y): return x[0].y < y[0].y)
+		for ms in masses:
+			O.part(ci, O.Ink.lumpy(ms[0], ms[1], ms[1] * 0.8, 26, 0.1, 9.0, ms[0].x), leaf, 1.3, 1.0, 0.7)
+		for i in 30:
+			var ms: Array = masses[r.randi() % masses.size()]
+			var p: Vector2 = ms[0] + Vector2(r.randf_range(-0.7, 0.6), r.randf_range(-0.6, 0.4)) * ms[1]
+			O.flower(ci, p, r.randf_range(3.0, 4.2), O.fg(Art.mc(reg, "ravive", "fleur" if i % 3 else "fleur_2"), k), O.fg(Art.mc(reg, "ravive", "fleur_coeur"), k), r.randf() * TAU)
+		# Mûres qui pendent sous le houppier.
+		for i in 6:
+			var ms: Array = masses[r.randi() % masses.size()]
+			var p: Vector2 = ms[0] + Vector2(r.randf_range(-0.5, 0.5) * ms[1], ms[1] * 0.75)
+			ci.draw_line(p, p + Vector2(0, 7), Color(ron["ombre"], 0.9), 1.0, true)
+			for b in 3:
+				ci.draw_circle(p + Vector2(b * 2.2 - 2.2, 8.0 + (b % 2) * 1.8), 2.0, O.fg(Art.mc(reg, "ravive", "fruit"), k))
+	else:
+		var leaf: Dictionary = P.call("feuillage")
+		for i in tips.size():
+			if i % 2 != 0:
+				continue
+			var tip: Vector2 = tips[i]
+			for j in r.randi_range(1, 3):
+				var p: Vector2 = tip + Vector2(r.randf_range(-6, 6), r.randf_range(-3, 6))
+				O.part(ci, O.Ink.leaf(p, r.randf_range(1.0, 2.2), 7.0, 3.4, 0.15), leaf, 0.7, 1.0, 0.0)
+		# Tiges qui retombent des charpentières, en guirlandes d'épines.
+		for i in 4:
+			var t0: Vector2 = tips[(i * 5) % tips.size()]
+			var t1: Vector2 = tips[(i * 5 + 3) % tips.size()]
+			var sag := O.curve(t0, t0.lerp(t1, 0.5) + Vector2(0, h * 0.12), t1, 10)
+			O.brush(ci, sag, 2.4, ron["ombre"], 0.4, 0.4)
+			for j in range(1, 10, 3):
+				O.poly(ci, O.Ink.thorn(sag[j], PI * 0.5 + r.randf_range(-0.5, 0.5), 4.0, 1.8), ron["ombre"])
 
 
 ## Branche qui se divise : un coup de pinceau sombre, un filet clair sur le dessus (côté lumière).
@@ -362,6 +466,47 @@ static func _champignon(ci: CanvasItem, at: Vector2, h: float, fl: float, r: Ran
 			O.poly(ci, O.Ink.oval(p, rr, rr * 0.7, 12), O.fg(Art.mc("spore", "ravive", "fleur"), k))
 		else:
 			O.poly(ci, O.Ink.oval(p, rr, rr * 0.65, 12), Color(cap["ombre"].darkened(0.35), 0.9))
+
+
+## Chapeau géant (repère du Marais) : un chapeau immense, deux plus petits blottis à son pied, des
+## polypores en étagères sur le pied, et un voile de mycélium qui pend de l'ourlet. Flétri : affaissé,
+## voile gris ; ravivé : voile qui luit, pois lumineux.
+static func _chapeau_geant(ci: CanvasItem, at: Vector2, h: float, fl: float, r: RandomNumberGenerator, P: Callable, etat: String, k: float) -> void:
+	var r2 := RandomNumberGenerator.new()
+	r2.seed = r.seed + 17
+	# Le petit de derrière.
+	_champignon(ci, at + Vector2(-h * 0.2 * fl, -h * 0.03), h * 0.36, -fl, r2, P, etat, k, false)
+	_champignon(ci, at, h, fl, r, P, etat, k, true)
+	# Polypores en étagères sur le pied (côté lumière).
+	var pied: Dictionary = P.call("pied")
+	var shelf: Dictionary = P.call("chapeau")
+	for i in 3:
+		var c := at + Vector2(-h * 0.045 * fl, -h * (0.18 + 0.12 * i))
+		var sw := h * (0.07 - 0.012 * i)
+		var pts := PackedVector2Array()
+		for j in 9:
+			var a := PI + PI * j / 8.0
+			pts.append(c + Vector2(-fl * sw * 0.2 + cos(a) * sw, sin(a) * sw * 0.35))
+		pts.append(c + Vector2(sw, sw * 0.12))
+		pts.append(c + Vector2(-sw, sw * 0.12))
+		O.part(ci, pts, shelf, 1.1, 1.0, 0.4)
+		ci.draw_line(c + Vector2(-sw * 0.8, sw * 0.08), c + Vector2(sw * 0.8, sw * 0.08), Color(pied["ombre"], 0.8), 1.0, true)
+	# Voile de mycélium qui pend de l'ourlet.
+	var cw := h * 0.46
+	var brim := at + Vector2(0, -h * 0.78)
+	var veil: Color = Color(Art.mc("spore", "ravive", "lueur"), 0.55) if etat == "ravive" else Color(Art.mc("spore", "fletri", "cendre"), 0.32)
+	veil = O.fg(veil, k)
+	for i in 9:
+		var u := -0.85 + 1.7 * i / 8.0
+		var p0 := brim + Vector2(u * cw, cw * 0.14 + (0.0 if etat == "ravive" else 0.25 * cw * (1.0 - absf(u)) * 0.8))
+		var l := h * r.randf_range(0.06, 0.16)
+		var pts := O.curve(p0, p0 + Vector2(r.randf_range(-3, 3), l * 0.5), p0 + Vector2(r.randf_range(-5, 5), l), 4)
+		ci.draw_polyline(pts, veil, 1.0, true)
+		if etat == "ravive" and i % 2 == 0:
+			ci.draw_circle(pts[-1], 2.4, Color(veil, 0.25))
+			ci.draw_circle(pts[-1], 1.0, veil)
+	# Le petit de devant.
+	_champignon(ci, at + Vector2(h * 0.17 * fl, h * 0.02), h * 0.27, fl, r2, P, etat, k, false)
 
 
 ## Tronc couché : un tronc mort qui pourrit dans la vase, mousse et petits chapeaux dessus.

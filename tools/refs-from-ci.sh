@@ -10,8 +10,9 @@
 #   tools/refs-from-ci.sh --in-ci [branche]  # tout se fait dans la CI (sessions cloud : le stockage des
 #                                    # artefacts n'y est pas joignable) : les tests visuels de la branche
 #                                    # (par défaut la branche courante, déjà poussée) prennent leurs
-#                                    # captures changées comme références, les commitent sur la branche
-#                                    # et se relancent pour vérifier ; « git pull » ensuite.
+#                                    # captures changées comme références et les commitent sur
+#                                    # ci-refs/<branche> (≈ 5 minutes) ;
+#   tools/refs-from-ci.sh --pull     # puis : reprend ce commit sur la branche courante ; il reste à pousser.
 #
 # Ensuite : regarder les images changées (git diff --stat, rapport.html de l'artefact), committer,
 # pousser. Les tests visuels du commit suivant comparent alors aux captures de la CI elle-même.
@@ -27,8 +28,24 @@ if [ "${1:-}" = "--in-ci" ]; then
   case "$branch" in develop|main|master|HEAD) echo "Refusé sur « $branch » : seulement une branche de PR."; exit 1 ;; esac
   gh api -X POST "repos/$REPO/actions/workflows/visual-tests.yml/dispatches" \
     -f ref="$branch" -f 'inputs[references]=true' >/dev/null
-  echo "Tests visuels lancés sur $branch avec prise des références (≈ 5 minutes, puis un run de vérification)."
+  echo "Tests visuels lancés sur $branch avec prise des références (≈ 5 minutes)."
+  echo "Ensuite : tools/refs-from-ci.sh --pull, vérifier les images, git push."
   echo "Suivi : https://github.com/$REPO/actions/workflows/visual-tests.yml?query=branch%3A$branch"
+  exit 0
+fi
+if [ "${1:-}" = "--pull" ]; then
+  branch=$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)
+  git -C "$ROOT" fetch -q origin "ci-refs/$branch" || { echo "Pas de ci-refs/$branch : le run --in-ci est-il fini, avec des captures changées ?"; exit 1; }
+  parent=$(git -C "$ROOT" rev-parse FETCH_HEAD^)
+  if [ "$parent" != "$(git -C "$ROOT" rev-parse HEAD)" ]; then
+    echo "ci-refs/$branch a été fait sur $(git -C "$ROOT" rev-parse --short "$parent"), pas sur HEAD : le code a changé depuis,"
+    echo "les captures risquent d'être fausses. Relancer tools/refs-from-ci.sh --in-ci."
+    exit 1
+  fi
+  git -C "$ROOT" merge -q --ff-only FETCH_HEAD
+  git -C "$ROOT" show --stat --format='%s' HEAD | head -20
+  git -C "$ROOT" push -q origin --delete "ci-refs/$branch" 2>/dev/null || true
+  echo "Références reprises. Vérifier les images, puis git push."
   exit 0
 fi
 for a in "$@"; do
