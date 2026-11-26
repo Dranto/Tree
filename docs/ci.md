@@ -56,7 +56,8 @@ push qui suit relance toute la CI normalement. Regarder les images avant de pous
 (`rapport.html`) est dans l'artefact « tests-visuels » du run.
 
 Le commit n'est pas poussé directement sur la branche de la PR : poussé par le jeton de la CI, il y
-laissait des runs « en attente d'approbation » au lieu de la CI (vu le 26/11).
+laissait des runs « en attente d'approbation » au lieu de la CI (vu le 26/11). Une session cloud
+ne peut pas supprimer `ci-refs/<branche>` ensuite : la branche reste, et le run suivant l'écrase.
 
 Là où le stockage des artefacts de GitHub est joignable (poste d'Antoine), `tools/refs-from-ci.sh`
 sans option copie les captures changées du dernier run du commit courant, à committer soi-même.
