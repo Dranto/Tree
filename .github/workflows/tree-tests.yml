@@ -2,9 +2,20 @@ name: Arbre de vie
 
 on:
   pull_request:
+    # Documentation seule : rien à tester.
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "prototype-web/**"
+      - ".claude/**"
   push:
     branches: [main, master, develop, "claude/project-thread-9liy48"]
   workflow_dispatch:
+
+# Un nouveau push sur une PR annule les jobs en cours de l'ancien commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   calage:
@@ -16,16 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Installer l'écran virtuel et le rendu logiciel
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1
-
-      - name: Cache de Godot
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/godot
-          key: godot-4.7-stable
+      - uses: ./.github/actions/godot
 
       - name: Importer le projet
         run: tools/import.sh   # relance l'import s'il plante (3 essais)

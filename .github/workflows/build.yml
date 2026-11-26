@@ -5,56 +5,72 @@ name: Builds
 on:
   pull_request:
     branches: [develop]
+    # Documentation seule : rien à tester.
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "prototype-web/**"
+      - ".claude/**"
+      - "godot/tests/**"   # exclus de l'export (export_presets.cfg)
+      - "steam/**"
   push:
     branches: [develop]
   workflow_dispatch:
 
+# Un nouveau push sur une PR annule les jobs en cours de l'ancien commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # Deux jobs (jeu, démo), chacun exporte Windows puis Linux : moins de machines occupées par PR
+  # (la limite du compte est de 20 jobs à la fois), même couverture qu'avec un job par build.
   build:
+    name: build (${{ matrix.variant }})
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        preset: [windows, linux, windows-demo, linux-demo]
+        variant: [jeu, demo]
+    env:
+      SUFFIX: ${{ matrix.variant == 'demo' && '-demo' || '' }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Installer l'écran virtuel et le rendu logiciel
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1
-
-      - name: Cache de Godot et des modèles d'export
-        uses: actions/cache@v4
+      - uses: ./.github/actions/godot
         with:
-          path: |
-            ~/.cache/godot
-            ~/.local/share/godot/export_templates
-          key: godot-export-4.7-stable
+          export-templates: "true"
 
-      - name: Exporter
-        run: tools/export.sh ${{ matrix.preset }}
+      - name: Exporter (Windows)
+        run: tools/export.sh "windows$SUFFIX"
+
+      - name: Exporter (Linux)
+        run: tools/export.sh "linux$SUFFIX"
 
       - name: Lancer le build Linux (démarrage + robot 60 s)
-        if: startsWith(matrix.preset, 'linux')
         run: |
-          bin=$(ls build/${{ matrix.preset }}/*.x86_64)
+          bin=$(ls build/linux$SUFFIX/*.x86_64)
           tools/export-smoke.sh "$bin"
 
-      - name: Publier le build
+      - name: Publier le build Windows
         uses: actions/upload-artifact@v4
         with:
-          name: seve-${{ matrix.preset }}
-          path: |
-            build/${{ matrix.preset }}/*.exe
-            build/${{ matrix.preset }}/*.x86_64
+          name: seve-windows${{ env.SUFFIX }}
+          path: build/windows${{ env.SUFFIX }}/*.exe
+          if-no-files-found: error
+
+      - name: Publier le build Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: seve-linux${{ env.SUFFIX }}
+          path: build/linux${{ env.SUFFIX }}/*.x86_64
           if-no-files-found: error
 
       - name: Publier le journal du robot
-        if: always() && startsWith(matrix.preset, 'linux')
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: journal-${{ matrix.preset }}
-          path: build/${{ matrix.preset }}/smoke.log
+          name: journal-linux${{ env.SUFFIX }}
+          path: build/linux${{ env.SUFFIX }}/smoke.log
           if-no-files-found: ignore
