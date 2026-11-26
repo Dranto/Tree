@@ -93,16 +93,24 @@ void fragment() {
 	vec3 tip_col = alive_light;
 	// Îlots de la bande : bruit propre (canal R relu à une autre échelle) ; largeur d'un pixel d'écran
 	// en px du monde (dérivées prises hors de la boucle).
-	float bn = texture(noise_tex, p * border_scale / noise_period + border_offset).r;
+	// Le bruit n'est lu que près d'une frontière (ailleurs, n = 0,5 : aucun décalage).
 	float wpx = max(fwidth(w.x), 1e-3);
 	float lip = 0.0;
+	float plen = length(p);
+	bool near_border = abs(plen - region_inner) < border_inner;
+	for (int i = 0; i < region_count; i++) {
+		near_border = near_border || abs(dot(p, region_n1[i])) < border_half;
+	}
+	float bn = near_border ? textureLod(noise_tex, p * border_scale / noise_period + border_offset, 0.0).r : 0.5;
 	for (int i = 0; i < region_count; i++) {
 		float s1 = dot(p, region_n1[i]);
 		float s2 = dot(p, region_n2[i]);
-		float s3 = length(p) - region_inner;
+		float s3 = plen - region_inner;
 		float inside = min(min(s1 + border_shift(s1, border_half, bn), s2 - border_shift(s2, border_half, bn)), s3 + border_shift(s3, border_inner, bn));
 		float rw = clamp(inside / (wpx * 1.3) + 0.5, 0.0, 1.0);
-		lip = max(lip, 1.0 - smoothstep(wpx * 0.6, wpx * 0.6 + 2.4, abs(inside)));
+		if (near_border) {
+			lip = max(lip, 1.0 - smoothstep(wpx * 0.6, wpx * 0.6 + 2.4, abs(inside)));
+		}
 		if (rw > 0.002) {
 			if (edge < 1.0) {
 				dead = mix(dead, plaques(region_dead_dark[i], region_dead_mid[i], region_dead_light[i], k), rw);
