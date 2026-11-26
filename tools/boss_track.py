@@ -128,7 +128,8 @@ def lag(a, b, n=RATE // 2, span=256):
 # d'épines (scripts/boss_finale.gd › SCORE). Détection : hausse d'énergie de la bande sur 30 ms à
 # chaque double croche, rapportée au plus fort de la boucle ; gardée au-dessus de COUPS_SEUIL.
 # Les coups discrets ont leur propre liste : « charleston » (6-10 kHz, au-dessus de COUPS_SEUIL_HAT) et
-# « caisse_douce » (caisse claire entre COUPS_SEUIL_DOUX et COUPS_SEUIL : notes fantômes, petits coups).
+# « caisse_douce » et « kick_doux » (caisse claire ou grosse caisse entre COUPS_SEUIL_DOUX et
+# COUPS_SEUIL : notes fantômes, petits coups).
 COUPS_BANDES = {"kick": (30.0, 110.0), "caisse": (180.0, 400.0), "charleston": (6000.0, 10000.0)}
 COUPS_SEUIL = 0.45
 COUPS_SEUIL_HAT = 0.25
@@ -159,6 +160,9 @@ def coups(x, start, bars, bar):
         top = max(rise) or 1.0
         seuil = COUPS_SEUIL_HAT if name == "charleston" else COUPS_SEUIL
         out[name] = [[j for j in range(16) if rise[m * 16 + j] / top > seuil] for m in range(bars)]
+        if name == "kick":
+            out["kick_doux"] = [[j for j in range(16) if COUPS_SEUIL_DOUX < rise[m * 16 + j] / top <= COUPS_SEUIL]
+                                for m in range(bars)]
         if name == "caisse":
             out["caisse_douce"] = [[j for j in range(16) if COUPS_SEUIL_DOUX < rise[m * 16 + j] / top <= COUPS_SEUIL]
                                    for m in range(bars)]
