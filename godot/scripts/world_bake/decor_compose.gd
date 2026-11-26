@@ -84,9 +84,12 @@ const LISIERES := {  # i18n: non (début)
 		"grand": [["falaise:Bleached", 2.6, 3.4, 1]],
 	},
 	"racine": {
-		"bord": [["foret:Stump", 0.8, 1.1, 1]],
-		"grappe": [["foret:Stump", 1.0, 1.5, 2], ["foret:StoneTree", 1.3, 1.8, 2]],
-		"grand": [["foret:StoneTree", 2.6, 3.4, 1]],
+		# Forêt pétrifiée (vague 2, P6) : souches et racines en arceaux au bord, arbres de pierre dans les
+		# grappes, grands arbres de pierre au centre ; repère : l'arbre de pierre géant (size × 16 px).
+		"bord": [["foret:Stump", 0.8, 1.15, 3], ["foret:RootArch", 2.2, 2.8, 1.5], ["rocher", 0.5, 0.8, 0.6]],
+		"grappe": [["foret:Stump", 1.0, 1.5, 2], ["foret:StoneTree", 1.3, 1.8, 2], ["foret:RootArch", 2.6, 3.4, 1.5], ["rocher", 0.7, 1.1, 0.5]],
+		"grand": [["foret:StoneTree", 2.6, 3.4, 3], ["foret:RootArch", 4.2, 4.8, 0.6]],
+		"repere": {"grand_arbre": ["foret:Ancient", 14.5], "ruine": ["foret:RootArch", 7.5], "rocher": ["rocher", 2.4]},
 	},
 }
 ## Souplesse au vent par sorte (lue par le monde vivant, tâche V).
@@ -453,9 +456,10 @@ static func _reperes(flora, reg: String, lis: Dictionary, placed: Array) -> int:
 	var n := 0
 	for s in spots:
 		var spec: Array = rep.get(s[1], rep.get("*", ["arbre", 1.4]))
-		var o := Objet.new()
-		o.kind = spec[0]
-		o.region = reg
+		var o = _make(spec[0], reg) if ":" in spec[0] else Objet.new()
+		if o is Objet:
+			o.kind = spec[0]
+			o.region = reg
 		o.size = spec[1]
 		o.tree_seed = hash([reg, s[1], n])
 		o.position = s[0]
