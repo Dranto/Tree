@@ -12,7 +12,7 @@
 #
 # Ensuite (docs/ci.md) :
 #   1. git push, puis ouvrir la PR du lot vers develop (titre « Lot : #152, #153, #154 ») ;
-#   2. si les tests visuels signalent des écarts attendus : tools/refs-from-ci.sh --in-ci, puis git pull ;
+#   2. si les tests visuels signalent des écarts attendus : tools/refs-from-ci.sh --in-ci, puis --pull et git push ;
 #   3. CI verte : fusionner la PR du lot par un commit de fusion (pas de squash ni de rebase) ; GitHub
 #      marque alors chaque PR du lot comme fusionnée, puisque ses commits sont dans develop. Une PR qui a
 #      reçu un commit après la création du lot reste ouverte : la refaire entrer ou la fusionner à part.
