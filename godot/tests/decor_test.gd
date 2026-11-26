@@ -178,6 +178,30 @@ func _run() -> void:
 		await _frames(40)
 		check(tall.fade > 0.99, "le héros devant : il revient (%.2f)" % tall.fade)
 
+	# Enveloppe de chaque atlas (vague 2) et plafond commun : toutes les régions cuites tiennent dessous.
+	var total := 0
+	for reg in Regions.ids() + [DecorBake.COMMUN]:
+		if not DecorBake.atlases.has(reg):
+			await DecorBake.bake(main, flora, reg)
+		var at = DecorBake.atlases.get(reg)
+		var mb: float = at.bytes / 1048576.0 if at != null else 0.0
+		total += at.bytes if at != null else 0
+		print("  atlas %s : %.1f Mo (enveloppe %.0f Mo)" % [reg, mb, DecorBake.envelope(reg) / 1048576.0])
+		check(at == null or at.bytes <= DecorBake.envelope(reg), "atlas %s dans son enveloppe (%.1f Mo / %.0f Mo)" % [reg, mb, DecorBake.envelope(reg) / 1048576.0])
+	check(total <= DecorBake.budget, "tous les atlas sous le plafond (%.1f Mo / %.0f Mo)" % [total / 1048576.0, DecorBake.budget / 1048576.0])
+	# Une région en vue n'est jamais rendue, même au-delà du plafond (sinon elle se recuit en boucle).
+	var saved: int = DecorBake.budget
+	var saved_view: Dictionary = DecorBake.in_view
+	var n0: int = DecorBake.atlases.size()
+	DecorBake.budget = 1
+	DecorBake.in_view = {}
+	for reg in DecorBake.atlases:
+		DecorBake.in_view[reg] = true
+	DecorBake.trim(flora)
+	check(DecorBake.atlases.size() == n0, "trim garde les régions en vue (%d / %d)" % [DecorBake.atlases.size(), n0])
+	DecorBake.budget = saved
+	DecorBake.in_view = saved_view
+
 	DecorBake.clear_disk_cache()
 	print("DÉCOR %s" % ("réussi" if failures == 0 else "%d échecs" % failures))
 	quit(1 if failures > 0 else 0)
