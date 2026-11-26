@@ -365,13 +365,17 @@ func bot_ring(arena_radius: float) -> float:
 
 # --- Dessin ---
 #
-# Charte : les Flétris sont sombres et saturés, contour clair, braise dans les fentes. L'Amanite-Mère
-# est un chapeau de vin et de violet (ennemi, nuancé de poison) couvert de verrues pâles, sur un pied
-# à collerette planté dans une volve. Phase 2 : le chapeau se soulève et montre ses lamelles qui
-# luisent. Phase 3 : il se fend, la braise couve dans les fentes, le mycélium sort de terre.
+# Bestiaire d'herbier (refonte des personnages, B2) : le dessin est dans
+# scripts/creature_art/spore/_amanite_mere.gd (vue de trois quarts, encre fine, palette de Spore,
+# braise = ennemi), comme les Flétris du marais dont elle est la mère. Ici, la pose seulement :
+# gonflement des annonces, recul après l'onde, chapeau soulevé (phase 2), fendu (phase 3),
+# affaissement et cendre à la mort, regard tourné vers le joueur visé.
 
-func _cap_color() -> Color:
-	return Art.c("ennemi").lerp(Art.ec("poison", "sombre"), 0.35)
+const Art_ = preload("res://scripts/creature_art/spore/_amanite_mere.gd")
+const BodyCache = preload("res://scripts/boss_body_cache.gd")
+
+## Tournée vers la gauche (vers la dernière cible visée).
+var face_left := false
 
 
 ## Avancée de l'annonce en cours (0 → 1), 0 hors annonce.
@@ -381,102 +385,34 @@ func _announce_k() -> float:
 	return clampf(1.0 - timer / stage_time, 0.0, 1.0)
 
 
-func _draw() -> void:
-	var r := radius
+func pose() -> Dictionary:
 	var k := _announce_k()
 	var die := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
-	var b := Anim.breathe(t, 0.025)
-	# Gonflement pendant l'annonce (nuages, onde), recul juste après l'onde.
+	if absf(aim.x) > 0.25:
+		face_left = aim.x < 0.0
+	# Gonflement pendant l'annonce (nuages, onde, spirale), recul juste après l'onde.
 	var swell := 1.0 + (0.1 * Anim.ease_out(k) if attack in ["nuages", "onde", "spirale"] else 0.0)
 	if strike_flash >= 0.0:
 		swell *= 1.0 - 0.12 * (1.0 - strike_flash / WAVE["flash"])
-	# Mort : le chapeau s'affaisse et s'étale.
-	var sag := Anim.ease_out(die)
-	var cap_c := Vector2(0, -r * (0.95 - 0.6 * sag))
-	var rx := r * 1.18 * swell * b * (1.0 + 0.15 * sag)
-	var ry := r * 0.64 * swell * (2.0 - b) * (1.0 - 0.45 * sag)
-	var lift := (0.18 if phase >= 2 else 0.0) * (1.0 - sag) + 0.12 * k * float(attack == "spirale")
-	Art.shadow(self, Vector2(0, r * 0.08), r * 0.95)
-	# Mycélium au pied (phase 3) : filaments clairs qui rampent sur le sol.
-	if phase >= 3 and not dead:
-		var fil := Color(Art.ec("poison", "clair"), 0.55)
-		for i in 9:
-			var a := TAU * i / 9.0 + 0.2
-			var pts := PackedVector2Array()
-			for j in 6:
-				var u := j / 5.0
-				pts.append(Vector2.from_angle(a + 0.25 * sin(u * 4.0 + t + i)) * r * (0.5 + 0.9 * u) + Vector2(0, r * 0.2))
-			draw_polyline(pts, fil, Art.TRAIT_FIN, true)
-	# Volve : la coupe déchirée d'où sort le pied.
-	var volve := PackedVector2Array()
-	for i in 14:
-		var a := PI * i / 13.0
-		var jag := 1.0 if i % 2 == 0 else 0.82
-		volve.append(Vector2(cos(a) * r * 0.62 * jag, r * 0.12 + sin(a) * r * 0.3 * jag))
-	volve.append(Vector2(-r * 0.62, r * 0.05))
-	volve.append(Vector2(r * 0.62, r * 0.05))
-	Art.volume(self, volve, _color(Art.c("ennemi").darkened(0.25)), 0.5)
-	# Pied et collerette.
-	var stem := PackedVector2Array([Vector2(-r * 0.3, r * 0.18), Vector2(-r * 0.24, cap_c.y), Vector2(r * 0.24, cap_c.y), Vector2(r * 0.3, r * 0.18)])
-	Art.volume(self, stem, _color(Art.c("ennemi_contour").darkened(0.45).lerp(Art.ec("poison", "sombre"), 0.25)), 0.7)
-	var skirt := PackedVector2Array()
-	for i in 17:
-		var a := PI * i / 16.0
-		skirt.append(Vector2(cos(a) * r * 0.42, cap_c.y + ry + r * 0.04 + sin(a) * r * (0.18 + 0.05 * (i % 2))))
-	Art.volume(self, skirt, _color(Art.c("ennemi_contour").darkened(0.3)), 0.6)
-	# Yeux de braise sur le pied (la marque des Flétris).
-	for sgn in [-1, 1]:
-		var e := Vector2(sgn * r * 0.11, cap_c.y + ry + r * 0.32)
-		var glow := 0.4 + 0.6 * k
-		draw_circle(e, r * 0.07, Color(Art.c("ennemi_oeil"), 0.35 * glow * (1.0 - die)))
-		draw_line(e + Vector2(-r * 0.06, -sgn * r * 0.02), e + Vector2(r * 0.06, sgn * r * 0.02), Color(Art.c("ennemi_oeil"), 1.0 - die), 2.5, true)
-	# Lamelles (dessous du chapeau), visibles quand il se soulève : elles luisent de spores.
-	if lift > 0.0:
-		var gills := Art.ellipse(cap_c + Vector2(0, ry * 0.35), rx * 0.92, ry * (0.35 + lift), 28)
-		draw_colored_polygon(gills, _color(Art.ec("poison", "sombre").darkened(0.2)))
-		for i in 12:
-			var a := PI * (i + 0.5) / 12.0
-			var q := cap_c + Vector2(0, ry * 0.35) + Vector2(cos(a) * rx * 0.88, sin(a) * ry * (0.33 + lift))
-			draw_line(cap_c + Vector2(0, ry * 0.35), q, Color(Art.ec("poison", "clair"), (0.25 + 0.5 * k) * (1.0 - die)), Art.TRAIT_FIN, true)
-	# Le chapeau : dôme en volume, contour clair des Flétris.
-	var cap := Art.ellipse(cap_c - Vector2(0, lift * r * 0.4), rx, ry, 36)
-	if phase >= 3:
-		# Fendu : deux encoches dans le bord.
-		for notch in [0.6, 2.4]:
-			var idx := int(notch / TAU * cap.size())
-			cap[idx] = cap[idx].lerp(cap_c, 0.32)
-	# Bord du chapeau vu de trois quarts : une bande sombre sous le dôme, qui le fait lire en relief.
-	var rim := Art.ellipse(cap_c + Vector2(0, ry * 0.32 - lift * r * 0.4), rx * 0.97, ry * 0.72, 32)
-	draw_colored_polygon(rim, _color(_cap_color().darkened(0.5)))
-	draw_colored_polygon(cap, Color(Art.c("contour"), 0.6))
-	Art.volume(self, cap, _color(_cap_color()), 0.8)
-	Art.outline(self, cap, Color(Art.c("ennemi_contour"), 1.0 - die * 0.8), Art.TRAIT_FORT)
-	# Verrues pâles, en volume.
-	var wart := _color(Art.ec("epine", "clair").lerp(Art.c("ennemi_contour"), 0.3))
-	for w in [[-0.45, -0.25, 0.13], [0.1, -0.45, 0.11], [0.5, -0.15, 0.12], [-0.15, 0.1, 0.1], [0.32, 0.25, 0.08], [-0.6, 0.18, 0.08], [0.0, -0.1, 0.07]]:
-		var p: Vector2 = cap_c - Vector2(0, lift * r * 0.4) + Vector2(w[0] * rx, w[1] * ry)
-		Art.volume_circle(self, p, r * w[2] * (1.0 - 0.4 * sag), wart, 0.6)
-	# Fentes de braise (phase 3).
-	if phase >= 3:
-		var ember := Color(Art.ec("cendre"), (0.6 + 0.3 * sin(t * 5.0)) * (1.0 - die))
-		var c0 := cap_c - Vector2(0, lift * r * 0.4)
-		draw_polyline(PackedVector2Array([c0 + Vector2(-rx * 0.1, -ry * 0.1), c0 + Vector2(-rx * 0.4, -ry * 0.45), c0 + Vector2(-rx * 0.55, -ry * 0.4)]), ember, 3.0, true)
-		draw_polyline(PackedVector2Array([c0 + Vector2(rx * 0.05, ry * 0.05), c0 + Vector2(rx * 0.45, ry * 0.3), c0 + Vector2(rx * 0.7, ry * 0.2)]), ember, 3.0, true)
-	# Pores qui fument pendant l'annonce des nuages.
-	if attack == "nuages" and stage == "annonce":
-		for i in 5:
-			var u := fposmod(t * 1.5 + i / 5.0, 1.0)
-			var q := cap_c + Vector2((i - 2) * rx * 0.3, -ry * (0.6 + 0.9 * u))
-			draw_circle(q, r * (0.06 + 0.12 * u), Color(Art.ec("poison", "clair"), 0.6 * (1.0 - u)))
-	# Mort : les spores s'échappent en bouffées qui montent et pâlissent.
-	if dead:
-		for i in 10:
-			var a := TAU * i / 10.0 + 0.3
-			var u := clampf(die * 1.3 - (i % 3) * 0.12, 0.0, 1.0)
-			if u <= 0.0 or u >= 1.0:
-				continue
-			var q := cap_c + Vector2.from_angle(a) * rx * (0.4 + 0.9 * u) - Vector2(0, r * 0.8 * u)
-			draw_circle(q, r * (0.1 + 0.18 * u), Color(Art.ec("poison", "clair").lerp(Art.ec("seve", "clair"), u), 0.55 * (1.0 - u)))
+	var lift := (1.0 if phase >= 2 else 0.0) * (1.0 - Anim.ease_out(die)) + 0.7 * Anim.ease_out(k) * float(attack == "spirale")
+	# Valeurs quantifiées : le corps est cuit une fois par pose (boss_body_cache.gd).
+	return {"t": t, "k": snappedf(k, 0.25) if stage == "annonce" and attack in ["nuages", "onde", "spirale", "invocation"] else 0.0, "attack": attack, "phase": phase,
+		"die": snappedf(die, 0.1), "swell": snappedf(swell, 0.02), "lift": snappedf(lift, 0.25),
+		"hit": 1.0 if hit_flash > 0.0 else 0.0, "poison": poison_time > 0.0,
+		"ash": snappedf(Anim.ease_out(clampf(dying / death_time * 1.4, 0.0, 1.0)), 0.1) if dead else 0.0, "flip": face_left}
+
+
+var _cache
+
+
+func _draw() -> void:
+	var h := Art_.HEIGHT * radius / 72.0
+	if _cache == null:
+		_cache = BodyCache.new(self, Rect2(Vector2(-0.95, -1.25) * h, Vector2(1.9, 1.55) * h), func(ci, p): Art_.draw(ci, Vector2.ZERO, h, p))
+	# Respiration : le chapeau s'élargit et s'aplatit doucement, autour des pieds.
+	var b := sin(t * TAU / 3.2) * (0.0 if dead else 1.0)
+	var xf := Transform2D(0.0, Vector2(1.0 + 0.018 * b, 1.0 - 0.018 * b), 0.0, Vector2.ZERO)
+	_cache.paint(self, Art_, h, Vector2(0, radius * 0.35), pose(), xf, frozen or BodyCache.headless())
 
 
 ## Annonces au sol, en coordonnées monde (grammaire de Art.telegraph). L'invocation, qui ne blesse
@@ -555,34 +491,9 @@ func draw_overlay(c: CanvasItem) -> void:
 
 ## L'Amanite-Mère endormie : un gros bouton fermé dans sa volve, tant que le combat n'a pas lieu.
 static func draw_sleeper(a: Node2D) -> void:
-	var c: Vector2 = a.center
-	var r := 46.0
-	Art.shadow(a, c + Vector2(0, r * 0.4), r * 1.1)
-	var cap := Art.c("ennemi").lerp(Art.ec("poison", "sombre"), 0.35).darkened(0.3)
-	var egg := Art.ellipse(c - Vector2(0, r * 0.15), r * 0.8, r, 24)
-	Art.volume(a, egg, cap, 0.6)
-	Art.outline(a, egg, Color(Art.c("ennemi_contour"), 0.6), Art.TRAIT)
-	for w in [[-0.3, -0.5], [0.25, -0.3], [-0.05, 0.1], [0.35, 0.3]]:
-		Art.volume_circle(a, c + Vector2(w[0], w[1]) * r, r * 0.1, Art.ec("epine", "clair").darkened(0.35), 0.5)
-	if a.state == "ouverte":
-		var pulse := 0.45 + 0.35 * sin(a.t * 2.0)
-		a.draw_circle(c, r * 0.3, Color(Art.ec("poison"), pulse * 0.6))
+	Art_.draw_sleeper(a, a.center + Vector2(0, 20.0), Art_.HEIGHT, a.t, a.state == "ouverte")
 
 
-## Après la victoire : un cercle de champignons clairs dans la mousse, à la place de l'Amanite-Mère.
+## Après la victoire : un cercle de fées, amanites saines dans la mousse, à la place de l'Amanite-Mère.
 static func draw_victory(a: Node2D) -> void:
-	var c: Vector2 = a.center
-	a.draw_circle(c, 70.0, Color(Art.c("decor_vivant"), 0.55))
-	a.draw_circle(c + Vector2(-10, -8), 46.0, Color(Art.c("decor_vivant").lightened(0.1), 0.5))
-	for i in 9:
-		var ang := TAU * i / 9.0 + 0.2
-		var p := c + Vector2(cos(ang), sin(ang) * 0.75) * 58.0
-		var s := 8.0 + 3.0 * (i % 3)
-		a.draw_colored_polygon(PackedVector2Array([p + Vector2(-s * 0.18, 0), p + Vector2(-s * 0.14, -s * 1.1), p + Vector2(s * 0.14, -s * 1.1), p + Vector2(s * 0.18, 0)]), Art.c("interactif").darkened(0.3))
-		var dome := PackedVector2Array()
-		for j in 9:
-			var u := PI + PI * j / 8.0
-			dome.append(p + Vector2(0, -s * 1.1) + Vector2(cos(u) * s * 0.75, sin(u) * s * 0.55))
-		Art.volume(a, dome, Art.c("interactif").darkened(0.12) if i % 2 else Art.ec("seve", "sombre").lightened(0.3), 0.6)
-	Art.glow(a, c, 36.0, "seve")
-	a.draw_circle(c, 9.0, Art.ec("seve", "clair"))
+	Art_.draw_healed(a, a.center, 1.0, a.t)

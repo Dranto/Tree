@@ -332,14 +332,17 @@ func bot_ring(arena_radius: float) -> float:
 
 # --- Dessin ---
 #
-# Charte : les Flétris sont sombres et saturés, contour clair, braise dans les fentes. Le Saule
-# exsangue est un tronc noueux couleur de vase, une couronne sombre d'où retombent des rideaux de
-# branches grises ; la vie qu'il boit monte en veines rouge sang dans son écorce. Phase 2 : les
-# veines battent, les rideaux s'agitent. Phase 3 : la couronne se dégarnit, le tronc se fend et la
-# braise couve dans les fentes.
+# Bestiaire d'herbier (refonte des personnages, B2) : le dessin est dans
+# scripts/creature_art/seve/_saule_exsangue.gd (vue de trois quarts, encre fine, palette de Sève,
+# braise = ennemi, sève verte = la vie bue), le saule-mère des Souches gorgées. Ici, la pose seulement :
+# rideaux soulevés du côté visé, siphon, gousses des graines, racines allumées, phase 3 dégarnie,
+# affaissement et cendre à la mort, regard tourné vers le joueur visé.
 
-func _bark_color() -> Color:
-	return Art.c("ennemi").lerp(Art.ec("racine", "sombre"), 0.4).lerp(Art.ec("seve", "sombre"), 0.15)
+const Art_ = preload("res://scripts/creature_art/seve/_saule_exsangue.gd")
+const BodyCache = preload("res://scripts/boss_body_cache.gd")
+
+## Tourné vers la gauche (vers la dernière cible visée).
+var face_left := false
 
 
 ## Avancée de l'annonce en cours (0 → 1), 0 hors annonce.
@@ -349,86 +352,34 @@ func _announce_k() -> float:
 	return clampf(1.0 - timer / stage_time, 0.0, 1.0)
 
 
-func _draw() -> void:
-	var r := radius
+func pose() -> Dictionary:
 	var k := _announce_k()
-	var die := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
-	var b := Anim.breathe(t, 0.02)
-	var sag := Anim.ease_out(die)
-	var bark := _color(_bark_color())
-	Art.shadow(self, Vector2(0, r * 0.08), r * 1.15)
-	# Racines qui plongent dans l'étang autour du pied.
-	var root := _color(_bark_color().darkened(0.25))
-	for i in 7:
-		var a := PI * (0.02 + 0.96 * i / 6.0)
-		var tip := Vector2(cos(a) * r * 1.25, sin(a) * r * 0.38 + r * 0.12)
-		var glow: float = k if attack == "racines" else 0.0
-		draw_colored_polygon(PackedVector2Array([Vector2(-r * 0.12, r * 0.05), tip, Vector2(r * 0.12, r * 0.05)]), root)
-		if glow > 0.0:
-			draw_line(Vector2(0, r * 0.05), tip, Color(Art.ec("saignement", "clair"), 0.6 * glow), 2.0, true)
-	# Tronc noueux, un peu tordu, qui s'affaisse à la mort.
-	var top := Vector2(r * 0.08, -r * (1.55 - 0.5 * sag))
-	var trunk := PackedVector2Array([Vector2(-r * 0.42, r * 0.12), Vector2(-r * 0.3, -r * 0.5), Vector2(-r * 0.36, -r * 1.0), top + Vector2(-r * 0.22, 0), top + Vector2(r * 0.22, 0), Vector2(r * 0.34, -r * 0.8), Vector2(r * 0.3, -r * 0.3), Vector2(r * 0.46, r * 0.12)])
-	Art.volume(self, trunk, bark, 0.7)
-	Art.outline(self, trunk, Color(Art.c("ennemi_contour"), 1.0 - die * 0.8), Art.TRAIT_FORT)
-	# Veines de la vie bue : rouge sang qui monte le long du tronc (battent en phase 2).
-	var beat := 0.5 + 0.5 * sin(t * (6.0 if phase >= 2 else 3.0))
-	var vein := Color(Art.ec("saignement", "clair"), (0.35 + 0.35 * beat) * (1.0 - die))
-	for sgn in [-1.0, 1.0]:
-		draw_polyline(PackedVector2Array([Vector2(sgn * r * 0.2, r * 0.05), Vector2(sgn * r * 0.12, -r * 0.5), Vector2(sgn * r * 0.2, -r * 0.95), top + Vector2(sgn * r * 0.1, r * 0.1)]), vein, 2.5, true)
-	# Fentes de braise (phase 3) ; et à la mort, l'eau bue qui s'en échappe.
-	if phase >= 3:
-		var ember := Color(Art.ec("cendre"), (0.6 + 0.3 * sin(t * 5.0)) * (1.0 - die))
-		draw_polyline(PackedVector2Array([Vector2(-r * 0.05, -r * 0.2), Vector2(r * 0.1, -r * 0.55), Vector2(-r * 0.02, -r * 0.85)]), ember, 3.0, true)
-	# Visage : deux fentes de braise, une bouche creuse.
-	for sgn in [-1, 1]:
-		var e := Vector2(sgn * r * 0.14, -r * 0.75)
-		draw_circle(e, r * 0.07, Color(Art.c("ennemi_oeil"), 0.35 * (0.4 + 0.6 * k) * (1.0 - die)))
-		draw_line(e + Vector2(-r * 0.07, -sgn * r * 0.02), e + Vector2(r * 0.07, sgn * r * 0.02), Color(Art.c("ennemi_oeil"), 1.0 - die), 2.5, true)
-	draw_colored_polygon(Art.ellipse(Vector2(0, -r * 0.45), r * 0.1, r * (0.07 + 0.05 * k), 10), Color(Art.c("contour"), 0.9))
-	# Couronne : un dôme bas fait de masses de feuillage mort, dégarni en phase 3. Les rideaux de
-	# branches en retombent jusqu'au sol, devant le tronc ; ils se soulèvent du côté visé (rideau),
-	# s'agitent pendant le siphon, tombent à la mort.
-	var crown_c := top + Vector2(0, -r * 0.05)
-	var thin := 0.8 if phase >= 3 else 1.0
-	var leaf := _color(_bark_color().darkened(0.15).lerp(Art.c("brume").darkened(0.45), 0.35))
-	var lobes := [[0.0, -0.45, 0.62], [-0.62, -0.2, 0.5], [0.62, -0.2, 0.5], [-1.05, 0.12, 0.38], [1.05, 0.12, 0.38], [-0.35, 0.1, 0.48], [0.35, 0.1, 0.48]]
-	for l in lobes:
-		var q: Vector2 = crown_c + Vector2(l[0] * r * b, l[1] * r) * thin
-		draw_circle(q, r * l[2] * thin + 2.5, Color(Art.c("ennemi_contour"), 0.75 * (1.0 - die)))
-	for l in lobes:
-		var q: Vector2 = crown_c + Vector2(l[0] * r * b, l[1] * r) * thin
-		Art.volume_circle(self, q, r * l[2] * thin, leaf, 0.55)
-	var strand := _color(Art.c("brume").darkened(0.3).lerp(_bark_color(), 0.35))
-	var n := 22 if phase < 3 else 14
-	for i in n:
-		var u0 := (i + 0.5) / n
-		var x0 := (u0 * 2.0 - 1.0) * r * 1.3 * thin
-		var base := crown_c + Vector2(x0, r * (0.25 + 0.15 * (1.0 - absf(u0 * 2.0 - 1.0))))
-		var side := signf(x0) if absf(x0) > 1.0 else 0.0
-		var lift := 0.0
-		if attack == "rideau":
-			lift = k * clampf(0.3 + 0.7 * side * signf(aim.x), 0.0, 1.0) * 0.8
-		var shake := 4.0 * sin(t * (12.0 if attack == "siphon" else 1.6) + i * 1.3)
-		var len := r * (1.25 + 0.3 * sin(i * 2.1)) * (1.0 - 0.6 * lift) * (1.0 - 0.5 * sag)
-		var tip := base + Vector2(side * r * 0.25 * (1.0 + 2.0 * lift) + shake, len)
-		var mid := base.lerp(tip, 0.5) + Vector2(side * r * 0.08, 0)
-		var w := r * 0.07
-		draw_colored_polygon(PackedVector2Array([base - Vector2(w, 0), mid - Vector2(w * 0.6, 0), tip, mid + Vector2(w * 0.6, 0), base + Vector2(w, 0)]), strand.darkened(0.1 * (i % 3)))
-	# Graines qui gonflent dans la couronne pendant l'annonce de la salve.
-	if attack == "graines" and stage == "annonce":
-		for i in 5:
-			var q := crown_c + Vector2((i - 2) * r * 0.4, r * 0.1 * (i % 2))
-			Art.volume_circle(self, q, r * (0.05 + 0.07 * k), _color(Art.ec("racine", "sombre").lerp(Art.ec("saignement"), k)), 0.7)
-	# Mort : l'eau bue s'échappe en gouttes vertes qui montent et pâlissent.
-	if dead:
-		for i in 10:
-			var a := TAU * i / 10.0 + 0.3
-			var u := clampf(die * 1.3 - (i % 3) * 0.12, 0.0, 1.0)
-			if u <= 0.0 or u >= 1.0:
-				continue
-			var q := top + Vector2.from_angle(a) * r * (0.3 + 0.8 * u) - Vector2(0, r * 0.6 * u)
-			draw_circle(q, r * (0.05 + 0.08 * u), Color(Art.ec("seve", "clair"), 0.7 * (1.0 - u)))
+	if absf(aim.x) > 0.25:
+		face_left = aim.x < 0.0
+	# Le siphon agite les rideaux pendant toute la frappe.
+	if attack == "siphon" and stage == "frappe":
+		k = 1.0
+	# Valeurs quantifiées : le corps est cuit une fois par pose (boss_body_cache.gd) ; les rideaux du
+	# siphon s'agitent sur 4 images (« wig », 12 par seconde).
+	return {"t": t, "k": snappedf(k, 0.25) if attack != "invocation" else 0.0, "attack": attack, "stage": stage if attack == "graines" else "", "phase": phase,
+		"die": snappedf(clampf(dying / death_time, 0.0, 1.0), 0.1) if dead else 0.0, "aim": signf(aim.x) if attack == "rideau" else 0.0,
+		"hit": 1.0 if hit_flash > 0.0 else 0.0, "poison": poison_time > 0.0,
+		"ash": snappedf(Anim.ease_out(clampf(dying / death_time * 1.4, 0.0, 1.0)), 0.1) if dead else 0.0, "flip": face_left,
+		"wig": int(t * 12.0) % 4 if attack == "siphon" else 0}
+
+
+var _cache
+
+
+func _draw() -> void:
+	var h := Art_.HEIGHT * radius / 72.0
+	if _cache == null:
+		_cache = BodyCache.new(self, Rect2(Vector2(-0.92, -1.32) * h, Vector2(1.84, 1.68) * h), func(ci, p): Art_.draw(ci, Vector2.ZERO, h, p))
+	# Respiration et balancement : la couronne se gonfle et le saule ploie doucement, autour des pieds.
+	var live := 0.0 if dead else 1.0
+	var b := sin(t * TAU / 3.6) * live
+	var xf := Transform2D(0.0, Vector2(1.0 + 0.01 * b, 1.0 + 0.012 * b), 0.03 * sin(t * TAU / 5.3) * live, Vector2.ZERO)
+	_cache.paint(self, Art_, h, Vector2(0, radius * 0.35), pose(), xf, frozen or BodyCache.headless())
 
 
 ## Annonces au sol, en coordonnées monde (grammaire de Art.telegraph). L'invocation, qui ne blesse
@@ -488,35 +439,9 @@ func draw_overlay(c: CanvasItem) -> void:
 
 ## Le Saule endormi : un saule bas aux rideaux immobiles, au milieu de l'étang.
 static func draw_sleeper(a: Node2D) -> void:
-	var c: Vector2 = a.center
-	var r := 46.0
-	Art.shadow(a, c + Vector2(0, r * 0.3), r * 1.2)
-	var bark := Art.c("ennemi").lerp(Art.ec("racine", "sombre"), 0.4).darkened(0.25)
-	var trunk := PackedVector2Array([c + Vector2(-r * 0.3, r * 0.2), c + Vector2(-r * 0.2, -r * 0.9), c + Vector2(r * 0.2, -r * 0.9), c + Vector2(r * 0.32, r * 0.2)])
-	Art.volume(a, trunk, bark, 0.6)
-	Art.volume(a, Art.ellipse(c + Vector2(0, -r * 1.0), r * 1.0, r * 0.4, 20), bark.darkened(0.15), 0.5)
-	var strand := Art.c("brume").darkened(0.4)
-	for i in 10:
-		var x := (i - 4.5) * r * 0.2
-		a.draw_line(c + Vector2(x, -r * 0.85), c + Vector2(x * 1.15, r * 0.1 + 6.0 * (i % 3)), strand, 2.0, true)
-	if a.state == "ouverte":
-		var pulse := 0.45 + 0.35 * sin(a.t * 2.0)
-		a.draw_circle(c + Vector2(0, -r * 0.4), r * 0.2, Color(Art.ec("saignement", "clair"), pulse * 0.5))
+	Art_.draw_sleeper(a, a.center + Vector2(0, 20.0), Art_.HEIGHT, a.t, a.state == "ouverte")
 
 
 ## Après la victoire : une source claire et un jeune saule, là où se tenait le Saule exsangue.
 static func draw_victory(a: Node2D) -> void:
-	var c: Vector2 = a.center
-	a.draw_colored_polygon(Art.ellipse(c, 80.0, 30.0, 24), Color(Art.ec("seve", "sombre").lerp(Art.ec("vent", "sombre"), 0.35), 0.8))
-	for i in 2:
-		var u := fposmod(a.t * 0.3 + i * 0.5, 1.0)
-		a.draw_arc(c, 12.0 + 60.0 * u, 0.0, TAU, 28, Color(Art.ec("seve", "clair"), 0.3 * (1.0 - u)), 1.5, true)
-	var bark := Art.ec("racine", "sombre").lerp(Art.c("decor_vivant"), 0.25)
-	a.draw_colored_polygon(PackedVector2Array([c + Vector2(-5, 0), c + Vector2(-2, -50), c + Vector2(4, -50), c + Vector2(6, 0)]), bark)
-	var leaf := Art.c("decor_vivant").lerp(Art.ec("seve"), 0.25)
-	for i in 8:
-		var ang := PI + PI * (i + 0.5) / 8.0
-		var base := c + Vector2(0, -52) + Vector2(cos(ang) * 26.0, sin(ang) * 10.0)
-		a.draw_line(base, base + Vector2(cos(ang) * 8.0, 38.0), leaf.darkened(0.06 * (i % 2)), 3.0, true)
-	Art.volume(a, Art.ellipse(c + Vector2(0, -54), 30.0, 13.0, 16), leaf, 0.6)
-	Art.glow(a, c + Vector2(0, -20), 36.0, "seve")
+	Art_.draw_healed(a, a.center, 1.0, a.t)
