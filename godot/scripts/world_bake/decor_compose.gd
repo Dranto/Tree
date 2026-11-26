@@ -60,13 +60,13 @@ const LISIERES := {  # i18n: non (début)
 		"bord": [["buisson", 0.75, 1.1, 4], ["rocher", 0.6, 1.0, 1.2], ["muret", 0.85, 1.05, 1]],
 		"grappe": [["haie", 0.85, 1.25, 3], ["buisson", 0.95, 1.3, 2.5], ["rocher", 0.8, 1.25, 0.8], ["muret", 0.9, 1.1, 0.4]],
 		"grand": [["arbre", 0.85, 1.15, 3], ["haie", 1.35, 1.6, 1.2]],
-		"repere": {"grand_arbre": ["arbre", 1.45], "ruine": ["ruine", 1.0], "rocher": ["rocher", 2.6]},
+		"repere": {"grand_arbre": ["grand_arbre", 0.92], "ruine": ["ruine", 1.15], "rocher": ["rocher", 2.6]},
 	},
 	"spore": {
 		"bord": [["fougere", 0.75, 1.15, 3], ["roseaux", 0.75, 1.05, 2.5], ["champignon", 0.3, 0.45, 0.8], ["rocher", 0.55, 0.85, 0.4]],
 		"grappe": [["fougere", 1.0, 1.4, 3], ["roseaux", 1.0, 1.3, 2], ["tronc", 0.85, 1.1, 0.8], ["champignon", 0.45, 0.65, 1]],
 		"grand": [["champignon", 0.8, 1.1, 3], ["roseaux", 1.35, 1.55, 1]],
-		"repere": {"*": ["chapeau_geant", 0.8]},
+		"repere": {"grand_arbre": ["chapeau_geant", 1.05], "*": ["chapeau_geant", 0.8]},
 	},
 	"vent": {
 		"bord": [["plateau:Grass", 0.8, 1.3, 5], ["plateau:Twisted", 0.9, 1.3, 1]],
@@ -91,7 +91,7 @@ const LISIERES := {  # i18n: non (début)
 }
 ## Souplesse au vent par sorte (lue par le monde vivant, tâche V).
 const SWAY := {
-	"arbre": 1.0, "haie": 0.7, "buisson": 0.6, "champignon": 0.25, "chapeau_geant": 0.15, "roseaux": 1.2,
+	"arbre": 1.0, "haie": 0.7, "buisson": 0.6, "champignon": 0.25, "chapeau_geant": 0.15, "grand_arbre": 0.5, "roseaux": 1.2,
 	"fougere": 0.9, "Twisted": 0.9, "Grass": 1.1, "Willow": 1.0, "Fern": 0.9, "Bleached": 0.7,
 	"StoneTree": 0.1, "DecorTree": 1.0, "DecorBramble": 0.8, "DecorBush": 0.35, "DecorReeds": 1.2, "DecorMushroom": 0.25,
 }  # i18n: non (fin)

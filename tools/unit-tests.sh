@@ -38,6 +38,7 @@ TESTS=(
   "bestiaire|--xvfb --audio-driver Dummy|"
   "heros|--xvfb --audio-driver Dummy|"
   "seve_bestiaire|--xvfb --audio-driver Dummy|"
+  "boss_dessin|--xvfb --audio-driver Dummy|"
   "sprite_bake|--xvfb --audio-driver Dummy|"
   "remains_sprite|--xvfb --audio-driver Dummy --fixed-fps 60|--sprites=3"
   "paysages_proto|--xvfb --audio-driver Dummy|"
@@ -97,7 +98,7 @@ declare -A WEIGHT=(
   [world_fx]=12 [boss]=11 [bestiaire]=11 [i18n]=11 [moments]=11 [aube]=10 [death]=10 [grafts]=10
   [marais]=10 [access]=9 [deaths]=9 [migration]=9 [spore]=9 [tree_anim]=9 [difficulty]=7 [feel]=8
   [objectives]=8 [region_engine]=8 [region_ui]=8 [save]=8 [steam]=8 [world]=6 [planner]=5
-  [seve_bestiaire]=5 [paysages_proto]=4 [art]=3 [air]=3 [borders]=3 [builds]=3 [draw_batch]=3
+  [seve_bestiaire]=5 [boss_dessin]=4 [paysages_proto]=4 [art]=3 [air]=3 [borders]=3 [builds]=3 [draw_batch]=3
   [node_types]=3 [tree_originals]=3 [user_dir]=3 [legibility]=2 [rumble]=2 [world_edge]=2
 )
 # Du plus long au plus court (ordre de lancement).
