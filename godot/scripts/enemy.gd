@@ -607,7 +607,9 @@ func pose() -> Dictionary:
 	if enraged:
 		o["tint"] = Color(Art.ec("cendre"), 0.28)
 	elif poison_time > 0.0:
-		o["tint"] = Color(Art.ec("poison"), 0.3)
+		# Teinte légère : sur les corps clairs des communs (cendre grise, #151), 0,3 de violet les
+		# faisait passer pour des Flétris de Spore ; l'état se lit surtout par ses bulles (_draw_over).
+		o["tint"] = Color(Art.ec("poison"), 0.14)
 	elif not bleed_stacks.is_empty():
 		o["tint"] = Color(Art.ec("saignement", "clair"), 0.22)
 	_behavior.pose(self, o)

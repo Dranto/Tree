@@ -283,7 +283,7 @@ func _shot_vague() -> void:
 	_place(spot)
 	_ring(spot, 7, 260, 420, ["sporule", "lichen", "scissipore"])
 	await _run(30)
-	main.revive(spot + Vector2(-140, 60), 620.0, Art.ec("spore", "clair"))
+	main.revive(spot + Vector2(-140, 60), 620.0, Art.ec("poison", "clair"))
 	await _run(22)
 	await _save("vague")
 
