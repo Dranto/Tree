@@ -64,7 +64,9 @@ func _film(id: String) -> void:
 	p.reset_physics_interpolation()
 	main.camera.reset_smoothing()
 	await _frames(2)
-	arena._start_fight()
+	# Le joueur posé dans l'arène peut déjà avoir réveillé le boss : pas de second boss par-dessus.
+	if not is_instance_valid(arena.get("boss")) or arena.boss.dead:
+		arena._start_fight()
 	var boss = arena.boss
 	await _record(id, ARRIVAL)
 	# Changement de phase : juste sous la première limite.
