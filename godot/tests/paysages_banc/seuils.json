@@ -18,6 +18,10 @@
       "valeur": 1.6,
       "cible": 8.0
     },
+    "annonce:spore:fletri": {
+      "valeur": 8.9,
+      "cible": 9.0
+    },
     "annonce:spore:ravive": {
       "valeur": 8.4,
       "cible": 9.0
