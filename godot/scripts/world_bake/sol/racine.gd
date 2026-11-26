@@ -89,17 +89,16 @@ static func flower(L, p: Vector2, r: float, pal: Dictionary, e: RandomNumberGene
 static func _rings(L, c: Vector2, e: RandomNumberGenerator) -> void:
 	var st: Dictionary = _c("fletri", "bois")
 	var rr := e.randf_range(9.0, 15.0)
-	L._oval(c + Vector2(1.2, 1.4), rr * 1.05, rr * 0.5, Color(st["ombre"], 0.5), 10)
-	L._oval(c, rr, rr * 0.46, Color(st["clair"], 0.55), 10)
+	L._oval(c + Vector2(1.2, 1.4), rr * 1.05, rr * 0.5, Color(st["ombre"], 0.5), 8)
+	L._oval(c, rr, rr * 0.46, Color(st["clair"], 0.55), 8)
 	var ink: Color = _c("fletri", "matiere")
-	for k in range(1, 3):
-		var f := 1.0 - 0.3 * k
-		var pts := PackedVector2Array()
-		var a0 := e.randf() * TAU
-		for j in 8:
-			var a := a0 + TAU * 0.8 * j / 7.0
-			pts.append(c + Vector2(cos(a) * rr * f, sin(a) * rr * f * 0.46))
-		L._polyline(pts, 0.8, Color(ink, 0.45))
+	# Un cerne : un arc ouvert (quatre traits).
+	var pts := PackedVector2Array()
+	var a0 := e.randf() * TAU
+	for j in 5:
+		var a := a0 + TAU * 0.7 * j / 4.0
+		pts.append(c + Vector2(cos(a) * rr * 0.55, sin(a) * rr * 0.25))
+	L._polyline(pts, 0.8, Color(ink, 0.45))
 	# La fente, du cœur vers le bord, et un éclat de reflet en haut à gauche.
 	var a := e.randf() * TAU
 	L._line(c, c + Vector2(cos(a) * rr * 1.1, sin(a) * rr * 0.55), 1.0, Color(ink, 0.6))
@@ -114,21 +113,18 @@ static func _root(L, p: Vector2, e: RandomNumberGenerator, alive: bool) -> void:
 	var a := e.randf_range(-0.5, 0.5) + (PI if e.randf() < 0.5 else 0.0)
 	var l := e.randf_range(28.0, 46.0)
 	var pts := PackedVector2Array()
-	for j in 7:
-		var u := j / 6.0
+	for j in 5:
+		var u := j / 4.0
 		pts.append(p + Vector2.from_angle(a + sin(u * 3.0) * 0.25) * l * u * Vector2(1.0, 0.7) + Vector2(0, -sin(u * PI) * 2.5))
-	var shadow := PackedVector2Array()
-	for q in pts:
-		shadow.append(q + Vector2(1.0, 1.6))
-	L._polyline(shadow, 4.2, Color(_c("fletri", "matiere"), 0.45))
+	# Ombre (en bas à droite) et racine, un trait par segment ; filet clair au milieu.
 	for j in pts.size() - 1:
 		var w := 4.2 * sin(PI * (j + 0.5) / (pts.size() - 1)) + 1.0
+		L._line(pts[j] + Vector2(1.0, 1.6), pts[j + 1] + Vector2(1.0, 1.6), w, Color(_c("fletri", "matiere"), 0.45))
 		L._line(pts[j], pts[j + 1], w, wood["clair"])
-	L._polyline(pts.slice(1, 5), 1.0, wood["reflet"].darkened(0.1))
+	L._line(pts[1], pts[3], 1.0, wood["reflet"].darkened(0.1))
 	if alive:
 		var moss: Dictionary = _c("ravive", "mousse")
-		for j in [2, 4]:
-			L._oval(pts[j] + Vector2(0, -1.5), 3.2, 1.6, moss["clair"], 6)
+		L._oval(pts[2] + Vector2(0, -1.5), 3.6, 1.7, moss["clair"], 6)
 	else:
 		# Veine d'ocre dans la racine pétrifiée.
 		L._line(pts[2], pts[3], 0.8, Color(_c("fletri", "veine"), 0.7))
@@ -136,13 +132,12 @@ static func _root(L, p: Vector2, e: RandomNumberGenerator, alive: bool) -> void:
 
 ## Congère de feuilles couchées (brunes et sèches, ou d'or et d'ocre).
 static func _leaves(L, c: Vector2, e: RandomNumberGenerator, etat: String, alpha: float) -> void:
-	for i in e.randi_range(4, 7):
+	for i in e.randi_range(3, 6):
 		var p := c + Vector2(e.randf_range(-22, 22), e.randf_range(-10, 10))
 		var col: Color = _c(etat, "feuille" if i % 2 == 0 else "feuille_2")
 		var a := e.randf() * TAU
 		var l := e.randf_range(5.0, 8.0)
 		L._leaf(p, a, l, Color(col, alpha))
-		L._line(p, p + Vector2.from_angle(a) * l * 0.8, 0.6, Color(col.darkened(0.35), alpha))
 
 
 ## Éclat de pierre anguleux (lumière d'en haut à gauche).
