@@ -193,7 +193,7 @@ const BESTIAIRE := {
 	"braise_coeur": Color("ffd27a"),
 	"ronge": Color("2b1a22"),
 	"os": Color("e6d2a8"),
-	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
+	"ronce": {"clair": Color("a8487c"), "ombre": Color("6e2752"), "reflet": Color("eaa6b8"), "detail": Color("6b6a3a")},
 	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f"),
 		# Flétris de la forêt pétrifiée (R6) : bois mort, chair de racine (mandragore), cendre (termite), feuille sèche.
 		"bois": Color("6e5238"), "bois_ombre": Color("3a2a1e"), "chair": Color("b89468"), "chair_ombre": Color("6a4e34"),
