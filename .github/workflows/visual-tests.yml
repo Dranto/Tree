@@ -4,8 +4,8 @@
 # le résumé du job (onglet Summary) liste chaque capture et chaque défaut d'interface détecté.
 #
 # Lancé à la main avec « references » (tools/refs-from-ci.sh --in-ci <branche>), le workflow prend les
-# captures changées de la CI comme nouvelles références, les commite sur la branche, puis relance les
-# tests visuels sur ce commit pour le vérifier : plus besoin de tools/visual-tests.sh --update en local
+# captures changées de la CI comme nouvelles références et les commite sur ci-refs/<branche>, que
+# tools/refs-from-ci.sh --pull reprend sur la branche : plus besoin de tools/visual-tests.sh --update en local
 # après un rebase (10 minutes, et le rendu d'une autre machine diffère un peu de celui de la CI).
 name: Tests visuels
 
@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       references:
-        description: "Prendre les captures changées comme références et les commiter sur la branche"
+        description: "Prendre les captures changées comme références (commit sur ci-refs/<branche>)"
         type: boolean
         default: false
 
@@ -119,7 +119,6 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
-      actions: write
     steps:
       - uses: actions/checkout@v4
 
@@ -145,16 +144,15 @@ jobs:
           echo "n=$n" >> "$GITHUB_OUTPUT"
           { echo "### Références prises dans la CI : $n"; cat liste.md 2>/dev/null || true; } >> "$GITHUB_STEP_SUMMARY"
 
-      # Un push fait avec le jeton du workflow ne relance aucun workflow : les tests visuels sont
-      # relancés à la main sur le nouveau commit, pour vérifier que tout correspond.
-      - name: Commiter, pousser et revérifier
+      # Le commit va sur une branche à part, ci-refs/<branche> : pousser sur la branche de la PR avec
+      # le jeton du workflow y laisserait des runs « en attente d'approbation » (vu le 26/11). La
+      # session le reprend avec tools/refs-from-ci.sh --pull et le pousse elle-même : toute la CI tourne.
+      - name: Commiter sur ci-refs/${{ github.ref_name }}
         if: steps.copie.outputs.n != '0'
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add godot/tests/visual/reference
           git commit -m "Références visuelles prises dans la CI (${{ steps.copie.outputs.n }} captures, run ${{ github.run_id }})"
-          git push origin "HEAD:${{ github.ref_name }}"
-          gh workflow run visual-tests.yml --ref "${{ github.ref_name }}" -R "${{ github.repository }}"
+          git push -f origin "HEAD:refs/heads/ci-refs/${{ github.ref_name }}"
+          echo "Reprendre avec : tools/refs-from-ci.sh --pull" >> "$GITHUB_STEP_SUMMARY"
