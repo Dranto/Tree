@@ -20,7 +20,7 @@ const BED_STATES := {"mort": "dead", "vif": "alive"}
 const BED_DIR := "res://assets/ambience/"
 ## Sons du boss reconnus (clé de « boss » → moment du combat).
 const BOSS_KEYS := ["eveil", "phase", "mort"]
-const SHAPES := ["dot", "glow", "streak"]
+const SHAPES := ["dot", "glow", "streak", "drop", "chip", "feather"]
 
 
 ## Réglages d'une région ({} sans réglages) : la section « audio » de son fichier, sinon l'entrée de data/audio.json.
@@ -134,6 +134,8 @@ static func validate() -> PackedStringArray:
 				continue
 			if not str(p.get("shape", "dot")) in SHAPES:
 				errors.append("%s, ambience › %s : forme inconnue « %s » (%s)" % [w, state, p.get("shape"), ", ".join(SHAPES)])
+			if p.has("alt") and not str(p["alt"]) in SHAPES:
+				errors.append("%s, ambience › %s : forme « alt » inconnue « %s » (%s)" % [w, state, p.get("alt"), ", ".join(SHAPES)])
 			if p.has("color") and not Regions.color_ok(p["color"]):
 				errors.append("%s, ambience › %s : « color » mal écrite" % [w, state])
 		var bs = a.get("boss", {})

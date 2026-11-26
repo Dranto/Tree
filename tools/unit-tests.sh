@@ -19,6 +19,7 @@ LIMIT="${LIMIT:-600}"   # secondes au plus par test
 # nom|options de Godot (avant -s)|arguments du test (après --)
 TESTS=(
   "access|--headless|"
+  "air|--headless|"
   "art|--headless|"
   "attack|--headless --fixed-fps 60|"
   "aube|--headless --fixed-fps 60|"
