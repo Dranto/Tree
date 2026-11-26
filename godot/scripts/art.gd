@@ -267,6 +267,9 @@ const MONDE := {
 		"seve": Color("8af5c0"), "seve_clair": Color("eafff4"), "seve_sombre": Color("1f7a56"),
 		"encre_decor": Color("1f1614"), "lumiere": Color("ffe9bf"), "nuit": Color("120c10"),
 		"pierre": {"clair": Color("948a7c"), "ombre": Color("5a524a"), "reflet": Color("cbc2b2")},
+		# Cœur commun (régions sans Cœur à elles, world_art/lieux.gd) : écorce morte, puis vivante.
+		"ecorce": {"clair": Color("4d413c"), "ombre": Color("251c1b"), "reflet": Color("76645c")},
+		"ecorce_vive": {"clair": Color("7a5a44"), "ombre": Color("45322a"), "reflet": Color("a8866a")},
 	},
 	"ronce": {
 		# Sol en couches et décor cuit (scripts/world_bake/, ex-prototype P) : lavis, matière, détails en grappes.

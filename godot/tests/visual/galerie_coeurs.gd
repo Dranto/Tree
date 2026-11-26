@@ -59,7 +59,7 @@ func _ready() -> void:
 			var tile := Tile.new()
 			tile.heart = h
 			tile.position = Vector2(110 + j * 170, y0 + 190 * k)
-			tile.scale = Vector2(k, k) * 1.25
+			tile.scale = Vector2(k, k) * 0.85
 			add_child(tile)
 			_labels.append([Vector2(tile.position.x - 34, y0 + 262 * k), HEART_STATES[j][0], 12])
 		for j in ARENA_STATES.size():

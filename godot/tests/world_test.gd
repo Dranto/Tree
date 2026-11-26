@@ -132,14 +132,17 @@ func _run() -> void:
 	check(Regions.art("vent").resource_path.ends_with("region_art/vent.gd"), "Vent : ses propres dessins")
 	check(Regions.art("seve").resource_path.ends_with("region_art/seve.gd"), "Sève : ses propres dessins")
 	check(Regions.art("aube").resource_path.ends_with("region_art/aube.gd"), "Aube : ses propres dessins (les falaises de verre)")
-	for f in ["draw_heart", "draw_heart_purified", "draw_arena_floor", "draw_arena_wall"]:
+	for f in ["draw_arena_floor", "draw_arena_wall"]:
 		check(Regions.art("aube").get_script_method_list().any(func(m): return m["name"] == f), "Aube redessine %s" % f)
 	check(Regions.art("racine").resource_path.ends_with("region_art/racine.gd"), "Racine : ses propres dessins (la forêt pétrifiée)")
 	Regions.set_extra_dirs(["res://tests/regions/"], ["racine"])
 	check("essai" in Regions.ids() and not "racine" in Regions.ids(), "un test peut écarter Racine pour poser la région d'essai à sa place (%s)" % [Regions.ids()])
 	check(Regions.art("essai").resource_path == Regions.BASE_ART, "une région sans « art » : les dessins par défaut")
 	Regions.set_extra_dirs(["res://tests/regions/"])
-	for f in ["draw_heart", "draw_heart_purified", "draw_arena_floor", "draw_arena_wall"]:
+	# Cœurs vus de trois quarts (refonte du monde, vague 1 C) : ceux de world_art/lieux.gd pour toutes.
+	for id in ["ronce", "spore", "vent", "seve", "aube", "racine"]:
+		check(_has_static(Regions.art(id), "heart_body") and _has_static(Regions.art(id), "heart_live"), "%s : un Cœur en partie fixe (cuite) et en partie animée" % id)
+	for f in ["draw_arena_floor", "draw_arena_wall"]:
 		var own := []
 		for id in ["spore", "vent"]:
 			for m in Regions.art(id).get_script_method_list():
@@ -185,3 +188,12 @@ func _run() -> void:
 	Regions.set_extra_dirs([])
 	print("RÉSULTAT : " + ("tout est bon" if failures == 0 else "%d échec(s)" % failures))
 	quit(1 if failures > 0 else 0)
+
+
+## La fonction statique « f » est dans le script ou l'un de ses parents.
+func _has_static(scr: Script, f: String) -> bool:
+	while scr != null:
+		if scr.get_script_method_list().any(func(m): return m["name"] == f):
+			return true
+		scr = scr.get_base_script()
+	return false

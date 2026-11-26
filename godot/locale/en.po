@@ -7215,7 +7215,7 @@ msgid "Phase {0} sur {1} : les ronces se resserrent"
 msgstr "Phase {0} of {1}: the brambles close in"
 
 #. data/regions/ronce.json › ronce › heart › name
-#. scripts/heart.gd:48
+#. scripts/heart.gd:56
 #. scripts/regions.gd:223
 #. scripts/world_map.gd:115
 msgid "Cœur de flétrissure"
@@ -8134,11 +8134,11 @@ msgstr "Requires the “%s” skill."
 msgid "Incompatible avec « %s »."
 msgstr "Incompatible with “%s”."
 
-#. scripts/heart.gd:255
+#. scripts/heart.gd:282
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
 msgstr "Return to the zone: the blight is gaining ground"
 
-#. scripts/heart.gd:255
+#. scripts/heart.gd:282
 msgid "Tiens la zone : %d s"
 msgstr "Hold the ground: %d s"
 
@@ -8481,11 +8481,11 @@ msgstr "sealed"
 msgid "scellée  ·  %d / %d régions purifiées"
 msgstr "sealed  ·  %d / %d regions cleansed"
 
-#. scripts/sanctuary.gd:31
+#. scripts/sanctuary.gd:38
 msgid "de la Graine"
 msgstr "of the Seed"
 
-#. scripts/sanctuary.gd:87
+#. scripts/sanctuary.gd:94
 msgid "sanctuaire %s"
 msgstr "%s sanctuary"
 
