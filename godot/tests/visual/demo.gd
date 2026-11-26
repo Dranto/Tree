@@ -68,7 +68,8 @@ func run(runner) -> void:
 func _look(shot: String, pos: Vector2, frames := 4) -> void:
 	await r._place_player(pos)
 	main.demo_wall.ensure(Rect2(pos - Vector2(2500, 2500), Vector2(5000, 5000)))
-	main.world_edge.ensure(Rect2(pos - Vector2(3000, 3000), Vector2(6000, 6000)))
+	main.world_edge.ensure(Rect2(pos - Vector2(1500, 1000), Vector2(3000, 2000)))
 	main.hud.banner_time = 0.0
+	await main.world_edge.settle()
 	await r._frames(frames)
 	await r._shot(shot, "jeu")

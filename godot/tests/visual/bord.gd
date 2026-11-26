@@ -31,10 +31,13 @@ func run(runner) -> void:
 	await r._frames(5)
 	main.player.position = Vector2(0, 600)
 	main.quest_ui.toggle("carte")
-	await r._frames(3)
+	# Le décor du bord de la carte est cuit à la première ouverture (sur quelques images).
+	await r._frames(60)
 	await r._shot("bord_carte", "carte")
 	main.quest_ui.close()
 	await r._frames(2)
+	var bb = load("res://scripts/world_bake/bord_bake.gd")
+	print("VISUEL info bord : %d cuissons, dessin par image ≤ %.0f ms, tirage ≤ %.0f ms, images %.1f Mo" % [bb.baked, bb.paint_max_usec / 1000.0, bb.items_max_usec / 1000.0, bb.bytes / 1048576.0])
 
 
 ## Point du bord du monde (à 60 px à l'intérieur) dans la direction « angle ».
@@ -46,7 +49,9 @@ func _edge_point(angle: float) -> Vector2:
 
 func _look(shot: String, pos: Vector2) -> void:
 	await r._place_player(pos)
-	main.world_edge.ensure(Rect2(pos - Vector2(3000, 3000), Vector2(6000, 6000)))
+	main.world_edge.ensure(Rect2(pos - Vector2(1500, 1000), Vector2(3000, 2000)))
 	main.hud.banner_time = 0.0
+	# Le décor du bord est cuit en quelques images (world_edge.gd) : on attend la fin des cuissons.
+	await main.world_edge.settle()
 	await r._frames(4)
 	await r._shot(shot, "jeu")
