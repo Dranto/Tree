@@ -69,9 +69,10 @@ const LISIERES := {  # i18n: non (début)
 		"repere": {"*": ["chapeau_geant", 0.8]},
 	},
 	"vent": {
-		"bord": [["plateau:Grass", 0.8, 1.3, 5], ["plateau:Twisted", 0.9, 1.3, 1]],
-		"grappe": [["plateau:Grass", 1.0, 1.5, 3], ["plateau:Twisted", 1.4, 2.0, 2]],
-		"grand": [["plateau:Twisted", 2.9, 3.7, 1]],
+		"bord": [["plateau:Grass", 0.8, 1.2, 5], ["plateau:Twisted", 0.9, 1.3, 0.8]],
+		"grappe": [["plateau:Grass", 1.1, 1.6, 3.5], ["plateau:Twisted", 1.4, 2.0, 1.6]],
+		"grand": [["plateau:Twisted", 2.9, 3.6, 1]],
+		"repere": {"grand_arbre": ["plateau:Twisted", 4.4], "rocher": ["plateau:Cairn", 6.5], "ruine": ["plateau:Dolmen", 6.0]},
 	},
 	"seve": {
 		"bord": [["vallee:Fern", 0.8, 1.3, 1]],
@@ -92,7 +93,7 @@ const LISIERES := {  # i18n: non (début)
 ## Souplesse au vent par sorte (lue par le monde vivant, tâche V).
 const SWAY := {
 	"arbre": 1.0, "haie": 0.7, "buisson": 0.6, "champignon": 0.25, "chapeau_geant": 0.15, "roseaux": 1.2,
-	"fougere": 0.9, "Twisted": 0.9, "Grass": 1.1, "Willow": 1.0, "Fern": 0.9, "Bleached": 0.7,
+	"fougere": 0.9, "Twisted": 0.9, "Grass": 1.1, "plateau:Twisted": 0.5, "plateau:Cairn": 0.3, "plateau:Dolmen": 0.3, "Willow": 1.0, "Fern": 0.9, "Bleached": 0.7,
 	"StoneTree": 0.1, "DecorTree": 1.0, "DecorBramble": 0.8, "DecorBush": 0.35, "DecorReeds": 1.2, "DecorMushroom": 0.25,
 }  # i18n: non (fin)
 ## Décor de région -> son script (pour « plateau:Twisted »).
@@ -453,9 +454,10 @@ static func _reperes(flora, reg: String, lis: Dictionary, placed: Array) -> int:
 	var n := 0
 	for s in spots:
 		var spec: Array = rep.get(s[1], rep.get("*", ["arbre", 1.4]))
-		var o := Objet.new()
-		o.kind = spec[0]
-		o.region = reg
+		var o = _make(spec[0], reg) if ":" in spec[0] else Objet.new()
+		if o is Objet:
+			o.kind = spec[0]
+			o.region = reg
 		o.size = spec[1]
 		o.tree_seed = hash([reg, s[1], n])
 		o.position = s[0]
