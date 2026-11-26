@@ -1234,7 +1234,8 @@ func _tint_color() -> Color:
 		var k := Anim.ease_out(clampf(dying / death_time * 1.4, 0.0, 1.0))
 		return Color(FletriArt.ash_color(), 1.0 - k)
 	if hit_flash > 0.0:
-		return Color(Art.c("danger_eclair"), 0.4)
+		# Plus léger que sur l'ancien dessin (0,6 sur l'écorce seule) : ici, toute l'image s'éclaire.
+		return Color(Art.c("danger_eclair"), 0.65)
 	if poison_time > 0.0:
 		return Color(Art.ec("poison"), 0.7)
 	return Color.WHITE
