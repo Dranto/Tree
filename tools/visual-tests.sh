@@ -15,7 +15,7 @@ OUT="$ROOT/godot/tests/visual/out"
 SEED=1234
 # Scénarios : « nom » ou « nom:LARGEURxHAUTEUR » (résolution de la fenêtre, 1600x900 par défaut).
 # Seul le premier est joué si TEST_ONLY est défini (ex. TEST_ONLY=galerie tools/visual-tests.sh).
-SCENARIOS=(depart combat galerie competences boss roncier resolution:1280x720 resolution:1920x1080 resolution:2560x1440 resolution:3440x1440 quetes:1280x720 quetes:1920x1080 quetes:2560x1440 quetes:3440x1440 charte:2560x1440 interactions heros:2560x1440 monde attaque regions marais plateaux carte5:1280x720 carte5:1920x1080 falaises vallee finale foret bord paysages menus:1280x720 menus:3440x1440 cumul manette:1280x800 langue:1280x720 langue:1280x800 langue:3440x1440 anglais:1280x720 anglais:1280x800 anglais:3440x1440 eclat reaction demo:1280x720 demo:1280x800 bestiaire:2560x1440)
+SCENARIOS=(depart combat galerie competences boss roncier resolution:1280x720 resolution:1920x1080 resolution:2560x1440 resolution:3440x1440 quetes:1280x720 quetes:1920x1080 quetes:2560x1440 quetes:3440x1440 charte:2560x1440 interactions heros:2560x1440 monde attaque regions marais plateaux carte5:1280x720 carte5:1920x1080 falaises vallee finale foret bord paysages menus:1280x720 menus:3440x1440 cumul manette:1280x800 langue:1280x720 langue:1280x800 langue:3440x1440 anglais:1280x720 anglais:1280x800 anglais:3440x1440 eclat reaction vivant demo:1280x720 demo:1280x800 bestiaire:2560x1440)
 
 # Durée approximative de chaque scénario (s, machine des tests du 24/11 : 444 s en tout), pour répartir les parts : chaque scénario
 # va à la part la moins chargée, du plus long au plus court. Un scénario absent compte 20 s.
@@ -26,7 +26,7 @@ declare -A WEIGHT=(
   [interactions]=18 [heros:2560x1440]=7 [monde]=4 [attaque]=3 [regions]=17 [marais]=21
   [plateaux]=18 [carte5:1280x720]=5 [carte5:1920x1080]=5 [falaises]=19 [vallee]=22 [finale]=10
   [foret]=21 [bord]=19 [paysages]=16 [menus:1280x720]=9 [menus:3440x1440]=20 [cumul]=6 [manette:1280x800]=10
-  [langue:1280x720]=25 [langue:1280x800]=28 [langue:3440x1440]=40 [anglais:1280x720]=25 [anglais:1280x800]=28 [anglais:3440x1440]=40 [eclat]=7 [reaction]=6 [demo:1280x720]=8 [demo:1280x800]=8 [bestiaire:2560x1440]=8
+  [langue:1280x720]=25 [langue:1280x800]=28 [langue:3440x1440]=40 [anglais:1280x720]=25 [anglais:1280x800]=28 [anglais:3440x1440]=40 [eclat]=7 [reaction]=6 [vivant]=7 [demo:1280x720]=8 [demo:1280x800]=8 [bestiaire:2560x1440]=8
 )
 
 # SHARD=k/n : garde les scénarios de la part k sur n.
@@ -77,12 +77,7 @@ export TREE_LANG="${TREE_LANG:-fr}"
 # Importe le projet (ressources, cache de scripts) avant de lancer les scénarios.
 # Le journal d'import est gardé dans out/import.log : un import qui plante (vu en CI : segfault,
 # polices non importées, toutes les captures avec du texte en écart) est signalé et refait une fois.
-if ! "$ROOT/tools/godot.sh" --headless --import >"$OUT/import.log" 2>&1; then
-  echo "Import du projet en échec (code $?), fin du journal :"
-  tail -40 "$OUT/import.log"
-  echo "Nouvel essai d'import."
-  "$ROOT/tools/godot.sh" --headless --import >"$OUT/import2.log" 2>&1 || { echo "Import encore en échec :"; tail -40 "$OUT/import2.log"; }
-fi
+"$ROOT/tools/import.sh" "$OUT/import.log" || echo "Import encore en échec : captures probablement fausses."
 
 START=$SECONDS
 status=0

@@ -224,13 +224,12 @@ func _ready() -> void:
 	flora = Flora.new()
 	flora.ground = ground
 	flora.trees_parent = trees_layer
+	DecorCompose.configure()
 	add_child(flora)
+	# Décor cuit (refonte du monde, vague 1 D) : un atlas par région, cuit quand elle entre dans le
+	# champ ; « --decor-direct » revient au dessin direct.
 	DecorBake.configure()
-	if DecorBake.enabled:
-		DecorCompose.configure()
-		DecorCompose.spawn(flora, DecorCompose.test_center())
-		if DecorBake.baked:
-			_bake_decor()
+	DecorBake.install(flora)
 	orbs_layer = Node2D.new()
 	add_child(orbs_layer)
 	# Signatures des attaques du héros : une moitié sous les acteurs, l'autre au-dessus des projectiles.
@@ -1094,6 +1093,8 @@ func on_enemy_killed(e) -> void:
 	Game.kills += 1
 	# Une élite laisse une gerbe d'essences, et parfois une greffe (tâche B).
 	var is_elite: bool = e.get("elite") == true
+	# Monde vivant (world_life.gd) : l'herbe se redresse, la faune proche s'enfuit.
+	world_fx.react("death", e.position, 1.5 if is_elite else 1.0)
 	# Une élite meurt avec un son à elle (s'il existe, sinon celui de sa sorte).
 	Sfx.play("mort_elite" if is_elite and Sfx.has_sound("mort_elite") else enemy_sound(e, "sound_death", "mort"), e.position)
 	var n_orbs := 6 if is_elite else 1
@@ -1515,8 +1516,7 @@ func _finish_benchmark() -> void:
 	if ground.layered:
 		var gs := Ground.GroundLayers.stats()
 		print("BENCHMARK sol en couches : %d calques dessinés, %.2f ms chacun, %d sommets chacun" % [gs["draws"], gs["usec"] / 1000.0 / maxf(1.0, gs["draws"]), gs["verts"] / maxi(1, gs["draws"])])
-	if DecorBake.enabled:
-		print("BENCHMARK décor : %d éléments, cuit %s (%d dessins cuits, %d en direct), atlas %.1f Mo, cuisson %.0f ms" % [flora.trees.size(), "oui" if DecorBake.baked else "non", DecorBake.drawn, DecorBake.fallback, DecorBake.bytes / 1048576.0, DecorBake.bake_usec / 1000.0])
+	print("BENCHMARK décor : %d éléments, %d à l'écran du départ, cuit %s (%d dessins cuits, %d en direct), atlas %.1f Mo (%d régions), cuisson %.0f ms (%d images, cache %d)" % [flora.trees.size(), DecorCompose.count_in_screen(flora, bench_origin), "oui" if DecorBake.enabled else "non", DecorBake.drawn, DecorBake.fallback, DecorBake.total_bytes() / 1048576.0, DecorBake.atlases.size(), DecorBake.bake_usec / 1000.0, DecorBake.jobs_baked, DecorBake.cache_hits])
 	print("BENCHMARK partie : niveau %d, tués %d, fleurs %d" % [Game.level, Game.kills, flora.flowers.size()])
 	var kinds := {}
 	for e in enemies:
@@ -1579,13 +1579,6 @@ func _benchmark_setup() -> void:
 			bench_seg["script"] += _seg_pre - _seg_start
 			bench_seg["render"] += Time.get_ticks_usec() - _seg_pre
 			bench_seg["n"] += 1)
-
-
-## Prototype du décor cuit : cuisson à la mise en route (une image), puis le décor se redessine
-## depuis l'atlas.
-func _bake_decor() -> void:
-	await DecorBake.bake(self)
-	DecorBake.install(flora)
 
 
 ## « --hide=sol,ennemis » : cache ces calques pendant le banc (la différence de temps dit leur coût).

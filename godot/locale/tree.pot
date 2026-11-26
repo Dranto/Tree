@@ -8078,11 +8078,11 @@ msgstr ""
 msgid "Phase 3 sur 3"
 msgstr ""
 
-#. scripts/fx.gd:309
+#. scripts/fx.gd:312
 msgid "Sève −%d"
 msgstr ""
 
-#. scripts/fx.gd:311
+#. scripts/fx.gd:314
 msgid "étourdi"
 msgstr ""
 
@@ -8165,17 +8165,17 @@ msgid ""
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 msgstr ""
 
-#. scripts/main.gd:1192
+#. scripts/main.gd:1193
 msgid "%s vaincu"
 msgstr ""
 
-#. scripts/main.gd:393
+#. scripts/main.gd:392
 #. scripts/save_game.gd:140
 #. scripts/save_game.gd:197
 msgid "aucune sauvegarde"
 msgstr ""
 
-#. scripts/main.gd:394
+#. scripts/main.gd:393
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr ""
 

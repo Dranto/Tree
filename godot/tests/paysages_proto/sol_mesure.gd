@@ -58,11 +58,20 @@ func _run() -> void:
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
 	var shot := ""
 	var court := false
+	var region := "ronce"
+	var purify := false
+	var gif := ""
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--shot="):
 			shot = a.get_slice("=", 1)
 		elif a == "--court":
 			court = true
+		elif a.begins_with("--region="):
+			region = a.get_slice("=", 1)
+		elif a == "--purifie":
+			purify = true
+		elif a.begins_with("--gif="):
+			gif = a.get_slice("=", 1)
 	ground = Ground.new()
 	root.add_child(ground)
 	ground.tile_budget = 0
@@ -71,16 +80,34 @@ func _run() -> void:
 	cam.zoom = Vector2(VIEW, VIEW)
 	root.add_child(cam)
 	cam.make_current()
-	var axis := Vector2.from_angle(Regions.angle_of("ronce"))
+	var axis := Vector2.from_angle(Regions.angle_of(region))
 	var spot := axis * 1150.0
 	cam.position = spot
 	# Une clairière ravivée à droite de l'écran : terre morte, front de vie et terre ravivée.
 	var side := axis.orthogonal()
 	ground.paint(spot + side * 330.0, 420.0, 1.6)
 	ground.paint(spot - side * 520.0 + axis * 260.0, 160.0, 1.2)
+	# Taches de vie des Flétris tués (comme main.gd : petites, faibles, qui se cumulent).
+	var rk := RandomNumberGenerator.new()
+	rk.seed = 7
+	for i in 26:
+		var q := spot - side * rk.randf_range(250.0, 900.0) + axis * rk.randf_range(-420.0, 420.0)
+		for j in rk.randi_range(1, 4):
+			ground.paint(q + Vector2(rk.randf_range(-40, 40), rk.randf_range(-40, 40)), 60.0, 0.3)
+	if purify:
+		ground.set_purified(region, 1.0)
 	await _frames(4)
 	await RenderingServer.frame_post_draw
-	var label := "couches" if GroundLayers.enabled else "develop"
+	# Film du bord de vie : une vague qui avance (images dans le dossier « gif »).
+	if gif != "":
+		ground.paint_wave(spot - side * 330.0 - axis * 120.0, 380.0, 1.3)
+		for i in 64:
+			await _frames(2)
+			await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png("%s/f%03d.png" % [gif, i])
+		quit()
+		return
+	var label := "couches" if ground.layered else "sans calque"
 	if shot != "":
 		root.get_texture().get_image().save_png(shot)
 		print("SOL capture %s : %s" % [label, shot])
@@ -100,6 +127,17 @@ func _run() -> void:
 		res[k] = tk
 		var st := GroundLayers.stats()
 		print("SOL refaire %d carré(s) par image : %.2f ms (sans : %.2f ms) → %.2f ms par carré ; calque dessiné %.2f ms par carré, %d sommets par carré" % [k, _mean(tk), _mean(base), (_mean(tk) - _mean(base)) / k, st["usec"] / 1000.0 / maxf(1.0, st["draws"]), st["verts"] / maxi(1, st["draws"])])
+	# 1 bis. Construction complète d'un carré : calque redessiné (script) et rendu, un par image.
+	if ground.layered:
+		for m in [1, 2, 4, 7]:
+			GroundLayers.reset_stats()
+			var tb := await _timed(60, func(i):
+				var t: Dictionary = tiles[i % tiles.size()]
+				t["layer"].mask = m
+				t["layer"].queue_redraw()
+				ground._render_once(t["vp"]))
+			var sb := GroundLayers.stats()
+			print("SOL construire 1 carré par image (sortes %d) : %.2f ms (sans : %.2f ms) → %.2f ms par carré ; calque dessiné %.2f ms, %d sommets par carré" % [m, _mean(tb), _mean(base), _mean(tb) - _mean(base), sb["usec"] / 1000.0 / maxf(1.0, sb["draws"]), sb["verts"] / maxi(1, sb["draws"])])
 	# 2. Marche, course, Ruée : la caméra traverse le Roncier en ligne droite (perpendiculaire à l'axe).
 	for v in [220.0, 400.0, 1400.0]:
 		cam.position = axis * 1600.0 - side * 900.0
