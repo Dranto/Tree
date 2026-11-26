@@ -172,7 +172,7 @@
       },
       "ambience": {
         "butterflies": 0,
-        "dead": {"shape": "glow", "color": "#7a6a3c", "alpha": 0.4, "vel": [3.0, -8.0], "sway": [6.0, 2.0], "size": [1.2, 2.6]},
+        "dead": {"shape": "chip", "color": "#9a9cab", "alpha": 0.4, "vel": [3.0, 10.0], "sway": [6.0, 2.0], "size": [1.2, 2.4]},
         "alive": {"shape": "glow", "color": "#fff0b8", "alpha": 0.9, "vel": [4.0, -16.0], "sway": [10.0, 3.0], "size": [1.2, 3.0]}
       },
       "boss": {"eveil": "aube_boss_eveil", "phase": "aube_boss_phase", "mort": "aube_boss_mort"}
