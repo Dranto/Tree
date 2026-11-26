@@ -416,7 +416,8 @@ func draw_body(c: CanvasItem) -> void:
 	var key := _bake_key()
 	var k := ratio()
 	var p := pulse()
-	var sq := 1.0 + (p - 1.0) * 0.7 + 0.03 * jolt
+	# Respiration lente à peine visible (la silhouette reste stable), battement franc pendant le siège.
+	var sq := 1.0 + (p - 1.0) * (0.7 if state == "siege" else 0.25) + 0.03 * jolt
 	var shake := sin(t * 60.0) * 1.5 * jolt
 	if state == "purifie":
 		if bloom > 0.0:
