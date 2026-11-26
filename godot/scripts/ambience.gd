@@ -111,9 +111,12 @@ class Air extends Control:
 		var h := size.y
 		var clear_l := Color(luz, 0.0)
 		var clear_v := Color(voile, 0.0)
-		if luz.a > 0.004 or bas > 0.004:
-			draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-				PackedColorArray([luz, clear_l, Color(voile, bas), clear_v]))
+		# Lumière et voile seulement dans deux coins (haut à gauche, bas à droite) : le centre, où se jouent les
+		# personnages et le décor, n'est jamais voilé.
+		if luz.a > 0.004:
+			draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w * 0.5, 0), Vector2(0, h * 0.5)]), PackedColorArray([luz, clear_l, clear_l]))
+		if bas > 0.004:
+			draw_polygon(PackedVector2Array([Vector2(w, h), Vector2(w * 0.5, h), Vector2(w, h * 0.5)]), PackedColorArray([Color(voile, bas), clear_v, clear_v]))
 		if rays > 0.004:
 			# Rayons obliques depuis le haut à gauche (même direction que la lumière commune).
 			var d := -Art.LUMIERE_DIR * h * 0.6

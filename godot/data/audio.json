@@ -132,7 +132,7 @@
       "ambience": {
         "butterflies": 0,
         "dead": {"shape": "drop", "color": "seve/sombre", "alpha": 0.5, "vel": [1.0, 34.0], "sway": [4.0, 4.0], "size": [1.6, 2.8]},
-        "alive": {"shape": "drop", "color": "seve/clair", "alpha": 0.85, "vel": [2.0, 28.0], "sway": [5.0, 4.0], "size": [1.6, 3.0]}
+        "alive": {"shape": "drop", "color": "seve/clair", "alpha": 0.5, "vel": [2.0, 28.0], "sway": [5.0, 4.0], "size": [1.6, 3.0]}
       },
       "boss": {"eveil": "seve_boss_eveil", "phase": "seve_boss_phase", "mort": "seve_boss_mort"}
     },

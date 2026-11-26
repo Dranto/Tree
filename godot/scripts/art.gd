@@ -346,8 +346,8 @@ const MONDE_AIR := {
 ## Force de l'air par état : opacité de la vignette, de la lumière en haut à gauche, du voile en bas à droite,
 ## des rayons obliques. Le flétri est plus sombre ; le ravivé, nettement plus clair. Le centre reste intact.
 const AIR_ETAT := {
-	"fletri": {"vignette": 0.55, "haut": 0.02, "bas": 0.20, "rayons": 0.0},
-	"ravive": {"vignette": 0.22, "haut": 0.05, "bas": 0.0, "rayons": 0.03},
+	"fletri": {"vignette": 0.55, "haut": 0.04, "bas": 0.20, "rayons": 0.0},
+	"ravive": {"vignette": 0.30, "haut": 0.10, "bas": 0.10, "rayons": 0.025},
 }
 ## Lumière commune du monde (comme Ink.LIGHT) : elle vient d'en haut à gauche ; les ombres portées partent
 ## à l'opposé, vers le bas à droite (même direction que world_art/outils.gd › SHADOW_DIR).

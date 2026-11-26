@@ -192,9 +192,9 @@ class DecorTree extends Node2D:
 	func dead_color() -> Color:
 		return Art.c("decor").lerp(Art.c("sol_mort"), 0.35)
 
-	## Ombre au sol aplatie (lumière d'en haut à gauche : décalée vers Art.OMBRE_DIR) pour le décor : plus légère que celle des acteurs.
+	## Ombre au sol aplatie (lumière zénithale) pour le décor : plus légère que celle des acteurs.
 	static func flat_shadow(ci, pos: Vector2, r: float) -> void:
-		ci.draw_colored_polygon(Art.ellipse(Art.ombre_decalee(pos, r), r, r * Art.OMBRE_APLATI, 16), Color(Art.c("ombre"), 0.22))
+		ci.draw_colored_polygon(Art.ellipse(pos, r, r * Art.OMBRE_APLATI, 16), Color(Art.c("ombre"), 0.22))
 
 
 	## Membre effilé (tronc, branche, tige) : un quadrilatère de base « w0 » et de pointe « w1 ».
