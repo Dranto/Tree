@@ -25,7 +25,15 @@ uniform int region_count = 0;
 uniform vec2 region_n1[6];
 uniform vec2 region_n2[6];
 uniform float region_inner = 430.0;
-uniform float region_edge = 110.0;
+// Frontières entre régions (vague 3 B, world_art/frontieres.gd) : les deux sols ne se fondent pas, ils
+// s'entremêlent en langues et en îlots sur une bande de ± border_half px autour de chaque demi-droite
+// (± border_inner autour de l'oasis). Chaque pixel appartient à une seule région ; un fin liseré
+// sombre marque le bord d'un îlot (une terre posée sur l'autre). Même calcul que Frontieres.inside().
+uniform float border_half = 220.0;
+uniform float border_inner = 120.0;
+uniform float border_amp = 1.25;
+uniform float border_scale = 1.7;
+uniform vec2 border_offset = vec2(0.37, 0.61);
 // Trois tons par région, pour la terre morte (mélange du flétri et de l'apaisé selon les Cœurs
 // purifiés, fait par ground.gd) et pour la terre ravivée : sombre, moyen, clair.
 uniform vec3 region_dead_dark[6];
@@ -53,6 +61,12 @@ uint hash_u(vec2 cell) {
 	return h ^ (h >> 13u);
 }
 
+// Décalage des îlots pour une distance s au bord (nul hors de la bande).
+float border_shift(float s, float half_w, float n) {
+	float t = clamp(s / half_w, -1.0, 1.0);
+	return (n - 0.5) * 2.0 * border_amp * half_w * (1.0 - t * t);
+}
+
 vec3 plaques(vec3 d, vec3 m, vec3 l, vec2 k) {
 	return mix(mix(m, d, k.x), l, k.y);
 }
@@ -77,9 +91,18 @@ void fragment() {
 	vec3 alive = edge > 0.0 ? plaques(alive_dark, alive_mid, alive_light, k) : vec3(0.0);
 	vec3 band_col = alive_dark;
 	vec3 tip_col = alive_light;
+	// Îlots de la bande : bruit propre (canal R relu à une autre échelle) ; largeur d'un pixel d'écran
+	// en px du monde (dérivées prises hors de la boucle).
+	float bn = texture(noise_tex, p * border_scale / noise_period + border_offset).r;
+	float wpx = max(fwidth(w.x), 1e-3);
+	float lip = 0.0;
 	for (int i = 0; i < region_count; i++) {
-		float inside = min(min(dot(p, region_n1[i]), dot(p, region_n2[i])), length(p) - region_inner);
-		float rw = smoothstep(-region_edge, region_edge, inside + (nz.r - 0.5) * 120.0);
+		float s1 = dot(p, region_n1[i]);
+		float s2 = dot(p, region_n2[i]);
+		float s3 = length(p) - region_inner;
+		float inside = min(min(s1 + border_shift(s1, border_half, bn), s2 - border_shift(s2, border_half, bn)), s3 + border_shift(s3, border_inner, bn));
+		float rw = clamp(inside / (wpx * 1.3) + 0.5, 0.0, 1.0);
+		lip = max(lip, 1.0 - smoothstep(wpx * 0.6, wpx * 0.6 + 2.4, abs(inside)));
 		if (rw > 0.002) {
 			if (edge < 1.0) {
 				dead = mix(dead, plaques(region_dead_dark[i], region_dead_mid[i], region_dead_light[i], k), rw);
@@ -120,6 +143,8 @@ void fragment() {
 		alive = mix(alive, stroke, hit * 0.22);
 	}
 	vec3 col = mix(dead, alive, edge);
+	// Bord d'un îlot de la bande : une terre posée sur l'autre, un liseré à peine plus sombre.
+	col *= 1.0 - lip * 0.16;
 	// Herbe dense juste dedans (ombre), liseré de sève sur le front, léger halo dehors.
 	float band = edge * (1.0 - smoothstep(2.0, 9.0, d));
 	col = mix(col, band_col * 0.82, band * 0.5);

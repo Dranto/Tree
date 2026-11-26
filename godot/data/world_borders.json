@@ -1,0 +1,11 @@
+{
+  "_doc": "Frontières entre régions dans le monde (refonte du monde, vague 3 B ; scripts/world_art/frontieres.gd). Ne pas confondre avec data/borders/ (frontières de l'arbre de compétences). Pour chaque paire de régions voisines : l'élément de passage (dessin seul, sans collision ; frontieres.gd › draw_passage), sa taille, l'atlas du décor où il est cuit (« atlas », sinon la région de l'îlot où il est posé) et où le poser le long de la frontière (fractions de la demi-droite entre l'oasis et le bord du monde ; posé dans la zone libre la plus proche).",
+  "pairs": {
+    "ronce-spore": {"passage": "ronces_chapeaux", "size": 1.0, "spots": [0.22, 0.52, 0.8]},
+    "spore-seve": {"passage": "saule_chapeaux", "size": 1.0, "spots": [0.28, 0.6, 0.86]},
+    "seve-vent": {"passage": "saule_plumes", "size": 1.05, "spots": [0.2, 0.5, 0.78]},
+    "vent-aube": {"passage": "cairn_cristal", "size": 1.0, "spots": [0.3, 0.58, 0.85]},
+    "aube-racine": {"passage": "souche_cristal", "size": 1.0, "spots": [0.24, 0.55, 0.82]},
+    "racine-ronce": {"passage": "arceau_ronce", "atlas": "racine", "size": 0.95, "spots": [0.3, 0.6, 0.86]}
+  }
+}

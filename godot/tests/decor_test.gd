@@ -79,7 +79,8 @@ func _run() -> void:
 		obstacles[b] = true
 	for reg in Regions.ids():
 		var rep: Dictionary = Compose.report.get(reg, {})
-		check(rep.get("placed", 0) > 120, "%s : décor composé (%s)" % [reg, rep])
+		# Plus de 110 (vague 3 B : dans les bandes de frontière, une région laisse des places à ses voisines).
+		check(rep.get("placed", 0) > 110, "%s : décor composé (%s)" % [reg, rep])
 		var geo: Dictionary = Compose.clearings(reg)
 		var inside := 0
 		var big := []
