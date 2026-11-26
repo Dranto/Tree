@@ -331,7 +331,8 @@ static func _drawn(host: Node) -> Signal:
 	return host.drawn if host.has_signal("drawn") else RenderingServer.frame_post_draw
 
 
-## Cuit le décor d'une région dans un atlas. Coroutine (deux images de rendu ; aucune si le cache sert).
+## Cuit le décor d'une région dans un atlas. Coroutine : deux images de rendu, et autant quand le cache
+## sert (l'atlas relu attend deux images) : le décor arrive à la même image, cache vide ou non.
 static func bake(host: Node, flora, region: String) -> void:
 	while _busy:
 		await _drawn(host)
@@ -345,6 +346,8 @@ static func bake(host: Node, flora, region: String) -> void:
 		var cached := _load_cached(region, fp)
 		if cached != null and cached.cells.size() >= models.size() * 2:
 			cache_hits += 1
+			await _drawn(host)
+			await _drawn(host)
 			_install_atlas(flora, cached)
 			bake_usec += Time.get_ticks_usec() - t0
 			_busy = false
@@ -516,7 +519,7 @@ static func prepare(t) -> void:
 ## Dessine l'élément depuis l'atlas de sa région (appelé par DecorTree._draw). Faux : dessin direct.
 static func draw(t) -> bool:
 	# Seul le décor du monde (flora) est cuit ; une galerie figée dessine en direct.
-	if _baking or not t.has_meta("cuit"):
+	if not t.has_meta("cuit"):
 		return false
 	var a: Atlas = atlases.get(region_of(t))
 	if a == null:
@@ -593,12 +596,29 @@ class Runtime extends Node:
 		# Pas à la première image : le héros et la caméra ne sont pas encore à leur place.
 		if _tick % 20 == 2:
 			_want()
+		elif _tick > 2 and _tick % 2 == 0:
+			_visible_now()
 		if not B._wanted.is_empty() and not B._busy:
 			for reg in B._wanted.keys():
 				if not _keep.has(reg):
 					B._wanted.erase(reg)
 			B.pump(self, flora)
 		_fade(delta)
+
+	## Régions à l'écran pas encore cuites (après un saut de la caméra) : demandées tout de suite, sans
+	## attendre le prochain relevé du champ.
+	func _visible_now() -> void:
+		var cam := get_viewport().get_camera_2d() if get_viewport() != null else null
+		var c: Vector2 = cam.get_screen_center_position() if cam != null else Vector2.ZERO
+		var half := get_viewport().get_visible_rect().size * 0.5 / (cam.zoom if cam != null else Vector2.ONE)
+		for i in 3:
+			for j in 3:
+				var reg := Regions.region_weighted(c + Vector2((i - 1) * half.x, (j - 1) * half.y))
+				if reg == "":
+					reg = COMMUN
+				if not B.atlases.has(reg):
+					_keep[reg] = true
+					B.request(reg)
 
 	## Régions du champ de la caméra (et un peu au-delà) : demandées, gardées en mémoire.
 	func _want() -> void:
