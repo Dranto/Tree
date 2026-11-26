@@ -15,7 +15,7 @@
   "tolerance_connus": 1.5,
   "connus": {
     "fletri_dl:ronce:ravive": {
-      "valeur": 2.7,
+      "valeur": 1.6,
       "cible": 8.0
     },
     "annonce:spore:ravive": {
@@ -23,7 +23,7 @@
       "cible": 9.0
     },
     "fletri_dl:vent:ravive": {
-      "valeur": 0.7,
+      "valeur": 0.8,
       "cible": 8.0
     },
     "heros_dl:vent:ravive": {
@@ -77,10 +77,6 @@
     "regions_de_dalto:ronce:vent": {
       "valeur": 5.4,
       "cible": 8.0
-    },
-    "regions_de:ronce:seve": {
-      "valeur": 15.0,
-      "cible": 15.0
     },
     "regions_de:ronce:aube": {
       "valeur": 12.6,
