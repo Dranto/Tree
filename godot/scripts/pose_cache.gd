@@ -10,7 +10,7 @@
 ## Apparence seulement : rien ici ne touche au jeu.
 extends Node2D
 
-const NAME := "PoseCache"
+const NAME := "PoseCache"  # i18n: non
 
 ## Nombre de poses gardées (la plus ancienne est oubliée au-delà).
 var limit := 220
