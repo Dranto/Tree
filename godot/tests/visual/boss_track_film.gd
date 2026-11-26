@@ -1,7 +1,9 @@
 ## Film du combat contre la Flétrissure avec sa musique faite à la main (tools/boss-track-film.sh) :
-## le vrai jeu, le héros invulnérable, et des coups forcés pour tenir en ~1 min 40 : descente par la
-## brèche et invocation (intro), combat à l'entrée de la batterie (boucle_1), mue de la phase 2 sur
-## drop_1, transformation sur drop_2, mort (fin). Les moments sont imprimés (« FILM »).
+## le vrai jeu, le héros invulnérable mené par le robot de l'arène (il esquive comme un joueur), et
+## des coups forcés pour tenir en ~2 min 15 : descente par la brèche et invocation (intro), une boucle
+## de la partition de phase 1 (boucle_1), mue de la phase 2 sur drop_1, phase 2, transformation sur
+## drop_2, seconde forme jusqu'au déluge (mesures 25-32 de boucle_3), mort (fin). Les moments sont
+## imprimés (« FILM »).
 ## Rien n'est comparé : c'est un outil. Lancer avec --write-movie (Movie Maker : image et son calés).
 extends Node
 
@@ -9,9 +11,9 @@ const MainScene = preload("res://scenes/main.tscn")
 const Regions = preload("res://scripts/regions.gd")
 
 ## Après la reprise du combat (s) : le coup qui fait passer en phase 2, puis en phase 3, puis la mort.
-const HIT2_AFTER := 8.0
-const HIT3_AFTER := 10.0
-const KILL_AFTER := 12.0
+const HIT2_AFTER := 22.0
+const HIT3_AFTER := 22.0
+const KILL_AFTER := 46.0
 ## Temps laissé à la fin du morceau après la mort (s).
 const END_AFTER := 24.0
 var _was_ascending := false
@@ -22,6 +24,19 @@ var step := 0
 var _seen_phase := 1
 var _mark := 0.0
 var _waited := false
+
+
+## Le robot de l'arène mène le héros pendant le combat (main.gd › bot_input passe par zone_bot).
+class FilmBot:
+	var finale
+
+	func input(_m, p) -> Dictionary:
+		if finale.in_combat():
+			return finale.bot_input(p)
+		return {"move": Vector2.ZERO, "aim": p.position + Vector2.DOWN * 50.0, "dash": false}
+
+	func step(_m, _delta: float) -> void:
+		pass
 
 
 func _ready() -> void:
@@ -79,6 +94,10 @@ func _physics_process(delta: float) -> void:
 		2:
 			if finale.in_combat():
 				_log("au fond du puits : invocation")
+				var bot := FilmBot.new()
+				bot.finale = finale
+				main.zone_bot = bot
+				main.autotest = true
 				step = 3
 		3:
 			if ready:
@@ -86,8 +105,8 @@ func _physics_process(delta: float) -> void:
 				_mark = t
 				step = 4
 		4:
-			if t - _mark >= HIT2_AFTER:
-				b.take_damage(b.hp - b.max_hp * 0.6, false)
+			if t - _mark >= HIT2_AFTER and b.phase == 1:
+				b.take_damage(maxf(0.0, b.hp - b.max_hp * 0.6), false)
 				_log("coup : la vie passe sous 66 %")
 				_waited = false
 				step = 5
@@ -97,8 +116,8 @@ func _physics_process(delta: float) -> void:
 				_mark = t
 				step = 6
 		6:
-			if t - _mark >= HIT3_AFTER:
-				b.take_damage(b.hp - b.max_hp * 0.3, false)
+			if t - _mark >= HIT3_AFTER and b.phase == 2:
+				b.take_damage(maxf(0.0, b.hp - b.max_hp * 0.3), false)
 				_log("coup : la vie passe sous 33 %")
 				_waited = false
 				step = 7
