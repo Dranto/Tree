@@ -6,7 +6,7 @@
 ##   - le Flétri ressort : écart de luminosité (L*) du corps avec le sol voisin ≥ « fletri_dl_min », le héros ≥ « heros_dl_min » ;
 ##   - le sol n'est jamais plus contrasté qu'un Flétri (gradient p95 du sol ≤ celui du moins marqué − marge) ni que le décor ;
 ##   - l'annonce d'attaque (cercle, cône, ligne de la charte) se lit sur ce sol : ΔE médian ≥ « annonce_de_min » ;
-##   - le héros et les Flétris restent distincts de leur sol pour un daltonien (ΔE des couleurs simulées) ;
+##   - le héros et les Flétris restent distincts de leur sol pour un daltonien, avec son mode daltonien (ΔE des couleurs simulées) ;
 ##   - densité du décor ≤ « densite_max » éléments à l'écran.
 ## Par région : le ravivé est nettement plus clair que le flétri ; deux régions ravivées se distinguent
 ## (ΔE du sol au centre du cadre, aussi en vision daltonienne, comme art_test.gd).
@@ -184,8 +184,23 @@ func _cadre(r: String, etat: String, m: Dictionary) -> void:
 	for kind in Art.DALTONISMES:
 		var pire := 1000.0
 		for p in m["persos"]:
-			pire = minf(pire, Art.delta_e(Art.simulate(p["couleur"], kind), Art.simulate(p["sol"], kind)))
+			# Avec le mode daltonien de ce daltonisme : les Flétris prennent les couleurs du mode (Art.BESTIAIRE_DALTONIEN).
+			var c: Color = p["couleur"]
+			var dec := Art.decalage_bestiaire(_region_de(p["kind"]), kind)
+			if dec != Vector3.ZERO:
+				c = Art.from_lab(Art.lab(c) + dec)
+			pire = minf(pire, Art.delta_e(Art.simulate(c, kind), Art.simulate(p["sol"], kind)))
 		check("dalto_perso:%s:%s" % [kind, cle], pire, "min", cibles["perso_de_dalto_min"], "%s : personnages distincts du sol en %s (ΔE)" % [tag, kind])
+
+
+## Région d'origine d'une sorte (enemies.json) : « commun » sans région, « heros » pour le héros.
+var _regions_des_sortes := {}
+func _region_de(kind_id: String) -> String:
+	if _regions_des_sortes.is_empty():
+		var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/enemies.json"))
+		for k in data["kinds"]:
+			_regions_des_sortes[k["id"]] = k.get("region", "commun")
+	return _regions_des_sortes.get(kind_id, kind_id)
 
 
 func _annonce_min(m: Dictionary) -> float:
