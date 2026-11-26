@@ -8354,7 +8354,7 @@ msgid "%s est déjà utilisé : %s."
 msgstr ""
 
 #. scripts/options_panel.gd:60
-#. scripts/settings.gd:819
+#. scripts/settings.gd:823
 msgid "Affichage"
 msgstr ""
 
@@ -8404,7 +8404,7 @@ msgstr ""
 
 #. scripts/options_panel.gd:79
 #. scripts/pause_menu.gd:51
-#. scripts/settings.gd:822
+#. scripts/settings.gd:826
 #. scripts/title.gd:70
 msgid "Options"
 msgstr ""
@@ -8519,7 +8519,7 @@ msgid "Tous"
 msgstr ""
 
 #. scripts/settings.gd:392
-#. scripts/settings.gd:859
+#. scripts/settings.gd:863
 msgid "compétence %d"
 msgstr ""
 
@@ -8603,103 +8603,103 @@ msgstr ""
 msgid "Très grande"
 msgstr ""
 
-#. scripts/settings.gd:734
+#. scripts/settings.gd:738
 msgid "L'attaque de base part toute seule vers la souris, même sans ennemi."
 msgstr ""
 
-#. scripts/settings.gd:735
+#. scripts/settings.gd:739
 msgid "L'attaque de base part toute seule sur l'ennemi à portée le plus proche du curseur. Sans ennemi à portée, elle ne part pas."
 msgstr ""
 
-#. scripts/settings.gd:743
+#. scripts/settings.gd:747
 msgid "Clic droit : le héros marche jusqu'à l'endroit cliqué (un repère s'affiche au sol) ; clic droit tenu : il suit le curseur. La compétence du clic droit passe sur %s ; Espace reste l'esquive, vers le curseur."
 msgstr ""
 
-#. scripts/settings.gd:745
+#. scripts/settings.gd:749
 msgid "Le héros marche vers la souris et s'arrête quand elle est tout près de lui. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur. L'esquive part vers le curseur."
 msgstr ""
 
-#. scripts/settings.gd:746
+#. scripts/settings.gd:750
 msgid "Z Q S D (W A S D en QWERTY) ou les flèches. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur."
 msgstr ""
 
-#. scripts/settings.gd:819
+#. scripts/settings.gd:823
 msgid "Menu"
 msgstr ""
 
-#. scripts/settings.gd:820
+#. scripts/settings.gd:824
 msgid "Stick D"
 msgstr ""
 
-#. scripts/settings.gd:820
+#. scripts/settings.gd:824
 msgid "Stick G"
 msgstr ""
 
-#. scripts/settings.gd:821
+#. scripts/settings.gd:825
 msgid "Carré"
 msgstr ""
 
-#. scripts/settings.gd:821
+#. scripts/settings.gd:825
 msgid "Croix"
 msgstr ""
 
-#. scripts/settings.gd:821
+#. scripts/settings.gd:825
 msgid "Rond"
 msgstr ""
 
-#. scripts/settings.gd:821
+#. scripts/settings.gd:825
 msgid "Triangle"
 msgstr ""
 
-#. scripts/settings.gd:822
+#. scripts/settings.gd:826
 msgid "Partage"
 msgstr ""
 
-#. scripts/settings.gd:824
+#. scripts/settings.gd:828
 msgid "Croix bas"
 msgstr ""
 
-#. scripts/settings.gd:824
+#. scripts/settings.gd:828
 msgid "Croix gauche"
 msgstr ""
 
-#. scripts/settings.gd:824
+#. scripts/settings.gd:828
 msgid "Croix haut"
 msgstr ""
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:829
 msgid "Croix droite"
 msgstr ""
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:829
 msgid "Palette 1"
 msgstr ""
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:829
 msgid "Palette 2"
 msgstr ""
 
-#. scripts/settings.gd:826
+#. scripts/settings.gd:830
 msgid "Palette 3"
 msgstr ""
 
-#. scripts/settings.gd:826
+#. scripts/settings.gd:830
 msgid "Palette 4"
 msgstr ""
 
-#. scripts/settings.gd:826
+#. scripts/settings.gd:830
 msgid "Stick droit"
 msgstr ""
 
-#. scripts/settings.gd:826
+#. scripts/settings.gd:830
 msgid "Stick gauche"
 msgstr ""
 
-#. scripts/settings.gd:827
+#. scripts/settings.gd:831
 msgid "Croix directionnelle"
 msgstr ""
 
-#. scripts/settings.gd:837
+#. scripts/settings.gd:841
 msgid "Bouton %d"
 msgstr ""
 

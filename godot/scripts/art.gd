@@ -87,6 +87,7 @@ static func set_access(mode: String, contraste := false) -> void:
 		var a: Color = _access.get("danger_annonce", PALETTE["danger_annonce"])
 		_access["danger_annonce"] = Color(a, ANNONCE_CONTRASTE)
 	motifs = mode != "aucun" or contraste
+	_set_bestiaire_mode(mode)
 
 
 ## Couleur de rôle par nom. Un nom inconnu est une erreur (magenta à l'écran, message en console).
@@ -186,31 +187,45 @@ const ELEMENT_DE_COMPETENCE := {
 # « reflet »), plus un « detail » propre à la région (feuille sèche, ocre, lichen). La braise
 # (« braise », « braise_coeur ») est le signe commun de l'ennemi ; le « ronge » est la Flétrissure
 # qui mange la bête. Le héros garde son corps crème ; ses feuilles prennent la couleur de son build.
-# Utilisé seulement par scripts/creature_art/ (planche), rien n'est encore branché dans le jeu.
+# Lu par bc(), qui applique le mode daltonien (BESTIAIRE_DALTONIEN).
 const BESTIAIRE := {
 	"encre": Color("1a1210"),
 	"braise": Color("ff8a2a"),
 	"braise_coeur": Color("ffd27a"),
 	"ronge": Color("2b1a22"),
 	"os": Color("e6d2a8"),
-	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
-	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f"),
-		# Flétris de la forêt pétrifiée (R6) : bois mort, chair de racine (mandragore), cendre (termite), feuille sèche.
-		"bois": Color("6e5238"), "bois_ombre": Color("3a2a1e"), "chair": Color("b89468"), "chair_ombre": Color("6a4e34"),
-		"cendre": Color("c2b8a4"), "cendre_ombre": Color("6e6658"), "feuille": Color("8a7a40")},
-	"vent": {"clair": Color("a3b6c8"), "ombre": Color("5a6a80"), "reflet": Color("e4eef7"), "detail": Color("d6c27e"),
-		"plume": Color("77869c"), "duvet": Color("dfe2dc"), "aile": Color("c8d4df")},
-	# Spore (R2) : chair de champignon violet poison (assez saturée pour rester distincte de Vent et Racine
-	# pour les daltoniens, bestiaire_test), lames ocre, chapeaux pâles, vase luisante, lichen vert-de-gris.
-	"spore": {"clair": Color("ca6aeb"), "ombre": Color("6a2f86"), "reflet": Color("f2d8fb"), "detail": Color("c99a5a"),
-		"chapeau": Color("e6d8bf"), "chapeau_ombre": Color("9c8670"), "vase": Color("5e6a4a"), "vase_reflet": Color("b9c98a"),
-		"lichen": Color("9fb38a"), "lichen_ombre": Color("56684c"), "spore": Color("d9c2f0")},
-	# Aube : verre nacré des falaises (corps : face claire perle, ombre mauve ; clair pour trancher sur le calcaire et se distinguer
-	# de Vent et de Racine même pour un daltonien), verre clair (ailes, aiguilles), lumière d'or sale (detail).
-	"aube": {"clair": Color("f4e4d8"), "ombre": Color("7c6c9c"), "reflet": Color("fcf9ff"), "detail": Color("e6c25a"),
-		"verre": Color("bfe0ea"), "verre_ombre": Color("587886"), "lueur": Color("fff2c4")},
-	# Sève (R4) : vert profond de mare (distinct des autres régions pour les daltoniens, bestiaire_test), loin du vert menthe de la sève vivante ; detail = vase ocre ; vase = limon du fond.
-	"seve": {"clair": Color("308533"), "ombre": Color("1e5c2a"), "reflet": Color("b0e6a8"), "detail": Color("a88d52"), "vase": Color("4a3f30")},
+	# Palettes franches (26/11) : chaque région a sa teinte propre, nettement distincte des autres en vision
+	# normale (ΔE ≥ 30, bestiaire_test). La séparation pour les daltoniens est assurée par le mode daltonien
+	# (BESTIAIRE_DALTONIEN), pas par la palette normale.
+	# Flétris communs : la Flétrissure pure, cendre grise neutre sur écorce brûlée (sans teinte de région).
+	"commun": {"clair": Color("dcd6d2"), "ombre": Color("7a7377"), "reflet": Color("f4f1ee"), "detail": Color("2e2428"), "charbon": Color("3d3236")},
+	# Ronce : cramoisi d'épine ; detail = feuille sèche olive.
+	"ronce": {"clair": Color("c8324a"), "ombre": Color("6a1426"), "reflet": Color("f59aa6"), "detail": Color("6b6a3a")},
+	# Racine : brun roux de terre et de bois (R6 : bois mort, chair de racine, sable du termite, feuille sèche).
+	"racine": {"clair": Color("b97b4e"), "ombre": Color("68422b"), "reflet": Color("f6c392"), "detail": Color("f6cb6a"),
+		"bois": Color("89583a"), "bois_ombre": Color("523528"), "chair": Color("dd9a69"), "chair_ombre": Color("895a3e"),
+		"cendre": Color("e5bb94"), "cendre_ombre": Color("88735c"), "feuille": Color("a59458")},
+	# Vent : bleu de ciel ; plumes bleu ardoise, duvet et ailes ciel pâle.
+	"vent": {"clair": Color("4f9fe6"), "ombre": Color("23507e"), "reflet": Color("d4ecff"), "detail": Color("d6c27e"),
+		"plume": Color("3f6e9e"), "duvet": Color("dfe8f0"), "aile": Color("a8cdf0")},
+	# Spore (R2) : chair de champignon violet poison, lames ocre, chapeaux pâles, vase luisante, lichen vert-de-gris.
+	"spore": {"clair": Color("b45aec"), "ombre": Color("5c2a84"), "reflet": Color("f1d3ff"), "detail": Color("d5a564"),
+		"chapeau": Color("f1e3ca"), "chapeau_ombre": Color("a7907a"), "vase": Color("687453"), "vase_reflet": Color("c4d495"),
+		"lichen": Color("aabe94"), "lichen_ombre": Color("607255"), "spore": Color("e4cdfc")},
+	# Aube : or de l'aube (corps), ombre ambrée, verre clair (ailes, aiguilles), lumière blanche (detail).
+	"aube": {"clair": Color("fccd46"), "ombre": Color("a66e2a"), "reflet": Color("fff9cb"), "detail": Color("fff9df"),
+		"verre": Color("caebf5"), "verre_ombre": Color("628290"), "lueur": Color("fff9cb")},
+	# Sève (R4) : vert franc de mare, loin du vert menthe de la sève vivante ; detail = vase ocre ; vase = limon du fond.
+	"seve": {"clair": Color("58c45e"), "ombre": Color("4d9053"), "reflet": Color("d4ffc6"), "detail": Color("bea266"), "vase": Color("766959")},
+}
+## Mode daltonien du bestiaire : teinte « clair » visée pour chaque région, telle que la forme de daltonisme
+## la sépare des autres régions (ΔE ≥ 30), de la braise et du sol (bestiaire_test). bc() décale toutes les
+## couleurs de la région du même écart (CIELAB) : ombres, reflets et matières gardent leurs rapports.
+## Une région absente garde sa palette normale. Réglé par tools/palettes-daltonisme.py.
+const BESTIAIRE_DALTONIEN := {
+	"protanopie": {"ronce": Color("d44160"), "vent": Color("549fe3"), "seve": Color("69d674"), "aube": Color("facd3f"), "racine": Color("cc916b")},
+	"deuteranopie": {"ronce": Color("be367a"), "vent": Color("7a9fcb"), "seve": Color("48c97d"), "aube": Color("f9d074"), "racine": Color("bc6f2a"), "commun": Color("d8d6da")},
+	"tritanopie": {"spore": Color("b15bef"), "vent": Color("2d80c3"), "seve": Color("70dd76"), "racine": Color("b47648"), "commun": Color("f6f4f8")},
 }
 ## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
 ## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
@@ -334,6 +349,41 @@ const MONDE := {
 	},
 }
 
+## Air des six régions (refonte du monde, tâche L) : teinte de l'air et voile de bord, côté flétri et côté
+## ravivé, pour ambience.gd. [teinte de la lumière, couleur du voile et de la vignette]. Ronce et Marais
+## reprennent Art.MONDE ; les autres régions n'ont pas encore de palette complète (vague 2).
+const MONDE_AIR := {
+	"ronce": {"fletri": [Color("5a4650"), Color("1b1216")], "ravive": [Color("ffe2c4"), Color("3a2620")]},
+	"spore": {"fletri": [Color("4a4060"), Color("120e1a")], "ravive": [Color("c8fff0"), Color("0e2228")]},
+	"vent": {"fletri": [Color("56687a"), Color("141a22")], "ravive": [Color("eaf3ff"), Color("080b0e")]},
+	"seve": {"fletri": [Color("3e5a50"), Color("0e1a16")], "ravive": [Color("d6fff0"), Color("0f2a22")]},
+	"racine": {"fletri": [Color("5e4c38"), Color("1a120c")], "ravive": [Color("ffdfa6"), Color("33220f")]},
+	"aube": {"fletri": [Color("6c5c48"), Color("1c1612")], "ravive": [Color("fff1c2"), Color("3a2c14")]},
+	"finale": {"fletri": [Color("4e303e"), Color("160c14")], "ravive": [Color("ffe6b0"), Color("301c20")]},
+}
+## Force de l'air par état : opacité de la vignette, de la lumière en haut à gauche, du voile en bas à droite,
+## des rayons obliques. Le flétri est plus sombre ; le ravivé, nettement plus clair. Le centre reste intact.
+const AIR_ETAT := {
+	"fletri": {"vignette": 0.55, "haut": 0.04, "bas": 0.20, "rayons": 0.0},
+	"ravive": {"vignette": 0.30, "haut": 0.10, "bas": 0.10, "rayons": 0.025},
+}
+## Lumière commune du monde (comme Ink.LIGHT) : elle vient d'en haut à gauche ; les ombres portées partent
+## à l'opposé, vers le bas à droite (même direction que world_art/outils.gd › SHADOW_DIR).
+const LUMIERE_DIR := Vector2(-0.55, -0.83)
+const OMBRE_DIR := Vector2(0.62, 0.30)
+
+
+## Air d'une région (clé de MONDE_AIR, sinon Ronce) dans un état : "fletri" ou "ravive".
+static func air_de(region: String, etat: String) -> Array:
+	var r: Dictionary = MONDE_AIR.get(region, MONDE_AIR["ronce"])
+	return r[etat]
+
+
+## Ombre portée d'un objet de rayon r : décalée vers l'ombre commune (bas à droite).
+static func ombre_decalee(pos: Vector2, r: float) -> Vector2:
+	return pos + OMBRE_DIR * r * 0.4
+
+
 ## Couleur du sol en couches et du décor cuit : mpc("ronce", "lavis_vif_clair") (MONDE[région]["sol_couches"]).
 static func mpc(region: String, key: String) -> Color:
 	var r: Dictionary = MONDE.get(region, {}).get("sol_couches", {})
@@ -359,15 +409,47 @@ static func mc(region: String, etat: String, cle: String):
 	return Color.MAGENTA
 
 
-## Couleur du bestiaire : bc("encre"), ou bc("ronce", "clair") pour la palette d'une région.
+## Couleur du bestiaire : bc("encre"), ou bc("ronce", "clair") pour la palette d'une région. En mode daltonien,
+## la couleur d'une région est décalée vers sa teinte du mode (BESTIAIRE_DALTONIEN).
 static func bc(nom: String, variante := "") -> Color:
-	var v = BESTIAIRE.get(nom, null)
+	var v = palette_essai.get(nom, BESTIAIRE.get(nom, null))
 	if v is Color:
 		return v
 	if v is Dictionary and v.has(variante):
+		if _bestiaire_decale.has(nom):
+			var cle := nom + "/" + variante
+			if not _bestiaire_cache.has(cle):
+				_bestiaire_cache[cle] = from_lab(lab(v[variante]) + _bestiaire_decale[nom], v[variante].a)
+			return _bestiaire_cache[cle]
 		return v[variante]
 	push_error("Art.bc : couleur du bestiaire inconnue « %s/%s »" % [nom, variante])
 	return Color.MAGENTA
+
+
+## Planches seulement : palettes de régions qui remplacent celles de BESTIAIRE (comparaison avant / après).
+static var palette_essai := {}
+## Écart CIELAB de chaque région en mode daltonien, et couleurs déjà décalées.
+static var _bestiaire_decale := {}
+static var _bestiaire_cache := {}
+## Mode daltonien en cours (Settings.COLORBLIND_MODES) : les cuissons de sprites le mettent dans leur clé.
+static var mode_daltonien := "aucun"
+
+
+static func _set_bestiaire_mode(mode: String) -> void:
+	mode_daltonien = mode
+	_bestiaire_decale.clear()
+	_bestiaire_cache.clear()
+	for reg in BESTIAIRE_DALTONIEN.get(mode, {}):
+		_bestiaire_decale[reg] = decalage_bestiaire(reg, mode)
+
+
+## Écart CIELAB des couleurs d'une région du bestiaire dans un mode daltonien (zéro si elle n'en a pas).
+static func decalage_bestiaire(region: String, mode: String) -> Vector3:
+	var cible = BESTIAIRE_DALTONIEN.get(mode, {}).get(region, null)
+	var base = palette_essai.get(region, BESTIAIRE.get(region, null))
+	if cible == null or not (base is Dictionary and base.has("clair")):
+		return Vector3.ZERO
+	return lab(cible) - lab(base["clair"])
 
 
 # --- Traits, ombres, lumière ---
@@ -792,6 +874,20 @@ static func lab(col: Color) -> Vector3:
 ## Écart perçu entre deux couleurs (ΔE 1976). Au-dessus de 20, on les distingue d'un coup d'œil.
 static func delta_e(a: Color, b: Color) -> float:
 	return lab(a).distance_to(lab(b))
+
+
+## Couleur sRGB de coordonnées CIELAB (inverse de lab(), D65), ramenée dans le gamut.
+static func from_lab(v: Vector3, alpha := 1.0) -> Color:
+	var fy := (v.x + 16.0) / 116.0
+	var fx := fy + v.y / 500.0
+	var fz := fy - v.z / 200.0
+	var fi := func(t: float) -> float: return t * t * t if t > 0.206893 else (t - 16.0 / 116.0) / 7.787
+	var x: float = fi.call(fx) * 0.95047
+	var y: float = fi.call(fy)
+	var z: float = fi.call(fz) * 1.08883
+	var lin := Color(clampf(3.2406 * x - 1.5372 * y - 0.4986 * z, 0, 1), clampf(-0.9689 * x + 1.8758 * y + 0.0415 * z, 0, 1),
+		clampf(0.0557 * x - 0.2040 * y + 1.0570 * z, 0, 1), alpha)
+	return lin.linear_to_srgb()
 
 
 # --- Icônes ---

@@ -6,6 +6,7 @@
 #   tools/unit-tests.sh                 # tous les tests de la liste
 #   tools/unit-tests.sh flow save       # seulement ceux-là (nom sans « _test.gd »)
 #   JOBS=2 tools/unit-tests.sh          # nombre de tests à la fois (par défaut : nombre de cœurs)
+#   SHARD=1/2 tools/unit-tests.sh       # seulement la 1re des 2 parts (jobs parallèles de la CI)
 #
 # Les robots longs (aventure_test, zone_test) n'en font pas partie : tools/aventure.sh, tools/zone.sh.
 # Journaux et durées dans godot/tests/unit-out/ ; résumé Markdown dans resume.md (résumé de la CI).
@@ -19,6 +20,7 @@ LIMIT="${LIMIT:-600}"   # secondes au plus par test
 # nom|options de Godot (avant -s)|arguments du test (après --)
 TESTS=(
   "access|--headless|"
+  "air|--headless|"
   "art|--headless|"
   "attack|--headless --fixed-fps 60|"
   "aube|--headless --fixed-fps 60|"
@@ -83,6 +85,39 @@ TESTS=(
   "world_fx|--headless --fixed-fps 60|"
   "world|--headless --fixed-fps 60|"
 )
+
+# Durée approximative de chaque test (s, CI du 26/11 : 1 150 s en tout, 4 à la fois). Sert à répartir
+# les parts (SHARD) et à lancer les plus longs d'abord : un long test lancé en dernier allongeait la
+# durée totale. Un test absent compte 10 s.
+declare -A WEIGHT=(
+  [move]=121 [paysages]=89 [attack]=74 [finale]=74 [sound]=63 [heros]=56 [world_life]=51
+  [boss_eclat]=45 [pad]=34 [remains_sprite]=27 [boss_track]=26 [direct_screen]=26 [eclat_skills]=24
+  [decor]=23 [seve]=21 [plateaux]=18 [enemies]=17 [vent]=17 [foret]=16 [demo]=15 [falaises]=15
+  [flow]=15 [region]=15 [vallee]=15 [sprite_bake]=14 [racine]=14 [tree_ui]=14 [skills]=13
+  [world_fx]=12 [boss]=11 [bestiaire]=11 [i18n]=11 [moments]=11 [aube]=10 [death]=10 [grafts]=10
+  [marais]=10 [access]=9 [deaths]=9 [migration]=9 [spore]=9 [tree_anim]=9 [difficulty]=7 [feel]=8
+  [objectives]=8 [region_engine]=8 [region_ui]=8 [save]=8 [steam]=8 [world]=6 [planner]=5
+  [seve_bestiaire]=5 [paysages_proto]=4 [art]=3 [air]=3 [borders]=3 [builds]=3 [draw_batch]=3
+  [node_types]=3 [tree_originals]=3 [user_dir]=3 [legibility]=2 [rumble]=2 [world_edge]=2
+)
+# Du plus long au plus court (ordre de lancement).
+mapfile -t TESTS < <(for e in "${TESTS[@]}"; do echo "${WEIGHT[${e%%|*}]:-10}	$e"; done | sort -t$'\t' -k1,1nr -k2,2 -s | cut -f2-)
+
+# SHARD=k/n : chaque test va à la part la moins chargée, du plus long au plus court.
+if [ -n "${SHARD:-}" ]; then
+  k="${SHARD%/*}"; n="${SHARD#*/}"
+  declare -a load
+  for ((i = 1; i <= n; i++)); do load[$i]=0; done
+  mine=()
+  for e in "${TESTS[@]}"; do
+    best=1
+    for ((i = 2; i <= n; i++)); do [ "${load[$i]}" -lt "${load[$best]}" ] && best=$i; done
+    load[$best]=$((load[$best] + ${WEIGHT[${e%%|*}]:-10}))
+    [ "$best" = "$k" ] && mine+=("$e")
+  done
+  TESTS=("${mine[@]}")
+  echo "Part $SHARD : ${#TESTS[@]} tests (~${load[$k]} s de tests, $JOBS à la fois)"
+fi
 
 rm -rf "$OUT"
 mkdir -p "$OUT"
@@ -149,7 +184,7 @@ TOTAL=$((SECONDS - START))
 
 failed=$(awk '$2 != 0 {print $1}' "$OUT/resultats.txt" | sort)
 {
-  echo "## Tests de logique"
+  echo "## Tests de logique${SHARD:+ (part $SHARD)}"
   echo
   echo "| Test | Résultat | Durée |"
   echo "| --- | --- | --- |"

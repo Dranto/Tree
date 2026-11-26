@@ -1,0 +1,32 @@
+# Préparation commune des jobs Godot : écran virtuel et rendu logiciel (mesa à jour, comme les
+# références des tests visuels), binaire de Godot 4.7 en cache.
+name: Préparer Godot
+description: Installe xvfb et mesa (rendu logiciel) et restaure le binaire de Godot en cache.
+inputs:
+  export-templates:
+    description: Mettre aussi en cache les modèles d'export (builds).
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Installer l'écran virtuel et le rendu logiciel
+      shell: bash
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1
+
+    - name: Cache de Godot
+      if: inputs.export-templates != 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/godot
+        key: godot-4.7-stable
+
+    - name: Cache de Godot et des modèles d'export
+      if: inputs.export-templates == 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/godot
+          ~/.local/share/godot/export_templates
+        key: godot-export-4.7-stable
