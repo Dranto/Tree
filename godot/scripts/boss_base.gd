@@ -593,14 +593,14 @@ func _color(base: Color) -> Color:
 
 # --- Boss cuits en sprites (« Bestiaire d'herbier », boss_bake.gd) ---
 
-const TINT_SHADER = preload("res://shaders/boss_tint.gdshader")
+const BOSS_TINT_SHADER = preload("res://shaders/boss_tint.gdshader")
 
 
 ## Un boss cuit ne peut plus teinter chaque forme (_color) : la teinte d'état (poison, cendre de la
 ## mort) et l'éclair du coup reçu passent par un shader sur tout son nœud. À appeler dans _ready.
 func use_tint_material() -> void:
 	var m := ShaderMaterial.new()
-	m.shader = TINT_SHADER
+	m.shader = BOSS_TINT_SHADER
 	m.set_shader_parameter("flash_col", Art.c("danger_eclair"))
 	material = m
 
