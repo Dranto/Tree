@@ -8,6 +8,8 @@
 ## Sans rendu (--headless), rien n'est cuit : `ready` reste faux, l'appelant dessine en direct s'il veut.
 extends RefCounted
 
+const Cuisson = preload("res://scripts/boss_art/cuisson.gd")
+
 ## Repère local du dessin (px du jeu) couvert par la texture.
 var box: Rect2
 ## Pixels de texture par px du jeu (hauteur de la fenêtre / 900, ×1,5, pas de 0,25, de 1,5 à 2,5).
@@ -22,10 +24,12 @@ var _last := -INF
 var _pending := 0
 ## Une image au moins est rendue (la texture peut être affichée).
 var ready := false
+## Palette du dernier rendu (Cuisson.epoch) : le mode daltonien change, la texture est refaite tout de suite.
+var _epoch := Cuisson.epoch
 
 
 static func available() -> bool:
-	return DisplayServer.get_name() != "headless"
+	return Cuisson.active()
 
 
 func _init(host: Node, box_: Rect2, drawer_: Callable) -> void:
@@ -33,9 +37,8 @@ func _init(host: Node, box_: Rect2, drawer_: Callable) -> void:
 	drawer = drawer_
 	if not available():
 		return
-	var hgt := float(DisplayServer.window_get_size().y)
 	# ×1,5 de suréchantillonnage (le SubViewport n'a pas de MSAA en Compatibility) : bords lisses.
-	scale = clampf(snappedf(hgt / 900.0 * 1.5, 0.25), 1.5, 2.5)
+	scale = Cuisson.window_scale(1.5, 1.5, 2.5)
 	vp = SubViewport.new()
 	vp.size = Vector2i((box.size * scale).ceil())
 	vp.transparent_bg = true
@@ -59,8 +62,9 @@ func update(new_key, now: float) -> void:
 		_pending -= 1
 		if _pending == 0:
 			ready = true
-	if new_key == key and now - _last < 1.0 / rate and now >= _last:
+	if new_key == key and now - _last < 1.0 / rate and now >= _last and _epoch == Cuisson.epoch:
 		return
+	_epoch = Cuisson.epoch
 	key = new_key
 	_last = now
 	node.queue_redraw()

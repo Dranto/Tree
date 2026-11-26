@@ -964,6 +964,8 @@ static func total_bytes() -> int:
 ## Le mode daltonien a changé : les couleurs des Flétris aussi, tout est recuit (les sortes visibles
 ## redemandent leur atlas, dessin direct en attendant).
 static func palette_changed() -> void:
+	# Les boss aussi (boss_art/cuisson.gd : chaque cuisson de boss jette ce qu'elle a cuit).
+	load("res://scripts/boss_art/cuisson.gd").palette_changed()
 	forget_signatures()
 	atlases.clear()
 	_wanted.clear()

@@ -11,6 +11,7 @@
 extends Node2D
 
 const NAME := "PoseCache"  # i18n: non
+const Cuisson = preload("res://scripts/boss_art/cuisson.gd")
 
 ## Nombre de poses gardées (la plus ancienne est oubliée au-delà).
 var limit := 220
@@ -25,6 +26,8 @@ var _current: Node2D = null
 var _prev: Node2D = null
 ## Poses dessinées (compteur, pour les bancs et les tests).
 var drawn_count := 0
+## Palette des poses gardées (Cuisson.epoch) : le mode daltonien change, elles sont redessinées.
+var _epoch := Cuisson.epoch
 
 
 class Pose extends Node2D:
@@ -52,6 +55,14 @@ static func on(host: Node2D) -> Node2D:
 func show_pose(key: String, drawer: Callable, xf: Transform2D, mod := Color.WHITE) -> void:
 	_clock += 1
 	visible = true
+	if _epoch != Cuisson.epoch:
+		_epoch = Cuisson.epoch
+		for k in _nodes:
+			_nodes[k].queue_free()
+		_nodes.clear()
+		_stamp.clear()
+		_current = null
+		_prev = null
 	var n: Node2D = _nodes.get(key)
 	if n == null:
 		var p := Pose.new()
