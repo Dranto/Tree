@@ -13,6 +13,14 @@
 ## sa vie, mais le Cœur reste purifié et l'arène ouverte.
 ## Ce nœud est au niveau du sol (sous les personnages) ; le boss (boss_<région>.gd, BossBase) est
 ## rangé avec les ennemis.
+##
+## Arène en décor (refonte du monde, vague 3 A ; contrat dans region_art.gd) : pour une région dont
+## l'art le dit (arena_baked), le mur est fait de pièces de décor (ArenaPiece) posées dans le calque
+## trié en profondeur (main.actors_layer) et cuites par lieux_bake.gd ; le sol est sur un calque fixe,
+## redessiné quand l'état change. La brèche s'ouvre en animation, le mur tremble aux phases et aux coups
+## du boss (et le monde vivant le sait : world_life.event « boss_phase », « boss_hit »), suit le rayon
+## quand il se resserre, et refleurit après la victoire. Dessin seul : le combat lit toujours radius,
+## state et gap_open comme avant.
 extends Node2D
 
 const BossSync = preload("res://scripts/boss_sync.gd")
@@ -20,6 +28,18 @@ const BossBar = preload("res://scripts/boss_bar.gd")
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 const BossEclat = preload("res://scripts/boss_eclat.gd")
+const LieuxBake = preload("res://scripts/world_bake/lieux_bake.gd")
+
+## Fondu des pièces vers leur image ravivée après la victoire (secondes).
+const REVIVE_TIME := 2.0
+## Pièce qui cache le héros ou le boss : opacité visée.
+const SEE_THROUGH := 0.42
+## Résolution du sol cuit (pixels de l'image par pixel du monde) : un sol doux supporte d'être cuit bas.
+const FLOOR_SCALE := 0.5
+## Résolution des pièces du mur : 1 pixel d'image par pixel du monde (lissées par le suréchantillonnage
+## de la cuisson), lues sans mipmaps : en rendu logiciel, le filtrage trilinéaire de dizaines de grandes
+## images qui se chevauchent coûtait plus que tout le reste de l'arène.
+const PIECE_SCALE := 1.0
 
 const SHRINK_WARN := 1.6
 const SHRINK_SPEED := 30.0
@@ -74,6 +94,43 @@ var auto_done := false
 var auto_shots := {}
 var auto_boss_left := 1.0
 
+## Arène en décor (vague 3 A) : dessins de la région, pièces du mur et calque du sol.
+var art: GDScript
+var baked := false
+var pieces: Array = []
+var _descs: Array = []
+var _floor: Node2D
+var _floor_key := ""
+## Tremblement du mur (phase du boss : 1 puis retombe), frisson (coup reçu par le boss).
+var quake := 0.0
+var shiver := 0.0
+## Fondu vers le ravivé après la victoire (0 → 1).
+var revive_k := 1.0
+var _seen_phase := 0
+var _seen_hp := -1.0
+var _hit_cd := 0.0
+var _pieces_sig := ""
+var _pieces_move := ""
+var _pieces_fade_done := true
+var _live_clock := 0.0
+
+
+## Une pièce du mur (ou un repère), triée en profondeur avec les personnages.
+class ArenaPiece extends Node2D:
+	var arena
+	var i := 0
+
+	func _draw() -> void:
+		arena.draw_piece(self, i)
+
+
+## Calque du sol de l'arène (fixe).
+class FloorLayer extends Node2D:
+	var arena
+
+	func _draw() -> void:
+		arena.draw_floor(self)
+
 
 ## Lit les réglages de l'arène et de son boss dans le fichier de la région (appelé par _ready).
 func configure(id: String) -> void:
@@ -105,6 +162,10 @@ func _ready() -> void:
 	for i in 72:
 		_wall.append([shape.randf_range(-0.03, 0.03), shape.randf_range(0.7, 1.3), shape.randf_range(-1.0, 1.0)])
 	Game.seed_rng(rng, 4 + 10 * maxi(0, Regions.ids().find(region)))
+	art = Regions.art(region) if Regions.exists(region) else load(Regions.BASE_ART)
+	baked = art.has_method("arena_baked") and art.arena_baked(region)
+	if baked:
+		_build_pieces()
 	bar = BossBar.new()
 	# Marques des phases sur la barre : celles du boss (lues sur un boss jamais posé dans le monde).
 	var probe = boss_script.new()
@@ -126,10 +187,17 @@ func entrance() -> Vector2:
 
 func _process(delta: float) -> void:
 	t += delta
+	quake = maxf(0.0, quake - delta / 0.9)
+	shiver = maxf(0.0, shiver - delta / 0.25)
+	revive_k = 1.0 if frozen else minf(1.0, revive_k + delta / REVIVE_TIME)
 	# Redessinée seulement quand elle touche le cadre de la caméra : les murs des régions (champignons,
 	# pierres levées) coûtent plus cher que l'ancien mur de ronces.
-	if not frozen and main.player.position.distance_squared_to(center) < 1900.0 * 1900.0 and _near_view():
+	var near: bool = main.player.position.distance_squared_to(center) < 1900.0 * 1900.0 and _near_view()
+	if near and not frozen:
 		queue_redraw()
+	if baked and near:
+		_live_clock -= delta
+		_sync_pieces()
 
 
 ## L'arène (mur compris, plus une marge) touche le cadre visible.
@@ -176,6 +244,7 @@ func _physics_process(delta: float) -> void:
 				p.position = center + to / maxf(d, 0.01) * limit
 				p.take_hit(WALL_DAMAGE * boss.damage_scale, null)
 			update_bar()
+			_watch_boss(delta)
 		"vaincue":
 			bar.hide_bar()
 			_life_wave_step(delta)
@@ -208,6 +277,8 @@ func _music_sync():
 func _start_fight() -> void:
 	state = "combat"
 	radius = max_radius
+	_seen_phase = 0
+	_seen_hp = -1.0
 	shrinking = false
 	shrink_warn = 0.0
 	main.spawn_paused = true
@@ -267,6 +338,7 @@ func boss_defeated() -> void:
 		sync.stop()
 		sync = null
 	gap_open = 1.0
+	revive_k = 0.0
 	shrinking = false
 	shrink_warn = 0.0
 	main.spawn_paused = false
@@ -319,9 +391,12 @@ func _life_wave_step(delta: float) -> void:
 
 
 func _draw() -> void:
-	# Sol et mur de l'arène : les dessins de la région (Regions.art, region_art.gd par défaut).
-	var art: GDScript = Regions.art(region) if Regions.exists(region) else load(Regions.BASE_ART)
-	art.draw_arena_floor(self, self)
+	# Sol et mur de l'arène : les dessins de la région (Regions.art, region_art.gd par défaut). En décor
+	# (vague 3 A), le sol est sur son calque et le mur en pièces : ici, seulement ce qui bouge au sol.
+	if baked:
+		art.arena_live(self, self)
+	else:
+		art.draw_arena_floor(self, self)
 	# Annonce du resserrement : le futur bord clignote au sol.
 	if shrinking:
 		var blink := 0.5 + 0.5 * sin(t * 12.0)
@@ -329,12 +404,215 @@ func _draw() -> void:
 		for i in 24:
 			var dir := Vector2.from_angle(TAU * i / 24.0)
 			draw_line(center + dir * (radius - 24.0), center + dir * lerpf(radius - 24.0, min_radius + 8.0, 0.3 + 0.2 * blink), Color(1.0, 0.35, 0.2, 0.35), 3.0)
-	art.draw_arena_wall(self, self)
+	if not baked:
+		art.draw_arena_wall(self, self)
 	# Le boss endormi, puis ce qui pousse à sa place : dessinés par son script (BossBase).
 	if state == "ouverte" or state == "fermee":
 		boss_script.draw_sleeper(self)
 	elif state == "vaincue":
 		boss_script.draw_victory(self)
+
+
+# --- Arène en décor (vague 3 A) ---
+
+
+func _build_pieces() -> void:
+	_floor = FloorLayer.new()
+	LieuxBake.prepare(_floor)
+	_floor.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_floor.arena = self
+	_floor.show_behind_parent = true
+	add_child(_floor)
+	_descs = art.arena_pieces(region, self)
+	var layer: Node = main.get("actors_layer") if main != null else null
+	for i in _descs.size():
+		var pc := ArenaPiece.new()
+		pc.arena = self
+		pc.i = i
+		pc.name = "Arene_%s_%d" % [region, i]  # i18n: non (nom de nœud)
+		LieuxBake.prepare(pc)
+		pc.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		# main pose encore ses enfants pendant notre _ready : la pièce rejoint le calque juste après.
+		if layer != null:
+			layer.add_child.call_deferred(pc)
+		else:
+			add_child(pc)
+		var d: Dictionary = _descs[i]
+		pc.position = center + Vector2.from_angle(float(d["ang"])) * ((max_radius if not d["ring"] else radius) + float(d["out"]))
+		pieces.append(pc)
+	tree_exiting.connect(_free_pieces)
+	# Pas de cuisson pendant le _ready : la racine pose encore ses enfants (le SubViewport de la cuisson
+	# n'y entrerait pas et l'atlas sortirait vide). _process s'en charge dès la première image.
+
+
+func _free_pieces() -> void:
+	for pc in pieces:
+		if is_instance_valid(pc) and pc.get_parent() != self:
+			pc.queue_free()
+	pieces.clear()
+
+
+## Ouverture de la pièce à l'angle « ang » (0 en place, 1 rentrée sous terre) : la brèche s'ouvre du
+## milieu vers les bords, à mesure que gap_open monte.
+func gap_k(ang: float) -> float:
+	if gap_open <= 0.0:
+		return 0.0
+	var half := 0.42 * gap_open
+	var d := absf(wrapf(ang - art.gate_angle(self), -PI, PI))
+	return clampf((half + 0.03 - d) / 0.08, 0.0, 1.0) * minf(1.0, gap_open * 3.0)
+
+
+## Jeu cuit d'un état.
+func bake_key(etat: String) -> String:
+	return "arene/%s/%s" % [region, etat]
+
+
+func _etat() -> String:
+	return "ravive" if state == "vaincue" else "fletri"
+
+
+func _keep_baked(etat: String) -> void:
+	var key := bake_key(etat)
+	if LieuxBake.ready(key):
+		return
+	var a: GDScript = art
+	var reg := region
+	var jobs := []
+	for k in art.arena_piece_keys(region):
+		var kk: String = k
+		jobs.append({"key": kk, "box": art.arena_piece_box(region, kk), "paint": func(ci): a.arena_piece(ci, reg, kk, etat)})
+	LieuxBake.request(self, key, jobs, {"trim": true, "scale": PIECE_SCALE, "mipmaps": false})
+
+
+## Sol cuit d'un état : une seule image douce (résolution FLOOR_SCALE), au lieu de centaines de formes
+## redessinées à chaque image.
+func _keep_floor_baked(etat: String) -> void:
+	var key := bake_key("sol_" + etat)
+	if LieuxBake.ready(key):
+		return
+	var a: GDScript = art
+	var proxy := {"center": Vector2.ZERO, "max_radius": max_radius}
+	var R := max_radius * 1.06 + 30.0
+	LieuxBake.request(self, key, [{"key": "sol", "box": Rect2(-R, -R, 2.0 * R, 2.0 * R), "paint": func(ci): a.arena_floor(ci, proxy, etat)}],
+		{"scale": FLOOR_SCALE, "trim": true, "mipmaps": false})
+
+
+## Place, ouvre, fait trembler et estompe les pièces ; les redessine quand ce qu'elles montrent change.
+func _sync_pieces() -> void:
+	if pieces.is_empty():
+		return
+	var etat := _etat()
+	_keep_baked(etat)
+	if etat == "ravive" and revive_k < 1.0:
+		_keep_baked("fletri")
+	var fetat := "ravive" if etat == "ravive" and revive_k >= 0.5 else "fletri"
+	_keep_floor_baked(fetat)
+	var fkey := fetat + str(LieuxBake.ready(bake_key("sol_" + fetat)))
+	if fkey != _floor_key:
+		_floor_key = fkey
+		_floor.queue_redraw()
+	var sig := "%s|%s|%d|%d|%d" % [state, etat, int(LieuxBake.ready(bake_key("fletri"))), int(LieuxBake.ready(bake_key("ravive"))), int(revive_k * 20.0)]
+	var redraw := sig != _pieces_sig
+	_pieces_sig = sig
+	# Lueurs du combat : redessinées 15 fois par seconde.
+	var live_redraw := false
+	if state == "combat" and _live_clock <= 0.0:
+		_live_clock = 1.0 / 15.0
+		live_redraw = true
+	var p = main.player if main != null else null
+	var hidden: Array = []
+	if p != null:
+		hidden.append(p.position)
+	if is_instance_valid(boss):
+		hidden.append(boss.position)
+	# Rien n'a bougé (ni le mur, ni le héros, ni le boss) : les pièces restent comme elles sont.
+	var moving := "%.1f|%.3f|%.2f|%.2f|%s|%s" % [radius, gap_open, quake, shiver, str(hidden), str(_pieces_fade_done)]
+	if moving == _pieces_move and not redraw:
+		if live_redraw:
+			for pc in pieces:
+				if pc.i % 3 == 0:
+					pc.queue_redraw()
+		return
+	_pieces_move = moving
+	_pieces_fade_done = true
+	for pc in pieces:
+		var d: Dictionary = _descs[pc.i]
+		var ang: float = d["ang"]
+		var dir := Vector2.from_angle(ang)
+		var o := gap_k(ang) if d["ring"] else 0.0
+		var r: float = (radius if d["ring"] else max_radius) * (1.0 + float(_wall[pc.i % _wall.size()][0]) * 0.5) + float(d["out"]) + 34.0 * o
+		pc.position = center + dir * r
+		pc.visible = o < 0.97
+		var sz: float = d["size"]
+		var fl := -1.0 if d["flip"] else 1.0
+		pc.scale = Vector2(fl * sz * (1.0 + 0.12 * o), sz * (1.0 - 0.9 * o))
+		# Les bords de la brèche s'écartent ; le mur tremble aux phases, frissonne aux coups.
+		var side := signf(wrapf(ang - art.gate_angle(self), -PI, PI))
+		var jig := sin(t * 31.0 + pc.i * 1.9) * (0.07 * quake + 0.025 * shiver)
+		pc.rotation = side * 0.35 * o + jig
+		# Une pièce qui cache le héros ou le boss s'estompe.
+		var see := 1.0
+		var box: Rect2 = art.arena_piece_box(region, d["key"])
+		for h in hidden:
+			var rel: Vector2 = h - pc.position
+			if rel.y < 0.0 and rel.y > box.position.y * sz * 0.85 and absf(rel.x) < box.size.x * 0.4 * sz:
+				see = SEE_THROUGH
+		var tint := Color(1.0, 0.82, 0.78) if state == "combat" else Color.WHITE
+		var alpha := lerpf(pc.modulate.a, see, 0.25) if not frozen else see
+		if absf(alpha - see) > 0.01:
+			_pieces_fade_done = false
+		else:
+			alpha = see
+		pc.modulate = Color(tint, alpha)
+		if redraw or (live_redraw and pc.i % 3 == 0):
+			pc.queue_redraw()
+
+
+## Dessin d'une pièce : image cuite de l'état (fondue depuis la flétrie après la victoire), dessin direct
+## tant qu'elle n'est pas cuite, puis ce qui bouge dessus.
+func draw_piece(c: CanvasItem, i: int) -> void:
+	var key: String = _descs[i]["key"]
+	var etat := _etat()
+	if etat == "ravive" and revive_k < 1.0:
+		if not LieuxBake.draw(c, bake_key("fletri"), key) and revive_k < 0.5:
+			art.arena_piece(c, region, key, "fletri")
+		if not LieuxBake.draw(c, bake_key("ravive"), key, Vector2.ZERO, 1.0, Color(1, 1, 1, revive_k)) and revive_k >= 0.5:
+			art.arena_piece(c, region, key, "ravive")
+	elif not LieuxBake.draw(c, bake_key(etat), key):
+		art.arena_piece(c, region, key, etat)
+	art.arena_piece_live(c, region, key, self, i)
+
+
+func draw_floor(c: CanvasItem) -> void:
+	var etat := "ravive" if state == "vaincue" and revive_k >= 0.5 else "fletri"
+	if not LieuxBake.draw(c, bake_key("sol_" + etat), "sol", center):
+		art.arena_floor(c, self, etat)
+
+
+## Le boss change de phase ou est touché : le mur tremble, le monde vivant réagit (world_life.event).
+func _watch_boss(delta: float) -> void:
+	if frozen or not is_instance_valid(boss):
+		return
+	_hit_cd -= delta
+	var ph := int(boss.phase)
+	if ph > _seen_phase:
+		if _seen_phase > 0:
+			quake = 1.0
+			_life_event("boss_phase", center, {"phase": ph, "r": max_radius * 1.35})
+		_seen_phase = ph
+	var hp: float = boss.hp
+	if _seen_hp >= 0.0 and hp < _seen_hp - 0.001 and _hit_cd <= 0.0:
+		_hit_cd = 0.25
+		shiver = 1.0
+		_life_event("boss_hit", boss.position, {})
+	_seen_hp = hp
+
+
+func _life_event(kind: String, pos: Vector2, data: Dictionary) -> void:
+	var wfx = main.get("world_fx") if main != null else null
+	var life = wfx.get("life") if wfx != null else null
+	if life != null:
+		life.event(kind, pos, data)
 
 
 # --- Robot du mode « -- --autotest=boss » ---

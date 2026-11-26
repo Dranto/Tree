@@ -1,8 +1,9 @@
 ## Dessins de la région de Spore (le marais) : le Cœur de moisissure et le cercle de champignons de
 ## l'arène de l'Amanite-Mère. Voir region_art.gd (ce qui n'est pas remplacé ici reste celui du roncier).
 ##   - Cœur : celui du Marais de world_art/lieux.gd (refonte du monde, vague 1 C) ;
-##   - mur de l'arène : un cordon de mycélium hérissé de champignons de toutes tailles ; brèche du
-##     côté du Cœur ; il luit de poison pendant le combat, puis les chapeaux s'éclaircissent.
+##   - arène (vague 3 A) : en décor cuit (world_art/arenes.gd), un rond de sorcière de touffes de
+##     champignons et de vesses-de-loup sur leur mycélium, le chapeau géant au fond ; draw_arena_floor et
+##     draw_arena_wall (l'ancien cordon de mycélium) ne servent plus qu'aux comparaisons.
 extends "res://scripts/region_art.gd"
 
 
@@ -82,3 +83,38 @@ static func draw_arena_wall(c: CanvasItem, a) -> void:
 			c.draw_circle(top + Vector2(0, s * 0.15), s * 0.35, Color(Art.ec("poison", "clair"), 0.35 + 0.25 * sin(a.t * 4.0 + i)))
 		elif alive and i % 4 == 0:
 			c.draw_circle(top + Vector2(s * 0.2, -s * 0.4), 2.0, Art.ec("seve", "clair"))
+
+
+# --- Arène en décor (vague 3 A, world_art/arenes.gd) : un rond de sorcière ---
+
+
+static func arena_baked(region: String) -> bool:
+	return true
+
+
+static func arena_pieces(region: String, a) -> Array:
+	return arena_ring(a, 44, Arenes.MUR_VARIANTES, [["r0", 0.0, 70.0]], 59)
+
+
+static func arena_piece_keys(region: String) -> Array:
+	return Arenes.keys("spore")
+
+
+static func arena_piece_box(region: String, key: String) -> Rect2:
+	return Arenes.piece_box("spore", key)
+
+
+static func arena_piece(ci: CanvasItem, region: String, key: String, etat: String) -> void:
+	Arenes.piece(ci, "spore", key, etat)
+
+
+static func arena_piece_live(ci: CanvasItem, region: String, key: String, a, i: int) -> void:
+	Arenes.piece_live(ci, "spore", key, a, i)
+
+
+static func arena_floor(ci: CanvasItem, a, etat: String) -> void:
+	Arenes.ground(ci, a, "spore", etat)
+
+
+static func arena_live(ci: CanvasItem, a) -> void:
+	Arenes.live(ci, a, "spore")

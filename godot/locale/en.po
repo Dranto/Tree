@@ -7200,7 +7200,7 @@ msgid "Autel de la couronne"
 msgstr "Altar of the Crown"
 
 #. data/regions/ronce.json › ronce › boss › name
-#. scripts/boss_arena.gd:36
+#. scripts/boss_arena.gd:56
 msgid "La Mère-Ronce"
 msgstr "The Bramble Mother"
 
@@ -7862,16 +7862,16 @@ msgstr "%d attack forms"
 msgid "Synergie possible « %s » : %s"
 msgstr "Possible synergy “%s”: %s"
 
-#. scripts/boss_arena.gd:38
+#. scripts/boss_arena.gd:58
 #. scripts/finale_arena.gd:96
 msgid "Phase 1 sur 3"
 msgstr "Phase 1 of 3"
 
-#. scripts/boss_arena.gd:38
+#. scripts/boss_arena.gd:58
 msgid "Phase 2 sur 3 : les bourgeons éclosent"
 msgstr "Phase 2 of 3: the buds burst open"
 
-#. scripts/boss_arena.gd:38
+#. scripts/boss_arena.gd:58
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 of 3: the brambles close in"
 
