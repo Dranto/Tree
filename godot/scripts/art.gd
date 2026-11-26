@@ -346,6 +346,41 @@ const MONDE := {
 	},
 }
 
+## Air des six régions (refonte du monde, tâche L) : teinte de l'air et voile de bord, côté flétri et côté
+## ravivé, pour ambience.gd. [teinte de la lumière, couleur du voile et de la vignette]. Ronce et Marais
+## reprennent Art.MONDE ; les autres régions n'ont pas encore de palette complète (vague 2).
+const MONDE_AIR := {
+	"ronce": {"fletri": [Color("5a4650"), Color("1b1216")], "ravive": [Color("ffe2c4"), Color("3a2620")]},
+	"spore": {"fletri": [Color("4a4060"), Color("120e1a")], "ravive": [Color("c8fff0"), Color("0e2228")]},
+	"vent": {"fletri": [Color("56687a"), Color("141a22")], "ravive": [Color("eaf3ff"), Color("080b0e")]},
+	"seve": {"fletri": [Color("3e5a50"), Color("0e1a16")], "ravive": [Color("d6fff0"), Color("0f2a22")]},
+	"racine": {"fletri": [Color("5e4c38"), Color("1a120c")], "ravive": [Color("ffdfa6"), Color("33220f")]},
+	"aube": {"fletri": [Color("6c5c48"), Color("1c1612")], "ravive": [Color("fff1c2"), Color("3a2c14")]},
+	"finale": {"fletri": [Color("4e303e"), Color("160c14")], "ravive": [Color("ffe6b0"), Color("301c20")]},
+}
+## Force de l'air par état : opacité de la vignette, de la lumière en haut à gauche, du voile en bas à droite,
+## des rayons obliques. Le flétri est plus sombre ; le ravivé, nettement plus clair. Le centre reste intact.
+const AIR_ETAT := {
+	"fletri": {"vignette": 0.55, "haut": 0.04, "bas": 0.20, "rayons": 0.0},
+	"ravive": {"vignette": 0.30, "haut": 0.10, "bas": 0.10, "rayons": 0.025},
+}
+## Lumière commune du monde (comme Ink.LIGHT) : elle vient d'en haut à gauche ; les ombres portées partent
+## à l'opposé, vers le bas à droite (même direction que world_art/outils.gd › SHADOW_DIR).
+const LUMIERE_DIR := Vector2(-0.55, -0.83)
+const OMBRE_DIR := Vector2(0.62, 0.30)
+
+
+## Air d'une région (clé de MONDE_AIR, sinon Ronce) dans un état : "fletri" ou "ravive".
+static func air_de(region: String, etat: String) -> Array:
+	var r: Dictionary = MONDE_AIR.get(region, MONDE_AIR["ronce"])
+	return r[etat]
+
+
+## Ombre portée d'un objet de rayon r : décalée vers l'ombre commune (bas à droite).
+static func ombre_decalee(pos: Vector2, r: float) -> Vector2:
+	return pos + OMBRE_DIR * r * 0.4
+
+
 ## Couleur du sol en couches et du décor cuit : mpc("ronce", "lavis_vif_clair") (MONDE[région]["sol_couches"]).
 static func mpc(region: String, key: String) -> Color:
 	var r: Dictionary = MONDE.get(region, {}).get("sol_couches", {})
