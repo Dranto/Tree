@@ -394,7 +394,58 @@ const MONDE := {
 	# -- fin vent --
 	#
 	# -- seve (Vallée) --
-
+	# Vallée des sources (vague 2, P4) : flétri = limon gris-vert et sève figée en ruisselets ambrés, sous la
+	# brume ; ravivé = prairie humide vert d'eau, mousses, fougères et eau claire (le vert sève, plus vif,
+	# reste au bord de vie et à la graine).
+	"seve": {
+		"sol_couches": {
+			# Matière (couche 2) : ruisselets de sève figée (morte), d'eau claire bordée de mousse (vive).
+			"encre_morte": Color("161a17"), "seve_figee": Color("4f4428"), "seve_figee_reflet": Color("85714a"),
+			"vase": Color("262b25"), "fissure": Color("141713"),
+			"encre_vive": Color("143326"), "ruisselet": Color("2f7f86"), "ruisselet_reflet": Color("c8fff0"),
+			"mousse": Color("3f8a54"), "mousse_claire": Color("7cc486"),
+			# Détails en grappes (couche 3) : crosses sèches, croûtes de vase ; frondes, coussins de mousse,
+			# myosotis d'eau, gouttes de rosée.
+			"crosse": Color("5e5440"), "croute": Color("5a5c50"),
+			"fronde": Color("3f9a62"), "fronde_claire": Color("86d49a"), "goutte": Color("e6fff8"),
+		},
+		"fletri": {
+			"sol": Color("3c403a"), "sol_clair": Color("4b5048"), "sol_sombre": Color("2c302b"),
+			"matiere": Color("1c201c"), "feuille": Color("6a6446"), "feuille_2": Color("57553c"),
+			"cendre": Color("8e958a"), "touffe": Color("5e5a44"), "touffe_2": Color("464634"),
+			"eau": Color("23292a"), "eau_reflet": Color("6c7a76"),
+			"bois": {"clair": Color("4c4a42"), "ombre": Color("2a2a25"), "reflet": Color("6e6c60")},
+			"saule": {"clair": Color("5a5c50"), "ombre": Color("34372f"), "reflet": Color("7e8072")},
+			"feuillage": {"clair": Color("5a5c4a"), "ombre": Color("363829"), "reflet": Color("7a7c66")},
+			"fougere": {"clair": Color("6a5e42"), "ombre": Color("41392a"), "reflet": Color("8a7c5c")},
+			"liane": {"clair": Color("54503e"), "ombre": Color("302e24"), "reflet": Color("767058")},
+			"pierre": {"clair": Color("595d56"), "ombre": Color("343833"), "reflet": Color("7a7f76")},
+			"seve": {"clair": Color("7a6232"), "ombre": Color("47381e"), "reflet": Color("b8955a")},
+			"fleur": Color("7e7c6c"), "fruit": Color("2a2a22"),
+			"air": Color("3e5a50"), "voile": Color("0e1a16"), "particule": Color("98a89e"),
+		},
+		"apaise": {
+			"sol": Color("454c44"), "sol_clair": Color("566052"), "sol_sombre": Color("343a33"),
+			"matiere": Color("252b25"), "feuille": Color("6e7250"), "feuille_2": Color("5c6446"),
+			"cendre": Color("a2aea2"), "touffe": Color("5c6a4a"), "touffe_2": Color("46523a"),
+			"eau": Color("26333a"), "eau_reflet": Color("7a929a"),
+		},
+		"ravive": {
+			"sol": Color("4a8c00"), "sol_clair": Color("61a11c"), "sol_sombre": Color("347700"),
+			"matiere": Color("1d5440"), "feuille": Color("8fdcae"), "feuille_2": Color("4fa47a"),
+			"cendre": Color("e6fff4"), "touffe": Color("3fa06a"), "touffe_2": Color("267550"),
+			"eau": Color("1f6a72"), "eau_reflet": Color("c8fff0"),
+			"bois": {"clair": Color("6e5c48"), "ombre": Color("40342a"), "reflet": Color("9c8670")},
+			"saule": {"clair": Color("5cbf8a"), "ombre": Color("2a7a56"), "reflet": Color("b4f0cc")},
+			"feuillage": {"clair": Color("4fae7c"), "ombre": Color("24704e"), "reflet": Color("a6e8c2")},
+			"fougere": {"clair": Color("46a868"), "ombre": Color("226e44"), "reflet": Color("9ee2b0")},
+			"liane": {"clair": Color("5a9a5a"), "ombre": Color("2e5e36"), "reflet": Color("a2d89a")},
+			"pierre": {"clair": Color("7c8a84"), "ombre": Color("4a5852"), "reflet": Color("b0c2ba")},
+			"seve": {"clair": Color("9ff0dc"), "ombre": Color("3aa08e"), "reflet": Color("eafffa")},
+			"fleur": Color("a8e8ff"), "fleur_coeur": Color("fff1a0"), "fleur_2": Color("f2fff8"), "fruit": Color("e86a8a"),
+			"air": Color("d6fff0"), "voile": Color("0f2a22"), "particule": Color("c8fff0"),
+		},
+	},
 	# -- fin seve --
 	#
 	# -- aube (Falaises) --
@@ -438,6 +489,41 @@ const MONDE := {
 	# -- fin aube --
 	#
 	# -- racine (Forêt) --
+	# Forêt pétrifiée (vague 2, P6) : flétrie, une futaie changée en pierre grise et froide, sciure et
+	# feuilles brunes ; ravivée, un sous-bois d'automne chaud, humus brun doré, feuilles d'or et d'ocre,
+	# mousse olive, glands. L'ambre (cœur des cernes) est la seule lueur ; le vert sève reste au bord de vie.
+	"racine": {
+		"fletri": {
+			"sol": Color("47403a"), "sol_clair": Color("564d45"), "sol_sombre": Color("38322e"),
+			"matiere": Color("1e1a18"), "feuille": Color("6a5040"), "feuille_2": Color("7d6048"),
+			"cendre": Color("8f877c"), "touffe": Color("5e5444"), "touffe_2": Color("463e33"),
+			# Bois pétrifié : de la pierre qui garde le grain du bois.
+			"bois": {"clair": Color("5f5750"), "ombre": Color("34302c"), "reflet": Color("8c8276")},
+			"feuillage": {"clair": Color("4f4538"), "ombre": Color("2e2820"), "reflet": Color("6e604c")},
+			"pierre": {"clair": Color("635c55"), "ombre": Color("38332f"), "reflet": Color("8a8177")},
+			"veine": Color("7a5a3a"), "ambre": Color("c8782a"),
+			"fleur": Color("7a6450"), "fleur_coeur": Color("a08a6a"), "fruit": Color("3a2a20"),
+			"air": Color("504840"), "voile": Color("18120f"), "particule": Color("a09482"),
+		},
+		"apaise": {
+			"sol": Color("574b3f"), "sol_clair": Color("695a4b"), "sol_sombre": Color("453b32"),
+			"matiere": Color("2c241e"), "feuille": Color("7d6046"), "feuille_2": Color("93724f"),
+			"cendre": Color("a89c8a"), "touffe": Color("6d6640"), "touffe_2": Color("52502f"),
+		},
+		"ravive": {
+			"sol": Color("6e5a30"), "sol_clair": Color("86703a"), "sol_sombre": Color("4e4024"),
+			"matiere": Color("4a3420"), "feuille": Color("e0a848"), "feuille_2": Color("b8742e"),
+			"cendre": Color("f0dcb0"), "touffe": Color("8f9c44"), "touffe_2": Color("5e6e2a"),
+			# Bois vivant : écorce brun chaud ; couronne d'automne, or et ocre.
+			"bois": {"clair": Color("8a6440"), "ombre": Color("4e3624"), "reflet": Color("c09a6a")},
+			"feuillage": {"clair": Color("d89a3c"), "ombre": Color("8a5424"), "reflet": Color("f6d27a")},
+			"mousse": {"clair": Color("9aa448"), "ombre": Color("5a6626"), "reflet": Color("ccd480")},
+			"pierre": {"clair": Color("a89880"), "ombre": Color("6a5c4a"), "reflet": Color("d8c8a8")},
+			"veine": Color("e0a040"), "ambre": Color("ffb43c"),
+			"fleur": Color("f0b848"), "fleur_coeur": Color("fff0c0"), "fleur_2": Color("d8703a"), "fruit": Color("7a4a22"),
+			"air": Color("ffe0b0"), "voile": Color("2e2014"), "particule": Color("f4c878"),
+		},
+	},
 
 	# -- fin racine --
 }

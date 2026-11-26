@@ -1,7 +1,7 @@
 ## Monde vivant (refonte du monde, vague 1 V) : images cuites de la petite vie du monde.
 ##
 ## Feuilles, cailloux, éclats, spores, plumes, gouttes, cendre des pas, fleurs des pas, rides et
-## éclaboussures, et la faune ambiante (papillon, oiseau, grenouille, luciole) sont dessinés une fois par
+## éclaboussures, et la lueur de la luciole sont dessinés une fois par
 ## le code au démarrage, ×SCALE et lissés (dessinés SS fois plus grands dans un SubViewport, puis réduits),
 ## dans un seul atlas. En jeu, world_life.gd n'envoie que des quadrilatères texturés de cet atlas, tous
 ## dans un seul appel de rendu par calque.
@@ -24,10 +24,7 @@ const COLS := 8
 ## Images, dans l'ordre de l'atlas.
 const FRAMES := [
 	"feuille", "petale", "caillou", "eclat", "spore", "plume", "sciure", "goutte",
-	"cendre", "fleur_pas", "ride", "eclabous", "lueur",
-	"papillon_0", "papillon_1", "papillon_2", "papillon_3",
-	"oiseau_sol_0", "oiseau_sol_1", "oiseau_vol_0", "oiseau_vol_1", "oiseau_vol_2", "oiseau_vol_3",
-	"grenouille_0", "grenouille_1", "grenouille_2", "luciole",
+	"cendre", "fleur_pas", "ride", "eclabous", "lueur", "luciole",
 ]
 
 static var tex: ImageTexture = null
@@ -191,86 +188,6 @@ class Painter extends Node2D:
 				for i in 6:
 					draw_circle(Vector2.ZERO, 7.0 - i * 1.1, Color(w, 0.08 + 0.1 * i))
 				draw_circle(Vector2.ZERO, 1.3, w)
-			_:
-				if f.begins_with("papillon_"):
-					_butterfly(int(f.get_slice("_", 1)), ink, w, g1, g2)
-				elif f.begins_with("oiseau_sol_"):
-					_bird_ground(int(f.get_slice("_", 2)), ink, w, g1, g2)
-				elif f.begins_with("oiseau_vol_"):
-					_bird_fly(int(f.get_slice("_", 2)), ink, w, g1, g2)
-				elif f.begins_with("grenouille_"):
-					_frog(int(f.get_slice("_", 1)), ink, w, g1, g2)
-
-	## Papillon vu de trois quarts : ailes qui battent (ouverture de l'image 0, ouvertes, à 3, fermées).
-	func _butterfly(i: int, ink: Color, w: Color, g1: Color, g2: Color) -> void:
-		var open: float = [1.0, 0.62, 0.22, 0.6][i]
-		for side in [-1.0, 1.0]:
-			var up := PackedVector2Array([Vector2(0, -0.5), Vector2(side * 9.0 * open, -7.5), Vector2(side * 10.5 * open, -2.5), Vector2(side * 3.0 * open, 0.5)])
-			var lo := PackedVector2Array([Vector2(0, 0.5), Vector2(side * 7.0 * open, 1.0), Vector2(side * 5.0 * open, 6.0), Vector2(side * 1.0, 3.0)])
-			draw_colored_polygon(_grow(up, Vector2.ZERO, 0.8), Color(ink, 0.8))
-			draw_colored_polygon(_grow(lo, Vector2.ZERO, 0.8), Color(ink, 0.8))
-			draw_colored_polygon(up, w)
-			draw_colored_polygon(lo, g1)
-			draw_circle(Vector2(side * 6.0 * open, -4.0), 1.1 * open + 0.3, Color(ink, 0.55))
-		draw_line(Vector2(0, -3.5), Vector2(0, 4.5), ink, 1.4)
-		draw_line(Vector2(0, -3.5), Vector2(-2.0, -6.5), Color(ink, 0.8), 0.6)
-		draw_line(Vector2(0, -3.5), Vector2(2.0, -6.5), Color(ink, 0.8), 0.6)
-
-	## Petit oiseau posé, tourné vers la droite : tête haute (0) ou qui picore (1).
-	func _bird_ground(i: int, ink: Color, w: Color, g1: Color, g2: Color) -> void:
-		draw_colored_polygon(Art.ellipse(Vector2(0, 7.5), 6.0, 1.6, 14), Color(Art.c("ombre"), 0.25))
-		var body := Art.ellipse(Vector2(-1, 1.5), 6.5, 4.6, 18)
-		draw_colored_polygon(_grow(body, Vector2(-1, 1.5), 0.9), ink)
-		draw_colored_polygon(body, g1)
-		draw_colored_polygon(Art.ellipse(Vector2(-0.5, 3.0), 4.5, 2.6, 14), w)
-		# Queue.
-		draw_colored_polygon(PackedVector2Array([Vector2(-6.5, 0), Vector2(-11, -2.5), Vector2(-10.5, 1.0), Vector2(-6, 2.5)]), g2)
-		var head := Vector2(5.0, -3.2) if i == 0 else Vector2(6.2, 2.4)
-		draw_circle(head, 3.4, ink)
-		draw_circle(head, 2.7, g1)
-		var beak := head + (Vector2(3.6, 0.4) if i == 0 else Vector2(2.6, 2.6))
-		draw_colored_polygon(PackedVector2Array([head + Vector2(1.8, -0.9), beak, head + Vector2(1.6, 1.0)]), ink.lightened(0.3))
-		draw_circle(head + Vector2(0.9, -0.7), 0.8, ink)
-		draw_line(Vector2(0, 6), Vector2(-0.5, 7.5), ink, 0.8)
-		draw_line(Vector2(2, 6), Vector2(2.2, 7.5), ink, 0.8)
-
-	## Oiseau en vol, vu de trois quarts : battement d'ailes en quatre images.
-	func _bird_fly(i: int, ink: Color, w: Color, g1: Color, g2: Color) -> void:
-		var lift: float = [-7.0, -2.0, 4.0, -1.0][i]
-		var body := Art.ellipse(Vector2(0, 0), 6.0, 3.2, 16)
-		for side in [-1.0, 1.0]:
-			var tip := Vector2(-2.0 + side * 1.0, lift * (1.0 if side > 0 else 0.8) - 1.0) + Vector2(0, side * 1.0)
-			var wing := PackedVector2Array([Vector2(-3, -0.5), tip + Vector2(-6, 0), tip + Vector2(2, -1), Vector2(3, -0.5)])
-			if side < 0:
-				wing = PackedVector2Array([Vector2(-3, 0.5), Vector2(-3, 0.5) + Vector2(-4, lift * 0.6 + 2.0), Vector2(1, lift * 0.6 + 3.0), Vector2(2, 0.5)])
-			draw_colored_polygon(_grow(wing, Vector2.ZERO, 0.8), Color(ink, 0.85))
-			draw_colored_polygon(wing, g1 if side > 0 else g2)
-		draw_colored_polygon(_grow(body, Vector2.ZERO, 0.8), ink)
-		draw_colored_polygon(body, w)
-		draw_colored_polygon(PackedVector2Array([Vector2(-5.5, -0.5), Vector2(-10, -2), Vector2(-9.5, 1.5), Vector2(-5.5, 1.0)]), g2)
-		draw_circle(Vector2(5.5, -1.2), 2.6, ink)
-		draw_circle(Vector2(5.5, -1.2), 2.0, g1)
-		draw_colored_polygon(PackedVector2Array([Vector2(7, -2), Vector2(10, -1), Vector2(7, -0.4)]), ink.lightened(0.3))
-
-	## Grenouille : assise (0), qui s'élance (1), en l'air pattes tendues (2).
-	func _frog(i: int, ink: Color, w: Color, g1: Color, g2: Color) -> void:
-		draw_colored_polygon(Art.ellipse(Vector2(0, 6.5), 6.5, 1.8, 14), Color(Art.c("ombre"), 0.25 if i == 0 else 0.0))
-		var stretch: float = [1.0, 1.15, 1.35][i]
-		var body := Art.ellipse(Vector2(0, 1.0), 6.0 * stretch, 4.4 / stretch, 18)
-		draw_colored_polygon(_grow(body, Vector2(0, 1), 0.9), ink)
-		draw_colored_polygon(body, g1)
-		draw_colored_polygon(Art.ellipse(Vector2(1.0, 2.5), 4.0 * stretch, 2.0, 14), w)
-		if i == 0:
-			for side in [-1.0, 1.0]:
-				draw_colored_polygon(Art.ellipse(Vector2(side * 5.5 - 1.0, 4.5), 3.0, 1.8, 10), g2)
-		else:
-			draw_line(Vector2(-5 * stretch, 3), Vector2(-10 * stretch, 6), ink, 1.6)
-			draw_line(Vector2(-5 * stretch, 3), Vector2(-10 * stretch, 6), g2, 1.0)
-		for side in [-1.0, 1.0]:
-			var eye := Vector2(3.5 * stretch + side * 1.8, -2.6)
-			draw_circle(eye, 1.9, ink)
-			draw_circle(eye, 1.4, w)
-			draw_circle(eye + Vector2(0.3, 0.2), 0.7, ink)
 
 	static func _leaf(p: Vector2, l: float, a: float, wk: float) -> PackedVector2Array:
 		var d := Vector2.from_angle(a)
