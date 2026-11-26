@@ -9,6 +9,7 @@
 ##   --update        enregistre les captures comme nouvelles références au lieu de comparer
 extends Node
 
+const BossBake = preload("res://scripts/boss_bake.gd")
 const MainScene = preload("res://scenes/main.tscn")
 
 const REFERENCE_DIR := "res://tests/visual/reference"
@@ -1819,6 +1820,14 @@ func _first_neighbor_of_root() -> int:
 
 func _shot(shot_name: String, screen := "") -> void:
 	await RenderingServer.frame_post_draw
+	# Un boss « Bestiaire d'herbier » apparu à l'écran se cuit en sprites (boss_bake.gd) : capturer
+	# l'image cuite, pas le dessin direct d'attente.
+	if BossBake.baking():
+		while BossBake.baking():
+			await get_tree().process_frame
+		_redraw_bosses()
+		await RenderingServer.frame_post_draw
+		await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	img.convert(Image.FORMAT_RGB8)
 	if screen == "" and shot_name.begins_with("arbre"):
@@ -1838,6 +1847,20 @@ func _shot(shot_name: String, screen := "") -> void:
 			_screens_checked.append(screen)
 		_audit(screen, not shot_name.ends_with("proche"), img)
 	await _shot_image(shot_name, img)
+
+
+## Redessine les arènes et les boss figés (après une cuisson).
+func _redraw_bosses() -> void:
+	if not is_instance_valid(main):
+		return
+	var arenas: Array = main.arenas.values() if main.get("arenas") is Dictionary else []
+	if main.get("finale") != null:
+		arenas.append(main.finale)
+	for a in arenas:
+		if is_instance_valid(a):
+			a.queue_redraw()
+			if is_instance_valid(a.get("boss")):
+				a.boss.redraw()
 
 
 func _shot_image(shot_name: String, img: Image) -> void:

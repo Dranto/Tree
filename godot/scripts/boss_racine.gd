@@ -22,6 +22,10 @@
 ## Le socle (vie, phases, états, mort, interface d'ennemi) est dans boss_base.gd.
 extends BossBase
 
+const Ancien = preload("res://scripts/creature_art/racine/_ancien.gd")
+const Ink = preload("res://scripts/creature_art/ink.gd")
+const BossBake = preload("res://scripts/boss_bake.gd")
+
 const PHASE_LIMITS := [0.66, 0.33]
 ## Vie : base + par niveau du joueur (réglée au robot : --autotest=boss au niveau 20).
 const BASE_HP := 440.0
@@ -297,14 +301,43 @@ func bot_ring(arena_radius: float) -> float:
 
 # --- Dessin ---
 #
-# Charte : les Flétris sont sombres et saturés, contour clair, braise dans les fentes. L'Ancien est un
-# chêne énorme changé en pierre grise : un fût large aux contreforts de racines, un visage creusé
-# dans l'écorce (arcades lourdes, yeux de braise), deux bras-branches cassés, une cime de branches
-# de pierre où pendent quelques feuilles mortes. Phase 2 : la cime se fend, la braise y couve.
-# Phase 3 : l'écorce de pierre s'écaille par plaques et la braise court dans les fentes du fût.
+# « Bestiaire d'herbier » (refonte des personnages, vague 2 B1) : l'Ancien est un chêne de pierre remis
+# debout par ses racines, comme le Menhir et le Tertre (scripts/creature_art/racine/_ancien.gd). Vue de
+# trois quarts, tourné vers le joueur. Son corps et le sol sont cuits en sprites (boss_bake.gd) ; les
+# bras-branches (le bras du côté du joueur se lève pour planter le pieu), les yeux de braise et les
+# pierres de l'éboulis sont dessinés en direct. Phase 2 : la cime se fend de braise. Phase 3 : l'écorce
+# de pierre s'écaille, la braise court dans le fût. Les annonces au sol (draw_marks) gardent la
+# grammaire de Art.telegraph.
+
+const FEET := 0.3
+
+var facing := 1.0
+var _life: Node2D
+
+
+func _ready() -> void:
+	super._ready()
+	use_tint_material()
+	_life = Layer2.new()
+	_life.boss = self
+	add_child(_life)
+
+
+class Layer2 extends Node2D:
+	var boss
+
+	func _draw() -> void:
+		boss.draw_life(self)
+
+
+func redraw() -> void:
+	super.redraw()
+	if _life != null:
+		_life.queue_redraw()
+
 
 func _stone() -> Color:
-	return Art.c("ennemi").lerp(Art.c("brume").darkened(0.42), 0.55).lerp(Art.ec("racine", "sombre"), 0.15)
+	return Art.bc("racine", "clair")
 
 
 ## Avancée de l'annonce en cours (0 → 1), 0 hors annonce.
@@ -314,148 +347,109 @@ func _announce_k() -> float:
 	return clampf(1.0 - timer / stage_time, 0.0, 1.0)
 
 
-func _draw() -> void:
-	var r := radius
+func _body_xf() -> Transform2D:
+	var wake := 1.0 - clampf(intro / intro_time, 0.0, 1.0) if intro_time > 0.0 else 1.0
 	var k := _announce_k()
+	var s := lerpf(0.4, 1.0, Anim.ease_out(wake))
+	# La cime tremble avant l'éboulis et la chute ; un tremblement pendant un changement de phase.
+	var shift := Vector2.ZERO
+	if attack in ["eboulis", "chute"]:
+		shift.x = 3.0 * sin(t * 40.0) * k
+	if transition > 0.0:
+		shift += Vector2(sin(t * 50.0), cos(t * 43.0)) * 3.0
+	return Transform2D(0.0, Vector2(s * facing, s), 0.0, Vector2(0, radius * FEET) + shift)
+
+
+func _draw() -> void:
+	update_tint()
 	var die := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
-	var b := Anim.breathe(t, 0.015)
-	var rock := _color(_stone())
-	var ember := Art.ec("cendre")
-	Art.shadow(self, Vector2(0, r * 0.1), r * 1.3)
-	# Contreforts de racines qui s'enfoncent dans la roche ; ils rougeoient avant les racines.
-	var root := _color(_stone().darkened(0.2))
-	for i in 6:
-		var a := PI * (0.04 + 0.92 * i / 5.0)
-		var tip := Vector2(cos(a) * r * 1.4, sin(a) * r * 0.42 + r * 0.14)
-		var base_l := Vector2(cos(a) * r * 0.3 - r * 0.12, r * 0.02)
-		var base_r := Vector2(cos(a) * r * 0.3 + r * 0.12, r * 0.02)
-		draw_colored_polygon(PackedVector2Array([base_l, tip, base_r]), root.darkened(0.06 * (i % 2)))
-		if attack == "racines" and k > 0.0:
-			draw_line(Vector2(cos(a) * r * 0.3, r * 0.02), tip, Color(Art.ec("saignement", "clair"), 0.65 * k), 2.5, true)
-	# Le fût : large, un peu évasé au pied, qui s'affaisse à la mort.
-	var sag := Anim.ease_out(die)
-	var hh := r * (1.5 - 0.45 * sag)
-	var top := Vector2(0, -hh)
-	# Silhouette noueuse : un pied très évasé (contreforts), une taille plus fine, des bosses.
-	var trunk := PackedVector2Array([
-		Vector2(-r * 0.95, r * 0.14), Vector2(-r * 0.62, -r * 0.05), Vector2(-r * 0.46, -r * 0.4),
-		Vector2(-r * 0.52, -hh * 0.55), Vector2(-r * 0.42, -hh * 0.78), top + Vector2(-r * 0.58, r * 0.05),
-		top + Vector2(-r * 0.2, -r * 0.08), top + Vector2(r * 0.22, -r * 0.06), top + Vector2(r * 0.6, r * 0.06),
-		Vector2(r * 0.44, -hh * 0.76), Vector2(r * 0.5, -hh * 0.5), Vector2(r * 0.45, -r * 0.38),
-		Vector2(r * 0.6, -r * 0.04), Vector2(r * 0.98, r * 0.14), Vector2(r * 0.3, r * 0.2), Vector2(-r * 0.3, r * 0.2)])
-	Art.volume(self, trunk, rock, 0.65)
-	Art.outline(self, trunk, Color(Art.c("ennemi_contour"), 1.0 - die * 0.8), Art.TRAIT_FORT)
-	# Fil du bois devenu pierre : des stries qui montent en se tordant.
-	var grain := rock.darkened(0.28)
-	for i in 5:
-		var x := (i - 2) * r * 0.17
-		draw_polyline(PackedVector2Array([Vector2(x * 1.5, r * 0.1), Vector2(x, -r * 0.45), Vector2(x * 1.1 + r * 0.04, -hh * 0.7), Vector2(x * 1.2, -hh + r * 0.1)]), grain, 1.6, true)
-	# Plaques d'écorce de pierre ; en phase 3 (et à la mort) certaines tombent, la braise dessous.
-	var flake_fall := (0.35 if phase >= 3 else 0.0) + die
-	for i in 6:
-		var px := (-0.3 + 0.2 * (i % 4)) * r
-		var py := -hh * (0.2 + 0.13 * i)
-		var plate := PackedVector2Array([Vector2(px - r * 0.1, py), Vector2(px + r * 0.08, py - r * 0.06), Vector2(px + r * 0.12, py + r * 0.12), Vector2(px - r * 0.06, py + r * 0.16)])
-		if flake_fall > 0.0 and i % 2 == 0:
-			draw_colored_polygon(plate, Color(ember, (0.55 + 0.3 * sin(t * 5.0 + i)) * (1.0 - die * 0.5)))
-			if dead:
-				var drop := Vector2(0, r * 0.9 * die * die) + Vector2((i - 2.5) * r * 0.08 * die, 0)
-				var moved := PackedVector2Array()
-				for q in plate:
-					moved.append(q + drop)
-				draw_colored_polygon(moved, Color(rock.lightened(0.1), 1.0 - die))
-		else:
-			draw_colored_polygon(plate, rock.lightened(0.08))
-	# À la mort : le bois vivant apparaît sous la pierre.
-	if dead:
-		var wood := Art.ec("racine", "sombre").lerp(Art.c("decor_vivant"), 0.25)
-		draw_colored_polygon(Art.ellipse(Vector2(0, -hh * 0.5), r * 0.32 * die, hh * 0.32 * die + 0.5, 14), Color(wood, die))
-	# Fentes de braise dans le fût (phase 3).
-	if phase >= 3 and not dead:
-		var fl := Color(ember, 0.6 + 0.3 * sin(t * 5.0))
-		draw_polyline(PackedVector2Array([Vector2(-r * 0.2, -r * 0.1), Vector2(-r * 0.05, -r * 0.5), Vector2(-r * 0.18, -hh * 0.8)]), fl, 3.0, true)
-		draw_polyline(PackedVector2Array([Vector2(r * 0.25, -r * 0.2), Vector2(r * 0.12, -r * 0.6)]), fl, 2.5, true)
-	# Visage : arcades lourdes, yeux de braise, bouche-crevasse.
-	var face_y := -hh * 0.62
-	var brow := rock.darkened(0.3)
-	for sgn in [-1, 1]:
-		var e := Vector2(sgn * r * 0.2, face_y)
-		draw_colored_polygon(PackedVector2Array([e + Vector2(-sgn * r * 0.16, -r * 0.1), e + Vector2(sgn * r * 0.15, -r * 0.16), e + Vector2(sgn * r * 0.12, -r * 0.06)]), brow)
-		draw_circle(e, r * 0.08, Color(Art.c("ennemi_oeil"), 0.35 * (0.4 + 0.6 * k) * (1.0 - die)))
-		draw_line(e + Vector2(-r * 0.07, -sgn * r * 0.015), e + Vector2(r * 0.07, sgn * r * 0.015), Color(Art.c("ennemi_oeil"), 1.0 - die), 2.5, true)
-	var mouth := PackedVector2Array([Vector2(-r * 0.16, face_y + r * 0.3), Vector2(-r * 0.05, face_y + r * 0.26), Vector2(r * 0.06, face_y + r * 0.31), Vector2(r * 0.16, face_y + r * 0.27), Vector2(r * 0.06, face_y + r * (0.36 + 0.06 * k))])
-	draw_colored_polygon(mouth, Color(Art.c("contour"), 0.9))
-	# Bras-branches : le droit (du côté visé) se lève pour planter le pieu.
+	modulate.a = 1.0 - Anim.ease_in(clampf((die - 0.6) / 0.4, 0.0, 1.0))
+	if main and main.player and not dead:
+		var dx: float = main.player.position.x - anchor.x
+		if absf(dx) > 30.0:
+			facing = signf(dx)
+	var xf := _body_xf()
+	var ux := xf * Transform2D(0.0, Vector2.ONE * Ancien.HEIGHT / 100.0, 0.0, Vector2.ZERO)
+	var atlas = BossBake.get_atlas(self, Ancien)
+	_draw_part(atlas, "sol", "p%d" % phase, 0.0, xf, {"phase": phase})
+	var k := _announce_k()
+	# Le bras du côté du joueur se lève pour le pieu (le bras « devant », côté +x du dessin).
 	var raise: float = k if attack == "pieu" else 0.0
-	for sgn in [-1.0, 1.0]:
-		var up := raise if signf(aim.x if absf(aim.x) > 0.1 else 1.0) == sgn else 0.0
-		var sh := top + Vector2(sgn * r * 0.42, r * 0.35)
-		var el := sh + Vector2(sgn * r * 0.55, -r * (0.2 + 0.5 * up))
-		var hand := el + Vector2(sgn * r * 0.25, -r * (0.35 + 0.5 * up))
-		_branch(sh, el, r * 0.16, r * 0.11, rock.darkened(0.08))
-		_branch(el, hand, r * 0.11, r * 0.05, rock.darkened(0.12))
-		if up > 0.0:
-			# Le pieu tenu au bout du bras, qui pâlit en rouge à mesure que l'annonce avance.
-			var stake_tip := hand + Vector2(0, -r * 0.45)
-			_branch(hand + Vector2(0, r * 0.1), stake_tip, r * 0.08, r * 0.01, rock.lightened(0.1).lerp(Art.ec("saignement", "clair"), 0.5 * up))
-	# Cime : trois maîtresses branches de pierre qui portent des masses de feuillage pétrifié (des
-	# blocs gris, fendus) ; des branches cassées dépassent. Elle tremble pendant l'éboulis et la chute ;
-	# fendue de braise dès la phase 2, dégarnie en phase 3.
-	var shake := (3.0 * sin(t * 40.0) * k) if attack in ["eboulis", "chute"] else 0.0
-	var crown := top + Vector2(shake, -r * 0.02)
-	var cr := rock.lightened(0.05)
-	for i in 3:
-		var a := -PI / 2.0 + (i - 1) * 0.75
-		_branch(crown + Vector2((i - 1) * r * 0.25, r * 0.05), crown + Vector2.from_angle(a) * r * 0.75 + Vector2(0, r * 0.1), r * 0.2, r * 0.1, rock.darkened(0.05))
-	for i in 5:
-		var a := -PI / 2.0 + (i - 2) * 0.5
-		var base := crown + Vector2.from_angle(a) * r * 0.6
-		var tip := base + Vector2.from_angle(a + 0.25 * (1 if i % 2 else -1)) * r * (0.55 + 0.15 * (i % 2)) * b
-		_branch(base, tip, r * 0.07, r * 0.025, cr.darkened(0.12))
-	var thin := 0.82 if phase >= 3 else 1.0
-	var lobes := [[0.0, -0.95, 0.5], [-0.62, -0.7, 0.42], [0.62, -0.7, 0.42], [-0.95, -0.3, 0.32], [0.95, -0.3, 0.32], [-0.32, -0.42, 0.4], [0.32, -0.42, 0.4]]
-	var mass := _color(_stone().lerp(Art.ec("racine", "sombre"), 0.25).lightened(0.06))
-	for l in lobes:
-		var q: Vector2 = crown + Vector2(l[0] * r * b, l[1] * r) * thin
-		draw_circle(q, r * l[2] * thin + 2.5, Color(Art.c("ennemi_contour"), 0.7 * (1.0 - die)))
-	for li in lobes.size():
-		var l: Array = lobes[li]
-		var q: Vector2 = crown + Vector2(l[0] * r * b, l[1] * r) * thin
-		if dead:
-			q += Vector2((li - 3) * r * 0.1, r * 1.4 * die * die)
-		Art.volume_circle(self, q, r * l[2] * thin, Color(mass.darkened(0.05 * (li % 3)), 1.0 - die * 0.7), 0.55)
-		# Fentes de la pierre ; de braise dès la phase 2.
-		var fl: Color = Color(ember, 0.55 + 0.3 * sin(t * 4.0 + li)) if phase >= 2 and not dead and li % 2 == 0 else mass.darkened(0.35)
-		var cs: float = r * l[2] * thin
-		var sd := 1.0 if li % 2 == 0 else -1.0
-		draw_polyline(PackedVector2Array([q + Vector2(-0.55 * sd, -0.25) * cs, q + Vector2(-0.15 * sd, 0.05) * cs, q + Vector2(0.12 * sd, -0.12) * cs, q + Vector2(0.5 * sd, 0.18) * cs]), fl, 1.8, true)
 	if not dead:
-		var leaf := Art.c("decor").lerp(Art.ec("racine", "sombre"), 0.5)
-		for i in 6:
-			var q := crown + Vector2((i - 2.5) * r * 0.32, -r * (0.25 + 0.12 * (i % 3))) * thin
-			draw_colored_polygon(Art.ellipse(q, r * 0.06, r * 0.035, 8), Color(leaf, 0.9))
+		_arm(ux, -1.0, 0.0, false)
+	if dead:
+		_draw_part(atlas, "corps", "mort", die, xf, {"phase": 3, "die": die}, false)
+		return
+	_draw_part(atlas, "corps", "p%d" % phase, fposmod(t / Ancien.LOOP, 1.0), xf, {"phase": phase, "t": fposmod(t, Ancien.LOOP)})
+	_arm(ux, 1.0, raise, attack == "pieu")
+	# Yeux de braise, plus vifs pendant une annonce.
+	var ann := 1.0 if stage == "annonce" else 0.0
+	for i in Ancien.EYES.size():
+		var e: Array = Ancien.EYES[i]
+		var hit := 1.0 if hit_flash > 0.0 else 0.0
+		if hit > 0.4:
+			Ink.brush(self, ux, PackedVector2Array([e[0], e[0] + Vector2.from_angle(e[1]) * e[2]]), e[3] * 0.6, Ink.encre())
+		else:
+			Ink.ember(self, ux, Ink.leaf(e[0], e[1], e[2], e[3]), 0.4 + 0.6 * ann)
 	# Pierres qui se détachent de la cime pendant l'annonce de l'éboulis.
 	if attack == "eboulis" and stage == "annonce":
+		var rock := Art.bc("racine", "cendre")
 		for i in 5:
-			var q := crown + Vector2((i - 2) * r * 0.3, -r * 0.5 + r * 0.25 * k * (1 + i % 2))
-			Art.volume_circle(self, q, r * 0.06, rock.lightened(0.15), 0.6)
-	# Mort : des pousses vertes percent la pierre qui tombe.
-	if dead:
-		for i in 6:
-			var u := clampf(die * 1.4 - (i % 3) * 0.15, 0.0, 1.0)
-			if u <= 0.01:
-				continue
-			var foot := Vector2((i - 2.5) * r * 0.22, -hh * (0.15 + 0.12 * (i % 3)))
-			draw_line(foot, foot + Vector2(0, -r * 0.25 * u), Art.c("decor_vivant").darkened(0.2), 2.0, true)
-			draw_circle(foot + Vector2(0, -r * 0.25 * u), r * 0.05 * u + 0.5, Art.c("decor_vivant"))
+			var q: Vector2 = ux * (Ancien.CROWN + Vector2((i - 2) * 26.0, -20.0 + 40.0 * k * (1 + i % 2)))
+			draw_circle(q, 6.0, Art.bc("encre"))
+			draw_circle(q + Vector2(-0.8, -0.8), 4.6, rock)
 
 
-## Une branche de pierre (de a à b, largeur w0 → w1), dessinée par un quadrilatère.
-func _branch(a: Vector2, bb: Vector2, w0: float, w1: float, col: Color) -> void:
-	var n := (bb - a).orthogonal().normalized()
-	if n == Vector2.ZERO:
+func _draw_part(atlas, group: String, anim: String, u: float, xf: Transform2D, o: Dictionary, loop := true) -> void:
+	if atlas != null and atlas.draw_blend(self, group, anim, u, xf, loop):
 		return
-	draw_colored_polygon(PackedVector2Array([a + n * w0, bb + n * w1, bb - n * w1, a - n * w0]), col)
+	if BossBake.no_render():
+		return
+	o["groupe"] = group
+	draw_set_transform_matrix(xf)
+	Ancien.draw(self, Vector2.ZERO, Ancien.HEIGHT, o)
+	draw_set_transform_matrix(Transform2D.IDENTITY)
+
+
+## Bras-branche (unités du dessin) : sgn -1 au fond, 1 devant ; up : levé (0 → 1) ; stake : le pieu
+## de pierre tenu au bout, qui rougit à mesure que l'annonce avance.
+func _arm(ux: Transform2D, sgn: float, up: float, stake: bool) -> void:
+	var sh: Vector2 = Ancien.SHOULDERS[0 if sgn < 0.0 else 1]
+	var sway := sin(t * 1.3 + sgn) * 2.0
+	var el := sh + Vector2(sgn * 30.0, 22.0 + sway).lerp(Vector2(sgn * 22.0, -34.0), up)
+	var hand := el + Vector2(sgn * 12.0, 26.0).lerp(Vector2(sgn * 6.0, -40.0), up)
+	var wood := Art.bc("racine", "bois")
+	if sgn < 0.0:
+		wood = Art.bc("racine", "bois_ombre")
+	var pts := PackedVector2Array([sh, el, hand])
+	Ink.brush(self, ux, pts, 15.0, Ink.encre(), 1.0, 0.5)
+	Ink.brush(self, ux, pts, 11.0, wood, 1.0, 0.45)
+	Ink.brush(self, ux, PackedVector2Array([sh.lerp(el, 0.2), el]), 3.0, wood.lightened(0.3), 0.0, 0.0)
+	# Doigts de rameaux.
+	var d := (hand - el).normalized()
+	for i in 3:
+		var f := hand + d.rotated((i - 1) * 0.6) * 12.0
+		Ink.brush(self, ux, PackedVector2Array([hand, f]), 5.0, Ink.encre(), 1.0, 0.0)
+		Ink.brush(self, ux, PackedVector2Array([hand, f]), 3.2, wood, 1.0, 0.0)
+	if stake and up > 0.0:
+		var col := Art.bc("racine", "cendre").lerp(Art.ec("saignement", "clair"), 0.5 * up)
+		var spike := Ink.thorn(hand + Vector2(0, 6), -PI * 0.5, 56.0, 13.0)
+		Ink.flat(self, ux, spike, col, 2.0)
+		Ink.brush(self, ux, PackedVector2Array([hand + Vector2(-2, 0), hand + Vector2(-1, -44)]), 2.0, col.lightened(0.3))
+
+
+## Au-dessus de la teinte : la vie qui reprend sous la pierre à sa mort, les états visibles.
+func draw_life(c: CanvasItem) -> void:
+	var xf := _body_xf()
+	var ux := xf * Transform2D(0.0, Vector2.ONE * Ancien.HEIGHT / 100.0, 0.0, Vector2.ZERO)
+	var mid: Vector2 = ux * Vector2(0, -70)
+	if statuses.has("saignement"):
+		Art.status(c, "saignement", mid, radius * 0.7, t * 1.25)
+	if poison_time > 0.0:
+		Art.status(c, "poison", mid, radius * 0.7, t)
+	var die := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
+	if dead and die > 0.35:
+		Art.glow(c, mid, radius * 0.8 * Anim.ease_out((die - 0.35) / 0.65), "seve")
 
 
 ## Annonces au sol, en coordonnées monde (grammaire de Art.telegraph). L'invocation, qui ne blesse
@@ -520,39 +514,36 @@ func draw_overlay(_c: CanvasItem) -> void:
 	pass
 
 
-## L'Ancien endormi : un chêne de pierre trapu, cime cassée, au milieu de sa clairière.
+## L'Ancien endormi : la cime basse, les yeux clos ; arène ouverte, la braise couve sous ses arcades.
 static func draw_sleeper(a: Node2D) -> void:
-	var c: Vector2 = a.center
-	var r := 48.0
-	Art.shadow(a, c + Vector2(0, r * 0.3), r * 1.3)
-	var rock := Art.c("ennemi").lerp(Art.c("brume").darkened(0.42), 0.55).darkened(0.2)
-	var trunk := PackedVector2Array([c + Vector2(-r * 0.5, r * 0.2), c + Vector2(-r * 0.36, -r * 1.1), c + Vector2(r * 0.36, -r * 1.1), c + Vector2(r * 0.52, r * 0.2)])
-	Art.volume(a, trunk, rock, 0.6)
-	for i in 5:
-		var ang := -PI / 2.0 + (i - 2) * 0.45
-		var base := c + Vector2((i - 2) * r * 0.15, -r * 1.05)
-		var tip := base + Vector2.from_angle(ang) * r * 0.65
-		var n := (tip - base).orthogonal().normalized()
-		a.draw_colored_polygon(PackedVector2Array([base + n * 5.0, tip + n * 2.0, tip - n * 2.0, base - n * 5.0]), rock.darkened(0.08))
+	var feet: Vector2 = a.center + Vector2(0, 78.0 * FEET)
+	var xf := Transform2D(0.0, feet)
+	var atlas = BossBake.get_atlas(a, Ancien)
+	if BossBake.no_render():
+		return
+	if atlas == null or not atlas.draw_blend(a, "sol", "p1", 0.0, xf):
+		a.draw_set_transform_matrix(xf)
+		Ancien.draw(a, Vector2.ZERO, Ancien.HEIGHT, {"groupe": "sol", "phase": 1})
+	if atlas == null or not atlas.draw_blend(a, "corps", "dort", 0.0, xf):
+		a.draw_set_transform_matrix(xf)
+		Ancien.draw(a, Vector2.ZERO, Ancien.HEIGHT, {"sleep": true})
+	a.draw_set_transform_matrix(Transform2D.IDENTITY)
 	if a.state == "ouverte":
+		var ux := xf * Transform2D(0.0, Vector2.ONE * Ancien.HEIGHT / 100.0, 0.0, Vector2.ZERO)
 		var pulse := 0.45 + 0.35 * sin(a.t * 2.0)
-		for sgn in [-1, 1]:
-			a.draw_circle(c + Vector2(sgn * r * 0.18, -r * 0.7), r * 0.07, Color(Art.ec("cendre", "clair"), pulse))
+		for e in Ancien.EYES:
+			Ink.halo(a, ux * e[0], 12.0, Art.bc("braise"), 1.0 + 1.5 * pulse)
 
 
 ## Après la victoire : une clairière moussue et un jeune chêne, là où se tenait l'Ancien.
 static func draw_victory(a: Node2D) -> void:
-	var c: Vector2 = a.center
-	a.draw_colored_polygon(Art.ellipse(c, 80.0, 30.0, 24), Color(Art.c("decor_vivant").darkened(0.2), 0.7))
-	# Débris de pierre moussus autour.
-	for i in 6:
-		var ang := TAU * i / 6.0 + 0.3
-		var p := c + Vector2(cos(ang) * 70.0, sin(ang) * 26.0)
-		Art.volume(a, Art.ellipse(p, 11.0, 7.0, 8), Art.c("brume").darkened(0.35), 0.5)
-		a.draw_colored_polygon(Art.ellipse(p + Vector2(0, -4), 7.0, 2.5, 8), Art.c("decor_vivant"))
-	var bark := Art.ec("racine", "sombre").lerp(Art.c("decor_vivant"), 0.15)
-	a.draw_colored_polygon(PackedVector2Array([c + Vector2(-6, 0), c + Vector2(-3, -52), c + Vector2(4, -52), c + Vector2(7, 0)]), bark)
-	var leaf := Art.c("decor_vivant").lerp(Art.ec("racine", "clair"), 0.25)
-	for l in [[0, -66, 20], [-16, -56, 15], [16, -56, 15], [-8, -46, 13], [9, -46, 13]]:
-		Art.volume_circle(a, c + Vector2(l[0], l[1]), l[2], leaf, 0.6)
-	Art.glow(a, c + Vector2(0, -20), 36.0, "racine")
+	var feet: Vector2 = a.center
+	var xf := Transform2D(0.0, feet)
+	var atlas = BossBake.get_atlas(a, Ancien)
+	if BossBake.no_render():
+		return
+	if atlas == null or not atlas.draw_blend(a, "vaincu", "vaincu", 0.0, xf):
+		a.draw_set_transform_matrix(xf)
+		Ancien.draw(a, Vector2.ZERO, Ancien.HEIGHT, {"groupe": "vaincu"})
+		a.draw_set_transform_matrix(Transform2D.IDENTITY)
+	Art.glow(a, feet + Vector2(0, -20), 36.0, "racine")

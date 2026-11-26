@@ -12,6 +12,11 @@
 ## fichier ne décrit que ses attaques et son dessin. Nommée dans data/regions/ronce.json › boss.
 extends BossBase
 
+const Mere = preload("res://scripts/creature_art/ronce/_mere_ronce.gd")
+const O = preload("res://scripts/creature_art/ronce/_outils.gd")
+const Ink = preload("res://scripts/creature_art/ink.gd")
+const BossBake = preload("res://scripts/boss_bake.gd")
+
 const RADIUS := 70.0
 const INTRO := 1.4
 const DEATH_TIME := 1.6
@@ -353,33 +358,51 @@ func bot_ring(arena_radius: float) -> float:
 
 # --- Dessin ---
 #
-# Charte graphique : les Flétris sont anguleux, en volume, contour clair, braise dans les fentes.
-# La Mère-Ronce est une rose de cendre : bouton fermé (phase 1), qui s'ouvre (phase 2), puis
-# brûle à cœur ouvert (phase 3). Toutes ses attaques s'annoncent avec Art.telegraph.
+# « Bestiaire d'herbier » (refonte des personnages, vague 2 B1) : la Mère-Ronce est la souche-mère des
+# Flétris de Ronce (scripts/creature_art/ronce/_mere_ronce.gd) : une galle-mère couleur de mûre sur
+# quatre pattes d'insecte épineuses, cerclée de grandes tiges arquées, couronnée d'une rose de cendre
+# en bouton (phase 1), qui s'ouvre (phase 2), puis brûle à cœur ouvert (phase 3). Vue de trois quarts,
+# tournée vers le joueur. Son corps et le sol sont cuits en sprites (boss_bake.gd) ; les lianes au
+# repos, les yeux de braise et les braises sont dessinés en direct. Les annonces au sol (draw_marks)
+# gardent la grammaire de Art.telegraph.
 
-## Pétale : forme de goutte effilée, de la base vers dir, déchirée au bout en phase 3.
-func _petal(base: Vector2, dir: Vector2, length: float, width: float, torn: float) -> PackedVector2Array:
-	var n := dir.orthogonal()
-	var pts := PackedVector2Array()
-	for i in 7:
-		var u := i / 6.0
-		pts.append(base + dir * length * u + n * width * sin(u * PI * 0.92) * (1.0 - 0.25 * u))
-	if torn > 0.0:
-		pts.append(base + dir * length * (1.0 - 0.18 * torn) + n * width * 0.12)
-	pts.append(base + dir * length * 1.04)
-	if torn > 0.0:
-		pts.append(base + dir * length * (1.0 - 0.12 * torn) - n * width * 0.1)
-	for i in range(6, -1, -1):
-		var u := i / 6.0
-		pts.append(base + dir * length * u - n * width * sin(u * PI * 0.92) * (1.0 - 0.25 * u))
-	return pts
+## Pieds du dessin sous le centre du boss (fraction de son rayon) : le corps se pose sur son ombre.
+const FEET := 0.3
+
+## Côté vers lequel elle regarde (1 : droite), avec une marge pour ne pas se retourner sans cesse.
+var facing := 1.0
+var _life: Node2D
 
 
-func _draw() -> void:
+func _ready() -> void:
+	super._ready()
+	use_tint_material()
+	# Ce qui ne prend ni la cendre ni l'éclair : la vie qui reprend à sa mort, les états.
+	_life = Layer2.new()
+	_life.boss = self
+	add_child(_life)
+
+
+class Layer2 extends Node2D:
+	var boss
+
+	func _draw() -> void:
+		boss.draw_life(self)
+
+
+func redraw() -> void:
+	super.redraw()
+	if _life != null:
+		_life.queue_redraw()
+
+
+## Repère du dessin (pixels du jeu, pieds à l'origine) : entrée en scène, recul, retournement.
+func _body_xf() -> Transform2D:
 	var wake := 1.0 - clampf(intro / INTRO, 0.0, 1.0)
 	var dk := clampf(dying / DEATH_TIME, 0.0, 1.0) if dead else 0.0
-	var s := lerpf(0.3, 1.0, Anim.ease_out(wake)) * (1.0 - 0.2 * Anim.ease_in(dk))
-	# Recul avant la volée, élan au tir, tremblement avant les fouets et pendant un changement de phase.
+	var s := lerpf(0.3, 1.0, Anim.ease_out(wake)) * (1.0 - 0.1 * Anim.ease_in(dk))
+	# Recul avant la volée (elle se tasse), élan au tir, tremblement avant les fouets et pendant un
+	# changement de phase.
 	var shift := Vector2.ZERO
 	var crouch := 0.0
 	if attack == "volee":
@@ -387,141 +410,115 @@ func _draw() -> void:
 		shift = -aim * 22.0 * Anim.ease_out(k) if stage == "annonce" else aim * 12.0 * Anim.flash(k * 3.0)
 		crouch = k if stage == "annonce" else 0.0
 	elif attack == "fouets" and stage == "annonce":
-		shift = Vector2(0, 5.0 * sin(t * 30.0))
+		shift = Vector2(4.0 * sin(t * 30.0), 0)
 	if transition > 0.0:
 		shift += Vector2(sin(t * 50.0), cos(t * 43.0)) * 4.0
-	var r := radius
-	var open: float = [0.0, 0.45, 0.9][phase - 1]
-	var rage: float = [0.0, 0.5, 1.0][phase - 1]
-	if dead:
-		open = lerpf(open, 1.3, Anim.ease_out(dk))
-	modulate.a = 1.0 - Anim.ease_in(clampf((dk - 0.55) / 0.45, 0.0, 1.0))
-	Art.shadow(self, Vector2(0, r * 0.1), r * 1.45)
-	draw_set_transform(shift, 0.0, Vector2(s, s))
-	var contour := Art.c("ennemi_contour")
-	var body := Art.c("ennemi")
+	var sq := Vector2(1.0 + 0.06 * crouch, 1.0 - 0.1 * crouch)
+	return Transform2D(0.0, Vector2(s * facing * sq.x, s * sq.y), 0.0, Vector2(0, radius * FEET) + shift)
 
-	# Racines maîtresses, étalées au sol, en volume (côté sombre, dos éclairé).
-	for i in 9:
-		var a := TAU * i / 9.0 + 0.2
+
+func _draw() -> void:
+	update_tint()
+	var dk := clampf(dying / DEATH_TIME, 0.0, 1.0) if dead else 0.0
+	modulate.a = 1.0 - Anim.ease_in(clampf((dk - 0.55) / 0.45, 0.0, 1.0))
+	if main and main.player and not dead:
+		var dx: float = main.player.position.x - anchor.x
+		if absf(dx) > 30.0:
+			facing = signf(dx)
+	var xf := _body_xf()
+	var ux := xf * Transform2D(0.0, Vector2.ONE * Mere.HEIGHT / 100.0, 0.0, Vector2.ZERO)
+	var atlas = BossBake.get_atlas(self, Mere)
+	var anim := "mort" if dead else "p%d" % phase
+	var u := dk if dead else fposmod(t / Mere.LOOP, 1.0)
+	_draw_part(atlas, "sol", "p%d" % phase, 0.0, xf, {"groupe": "sol", "phase": phase})
+	# Lianes au repos derrière elle (une de plus à chaque phase), qui ondulent ; elles rentrent à la mort.
+	if dk < 0.5:
+		_rest_vines(ux, 1.0 - dk * 2.0)
+	var o := {"phase": phase, "t": fposmod(t, Mere.LOOP)}
+	if dead:
+		o = {"phase": 3, "die": dk}
+	_draw_part(atlas, "corps", anim, u, xf, o, not dead)
+	if dead:
+		return
+	# Yeux de braise : plus vifs pendant une annonce.
+	var ann := 1.0 if stage == "annonce" else 0.0
+	var lift := Vector2(0, -Mere.LIFT)
+	for i in Mere.EYES.size():
+		var e: Array = Mere.EYES[i]
+		O.eye(self, ux, e[0] + lift, e[1], e[2], e[3], 0.45 + 0.55 * ann, 1.0 if hit_flash > 0.0 else 0.0, t, 0.0, 0.7 + i * 0.13)
+	# Phase 3 : des braises s'échappent du cœur de la rose.
+	if phase >= 3:
+		Ink.sparks(self, ux, Mere.HEART, Vector2(0.1, -1.6), 7, t * 0.8, 3.0, 1.0)
+
+
+## Un groupe cuit (sprite) ou, faute d'atlas, le même dessin en direct.
+func _draw_part(atlas, group: String, anim: String, u: float, xf: Transform2D, o: Dictionary, loop := true) -> void:
+	if atlas != null and atlas.draw_blend(self, group, anim, u, xf, loop):
+		return
+	if BossBake.no_render():
+		return
+	o["groupe"] = group
+	draw_set_transform_matrix(xf)
+	Mere.draw(self, Vector2.ZERO, Mere.HEIGHT, o)
+	draw_set_transform_matrix(Transform2D.IDENTITY)
+
+
+## Les fouets au repos : de longues tiges de ronce qui sortent de derrière elle et ondulent.
+func _rest_vines(ux: Transform2D, k: float) -> void:
+	var rage: float = [0.0, 0.5, 1.0][phase - 1]
+	var n := 2 + phase
+	var cane := Art.bc("ronce", "detail").lerp(Art.bc("ronce", "ombre"), 0.4)
+	var bone := Art.bc("os")
+	for i in n:
+		var foot: Vector2 = Mere.VINE_FEET[i]
+		var out := -1.0 if foot.x < 0.0 else 1.0
+		var a0 := -PI * 0.5 + out * (0.55 + 0.25 * (i % 2))
+		var len := (95.0 + 20.0 * (i % 3)) * k
 		var pts := PackedVector2Array()
-		for j in 6:
-			var u := j / 5.0
-			pts.append(Vector2.from_angle(a + 0.35 * sin(u * 3.0 + i)) * r * (0.6 + 1.5 * u) * Vector2(1.0, 0.7))
-		var w := 13.0 - 1.2 * (i % 4)
-		draw_polyline(pts, _color(Art.c("contour")), w + 3.0, true)
-		draw_polyline(pts, _color(body.darkened(0.45)), w, true)
-		draw_polyline(pts, _color(body.darkened(0.2)), w * 0.35, true)
-	# Fouets au repos : lianes épineuses qui ondulent (une de plus à chaque phase).
-	var vines := 2 + phase
-	for i in vines:
-		var a := TAU * (i + 0.5) / vines + 0.25 * sin(t * 0.9 + i * 1.7)
-		var pts := PackedVector2Array()
+		var p := foot
+		var ang := a0
 		for j in 9:
 			var u := j / 8.0
-			var sway := 0.5 * sin(t * (1.6 + rage) + u * 4.0 + i * 2.0) * u
-			pts.append(Vector2.from_angle(a + sway) * r * (0.8 + 1.6 * u) + Vector2(0, -r * 0.5 * sin(u * PI)))
-		_vine(self, pts, 8.0, 1.0)
-	var lift := Vector2(0, -r * 0.5) + Vector2(0, r * 0.08 * crouch)
-	# Sépales épineux derrière la corolle, en volume.
-	for i in 12:
-		var a := TAU * i / 12.0 + 0.05 * sin(t * 2.0 + i)
-		var dir := Vector2.from_angle(a)
-		var base := lift + dir * r * 0.85
-		var tip := lift + dir * r * (1.55 + 0.25 * rage)
-		var side := dir.orthogonal() * r * 0.2
-		draw_colored_polygon(PackedVector2Array([base + side, tip, base]), _color(body.darkened(0.35)))
-		draw_colored_polygon(PackedVector2Array([base, tip, base - side]), _color(body.darkened(0.6)))
-	# Corolle : deux couronnes de pétales de rose fanée, qui s'écartent et rougissent à chaque phase.
-	var petal_far := body.lerp(Art.ec("saignement"), 0.35 + 0.3 * rage)
-	var petal_near := body.lerp(Art.ec("saignement", "clair"), 0.15 + 0.45 * rage)
-	for ring in 2:
-		var n := 9 - ring * 3
-		for i in n:
-			var a := TAU * (i + 0.5 * ring) / n + 0.04 * sin(t * 1.5 + i * 1.3)
-			var dir := Vector2.from_angle(a)
-			var length: float = r * (1.25 - 0.4 * ring) * (1.0 + 0.22 * open)
-			var width: float = r * (0.5 - 0.12 * ring) * (1.0 - 0.25 * open)
-			var base: Vector2 = lift + dir * r * 0.22 * open
-			if dead:
-				# Les pétales se détachent et tombent en tournoyant.
-				var fall := Anim.ease_in(clampf(dk * 1.3 - i * 0.03, 0.0, 1.0))
-				base += dir * r * 0.8 * fall + Vector2(0, r * 0.5 * fall)
-				dir = dir.rotated(fall * (1.5 if i % 2 else -1.5))
-			var pts := _petal(base, dir, length, width, rage if ring == 0 else 0.0)
-			Art.volume(self, pts, _color(petal_far if ring == 0 else petal_near), 0.8)
-			Art.outline(self, pts, Color(_color(contour), 0.55 if ring == 0 else 0.8), Art.TRAIT_FIN)
-			# Nervure.
-			draw_line(base + dir * length * 0.15, base + dir * length * 0.75, _color((petal_far if ring == 0 else petal_near).darkened(0.35)), 1.5, true)
-	# Bulbe central, fendu de braise.
-	var bulb := PackedVector2Array()
-	for i in 20:
-		var a := TAU * i / 20.0
-		bulb.append(lift + Vector2.from_angle(a) * r * (0.6 + 0.08 * open) * (1.0 + 0.06 * sin(a * 5.0 + t * 3.0)))
-	Art.volume(self, bulb, _color(body.darkened(0.2).lerp(Art.ec("cendre", "sombre"), rage * 0.5)))
-	var ember := Art.ec("cendre")
-	var pulse := 0.5 + 0.5 * sin(t * (3.0 + 4.0 * rage))
-	var fade := 1.0 - dk
-	for i in 6:
-		var a := TAU * i / 6.0 + 0.3
-		var p0 := lift + Vector2.from_angle(a) * r * 0.2
-		var p1 := lift + Vector2.from_angle(a + 0.25) * r * 0.42
-		var p2 := lift + Vector2.from_angle(a - 0.1) * r * 0.58
-		draw_polyline(PackedVector2Array([p0, p1, p2]), _color(Art.c("contour")), 4.0, true)
-		draw_polyline(PackedVector2Array([p0, p1, p2]), Color(ember, (0.35 + 0.55 * rage) * (0.7 + 0.3 * pulse) * fade), 2.0, true)
-	Art.outline(self, bulb, _color(contour), Art.TRAIT)
-	# Cœur de braise, de plus en plus à nu ; il s'éteint à la mort.
-	var core := r * (0.16 + 0.14 * open)
-	if dead:
-		core *= 1.0 + 0.6 * Anim.flash(dk * 3.0)
-	draw_circle(lift, core * 2.1, Color(ember, (0.15 + 0.2 * pulse) * fade))
-	draw_circle(lift, core * 1.45, Color(ember, (0.3 + 0.2 * pulse) * fade))
-	Art.volume_circle(self, lift, core, _color(ember.lerp(Art.ec("cendre", "clair"), pulse * (0.3 + 0.7 * rage))), 0.9)
-	# Trois yeux fendus tournés vers le joueur, plus vifs pendant une annonce.
-	var look: Vector2 = (main.player.position - anchor).normalized() if main and main.player else Vector2.DOWN
-	var glare := 0.35 + (0.5 if stage == "annonce" else 0.0)
-	for i in 3:
-		var eye := lift + look * r * 0.4 + look.orthogonal() * r * 0.22 * (i - 1) - look * r * 0.06 * absf(i - 1)
-		var xf := Transform2D(look.angle(), Vector2(r, r), 0.0, eye)
-		FletriArt._slit(self, xf, Vector2.ZERO, 0.075, 1 if i == 2 else -1, glare, {"ash": dk})
-	# Phase 3 et mort : des braises s'échappent de la corolle.
-	var embers := 0 if phase < 3 and not dead else 8
-	for i in embers:
-		var u := fposmod(t * 0.7 + i / 8.0, 1.0)
-		var q := lift + Vector2(sin(i * 2.4 + t) * r * 0.9, -r * (0.3 + 1.6 * u))
-		FletriArt._flake(self, q, 3.5 * (1.0 - 0.5 * u), Color(Art.ec("cendre", "clair") if i % 2 else FletriArt.ash_color(), 1.0 - u))
-	# États visibles : motifs des éléments (charte, § 3).
+			pts.append(p)
+			ang += out * (0.16 + 0.1 * sin(t * (1.4 + 0.6 * rage) + i * 2.0 + u * 3.0))
+			p += Vector2.from_angle(ang) * len / 8.0
+		Ink.brush(self, ux, pts, 9.0, Ink.encre(), 1.0, 0.0)
+		Ink.brush(self, ux, pts, 6.0, cane, 1.0, 0.0)
+		for j in range(1, 8):
+			var d := (pts[j + 1] - pts[j - 1]).normalized()
+			var side := 1.0 if j % 2 else -1.0
+			var b: Vector2 = pts[j] + d.orthogonal() * side * 2.0
+			var tip := b + (d.orthogonal() * side - d * 0.6).normalized() * (8.0 - j * 0.5)
+			var w := d * 2.2
+			draw_colored_polygon(ux * PackedVector2Array([b - w, tip, b + w]), bone.darkened(0.15 * (j % 2)))
+
+
+## Au-dessus de la teinte : la vie qui reprend au cœur de la rose à sa mort, les états visibles.
+func draw_life(c: CanvasItem) -> void:
+	var xf := _body_xf()
+	var ux := xf * Transform2D(0.0, Vector2.ONE * Mere.HEIGHT / 100.0, 0.0, Vector2.ZERO)
+	var heart: Vector2 = ux * Mere.HEART
+	var mid: Vector2 = ux * Vector2(0, -60)
 	if statuses.has("saignement"):
-		Art.status(self, "saignement", lift, r * 0.7, t * 1.25)
+		Art.status(c, "saignement", mid, radius * 0.7, t * 1.25)
 		for i in int(statuses["saignement"]["stacks"]):
-			Art._drop(self, lift + Vector2(-r * 0.5 + i * r * 0.25, -r * 1.05), 4.5, Art.ec("saignement", "clair"))
+			Art._drop(c, heart + Vector2(-radius * 0.5 + i * radius * 0.25, -radius * 0.45), 4.5, Art.ec("saignement", "clair"))
 	if statuses.has("enracine"):
-		Art.status(self, "racine", lift + Vector2(0, r * 0.2), r * 0.9, t)
+		Art.status(c, "racine", ux * Vector2(0, -20), radius * 0.9, t)
 	if poison_time > 0.0:
-		Art.status(self, "poison", lift, r * 0.7, t)
-	# Mort : la vie reprend au cœur de la rose.
-	if dead and dk > 0.45:
-		var g := Anim.ease_out((dk - 0.45) / 0.55)
-		Art.glow(self, lift, r * 0.9 * g, "seve")
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-## Liane épineuse (fouet) : contour sombre, corps, épines d'os en volume. thorns : densité (0 → 1).
-func _vine(c: CanvasItem, pts: PackedVector2Array, width: float, thorns: float) -> void:
-	c.draw_polyline(pts, _color(Art.c("contour")), width + 3.0, true)
-	c.draw_polyline(pts, _color(Art.c("ennemi").darkened(0.3)), width, true)
-	c.draw_polyline(pts, _color(Art.c("ennemi").lightened(0.1)), width * 0.3, true)
-	if thorns <= 0.0:
-		return
-	var bone := _color(Art.ec("epine", "clair").darkened(0.15))
-	for j in range(2, pts.size(), 2):
-		var d: Vector2 = (pts[j] - pts[j - 1]).normalized()
-		var n := d.orthogonal() * (1.0 if j % 4 == 0 else -1.0)
-		var b: Vector2 = pts[j] + n * width * 0.4
-		var tip: Vector2 = b + (n - d * 0.5).normalized() * width * 1.3
-		var side := (tip - b).orthogonal() * 0.25
-		c.draw_colored_polygon(PackedVector2Array([b + side, tip, b]), bone.lightened(0.15))
-		c.draw_colored_polygon(PackedVector2Array([b, tip, b - side]), bone.darkened(0.3))
+		Art.status(c, "poison", mid, radius * 0.7, t)
+	# Mort : la vie reprend au cœur de la rose (vert sève : le vivant), des pousses sortent de la galle.
+	var dk := clampf(dying / DEATH_TIME, 0.0, 1.0) if dead else 0.0
+	if dead and dk > 0.4:
+		var g := Anim.ease_out((dk - 0.4) / 0.6)
+		var at: Vector2 = ux * Vector2(0, -60.0 + 30.0 * dk)
+		Art.glow(c, at, radius * 0.9 * g, "seve")
+		var green := Art.ec("seve", "clair")
+		for i in 5:
+			var foot := Vector2(-36.0 + i * 18.0, -40.0 + 30.0 * dk - 8.0 * (i % 2))
+			var top := foot + Vector2(4.0 * sin(i * 1.7), -26.0 * g)
+			Ink.brush(c, ux, PackedVector2Array([foot, foot.lerp(top, 0.5) + Vector2(2, 0), top]), 3.2, Color(green.darkened(0.3), g), 1.0, 0.0)
+			c.draw_colored_polygon(ux * Ink.leaf(top, -PI * 0.5 + (0.7 if i % 2 else -0.7), 12.0 * g, 6.0 * g), Color(green, g))
 
 
 ## Annonces au sol, en coordonnées monde : toujours la grammaire de Art.telegraph. Pour que l'écran
@@ -584,18 +581,34 @@ func draw_marks(c: CanvasItem) -> void:
 				c.draw_line(pos + Vector2.from_angle(a) * 6.0, pos + Vector2.from_angle(a + 0.3) * ROOT["radius"] * (0.25 + 0.6 * k), Color(Art.c("contour"), 0.85), 3.0, true)
 		else:
 			Art.telegraph(c, forme, 1.0, clampf(r["burst"] / ROOT["burst"], 0.0, 1.0), t)
-	# Invocation : des boutons de rose sortent du sol et enflent (pas un coup : couleur de cendre).
+	# Invocation : des galles sortent du sol et enflent, une larve y pointe (pas un coup : couleur de cendre).
 	for b in buds:
 		var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
 		var e := Art.ec("cendre")
 		c.draw_arc(b, 30.0, 0.0, TAU, 28, Color(e, 0.25 + 0.4 * k), Art.TRAIT, true)
 		c.draw_circle(b, 30.0 * k, Color(e, 0.1))
-		var size := 6.0 + 12.0 * Anim.ease_out(k)
-		for i in 4:
-			var a := TAU * i / 4.0 + 0.4 + k
-			var pts := _petal(b, Vector2.from_angle(a), size, size * 0.6, 0.0)
-			Art.volume(c, pts, Art.c("ennemi").lerp(Art.ec("saignement"), 0.4), 0.7)
-		c.draw_circle(b, 3.0 + 4.0 * k, Art.ec("cendre", "clair"))
+		var size := 5.0 + 9.0 * Anim.ease_out(k)
+		var gall := Ink.lumpy(b + Vector2(0, -size * 0.7), size * 0.9, size, 16, 0.08, 10.0)
+		Ink.part(c, Transform2D.IDENTITY, gall, O.pal(), 1.6, 1.0, 0.6)
+		if k > 0.5:
+			Ink.ember(c, Transform2D.IDENTITY, Ink.leaf(b + Vector2(-size * 0.3, -size * 0.9), -0.2, size * 0.5, size * 0.25), k)
+
+
+## Fouet (liane épineuse) en coordonnées monde : encre, tige de ronce, épines d'os.
+func _vine(c: CanvasItem, pts: PackedVector2Array, width: float, _thorns: float) -> void:
+	var cane := Art.bc("ronce", "detail").lerp(Art.bc("ronce", "ombre"), 0.4)
+	Ink.brush(c, Transform2D.IDENTITY, pts, width + 4.0, Ink.encre(), 1.0, 0.4)
+	Ink.brush(c, Transform2D.IDENTITY, pts, width, cane, 1.0, 0.4)
+	Ink.brush(c, Transform2D.IDENTITY, pts, width * 0.3, cane.lightened(0.3), 1.0, 0.0)
+	var bone := Art.bc("os")
+	for j in range(2, pts.size(), 2):
+		var d: Vector2 = (pts[j] - pts[j - 1]).normalized()
+		var n := d.orthogonal() * (1.0 if j % 4 == 0 else -1.0)
+		var b: Vector2 = pts[j] + n * width * 0.4
+		var tip: Vector2 = b + (n - d * 0.5).normalized() * width * 1.3
+		var side := (tip - b).orthogonal() * 0.25
+		c.draw_colored_polygon(PackedVector2Array([b + side, tip, b]), bone)
+		c.draw_colored_polygon(PackedVector2Array([b, tip, b - side]), bone.darkened(0.3))
 
 
 ## Projectiles et coups, au-dessus des personnages, en coordonnées monde.
@@ -628,7 +641,7 @@ func draw_overlay(c: CanvasItem) -> void:
 			var d: Vector2 = (pts[12] - pts[11]).normalized()
 			var tip: Vector2 = pts[12] + d * 18.0
 			var side := d.orthogonal() * 7.0
-			c.draw_colored_polygon(PackedVector2Array([pts[12] + side, tip, pts[12] - side]), Art.ec("epine", "clair"))
+			c.draw_colored_polygon(PackedVector2Array([pts[12] + side, tip, pts[12] - side]), Art.bc("os"))
 	for r in roots:
 		if r["burst"] >= 0.0:
 			var pos: Vector2 = r["pos"]
@@ -638,43 +651,47 @@ func draw_overlay(c: CanvasItem) -> void:
 				var a := TAU * i / 6.0 + pos.y * 0.01
 				var foot := pos + Vector2.from_angle(a) * ROOT["radius"] * 0.5 * Vector2(1.0, 0.6)
 				var tip := foot + Vector2(cos(a) * 14.0, -70.0 * rise)
-				var body := Art.c("ennemi").darkened(0.3)
-				c.draw_colored_polygon(PackedVector2Array([foot + Vector2(-10, 0), tip, foot]), body.lightened(0.15))
-				c.draw_colored_polygon(PackedVector2Array([foot, tip, foot + Vector2(10, 0)]), body.darkened(0.35))
-				Art.outline(c, PackedVector2Array([foot + Vector2(-10, 0), tip, foot + Vector2(10, 0)]), Art.c("ennemi_contour"), Art.TRAIT_FIN)
-				c.draw_circle(tip, 2.5, Art.ec("epine", "clair"))
+				var body := Art.bc("ronce", "detail").lerp(Art.bc("ronce", "ombre"), 0.4)
+				var spike := PackedVector2Array([foot + Vector2(-10, 0), tip, foot + Vector2(10, 0)])
+				Art.outline(c, spike, Art.bc("encre"), Art.TRAIT)
+				c.draw_colored_polygon(PackedVector2Array([foot + Vector2(-10, 0), tip, foot]), body.lightened(0.2))
+				c.draw_colored_polygon(PackedVector2Array([foot, tip, foot + Vector2(10, 0)]), body.darkened(0.3))
+				# Pointe d'os.
+				var d := (tip - foot).normalized()
+				c.draw_colored_polygon(PackedVector2Array([tip - d * 12.0 + d.orthogonal() * 3.5, tip + d * 4.0, tip - d * 12.0 - d.orthogonal() * 3.5]), Art.bc("os"))
 
 
 # --- Dessinés par l'arène (boss_arena.gd), coordonnées de l'arène ---
 
-## La Mère-Ronce endormie : un bouton fermé au centre de l'arène, tant que le combat n'a pas lieu.
+## La Mère-Ronce endormie : repliée sur ses pattes, la rose en bouton, les yeux clos. Arène ouverte :
+## la braise couve entre les pétales.
 static func draw_sleeper(a: Node2D) -> void:
-	var r := RADIUS * 0.75
-	var c: Vector2 = a.center + Vector2(0, -r * 0.4)
-	for i in 9:
-		var ang := TAU * i / 9.0 + 0.2
-		a.draw_line(a.center, a.center + Vector2.from_angle(ang) * r * 1.9 * Vector2(1.0, 0.7), Color("1c1418"), 9.0)
-	for i in 8:
-		var ang := TAU * i / 8.0
-		var dir := Vector2.from_angle(ang)
-		var side := dir.orthogonal() * r * 0.4
-		a.draw_colored_polygon(PackedVector2Array([c, c + dir * r * 0.6 + side, c + dir * r * 1.05, c + dir * r * 0.6 - side]), Color("3a2630") if i % 2 == 0 else Color("4a2a36"))
-	a.draw_circle(c, r * 0.45, Color("2a1c22"))
+	var feet: Vector2 = a.center + Vector2(0, RADIUS * FEET)
+	var xf := Transform2D(0.0, feet)
+	var atlas = BossBake.get_atlas(a, Mere)
+	if BossBake.no_render():
+		return
+	if atlas == null or not atlas.draw_blend(a, "sol", "p1", 0.0, xf):
+		a.draw_set_transform_matrix(xf)
+		Mere.draw(a, Vector2.ZERO, Mere.HEIGHT, {"groupe": "sol", "phase": 1})
+	if atlas == null or not atlas.draw_blend(a, "corps", "dort", 0.0, xf):
+		a.draw_set_transform_matrix(xf)
+		Mere.draw(a, Vector2.ZERO, Mere.HEIGHT, {"sleep": true})
+	a.draw_set_transform_matrix(Transform2D.IDENTITY)
 	if a.state == "ouverte":
-		a.draw_circle(c, r * 0.2, Color(1.0, 0.6, 0.3, 0.45 + 0.35 * sin(a.t * 2.0)))
+		var ux := xf * Transform2D(0.0, Vector2.ONE * Mere.HEIGHT / 100.0, 0.0, Vector2.ZERO)
+		var pulse := 0.5 + 0.5 * sin(a.t * 2.0)
+		Ink.halo(a, ux * (Mere.HEART + Vector2(0, 18)), 34.0 * (0.8 + 0.3 * pulse), Art.bc("braise"), 0.8 + 0.8 * pulse)
 
 
-## Après la victoire : un grand rosier en fleurs à la place de la Mère-Ronce.
+## Après la victoire : un roncier vivant, en fleurs et en fruits, à la place de la Mère-Ronce.
 static func draw_victory(a: Node2D) -> void:
-	var r := RADIUS
-	var c: Vector2 = a.center + Vector2(0, -r * 0.4)
-	for i in 7:
-		var ang := TAU * i / 7.0
-		a.draw_circle(c + Vector2.from_angle(ang) * r * 0.55, r * 0.5, Color("2f6b2a") if i % 2 == 0 else Color("3b7d31"))
-	a.draw_circle(c, r * 0.6, Color("468f38"))
-	for i in 9:
-		var ang := TAU * i / 9.0 + 0.4
-		var rose := c + Vector2.from_angle(ang) * r * (0.35 + 0.5 * (i % 3) / 2.0)
-		for j in 5:
-			a.draw_circle(rose + Vector2.from_angle(TAU * j / 5.0 + i) * 7.0, 6.5, Color("e0675e") if i % 2 == 0 else Color("f48fb1"))
-		a.draw_circle(rose, 4.0, Color("fff3c4"))
+	var feet: Vector2 = a.center + Vector2(0, RADIUS * FEET)
+	var xf := Transform2D(0.0, feet)
+	var atlas = BossBake.get_atlas(a, Mere)
+	if BossBake.no_render():
+		return
+	if atlas == null or not atlas.draw_blend(a, "vaincu", "vaincu", 0.0, xf):
+		a.draw_set_transform_matrix(xf)
+		Mere.draw(a, Vector2.ZERO, Mere.HEIGHT, {"groupe": "vaincu"})
+		a.draw_set_transform_matrix(Transform2D.IDENTITY)
