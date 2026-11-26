@@ -16,10 +16,10 @@ static func dead_matter(L, p: Vector2, i: int, sd: int, _e: RandomNumberGenerato
 	return true
 
 
-## Terre ravivée : tige de ronce feuillue, une églantine au bout d'une sur trois.
+## Terre ravivée : tige de ronce feuillue, une églantine au bout d'une sur deux.
 static func alive_matter(L, p: Vector2, e: RandomNumberGenerator) -> bool:
 	var tip := leafy_runner(L, p, e)
-	if e.randf() < 0.34:
+	if e.randf() < 0.5:
 		eglantine(L, tip, e.randf_range(3.0, 3.8), e)
 	return true
 
@@ -94,16 +94,16 @@ static func leafy_runner(L, p: Vector2, e: RandomNumberGenerator) -> Vector2:
 ## Églantine (rose des haies) : cinq pétales arrondis, un liseré plus clair côté lumière, cœur doré
 ## piqué d'étamines sombres ; une sur quatre blanche (fleur_2).
 static func eglantine(L, q: Vector2, r: float, e: RandomNumberGenerator) -> void:
-	# Fondue à 40 % dans le sol : le sol reste moins contrasté que les personnages (banc de lisibilité).
+	# Un peu fondue dans le sol : le sol reste moins contrasté que les personnages (banc de lisibilité).
 	var sol: Color = L._p["ravive"]["sol"]
-	var petal: Color = Art.mc("ronce", "ravive", "fleur_2" if e.randf() < 0.25 else "fleur").lerp(sol, 0.4)
+	var petal: Color = Art.mc("ronce", "ravive", "fleur_2" if e.randf() < 0.25 else "fleur").lerp(sol, 0.15)
 	var a0 := e.randf() * TAU
 	L._oval(q + Vector2(0.8, 1.0), r * 1.1, r * 0.9, Color(Art.mpc("ronce", "encre_vive"), 0.2), 8)
 	for k in 5:
 		var d := Vector2.from_angle(a0 + TAU * k / 5.0)
 		L._oval(q + d * r * 0.62, r * 0.55, r * 0.55, petal, 7)
 	L._oval(q + Vector2(-0.3, -0.3) * r, r * 0.42, r * 0.3, petal.lightened(0.15), 6)
-	L._oval(q, r * 0.34, r * 0.34, Art.mc("ronce", "ravive", "fleur_coeur").lerp(sol, 0.4), 6)
+	L._oval(q, r * 0.34, r * 0.34, Art.mc("ronce", "ravive", "fleur_coeur").lerp(sol, 0.15), 6)
 
 
 ## Grappe de mûres : trois à cinq fruits faits de grains serrés, un reflet en haut à gauche, une feuille.

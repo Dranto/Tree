@@ -302,7 +302,7 @@ const MONDE := {
 			"cendre": Color("a39a8e"), "touffe": Color("7e7a46"), "touffe_2": Color("5e5c32"),
 		},
 		"ravive": {
-			"sol": Color("728840"), "sol_clair": Color("8ea352"), "sol_sombre": Color("536a2e"),
+			"sol": Color("778a3e"), "sol_clair": Color("93a550"), "sol_sombre": Color("586c2c"),
 			"matiere": Color("44572a"), "feuille": Color("c2cf74"), "feuille_2": Color("6f8a3a"),
 			"cendre": Color("e8e0c8"), "touffe": Color("5f8c38"), "touffe_2": Color("3f6a28"),
 			"bois": {"clair": Color("7a5a44"), "ombre": Color("45322a"), "reflet": Color("a8866a")},
