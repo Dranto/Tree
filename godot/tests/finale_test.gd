@@ -167,15 +167,51 @@ func _run() -> void:
 	var seen := {}
 	# Au rythme du morceau : chaque frappe tombe sur un temps (boss_base.gd › beat_target).
 	var strikes: Array = []
+	var off_score: Array = []
 	var was: String = boss.stage
+	var waves_seen := 0
+	var rolls_seen := 0
+	var sparks_seen := 0
+	var pricks_seen := 0
+	var wave_n: int = boss._wave_count
 	for i in 600:
+		main.player.hp = maxf(main.player.hp, 100.0)
 		if boss.attack != "":
 			seen[boss.attack] = true
 		if boss.stage == "frappe" and was == "annonce":
 			strikes.append(fposmod(boss.beats_now() + 0.5, 1.0) - 0.5)
+			# La partition (boss_finale.gd › SCORE) : la frappe tombe sur un de ses coups.
+			var local := fposmod(boss.beats_now() - boss.score_origin, boss.score_len)
+			if not boss.score_hits.any(func(h): return absf(h["beat"] - local) < 0.1 or absf(h["beat"] - local + boss.score_len) < 0.1):
+				off_score.append(snappedf(local, 0.01))
+		for s in boss.thorns:
+			if s.get("roll", false) and not s.has("seen"):
+				s["seen"] = true
+				rolls_seen += 1
+			if s.get("spark", false) and not s.has("seen"):
+				s["seen"] = true
+				sparks_seen += 1
+		for r in boss.pricks:
+			if not r.has("seen"):
+				r["seen"] = true
+				pricks_seen += 1
 		was = boss.stage
 		await physics_frame
+	waves_seen = boss._wave_count - wave_n
 	check(strikes.size() >= 2 and strikes.all(func(x): return absf(x) < 0.08), "les frappes tombent sur les temps du morceau (%s)" % [strikes.map(func(x): return snappedf(x, 0.01))])
+	check(off_score.is_empty() and boss.score_skipped == 0, "phase 1 : chaque frappe tombe sur la partition, aucun coup sauté (hors partition : %s, sautés : %d)" % [off_score, boss.score_skipped])
+	check(boss.score_len == 64.0, "la partition de la phase 1 suit boucle_1 (16 mesures)")
+	# Chaque percussion relevée dans la boucle porte une attaque.
+	var coups: Dictionary = finale.sync.data["sections"]["boucle_1"]["coups"]
+	var total := 0
+	for k in coups:
+		for m in coups[k]:
+			total += m.size()
+	check(boss.score_drums.size() == total, "aucune percussion de boucle_1 sans attaque (%d attaques pour %d coups)" % [boss.score_drums.size(), total])
+	var per_beat1: float = boss.score_weight()
+	var hits_per_phrase1: float = boss.score_hits.size() * 16.0 / boss.score_len
+	check(sparks_seen >= 10 and pricks_seen >= 4, "les petites attaques suivent les drums discrets : étincelles sur les charlestons, piqûres sur les caisses douces (%d étincelles, %d piqûres)" % [sparks_seen, pricks_seen])
+	check(waves_seen >= 2 and rolls_seen >= 2, "les ondes de choc partent sur les grosses caisses, les roulements d'épines sur les caisses claires (%d ondes, %d épines)" % [waves_seen, rolls_seen])
 	check(seen.has("epines") and seen.has("spores"), "phase 1 : épines et spores (%s)" % ", ".join(seen.keys()))
 	var hp_before: float = boss.hp
 	boss.take_damage(boss.max_hp * 0.4, false)
@@ -196,6 +232,10 @@ func _run() -> void:
 			seen[boss.attack] = true
 		await physics_frame
 	check(seen.has("siphon") and seen.has("rafale"), "phase 2 : la sève et le vent (%s)" % ", ".join(seen.keys()))
+	check(boss.score_skipped == 0, "phase 2 : aucun coup de la partition sauté (%d)" % boss.score_skipped)
+	var per_beat2: float = boss.score_weight()
+	var hits_per_phrase2: float = boss.score_hits.size() * 16.0 / boss.score_len
+	check(per_beat2 > per_beat1 * 1.2 and hits_per_phrase2 > hits_per_phrase1, "phase 2 : plus d'attaques qu'en phase 1 (charge %.1f contre %.1f par temps, %.1f frappes par phrase contre %.1f)" % [per_beat2, per_beat1, hits_per_phrase2, hits_per_phrase1])
 	boss.take_damage(boss.max_hp * 0.3, false)
 	check(await _until(func(): return boss.phase == 3), "sous 33 % de vie : phase 3")
 	await _steps(2)
@@ -210,9 +250,14 @@ func _run() -> void:
 	check(not boss.music_waiting() and absf(finale.sync.bars_now() - drop2_end) < 0.1, "elle dure tout le drop (%.2f mesures, reprise à %d)" % [finale.sync.bars_now(), drop2_end])
 	seen = {}
 	for i in 1500:
+		main.player.hp = maxf(main.player.hp, 100.0)
 		if boss.attack != "":
 			seen[boss.attack] = true
 		await physics_frame
+	var per_beat3: float = boss.score_weight()
+	var hits_per_phrase3: float = boss.score_hits.size() * 16.0 / boss.score_len
+	check(per_beat3 > per_beat2 * 1.2 and hits_per_phrase3 > hits_per_phrase2, "seconde forme : encore plus d'attaques (charge %.1f contre %.1f par temps, %.1f frappes par phrase contre %.1f)" % [per_beat3, per_beat2, hits_per_phrase3, hits_per_phrase2])
+	check(boss.score_len == 160.0 and boss.score_skipped == 0, "seconde forme : la partition suit boucle_3 (40 mesures), aucun coup sauté (%d)" % boss.score_skipped)
 	check(seen.has("lumiere") and seen.has("racines"), "seconde forme : la lumière et les racines (%s)" % ", ".join(seen.keys()))
 	check(seen.has("tempete") and seen.has("floraison") and seen.has("aurore"), "seconde forme : les attaques combinées des six gardiens (%s)" % ", ".join(seen.keys()))
 
