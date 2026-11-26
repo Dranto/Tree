@@ -20,7 +20,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "demo", "bestiaire"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "paysages", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "vivant", "demo", "bestiaire"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -34,6 +34,7 @@ const ValleeScript = preload("res://tests/visual/vallee.gd")
 const ForetScript = preload("res://tests/visual/foret.gd")
 const FinaleScript = preload("res://tests/visual/finale.gd")
 const BordScript = preload("res://tests/visual/bord.gd")
+const PaysagesScript = preload("res://tests/visual/paysages.gd")
 const DemoScript = preload("res://tests/visual/demo.gd")
 const BestiaireScript = preload("res://tests/visual/bestiaire.gd")
 const Demo = preload("res://scripts/demo.gd")
@@ -42,6 +43,7 @@ const Orb = preload("res://scripts/orb.gd")
 const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 const RegionUi = preload("res://scripts/region_ui.gd")
+const WorldLife = preload("res://scripts/world_life.gd")
 const TitleScene = preload("res://scenes/title.tscn")
 ## Défauts d'interface déjà connus (un par ligne : « résolution|écran|type|libellés »).
 ## Un défaut absent de cette liste fait échouer le banc ; un défaut listé qui a disparu est signalé.
@@ -101,6 +103,9 @@ func _ready() -> void:
 	if scenario == "demo":
 		# Démo (jalon 12 E) : à poser avant la création du jeu (la haie se crée dans main._ready).
 		Demo.forced = 1
+	# Monde vivant (world_life.gd) : figé partout, sauf dans son scénario (les autres captures ne
+	# bougent pas avec le vent ni la faune).
+	WorldLife.still = scenario != "vivant"
 	main = MainScene.instantiate()
 	# Le robot du mode autotest joue à la place de la souris, sans ses captures ni sa fin de partie.
 	# Activé avant l'ajout à la scène : la partie ne lit ni n'écrit aucune sauvegarde.
@@ -155,6 +160,8 @@ func _ready() -> void:
 			await FinaleScript.new().run(self)
 		"bord":
 			await BordScript.new().run(self)
+		"paysages":
+			await PaysagesScript.new().run(self)
 		"menus":
 			await _scenario_menus()
 		"manette":
@@ -165,6 +172,8 @@ func _ready() -> void:
 			await _scenario_cumul()
 		"reaction":
 			await _scenario_reaction()
+		"vivant":
+			await _scenario_vivant()
 		"eclat":
 			await _scenario_eclat()
 		"demo":
@@ -735,6 +744,89 @@ func _scenario_reaction() -> void:
 	w.over.queue_redraw()
 	await _frames(3)
 	await _shot("monde_reagit")
+
+
+## Monde vivant (refonte du monde, vague 1 V ; world_life.gd), figé à un instant dans le Roncier
+## ravivé : décor qui balance (rafale qui passe, impulsion du héros qui traverse une ronce, torsion près
+## d'un élite), feuilles qui tombent, pas fleuris, cendre des pas d'un Flétri, ride et éclaboussure,
+## faune (papillons, oiseau posé et en vol, grenouille, lucioles), lueur de la lanterne.
+func _scenario_vivant() -> void:
+	var p = main.player
+	main.hud.glyphs.hide()
+	main.autotest = false
+	p.set_physics_process(false)
+	p.invuln = 1.0e9
+	main.spawn_timer = 1e9
+	# Une ronce du Roncier, à l'écart des Cœurs et de l'arène : le héros se tient à côté.
+	var best = null
+	var bd := INF
+	for t in main.flora.trees:
+		if t.get_script() == load("res://scripts/flora.gd").DecorBramble and Regions.region_at(t.position) == "ronce":
+			var d: float = t.position.distance_to(Vector2(2090, -2380))
+			if d < bd:
+				bd = d
+				best = t
+	var at: Vector2 = best.position if best != null else Vector2(2090, -2380)
+	main.ground.paint(at, 520.0, 1.0)
+	main.flora.finish_pending()
+	p.position = at + Vector2(-20, 24)
+	p.reset_physics_interpolation()
+	main.camera.reset_smoothing()
+	await _frames(20)
+	var life = main.world_fx.life
+	life.set_process(false)
+	main.world_fx.set_process(false)
+	main.flora.set_process(false)
+	for i in main.flora.trees.size() / 48 + 1:
+		life._scan_decor()
+	life.clock = 2.0
+	life.fauna.clear()
+	life.bits.clear()
+	life.marks.clear()
+	life._push.clear()
+	life._light = 0.3
+	life.gust_dir = Vector2(0.94, 0.34).normalized()
+	life.gust["front"] = p.position.dot(life.gust_dir) + 160.0
+	life.gust["width"] = 240.0
+	life.gust["force"] = 0.55
+	life.push(p.position + Vector2(0, 10), 90.0, 0.9)
+	life._push[0]["t"] = 0.05
+	life.push(p.position + Vector2(260, -40), 140.0, -0.55)
+	life._push[1]["t"] = 0.6
+	var leaf: Color = life.col("ronce", "bris_vif")
+	for i in 9:
+		life.add_bit("feuille", at + Vector2(-60 + i * 14, -10 + (i % 3) * 8), 14.0 + i * 6.0, Vector2.ZERO, 0.0, leaf, 0.75, 9.0, 1.0)
+		life.bits[-1]["rot"] = i * 0.7
+		life.bits[-1]["t"] = 0.3 + i * 0.11
+	for i in 6:
+		life.add_mark("fleur_pas", p.position + Vector2(-150 + i * 24, 34 + (6 if i % 2 == 0 else -4)), 9.0, life.col("ronce", "pas"), 0.9)
+		life.marks[-1]["t"] = 0.5
+	for i in 4:
+		life.add_mark("cendre", p.position + Vector2(200 + i * 26, 70 + (i % 2) * 8), 9.0, life.col("ronce", "cendre"), 1.0)
+		life.marks[-1]["t"] = 0.4 + i * 0.5
+	life.add_mark("ride", p.position + Vector2(-210, -70), 1.6, life.col("spore", "eau"), 0.5, 1.0)
+	life.marks[-1]["t"] = 0.5
+	life.add_mark("eclabous", p.position + Vector2(-170, -40), 0.45, life.col("ronce", "eau"), 1.0, 0.4)
+	life.marks[-1]["t"] = 0.15
+	var beasts := [
+		["papillon", Vector2(110, -80), 22.0, "repos", life.col("ronce", "papillon")],
+		["papillon", Vector2(150, -60), 18.0, "fuite", life.col("ronce", "papillon")],
+		["oiseau", Vector2(-120, 90), 0.0, "repos", life.col("ronce", "oiseau")],
+		["oiseau", Vector2(-40, -150), 120.0, "fuite", life.col("ronce", "oiseau")],
+		["grenouille", Vector2(-230, -60), 0.0, "repos", life.col("spore", "grenouille")],
+		["luciole", Vector2(70, 110), 26.0, "repos", life.col("ronce", "luciole")],
+		["luciole", Vector2(90, 130), 34.0, "repos", life.col("ronce", "luciole")],
+	]
+	for i in beasts.size():
+		var b: Array = beasts[i]
+		life.fauna.append({"sp": b[0], "pos": p.position + b[1], "z": b[2], "state": b[3], "t": 0.4 + i * 0.37, "timer": 9.0,
+			"home": p.position + b[1], "v": Vector2.ZERO, "face": 1.0 if i % 2 == 0 else -1.0, "col": b[4], "seed": i * 1.3, "vz": 0.0})
+	life._apply_uniforms(p)
+	main.world_fx.queue_redraw()
+	life.queue_redraw()
+	life.air.queue_redraw()
+	await _frames(3)
+	await _shot("monde_vivant")
 
 
 ## Attaques cumulées (jalon 10) : rayon d'aube principal, lames de vent et massue en écho, trois

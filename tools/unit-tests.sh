@@ -35,9 +35,13 @@ TESTS=(
   "draw_batch|--xvfb --audio-driver Dummy|"
   "bestiaire|--xvfb --audio-driver Dummy|"
   "heros|--xvfb --audio-driver Dummy|"
+  "seve_bestiaire|--xvfb --audio-driver Dummy|"
   "sprite_bake|--xvfb --audio-driver Dummy|"
   "remains_sprite|--xvfb --audio-driver Dummy --fixed-fps 60|--sprites=3"
   "paysages_proto|--xvfb --audio-driver Dummy|"
+  "world_life|--xvfb --audio-driver Dummy --fixed-fps 60|"
+  "decor|--xvfb --audio-driver Dummy --fixed-fps 60|"
+  "paysages|--xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0|"
   "eclat_skills|--headless --fixed-fps 60|"
   "enemies|--headless|"
   "falaises|--headless --fixed-fps 60|"
@@ -49,7 +53,7 @@ TESTS=(
   "legibility|--headless|"
   "grafts|--headless --fixed-fps 60|"
   "marais|--headless --fixed-fps 60|"
-  "moments|--headless|"
+  "moments|--headless --fixed-fps 60|"
   "move|--xvfb --fixed-fps 60 --audio-driver Dummy|"
   "node_types|--headless|"
   "pad|--xvfb --fixed-fps 60 --audio-driver Dummy|"
@@ -88,7 +92,7 @@ export LIBGL_ALWAYS_SOFTWARE=1
 export TREE_LANG="${TREE_LANG:-fr}"
 
 if [ ! -d "$ROOT/godot/.godot" ] || [ "${IMPORT:-1}" = 1 ]; then
-  "$GODOT" --headless --import >"$OUT/import.log" 2>&1 || { echo "Import en échec :"; tail -30 "$OUT/import.log"; }
+  "$ROOT/tools/import.sh" "$OUT/import.log" || echo "Import en échec : les tests peuvent échouer faute de ressources."
 fi
 
 # Lignes d'erreur ou d'avertissement de Godot qui ne sont pas des défauts du jeu :

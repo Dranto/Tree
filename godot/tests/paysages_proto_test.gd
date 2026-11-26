@@ -1,16 +1,13 @@
-## Test du prototype technique de la refonte du monde (vague 0 P) : sol en trois couches
-## (world_bake/ground_layers.gd), décor cuit (world_bake/decor_bake.gd) et composé
-## (world_bake/decor_compose.gd). Réglages éteints : le sol de develop, sans calque. Allumés : chaque
-## carré a son calque dessiné, l'atlas du décor couvre toutes les sortes, la composition laisse la
-## clairière libre et n'ajoute aucun obstacle.
+## Test du sol en trois couches (refonte du monde, vague 1 S : world_bake/ground_layers.gd, par défaut).
+## Chaque carré a son calque, tiré une fois ; une vague de vie et la purification ne refont que le rendu ;
+## chaque région a sa palette. Le décor composé et cuit (vague 1 D) a son test : tests/decor_test.gd.
 ## Rendu réel : tools/godot.sh --xvfb --audio-driver Dummy -s res://tests/paysages_proto_test.gd
 extends SceneTree
 
 const Ground = preload("res://scripts/ground.gd")
 const GroundLayers = preload("res://scripts/world_bake/ground_layers.gd")
-# flora.gd nomme l'autoload Game : chargé à l'exécution (un préchargement ne compile pas avec -s).
-var Flora
-var DecorBake
+const Regions = preload("res://scripts/regions.gd")
+# decor_compose.gd charge flora.gd, qui nomme l'autoload Game : chargé à l'exécution (pas de préchargement avec -s).
 var DecorCompose
 
 var failures := 0
@@ -40,29 +37,12 @@ func _ground(center: Vector2):
 
 
 func _run() -> void:
-	Flora = load("res://scripts/flora.gd")
-	DecorBake = load("res://scripts/world_bake/decor_bake.gd")
 	DecorCompose = load("res://scripts/world_bake/decor_compose.gd")
 	var center: Vector2 = DecorCompose.test_center()
-	# Éteint : le sol de develop.
+	# Sol en couches (vague 1 S) : allumé par défaut, un calque par carré.
 	var g = await _ground(center)
-	_check(not g.layered, "sol en couches allumé par défaut")
+	_check(g.layered, "sol en couches éteint par défaut")
 	_check(not g._tiles.is_empty(), "aucun carré de sol construit")
-	for t in g._tiles.values():
-		_check(t["layer"] == null, "calque sur un carré, réglage éteint")
-		break
-	var wr = g.mat.get_shader_parameter("wash_region")
-	_check(wr == null or int(wr) == -1, "lavis actif, réglage éteint")
-	_check(Flora.DecorTree.baker == null, "décor cuit branché par défaut")
-	g.queue_free()
-	await process_frame
-	# Allumé : un calque par carré, des éléments dessinés dans le Roncier.
-	GroundLayers.enabled = true
-	GroundLayers.reset_stats()
-	g = await _ground(center)
-	_check(g.layered, "sol en couches pas branché")
-	var wr2 = g.mat.get_shader_parameter("wash_region")
-	_check(wr2 != null and int(wr2) >= 0, "lavis sans région")
 	var with_layer := 0
 	for t in g._tiles.values():
 		if t["layer"] != null:
@@ -70,44 +50,48 @@ func _run() -> void:
 	_check(with_layer == g._tiles.size(), "carrés sans calque : %d sur %d" % [g._tiles.size() - with_layer, g._tiles.size()])
 	var st := GroundLayers.stats()
 	_check(st["draws"] >= with_layer and st["elements"] > with_layer * 5, "trop peu d'éléments dessinés : %s" % [st])
-	# Un carré refait (vague de vie) redessine son calque.
-	var d0: int = st["draws"]
+	# Monde tout mort : les calques ne tirent que la terre morte.
+	for t in g._tiles.values():
+		_check(t["layer"].mask == GroundLayers.DEAD, "carré mort avec des sortes vivantes : %d" % t["layer"].mask)
+		break
+	# La vie arrive : le carré tire une fois ses éléments vivants et ses pousses...
 	g.paint(center, 200.0, 1.5)
 	await process_frame
 	await RenderingServer.frame_post_draw
-	_check(GroundLayers.stats()["draws"] > d0, "calque pas redessiné après la vie")
-	GroundLayers.enabled = false
-	# Décor cuit : un atlas pour toutes les sortes, vivantes et mortes.
-	await DecorBake.bake(root)
-	_check(DecorBake.tex != null, "pas d'atlas du décor")
-	var expected := 0
-	for sd in DecorBake.sorts():
-		expected += (DecorBake.variants if sd[2][0] == "" else sd[2].size()) * sd[1].size() * 2
-	_check(DecorBake.cells.size() == expected, "atlas : %d images sur %d" % [DecorBake.cells.size(), expected])
-	var img: Image = DecorBake.tex.get_image()
-	_check(img.get_height() > 64 and img.is_invisible() == false, "atlas vide")
-	# Composition : clairière libre, aucun obstacle, éléments cuits.
-	var flora = Flora.new()
-	flora.ground = g
-	var layer := Node2D.new()
-	root.add_child(layer)
-	flora.trees_parent = layer
-	var placed: Array = DecorCompose.spawn(flora, center)
-	_check(placed.size() > 60, "composition trop pauvre : %d éléments" % placed.size())
-	_check(flora.bushes.is_empty(), "la composition ajoute des obstacles")
-	var inside := 0
-	for t in placed:
-		if t.position.distance_to(center) < DecorCompose.CLEAR - 1.0:
-			inside += 1
-	_check(inside == 0, "%d éléments dans la clairière" % inside)
-	DecorBake.install(flora)
+	var d1: int = GroundLayers.stats()["draws"]
+	_check(d1 > st["draws"], "calque pas complété quand la vie arrive")
+	var touched := 0
+	for t in g._tiles.values():
+		if (t["rect"] as Rect2).has_point(center):
+			touched += 1
+			_check(t["layer"].mask == GroundLayers.DEAD | GroundLayers.ALIVE | GroundLayers.FRONT, "carré ravivé sans toutes ses sortes")
+	_check(touched == 1, "carré du centre introuvable")
+	# ... puis une vague de vie ne refait que le rendu, pas le dessin.
+	var r0: int = g.tiles_redrawn
+	g.paint(center + Vector2(30, 0), 160.0, 1.0)
 	await process_frame
 	await RenderingServer.frame_post_draw
-	_check(DecorBake.drawn > 0, "aucun élément dessiné depuis l'atlas")
-	var grow = placed[1]
-	grow.revive(true)
-	_check(not DecorBake.draw(grow), "un arbre qui pousse doit rester dessiné en direct")
-	Flora.DecorTree.baker = null
-	flora.free()
+	_check(g.tiles_redrawn > r0, "carrés pas refaits après la vie")
+	_check(GroundLayers.stats()["draws"] == d1, "calque redessiné par une vague de vie")
+	# Purification : la terre morte s'apaise dans le shader (tons mélangés), sans redessin.
+	var reg: String = Regions.region_at(center)
+	var dead0: PackedVector3Array = g.mat.get_shader_parameter("region_dead_mid")
+	g.set_purified(reg, 1.0)
+	var dead1: PackedVector3Array = g.mat.get_shader_parameter("region_dead_mid")
+	var ri: int = Regions.ids().find(reg)
+	_check(not dead0[ri].is_equal_approx(dead1[ri]), "la terre morte ne s'apaise pas")
+	await process_frame
+	await RenderingServer.frame_post_draw
+	_check(GroundLayers.stats()["draws"] == d1, "calque redessiné par la purification")
+	# Six régions : chacune a sa palette du monde, aux trois états.
+	for id in Regions.ids():
+		var pal := GroundLayers.world_palette(id)
+		for etat in ["fletri", "apaise", "ravive"]:
+			for k in ["sol", "sol_clair", "sol_sombre", "matiere", "touffe", "touffe_2", "fleur", "pierre"]:
+				_check(pal[etat].has(k), "palette %s/%s sans « %s »" % [id, etat, k])
+	var rv: PackedVector3Array = g.mat.get_shader_parameter("region_alive_mid")
+	for i in rv.size():
+		for j in range(i + 1, rv.size()):
+			_check(not rv[i].is_equal_approx(rv[j]), "deux régions ravivées de même couleur : %s et %s" % [Regions.ids()[i], Regions.ids()[j]])
 	print("PAYSAGES %s" % ("réussi" if failures == 0 else "%d échecs" % failures))
 	quit(1 if failures > 0 else 0)

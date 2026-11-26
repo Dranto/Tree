@@ -194,8 +194,23 @@ const BESTIAIRE := {
 	"ronge": Color("2b1a22"),
 	"os": Color("e6d2a8"),
 	"ronce": {"clair": Color("8e3a55"), "ombre": Color("4e1a33"), "reflet": Color("d98aa0"), "detail": Color("6b6a3a")},
-	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f")},
-	"vent": {"clair": Color("8296aa"), "ombre": Color("3e4a5c"), "reflet": Color("d2e0ee"), "detail": Color("c8b472")},
+	"racine": {"clair": Color("9a8f7a"), "ombre": Color("564c3e"), "reflet": Color("d8cfb8"), "detail": Color("b5893f"),
+		# Flétris de la forêt pétrifiée (R6) : bois mort, chair de racine (mandragore), cendre (termite), feuille sèche.
+		"bois": Color("6e5238"), "bois_ombre": Color("3a2a1e"), "chair": Color("b89468"), "chair_ombre": Color("6a4e34"),
+		"cendre": Color("c2b8a4"), "cendre_ombre": Color("6e6658"), "feuille": Color("8a7a40")},
+	"vent": {"clair": Color("a3b6c8"), "ombre": Color("5a6a80"), "reflet": Color("e4eef7"), "detail": Color("d6c27e"),
+		"plume": Color("77869c"), "duvet": Color("dfe2dc"), "aile": Color("c8d4df")},
+	# Spore (R2) : chair de champignon violet poison (assez saturée pour rester distincte de Vent et Racine
+	# pour les daltoniens, bestiaire_test), lames ocre, chapeaux pâles, vase luisante, lichen vert-de-gris.
+	"spore": {"clair": Color("ca6aeb"), "ombre": Color("6a2f86"), "reflet": Color("f2d8fb"), "detail": Color("c99a5a"),
+		"chapeau": Color("e6d8bf"), "chapeau_ombre": Color("9c8670"), "vase": Color("5e6a4a"), "vase_reflet": Color("b9c98a"),
+		"lichen": Color("9fb38a"), "lichen_ombre": Color("56684c"), "spore": Color("d9c2f0")},
+	# Aube : verre nacré des falaises (corps : face claire perle, ombre mauve ; clair pour trancher sur le calcaire et se distinguer
+	# de Vent et de Racine même pour un daltonien), verre clair (ailes, aiguilles), lumière d'or sale (detail).
+	"aube": {"clair": Color("f4e4d8"), "ombre": Color("7c6c9c"), "reflet": Color("fcf9ff"), "detail": Color("e6c25a"),
+		"verre": Color("bfe0ea"), "verre_ombre": Color("587886"), "lueur": Color("fff2c4")},
+	# Sève (R4) : vert profond de mare (distinct des autres régions pour les daltoniens, bestiaire_test), loin du vert menthe de la sève vivante ; detail = vase ocre ; vase = limon du fond.
+	"seve": {"clair": Color("308533"), "ombre": Color("1e5c2a"), "reflet": Color("b0e6a8"), "detail": Color("a88d52"), "vase": Color("4a3f30")},
 }
 ## Porte-Graine qui évolue (planche v3) : teinte claire du corps (le héros reste clair, les Flétris
 ## sombres), feuilles et accent de chaque branche. « aucun » : la graine commune du début.
@@ -215,6 +230,24 @@ const FEUILLES_BUILD := {
 ## « apaise » (terre morte apaisée hors du bord de vie, une fois le Cœur purifié), « ravive » (dans le bord
 ## de vie : la couleur propre à la région revient). Le vert sève reste réservé au bord de vie et à la graine.
 const MONDE := {
+	# Monde vivant (refonte du monde, vague 1 V ; scripts/world_life.gd) : teintes de la petite vie (les
+	# images cuites sont en gris, le blanc prend ces couleurs). bris : débris lâchés par le décor secoué,
+	# sur terre morte ou vivante ; pas : fleurs des pas du héros sur la terre ravivée ; cendre : pas des
+	# Flétris sur la terre vivante ; faune ambiante (clé + « _mort » : sur la terre flétrie).
+	"vivant": {
+		"commun": {
+			"cendre": Color(0.55, 0.52, 0.5, 0.75), "eau": Color("bfe4ee"), "spore": Color("e6d8ff"),
+			"oiseau": Color("b08a66"), "oiseau_mort": Color("5a5058"), "grenouille": Color("7fae58"), "grenouille_mort": Color("6a6a58"),
+			"papillon": Color("ffd890"), "papillon_mort": Color("a89a90"), "luciole": Color("ffe9a0"), "luciole_mort": Color("c8b4e0"),
+		},
+		"ronce": {"bris_vif": Color("8fb04c"), "bris_mort": Color("7d4b30"), "pas": Color("f4a3b4"), "papillon": Color("ffb0c0")},
+		"spore": {"bris_vif": Color("7fd0b8"), "bris_mort": Color("82708a"), "pas": Color("7ff0dc"), "spore": Color("c9fff0"),
+			"eau": Color("9fe8e2"), "luciole": Color("8affea"), "luciole_mort": Color("b8a0e0")},
+		"vent": {"bris_vif": Color("e8e2d0"), "bris_mort": Color("a8a8b0"), "pas": Color("d8e8ff"), "oiseau": Color("c8ccd4")},
+		"seve": {"bris_vif": Color("7ee0a8"), "bris_mort": Color("6a8070"), "pas": Color("eafff4"), "papillon": Color("b8ffe0"), "eau": Color("c8fff0")},
+		"aube": {"bris_vif": Color("ffe6a8"), "bris_mort": Color("a89a80"), "pas": Color("ffd770"), "papillon": Color("fff0b0"), "luciole": Color("ffd770")},
+		"racine": {"bris_vif": Color("c8a878"), "bris_mort": Color("8a7a66"), "pas": Color("e8d090"), "oiseau": Color("9a7a5a")},
+	},
 	"commun": {
 		"seve": Color("8af5c0"), "seve_clair": Color("eafff4"), "seve_sombre": Color("1f7a56"),
 		"encre_decor": Color("1f1614"), "lumiere": Color("ffe9bf"), "nuit": Color("120c10"),

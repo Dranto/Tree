@@ -5,10 +5,15 @@
 shader_type canvas_item;
 render_mode blend_premul_alpha;
 
+// Monde vivant (tâche V) : balancement et lueur du décor.
+#include "res://shaders/decor_sway.gdshaderinc"
+
 // Couleur du sommet (le COLOR de fragment() est déjà multiplié par la texture).
 varying vec4 vcol;
 
 void vertex() {
+	VERTEX += decor_sway(VERTEX, MODEL_MATRIX);
+	COLOR.rgb *= decor_light(VERTEX, MODEL_MATRIX);
 	vcol = COLOR;
 }
 
