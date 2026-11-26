@@ -20,6 +20,11 @@ const SCENES := {
 		["scarabee", Vector2(200, 170), []], ["menhir", Vector2(-220, -150), []], ["menhir", Vector2(120, -230), []],
 		["fletri", Vector2(-120, 200), []], ["chargeur", Vector2(330, -10), []],
 	],
+	"aube": [
+		["miroitier", Vector2(260, -120), []], ["prismeur", Vector2(320, 80), []], ["quartz", Vector2(-240, 40), []],
+		["luciole", Vector2(200, 170), []], ["luciole", Vector2(230, 200), []], ["luciole", Vector2(-180, -150), []],
+		["miroitier", Vector2(-200, 180), ["rapide"]], ["prismeur", Vector2(-300, -100), ["ecorce"]], ["quartz", Vector2(120, -230), ["enrage"]],
+	],
 	"elites": [
 		["tireur", Vector2(240, -90), ["rapide"]], ["scarabee", Vector2(-240, 30), ["ecorce"]],
 		["menhir", Vector2(160, 170), ["enrage"]], ["fletri", Vector2(-150, -160), ["rapide"]],
