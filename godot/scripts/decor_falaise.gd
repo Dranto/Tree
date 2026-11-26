@@ -82,9 +82,12 @@ func spawn() -> void:
 		if solid:
 			flora.add_obstacle(t)
 			flora.trees_parent.add_child(t)
-		else:
-			# Les éclats sont plats, posés au sol : sous les personnages, gardés par le décor composé.
+		elif i % 3 == 0:
+			# Les éclats sont plats, posés au sol : sous les personnages, gardés par le décor composé
+			# (un sur trois : assez pour semer la pierre, sans charger la cuisson du décor).
 			flora.add_child(t)
+		else:
+			flora.trees_parent.add_child(t)
 		flora._add_tree(t)
 
 

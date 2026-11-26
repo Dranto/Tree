@@ -26,7 +26,6 @@ static func _shard(L, c: Vector2, l: float, a: float, glass: Dictionary, glint: 
 	var n := Vector2(-d.y, d.x).normalized() * l * 0.22 * Vector2(1.0, 0.6)
 	var p0 := c - d * l * 0.5
 	var p1 := c + d * l * 0.5
-	L._oval(c + Vector2(1.0, 1.2), l * 0.45, l * 0.16, Color(glass["ombre"].darkened(0.5), 0.35), 5)
 	L._tri(p0, c + n, p1, glass["clair"])
 	L._tri(p0, p1, c - n, glass["ombre"])
 	if glint > 0.0:
@@ -48,23 +47,21 @@ static func dead_matter(L, p: Vector2, i: int, _sd: int, e: RandomNumberGenerato
 		var lite: Color = pal["pierre"]["reflet"]
 		var len := e.randf_range(26.0, 46.0)
 		var tilt := e.randf_range(-0.12, 0.12)
-		for k in e.randi_range(2, 3):
+		for k in 2:
 			var y := k * e.randf_range(4.5, 6.5)
 			var x0 := e.randf_range(-6.0, 6.0) - len * 0.5 + k * 3.0
 			var l := len * e.randf_range(0.55, 1.0)
 			var pts := PackedVector2Array()
-			for j in 5:
-				var u := j / 4.0
+			for j in 4:
+				var u := j / 3.0
 				pts.append(p + Vector2(x0 + l * u, y + tilt * l * u + sin(u * 5.0 + k) * 0.8))
-			var up := PackedVector2Array()
-			for q in pts:
-				up.append(q + Vector2(0.4, -1.3))
-			L._polyline(up, 0.7, Color(lite, 0.22))
+			if k == 0:
+				L._line(pts[0] + Vector2(0.4, -1.3), pts[2] + Vector2(0.4, -1.3), 0.7, Color(lite, 0.22))
 			L._polyline(pts, 1.0, Color(ink, 0.5 - k * 0.08))
 		return true
 	# Éclats de verre fumé couchés, deux à quatre.
 	var glass: Dictionary = _m("fletri", "verre")
-	for k in e.randi_range(2, 4):
+	for k in e.randi_range(1, 3):
 		var q := p + Vector2(e.randf_range(-14.0, 14.0), e.randf_range(-6.0, 6.0))
 		_shard(L, q, e.randf_range(5.0, 9.0), e.randf() * PI, glass, 0.4)
 	return true
@@ -74,12 +71,12 @@ static func dead_matter(L, p: Vector2, i: int, _sd: int, e: RandomNumberGenerato
 static func alive_matter(L, p: Vector2, e: RandomNumberGenerator) -> bool:
 	var nacre: Dictionary = _m("ravive", "nacre")
 	var gold: Color = _m("ravive", "lueur")
-	for k in e.randi_range(2, 4):
+	for k in e.randi_range(1, 3):
 		var q := p + Vector2(e.randf_range(-16.0, 16.0), e.randf_range(-7.0, 7.0))
 		_shard(L, q, e.randf_range(4.0, 7.5), e.randf() * PI, nacre, 0.8)
-	for k in e.randi_range(4, 7):
+	for k in e.randi_range(3, 5):
 		var q := p + Vector2(e.randf_range(-22.0, 22.0), e.randf_range(-10.0, 10.0))
-		L._oval(q, 0.9, 0.7, Color(gold, 0.75), 4)
+		L._tri(q + Vector2(-1.0, 0.5), q + Vector2(0.0, -1.0), q + Vector2(1.0, 0.5), Color(gold, 0.75))
 	if e.randf() < 0.5:
 		_spark(L, p + Vector2(e.randf_range(-8.0, 8.0), e.randf_range(-6.0, 2.0)), 2.6, Color(nacre["reflet"], 0.85))
 	return true
@@ -99,7 +96,6 @@ static func dead_item(L, p: Vector2, big: float, kind: int, pal: Dictionary, e: 
 		for j in 6:
 			var a := rot + TAU * j / 6.0
 			pts.append(p + Vector2(cos(a) * rx, sin(a) * rx * 0.55) * e.randf_range(0.82, 1.1))
-		L._oval(p + Vector2(1.4, 1.6), rx * 1.05, rx * 0.45, Color(st["ombre"].darkened(0.4), 0.5), 6)
 		var side := PackedVector2Array()
 		for q in pts:
 			side.append(q + Vector2(0, rx * 0.28))
