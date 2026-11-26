@@ -100,6 +100,12 @@ func is_lit() -> bool:
 
 func _process(delta: float) -> void:
 	t += delta
+	# Une image cuite est apparue ou a été rendue : les pierres ne se redessinent pas à chaque image, leurs
+	# commandes de dessin pointeraient vers une texture libérée (tache blanche). On les refait tout de suite.
+	if _baked_epoch != LieuxBake.epoch:
+		_baked_epoch = LieuxBake.epoch
+		for pc in _pieces:
+			pc.queue_redraw()
 	flash = maxf(0.0, flash - delta / 1.2)
 	_since_draw += delta
 	if (_since_draw >= 1.0 / 15.0 - 0.001 or flash > 0.0) and main.player.position.distance_squared_to(position) < 1300.0 * 1300.0 and _near_view():
@@ -211,6 +217,8 @@ var _stones_layer: Layer
 var _pieces: Array = []
 ## Avancée (en soixantièmes) au dernier dessin de la dalle.
 var _stones_key := -1
+## Numéro des lieux cuits (LieuxBake.epoch) au dernier dessin des pierres.
+var _baked_epoch := -1
 
 
 func _ready() -> void:

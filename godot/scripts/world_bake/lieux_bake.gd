@@ -28,6 +28,13 @@ const UNUSED_MSEC := 4000
 static var sets := {}
 static var _pending := {}
 static var _failed := {}
+## Change à chaque fois qu'une image cuite apparaît ou disparaît : un nœud qui ne se redessine pas à chaque
+## image (les pierres du sanctuaire) compare son numéro au dernier dessin. Sinon ses commandes de dessin,
+## gardées d'un dessin à l'autre, pointent vers une texture rendue et s'affichent en tache blanche.
+static var epoch := 0
+## Textures rendues depuis moins de GRAVE_MSEC : gardées vivantes le temps que les nœuds se redessinent.
+const GRAVE_MSEC := 1500
+static var _grave := []
 ## Mesures (banc, tests).
 static var bytes := 0
 static var bake_usec := 0
@@ -85,6 +92,7 @@ static func request(host: Node, set_key: String, jobs: Array) -> void:
 		_failed[set_key] = true
 		return
 	_pending[set_key] = true
+	_empty_grave()
 	trim()
 	_bake(host, set_key, jobs)
 
@@ -141,6 +149,7 @@ static func _bake(host: Node, set_key: String, jobs: Array) -> void:
 	var cells := {}
 	for p in placed:
 		cells[p["key"]] = [p["src"], p["box"]]
+	epoch += 1
 	sets[set_key] = {"tex": ImageTexture.create_from_image(img), "cells": cells, "bytes": img.get_data_size(), "used": Time.get_ticks_msec()}
 	bytes += img.get_data_size()
 	baked += 1
@@ -188,11 +197,23 @@ static func release(set_key: String) -> void:
 	if s != null:
 		bytes -= int(s["bytes"])
 		sets.erase(set_key)
+		epoch += 1
+		# La texture reste vivante un instant : les commandes de dessin déjà posées la référencent encore.
+		_grave.append([Time.get_ticks_msec(), s["tex"]])
+	_empty_grave()
+
+
+static func _empty_grave() -> void:
+	var now := Time.get_ticks_msec()
+	while not _grave.is_empty() and now - int(_grave[0][0]) > GRAVE_MSEC:
+		_grave.pop_front()
 
 
 ## Rend toutes les images et le matériau (fin de partie : rien ne doit rester en mémoire à la sortie).
 static func clear() -> void:
 	sets.clear()
+	_grave.clear()
+	epoch += 1
 	_material = null
 	_pending.clear()
 	_failed.clear()
