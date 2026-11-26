@@ -7877,7 +7877,7 @@ msgstr ""
 msgid "Entravée"
 msgstr ""
 
-#. scripts/boss_vent.gd:113
+#. scripts/boss_vent.gd:116
 #. scripts/enemy_behaviors/glider.gd:70
 msgid "Hors d'atteinte"
 msgstr ""

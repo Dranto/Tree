@@ -44,17 +44,20 @@ diffère un peu de celui de la CI, si bien que tout est réécrit) :
 
 ```
 git push                              # la branche de la PR
-tools/refs-from-ci.sh --in-ci         # ou --in-ci <branche>
+tools/refs-from-ci.sh --in-ci         # ou --in-ci <branche> ; ≈ 5 minutes
+tools/refs-from-ci.sh --pull          # une fois le run fini
+git push
 ```
 
 La CI rejoue les tests visuels de la branche, copie les captures changées dans
-`godot/tests/visual/reference/`, commite (« Références visuelles prises dans la CI ») et relance les
-tests visuels sur ce commit pour vérifier. Faire ensuite `git pull`. Regarder les images avant de
-fusionner : le rapport (`rapport.html`) est dans l'artefact « tests-visuels » du premier run.
+`godot/tests/visual/reference/` et commite le tout sur une branche à part, `ci-refs/<branche>`.
+`--pull` reprend ce commit sur la branche courante (seulement si le code n'a pas bougé depuis) ; le
+push qui suit relance toute la CI normalement. Regarder les images avant de pousser : le rapport
+(`rapport.html`) est dans l'artefact « tests-visuels » du run.
 
-Ce commit est poussé par le jeton de la CI : GitHub ne relance pas les autres workflows dessus. Comme
-il ne change que des images de référence, les autres workflows du commit précédent font foi ; les
-tests visuels, eux, sont relancés sur le nouveau commit et doivent être verts.
+Le commit n'est pas poussé directement sur la branche de la PR : poussé par le jeton de la CI, il y
+laissait des runs « en attente d'approbation » au lieu de la CI (vu le 26/11). Une session cloud
+ne peut pas supprimer `ci-refs/<branche>` ensuite : la branche reste, et le run suivant l'écrase.
 
 Là où le stockage des artefacts de GitHub est joignable (poste d'Antoine), `tools/refs-from-ci.sh`
 sans option copie les captures changées du dernier run du commit courant, à committer soi-même.
@@ -71,7 +74,7 @@ git push -u origin <branche-du-lot>
 ```
 
 1. Ouvrir la PR du lot vers `develop`, titre « Lot : #152, #153, #154 ».
-2. Si les tests visuels montrent des écarts attendus : `tools/refs-from-ci.sh --in-ci`.
+2. Si les tests visuels montrent des écarts attendus : `tools/refs-from-ci.sh --in-ci`, puis `--pull` et `git push`.
 3. CI verte : fusionner la PR du lot **par un commit de fusion** (pas de squash ni de rebase). GitHub
    marque alors chaque PR du lot comme fusionnée, puisque ses commits sont dans `develop`.
 
