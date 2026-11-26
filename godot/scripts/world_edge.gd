@@ -48,6 +48,7 @@ const SLICE_KINDS := 8
 const SLICE_COST := 4.0
 ## Côté de l'image du décor de la carte (px).
 const MAP_TEX := 1400
+const BUSY := "/busy"  # clé interne du cache de la carte. # i18n: non
 
 ## « -- --bord-direct » : décor dessiné en direct, sans cuisson (comparaisons, banc).
 static var baking := true
@@ -500,8 +501,8 @@ static func draw_map_frame(ci: CanvasItem, outer: Rect2, world_rect: Rect2) -> v
 		ci.draw_set_transform_matrix(xf)
 		_paint_map(ci, depth, states)
 		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
-	elif ci is Node and ci.is_inside_tree() and not _map_tex.has(key + "/en cours"):
-		_map_tex[key + "/en cours"] = true
+	elif ci is Node and ci.is_inside_tree() and not _map_tex.has(key + BUSY):
+		_map_tex[key + BUSY] = true
 		_bake_map(ci, key, depth, span, states)
 	# Les bandes extérieures s'assombrissent : le bord de la carte se perd dans le noir.
 	var fade := (outer.size.x - world_rect.size.x) * 0.5 * 0.4
@@ -537,7 +538,7 @@ static func _bake_map(ci: CanvasItem, key: String, depth: float, span: float, st
 			if (i + 1) % 5 == 0:
 				await tree.process_frame
 				if not is_instance_valid(ci):
-					_map_tex.erase(key + "/en cours")
+					_map_tex.erase(key + BUSY)
 					return
 	Painter.sort_items(list)
 	var vp := SubViewport.new()
@@ -563,7 +564,7 @@ static func _bake_map(ci: CanvasItem, key: String, depth: float, span: float, st
 		await tree.process_frame
 		await RenderingServer.frame_post_draw
 		if not is_instance_valid(vp):
-			_map_tex.erase(key + "/en cours")
+			_map_tex.erase(key + BUSY)
 			return
 		from = pn.next
 		prev = pn
@@ -571,7 +572,7 @@ static func _bake_map(ci: CanvasItem, key: String, depth: float, span: float, st
 			break
 	var img: Image = vp.get_texture().get_image()
 	vp.queue_free()
-	_map_tex.erase(key + "/en cours")
+	_map_tex.erase(key + BUSY)
 	if img == null or img.is_empty():
 		return
 	img.resize(MAP_TEX, MAP_TEX, Image.INTERPOLATE_BILINEAR)
