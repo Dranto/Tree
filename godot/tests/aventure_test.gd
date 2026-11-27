@@ -349,8 +349,11 @@ func _force_region() -> void:
 	game.flags[Regions.boss_flag(r)] = true
 	game.flags[Regions.ending_flag(r)] = true
 	report[r]["forcee"] = true
-	await _reload("région %s forcée" % r)
+	# Objectifs rattrapés avant la sauvegarde : sinon le chargement les pose (« obj_coeur ajouté »).
+	# Sans bruit, comme au chargement.
+	obj._catch_up = true
 	obj.check()
+	await _reload("région %s forcée" % r)
 	await _finish_region()
 
 
