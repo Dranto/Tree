@@ -111,6 +111,7 @@ var _seen_hp := -1.0
 var _hit_cd := 0.0
 var _pieces_sig := ""
 var _pieces_move: Array = []
+var _pieces_geo: Array = []
 var _pieces_fade_done := true
 var _live_clock := 0.0
 
@@ -552,21 +553,28 @@ func _sync_pieces() -> void:
 		return
 	_pieces_move = moving
 	_pieces_fade_done = true
+	# La place des pièces ne dépend que du mur (rayon, brèche, secousses) : refaite seulement quand il
+	# change ; le héros et le boss qui bougent ne changent que la transparence (~0,3 ms gagnée par image).
+	var geo := [moving[0], moving[1], moving[2], moving[3], redraw]
+	var place: bool = geo != _pieces_geo or quake > 0.0 or shiver > 0.0
+	_pieces_geo = geo
+	var tint := Color(1.0, 0.82, 0.78) if state == "combat" else Color.WHITE
 	for pc in pieces:
 		var d: Dictionary = _descs[pc.i]
-		var ang: float = d["ang"]
-		var dir := Vector2.from_angle(ang)
-		var o := gap_k(ang) if d["ring"] else 0.0
-		var r: float = (radius if d["ring"] else max_radius) * (1.0 + float(_wall[pc.i % _wall.size()][0]) * 0.5) + float(d["out"]) + 34.0 * o
-		pc.position = center + dir * r
-		pc.visible = o < 0.97
 		var sz: float = d["size"]
-		var fl := -1.0 if d["flip"] else 1.0
-		pc.scale = Vector2(fl * sz * (1.0 + 0.12 * o), sz * (1.0 - 0.9 * o))
-		# Les bords de la brèche s'écartent ; le mur tremble aux phases, frissonne aux coups.
-		var side := signf(wrapf(ang - art.gate_angle(self), -PI, PI))
-		var jig := sin(t * 31.0 + pc.i * 1.9) * (0.07 * quake + 0.025 * shiver)
-		pc.rotation = side * 0.35 * o + jig
+		if place:
+			var ang: float = d["ang"]
+			var dir := Vector2.from_angle(ang)
+			var o := gap_k(ang) if d["ring"] else 0.0
+			var r: float = (radius if d["ring"] else max_radius) * (1.0 + float(_wall[pc.i % _wall.size()][0]) * 0.5) + float(d["out"]) + 34.0 * o
+			pc.position = center + dir * r
+			pc.visible = o < 0.97
+			var fl := -1.0 if d["flip"] else 1.0
+			pc.scale = Vector2(fl * sz * (1.0 + 0.12 * o), sz * (1.0 - 0.9 * o))
+			# Les bords de la brèche s'écartent ; le mur tremble aux phases, frissonne aux coups.
+			var side := signf(wrapf(ang - art.gate_angle(self), -PI, PI))
+			var jig := sin(t * 31.0 + pc.i * 1.9) * (0.07 * quake + 0.025 * shiver)
+			pc.rotation = side * 0.35 * o + jig
 		# Une pièce qui cache le héros ou le boss s'estompe.
 		var see := 1.0
 		var box: Rect2 = _box_of(d["key"])
@@ -574,13 +582,14 @@ func _sync_pieces() -> void:
 			var rel: Vector2 = h - pc.position
 			if rel.y < 0.0 and rel.y > box.position.y * sz * 0.85 and absf(rel.x) < box.size.x * 0.4 * sz:
 				see = SEE_THROUGH
-		var tint := Color(1.0, 0.82, 0.78) if state == "combat" else Color.WHITE
 		var alpha := lerpf(pc.modulate.a, see, 0.25) if not frozen else see
 		if absf(alpha - see) > 0.01:
 			_pieces_fade_done = false
 		else:
 			alpha = see
-		pc.modulate = Color(tint, alpha)
+		var m := Color(tint, alpha)
+		if pc.modulate != m:
+			pc.modulate = m
 		if redraw or (live_redraw and pc.i % 3 == 0):
 			pc.queue_redraw()
 
