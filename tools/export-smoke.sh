@@ -37,7 +37,7 @@ grep -q "AUTOTEST fini" "$LOG" || { echo "ÉCHEC : le robot n'a pas fini"; fail=
 # elle ne se voit qu'une fois sur dix environ quand la machine est très chargée. Même chose pour
 # « Invalid polygon data, triangulation failed » (un polygone aplati, vu une fois sur une trentaine de parties).
 # Lignes de Steam exclues : sans client Steam (CI), l'API dit « Failed to load module steamclient.so ».
-if grep -vE "^Steam :|^\[S_API\]" "$LOG" | grep -E "SCRIPT ERROR|Parse Error|Failed to load|Cannot open|Resource file not found" "$LOG"; then
+if grep -vE "^Steam :|^\[S_API\]" "$LOG" | grep -E "SCRIPT ERROR|Parse Error|Failed to load|Cannot open|Resource file not found"; then
   echo "ÉCHEC : erreurs de script ou de ressource"; fail=1
 fi
 noise=$(grep -E "^(ERROR|WARNING|USER ERROR|USER WARNING):" "$LOG" | grep -vE "Could not set V-Sync mode" || true)
