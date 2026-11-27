@@ -389,6 +389,10 @@ func bot_ring(arena_radius: float) -> float:
 
 ## Hauteur du thorax au-dessus du centre du boss (px) : les rayons partent de là.
 const BODY_Y := 76.0
+## Repère qui contient toutes les poses du Phalène (pieds en 0, px du dessin), mesuré sur ses 3 phases,
+## plus une marge : les poses sont rendues dans une image de cette taille (pose_cache.gd › bake_box).
+const POSE_BOX := Rect2(-165, -224, 322, 331)
+
 ## Images par animation.
 const TRACKS := {"vol": 12, "eclair": 8, "eclair_f": 6, "rayons": 6, "rayons_f": 6, "pluie": 8, "pluie_f": 6,
 	"ecailles": 6, "nuee": 6, "mort": 16}
@@ -517,7 +521,9 @@ func _draw() -> void:
 	# Le dessin est posé de sorte que le thorax soit à body_y au-dessus du centre (alt = 0 : thorax à
 	# 30 unités au-dessus des pieds).
 	var lift := body_y + feet.y - art_h * 0.3
-	PoseCache.on(self).show_pose(key, drawer, Transform2D(0.0, Vector2(s * facing, s), 0.0, feet + shift + Vector2(0, -lift * s)), mod)
+	var cache := PoseCache.on(self)
+	cache.bake_box = POSE_BOX
+	cache.show_pose(key, drawer, Transform2D(0.0, Vector2(s * facing, s), 0.0, feet + shift + Vector2(0, -lift * s)), mod)
 	_body_at = Vector2(0, -body_y * s)
 	if _over == null:
 		_over = Node2D.new()

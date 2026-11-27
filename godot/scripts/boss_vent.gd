@@ -445,6 +445,10 @@ func bot_ring(arena_radius: float) -> float:
 # chaque image n'est dessinée qu'une fois (pose_cache.gd). Ce fichier choisit l'animation et l'image ;
 # l'ombre et les états (saignement, racines, poison) restent dessinés à chaque image.
 
+## Repère qui contient toutes les poses du Harfang (pieds en 0, px du dessin), mesuré sur ses 3 phases,
+## plus une marge : les poses sont rendues dans une image de cette taille (pose_cache.gd › bake_box).
+const POSE_BOX := Rect2(-226, -304, 399, 351)
+
 ## Images par animation (une animation = une pose qui varie de u = 0 à 1).
 const TRACKS := {"vol": 16, "plumes": 8, "plumes_f": 4, "batt": 8, "batt_f": 6, "nuee": 6, "tempete": 6,
 	"vite": 8, "chute": 1, "pose": 8, "mort": 16}
@@ -592,6 +596,7 @@ func _draw() -> void:
 	if shadow > 0.0:
 		draw_colored_polygon(Art.ellipse(feet, r * 1.7 * s * (0.6 + 0.4 * shadow), r * 0.55 * s * (0.6 + 0.4 * shadow), 24), Color(Art.c("ombre"), 0.35 * shadow))
 	var cache := PoseCache.on(self)
+	cache.bake_box = POSE_BOX
 	if fade <= 0.01:
 		cache.hide_all()
 		return
