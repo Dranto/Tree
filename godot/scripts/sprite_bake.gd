@@ -473,13 +473,9 @@ static func request(kind_id: String, extra := {}) -> void:
 static func pump(host: Node) -> void:
 	if _busy or _wanted.is_empty():
 		return
-	# Une sorte à la fois : cuire toutes les sortes d'une région dans la même image gelait l'écran à
-	# l'entrée de la région (250 à 1 100 ms, banc « zones »). La partie préparée (world_preload.gd) a
-	# déjà tout cuit ; ici ne reste que ce qui manquerait.
-	var key: String = _wanted.keys()[0]
-	var kr: Array = _wanted[key]
-	_wanted.erase(key)
-	bake(host, [kr])
+	var kinds := _wanted.values()
+	_wanted.clear()
+	bake(host, kinds)
 
 
 ## Cuit les sortes demandées ([[id, rayon], ...] ou [id, ...]) ; host : un nœud de l'arbre (pour les

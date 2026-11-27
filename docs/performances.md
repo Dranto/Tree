@@ -328,7 +328,7 @@ Antoine voyait de petits gels en passant d'une région à l'autre. Banc `--bench
 
 | Cause | Pire image | Correction |
 | --- | --- | --- |
-| Toutes les sortes de Flétris de la région cuites dans la même image à l'entrée (`sprite_bake.pump`) ; même depuis le cache disque : 50 à 80 ms | 250 à 1 100 ms | cuites au chargement ; en jeu, une sorte à la fois |
+| Toutes les sortes de Flétris de la région cuites dans la même image à l'entrée (`sprite_bake.pump`) ; même depuis le cache disque : 50 à 80 ms | 250 à 1 100 ms | cuites au chargement (en jeu, ce qui manquerait se cuit encore par lot : une sorte à la fois rallongeait le banc des 120 Flétris à froid, plus de dessins directs) |
 | Pièces et sol d'une arène dessinés en direct tant qu'ils ne sont pas cuits | 70 à 145 ms | cuits au chargement |
 | Fond et voile d'une tuile du bord du monde construits à l'approche (`world_edge.ensure`) | 60 à 95 ms | construits au chargement, gardés en mémoire (~1,5 Mo) et en cache disque (`user://bord/`) |
 | Bande de décor du bord : lecture du SubViewport puis réduction de l'image | 50 à 100 ms (réduction ~45 ms) | réduction sur un autre fil (`WorkerThreadPool`) ; la lecture reste (~35 ms en rendu logiciel) |
