@@ -42,6 +42,14 @@ class Slot extends Control:
 		custom_minimum_size = Vector2(SIZE + 8.0, SIZE + 24.0)
 		mouse_filter = Control.MOUSE_FILTER_STOP
 
+	## Ces deux libellés ne sont jamais dans l'arbre : sans cela, ils restent « orphelins » à la sortie du jeu.
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_PREDELETE:
+			if is_instance_valid(name_label):
+				name_label.free()
+			if is_instance_valid(key_label):
+				key_label.free()
+
 	## Fixe le genre (et donc la taille) de l'emplacement.
 	func set_kind(k: int) -> void:
 		kind = k

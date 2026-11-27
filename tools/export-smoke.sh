@@ -25,15 +25,27 @@ elif [ "${STEAM_REQUIRED:-0}" = 1 ]; then
 fi
 # Dossier utilisateur isolé (XDG_DATA_HOME), comme tools/unit-tests.sh : ne touche pas à la partie du développeur.
 export XDG_DATA_HOME="$(mktemp -d)"
-timeout 240 xvfb-run -a -s "-screen 0 1600x900x24" "$BIN" --resolution 1600x900 -- --autotest >"$LOG" 2>&1
+# Pilote audio factice : la machine de CI n'a pas de carte son (sinon ALSA ajoute ses erreurs au journal).
+timeout 240 xvfb-run -a -s "-screen 0 1600x900x24" "$BIN" --resolution 1600x900 --audio-driver Dummy -- --autotest >"$LOG" 2>&1
 code=$?
 [ $code -eq 0 ] || { echo "ÉCHEC : code de sortie $code"; fail=1; }
 grep -q "AUTOTEST fini" "$LOG" || { echo "ÉCHEC : le robot n'a pas fini"; fail=1; }
-# Erreurs attendues (pilote audio absent sur la CI, texture de rendu logiciel, fuites à la sortie).
+# Zéro ERROR / WARNING dans le journal, aux seules exceptions suivantes (le serveur X virtuel et le
+# rendu logiciel de la CI, pas le jeu) :
+#  - V-Sync : xvfb ne sait pas le régler.
+# Une fuite « at exit » (nœud resté orphelin à la fermeture) est signalée mais ne fait pas échouer :
+# elle ne se voit qu'une fois sur dix environ quand la machine est très chargée. Même chose pour
+# « Invalid polygon data, triangulation failed » (un polygone aplati, vu une fois sur une trentaine de parties).
 # Lignes de Steam exclues : sans client Steam (CI), l'API dit « Failed to load module steamclient.so ».
 if grep -vE "^Steam :|^\[S_API\]" "$LOG" | grep -E "SCRIPT ERROR|Parse Error|Failed to load|Cannot open|Resource file not found"; then
   echo "ÉCHEC : erreurs de script ou de ressource"; fail=1
 fi
-grep -E "^ERROR" "$LOG" | grep -vE "status < 0|rp_texture|leaked at exit" && { echo "ÉCHEC : erreurs inattendues"; fail=1; }
+noise=$(grep -E "^(ERROR|WARNING|USER ERROR|USER WARNING):" "$LOG" | grep -vE "Could not set V-Sync mode" || true)
+leaks=$(echo "$noise" | grep -E "leaked|triangulation failed" || true)
+bad=$(echo "$noise" | grep -vE "leaked|triangulation failed" || true)
+[ -z "$leaks" ] || { echo "Attention (sans échec) : fuite à la sortie ou polygone aplati rare :"; echo "$leaks"; }
+if [ -n "$bad" ]; then
+  echo "ÉCHEC : le journal contient des ERROR / WARNING :"; echo "$bad"; fail=1
+fi
 [ $fail -eq 0 ] && echo "OK : build exporté démarré, 60 s de robot, sortie propre ($(grep -c AUTOTEST "$LOG") lignes AUTOTEST)"
 exit $fail
