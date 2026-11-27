@@ -1502,7 +1502,7 @@ func _benchmark_frame(delta: float) -> void:
 	if bench_clock > BENCH_WARMUP and bench_last_usec > 0:
 		var ms := (now - bench_last_usec) / 1000.0
 		bench_frames.append(ms)
-		if ms > HITCH_MS and bench_scene == "zones":
+		if ms > HITCH_MS and bench_scene in ["zones", "coeur"]:
 			bench_hitches.append([bench_clock - BENCH_WARMUP, ms, Regions.region_at(player.position), Prof.frame_top(6)])
 		bench_cpu["process"] += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
 		bench_cpu["physics"] += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0

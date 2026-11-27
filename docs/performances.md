@@ -332,6 +332,7 @@ Antoine voyait de petits gels en passant d'une région à l'autre. Banc `--bench
 | Pièces et sol d'une arène dessinés en direct tant qu'ils ne sont pas cuits | 70 à 145 ms | cuits au chargement |
 | Fond et voile d'une tuile du bord du monde construits à l'approche (`world_edge.ensure`) | 60 à 95 ms | construits au chargement, gardés en mémoire (~1,5 Mo) et en cache disque (`user://bord/`) |
 | Bande de décor du bord : lecture du SubViewport puis réduction de l'image | 50 à 100 ms (réduction ~45 ms) | réduction sur un autre fil (`WorkerThreadPool`) ; la lecture reste (~35 ms en rendu logiciel) |
+| Purification d'un Cœur : toutes les tuiles du bord de sa région refaites dans la même image (`world_edge._sync_states`, signalé par le banc du siège) | 550 à 650 ms | en jeu, un fond ou un voile par image, tuiles proches de l'écran d'abord, l'ancienne image reste jusqu'au fondu (pire étape ~75 ms en rendu logiciel) ; captures et tests : tout de suite, comme avant |
 | Faune et formes guéries d'une région (`world_life_vie.gd`) | 35 à 65 ms | cuites au chargement, gardées (`Vie.pinned`) |
 | Pierres des sanctuaires, Cœurs, autels dessinés en direct en attendant leur cuisson | 10 à 20 ms | cuits au chargement |
 | Pistes de musique et d'ambiance lues du disque à l'entrée | ~7 ms | lues au chargement |

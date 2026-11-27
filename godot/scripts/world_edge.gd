@@ -116,6 +116,7 @@ func _process(delta: float) -> void:
 	if main == null or not is_instance_valid(main) or main.camera == null:
 		return
 	_sync_states()
+	_restate_step()
 	_advance(delta)
 	_pump()
 	var under: bool = main.underground()
@@ -240,12 +241,12 @@ static var fields := {}
 static var fields_bytes := 0
 
 
-func _field(side: int, i: int, state: String, veil: bool) -> Array:
+func _field(side: int, i: int, state: String, veil: bool, states = null) -> Array:
 	var key := "%d/%d/%s/%d/%s" % [side, i, state, int(veil), Art.mode_daltonien]
 	var m = fields.get(key)
 	if m == null:
 		var b := DrawBatch.new()
-		Painter.build_field(b, side, i, _states.duplicate(), veil)
+		Painter.build_field(b, side, i, (_states if states == null else states).duplicate(), veil)
 		m = [b.points, b.colors, b.indices]
 		fields[key] = m
 		fields_bytes += b.points.size() * 8 + b.colors.size() * 16 + b.indices.size() * 4
@@ -254,7 +255,9 @@ func _field(side: int, i: int, state: String, veil: bool) -> Array:
 
 ## Préparation du monde : construit le fond et le voile d'une tuile de plus (dans l'état actuel des
 ## régions) ; faux quand tout est construit. Le premier appel relit le cache disque (FIELDS_CACHE) ; le
-## dernier l'écrit s'il a fallu construire quelque chose.
+## dernier l'écrit s'il a fallu construire quelque chose. Les états suivants (une région purifiée) ne
+## sont pas préparés : ~3 fois plus de fonds, des dizaines de secondes de chargement au premier lancement ;
+## _sync_states étale plutôt leur construction.
 func prepare_fields() -> bool:
 	_sync_states()
 	if not _fields_loaded:
@@ -374,21 +377,65 @@ func _sync_states() -> void:
 		return
 	_states = now
 	current_states = now.duplicate()
+	var changed := []
 	for key in _tiles:
 		var t: Tile = _tiles[key]
+		if Painter.state_key(t.side, t.index, _states) != t.state and not _restate.has(key):
+			changed.append(key)
+	# En jeu, les tuiles changées sont refaites une par image, les plus proches de l'écran d'abord : la
+	# purification d'un Cœur les refaisait toutes dans la même image (550 à 650 ms). L'ancienne image reste
+	# affichée en attendant, puis la nouvelle apparaît en fondu. Captures et tests : tout de suite.
+	if BordBake.threaded:
+		var c: Vector2 = main.camera.get_screen_center_position() if main != null and main.get("camera") != null else Vector2.ZERO
+		changed.sort_custom(func(a, b): return _tile_center(a).distance_squared_to(c) < _tile_center(b).distance_squared_to(c))
+		_restate.append_array(changed)
+	else:
+		for key in changed:
+			_restate_tile(key)
+
+
+## Tuiles dont l'état a changé, à refaire (une par image en jeu, voir _sync_states).
+var _restate: Array = []
+
+
+func _tile_center(key: int) -> Vector2:
+	return Painter.band_rect(key / 100, key % 100, Painter.NEAR).get_center()
+
+
+## Une étape des tuiles à refaire : un fond (ou un voile) construit par image, puis la tuile refaite.
+func _restate_step() -> void:
+	if _restate.is_empty():
+		return
+	var key: int = _restate[0]
+	var t: Tile = _tiles.get(key)
+	if t != null:
 		var st := Painter.state_key(t.side, t.index, _states)
-		if st == t.state:
+		for veil in [false, true]:
+			if not fields.has("%d/%d/%s/%d/%s" % [t.side, t.index, st, int(veil), Art.mode_daltonien]):
+				_field(t.side, t.index, st, veil)
+				return
+	_restate.pop_front()
+	_restate_tile(key)
+
+
+## Refait une tuile dans l'état actuel des régions (fondu de l'ancienne image vers la nouvelle).
+func _restate_tile(key: int) -> void:
+	var t: Tile = _tiles.get(key)
+	if t == null:
+		return
+	var st := Painter.state_key(t.side, t.index, _states)
+	if st == t.state:
+		return
+	t.state = st
+	for pair in [[t.base, null], [t.veil, null], [t.near, Painter.NEAR], [t.far, Painter.FAR]]:
+		var s: Slot = pair[0]
+		if s == null:
 			continue
-		t.state = st
-		for pair in [[t.base, null], [t.veil, null], [t.near, Painter.NEAR], [t.far, Painter.FAR]]:
-			var s: Slot = pair[0]
-			if s == null:
-				continue
-			if pair[1] == null:
-				s.push(_mesh_variant(t, s == t.veil), true)
-			else:
-				s.push(_decor_variant(t, pair[1], false), true)
-			_fading[s] = true
+		if pair[1] == null:
+			s.push(_mesh_variant(t, s == t.veil), true)
+		else:
+			s.push(_decor_variant(t, pair[1], false), true)
+		_fading[s] = true
 
 
 func _advance(delta: float) -> void:
