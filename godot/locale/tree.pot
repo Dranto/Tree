@@ -9333,35 +9333,35 @@ msgstr ""
 msgid "M ou Échap : fermer"
 msgstr ""
 
-#. scripts/world_preload.gd:317
+#. scripts/world_preload.gd:100
+msgid "Les couleurs"
+msgstr ""
+
+#. scripts/world_preload.gd:326
 msgid "Le monde se prépare…"
 msgstr ""
 
-#. scripts/world_preload.gd:88
+#. scripts/world_preload.gd:94
 msgid "Les Flétris"
 msgstr ""
 
-#. scripts/world_preload.gd:89
+#. scripts/world_preload.gd:95
 msgid "Le décor"
 msgstr ""
 
-#. scripts/world_preload.gd:90
+#. scripts/world_preload.gd:96
 msgid "Les lieux"
 msgstr ""
 
-#. scripts/world_preload.gd:91
+#. scripts/world_preload.gd:97
 msgid "La faune"
 msgstr ""
 
-#. scripts/world_preload.gd:92
+#. scripts/world_preload.gd:98
 msgid "Le bord du monde"
 msgstr ""
 
-#. scripts/world_preload.gd:93
+#. scripts/world_preload.gd:99
 msgid "La musique"
-msgstr ""
-
-#. scripts/world_preload.gd:94
-msgid "Les couleurs"
 msgstr ""
 

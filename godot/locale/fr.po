@@ -9344,35 +9344,35 @@ msgstr "LÉGENDE"
 msgid "M ou Échap : fermer"
 msgstr "M ou Échap : fermer"
 
-#. scripts/world_preload.gd:317
+#. scripts/world_preload.gd:100
+msgid "Les couleurs"
+msgstr "Les couleurs"
+
+#. scripts/world_preload.gd:326
 msgid "Le monde se prépare…"
 msgstr "Le monde se prépare…"
 
-#. scripts/world_preload.gd:88
+#. scripts/world_preload.gd:94
 msgid "Les Flétris"
 msgstr "Les Flétris"
 
-#. scripts/world_preload.gd:89
+#. scripts/world_preload.gd:95
 msgid "Le décor"
 msgstr "Le décor"
 
-#. scripts/world_preload.gd:90
+#. scripts/world_preload.gd:96
 msgid "Les lieux"
 msgstr "Les lieux"
 
-#. scripts/world_preload.gd:91
+#. scripts/world_preload.gd:97
 msgid "La faune"
 msgstr "La faune"
 
-#. scripts/world_preload.gd:92
+#. scripts/world_preload.gd:98
 msgid "Le bord du monde"
 msgstr "Le bord du monde"
 
-#. scripts/world_preload.gd:93
+#. scripts/world_preload.gd:99
 msgid "La musique"
 msgstr "La musique"
-
-#. scripts/world_preload.gd:94
-msgid "Les couleurs"
-msgstr "Les couleurs"
 
