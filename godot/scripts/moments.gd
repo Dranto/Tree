@@ -99,6 +99,7 @@ var shown_sil := Color.TRANSPARENT
 
 
 func _ready() -> void:
+	_rng.seed = 5309  # tirages des moments : toujours les mêmes (parties rejouables)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Après fx.gd : la secousse de l'image est déjà calculée quand la caméra est posée.
 	process_priority = 100

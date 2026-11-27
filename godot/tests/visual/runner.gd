@@ -70,6 +70,7 @@ func _ready() -> void:
 	var imp: Dictionary = Content.feel().get("impact_frame", {})
 	imp["frame_time"] = 0.0
 	imp["frame_time_strong"] = 0.0
+	imp["crit_ref"] = 1.0  # critiques lourds : impact frame systématique, comme quand les références ont été prises
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--scenario="):
 			scenario = arg.get_slice("=", 1)
