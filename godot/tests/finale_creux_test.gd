@@ -11,9 +11,12 @@ extends SceneTree
 const Regions = preload("res://scripts/regions.gd")
 const FinaleCreux = preload("res://scripts/world_art/finale_creux.gd")
 const LieuxBake = preload("res://scripts/world_bake/lieux_bake.gd")
+const Abords = preload("res://scripts/world_art/finale_abords.gd")
 
 ## Mémoire d'une image cuite du creux, au plus.
 const BUDGET := 10 * 1024 * 1024
+## Mémoire des carreaux des abords (écran 1600×900 : 91 carreaux, 17,3 Mo), au plus.
+const ABORDS_BUDGET := 20 * 1024 * 1024
 
 var failures := 0
 var main
@@ -84,6 +87,27 @@ func _run() -> void:
 	check(creux.bytes > 0 and creux.bytes <= BUDGET, "dans le budget (%.1f Mo)" % (creux.bytes / 1048576.0))
 	print("  cuisson : %.0f ms" % (creux.bake_usec / 1000.0))
 
+	print("Abords cuits")
+	var lip_ok := true
+	for i in 36:
+		var a := TAU * i / 36.0
+		if Abords.at(r, a, 0.0).distance_to(FinaleCreux.wall_pt(r, a, 1.0)) > 0.01:
+			lip_ok = false
+	check(lip_ok, "les abords partent de la lèvre du creux (mêmes mesures)")
+	for i in 240:
+		if creux.tiles_ready():
+			break
+		await process_frame
+	check(creux.tiles_ready() and creux.tiles.size() > 0, "abords cuits (%d carreaux)" % creux.tiles.size())
+	check(creux.tile_bytes <= ABORDS_BUDGET, "dans le budget (%.1f Mo)" % (creux.tile_bytes / 1048576.0))
+	var hidden_ok := true
+	for key in creux.wanted_tiles():
+		if FinaleCreux.tile_hidden(key, r):
+			hidden_ok = false
+	check(hidden_ok and FinaleCreux.tile_hidden(Vector2i(6, 4), r), "les carreaux cachés par le creux ne sont pas cuits")
+	check(Abords.glows(r).size() >= 12, "des braises dans les veines (%d)" % Abords.glows(r).size())
+	print("  cuisson des abords : %.0f ms" % (creux.tiles_usec / 1000.0))
+
 	print("Floraison")
 	finale.state = "vaincue"
 	finale.bloom = 0.5
@@ -117,10 +141,12 @@ func _run() -> void:
 		FinaleCreux.paint_breche(ci, false)
 		FinaleCreux.paint_breche(ci, true)
 		FinaleCreux.draw_hanging(ci, Vector2.ZERO, r, 1.0, 1.0, 1.0)
-		FinaleCreux.draw_dust(ci, Vector2.ZERO, r, 0.5, 1.0))
+		FinaleCreux.draw_dust(ci, Vector2.ZERO, r, 0.5, 1.0)
+		FinaleCreux.draw_embers(ci, Vector2.ZERO, r, 1.0, 1.0, 0.0)
+		Abords.paint_all(ci, r))
 	ci.queue_redraw()
 	await _steps(2)
-	check(true, "le creux et la brèche se dessinent sans cuisson")
+	check(true, "le creux, ses abords et la brèche se dessinent sans cuisson")
 
 	print("Secousse")
 	finale.shake_creux(1.0)

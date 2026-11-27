@@ -335,6 +335,7 @@ func begin_descent() -> void:
 	# Le creux se cuit pendant la plongée (l'éclair de sève cache l'image de la cuisson).
 	if _creux != null:
 		_creux.request("fletri")
+		_creux.request_tiles()
 	sync.start("intro" if first else "intro_court")
 	descending = true
 	_fell = false
@@ -724,6 +725,7 @@ func _draw_cave() -> void:
 	var sk := _shake_now()
 	FinaleCreux.draw_hanging(self, c, r, t, sk, bloom)
 	FinaleCreux.draw_dust(self, c, r, t - _shake_at, _shake_power)
+	FinaleCreux.draw_embers(self, c, r, t, sk, bloom)
 	# Lueurs de sève prises dans les racines du pied de la paroi (éteintes avant la victoire).
 	for i in 12:
 		var q := c + Vector2.from_angle(TAU * (i + 0.5) / 12.0) * (r + 12.0)

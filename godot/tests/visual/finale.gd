@@ -38,6 +38,12 @@ func run(runner) -> void:
 	# Sous la graine : le creux, la Flétrissure endormie, le puits de lumière où l'on arrive.
 	finale.descend()
 	main.screen_fx.fade(Color(0, 0, 0), 0.0, 0.0, 0.01)
+	# Le creux et ses abords sont cuits (finale_creux.gd) : on attend la fin de la cuisson.
+	var creux = finale.get_node_or_null("Creux")
+	for i in 240:
+		if creux == null or (creux.tex.has("fletri") and creux.tiles_ready()):
+			break
+		await r._frames(1)
 	await _shot_at("finale_arene", finale.landing() + Vector2(0, -20), finale.center)
 	# La paroi du fond : strates, poches des six régions, racines de la graine.
 	await _shot_at("finale_paroi", finale.center + Vector2(-60, -400), finale.center)
