@@ -26,6 +26,7 @@ Options :
 | `--hide=sol,ennemis,…` | cache des calques : la différence de temps donne leur coût. Calques : `sol`, `decor`, `fleurs`, `ennemis`, `joueur`, `acteurs`, `effets`, `ambiance`, `hud`, `monde`, `sol_ennemis`, `bord` (bord du monde), `vivant` et `vivant_dessus` (monde vivant), `competences` |
 | `--profile` | temps de chaque `_process`, `_physics_process` et `_draw`, à lancer par `tools/perf-profile.sh` |
 | `--bench-scene=coeur` | banc des pics : le siège du Cœur (vagues toutes les 6 s), jusqu'à la purification (40 morts d'un coup, vague de vie) ; 36 s, héros au build du robot du boss |
+| `--bench-scene=zones` | le tour des six régions : le héros marche (220 px/s, `--bench-run=V`) sur un cercle de 1 300 px autour de la graine (`--bench-orbit=R`) et franchit chaque frontière ; Flétris nés comme en jeu ; liste les images de plus de 50 ms (`A-COUP`, avec ce qui a coûté sous `--profile`). `--preparation` lance d'abord l'écran de chargement du jeu (voir « Changements de zone ») |
 | `--bench-scene=boss` | le combat de la Mère-Ronce, 60 s (`--region=<id>` : le boss de cette région, `finale` : la Flétrissure). Le combat commence quand le bord du monde, l’arène et le décor en vue sont cuits (au plus 900 images) |
 
 `tools/perf-profile.sh` copie le projet dans un dossier temporaire, y enveloppe chaque fonction
@@ -318,3 +319,46 @@ Rendu par défaut ; `--decor-direct` revient au dessin direct, `--decor-ancien` 
 - Premier plan : grands éléments à demi transparents (self_modulate, sans redessin) quand le héros ou
   un Flétri passe derrière ; relevé des voisins toutes les 6 images, des Flétris toutes les 3.
 - `--decor-verbeux` : une ligne par région cuite. Vues : tests/paysages/decor_vues.gd.
+
+## Changements de zone (27/11)
+
+Antoine voyait de petits gels en passant d'une région à l'autre. Banc `--bench-scene=zones` sous
+`tools/perf-profile.sh` (le profil donne, pour chaque image de plus de 50 ms, ce qui a coûté, et
+`PIC` le pire temps de chaque fonction) :
+
+| Cause | Pire image | Correction |
+| --- | --- | --- |
+| Toutes les sortes de Flétris de la région cuites dans la même image à l'entrée (`sprite_bake.pump`) ; même depuis le cache disque : 50 à 80 ms | 250 à 1 100 ms | cuites au chargement (en jeu, ce qui manquerait se cuit encore par lot : une sorte à la fois rallongeait le banc des 120 Flétris à froid, plus de dessins directs) |
+| Pièces et sol d'une arène dessinés en direct tant qu'ils ne sont pas cuits | 70 à 145 ms | cuits au chargement |
+| Fond et voile d'une tuile du bord du monde construits à l'approche (`world_edge.ensure`) | 60 à 95 ms | construits au chargement, gardés en mémoire (~1,5 Mo) et en cache disque (`user://bord/`) |
+| Bande de décor du bord : lecture du SubViewport puis réduction de l'image | 50 à 100 ms (réduction ~45 ms) | réduction sur un autre fil (`WorkerThreadPool`) ; la lecture reste (~35 ms en rendu logiciel) |
+| Purification d'un Cœur : toutes les tuiles du bord de sa région refaites dans la même image (`world_edge._sync_states`, signalé par le banc du siège) | 550 à 650 ms | en jeu, un fond ou un voile par image, tuiles proches de l'écran d'abord, l'ancienne image reste jusqu'au fondu (pire étape ~75 ms en rendu logiciel) ; captures et tests : tout de suite, comme avant |
+| Faune et formes guéries d'une région (`world_life_vie.gd`) | 35 à 65 ms | cuites au chargement, gardées (`Vie.pinned`) |
+| Pierres des sanctuaires, Cœurs, autels dessinés en direct en attendant leur cuisson | 10 à 20 ms | cuits au chargement |
+| Pistes de musique et d'ambiance lues du disque à l'entrée | ~7 ms | lues au chargement |
+| Shaders compilés par le pilote à leur premier dessin (carte graphique réelle, invisible en rendu logiciel) | — | chacun dessiné une fois sous l'écran de chargement |
+
+**L'écran de chargement** (`scripts/world_preload.gd`) s'affiche au lancement d'une partie (Nouvelle
+partie, Continuer), arbre en pause, et prépare tout cela. Il n'est actif qu'en jeu (pas dans les
+tests, les robots, les captures ni le banc, sauf `-- --preparation` ; `-- --sans-preparation` le coupe).
+Les budgets mémoire des cuissons sont relevés pour que rien de préparé ne soit rendu puis recuit :
+Flétris 256 Mo (~210 Mo utilisés, élites des sortes régionales comprises), décor 160 Mo (~107),
+lieux 96 Mo (~62), faune ~30 Mo. Le décor des bandes du bord, lui, reste cuit à l'approche : tout
+cuire prendrait ~400 Mo.
+
+Durée en rendu logiciel (machine des tests) : ~45 s au premier lancement après une mise à jour (les
+caches disque des Flétris, du décor et du bord sont refaits), ~10 s ensuite.
+
+Paires alternées base (develop a7544b4) / branche, `--bench-scene=zones --bench-time=40`, chaque côté
+avec son propre `user://` (caches à chaud, sauf la 1re paire, à froid) :
+
+| Paire | Base : moyenne / 99e centile / pire ; images > 100 ms / > 200 ms | Branche (préparée) |
+| --- | --- | --- |
+| 1 (froid) | 69,8 / 449 / 1 119 ms ; 92 / 26 | 51,8 / 146 / 342 ms ; 27 / 4 |
+| 2 | 65,7 / 231 / 341 ms ; 91 / 14 | 46,3 / 108 / 131 ms ; 11 / 0 |
+| 3 | 59,6 / 198 / 339 ms ; 81 / 7 | 39,6 / 86 / 110 ms ; 3 / 0 |
+| 4 | 59,5 / 223 / 289 ms ; 83 / 13 | 45,6 / 102 / 127 ms ; 12 / 0 |
+
+Ce qui reste au-dessus de 100 ms en rendu logiciel est du rendu (cuisson des bandes du bord, carrés du
+sol), sans pic de script de plus de ~25 ms. `tests/preparation_test.gd` vérifie que tout est cuit après
+le chargement et qu'un tour des régions ne cuit plus ni Flétri, ni lieu, ni fond du bord.

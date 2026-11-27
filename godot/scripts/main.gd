@@ -29,6 +29,7 @@ const Heart = preload("res://scripts/heart.gd")
 const BossArena = preload("res://scripts/boss_arena.gd")
 const FinaleArena = preload("res://scripts/finale_arena.gd")
 const Regions = preload("res://scripts/regions.gd")
+const WorldPreload = preload("res://scripts/world_preload.gd")
 const Content = preload("res://scripts/content.gd")
 ## Menace des ennemis, apparitions et choix de difficulté : res://data/difficulty.json.
 const Difficulty = preload("res://scripts/difficulty.gd")
@@ -110,6 +111,8 @@ var hearts: Dictionary = {}
 var arenas: Dictionary = {}
 ## Tous les Cœurs de chaque région (identifiant -> liste, trois depuis le jalon 10), et tous ensemble.
 var region_hearts: Dictionary = {}
+## Écran de chargement du lancement (null une fois fini ou quand il n'y en a pas).
+var world_preload = null
 var all_hearts: Array = []
 ## Arène de la finale, sous la graine (finale_arena.gd) : ouverte quand toutes les régions sont purifiées.
 var finale
@@ -178,6 +181,9 @@ const BENCH_PREP_MAX := 900
 var _bench_prep_frames := 0
 var _bench_prep_done := false
 var bench_frames: PackedFloat32Array = PackedFloat32Array()
+## À-coups du banc : images de plus de HITCH_MS, avec l'heure, la région et ce qui a coûté (profil).
+const HITCH_MS := 50.0
+var bench_hitches: Array = []
 var bench_cpu := {"process": 0.0, "physics": 0.0, "samples": 0}
 ## Temps de chaque image découpé : scripts et dessins (de process_frame à frame_pre_draw), puis
 ## rendu (de frame_pre_draw à frame_post_draw), en microsecondes cumulées.
@@ -423,6 +429,12 @@ func _ready() -> void:
 		_benchmark_hide({"sol": ground, "decor": trees_layer, "fleurs": flora, "ennemis": enemies_layer, "sol_ennemis": enemy_ground_layer,
 			"joueur": player, "acteurs": actors_layer, "effets": fx, "ambiance": ambience, "hud": hud_layer, "monde": self,
 			"bord": world_edge, "vivant": world_fx, "vivant_dessus": world_fx.over, "competences": skill_fx})
+	# Écran de chargement : tout ce qui se cuisait à l'entrée d'une zone est cuit d'avance (world_preload.gd).
+	if WorldPreload.wanted(self):
+		world_preload = WorldPreload.new()
+		world_preload.main = self
+		add_child(world_preload)
+		world_preload.run()
 
 
 ## Demande une sauvegarde automatique, regroupée sur une seconde (fonctionne aussi en pause).
@@ -536,6 +548,8 @@ func _physics_process(delta: float) -> void:
 			var side := bench_origin.normalized().orthogonal() if bench_origin != Vector2.ZERO else Vector2.RIGHT
 			var u := fposmod(bench_clock * bench_run, 3600.0)
 			player.position = bench_origin + side * (absf(u - 1800.0) - 900.0)
+		if bench_scene == "zones":
+			player.position = _bench_zones_pos()
 		while bench_scene == "" and enemies.size() < BENCH_ENEMIES:
 			_spawn_enemy()
 	_rebuild_grid()
@@ -1486,11 +1500,15 @@ func _benchmark_frame(delta: float) -> void:
 		_bench_tiles = [ground.tiles_built, ground.tiles_redrawn]
 		Ground.GroundLayers.reset_stats()
 	if bench_clock > BENCH_WARMUP and bench_last_usec > 0:
-		bench_frames.append((now - bench_last_usec) / 1000.0)
+		var ms := (now - bench_last_usec) / 1000.0
+		bench_frames.append(ms)
+		if ms > HITCH_MS and bench_scene in ["zones", "coeur"]:
+			bench_hitches.append([bench_clock - BENCH_WARMUP, ms, Regions.region_at(player.position), Prof.frame_top(6)])
 		bench_cpu["process"] += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
 		bench_cpu["physics"] += Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
 		bench_cpu["samples"] += 1
 	bench_last_usec = now
+	Prof.frame_reset()
 	if bench_clock >= BENCH_WARMUP + bench_time:
 		_finish_benchmark()
 
@@ -1510,6 +1528,8 @@ func _finish_benchmark() -> void:
 	match bench_scene:
 		"coeur":
 			print("BENCHMARK vague du Cœur, %.0f s, %d images (siège : %s)" % [bench_clock - BENCH_WARMUP, n, heart.state])
+		"zones":
+			print("BENCHMARK tour des régions, %.0f s, %d images, %d à-coups de plus de %.0f ms" % [bench_clock - BENCH_WARMUP, n, bench_hitches.size(), HITCH_MS])
 		"boss":
 			print("BENCHMARK combat du boss, %.0f s, %d images (arène : %s)" % [bench_clock - BENCH_WARMUP, n, arena.state])
 		_:
@@ -1521,6 +1541,10 @@ func _finish_benchmark() -> void:
 	print("BENCHMARK rendu de la dernière image : %d appels de rendu, %d objets" % [Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)])
 	for line in Prof.report(n):
 		print(line)
+	for line in Prof.spike_report():
+		print(line)
+	for h in bench_hitches:
+		print("A-COUP %6.2f s %7.1f ms %-8s %s" % [h[0], h[1], h[2], h[3]])
 	var sil = Enemy.Silhouettes
 	print("BENCHMARK silhouettes : %d dessins en cache, %d calculées pour le cache (%d maillages gardés), %d calculées en action" % [sil.hits, sil.misses, sil._meshes.size() + sil._old.size(), sil.live])
 	var secs := maxf(0.001, bench_clock - BENCH_WARMUP)
@@ -1597,6 +1621,8 @@ func _benchmark_setup() -> void:
 		elif a == "--bench-at=ronce":
 			bench_origin = DecorCompose.test_center()
 			bench_orbit = 380.0
+		elif a.begins_with("--bench-orbit="):
+			bench_orbit = float(a.substr(14))
 		elif a.begins_with("--bench-run="):
 			bench_run = maxf(0.0, float(a.substr(12)))
 	get_tree().process_frame.connect(func(): _seg_start = Time.get_ticks_usec())
@@ -1618,6 +1644,15 @@ func _benchmark_hide(layers: Dictionary) -> void:
 				layers[key].visible = false
 			else:
 				push_warning("--hide : calque inconnu « %s » (%s)" % [key, ", ".join(layers.keys())])
+
+
+## Banc « zones » : le héros fait le tour des six régions à la vitesse de la marche (ou à
+## « --bench-run=V » px/s), sur un cercle de rayon bench_orbit autour de la graine (1300 par défaut) :
+## il franchit chaque frontière, comme un joueur qui change de zone. Les Flétris naissent comme en jeu.
+func _bench_zones_pos() -> Vector2:
+	var r := bench_orbit if bench_orbit != 900.0 else 1300.0
+	var v := bench_run if bench_run > 0.0 else 220.0
+	return Vector2.from_angle(-PI / 2.0 + maxf(0.0, bench_clock) * v / r) * r
 
 
 ## Banc « coeur » : le build du robot du boss, le héros posé au bord de la zone du Cœur.

@@ -88,6 +88,9 @@ static func can_bake() -> bool:
 
 func _ready() -> void:
 	configure()
+	# Réduction des bandes cuites sur un autre fil : en jeu et dans le banc seulement (comme le budget des
+	# carrés du sol, main.gd), jamais pendant une capture.
+	BordBake.threaded = main != null and main.get_tree().current_scene == main and (not main.autotest or main.benchmark)
 	_base_layer = Node2D.new()
 	add_child(_base_layer)
 	_decor_layer = Node2D.new()
@@ -99,6 +102,11 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	# Une réduction encore en cours sur un autre fil est attendue : Godot s'arrête sur un abort si une
+	# tâche n'a jamais été attendue à la fermeture.
+	for task in BordBake.resize_tasks:
+		WorkerThreadPool.wait_for_task_completion(task)
+	BordBake.resize_tasks.clear()
 	for key in _tiles.keys():
 		_free_tile(key)
 	_queue.clear()
@@ -108,6 +116,7 @@ func _process(delta: float) -> void:
 	if main == null or not is_instance_valid(main) or main.camera == null:
 		return
 	_sync_states()
+	_restate_step()
 	_advance(delta)
 	_pump()
 	var under: bool = main.underground()
@@ -218,8 +227,119 @@ func _slot(layer: Node2D, at: Vector2) -> Slot:
 
 func _mesh_variant(t: Tile, veil: bool) -> MeshVariant:
 	var v := MeshVariant.new()
-	Painter.build_field(v.batch, t.side, t.index, _states.duplicate(), veil)
+	var m := _field(t.side, t.index, t.state, veil)
+	# Copies : un tableau partagé entre deux tuiles (le cache, flush puis clear) faisait disparaître des
+	# fonds après une purification (capture bord_vivant_aube) ; la copie ne coûte que quelques ko.
+	v.batch.points = m[0].duplicate()
+	v.batch.colors = m[1].duplicate()
+	v.batch.indices = m[2].duplicate()
 	return v
+
+
+## Fonds et voiles déjà construits (sommets, couleurs, indices), par tuile, état et couche : leur
+## construction coûte des dizaines de ms par tuile ; la préparation du monde (world_preload.gd) les fait
+## d'avance, et une tuile rendue puis refaite ne les recalcule pas. Quelques Mo en tout.
+static var fields := {}
+static var fields_bytes := 0
+
+
+func _field(side: int, i: int, state: String, veil: bool, states = null) -> Array:
+	var key := "%d/%d/%s/%d/%s" % [side, i, state, int(veil), Art.mode_daltonien]
+	var m = fields.get(key)
+	if m == null:
+		var b := DrawBatch.new()
+		Painter.build_field(b, side, i, (_states if states == null else states).duplicate(), veil)
+		m = [b.points, b.colors, b.indices]
+		fields[key] = m
+		fields_bytes += b.points.size() * 8 + b.colors.size() * 16 + b.indices.size() * 4
+	return m
+
+
+## Préparation du monde : construit le fond et le voile d'une tuile de plus (dans l'état actuel des
+## régions) ; faux quand tout est construit. Le premier appel relit le cache disque (FIELDS_CACHE) ; le
+## dernier l'écrit s'il a fallu construire quelque chose. Les états suivants (une région purifiée) ne
+## sont pas préparés : ~3 fois plus de fonds, des dizaines de secondes de chargement au premier lancement ;
+## _sync_states étale plutôt leur construction.
+func prepare_fields() -> bool:
+	_sync_states()
+	if not _fields_loaded:
+		_fields_loaded = true
+		_load_fields()
+	for side in 4:
+		for i in Painter.chunk_count():
+			var st := Painter.state_key(side, i, _states)
+			for veil in [false, true]:
+				if not fields.has("%d/%d/%s/%d/%s" % [side, i, st, int(veil), Art.mode_daltonien]):
+					_field(side, i, st, veil)
+					_fields_dirty = true
+					return true
+	if _fields_dirty:
+		_fields_dirty = false
+		_save_fields()
+	return false
+
+
+## Cache disque des fonds et voiles (~1,5 Mo) : leur construction prend des secondes au lancement.
+## L'empreinte suit tout ce dont dépend leur dessin : scripts du bord, des frontières et des couleurs,
+## fichiers des régions et des frontières, mode daltonien.
+const FIELDS_CACHE := "user://bord/"
+const FIELDS_FORMAT := 1
+var _fields_loaded := false
+var _fields_dirty := false
+
+
+static func fields_fingerprint() -> String:
+	var parts := [FIELDS_FORMAT, Art.mode_daltonien, Regions.ids(), Regions.WORLD_HALF]
+	var files := ["res://scripts/world_edge.gd", "res://scripts/world_edge_painter.gd", "res://scripts/art.gd",
+		"res://scripts/regions.gd", "res://scripts/draw_batch.gd", "res://data/world_borders.json"]
+	for dir in ["res://scripts/world_art/", "res://data/regions/", "res://data/borders/"]:
+		var names: PackedStringArray = ResourceLoader.list_directory(dir)
+		names.sort()
+		for f in names:
+			if f.ends_with(".gd") or f.ends_with(".json"):
+				files.append(dir + f)
+	for f in files:
+		parts.append(_file_sig(f))
+	return "%08x" % (hash(parts) & 0xffffffff)
+
+
+## Empreinte d'un fichier : son contenu, ou le fichier compilé d'un export (.remap).
+static func _file_sig(path: String) -> String:
+	if FileAccess.file_exists(path):
+		return FileAccess.get_md5(path)
+	if FileAccess.file_exists(path + ".remap"):
+		var cfg := ConfigFile.new()
+		if cfg.load(path + ".remap") == OK:
+			var p := str(cfg.get_value("remap", "path", ""))
+			if p != "" and FileAccess.file_exists(p):
+				return FileAccess.get_md5(p)
+	return path
+
+
+func _load_fields() -> void:
+	var path := FIELDS_CACHE + "fonds_%s.bin" % fields_fingerprint()
+	if not FileAccess.file_exists(path):
+		return
+	var f := FileAccess.open_compressed(path, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
+	if f == null:
+		return
+	var d = f.get_var()
+	if not d is Dictionary:
+		return
+	for key in d:
+		if not fields.has(key) and d[key] is Array and d[key].size() == 3:
+			fields[key] = d[key]
+			fields_bytes += d[key][0].size() * 8 + d[key][1].size() * 16 + d[key][2].size() * 4
+
+
+func _save_fields() -> void:
+	DirAccess.make_dir_recursive_absolute(FIELDS_CACHE)
+	for old in DirAccess.get_files_at(FIELDS_CACHE):
+		if old.begins_with("fonds_"):
+			DirAccess.remove_absolute(FIELDS_CACHE + old)
+	var f := FileAccess.open_compressed(FIELDS_CACHE + "fonds_%s.bin" % fields_fingerprint(), FileAccess.WRITE, FileAccess.COMPRESSION_ZSTD)
+	if f != null:
+		f.store_var(fields)
 
 
 func _decor_variant(t: Tile, band: int, direct: bool) -> DecorVariant:
@@ -259,21 +379,65 @@ func _sync_states() -> void:
 		return
 	_states = now
 	current_states = now.duplicate()
+	var changed := []
 	for key in _tiles:
 		var t: Tile = _tiles[key]
+		if Painter.state_key(t.side, t.index, _states) != t.state and not _restate.has(key):
+			changed.append(key)
+	# En jeu, les tuiles changées sont refaites une par image, les plus proches de l'écran d'abord : la
+	# purification d'un Cœur les refaisait toutes dans la même image (550 à 650 ms). L'ancienne image reste
+	# affichée en attendant, puis la nouvelle apparaît en fondu. Captures et tests : tout de suite.
+	if BordBake.threaded:
+		var c: Vector2 = main.camera.get_screen_center_position() if main != null and main.get("camera") != null else Vector2.ZERO
+		changed.sort_custom(func(a, b): return _tile_center(a).distance_squared_to(c) < _tile_center(b).distance_squared_to(c))
+		_restate.append_array(changed)
+	else:
+		for key in changed:
+			_restate_tile(key)
+
+
+## Tuiles dont l'état a changé, à refaire (une par image en jeu, voir _sync_states).
+var _restate: Array = []
+
+
+func _tile_center(key: int) -> Vector2:
+	return Painter.band_rect(key / 100, key % 100, Painter.NEAR).get_center()
+
+
+## Une étape des tuiles à refaire : un fond (ou un voile) construit par image, puis la tuile refaite.
+func _restate_step() -> void:
+	if _restate.is_empty():
+		return
+	var key: int = _restate[0]
+	var t: Tile = _tiles.get(key)
+	if t != null:
 		var st := Painter.state_key(t.side, t.index, _states)
-		if st == t.state:
+		for veil in [false, true]:
+			if not fields.has("%d/%d/%s/%d/%s" % [t.side, t.index, st, int(veil), Art.mode_daltonien]):
+				_field(t.side, t.index, st, veil)
+				return
+	_restate.pop_front()
+	_restate_tile(key)
+
+
+## Refait une tuile dans l'état actuel des régions (fondu de l'ancienne image vers la nouvelle).
+func _restate_tile(key: int) -> void:
+	var t: Tile = _tiles.get(key)
+	if t == null:
+		return
+	var st := Painter.state_key(t.side, t.index, _states)
+	if st == t.state:
+		return
+	t.state = st
+	for pair in [[t.base, null], [t.veil, null], [t.near, Painter.NEAR], [t.far, Painter.FAR]]:
+		var s: Slot = pair[0]
+		if s == null:
 			continue
-		t.state = st
-		for pair in [[t.base, null], [t.veil, null], [t.near, Painter.NEAR], [t.far, Painter.FAR]]:
-			var s: Slot = pair[0]
-			if s == null:
-				continue
-			if pair[1] == null:
-				s.push(_mesh_variant(t, s == t.veil), true)
-			else:
-				s.push(_decor_variant(t, pair[1], false), true)
-			_fading[s] = true
+		if pair[1] == null:
+			s.push(_mesh_variant(t, s == t.veil), true)
+		else:
+			s.push(_decor_variant(t, pair[1], false), true)
+		_fading[s] = true
 
 
 func _advance(delta: float) -> void:
@@ -441,15 +605,34 @@ class DecorVariant extends Node2D:
 			prev = pn
 			if from >= list.size():
 				break
-		_finish()
+		var p0 := Prof.t0()
 		var img: Image = vp.get_texture().get_image() if vp.get_texture() != null else null
 		vp.queue_free()
 		if img == null or img.is_empty():
+			_finish()
 			direct = true
 			shown = true
 			queue_redraw()
 			return
-		img.resize(maxi(1, size.x / SS), maxi(1, size.y / SS), Image.INTERPOLATE_BILINEAR)
+		Prof.add("world_edge.lecture_cuisson", p0)
+		# La réduction (des dizaines de ms pour une bande) se fait sur un autre fil : l'image reste fluide.
+		# Captures et tests : réduction tout de suite, comme avant, pour que l'image soit prête à la même
+		# image qu'avant (les captures attendent pending() ; un décalage change la phase des animations).
+		var out := Vector2i(maxi(1, size.x / SS), maxi(1, size.y / SS))
+		if not BordBake.threaded:
+			img.resize(out.x, out.y, Image.INTERPOLATE_BILINEAR)
+		else:
+			var task := WorkerThreadPool.add_task(func(): img.resize(out.x, out.y, Image.INTERPOLATE_BILINEAR))
+			BordBake.resize_tasks.append(task)
+			while not WorkerThreadPool.is_task_completed(task) and is_inside_tree():
+				await get_tree().process_frame
+			if BordBake.resize_tasks.has(task):
+				BordBake.resize_tasks.erase(task)
+				WorkerThreadPool.wait_for_task_completion(task)
+		# La cuisson n'est finie (pending) qu'avec son image : les captures attendent jusque-là.
+		_finish()
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
 		tex = ImageTexture.create_from_image(img)
 		_bytes = img.get_data_size()
 		BordBake.bytes += _bytes
