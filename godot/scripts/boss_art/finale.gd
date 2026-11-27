@@ -25,6 +25,10 @@ const Ink = preload("res://scripts/creature_art/ink.gd")
 const U = preload("res://scripts/creature_art/commun/_outils.gd")
 
 const HEART := Vector2(0, -45)
+## Le dessin est plus grand que le rayon du boss (sa collision) : elle domine l'arène.
+const ART := 1.2
+## Le coude : le point du chemin d'un bras où il plie (sur 9).
+const ELBOW := 4
 ## Place de chaque bras (dans l'ordre de BossFinale.ARMS) : côté (-1 : près, devant le corps ; 1 : loin,
 ## derrière), hauteur dans l'éventail (0 haut, 1 milieu, 2 bas).
 const SLOTS := [[-1, 1], [1, 1], [-1, 2], [1, 0], [-1, 0], [1, 2]]
@@ -66,26 +70,41 @@ static var _cracks_cache := {}
 ## La Flétrissure entière autour de c (pieds), rayon r, dessinée tout de suite (planches, galeries,
 ## sans rendu). Mêmes paramètres que BossFinale.draw_colossus, plus facing (1 : tournée vers la
 ## droite, -1 : vers la gauche ; entre les deux pendant qu'elle se retourne) et arms (BossFinale.ARMS).
-static func draw(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, k: float, lit: int, die: float, wake: float, tint: Callable, lit2: int, form: float, facing: float, arms: Array) -> void:
+static func draw(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, k: float, lit: int, die: float, wake: float, tint: Callable, lit2: int, form: float, facing: float, arms: Array, anim := {}) -> void:
 	compose(ci, c, r, t, phase, k, lit, die, wake, lit2, form, facing, arms, func(cc: CanvasItem, xf: Transform2D, part):
 		if str(part) == "corps":
 			draw_body(cc, xf, phase, die, wake, form, tint)
 		else:
-			draw_arm(cc, xf, int(part), arms, phase, arm_on(int(part), k, lit, lit2, form), die, wake, form, tint))
+			var pc := piece_of(part)
+			draw_arm(cc, xf, pc[0], arms, phase, arm_on(pc[0], k, lit, lit2, form), die, wake, form, tint, pc[1]), "", anim)
 
 
-## Repère de dessin : pieds en c, échelle du rayon, retournement (facing), puis la vie du corps (elle
-## respire : le haut monte et s'élargit à peine ; endormie, elle se tasse ; morte, elle s'affaisse ;
-## pendant une annonce, elle se cabre un peu).
-static func body_xf(c: Vector2, r: float, t: float, phase: int, k: float, die: float, wake: float, form: float, facing: float) -> Transform2D:
-	var s := r / 100.0
+## Une partie de bras (id de compose) -> [indice du bras, pièce].
+static func piece_of(part) -> Array:
+	var sp := str(part)
+	if sp.begins_with("f"):
+		return [int(sp.substr(1)), "bas"]
+	if sp.begins_with("m"):
+		return [int(sp.substr(1)), "motif"]
+	return [int(part), "haut"]
+
+
+## Repère de dessin : pieds en c, échelle du rayon (× ART), retournement (facing), puis la vie du corps
+## (elle respire : le haut monte et s'élargit à peine ; endormie, elle se tasse ; morte, elle
+## s'affaisse ; pendant une annonce, elle se cabre un peu). lean / grow : le geste (FinaleChoreo
+## .body_pose) : penchée vers le héros (+) ou rejetée en arrière (-), grandie (+) ou tassée (-).
+static func body_xf(c: Vector2, r: float, t: float, phase: int, k: float, die: float, wake: float, form: float, facing: float, lean_g := 0.0, grow := 0.0) -> Transform2D:
+	var s := r / 100.0 * ART
 	var fx := facing
 	if absf(fx) < 0.18:
 		fx = 0.18 * (1.0 if fx >= 0.0 else -1.0)
 	var beat := Anim.breathe(t * (1.7 if phase >= 3 else 1.0) * (1.0 + 0.6 * form), (0.03 + 0.02 * form) * wake)
 	var slump := 1.0 - 0.14 * (1.0 - wake) - 0.22 * Anim.ease_in(die)
 	var lean := -0.05 * k * wake + 0.06 * (1.0 - wake) + 0.05 * die
-	return Transform2D(0.0, Vector2(s * fx, s), 0.0, c) * Transform2D(lean, Vector2(beat, slump * (2.0 - beat)), 0.0, Vector2.ZERO)
+	if lean_g != 0.0 or grow != 0.0:
+		lean = 0.06 * (1.0 - wake) + 0.05 * die + lean_g * wake
+	var sy := slump * (2.0 - beat) * (1.0 + grow)
+	return Transform2D(0.0, Vector2(s * fx, s), 0.0, c) * Transform2D(lean, Vector2(beat * (1.0 - 0.5 * grow), sy), 0.0, Vector2.ZERO)
 
 
 ## Allumage d'un bras (0 → 1) : l'annonce de son attaque ; en seconde forme, tous brillent un peu.
@@ -93,35 +112,83 @@ static func arm_on(i: int, k: float, lit: int, lit2: int, form: float) -> float:
 	return k if (i == lit or i == lit2) else 0.25 * form
 
 
-## Le bras i bouge d'un bloc autour de son épaule : il se balance, et se lève en s'allongeant quand il
-## s'allume (repère local du corps).
-static func arm_xf(i: int, t: float, on: float, wake: float, form: float) -> Transform2D:
+## Le bras i, articulé en deux (épaule, coude), dans le repère local du corps. Sans pose (planches,
+## ancien appel) : il se balance et se lève en s'allongeant quand il s'allume. Avec une pose
+## (FinaleChoreo.arm_pose) : rotation de l'épaule vers le haut, vers le héros (aim_l, repère local),
+## allongement. Le balancement reste, plus discret.
+static func arm_xf(i: int, t: float, on: float, wake: float, form: float, pose := {}, aim_l := Vector2.ZERO) -> Transform2D:
 	var side: int = SLOTS[i][0]
 	var sh: Vector2 = SHOULDER[side]
 	var tt := t * (1.0 + form) + i * 1.3
-	var ang := (0.04 * sin(tt * 1.3) + 0.02 * cos(tt * 0.7)) * wake * (1.0 + form) - side * 0.12 * on
+	var sway := (0.04 * sin(tt * 1.3) + 0.02 * cos(tt * 0.7)) * wake * (1.0 + form)
+	var ang := sway - side * 0.12 * on
 	var sc := 1.0 + 0.1 * on + 0.02 * sin(tt * 1.1) * wake
+	if not pose.is_empty():
+		ang = sway * 0.6 - side * float(pose["up"])
+		if float(pose["aim"]) != 0.0 and aim_l != Vector2.ZERO:
+			var rest: Vector2 = TIPS[side][SLOTS[i][1]] - sh
+			ang += clampf(angle_difference(rest.angle(), aim_l.angle()), -2.0, 2.0) * float(pose["aim"])
+		sc = float(pose["st"]) + 0.02 * sin(tt * 1.1) * wake
 	return Transform2D(ang, Vector2(sc, sc), 0.0, sh) * Transform2D(0.0, -sh)
+
+
+## L'avant-bras, dans le repère du bras : il plie au coude (pose["el"], + : replié vers le haut).
+static func fore_xf(i: int, arms: Array, phase: int, die: float, wake: float, form: float, pose := {}, t := 0.0) -> Transform2D:
+	var side: int = SLOTS[i][0]
+	var el := _arm_path(i, arms, phase, die, wake, form)[ELBOW]
+	var ang := 0.03 * sin(t * 1.7 + i * 2.1) * wake
+	if not pose.is_empty():
+		ang += -side * float(pose["el"])
+	return Transform2D(ang, Vector2.ONE, 0.0, el) * Transform2D(0.0, -el)
+
+
+## Le motif au bout, dans le repère de l'avant-bras : il gonfle ou se resserre (pose["m"]).
+static func motif_xf(i: int, arms: Array, phase: int, die: float, wake: float, form: float, pose := {}) -> Transform2D:
+	var m := float(pose.get("m", 1.0))
+	if is_equal_approx(m, 1.0):
+		return Transform2D.IDENTITY
+	var tip := _arm_path(i, arms, phase, die, wake, form)[8]
+	return Transform2D(0.0, Vector2(m, m), 0.0, tip) * Transform2D(0.0, -tip)
+
+
+## Les trois repères d'un bras posé : [bras, avant-bras, motif] (repère du dessin).
+static func arm_chain(xf: Transform2D, i: int, arms: Array, t: float, phase: int, on: float, die: float, wake: float, form: float, pose := {}, aim_l := Vector2.ZERO) -> Array:
+	var a := xf * arm_xf(i, t, on, wake, form, pose, aim_l)
+	var f := a * fore_xf(i, arms, phase, die, wake, form, pose, t)
+	return [a, f, f * motif_xf(i, arms, phase, die, wake, form, pose)]
 
 
 ## Assemble le colosse dans l'ordre (éclats du fond, bras du fond, corps, œil, bras de devant, cendre,
 ## braises, lueurs, éclats de devant). part.call(ci, xf, id) dessine une partie fixe dans le repère xf :
-## id = "corps" ou l'indice d'un bras (dessin direct, ou texture cuite par BossFinale).
+## id = "corps", ou pour le bras i : i (bras), "f<i>" (avant-bras), "m<i>" (motif) ; dessin direct,
+## ou texture cuite par BossFinale.
 ## stage : "" pour tout, ou une seule couche (BossFinale les répartit sur des nœuds, les textures
 ## cuites demandant un autre mélange) : "fond", "corps", "milieu", "devant", "dessus".
-static func compose(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, k: float, lit: int, die: float, wake: float, lit2: int, form: float, facing: float, arms: Array, part: Callable, stage := "") -> void:
+## anim (facultatif, FinaleChoreo) : {"arms": [pose par bras], "fx": [effets par bras], "body":
+## {lean, grow}, "aim": direction du héros (écran)}.
+static func compose(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, k: float, lit: int, die: float, wake: float, lit2: int, form: float, facing: float, arms: Array, part: Callable, stage := "", anim := {}) -> void:
 	var keep_flash := Ink.flash
 	Ink.flash = 0.0
-	var base := Transform2D(0.0, Vector2(r / 100.0 * signf(facing if facing != 0.0 else 1.0), r / 100.0), 0.0, c)
-	var xf := body_xf(c, r, t, phase, k, die, wake, form, facing)
+	var s := r / 100.0 * ART
+	var base := Transform2D(0.0, Vector2(s * signf(facing if facing != 0.0 else 1.0), s), 0.0, c)
+	var body: Dictionary = anim.get("body", {})
+	var xf := body_xf(c, r, t, phase, k, die, wake, form, facing, float(body.get("lean", 0.0)), float(body.get("grow", 0.0)))
+	var poses: Array = anim.get("arms", [])
+	var fxs: Array = anim.get("fx", [])
+	var aim: Vector2 = anim.get("aim", Vector2.ZERO)
+	var aim_l := Vector2(aim.x * (1.0 if facing >= 0.0 else -1.0), aim.y)
+	var chains: Array = []
+	for i in arms.size():
+		var pose: Dictionary = poses[i] if i < poses.size() else {}
+		chains.append(arm_chain(xf, i, arms, t, phase, arm_on(i, k, lit, lit2, form), die, wake, form, pose, aim_l))
 	if stage == "" or stage == "fond":
-		Ink.ground_shadow(ci, base, Vector2(0, 14), 150.0 + 20.0 * form)
+		Ink.ground_shadow(ci, base, Vector2(0, 14), 135.0 + 20.0 * form)
 		if form > 0.0:
 			_shards(ci, xf, t, form, lit, lit2, k, die, false, arms)
 	if stage == "" or stage == "corps":
 		for i in arms.size():
 			if SLOTS[i][0] == 1:
-				part.call(ci, xf * arm_xf(i, t, arm_on(i, k, lit, lit2, form), wake, form), i)
+				_arm_parts(ci, chains[i], i, part)
 		part.call(ci, xf, "corps")
 	if stage == "" or stage == "milieu":
 		var glow := _glow(t, phase, die, wake)
@@ -131,36 +198,42 @@ static func compose(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, 
 	if stage == "" or stage == "devant":
 		for i in arms.size():
 			if SLOTS[i][0] == -1:
-				part.call(ci, xf * arm_xf(i, t, arm_on(i, k, lit, lit2, form), wake, form), i)
+				_arm_parts(ci, chains[i], i, part)
 	if stage != "" and stage != "dessus":
 		Ink.flash = keep_flash
 		return
-	# Ce qui vit par-dessus : la sève qui monte dans les veines, la lueur d'un bras allumé.
+	# Ce qui vit par-dessus : la sève qui monte dans les veines, la lueur d'un bras allumé, les gestes.
 	if not Ink.mono:
 		for i in arms.size():
 			var on := arm_on(i, k, lit, lit2, form)
-			var axf := xf * arm_xf(i, t, on, wake, form)
+			var ch: Array = chains[i]
 			var element := str(arms[i]["element"])
+			var path := _arm_path(i, arms, phase, die, wake, form)
 			if phase >= int(arms[i]["phase"]) and die <= 0.0:
-				var path := _arm_path(i, arms, phase, die, wake, form)
 				var f := fposmod(t * 0.7 + i * 0.17, 1.0)
-				var at := path[1 + int(f * 6.0)].lerp(path[2 + int(f * 6.0)], fposmod(f * 6.0, 1.0))
-				ci.draw_circle(axf * at, 4.5 * axf.get_scale().abs().y, Color(Art.ec(element, "clair"), 0.85 * sin(PI * f)))
+				var q := 1 + int(f * 6.0)
+				var cx: Transform2D = ch[0] if q < ELBOW else ch[1]
+				var at := path[q].lerp(path[q + 1], fposmod(f * 6.0, 1.0))
+				ci.draw_circle(cx * at, 4.5 * cx.get_scale().abs().y, Color(Art.ec(element, "clair"), 0.85 * sin(PI * f)))
+			var tipxf: Transform2D = ch[1]
+			var tip := path[8]
 			if on > 0.0:
-				var tip := _arm_path(i, arms, phase, die, wake, form)[8]
-				Ink.halo(ci, axf * tip, (44.0 + 26.0 * on) * axf.get_scale().abs().y, Art.ec(element, "clair"), 1.4 * on)
+				Ink.halo(ci, tipxf * tip, (44.0 + 26.0 * on) * tipxf.get_scale().abs().y, Art.ec(element, "clair"), 1.4 * on)
 				if element == "lumiere":
-					var d: Vector2 = (tip - SHOULDER[SLOTS[i][0]]).normalized()
+					var d: Vector2 = (tip - path[6]).normalized()
 					for j in 6:
 						var dd: Vector2 = d.rotated((j - 2.5) * 0.4)
-						ci.draw_line(axf * (tip + dd * 60.0), axf * (tip + dd * (80.0 + 40.0 * on)), Color(Art.ec(element, "clair"), on), 2.0, true)
+						ci.draw_line(tipxf * (tip + dd * 60.0), tipxf * (tip + dd * (80.0 + 40.0 * on)), Color(Art.ec(element, "clair"), on), 2.0, true)
+			if i < fxs.size() and not (fxs[i] as Dictionary).is_empty():
+				_gesture_fx(ci, xf, ch, path, i, element, fxs[i], t, aim_l)
 	# La cendre qui monte des épaules et de la couronne ; des braises parmi, de plus en plus.
 	if die < 1.0 and not Ink.mono:
 		var up := 0.4 + 0.6 * wake
 		U.ash(ci, xf, Vector2(-70, -140), 3, t * up, 3.0, 26.0, 60.0)
 		U.ash(ci, xf, Vector2(40, -170), 3, t * up + 0.4, 3.0, 26.0, 70.0)
+		U.ash(ci, xf, Vector2(-10, -250), 4, t * up + 0.8, 2.6, 60.0, 110.0)
 		if phase >= 2 or form > 0.0:
-			Ink.sparks(ci, xf, Vector2(-8, -186), Vector2(0, -2.6), 3 + phase, t, 2.2, (1.0 - die) * wake)
+			Ink.sparks(ci, xf, Vector2(-8, -250), Vector2(0, -3.2), 4 + phase, t, 2.4, (1.0 - die) * wake)
 			Ink.sparks(ci, xf, Vector2(60, -40), Vector2(0.4, -2.0), 2 + phase, t + 0.7, 2.0, (1.0 - die) * wake)
 	# Mort : des gouttes de sève montent des fentes et pâlissent.
 	if die > 0.0 and not Ink.mono:
@@ -171,12 +244,92 @@ static func compose(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, 
 			var u := clampf(die * 1.4 - (i % 3) * 0.12, 0.0, 1.0)
 			if u <= 0.0 or u >= 1.0:
 				continue
-			var q := heart + Vector2.from_angle(a) * r * (0.3 + 1.0 * u) - Vector2(0, r * 0.8 * u)
-			ci.draw_circle(q, r * (0.04 + 0.07 * u), Color(seve, 0.75 * (1.0 - u)))
-		ci.draw_circle(heart, r * 0.55 * die, Color(U.pal()["clair"], 0.25 * die))
+			var q := heart + Vector2.from_angle(a) * r * ART * (0.3 + 1.0 * u) - Vector2(0, r * ART * 0.8 * u)
+			ci.draw_circle(q, r * ART * (0.04 + 0.07 * u), Color(seve, 0.75 * (1.0 - u)))
+		ci.draw_circle(heart, r * ART * 0.55 * die, Color(U.pal()["clair"], 0.25 * die))
 	if form > 0.0:
 		_shards(ci, xf, t, form, lit, lit2, k, die, true, arms)
 	Ink.flash = keep_flash
+
+
+static func _arm_parts(ci: CanvasItem, chain: Array, i: int, part: Callable) -> void:
+	part.call(ci, chain[0], i)
+	part.call(ci, chain[1], "f%d" % i)
+	part.call(ci, chain[2], "m%d" % i)
+
+
+## Les effets d'un geste (vivants, par-dessus) : fx = FinaleChoreo.arm_fx (wind : l'élan 0 → 1 ; hit :
+## l'éclat de la frappe 1 → 0 ; hold : tenue de la frappe 0/1 ; kind : l'attaque).
+static func _gesture_fx(ci: CanvasItem, xf: Transform2D, ch: Array, path: PackedVector2Array, i: int, element: String, fx: Dictionary, t: float, aim_l: Vector2) -> void:
+	var wind := float(fx.get("wind", 0.0))
+	var hit := float(fx.get("hit", 0.0))
+	var hold := float(fx.get("hold", 0.0))
+	var fxf: Transform2D = ch[1]
+	var tip := path[8]
+	var w := fxf * tip
+	var sc := fxf.get_scale().abs().y
+	var dir := (fxf.basis_xform(tip - path[6])).normalized()
+	var light := Art.ec(element, "clair")
+	var col := Art.ec(element)
+	# L'élan : la matière de l'élément afflue vers le bout du bras, en spirale qui se resserre.
+	if wind > 0.0:
+		var n := 9
+		for j in n:
+			var u := fposmod(t * 1.6 + j / float(n), 1.0)
+			var rad := (90.0 * (1.0 - u) + 10.0) * sc
+			var a := j * TAU / n + t * 2.4 + u * 2.5
+			var p := w + Vector2(cos(a) * rad, sin(a) * rad * 0.7)
+			var al := wind * sin(PI * u)
+			match element:
+				"epine":
+					var d := (w - p).normalized()
+					ci.draw_line(p, p + d * 9.0 * sc, Color(U.bone()["clair"], al), 2.4 * sc, true)
+				"vent":
+					ci.draw_arc(p, 12.0 * sc, a, a + 1.6, 6, Color(light, 0.8 * al), 1.6 * sc, true)
+				_:
+					ci.draw_circle(p, (2.0 + 2.5 * (1.0 - u)) * sc, Color(light, 0.9 * al))
+		if element == "lumiere" or element == "seve":
+			Ink.halo(ci, w, 30.0 * sc * (0.5 + wind), light, wind)
+	# La frappe : un éclat à la pointe, selon l'élément.
+	if hit > 0.0:
+		var f := 1.0 - hit
+		match element:
+			"epine":
+				for j in 7:
+					var d := dir.rotated((j - 3) * 0.32)
+					ci.draw_line(w + d * (10.0 + 50.0 * f) * sc, w + d * (30.0 + 80.0 * f) * sc, Color(U.bone()["clair"], hit), 3.0 * sc, true)
+			"poison":
+				ci.draw_circle(w + dir * 30.0 * sc * f, (20.0 + 70.0 * f) * sc, Color(light, 0.35 * hit))
+				for j in 10:
+					var a := j * TAU / 10.0 + i
+					ci.draw_circle(w + Vector2.from_angle(a) * (20.0 + 90.0 * f) * sc, 4.0 * sc * hit, Color(light, hit))
+			"seve":
+				for j in 3:
+					var rr := (20.0 + 60.0 * fposmod(f + j * 0.33, 1.0)) * sc
+					ci.draw_arc(w, rr, 0.0, TAU, 24, Color(light, 0.6 * hit), 3.0 * sc, true)
+			"vent":
+				for j in 4:
+					var o := dir.orthogonal() * (j - 1.5) * 14.0 * sc
+					ci.draw_line(w + o - dir * 140.0 * sc * hit, w + o + dir * 30.0 * sc, Color(light, 0.7 * hit), 2.4 * sc, true)
+			"lumiere":
+				for j in 8:
+					var d := Vector2.from_angle(j * TAU / 8.0 + 0.2)
+					var l := (j % 2 * 40.0 + 60.0) * sc * (0.6 + f)
+					ci.draw_line(w, w + d * l, Color(light, hit), (4.0 - j % 2 * 2.0) * sc, true)
+				ci.draw_circle(w, 16.0 * sc * hit, Color(Color.WHITE, hit))
+			"racine":
+				for j in 8:
+					var a := -PI / 2.0 + (j - 3.5) * 0.35
+					var q := w + Vector2.from_angle(a) * (16.0 + 70.0 * f) * sc + Vector2(0, 120.0 * f * f * sc)
+					ci.draw_circle(q, (5.0 - j % 3) * sc, Color(Art.ec("racine", "sombre"), hit))
+				ci.draw_arc(w, (20.0 + 50.0 * f) * sc, 0.0, TAU, 24, Color(light, 0.7 * hit), 3.0 * sc, true)
+	# La tenue : le siphon boit (des gouttes remontent du bulbe vers le cœur).
+	if hold > 0.0 and element == "seve":
+		var heart := xf * HEART
+		for j in 6:
+			var u := fposmod(t * 1.4 + j / 6.0, 1.0)
+			var p := w.lerp(heart, u) + Vector2(0, -sin(PI * u) * 40.0 * sc)
+			ci.draw_circle(p, (5.0 - 2.0 * u) * sc, Color(light, hold * sin(PI * u)))
 
 
 static func _glow(t: float, phase: int, die: float, wake: float) -> float:
@@ -205,6 +358,14 @@ static func draw_body(ci: CanvasItem, xf: Transform2D, phase: int, die: float, w
 	# Écorce en long, sur le flanc et le dos.
 	for g: Array in [[Vector2(-100, -60), Vector2(-96, -110)], [Vector2(-82, -40), Vector2(-74, -128)], [Vector2(-60, -90), Vector2(-40, -150)], [Vector2(80, -50), Vector2(64, -112)], [Vector2(90, -30), Vector2(88, -70)]]:
 		Ink.brush(ci, xf, PackedVector2Array(g), 2.0, ash["ombre"])
+	# Les cernes du bois au sommet du capuchon (la souche coupée).
+	for j in 4:
+		var rr := 18.0 + 13.0 * j
+		var arc := PackedVector2Array()
+		for q in 9:
+			var a := PI + 0.25 + (PI - 0.5) * q / 8.0
+			arc.append(Vector2(-6, -150) + Vector2(cos(a) * rr * 1.5, sin(a) * rr * 0.55))
+		Ink.brush(ci, xf, arc, 1.6, Color(ash["ombre"], 0.8))
 	# Les fentes de braise du corps : de plus en plus à chaque phase ; tout le corps en seconde forme.
 	var hot := clampf(0.35 + 0.15 * phase + 0.5 * form, 0.0, 1.0) * (1.0 - die)
 	var lines: Array = _body_cracks()
@@ -280,6 +441,10 @@ static func _feet(ci: CanvasItem, base: Transform2D, xf: Transform2D, t: float, 
 		[Vector2(-20, 26), Vector2(-50, 62), bark, 22.0],
 		[Vector2(40, 26), Vector2(80, 58), bark, 22.0],
 		[Vector2(96, 18), Vector2(140, 44), bark, 20.0],
+		[Vector2(-110, 4), Vector2(-196, 16), far_bark, 18.0],
+		[Vector2(104, 2), Vector2(204, 12), far_bark, 16.0],
+		[Vector2(-50, 30), Vector2(-104, 76), bark, 18.0],
+		[Vector2(14, 34), Vector2(26, 84), bark, 18.0],
 	]
 	var lift := 1.0 - 0.5 * form
 	for j in roots.size():
@@ -298,32 +463,46 @@ static func _feet(ci: CanvasItem, base: Transform2D, xf: Transform2D, t: float, 
 			_crack(ci, base, PackedVector2Array([pts[0].lerp(pts[1], 0.3), pts[1], pts[1].lerp(pts[2], 0.6)]), 2.0, 0.5 + 0.5 * form, t + j)
 
 
-## La couronne de bois mort au sommet du capuchon : cinq branches fourchues, braises au bout dès la
-## phase 2 ; en seconde forme, elles basculent vers l'extérieur et tombent.
+## La couronne de bois mort au sommet du capuchon : sept grandes branches fourchues comme des bois de
+## cerf, des fils de cendre qui pendent des fourches, braises au bout dès la phase 2 ; en seconde
+## forme, elles basculent vers l'extérieur et tombent.
 static func _crown(ci: CanvasItem, xf: Transform2D, t: float, phase: int, die: float, wake: float, form: float, bark: Dictionary) -> void:
 	var fall := Anim.ease_in(clampf(form / 0.9, 0.0, 1.0))
 	var rise := (0.6 + 0.4 * wake) * (1.0 - 0.4 * die)
-	for i in 5:
-		var u := (i - 2) / 2.0
-		var from := Vector2(-6 + u * 46.0, -170 + absf(u) * 14.0)
-		var a := -PI / 2.0 + u * 0.62 + 0.04 * sin(t * 0.7 + i) + fall * (1.2 if u >= 0.0 else -1.2) * (0.5 + absf(u))
-		var length := (112.0 - 26.0 * absf(u)) * rise
+	var pale := U.pal()
+	for i: int in [0, 6, 1, 5, 2, 4, 3]:
+		var u := (i - 3) / 3.0
+		var from := Vector2(-6 + u * 54.0, -170 + absf(u) * 18.0)
+		var a := -PI / 2.0 + u * 0.78 + 0.04 * sin(t * 0.7 + i) + fall * (1.2 if u >= 0.0 else -1.2) * (0.5 + absf(u))
+		var length := (150.0 - 46.0 * absf(u)) * rise
 		var drop := Vector2(u * 60.0 * fall, 220.0 * fall * fall)
-		var pts := _wiggle(from + drop, a, length, 9.0, i * 2.3)
-		Ink.brush(ci, xf, pts, 15.0, Ink.encre(), 1.0, 0.0)
-		Ink.brush(ci, xf, pts, 11.0, bark["clair"], 1.0, 0.0)
-		Ink.brush(ci, xf, pts.slice(0, 4), 2.4, Color(bark["reflet"], 0.45), 1.0, 0.0)
-		for sgn in [-1, 1]:
-			var at := pts[2 if sgn < 0 else 4]
-			var tw := _wiggle(at, a + sgn * 0.75, length * 0.4, 4.0, i + sgn)
-			Ink.brush(ci, xf, tw, 7.0, Ink.encre(), 1.0, 0.0)
-			Ink.brush(ci, xf, tw, 4.5, bark["clair"], 1.0, 0.0)
+		var pts := _wiggle(from + drop, a, length, 10.0, i * 2.3)
+		Ink.brush(ci, xf, pts, 20.0, Ink.encre(), 1.0, 0.0)
+		Ink.brush(ci, xf, pts, 15.0, bark["clair"], 1.0, 0.0)
+		Ink.brush(ci, xf, pts.slice(0, 4), 3.0, Color(bark["reflet"], 0.45), 1.0, 0.0)
+		# Les andouillers : deux fourches, chacune refendue au bout.
+		for f in 2:
+			var sgn: float = -1.0 if (i + f) % 2 == 0 else 1.0
+			var at := pts[2 + 2 * f]
+			var la := a + sgn * (0.7 + 0.15 * f)
+			var tw := _wiggle(at, la, length * (0.46 - 0.1 * f), 5.0, i + sgn + f)
+			Ink.brush(ci, xf, tw, 10.0, Ink.encre(), 1.0, 0.0)
+			Ink.brush(ci, xf, tw, 6.5, bark["clair"], 1.0, 0.0)
+			var end := tw[tw.size() - 1]
+			for g in [-1.0, 1.0]:
+				var tt := _wiggle(tw[4], la + g * 0.5, length * 0.16, 2.0, i * 3.0 + g)
+				Ink.brush(ci, xf, tt, 5.0, Ink.encre(), 1.0, 0.0)
+				Ink.brush(ci, xf, tt, 3.0, bark["clair"], 1.0, 0.0)
+			# Un fil de cendre qui pend de la fourche, un flocon au bout.
+			if fall <= 0.0 and f == 0:
+				var hang := PackedVector2Array([at, at + Vector2(sgn * 6.0, 22.0), at + Vector2(sgn * 3.0, 44.0 + 6.0 * (i % 3))])
+				Ink.brush(ci, xf, hang, 2.2, Color(pale["clair"], 0.75), 0.0, 0.0)
+				Ink.part(ci, xf, Ink.leaf(hang[2], PI / 2.0, 12.0, 7.0), pale, 1.0, 1.0, 0.0)
 			if phase >= 2 and die <= 0.0 and fall <= 0.0 and not Ink.mono:
-				var tip := tw[tw.size() - 1]
-				Ink.halo(ci, xf * tip, 9.0 * xf.get_scale().abs().y, Art.bc("braise"), 0.6 + 0.4 * sin(t * 4.0 + i + sgn))
-				Ink.flat(ci, xf, Ink.oval(tip, 3.2, 2.4, 10), Art.bc("braise_coeur").lerp(Art.bc("braise"), 0.5))
+				Ink.halo(ci, xf * end, 10.0 * xf.get_scale().abs().y, Art.bc("braise"), 0.6 + 0.4 * sin(t * 4.0 + i + sgn))
+				Ink.flat(ci, xf, Ink.oval(end, 3.4, 2.6, 10), Art.bc("braise_coeur").lerp(Art.bc("braise"), 0.5))
 		if phase >= 3 and die <= 0.0 and fall <= 0.0 and not Ink.mono:
-			Ink.halo(ci, xf * pts[pts.size() - 1], 20.0 * xf.get_scale().abs().y, Art.bc("braise"), 0.8)
+			Ink.halo(ci, xf * pts[pts.size() - 1], 22.0 * xf.get_scale().abs().y, Art.bc("braise"), 0.8)
 
 
 ## Le manteau : sept plaques d'écorce brûlée posées sur les épaules et le dos, en tuiles ; elles
@@ -352,6 +531,13 @@ static func _mantle(ci: CanvasItem, xf: Transform2D, t: float, die: float, form:
 		var d := Vector2.from_angle(hang)
 		Ink.brush(ci, xf, PackedVector2Array([at + out + d * 6.0, at + out + d * p[2] * 0.75]), 2.0, bark["ombre"].darkened(0.2))
 		Ink.brush(ci, xf, PackedVector2Array([at + out + d * p[2] * 0.3 + d.orthogonal() * p[3] * 0.2, at + out + d * p[2] * 0.55 + d.orthogonal() * p[3] * 0.12]), 1.4, bark["ombre"].darkened(0.2))
+		# Une frange de lichen de cendre sous la pointe (elle tombe avec la plaque).
+		if form < 0.5:
+			var end: Vector2 = at + out + d * p[2] * 0.92
+			for q in 3:
+				var st := end + d.orthogonal() * (q - 1) * 7.0
+				var fringe := PackedVector2Array([st, st + Vector2(sin(j + q) * 4.0, 14.0 + 5.0 * q), st + Vector2(sin(j * 2.0 + q) * 6.0, 26.0 + 8.0 * ((j + q) % 3))])
+				Ink.brush(ci, xf, fringe, 4.0, Color(Art.bc("commun", "charbon"), 0.9), 1.0, 0.0)
 
 
 ## La poitrine ouverte et le cœur : une graine noire, côtelée, qui bat, nouée de deux racines, fendue
@@ -475,8 +661,9 @@ static func _eye(ci: CanvasItem, xf: Transform2D, e: Vector2, g: float, t: float
 	Ink.flat(ci, xf, Ink.oval(e + Vector2(-w * 0.32, -hgt * 0.35), 3.0, 2.2, 8), Color(1, 0.96, 0.88, 0.85))
 
 
-## Chemin d'un bras au repos (9 points, repère local), sans son balancement (arm_xf) : déplié, ou replié
+## Chemin d'un bras au repos (9 points, repère local), sans sa pose (arm_xf) : déplié, ou replié
 ## contre elle quand elle dort, plus court tant qu'il n'est pas éveillé, retombé au sol à la mort.
+## Le coude est au point ELBOW.
 static func _arm_path(i: int, arms: Array, phase: int, die: float, wake: float, form: float) -> PackedVector2Array:
 	var side: int = SLOTS[i][0]
 	var slot: int = SLOTS[i][1]
@@ -500,10 +687,67 @@ static func _arm_path(i: int, arms: Array, phase: int, die: float, wake: float, 
 	return path
 
 
-## Un bras, partie fixe (cuite par BossFinale) : une longue racine brûlée, noueuse, épineuse, veinée
-## de son élément (plus vive quand il s'allume : on), et le motif de l'élément au bout. Pas encore
-## éveillé : gris de cendre. Les bras du fond (côté 1) sont plus sombres.
-static func draw_arm(ci: CanvasItem, xf: Transform2D, i: int, arms: Array, phase: int, on: float, die: float, wake: float, form: float, tint: Callable) -> void:
+## Épaisseur du bras le long de son chemin (u 0 → 1) : large à l'épaule, effilé au bout.
+static func _arm_w(u: float, far: bool) -> float:
+	return lerpf(34.0, 13.0, pow(u, 0.8)) * (0.9 if far else 1.0)
+
+
+## Un membre effilé le long de pts (épaisseur w0 → w1) : bois brûlé, encre autour, reflet de cendre du
+## côté de la lumière. Fait de tronçons (trapèzes et disques aux joints) : jamais de polygone croisé,
+## même plié serré.
+static func _limb(ci: CanvasItem, xf: Transform2D, pts: PackedVector2Array, w0: float, w1: float, pal: Dictionary, ink: float) -> void:
+	var p := pts
+	for _k in 2:
+		var sm := PackedVector2Array([p[0]])
+		for q in p.size() - 1:
+			sm.append(p[q].lerp(p[q + 1], 0.25))
+			sm.append(p[q].lerp(p[q + 1], 0.75))
+		sm.append(p[p.size() - 1])
+		p = sm
+	var n := p.size()
+	var wp := xf * p
+	var k := xf.get_scale().abs().x
+	var widths: Array = []
+	for q in n:
+		var u := float(q) / (n - 1)
+		widths.append(lerpf(w0, w1, u) * 0.5 * (1.0 + 0.07 * sin(u * 23.0)) * k)
+	var iw := ink * Ink.INK * k
+	for pass_ in 2:
+		var col: Color = Ink.encre() if pass_ == 0 else Ink.shade(pal["ombre"])
+		var grow := iw if pass_ == 0 else 0.0
+		for q in n - 1:
+			var d := (wp[q + 1] - wp[q]).normalized().orthogonal()
+			var a: float = widths[q] + grow
+			var b: float = widths[q + 1] + grow
+			var off := -Ink.LIGHT * grow * 0.45 if pass_ == 0 else Vector2.ZERO
+			var quad := PackedVector2Array([wp[q] + d * a + off, wp[q + 1] + d * b + off, wp[q + 1] - d * b + off, wp[q] - d * a + off])
+			ci.draw_colored_polygon(quad, col)
+			ci.draw_circle(wp[q + 1] + off, b, col)
+		ci.draw_circle(wp[0] + (-Ink.LIGHT * grow * 0.45 if pass_ == 0 else Vector2.ZERO), float(widths[0]) + grow, col)
+	if Ink.mono:
+		return
+	# La face éclairée : une bande décalée vers la lumière, puis un fil de reflet.
+	var lit := PackedVector2Array()
+	var shine := PackedVector2Array()
+	for q in n:
+		var d := (wp[mini(q + 1, n - 1)] - wp[maxi(q - 1, 0)]).normalized().orthogonal()
+		var side := 1.0 if d.dot(Ink.LIGHT) > 0.0 else -1.0
+		lit.append(wp[q] + d * side * float(widths[q]) * 0.3)
+		shine.append(wp[q] + d * side * float(widths[q]) * 0.62)
+	ci.draw_polyline(lit, Ink.shade(pal["clair"]), maxf(1.0, float(widths[n / 2]) * 0.9), true)
+	ci.draw_polyline(shine, Color(Ink.shade(pal["reflet"]), 0.35), maxf(1.0, 2.2 * k), true)
+
+
+## Un bras, partie fixe (cuite par BossFinale), en trois pièces : « haut » (de l'épaule au coude),
+## « bas » (du coude au bout, avec le nœud du coude) et « motif » (ce qu'il porte au bout). Une longue
+## racine brûlée, épaisse à l'épaule, couverte d'écailles d'écorce, noueuse, épineuse, veinée de son
+## élément (plus vive quand il s'allume : on). Pas encore éveillé : gris de cendre. Les bras du fond
+## (côté 1) sont plus sombres.
+static func draw_arm(ci: CanvasItem, xf: Transform2D, i: int, arms: Array, phase: int, on: float, die: float, wake: float, form: float, tint: Callable, piece := "") -> void:
+	if piece == "":
+		for pc in ["haut", "bas", "motif"]:
+			draw_arm(ci, xf, i, arms, phase, on, die, wake, form, tint, pc)
+		return
 	var far: bool = SLOTS[i][0] == 1
 	var element := str(arms[i]["element"])
 	var awake: bool = phase >= int(arms[i]["phase"])
@@ -515,42 +759,112 @@ static func draw_arm(ci: CanvasItem, xf: Transform2D, i: int, arms: Array, phase
 	var col: Color = Art.ec(element) if awake else U.pal()["ombre"]
 	if die > 0.0:
 		col = col.lerp(U.pal()["clair"], die)
-	# Le bras : encre, bois brûlé, reflet de cendre.
-	Ink.brush(ci, xf, path, 26.0, Ink.encre(), 1.0, 0.25)
-	Ink.brush(ci, xf, path, 21.0, bark["clair"], 1.0, 0.25)
-	Ink.brush(ci, xf, path.slice(0, 6), 4.0, Color(bark["reflet"], 0.4), 1.0, 0.0)
-	# Nœuds et épines.
-	for q in [2, 4, 6]:
-		var d := (path[q + 1] - path[q - 1]).normalized()
+	if piece == "motif":
+		var md := (tip - path[6]).normalized()
+		_motif(ci, xf, tip, md, 46.0 * (1.0 + 0.25 * on), element, col, awake, on, float(i), far)
+		return
+	# Le bois du bras : charbon, face éclairée de cendre (lisible sur le sol sombre du creux).
+	var gray: Color = tint.call(Art.bc("commun", "ombre").darkened(0.22 if not far else 0.42))
+	var wood := {"clair": gray.lightened(0.14), "ombre": gray, "reflet": tint.call(Art.bc("commun", "clair"))}
+	var lo := 0 if piece == "haut" else ELBOW
+	var hi := ELBOW if piece == "haut" else 8
+	var seg := path.slice(lo, hi + 1)
+	if piece == "bas":
+		# Le bout s'enfonce dans le motif.
+		seg[seg.size() - 1] = path[7].lerp(path[8], 1.15)
+	var w0 := _arm_w(lo / 8.0, far)
+	var w1 := _arm_w(hi / 8.0, far) if piece == "haut" else 10.0
+	_limb(ci, xf, seg, w0, w1, wood, 2.6)
+	# Le grain de l'écorce : de longues stries sombres qui suivent le bras, et des anneaux noueux.
+	for g in 3:
+		var off := (g - 1) * 0.28
+		var line := PackedVector2Array()
+		for q in seg.size():
+			var u := (lo + q) / 8.0
+			var d := (seg[mini(q + 1, seg.size() - 1)] - seg[maxi(q - 1, 0)]).normalized()
+			line.append(seg[q] + d.orthogonal() * _arm_w(u, far) * (off + 0.05 * sin(q * 2.0 + g + i)))
+		Ink.brush(ci, xf, line, 2.2, Color(Ink.encre(), 0.55), 0.0, 0.0)
+	for q in range(1, seg.size() - 1):
+		var u := (lo + q) / 8.0
+		var d := (seg[q + 1] - seg[q - 1]).normalized()
 		var o := d.orthogonal()
-		var w := lerpf(12.0, 4.0, q / 8.0)
-		Ink.brush(ci, xf, PackedVector2Array([path[q] - o * w, path[q] + d * 2.0 + o * w]), 3.0, Ink.encre())
-		var sgn := 1.0 if q % 4 == 2 else -1.0
-		Ink.part(ci, xf, Ink.thorn(path[q] + o * sgn * w * 0.8, (o * sgn + d * 0.8).angle(), 13.0, 7.0), U.bone() if not far else bark, 1.2, 1.0, 0.0)
-	# La veine de l'élément.
+		var w := _arm_w(u, far)
+		# Un anneau (bourrelet) et une épine d'os, d'un côté puis de l'autre.
+		Ink.brush(ci, xf, PackedVector2Array([seg[q] - o * w * 0.5, seg[q] + d * 4.0, seg[q] + o * w * 0.5]), 3.2, Ink.encre(), 0.0, 0.0)
+		Ink.brush(ci, xf, PackedVector2Array([seg[q] - o * w * 0.4 + d * 3.0, seg[q] + d * 6.0, seg[q] + o * w * 0.4 + d * 3.0]), 1.6, Color(wood["reflet"], 0.4), 0.0, 0.0)
+		var sg := 1.0 if (lo + q) % 2 == 0 else -1.0
+		Ink.part(ci, xf, Ink.thorn(seg[q] + o * sg * w * 0.42, (o * sg + d * 0.9).angle(), 12.0 + w * 0.4, 9.0, 0.14 * sg), U.bone() if not far else wood, 1.3, 1.0, 0.0)
+	# La veine de l'élément (braise grise tant qu'il dort).
 	if awake and not Ink.mono:
-		var vein := path.slice(1, 8)
-		Ink.brush(ci, xf, vein, 7.0 + 6.0 * on, Color(col, 0.22 + 0.25 * on), 1.0, 1.0)
-		Ink.brush(ci, xf, vein, 2.6 + 2.0 * on, Color(Art.ec(element, "clair"), 0.65 + 0.35 * on), 0.6, 0.6)
-	var md := (tip - path[6]).normalized()
-	_motif(ci, xf, tip, md, 40.0 * (1.0 + 0.25 * on), element, col, awake, on, float(i), far)
+		Ink.brush(ci, xf, seg, 8.0 + 6.0 * on, Color(col, 0.22 + 0.25 * on), 1.0, 1.0)
+		Ink.brush(ci, xf, seg, 2.8 + 2.0 * on, Color(Art.ec(element, "clair"), 0.65 + 0.35 * on), 0.6, 0.6)
+	if piece == "bas":
+		# Le nœud du coude : une loupe de bois brûlé, fendue de la couleur de l'élément.
+		var el := path[ELBOW]
+		var wk := _arm_w(ELBOW / 8.0, far)
+		Ink.part(ci, xf, Ink.lumpy(el, wk * 0.5, wk * 0.46, 14, 0.18, 5.0, float(i)), wood, 2.4, 1.0, 0.4)
+		if awake:
+			_crack(ci, xf, PackedVector2Array([el + Vector2(-wk * 0.3, -wk * 0.2), el + Vector2(0, 2), el + Vector2(wk * 0.25, wk * 0.22)]), 2.2, 0.4 + 0.6 * on, float(i))
+		# Des radicelles qui pendent du coude (encre fine).
+		for j in 3:
+			var a := PI / 2.0 + (j - 1) * 0.35
+			Ink.brush(ci, xf, _wiggle(el + Vector2((j - 1) * 6.0, wk * 0.4), a, 26.0 + 8.0 * j, 3.0, i + j), 2.0, Color(Ink.encre(), 0.8))
 
 
-## Boîte (repère local) où tient le bras i, quelle que soit sa pose (pour sa texture cuite).
-static func arm_box(i: int) -> Rect2:
-	var side: int = SLOTS[i][0]
-	var sh: Vector2 = SHOULDER[side]
-	var r := Rect2(sh, Vector2.ZERO)
-	for tip: Vector2 in TIPS[side]:
-		r = r.expand(sh + (tip - sh) * 1.2)
-	r = r.expand(sh + Vector2(side * 40.0, 170.0))
-	r = r.expand(Vector2(sh.x + side * 200.0, 40.0))
-	return r.grow(90.0)
+## Boîte (repère local) où tient une pièce du bras i, quelle que soit sa pose de repos (pour sa
+## texture cuite ; la pose animée est une transformation de la texture).
+static func arm_box(i: int, piece := "") -> Rect2:
+	var arms := []
+	for j in 6:
+		arms.append({"phase": 1 if j != i else 1})
+	var r := Rect2()
+	var first := true
+	for wake in [0.0, 1.0]:
+		for die in [0.0, 1.0]:
+			for form in [0.0, 1.0]:
+				for awake in [0, 9]:
+					arms[i] = {"phase": awake}
+					var path := _arm_path(i, arms, 1, die, wake, form)
+					var pts: Array = []
+					match piece:
+						"haut":
+							pts = Array(path.slice(0, ELBOW + 1))
+						"bas":
+							pts = Array(path.slice(ELBOW, 9))
+						"motif":
+							pts = [path[8]]
+						_:
+							pts = Array(path)
+					for p: Vector2 in pts:
+						if first:
+							r = Rect2(p, Vector2.ZERO)
+							first = false
+						r = r.expand(p)
+	var grow := 46.0
+	if piece == "motif" or piece == "":
+		grow = 46.0 * 2.4
+	elif piece == "bas":
+		grow = 60.0
+	return r.grow(grow)
+
+
+## Boîte serrée (repère local) d'une pièce du bras i dans sa pose de repos du moment (pour sa texture
+## cuite, refaite à chaque changement de pose), au pas de 16 unités.
+static func arm_piece_box(i: int, arms: Array, phase: int, die: float, wake: float, form: float, piece: String) -> Rect2:
+	var path := _arm_path(i, arms, phase, die, wake, form)
+	var pts: Array = Array(path.slice(0, ELBOW + 1)) if piece == "haut" else (Array(path.slice(ELBOW, 9)) if piece == "bas" else [path[8]])
+	var r := Rect2(pts[0], Vector2.ZERO)
+	for p: Vector2 in pts:
+		r = r.expand(p)
+	r = r.grow(46.0 * 2.4 if piece == "motif" else (60.0 if piece == "bas" else 46.0))
+	var p0 := (r.position / 16.0).floor() * 16.0
+	var p1 := (r.end / 16.0).ceil() * 16.0
+	return Rect2(p0, p1 - p0)
 
 
 ## Boîte (repère local) du corps, partie fixe.
 static func body_box() -> Rect2:
-	return Rect2(-230, -330, 460, 430)
+	return Rect2(-280, -400, 560, 520)
 
 
 ## Le motif d'un élément au bout d'un bras, tourné vers l'extérieur (dir), en repère local.

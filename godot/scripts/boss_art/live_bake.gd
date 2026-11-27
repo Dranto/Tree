@@ -32,13 +32,14 @@ static func available() -> bool:
 	return Cuisson.active()
 
 
-func _init(host: Node, box_: Rect2, drawer_: Callable) -> void:
+## mult : le dessin est affiché mult fois plus grand que son repère (la texture est d'autant plus fine).
+func _init(host: Node, box_: Rect2, drawer_: Callable, mult := 1.0) -> void:
 	box = box_
 	drawer = drawer_
 	if not available():
 		return
 	# ×1,5 de suréchantillonnage (le SubViewport n'a pas de MSAA en Compatibility) : bords lisses.
-	scale = Cuisson.window_scale(1.5, 1.5, 2.5)
+	scale = Cuisson.window_scale(1.5, 1.5, 2.5) * mult
 	vp = SubViewport.new()
 	vp.size = Vector2i((box.size * scale).ceil())
 	vp.transparent_bg = true
@@ -51,6 +52,18 @@ func _init(host: Node, box_: Rect2, drawer_: Callable) -> void:
 	vp.add_child(node)
 	# Différé : l'hôte peut être en train de se dessiner (cuisson créée dans un _draw).
 	host.add_child.call_deferred(vp)
+
+
+## Change la boîte couverte (au prochain rendu) : une boîte serrée sur la pose du moment coûte moins
+## à afficher qu'une boîte qui couvre toutes les poses (rendu logiciel : chaque pixel transparent compte).
+func set_box(b: Rect2) -> void:
+	if b == box:
+		return
+	box = b
+	if vp == null:
+		return
+	vp.size = Vector2i((box.size * scale).ceil())
+	node.position = -box.position * scale
 
 
 ## Demande un rendu si la clé a changé, ou si le dernier date de plus de 1/rate s (now : horloge en s).
