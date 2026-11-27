@@ -8895,61 +8895,61 @@ msgstr ""
 "Près de la graine (anneaux 1 à %d), oublier est gratuit. Plus loin, cela coûte de l'essence, prise sur le niveau en cours (%d en réserve). Au sanctuaire, tout est gratuit.\n"
 "« Nouveau » repart de la graine, « Copier ici » enregistre le build actif."
 
-#. scripts/tree_grafts.gd:458
+#. scripts/tree_grafts.gd:471
 msgid "Couronne de greffes"
 msgstr "Couronne de greffes"
 
-#. scripts/tree_grafts.gd:460
+#. scripts/tree_grafts.gd:473
 msgid "%d trouvée"
 msgid_plural "%d trouvées"
 msgstr[0] "%d trouvée"
 msgstr[1] "%d trouvées"
 
-#. scripts/tree_grafts.gd:481
+#. scripts/tree_grafts.gd:494
 msgid "%s sur un emplacement de la couronne : y poser la greffe."
 msgstr "%s sur un emplacement de la couronne : y poser la greffe."
 
-#. scripts/tree_grafts.gd:481
+#. scripts/tree_grafts.gd:494
 msgid "Clique un emplacement de la couronne pour y poser la greffe."
 msgstr "Clique un emplacement de la couronne pour y poser la greffe."
 
-#. scripts/tree_grafts.gd:483
+#. scripts/tree_grafts.gd:496
 msgid "%s sur une greffe pour la prendre, puis sur un emplacement libre."
 msgstr "%s sur une greffe pour la prendre, puis sur un emplacement libre."
 
-#. scripts/tree_grafts.gd:483
+#. scripts/tree_grafts.gd:496
 msgid "Glisse une greffe dans un emplacement libre de la couronne."
 msgstr "Glisse une greffe dans un emplacement libre de la couronne."
 
-#. scripts/tree_grafts.gd:485
+#. scripts/tree_grafts.gd:498
 msgid "%s sur un emplacement : retire sa greffe."
 msgstr "%s sur un emplacement : retire sa greffe."
 
-#. scripts/tree_grafts.gd:485
+#. scripts/tree_grafts.gd:498
 msgid "Clic sur un emplacement : retire sa greffe."
 msgstr "Clic sur un emplacement : retire sa greffe."
 
-#. scripts/tree_grafts.gd:515
+#. scripts/tree_grafts.gd:528
 msgid "Emplacement fermé"
 msgstr "Emplacement fermé"
 
-#. scripts/tree_grafts.gd:516
+#. scripts/tree_grafts.gd:529
 msgid "Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."
 msgstr "Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."
 
-#. scripts/tree_grafts.gd:539
+#. scripts/tree_grafts.gd:552
 msgid "Posée ici :"
 msgstr "Posée ici :"
 
-#. scripts/tree_grafts.gd:542
+#. scripts/tree_grafts.gd:555
 msgid "Remplace « %s »."
 msgstr "Remplace « %s »."
 
-#. scripts/tree_grafts.gd:545
+#. scripts/tree_grafts.gd:558
 msgid "Posée :"
 msgstr "Posée :"
 
-#. scripts/tree_grafts.gd:548
+#. scripts/tree_grafts.gd:561
 msgid "Retirée :"
 msgstr "Retirée :"
 
