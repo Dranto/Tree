@@ -99,6 +99,11 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	# Une réduction encore en cours sur un autre fil est attendue : Godot s'arrête sur un abort si une
+	# tâche n'a jamais été attendue à la fermeture.
+	for task in BordBake.resize_tasks:
+		WorkerThreadPool.wait_for_task_completion(task)
+	BordBake.resize_tasks.clear()
 	for key in _tiles.keys():
 		_free_tile(key)
 	_queue.clear()
@@ -561,9 +566,12 @@ class DecorVariant extends Node2D:
 		# La réduction (des dizaines de ms pour une bande) se fait sur un autre fil : l'image reste fluide.
 		var out := Vector2i(maxi(1, size.x / SS), maxi(1, size.y / SS))
 		var task := WorkerThreadPool.add_task(func(): img.resize(out.x, out.y, Image.INTERPOLATE_BILINEAR))
-		while not WorkerThreadPool.is_task_completed(task):
+		BordBake.resize_tasks.append(task)
+		while not WorkerThreadPool.is_task_completed(task) and is_inside_tree():
 			await get_tree().process_frame
-		WorkerThreadPool.wait_for_task_completion(task)
+		if BordBake.resize_tasks.has(task):
+			BordBake.resize_tasks.erase(task)
+			WorkerThreadPool.wait_for_task_completion(task)
 		# La cuisson n'est finie (pending) qu'avec son image : les captures attendent jusque-là.
 		_finish()
 		if not is_instance_valid(self) or not is_inside_tree():

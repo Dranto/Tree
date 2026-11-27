@@ -2,6 +2,9 @@
 ## cuissons, durée de la dernière. Séparé de world_edge.gd pour que ses classes internes y accèdent.
 extends RefCounted
 
+## Réductions des bandes cuites du bord en cours sur un autre fil (identifiants de WorkerThreadPool),
+## attendues à la fermeture (world_edge.gd › _exit_tree).
+static var resize_tasks: Array = []
 static var bytes := 0
 static var baked := 0
 static var bake_usec := 0
