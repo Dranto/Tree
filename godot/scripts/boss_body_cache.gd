@@ -13,7 +13,10 @@ const Cuisson = preload("res://scripts/boss_art/cuisson.gd")
 
 ## Rendu suréchantillonné (lissage des bords, comme la cuisson des Flétris).
 const SS := 1.5
-const MAX := 24
+## Poses gardées : 48 à l'échelle ×1,5 (fenêtre de 900 px, ~0,8 Mo par pose du Saule), moins dans une
+## grande fenêtre (même mémoire, 24 au moins). À 24, le Saule recuisait ~3 poses par seconde (pics).
+const MAX := 48
+var max_poses := MAX
 
 ## Rectangle du dessin autour des pieds, en px du jeu (avant l'échelle de l'écran).
 var rect: Rect2
@@ -33,6 +36,7 @@ func _init(h: Node, r: Rect2, fn: Callable) -> void:
 	rect = r
 	draw_fn = fn
 	scale = Cuisson.window_scale(1.1, 1.0, 3.0) * SS
+	max_poses = maxi(24, int(MAX * pow(1.5 / scale, 2.0)))
 
 
 class Painter extends Node2D:
@@ -65,7 +69,7 @@ func texture(key: String, pose: Dictionary) -> Texture2D:
 
 func _make(key: String, pose: Dictionary, now: int) -> void:
 	misses += 1
-	if entries.size() >= MAX:
+	if entries.size() >= max_poses:
 		var old := ""
 		var best := 1 << 62
 		for k in entries:
