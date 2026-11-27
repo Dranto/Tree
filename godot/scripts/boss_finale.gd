@@ -1067,10 +1067,29 @@ func bot_ring(arena_radius: float) -> float:
 
 
 ## Avancée de l'annonce en cours (0 → 1), 0 hors annonce.
-## Le cœur (repère du boss) : là où se calent la charge, la mort et l'éclat (le dessin est ART fois
-## plus grand que le rayon).
+## Le cœur (repère du boss) : là où se calent la charge, la mort et l'éclat (le dessin est art_k()
+## fois plus grand que le rayon, et monte sur ses racines en seconde forme).
 func heart_off() -> Vector2:
-	return FinaleArt.HEART * FinaleArt.ART * radius / 100.0
+	var form := form_k()
+	return (FinaleArt.HEART + Vector2(0, -FinaleArt.LIFT * form)) * _art_now() * radius / 100.0
+
+
+## Sa taille (dessin seul) : elle grandit à chaque phase (FinaleArt.PHASE_ART), pendant la mue de la
+## phase 2 (sur le drop) et pendant la transformation ; sans morceau, en un peu moins d'une demi-seconde.
+var _art := -1.0
+var _art_at := -1.0
+
+
+func _art_now() -> float:
+	if _art_at == t and _art > 0.0:
+		return _art
+	var target := FinaleArt.phase_art(phase, form_k())
+	if mue_k >= 0.0 and phase == 2:
+		target = lerpf(FinaleArt.PHASE_ART[1], FinaleArt.PHASE_ART[2], Choreo.ease_in_out(clampf(mue_k, 0.0, 1.0)))
+	var dt := maxf(0.0, t - _art_at) if _art_at >= 0.0 else 0.0
+	_art = target if (_art < 0.0 or frozen or transforming()) else move_toward(_art, target, dt * 0.25)
+	_art_at = t
+	return _art
 
 
 # --- Gestes (dessin seul : boss_art/finale_choreo.gd) ---
@@ -1202,6 +1221,7 @@ func _draw() -> void:
 		at = Transform2D(0.0, Vector2(sw, 2.0 - sw), 0.0, h - h * sw)
 	_pose = [phase, _announce_k(), lit, die, _wake_k(), lit2, form_k(), _facing_step()]
 	_anim = {} if dead or transforming() else _gesture_step()
+	_anim["art"] = _art_now()
 	if _layers.is_empty():
 		draw_set_transform_matrix(at)
 		draw_colossus(self, Vector2.ZERO, radius, t, phase, _pose[1], lit, die, _pose[4], _color, lit2, _pose[6], _pose[7], _anim)
@@ -1267,7 +1287,7 @@ func _make_art() -> void:
 	var plain := func(c): return c
 	_bakes["corps"] = LiveBake.new(self, FinaleArt.body_box(), func(ci):
 		var a: Array = _bake_args["corps"]
-		FinaleArt.draw_body(ci, Transform2D.IDENTITY, a[0], a[1], a[2], a[3], plain), FinaleArt.ART)
+		FinaleArt.draw_body(ci, Transform2D.IDENTITY, a[0], a[1], a[2], a[3], plain), FinaleArt.PHASE_ART[3])
 	# Chaque bras en trois pièces (bras, avant-bras, motif) : ses gestes plient le coude et gonflent le
 	# motif sans recuire (transformations des textures).
 	for i in ARMS.size():

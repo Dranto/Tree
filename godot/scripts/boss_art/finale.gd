@@ -25,8 +25,19 @@ const Ink = preload("res://scripts/creature_art/ink.gd")
 const U = preload("res://scripts/creature_art/commun/_outils.gd")
 
 const HEART := Vector2(0, -45)
-## Le dessin est plus grand que le rayon du boss (sa collision) : elle domine l'arène.
+## Le dessin est plus grand que le rayon du boss (sa collision) : elle domine l'arène. ART : la taille
+## de référence (phase 2, et l'échelle des textures cuites) ; PHASE_ART : elle grandit à chaque phase
+## (endormie et phase 1, phase 2, seconde forme), sur la mue et la transformation.
 const ART := 1.2
+const PHASE_ART := [1.1, 1.1, 1.2, 1.35]
+## Seconde forme : elle s'arrache du sol, debout sur ses racines (unités locales).
+const LIFT := 58.0
+
+
+## Taille du dessin (× le rayon) d'après la phase et la seconde forme (form 0 → 1).
+static func phase_art(phase: int, form: float) -> float:
+	var a: float = PHASE_ART[clampi(phase, 0, 2)]
+	return lerpf(a, PHASE_ART[3], clampf(form, 0.0, 1.0))
 ## Le coude : le point du chemin d'un bras où il plie (sur 9).
 const ELBOW := 4
 ## Place de chaque bras (dans l'ordre de BossFinale.ARMS) : côté (-1 : près, devant le corps ; 1 : loin,
@@ -93,8 +104,8 @@ static func piece_of(part) -> Array:
 ## (elle respire : le haut monte et s'élargit à peine ; endormie, elle se tasse ; morte, elle
 ## s'affaisse ; pendant une annonce, elle se cabre un peu). lean / grow : le geste (FinaleChoreo
 ## .body_pose) : penchée vers le héros (+) ou rejetée en arrière (-), grandie (+) ou tassée (-).
-static func body_xf(c: Vector2, r: float, t: float, phase: int, k: float, die: float, wake: float, form: float, facing: float, lean_g := 0.0, grow := 0.0) -> Transform2D:
-	var s := r / 100.0 * ART
+static func body_xf(c: Vector2, r: float, t: float, phase: int, k: float, die: float, wake: float, form: float, facing: float, lean_g := 0.0, grow := 0.0, art := -1.0) -> Transform2D:
+	var s := r / 100.0 * (art if art > 0.0 else phase_art(phase, form))
 	var fx := facing
 	if absf(fx) < 0.18:
 		fx = 0.18 * (1.0 if fx >= 0.0 else -1.0)
@@ -104,7 +115,8 @@ static func body_xf(c: Vector2, r: float, t: float, phase: int, k: float, die: f
 	if lean_g != 0.0 or grow != 0.0:
 		lean = 0.06 * (1.0 - wake) + 0.05 * die + lean_g * wake
 	var sy := slump * (2.0 - beat) * (1.0 + grow)
-	return Transform2D(0.0, Vector2(s * fx, s), 0.0, c) * Transform2D(lean, Vector2(beat * (1.0 - 0.5 * grow), sy), 0.0, Vector2.ZERO)
+	var lift := Vector2(0, -LIFT * form * (1.0 - Anim.ease_in(die)))
+	return Transform2D(0.0, Vector2(s * fx, s), 0.0, c) * Transform2D(lean, Vector2(beat * (1.0 - 0.5 * grow), sy), 0.0, lift)
 
 
 ## Allumage d'un bras (0 → 1) : l'annonce de son attaque ; en seconde forme, tous brillent un peu.
@@ -169,10 +181,11 @@ static func arm_chain(xf: Transform2D, i: int, arms: Array, t: float, phase: int
 static func compose(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, k: float, lit: int, die: float, wake: float, lit2: int, form: float, facing: float, arms: Array, part: Callable, stage := "", anim := {}) -> void:
 	var keep_flash := Ink.flash
 	Ink.flash = 0.0
-	var s := r / 100.0 * ART
+	var art := float(anim.get("art", phase_art(phase, form)))
+	var s := r / 100.0 * art
 	var base := Transform2D(0.0, Vector2(s * signf(facing if facing != 0.0 else 1.0), s), 0.0, c)
 	var body: Dictionary = anim.get("body", {})
-	var xf := body_xf(c, r, t, phase, k, die, wake, form, facing, float(body.get("lean", 0.0)), float(body.get("grow", 0.0)))
+	var xf := body_xf(c, r, t, phase, k, die, wake, form, facing, float(body.get("lean", 0.0)), float(body.get("grow", 0.0)), art)
 	var poses: Array = anim.get("arms", [])
 	var fxs: Array = anim.get("fx", [])
 	var aim: Vector2 = anim.get("aim", Vector2.ZERO)
@@ -182,7 +195,7 @@ static func compose(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, 
 		var pose: Dictionary = poses[i] if i < poses.size() else {}
 		chains.append(arm_chain(xf, i, arms, t, phase, arm_on(i, k, lit, lit2, form), die, wake, form, pose, aim_l))
 	if stage == "" or stage == "fond":
-		Ink.ground_shadow(ci, base, Vector2(0, 14), 135.0 + 20.0 * form)
+		Ink.ground_shadow(ci, base, Vector2(0, 14), 135.0 + 30.0 * form)
 		if form > 0.0:
 			_shards(ci, xf, t, form, lit, lit2, k, die, false, arms)
 	if stage == "" or stage == "corps":
@@ -244,9 +257,9 @@ static func compose(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, 
 			var u := clampf(die * 1.4 - (i % 3) * 0.12, 0.0, 1.0)
 			if u <= 0.0 or u >= 1.0:
 				continue
-			var q := heart + Vector2.from_angle(a) * r * ART * (0.3 + 1.0 * u) - Vector2(0, r * ART * 0.8 * u)
-			ci.draw_circle(q, r * ART * (0.04 + 0.07 * u), Color(seve, 0.75 * (1.0 - u)))
-		ci.draw_circle(heart, r * ART * 0.55 * die, Color(U.pal()["clair"], 0.25 * die))
+			var q := heart + Vector2.from_angle(a) * r * art * (0.3 + 1.0 * u) - Vector2(0, r * art * 0.8 * u)
+			ci.draw_circle(q, r * art * (0.04 + 0.07 * u), Color(seve, 0.75 * (1.0 - u)))
+		ci.draw_circle(heart, r * art * 0.55 * die, Color(U.pal()["clair"], 0.25 * die))
 	if form > 0.0:
 		_shards(ci, xf, t, form, lit, lit2, k, die, true, arms)
 	Ink.flash = keep_flash
@@ -346,6 +359,8 @@ static func draw_body(ci: CanvasItem, xf: Transform2D, phase: int, die: float, w
 	var bark := _tp(tint, U.char_pal())
 	var far_bark := {"clair": bark["ombre"], "ombre": Color(bark["ombre"].darkened(0.3), bark["ombre"].a), "reflet": bark["clair"]}
 	var glow := 0.8 * wake if die <= 0.0 else 1.0 - die * 0.5
+	if form > 0.35:
+		_ember_crown(ci, xf, form, die, wake)
 	if form < 0.9:
 		_crown(ci, xf, t, phase, die, wake, form, _tp(tint, {"clair": Art.bc("commun", "ombre").darkened(0.2), "ombre": Art.bc("commun", "charbon"), "reflet": Art.bc("commun", "clair")}))
 	# Le pied de racines qui l'ancre au sol (devant, il déborde sur la base).
@@ -375,7 +390,7 @@ static func draw_body(ci: CanvasItem, xf: Transform2D, phase: int, die: float, w
 		_crack(ci, xf, ln[0], ln[1] * (1.0 + 0.8 * form), hot * glow, t + j, die)
 	# Le manteau de plaques d'écorce sur les épaules et le dos ; il tombe pendant la transformation.
 	if form < 0.85:
-		_mantle(ci, xf, t, die, form, _tp(tint, U.pal()))
+		_mantle(ci, xf, t, die, form, _tp(tint, U.pal()), phase)
 	# La poitrine ouverte, le cœur, ses liens (l'œil est vivant : compose).
 	_chest(ci, xf, t, phase, 0.0, die, wake, form, glow, tint)
 
@@ -446,12 +461,15 @@ static func _feet(ci: CanvasItem, base: Transform2D, xf: Transform2D, t: float, 
 		[Vector2(-50, 30), Vector2(-104, 76), bark, 18.0],
 		[Vector2(14, 34), Vector2(26, 84), bark, 18.0],
 	]
-	var lift := 1.0 - 0.5 * form
+	# Seconde forme : le corps s'arrache du sol (body_xf, LIFT) ; ses racines restent plantées et
+	# deviennent des jambes, plus épaisses et plus écartées.
+	var spread := 1.0 + 0.15 * form
+	var ground := Vector2(0, LIFT * form * (1.0 - Anim.ease_in(die)))
 	for j in roots.size():
 		var rt: Array = roots[j]
 		var a: Vector2 = xf * rt[0]
-		var b: Vector2 = base * (rt[1] * Vector2(1.0, lift))
-		var w: float = rt[3]
+		var b: Vector2 = base * (rt[1] * Vector2(spread, 1.0) + ground)
+		var w: float = rt[3] * (1.0 + 0.45 * form)
 		var mid := a.lerp(b, 0.5) + Vector2(0, -10.0 * base.get_scale().y)
 		var la := base.affine_inverse()
 		var pts := PackedVector2Array([la * a, la * mid, la * b])
@@ -474,12 +492,19 @@ static func _crown(ci: CanvasItem, xf: Transform2D, t: float, phase: int, die: f
 		var u := (i - 3) / 3.0
 		var from := Vector2(-6 + u * 54.0, -170 + absf(u) * 18.0)
 		var a := -PI / 2.0 + u * 0.78 + 0.04 * sin(t * 0.7 + i) + fall * (1.2 if u >= 0.0 else -1.2) * (0.5 + absf(u))
-		var length := (150.0 - 46.0 * absf(u)) * rise
+		var length := (150.0 - 46.0 * absf(u)) * rise * (1.15 if phase >= 2 else 1.0)
 		var drop := Vector2(u * 60.0 * fall, 220.0 * fall * fall)
 		var pts := _wiggle(from + drop, a, length, 10.0, i * 2.3)
 		Ink.brush(ci, xf, pts, 20.0, Ink.encre(), 1.0, 0.0)
 		Ink.brush(ci, xf, pts, 15.0, bark["clair"], 1.0, 0.0)
 		Ink.brush(ci, xf, pts.slice(0, 4), 3.0, Color(bark["reflet"], 0.45), 1.0, 0.0)
+		# Phase 2 : la ramure se hérisse d'épines de braise, d'un côté puis de l'autre.
+		if phase >= 2 and fall < 0.5:
+			for q in range(1, pts.size() - 1):
+				var d := (pts[q + 1] - pts[q - 1]).normalized()
+				var sg := 1.0 if (q + i) % 2 == 0 else -1.0
+				var thorn := Ink.thorn(pts[q] + d.orthogonal() * sg * 5.0, (d * 0.7 + d.orthogonal() * sg).angle(), 26.0 - 2.0 * q, 10.0, 0.12 * sg)
+				Ink.part(ci, xf, thorn, {"clair": Art.bc("braise"), "ombre": Art.bc("braise").darkened(0.45), "reflet": Art.bc("braise_coeur")}, 1.2, 1.0, 0.5)
 		# Les andouillers : deux fourches, chacune refendue au bout.
 		for f in 2:
 			var sgn: float = -1.0 if (i + f) % 2 == 0 else 1.0
@@ -505,9 +530,42 @@ static func _crown(ci: CanvasItem, xf: Transform2D, t: float, phase: int, die: f
 			Ink.halo(ci, xf * pts[pts.size() - 1], 22.0 * xf.get_scale().abs().y, Art.bc("braise"), 0.8)
 
 
+## Seconde forme : à la place de la couronne tombée, une ramure de braise renaît, plus haute, qui
+## pousse pendant la transformation (form 0,35 → 1) : bois noir fendu de braise, pointes incandescentes.
+static func _ember_crown(ci: CanvasItem, xf: Transform2D, form: float, die: float, wake: float) -> void:
+	var grow := Anim.ease_out(clampf((form - 0.35) / 0.65, 0.0, 1.0)) * (0.6 + 0.4 * wake) * (1.0 - 0.5 * die)
+	if grow <= 0.0:
+		return
+	var hot := Art.bc("braise")
+	var core := Art.bc("braise_coeur")
+	var wood := Art.bc("commun", "charbon")
+	for i: int in [0, 8, 1, 7, 2, 6, 3, 5, 4]:
+		var u := (i - 4) / 4.0
+		var from := Vector2(-6 + u * 60.0, -168 + absf(u) * 20.0)
+		var a := -PI / 2.0 + u * 0.95
+		var length := (200.0 - 70.0 * absf(u)) * grow
+		var pts := _wiggle(from, a, length, 14.0, i * 3.7 + 1.0)
+		Ink.brush(ci, xf, pts, 22.0, Ink.encre(), 1.0, 0.0)
+		Ink.brush(ci, xf, pts, 16.0, wood, 1.0, 0.0)
+		if not Ink.mono and die <= 0.0:
+			Ink.brush(ci, xf, pts, 6.0, hot, 0.6, 0.0)
+			Ink.brush(ci, xf, pts.slice(2, 7), 2.4, core, 0.0, 0.0)
+		# Andouillers de braise.
+		for f in 2:
+			var sgn := -1.0 if (i + f) % 2 == 0 else 1.0
+			var tw := _wiggle(pts[2 + 2 * f], a + sgn * 0.65, length * (0.42 - 0.1 * f), 5.0, i + sgn * 2.0 + f)
+			Ink.brush(ci, xf, tw, 11.0, Ink.encre(), 1.0, 0.0)
+			Ink.brush(ci, xf, tw, 7.0, wood, 1.0, 0.0)
+			if not Ink.mono and die <= 0.0:
+				Ink.brush(ci, xf, tw, 3.0, hot, 0.5, 0.0)
+				Ink.flat(ci, xf, Ink.oval(tw[tw.size() - 1], 4.0, 4.0, 10), core)
+		if not Ink.mono and die <= 0.0:
+			Ink.flat(ci, xf, Ink.oval(pts[pts.size() - 1], 5.5, 5.5, 12), core)
+
+
 ## Le manteau : sept plaques d'écorce brûlée posées sur les épaules et le dos, en tuiles ; elles
 ## s'écartent à la mort et glissent au sol pendant la transformation.
-static func _mantle(ci: CanvasItem, xf: Transform2D, t: float, die: float, form: float, bark: Dictionary) -> void:
+static func _mantle(ci: CanvasItem, xf: Transform2D, t: float, die: float, form: float, bark: Dictionary, phase := 1) -> void:
 	# [attache, angle de la pointe (PI/2 : vers le bas), longueur, largeur], du bas vers le haut (tuiles).
 	var plates := [
 		[Vector2(-112, -64), PI / 2.0 + 0.35, 62.0, 34.0],
@@ -524,7 +582,9 @@ static func _mantle(ci: CanvasItem, xf: Transform2D, t: float, die: float, form:
 		var p: Array = plates[j]
 		var at: Vector2 = p[0]
 		var side := -1.0 if cos(p[1]) > 0.0 else 1.0
-		var hang: float = p[1] + 0.03 * sin(t * 0.9 + j) + fall * side * -0.8
+		# Phase 2 : les plaques se soulèvent et se dressent, comme un poil hérissé.
+		var bristle := 0.42 if phase >= 2 else 0.0
+		var hang: float = p[1] + 0.03 * sin(t * 0.9 + j) + fall * side * -0.8 + side * bristle
 		var out := Vector2(side * (10.0 * die + 40.0 * fall), 260.0 * fall * fall)
 		var plate := Ink.leaf(at + out - Vector2.from_angle(hang) * 8.0, hang, p[2], p[3], 0.05 * side)
 		Ink.part(ci, xf, plate, bark, 2.2, 1.0, 0.25)
@@ -688,8 +748,8 @@ static func _arm_path(i: int, arms: Array, phase: int, die: float, wake: float, 
 
 
 ## Épaisseur du bras le long de son chemin (u 0 → 1) : large à l'épaule, effilé au bout.
-static func _arm_w(u: float, far: bool) -> float:
-	return lerpf(34.0, 13.0, pow(u, 0.8)) * (0.9 if far else 1.0)
+static func _arm_w(u: float, far: bool, form := 0.0) -> float:
+	return lerpf(34.0, 13.0, pow(u, 0.8)) * (0.9 if far else 1.0) * (1.0 + 0.35 * form)
 
 
 ## Un membre effilé le long de pts (épaisseur w0 → w1) : bois brûlé, encre autour, reflet de cendre du
@@ -772,8 +832,8 @@ static func draw_arm(ci: CanvasItem, xf: Transform2D, i: int, arms: Array, phase
 	if piece == "bas":
 		# Le bout s'enfonce dans le motif.
 		seg[seg.size() - 1] = path[7].lerp(path[8], 1.15)
-	var w0 := _arm_w(lo / 8.0, far)
-	var w1 := _arm_w(hi / 8.0, far) if piece == "haut" else 10.0
+	var w0 := _arm_w(lo / 8.0, far, form)
+	var w1 := _arm_w(hi / 8.0, far, form) if piece == "haut" else 10.0 * (1.0 + 0.35 * form)
 	_limb(ci, xf, seg, w0, w1, wood, 2.6)
 	# Le grain de l'écorce : de longues stries sombres qui suivent le bras, et des anneaux noueux.
 	for g in 3:
@@ -782,13 +842,13 @@ static func draw_arm(ci: CanvasItem, xf: Transform2D, i: int, arms: Array, phase
 		for q in seg.size():
 			var u := (lo + q) / 8.0
 			var d := (seg[mini(q + 1, seg.size() - 1)] - seg[maxi(q - 1, 0)]).normalized()
-			line.append(seg[q] + d.orthogonal() * _arm_w(u, far) * (off + 0.05 * sin(q * 2.0 + g + i)))
+			line.append(seg[q] + d.orthogonal() * _arm_w(u, far, form) * (off + 0.05 * sin(q * 2.0 + g + i)))
 		Ink.brush(ci, xf, line, 2.2, Color(Ink.encre(), 0.55), 0.0, 0.0)
 	for q in range(1, seg.size() - 1):
 		var u := (lo + q) / 8.0
 		var d := (seg[q + 1] - seg[q - 1]).normalized()
 		var o := d.orthogonal()
-		var w := _arm_w(u, far)
+		var w := _arm_w(u, far, form)
 		# Un anneau (bourrelet) et une épine d'os, d'un côté puis de l'autre.
 		Ink.brush(ci, xf, PackedVector2Array([seg[q] - o * w * 0.5, seg[q] + d * 4.0, seg[q] + o * w * 0.5]), 3.2, Ink.encre(), 0.0, 0.0)
 		Ink.brush(ci, xf, PackedVector2Array([seg[q] - o * w * 0.4 + d * 3.0, seg[q] + d * 6.0, seg[q] + o * w * 0.4 + d * 3.0]), 1.6, Color(wood["reflet"], 0.4), 0.0, 0.0)
@@ -801,7 +861,7 @@ static func draw_arm(ci: CanvasItem, xf: Transform2D, i: int, arms: Array, phase
 	if piece == "bas":
 		# Le nœud du coude : une loupe de bois brûlé, fendue de la couleur de l'élément.
 		var el := path[ELBOW]
-		var wk := _arm_w(ELBOW / 8.0, far)
+		var wk := _arm_w(ELBOW / 8.0, far, form)
 		Ink.part(ci, xf, Ink.lumpy(el, wk * 0.5, wk * 0.46, 14, 0.18, 5.0, float(i)), wood, 2.4, 1.0, 0.4)
 		if awake:
 			_crack(ci, xf, PackedVector2Array([el + Vector2(-wk * 0.3, -wk * 0.2), el + Vector2(0, 2), el + Vector2(wk * 0.25, wk * 0.22)]), 2.2, 0.4 + 0.6 * on, float(i))
@@ -864,7 +924,7 @@ static func arm_piece_box(i: int, arms: Array, phase: int, die: float, wake: flo
 
 ## Boîte (repère local) du corps, partie fixe.
 static func body_box() -> Rect2:
-	return Rect2(-280, -400, 560, 520)
+	return Rect2(-300, -440, 600, 600)
 
 
 ## Le motif d'un élément au bout d'un bras, tourné vers l'extérieur (dir), en repère local.
