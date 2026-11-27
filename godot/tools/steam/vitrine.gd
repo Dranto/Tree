@@ -16,6 +16,9 @@ const Enemy = preload("res://scripts/enemy.gd")
 const Regions = preload("res://scripts/regions.gd")
 
 const SHOTS := ["ronce_combat", "ronce_boss", "ronce_coeur", "vague", "arbre", "couronne", "region", "finale"]
+## Captures de la page de la démo (Ronce seule, « -- --demo ») : rien hors de la région de Ronce.
+const DEMO_SHOTS := ["ronce_combat", "ronce_eveil", "ronce_coeur", "ronce_boss", "ronce_chute", "arbre", "couronne"]
+const Demo = preload("res://scripts/demo.gd")
 ## Illustration des capsules (sans interface), à prendre en 3840x2160 : « --shots=illustration ».
 const ART := ["illustration", "succes"]
 ## Succès Steam (un par boss, steam/succes.md) : région du boss, « finale » pour la Flétrissure.
@@ -27,7 +30,7 @@ const LEVEL := 22
 ## (tools/steam-trailer.sh). Chaque plan annonce « VITRINE debut N » à l'image N où il commence
 ## vraiment (la mise en place qui précède est coupée au montage).
 const CLIPS := {"titre": 5.0, "eveil": 9.0, "combat": 13.0, "arbre": 7.0, "coeur": 10.0, "boss": 13.0,
-	"spore": 5.0, "vent": 5.0, "aube": 5.0, "finale": 5.0, "fin": 7.0, "fin_demo": 7.0}
+	"spore": 5.0, "vent": 5.0, "aube": 5.0, "finale": 7.0, "fin": 7.0, "fin_demo": 7.0}
 ## Ligne de la fin (seul texte de la bande-annonce avec le nom du jeu), par langue.
 const END_LINE := {
 	"fin": {"fr": "Bientôt sur Steam", "en": "Coming soon to Steam"},   # i18n: non (bande-annonce)
@@ -46,7 +49,7 @@ var rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	rng.seed = 1234
-	var shots: Array = SHOTS.duplicate()
+	var shots: Array = (DEMO_SHOTS if Demo.active() else SHOTS).duplicate()
 	var clip := ""
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--shots="):
@@ -65,11 +68,11 @@ func _ready() -> void:
 	Settings.bindings = Settings.BINDING_DEFAULTS.duplicate()
 	Settings.apply_bindings()
 	for s in shots:
-		if not s in SHOTS and not s in ART:
+		if not s in SHOTS and not s in DEMO_SHOTS and not s in ART:
 			printerr("VITRINE capture inconnue : ", s)
 			continue
 		# Portraits des boss : partie neuve, sans build (rien n'est visé ni marqué).
-		await _boot("" if s == "succes" else "fouet")
+		await _boot("" if s in ["succes", "ronce_eveil"] else "fouet")
 		await call("_shot_" + str(s))
 		main.queue_free()
 		await _frames(2)
@@ -276,6 +279,37 @@ func _shot_ronce_coeur() -> void:
 	await _save("ronce_coeur")
 
 
+## Ronce encore morte (niveau 1) : le héros ranime un sanctuaire, la vague de vie gagne la terre
+## grise sous les Flétris.
+func _shot_ronce_eveil() -> void:
+	var spot: Vector2 = main.region_center("ronce") * 0.6
+	_place(spot)
+	_ring(spot, 7, 230, 400, ["fletri", "fletri", "cendreux"])
+	await _run(30)
+	main.revive(spot + Vector2(-120, 50), 620.0, Game.tree.branch_color(0))
+	await _run(22)
+	await _save("ronce_eveil")
+
+
+## La Mère-Ronce vient de tomber : ses restes, l'arène qui refleurit sous le héros.
+func _shot_ronce_chute() -> void:
+	var arena = main.arena
+	var spot: Vector2 = arena.center + Vector2(130, 150)
+	_place(spot)
+	arena._start_fight()
+	arena.gap_open = 0.0
+	var boss = arena.boss
+	boss.intro = 0.0
+	boss.hp = boss.max_hp * 0.3
+	await _run(60, func(i):
+		if i == 20: _cast("racines", boss.position)
+		if i == 40: _cast("volee", boss.position))
+	boss.take_damage(boss.hp + 1.0, false)
+	await _run(int(boss.death_time * 60.0) + 90)
+	main.hud.banner_time = 0.0
+	await _save("ronce_chute")
+
+
 ## Le marais de Spore encore mort : un sanctuaire ravivé, la vague de vie qui gagne la terre.
 ## (Ronce est déjà verte au niveau 22 : chaque nœud appris ravive sa région.)
 func _shot_vague() -> void:
@@ -358,6 +392,11 @@ func _shot(shot_name: String, _screen := "") -> void:
 			await _save_square("succes_" + _portrait)
 			_portrait = ""
 			return
+		if _as == "finale":
+			# La Flétrissure agrandie : la caméra recule pour garder sa ramure à l'écran.
+			main.moments.zoom_base = 0.8
+			main.camera.zoom = Vector2.ONE * 0.8
+			await _frames(3)
 		await _save(_as)
 
 
@@ -581,11 +620,27 @@ func _clip_finale(clip: String) -> void:
 	finale._start_fight()
 	var boss = finale.boss
 	boss.intro = 0.0
+	# Sans l'attente calée sur le morceau (le plan est trop court pour la partition entière).
+	if finale.sync != null:
+		finale.sync.stop()
+	# La seconde forme, d'emblée (comme le banc visuel) : l'île au-dessus du gouffre, la ramure de braise.
+	boss.phase = 3
+	boss.unbound = true
+	boss.morph_time = -1.0
+	finale.collapse_t = -1.0
+	finale.collapse_k = 1.0
+	finale.radius = finale.collapse_radius
+	boss.hp = boss.max_hp * 0.25
+	p.position = finale.center + Vector2(130, 140)
+	p.reset_physics_interpolation()
+	# La ramure entière à l'écran : la caméra recule un peu.
+	main.moments.zoom_base = 0.72
+	main.camera.zoom = Vector2.ONE * 0.72
 	await _run(int(1.5 * FPS))
 	main.fx.rings = []
 	await _play(clip, func(i):
 		if is_instance_valid(boss):
-			boss.hp = maxf(boss.hp, boss.max_hp * 0.5)
+			boss.hp = maxf(boss.hp, boss.max_hp * 0.2)
 		_skill_cycle(i, 26),
 		[[0.0, Vector2(-0.4, 0.2)], [2.5, Vector2(0.3, -0.4)]])
 

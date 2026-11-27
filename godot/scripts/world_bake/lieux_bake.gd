@@ -22,6 +22,8 @@ const ATLAS_W := 2048
 ## Mémoire des images gardées : au-delà, les jeux qui n'ont pas servi depuis UNUSED_MSEC sont rendus
 ## (recuits s'ils reviennent à l'écran). 28 Mo depuis les arènes (vague 3 A : ~3,5 Mo par arène à l'écran).
 const BUDGET := 28 * 1024 * 1024
+## Budget en cours (relevé pendant une partie préparée, world_preload.gd).
+static var budget := BUDGET
 const UNUSED_MSEC := 4000
 
 ## Jeu -> {"tex": ImageTexture, "cells": {clé: [src (Rect2, pixels de l'atlas), box (Rect2, monde)]}, "bytes": int}
@@ -208,13 +210,13 @@ static func draw(ci: CanvasItem, set_key: String, key: String, at := Vector2.ZER
 ## Au-delà du budget, rend les jeux qui n'ont pas servi depuis UNUSED_MSEC, les plus anciens d'abord.
 static func trim() -> int:
 	var n := 0
-	if bytes <= BUDGET:
+	if bytes <= budget:
 		return n
 	var keys := sets.keys()
 	keys.sort_custom(func(a, b): return int(sets[a]["used"]) < int(sets[b]["used"]))
 	var now := Time.get_ticks_msec()
 	for key in keys:
-		if bytes <= BUDGET:
+		if bytes <= budget:
 			break
 		if now - int(sets[key]["used"]) > UNUSED_MSEC:
 			release(key)

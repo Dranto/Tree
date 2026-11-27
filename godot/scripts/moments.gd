@@ -63,6 +63,9 @@ var _mat_sprite: ShaderMaterial
 var _flashes: Array = []
 ## Délai des impact frames de critique lourd (secondes réelles).
 var _crit_cd := 0.0
+## Chance de critique du dernier coup du joueur (posée par main.player_hit_enemy).
+var crit_chance := 0.0
+var _rng := RandomNumberGenerator.new()
 
 # --- Ralenti ---
 ## {t, dur, speed (vitesse visée, option comprise), ramp_in, ramp_out}
@@ -72,6 +75,11 @@ var _slow := {}
 var _kick := Vector2.ZERO
 var _zoom := {}
 var _focus := {}
+## Cadrage durable (px écran, réglé par une scène : la Flétrissure qui grandit lève le cadre pour garder
+## sa ramure à l'écran). Ce n'est pas une secousse : il reste même à secousses coupées.
+var frame_bias := Vector2.ZERO
+## Zoom de base de la caméra (1 en jeu ; la bande-annonce, tools/steam/vitrine.gd, recule pour la finale).
+var zoom_base := 1.0
 ## Distorsion du dernier coup en cours (final_blow.gd), ou null.
 var _warp = null
 var _cam_dirty := false
@@ -93,6 +101,7 @@ var shown_sil := Color.TRANSPARENT
 
 
 func _ready() -> void:
+	_rng.seed = 5309  # tirages des moments : toujours les mêmes (parties rejouables)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Après fx.gd : la secousse de l'image est déjà calculée quand la caméra est posée.
 	process_priority = 100
@@ -184,7 +193,8 @@ func impact_frame(force: float, cibles: Array = [], style := "encre", region_id 
 		region_id = _region_of(at)
 	_frame = {"force": force, "style": style, "seq": seq, "i": 0, "t": 0.0,
 		"min_time": feel("impact_frame", "min_time", 0.03), "region": region_id, "outline": outline, "pos": at,
-		"fresh": true, "hold": hold}
+		"fresh": true, "hold": hold,
+		"per": feel("impact_frame", "frame_time_strong" if strong else "frame_time", 0.09 if strong else 0.06)}
 	_collect(cibles, at, outline)
 	if outline:
 		outline_frames += 1
@@ -194,6 +204,11 @@ func impact_frame(force: float, cibles: Array = [], style := "encre", region_id 
 	last_seq = seq.duplicate()
 	_apply_variant()
 	return true
+
+
+## Tirage 0-1 propre aux moments (jamais main.rng : la partie reste rejouable à l'identique).
+func _roll() -> float:
+	return _rng.randf()
 
 
 ## Vrai pendant une impact frame.
@@ -361,20 +376,17 @@ func _step_frame(real: float) -> void:
 		_frame["fresh"] = false
 		return
 	_frame["t"] += real
-	if float(_frame.get("hold", 0.0)) > 0.0:
-		var at := int(float(_frame["t"]) / float(_frame["hold"]))
-		if at >= _frame["seq"].size():
-			_end_frame()
-		elif at != int(_frame["i"]):
-			_frame["i"] = at
-			_apply_variant()
-		return
-	var next := int(_frame["i"]) + 1
-	if next >= _frame["seq"].size() and _frame["t"] >= float(_frame["min_time"]):
+	# Chaque image dure « per » secondes réelles : « hold » (dernier coup), sinon frame_time
+	# (frame_time_strong pour les coups très forts). Trop brèves, elles faisaient un simple flash.
+	var per := float(_frame.get("hold", 0.0))
+	if per <= 0.0:
+		per = float(_frame.get("per", 0.06))
+	var at := int(float(_frame["t"]) / maxf(per, 0.001))
+	if at >= _frame["seq"].size():
 		_end_frame()
-		return
-	_frame["i"] = mini(next, _frame["seq"].size() - 1)
-	_apply_variant()
+	elif at != int(_frame["i"]):
+		_frame["i"] = at
+		_apply_variant()
 
 
 func _draw() -> void:
@@ -555,8 +567,8 @@ static func _envelope(e: Dictionary, rise := 0.2) -> float:
 
 func zoom_now() -> float:
 	if _zoom.is_empty():
-		return 1.0
-	return 1.0 + float(_zoom["force"]) * feel("camera", "zoom_max", 0.12) * Settings.shake_strength() * _envelope(_zoom, 0.18)
+		return zoom_base
+	return zoom_base + float(_zoom["force"]) * feel("camera", "zoom_max", 0.12) * Settings.shake_strength() * _envelope(_zoom, 0.18)
 
 
 func focus_offset() -> Vector2:
@@ -591,8 +603,8 @@ func _step_camera(real: float) -> void:
 		_zoom = {}
 		_focus = {}
 		active = false
-	if active or _cam_dirty or shake != Vector2.ZERO or cam.offset != Vector2.ZERO:
-		cam.offset = shake + _kick + focus_offset()
+	if active or _cam_dirty or shake != Vector2.ZERO or cam.offset != frame_bias:
+		cam.offset = frame_bias + shake + _kick + focus_offset()
 		var z := zoom_now()
 		if cam.zoom.x != z:
 			cam.zoom = Vector2(z, z)
@@ -622,6 +634,11 @@ func _process(delta: float) -> void:
 ## Critique lourd (fx.impact) : impact frame « encre », à-coup de la caméra dans le sens du coup.
 func on_crit_heavy(pos: Vector2) -> void:
 	if _crit_cd > 0.0:
+		return
+	# Pas systématique : plus on a de chances de critique, plus l'impact frame est rare
+	# (probabilité inversement proportionnelle : crit_ref / chance), contre le flood visuel.
+	var ref := feel("impact_frame", "crit_ref", 0.25)
+	if crit_chance > ref and _roll() > ref / crit_chance:
 		return
 	var target: Array = []
 	if main != null and main.has_method("enemies_near"):

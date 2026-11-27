@@ -28,7 +28,8 @@ MUSIC = {
     "spore": ["spore_boss"],
     "vent": ["vent_boss"],
     "aube": ["aube_boss"],
-    "finale": ["finale_boss"],
+    # La Flétrissure joue son morceau fait à la main (assets/music/hand), comme en jeu.
+    "finale": ["hand/finale/drop_1.ogg"],
     "fin": ["generique_lumineux"],
     "fin_demo": ["generique_lumineux"],
 }
@@ -66,7 +67,8 @@ def main():
         stems = MUSIC.get(name, ["lumineux"])
         ins = []
         for s in stems:
-            ins += ["-stream_loop", "-1", "-i", os.path.join(music_dir, f"{s}.wav")]
+            path = os.path.join(music_dir, s if "." in s else f"{s}.wav")
+            ins += ["-stream_loop", "-1", "-i", path]
         mix = "".join(f"[{i}:a]" for i in range(len(stems)))
         ff(*ins, "-t", f"{d:.3f}", "-filter_complex",
            f"{mix}amix=inputs={len(stems)}:normalize=0,aresample=44100,aformat=channel_layouts=stereo[m]",

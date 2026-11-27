@@ -1075,21 +1075,29 @@ func heart_off() -> Vector2:
 
 
 ## Sa taille (dessin seul) : elle grandit à chaque phase (FinaleArt.PHASE_ART), pendant la mue de la
-## phase 2 (sur le drop) et pendant la transformation ; sans morceau, en un peu moins d'une demi-seconde.
-var _art := -1.0
-var _art_at := -1.0
+## phase 2 (sur le drop) et pendant la transformation. Sans état : une capture figée a la bonne taille.
+## Plus elle grandit, plus le cadre se lève (jusqu'à FRAME_LIFT px en seconde forme) : sa ramure reste à
+## l'écran. Dessin seul : la caméra suit toujours le héros.
+const FRAME_LIFT := 180.0
+
+
+func _frame_bias() -> void:
+	if main == null or main.get("moments") == null:
+		return
+	var u := clampf((_art_now() - FinaleArt.PHASE_ART[0]) / (FinaleArt.PHASE_ART[3] - FinaleArt.PHASE_ART[0]), 0.0, 1.0)
+	main.moments.frame_bias = Vector2(0, -FRAME_LIFT * u * (1.0 - clampf(dying / maxf(death_time, 0.01), 0.0, 1.0) if dead else 1.0))
+
+
+func _exit_tree() -> void:
+	super._exit_tree()
+	if main != null and main.get("moments") != null and is_instance_valid(main.moments):
+		main.moments.frame_bias = Vector2.ZERO
 
 
 func _art_now() -> float:
-	if _art_at == t and _art > 0.0:
-		return _art
-	var target := FinaleArt.phase_art(phase, form_k())
 	if mue_k >= 0.0 and phase == 2:
-		target = lerpf(FinaleArt.PHASE_ART[1], FinaleArt.PHASE_ART[2], Choreo.ease_in_out(clampf(mue_k, 0.0, 1.0)))
-	var dt := maxf(0.0, t - _art_at) if _art_at >= 0.0 else 0.0
-	_art = target if (_art < 0.0 or frozen or transforming()) else move_toward(_art, target, dt * 0.25)
-	_art_at = t
-	return _art
+		return lerpf(FinaleArt.PHASE_ART[1], FinaleArt.PHASE_ART[2], Choreo.ease_in_out(clampf(mue_k, 0.0, 1.0)))
+	return FinaleArt.phase_art(phase, form_k())
 
 
 # --- Gestes (dessin seul : boss_art/finale_choreo.gd) ---
@@ -1222,6 +1230,7 @@ func _draw() -> void:
 	_pose = [phase, _announce_k(), lit, die, _wake_k(), lit2, form_k(), _facing_step()]
 	_anim = {} if dead or transforming() else _gesture_step()
 	_anim["art"] = _art_now()
+	_frame_bias()
 	if _layers.is_empty():
 		draw_set_transform_matrix(at)
 		draw_colossus(self, Vector2.ZERO, radius, t, phase, _pose[1], lit, die, _pose[4], _color, lit2, _pose[6], _pose[7], _anim)

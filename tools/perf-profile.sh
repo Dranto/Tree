@@ -16,4 +16,4 @@ rm -rf "$TMP/godot/autotest" "$TMP/godot/tests/visual/out"
 # shellcheck disable=SC2086
 python3 "$ROOT/tools/perf_instrument.py" "$TMP/godot" ${FUNCS:-}
 "$TMP/tools/godot.sh" --headless --import >/dev/null 2>&1 || true
-"$TMP/tools/godot.sh" --xvfb -- --benchmark --profile "$@" 2>&1 | grep -E "BENCHMARK|PROFIL|SCRIPT ERROR"
+"$TMP/tools/godot.sh" --xvfb -- --benchmark --profile "$@" 2>&1 | grep -E "BENCHMARK|PROFIL|PIC|A-COUP|PRÉPARATION|SCRIPT ERROR"
