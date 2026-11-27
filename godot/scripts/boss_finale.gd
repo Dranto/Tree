@@ -38,6 +38,7 @@
 extends BossBase
 
 const FinaleArt = preload("res://scripts/boss_art/finale.gd")
+const Choreo = preload("res://scripts/boss_art/finale_choreo.gd")
 const LiveBake = preload("res://scripts/boss_art/live_bake.gd")
 const TINT_SHADER = preload("res://shaders/sprite_tint.gdshader")
 
@@ -652,6 +653,7 @@ func _begin(kind: String, strike_at := -1.0) -> void:
 		kind = "spores" if strike_at >= 0.0 else "epines"
 	attack = kind
 	stage = "annonce"
+	_gesture_begin(kind)
 	Sfx.play("annonce", anchor)
 	var p: Vector2 = main.player.position
 	var to: Vector2 = p - anchor
@@ -757,6 +759,7 @@ func _announce_step() -> void:
 
 func _strike() -> void:
 	stage = "frappe"
+	_gesture_mark("struck")
 	_strike_beat = -1.0
 	var p = main.player
 	match attack:
@@ -862,6 +865,7 @@ func _in_rays(pos: Vector2, margin: float) -> bool:
 
 
 func _end_attack() -> void:
+	_gesture_mark("ended")
 	attack = ""
 	stage = ""
 	gap = PHASES[phase]["gap"]
@@ -1032,6 +1036,7 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 
 
 func _clear_attacks() -> void:
+	_gesture_mark("ended")
 	attack = ""
 	stage = ""
 	thorns = []
@@ -1062,6 +1067,90 @@ func bot_ring(arena_radius: float) -> float:
 
 
 ## Avancée de l'annonce en cours (0 → 1), 0 hors annonce.
+## Le cœur (repère du boss) : là où se calent la charge, la mort et l'éclat (le dessin est ART fois
+## plus grand que le rayon).
+func heart_off() -> Vector2:
+	return FinaleArt.HEART * FinaleArt.ART * radius / 100.0
+
+
+# --- Gestes (dessin seul : boss_art/finale_choreo.gd) ---
+# Chaque bras qui porte une attaque garde un enregistrement : l'attaque, l'heure de la frappe et de la
+# fin (horloge t) ; l'annonce se lit dans _announce_k. Le retour au repos continue après la fin, même
+# si une autre attaque commence ; un bras repris en plein retour part de sa pose du moment.
+var _gestures: Array = [{}, {}, {}, {}, {}, {}]
+var _anim := {}
+
+
+## Les bras (rangs dans ARMS) qui jouent l'attaque « kind ».
+static func gesture_arms(kind: String) -> Array:
+	if COMBO_ARMS.has(kind):
+		return COMBO_ARMS[kind]
+	if kind == "rejetons":
+		return [5]
+	for i in ARMS.size():
+		if ARMS[i]["trait"] == kind:
+			return [i]
+	return []
+
+
+func _gesture_begin(kind: String) -> void:
+	for i: int in gesture_arms(kind):
+		var old: Dictionary = _gesture_rec(i)
+		var rec := {"kind": kind, "struck": -1.0, "ended": -1.0, "begun": t}
+		if not Choreo.done(old):
+			rec["from"] = Choreo.arm_pose(old, str(ARMS[i]["trait"]), t)
+		_gestures[i] = rec
+
+
+func _gesture_mark(what: String) -> void:
+	for i: int in gesture_arms(attack):
+		var g: Dictionary = _gestures[i]
+		if g.is_empty() or g["kind"] != attack or float(g[what]) >= 0.0:
+			continue
+		g[what] = t
+		if what == "ended" and float(g["struck"]) < 0.0:
+			g["struck"] = t
+
+
+## L'enregistrement du bras i pour Choreo (k, s, e en secondes), {} au repos.
+func _gesture_rec(i: int) -> Dictionary:
+	var g: Dictionary = _gestures[i]
+	if g.is_empty():
+		return {}
+	var rec := {"kind": g["kind"], "k": 1.0, "s": -1.0, "e": -1.0}
+	if g.has("from"):
+		rec["from"] = g["from"]
+	if float(g["struck"]) < 0.0:
+		rec["k"] = _announce_k() if g["kind"] == attack else 1.0
+	else:
+		rec["s"] = t - float(g["struck"])
+		if float(g["ended"]) >= 0.0:
+			rec["e"] = t - float(g["ended"])
+	return rec
+
+
+func _gesture_step() -> Dictionary:
+	var recs: Array = []
+	for i in ARMS.size():
+		var rec := _gesture_rec(i)
+		if not rec.is_empty() and Choreo.done(rec):
+			_gestures[i] = {}
+			rec = {}
+		recs.append(rec)
+	var to: Vector2 = main.player.position - anchor if main != null and main.player != null else Vector2.DOWN
+	var anim := Choreo.build(recs, ARMS, to.normalized() if to.length() > 1.0 else Vector2.DOWN, t)
+	if drum_flash >= 0.0 and drum_flash < 1.0:
+		# Sur chaque coup de batterie, les bras au repos tressaillent (ils retombent, puis se relèvent).
+		var j := (1.0 - drum_flash) * (1.0 - drum_flash)
+		for i in ARMS.size():
+			if recs[i].is_empty():
+				var pose: Dictionary = anim["arms"][i].duplicate()
+				pose["up"] = float(pose["up"]) - 0.09 * j
+				pose["el"] = float(pose["el"]) + 0.12 * j
+				anim["arms"][i] = pose
+	return anim
+
+
 func _announce_k() -> float:
 	if stage != "annonce" or stage_time <= 0.0:
 		return 0.0
@@ -1097,7 +1186,7 @@ func _draw() -> void:
 		# Elle gonfle sur chaque impulsion et tremble de plus en plus : l'énergie la déborde.
 		var e := charge_energy()
 		var sw := 1.0 + 0.05 * e + 0.05 * e * charge_pulse() + 0.08 * charge_overflow()
-		var h := Vector2(0, -radius * 0.45)
+		var h := heart_off()
 		at = Transform2D(0.0, Vector2(sw, sw), 0.0, charge_jitter() + h - h * sw)
 	var pulsing := not charging and not dead and on_music_grid()
 	if pulsing:
@@ -1109,12 +1198,13 @@ func _draw() -> void:
 			# Au déluge, ses bras s'allument tour à tour, un par temps.
 			if lit < 0:
 				lit = int(beats_now()) % ARMS.size()
-		var h := Vector2(0, -radius * 0.45)
+		var h := heart_off()
 		at = Transform2D(0.0, Vector2(sw, 2.0 - sw), 0.0, h - h * sw)
 	_pose = [phase, _announce_k(), lit, die, _wake_k(), lit2, form_k(), _facing_step()]
+	_anim = {} if dead or transforming() else _gesture_step()
 	if _layers.is_empty():
 		draw_set_transform_matrix(at)
-		draw_colossus(self, Vector2.ZERO, radius, t, phase, _pose[1], lit, die, _pose[4], _color, lit2, _pose[6], _pose[7])
+		draw_colossus(self, Vector2.ZERO, radius, t, phase, _pose[1], lit, die, _pose[4], _color, lit2, _pose[6], _pose[7], _anim)
 		draw_set_transform_matrix(Transform2D.IDENTITY)
 		if charging:
 			_draw_charge_front(self)
@@ -1123,7 +1213,9 @@ func _draw() -> void:
 	_bake_part("corps", [phase, snappedf(die, 0.05), snappedf(_pose[4], 0.1), snappedf(_pose[6], 0.05)])
 	for i in ARMS.size():
 		var on := FinaleArt.arm_on(i, _pose[1], lit, lit2, _pose[6])
-		_bake_part(i, [phase >= int(ARMS[i]["phase"]), snappedf(on, 0.25), snappedf(die, 0.05), snappedf(_pose[4], 0.1), snappedf(_pose[6], 0.05)])
+		var key := [phase >= int(ARMS[i]["phase"]), snappedf(on, 0.25), snappedf(die, 0.05), snappedf(_pose[4], 0.1), snappedf(_pose[6], 0.05)]
+		for part in [i, "f%d" % i, "m%d" % i]:
+			_bake_part(part, key)
 	var ready := true
 	for key in _bakes:
 		ready = ready and _bakes[key].ready
@@ -1175,11 +1267,15 @@ func _make_art() -> void:
 	var plain := func(c): return c
 	_bakes["corps"] = LiveBake.new(self, FinaleArt.body_box(), func(ci):
 		var a: Array = _bake_args["corps"]
-		FinaleArt.draw_body(ci, Transform2D.IDENTITY, a[0], a[1], a[2], a[3], plain))
+		FinaleArt.draw_body(ci, Transform2D.IDENTITY, a[0], a[1], a[2], a[3], plain), FinaleArt.ART)
+	# Chaque bras en trois pièces (bras, avant-bras, motif) : ses gestes plient le coude et gonflent le
+	# motif sans recuire (transformations des textures).
 	for i in ARMS.size():
-		_bakes[i] = LiveBake.new(self, FinaleArt.arm_box(i), func(ci):
-			var a: Array = _bake_args[i]
-			FinaleArt.draw_arm(ci, Transform2D.IDENTITY, i, ARMS, a[0], a[1], a[2], a[3], a[4], plain))
+		for part in [i, "f%d" % i, "m%d" % i]:
+			var pc := FinaleArt.piece_of(part)
+			_bakes[part] = LiveBake.new(self, FinaleArt.arm_box(i, pc[1]), func(ci):
+				var a: Array = _bake_args[part]
+				FinaleArt.draw_arm(ci, Transform2D.IDENTITY, i, ARMS, a[0], a[1], a[2], a[3], a[4], plain, pc[1]), FinaleArt.ART)
 	for key in _bakes:
 		_bakes[key].rate = 0.001
 	# Le sol (racines, brume) : cuit à chaque changement de phase, de forme ou de mort, sous les annonces.
@@ -1204,7 +1300,9 @@ func _bake_part(key, args: Array) -> void:
 		if str(key) == "corps":
 			_bake_args[key] = [p[0], p[3], p[4], p[6]]
 		else:
-			_bake_args[key] = [p[0], FinaleArt.arm_on(int(key), p[1], p[2], p[5], p[6]), p[3], p[4], p[6]]
+			var pc := FinaleArt.piece_of(key)
+			_bake_args[key] = [p[0], FinaleArt.arm_on(pc[0], p[1], p[2], p[5], p[6]), p[3], p[4], p[6]]
+			b.set_box(FinaleArt.arm_piece_box(pc[0], ARMS, p[0], p[3], p[4], p[6], pc[1]))
 	b.update(args, t)
 
 
@@ -1214,7 +1312,7 @@ func _compose(ci: CanvasItem, stage: String) -> void:
 	FinaleArt.compose(ci, Vector2.ZERO, radius, t, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], ARMS, func(cc: CanvasItem, xf: Transform2D, part):
 		cc.draw_set_transform_matrix(xf)
 		_bakes[part].draw(cc, Vector2.ZERO, tint)
-		cc.draw_set_transform_matrix(Transform2D.IDENTITY), stage)
+		cc.draw_set_transform_matrix(Transform2D.IDENTITY), stage, _anim)
 
 
 func _draw_layer(n: Node2D, stage: String) -> void:
@@ -1223,7 +1321,7 @@ func _draw_layer(n: Node2D, stage: String) -> void:
 	if not _baked_ready:
 		# Pas encore cuit : tout en direct, sur la couche « milieu » (sans shader).
 		if stage == "milieu":
-			draw_colossus(n, Vector2.ZERO, radius, t, _pose[0], _pose[1], _pose[2], _pose[3], _pose[4], _color, _pose[5], _pose[6], _pose[7])
+			draw_colossus(n, Vector2.ZERO, radius, t, _pose[0], _pose[1], _pose[2], _pose[3], _pose[4], _color, _pose[5], _pose[6], _pose[7], _anim)
 		return
 	_compose(n, stage)
 
@@ -1281,7 +1379,7 @@ func _dying_step(_delta: float) -> void:
 	if Settings.reduce_effects:
 		return
 	var k := clampf(dying / death_time, 0.0, 1.0)
-	var h := anchor + Vector2(0, -radius * 0.45)
+	var h := anchor + heart_off()
 	var fx = main.fx
 	for i in 3:
 		var a := _die_rng.randf() * TAU
@@ -1304,7 +1402,7 @@ func _draw_charge_back() -> void:
 	var pulse := charge_pulse()
 	var hot := Art.ec("cendre", "clair")
 	var ember := Art.ec("cendre")
-	var h := Vector2(0, -radius * 0.45)
+	var h := heart_off()
 	var beat: float = fposmod(sync.bars_now() * sync.beats * charge_rate(), 1.0)
 	_draw_charge_cracks(e, pulse)
 	_draw_charge_sigil(e, pulse)
@@ -1354,7 +1452,7 @@ func _draw_charge_cracks(e: float, pulse: float) -> void:
 		var pts := PackedVector2Array([Vector2.from_angle(a) * radius * 0.5])
 		var dir := a
 		var l := 0.0
-		var seg := radius * 0.45
+		var seg := -heart_off().y
 		var k := 0
 		while l < reach * (0.6 + 0.4 * _rand(i + 50)):
 			dir += (_rand(i * 7 + k) - 0.5) * 0.9
@@ -1430,7 +1528,7 @@ func _draw_charge_sigil(e: float, pulse: float) -> void:
 ## Six courants d'énergie, un par élément de ses bras, qui viennent du bord de l'arène et coulent vers
 ## son cœur : des traits qui filent de plus en plus vite le long de courbes qui se tordent.
 func _draw_charge_streams(e: float, pulse: float) -> void:
-	var h := Vector2(0, -radius * 0.45)
+	var h := heart_off()
 	var far: float = (arena.max_radius if arena != null and arena.get("max_radius") != null else radius * 7.0) * 0.95
 	for i in ARMS.size():
 		var col := Art.ec(str(ARMS[i]["element"]), "clair")
@@ -1457,7 +1555,7 @@ func _draw_charge_streams(e: float, pulse: float) -> void:
 func _draw_charge_debris(e: float, pulse: float) -> void:
 	var stone := Art.ec("racine", "sombre").lerp(Art.c("ennemi"), 0.2).darkened(0.3)
 	var hot := Art.ec("cendre", "clair")
-	var h := Vector2(0, -radius * 0.45)
+	var h := heart_off()
 	for i in 16:
 		var born := 0.05 + 0.5 * _rand(i + 3)
 		if charge < born:
@@ -1491,7 +1589,7 @@ func _draw_charge_front(ci: CanvasItem) -> void:
 	var hot := Art.ec("cendre", "clair")
 	var ember := Art.ec("cendre")
 	var white := Color(1.0, 0.97, 0.9)
-	var h := Vector2(0, -radius * 0.45) + charge_jitter()
+	var h := heart_off() + charge_jitter()
 	# Veines de braise sur le corps, qui battent sur les impulsions.
 	for i in 9:
 		var a := TAU * i / 9.0 + 0.5
@@ -1556,8 +1654,8 @@ static func draw_floor(ci: CanvasItem, c: Vector2, r: float, t: float, phase: in
 ##   die : avancée de la mort (0 → 1) ; wake : 0 endormie, 1 dressée ;
 ##   tint : couleur d'une partie du corps (éclair du coup, poison, cendre ; BossBase._color) ;
 ##   form : seconde forme (0 → 1) ; facing : 1 tournée vers la droite, -1 vers la gauche.
-static func draw_colossus(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, k: float, lit: int, die: float, wake: float, tint: Callable, lit2 := -1, form := 0.0, facing := 1.0) -> void:
-	FinaleArt.draw(ci, c, r, t, phase, k, lit, die, wake, tint, lit2, form, facing, ARMS)
+static func draw_colossus(ci: CanvasItem, c: Vector2, r: float, t: float, phase: int, k: float, lit: int, die: float, wake: float, tint: Callable, lit2 := -1, form := 0.0, facing := 1.0, anim := {}) -> void:
+	FinaleArt.draw(ci, c, r, t, phase, k, lit, die, wake, tint, lit2, form, facing, ARMS, anim)
 
 
 ## Annonces au sol, en coordonnées monde (grammaire de Art.telegraph). Les rejetons, qui ne
