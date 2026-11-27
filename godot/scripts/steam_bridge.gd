@@ -40,10 +40,10 @@ const SAVE_PATH := "user://saves/partie.json"
 const SETTINGS_PATH := "user://settings.cfg"
 const CLOUD_FILES := {SAVE_PATH: "partie.json", SETTINGS_PATH: "settings.cfg"}
 ## Fonctions du singleton GodotSteam appelées par ce fichier (vérifiées par --steam-probe).
-const API := ["steamInitEx", "run_callbacks", "setAchievement", "storeStats", "setRichPresence",
-	"clearRichPresence", "isCloudEnabledForAccount", "isCloudEnabledForApp", "fileExists", "fileWrite",
-	"fileRead", "getFileSize", "getFileTimestamp", "isSteamRunningOnSteamDeck", "isSteamInBigPictureMode",
-	"showFloatingGamepadTextInput", "showGamepadTextInput"]
+const API := ["steamInitEx", "run_callbacks", "setAchievement", "storeStats", "setRichPresence",  # i18n: non
+	"clearRichPresence", "isCloudEnabledForAccount", "isCloudEnabledForApp", "fileExists", "fileWrite",  # i18n: non
+	"fileRead", "getFileSize", "getFileTimestamp", "isSteamRunningOnSteamDeck", "isSteamInBigPictureMode",  # i18n: non
+	"showFloatingGamepadTextInput", "showGamepadTextInput"]  # i18n: non
 ## Mode du clavier flottant du Deck : une seule ligne (EFloatingGamepadTextInputMode).
 const FLOATING_SINGLE_LINE := 0
 
@@ -96,8 +96,19 @@ func _probe() -> void:
 	var lib := Engine.has_singleton("Steam")
 	print("STEAM-PROBE bibliotheque=%s statut=%s app_id=%d demo=%s" % ["oui" if lib else "non", status, app_id(), Demo.active()])  # i18n: non
 	if lib:
-		var miss := missing_api(Engine.get_singleton("Steam"))
+		var steam = Engine.get_singleton("Steam")
+		if steam.has_method("get_godotsteam_version"):
+			print("STEAM-PROBE GodotSteam %s" % str(steam.get_godotsteam_version()))  # i18n: non
+		var miss := missing_api(steam)
 		print("STEAM-PROBE fonctions manquantes : %s" % (", ".join(miss) if not miss.is_empty() else "aucune"))  # i18n: non
+		if not miss.is_empty():
+			# Noms voisins, pour retrouver une fonction renommée par GodotSteam.
+			var names: Array = []
+			for m in steam.get_method_list():
+				var n: String = m["name"]
+				if n.containsn("deck") or n.containsn("version") or n.containsn("bigpicture"):  # i18n: non
+					names.append(n)
+			print("STEAM-PROBE fonctions voisines : %s" % ", ".join(names))  # i18n: non
 	get_tree().quit(0)
 
 

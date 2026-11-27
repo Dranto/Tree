@@ -30,7 +30,8 @@ code=$?
 [ $code -eq 0 ] || { echo "ÉCHEC : code de sortie $code"; fail=1; }
 grep -q "AUTOTEST fini" "$LOG" || { echo "ÉCHEC : le robot n'a pas fini"; fail=1; }
 # Erreurs attendues (pilote audio absent sur la CI, texture de rendu logiciel, fuites à la sortie).
-if grep -E "SCRIPT ERROR|Parse Error|Failed to load|Cannot open|Resource file not found" "$LOG"; then
+# Lignes de Steam exclues : sans client Steam (CI), l'API dit « Failed to load module steamclient.so ».
+if grep -vE "^Steam :|^\[S_API\]" "$LOG" | grep -E "SCRIPT ERROR|Parse Error|Failed to load|Cannot open|Resource file not found"; then
   echo "ÉCHEC : erreurs de script ou de ressource"; fail=1
 fi
 grep -E "^ERROR" "$LOG" | grep -vE "status < 0|rp_texture|leaked at exit" && { echo "ÉCHEC : erreurs inattendues"; fail=1; }
