@@ -104,14 +104,18 @@ func _run() -> void:
 	var paper := Color(str(feel["impact_frame"]["papier"]))
 	check(m.shown_back.is_equal_approx(Color(paper, 1.0)) and m.shown_sil.is_equal_approx(ink), "fond papier clair, silhouettes à l'encre")
 	check(not m.impact_frame(0.3, [e], "encre"), "un moment plus faible n'interrompt pas celui en cours")
-	await _frames(4)
-	await _wait_real(0.05)
-	check(not m.in_impact_frame(), "finie après quelques images")
+	await _frames(1)
+	check(m.in_impact_frame(), "encore là après quelques images : chaque image dure frame_time")
+	await _wait_real(float(feel["impact_frame"]["frame_time"]) * 2.0 + 0.1)
+	check(not m.in_impact_frame(), "finie après ses deux images")
 	check(p.z_index == z0 and p.material == null and e.material == null, "héros et cible rendus tels quels")
 	_settle(m)
 	m.impact_frame(0.9, [e], "encre")
 	check(m.last_seq == ["A", "B", "A"], "coup très fort : alternance avec la variante inverse (%s)" % [m.last_seq])
-	await _frames(2)
+	var g1 := 600
+	while int(m._frame.get("i", 0)) < 1 and g1 > 0:
+		g1 -= 1
+		await _frames(1)
 	check(m.shown_back.is_equal_approx(Color(ink, 1.0)) and m.shown_sil.is_equal_approx(paper), "variante inverse : fond encre, silhouettes papier")
 	_settle(m)
 
@@ -192,6 +196,27 @@ func _run() -> void:
 	_settle(m)
 	await _frames(1)
 	check(h.body.material == h_mat, "le Cœur rendu tel quel")
+
+	print("Critiques lourds : impact frame plus rare quand la chance de critique est haute")
+	var ref := float(feel["impact_frame"]["crit_ref"])
+	var hits := 0
+	for k in 200:
+		_settle(m)
+		m.crit_chance = 1.0
+		var before: int = m.impact_frames
+		m.on_crit_heavy(at + Vector2(60, 0))
+		hits += m.impact_frames - before
+	check(hits > 200 * ref * 0.5 and hits < 200 * ref * 1.6, "chance de critique 100 %% : environ %d %% des critiques lourds (%d sur 200)" % [int(ref * 100), hits])
+	hits = 0
+	for k in 50:
+		_settle(m)
+		m.crit_chance = ref
+		var before2: int = m.impact_frames
+		m.on_crit_heavy(at + Vector2(60, 0))
+		hits += m.impact_frames - before2
+	check(hits == 50, "chance de critique basse : toujours")
+	m.crit_chance = 0.0
+	_settle(m)
 
 	print("Combat de boss simulé : au plus 3 éclairs par seconde")
 	var stamps: Array = []

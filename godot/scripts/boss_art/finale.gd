@@ -28,10 +28,10 @@ const HEART := Vector2(0, -45)
 ## Le dessin est plus grand que le rayon du boss (sa collision) : elle domine l'arène. ART : la taille
 ## de référence (phase 2, et l'échelle des textures cuites) ; PHASE_ART : elle grandit à chaque phase
 ## (endormie et phase 1, phase 2, seconde forme), sur la mue et la transformation.
-const ART := 1.2
-const PHASE_ART := [1.1, 1.1, 1.2, 1.35]
+const ART := 1.5
+const PHASE_ART := [1.3, 1.3, 1.5, 1.75]
 ## Seconde forme : elle s'arrache du sol, debout sur ses racines (unités locales).
-const LIFT := 58.0
+const LIFT := 40.0
 
 
 ## Taille du dessin (× le rayon) d'après la phase et la seconde forme (form 0 → 1).
@@ -542,8 +542,8 @@ static func _ember_crown(ci: CanvasItem, xf: Transform2D, form: float, die: floa
 	for i: int in [0, 8, 1, 7, 2, 6, 3, 5, 4]:
 		var u := (i - 4) / 4.0
 		var from := Vector2(-6 + u * 60.0, -168 + absf(u) * 20.0)
-		var a := -PI / 2.0 + u * 0.95
-		var length := (200.0 - 70.0 * absf(u)) * grow
+		var a := -PI / 2.0 + u * 1.25
+		var length := (140.0 - 30.0 * absf(u)) * grow
 		var pts := _wiggle(from, a, length, 14.0, i * 3.7 + 1.0)
 		Ink.brush(ci, xf, pts, 22.0, Ink.encre(), 1.0, 0.0)
 		Ink.brush(ci, xf, pts, 16.0, wood, 1.0, 0.0)
@@ -922,9 +922,10 @@ static func arm_piece_box(i: int, arms: Array, phase: int, die: float, wake: flo
 	return Rect2(p0, p1 - p0)
 
 
-## Boîte (repère local) du corps, partie fixe.
+## Boîte (repère local) du corps, partie fixe : au plus serré (mesuré sur toutes les phases, la mort et la
+## seconde forme, + 16 de marge) ; rendu logiciel = coût au pixel, même transparent.
 static func body_box() -> Rect2:
-	return Rect2(-300, -440, 600, 600)
+	return Rect2(-244, -380, 488, 520)
 
 
 ## Le motif d'un élément au bout d'un bras, tourné vers l'extérieur (dir), en repère local.

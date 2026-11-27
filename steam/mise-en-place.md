@@ -9,16 +9,15 @@ Le code Steam est prêt et **facultatif** : sans la bibliothèque GodotSteam ni 
 4. Créer la **démo** depuis la page du jeu (Steamworks › Tous les produits associés › Créer une démo) : elle a **son propre App ID**.
 
 ## 2. Mettre l'App ID dans le jeu
-Un seul endroit, deux fichiers à garder égaux :
-- `godot/scripts/steam_bridge.gd` : `const APP_ID := 480` → l'App ID du jeu ;
-- `godot/steam_appid.txt` : la même valeur (sert seulement à lancer le jeu hors de Steam, pendant le développement ; **ne pas** le livrer dans le build Steam).
-
-La démo : un build exporté avec la fonctionnalité `demo` (tâche C) ; son App ID sera choisi selon `Game.is_demo()` quand la démo aura le sien.
+Un seul fichier : `godot/data/steam.json` (`app_id` pour le jeu, `demo_app_id` pour la démo, qui a le
+sien). Le jeu transmet lui-même l'identifiant à Steam : pas de `steam_appid.txt`. Voir `docs/steam.md`.
 
 ## 3. Bibliothèque GodotSteam
-- `tools/steam-fetch.sh` télécharge GodotSteam (GDExtension) dans `godot/addons/godotsteam` (hors dépôt). Sous Windows : le lancer depuis Git Bash, ou télécharger l'archive « GDExtension plugin » sur https://github.com/GodotSteam/GodotSteam/releases et copier son dossier `addons/godotsteam` dans `godot/addons/`.
-- Ouvrir Steam, puis lancer le jeu depuis Godot : la console doit dire `Steam : actif (App ID 480)` et l'overlay Steam (Maj+Tab) s'ouvrir.
-- Exporter : avec ce dossier présent, l'export embarque la bibliothèque et `steam_api64.dll`.
+- La CI (workflow « Builds ») pose GodotSteam 4.24 dans chaque build Windows et Linux et vérifie
+  qu'il se charge : les artefacts sont prêts pour Steam (exe + `libgodotsteam…` + `steam_api64.dll`).
+- En local : `tools/steam-fetch.sh` (Git Bash sous Windows), ou l'archive « GDExtension plugin » de
+  https://codeberg.org/godotsteam/godotsteam/releases (dossier `addons/godotsteam` dans `godot/addons/`).
+- Tester avec ton compte : `docs/steam.md`.
 
 ## 4. Réglages Steamworks
 - **Succès** : créer les 7 succès de `steam/succes.md` (identifiants exacts), puis « Publier ».
