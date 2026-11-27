@@ -17,6 +17,7 @@ extends Node2D
 
 const NAME := "PoseCache"  # i18n: non
 const Cuisson = preload("res://scripts/boss_art/cuisson.gd")
+const LieuxBake = preload("res://scripts/world_bake/lieux_bake.gd")
 
 ## Nombre de poses gardées (la plus ancienne est oubliée au-delà).
 var limit := 220
@@ -35,6 +36,21 @@ var drawn_count := 0
 var _epoch := Cuisson.epoch
 ## Le cache est montré (voir l'en-tête : `visible` reste vrai).
 var shown := true
+
+## --- Pose affichée en image (facultatif : bake_box posé par le boss) ---
+## Les poses gardent leurs commandes de dessin, mais dans un SubViewport : il n'est rendu que quand la
+## pose change (~8 fois par seconde), et l'écran ne montre plus qu'une image (alpha prémultiplié). En
+## rendu logiciel, retracer les milliers de sommets d'une pose à chaque image coûtait ~2,5 ms.
+## bake_box : repère de la pose (pieds en 0, px du jeu) qui contient toutes ses poses.
+var bake_box := Rect2()
+## Rendus de la pose affichée (compteur, pour les tests).
+var renders := 0
+var _vp: SubViewport
+var _holder: Node2D
+var _view: Node2D
+var _mod := Color.WHITE
+var _want_render := false
+var _has_image := false
 
 
 class Pose extends Node2D:
@@ -70,16 +86,24 @@ func show_pose(key: String, drawer: Callable, xf: Transform2D, mod := Color.WHIT
 		_stamp.clear()
 		_current = null
 		_prev = null
+		_want_render = false
+	var baking := _baking()
 	var n: Node2D = _nodes.get(key)
 	if n == null:
 		var p := Pose.new()
 		p.drawer = drawer
 		p.owner_cache = self
-		add_child(p)
+		if baking:
+			_holder.add_child(p)
+		else:
+			add_child(p)
 		_nodes[key] = p
 		n = p
 		_trim()
 	_stamp[key] = _clock
+	if baking:
+		_show_baked(n, xf, mod)
+		return
 	n.transform = xf
 	n.modulate = mod
 	_show(n, true)
@@ -96,6 +120,63 @@ func show_pose(key: String, drawer: Callable, xf: Transform2D, mod := Color.WHIT
 		else:
 			_prev.transform = xf
 			_prev.modulate = mod
+
+
+## Les poses passent par une image : bake_box posé et cuisson possible (écran, pas « --no-sprites »).
+func _baking() -> bool:
+	if not bake_box.has_area() or not Cuisson.active():
+		return false
+	if _vp == null:
+		var sc := Cuisson.window_scale(1.5, 1.5, 2.5)
+		_vp = SubViewport.new()
+		_vp.size = Vector2i((bake_box.size * sc).ceil())
+		_vp.transparent_bg = true
+		_vp.disable_3d = true
+		_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		_holder = Node2D.new()
+		_holder.scale = Vector2(sc, sc)
+		_holder.position = -bake_box.position * sc
+		_vp.add_child(_holder)
+		add_child(_vp)
+		_view = Node2D.new()
+		_view.material = LieuxBake.material()
+		_view.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		_view.draw.connect(_draw_view)
+		add_child(_view)
+	return true
+
+
+func _show_baked(n: Node2D, xf: Transform2D, mod: Color) -> void:
+	_view.transform = xf
+	if mod != _mod:
+		_mod = mod
+		_view.queue_redraw()
+	if n == _current:
+		return
+	if _current != null and is_instance_valid(_current):
+		_show(_current, false)
+	_show(n, true)
+	_current = n
+	_want_render = true
+
+
+func _draw_view() -> void:
+	if _has_image:
+		_view.draw_texture_rect(_vp.get_texture(), bake_box, false, _mod)
+
+
+## Rend la pose affichée dans l'image. Demandé à l'image qui suit le changement : en Godot 4.7, un rendu
+## demandé dans l'image même d'un changement montre l'état d'avant (docs/performances.md).
+func _render_pose() -> void:
+	if not _want_render or _current == null or not (_current as Pose).drawn:
+		return
+	_want_render = false
+	_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	renders += 1
+	if not _has_image:
+		_has_image = true
+		_view.queue_redraw()
 
 
 func hide_all() -> void:
@@ -116,6 +197,8 @@ func _show(n: CanvasItem, on: bool) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _vp != null:
+		_render_pose()
 	if _prev != null and is_instance_valid(_prev) and _current != null and (_current as Pose).drawn:
 		_show(_prev, false)
 		_prev = null
