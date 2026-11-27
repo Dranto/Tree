@@ -75,6 +75,8 @@ var _focus := {}
 ## Cadrage durable (px écran, réglé par une scène : la Flétrissure qui grandit lève le cadre pour garder
 ## sa ramure à l'écran). Ce n'est pas une secousse : il reste même à secousses coupées.
 var frame_bias := Vector2.ZERO
+## Zoom de base de la caméra (1 en jeu ; la bande-annonce, tools/steam/vitrine.gd, recule pour la finale).
+var zoom_base := 1.0
 ## Distorsion du dernier coup en cours (final_blow.gd), ou null.
 var _warp = null
 var _cam_dirty := false
@@ -558,8 +560,8 @@ static func _envelope(e: Dictionary, rise := 0.2) -> float:
 
 func zoom_now() -> float:
 	if _zoom.is_empty():
-		return 1.0
-	return 1.0 + float(_zoom["force"]) * feel("camera", "zoom_max", 0.12) * Settings.shake_strength() * _envelope(_zoom, 0.18)
+		return zoom_base
+	return zoom_base + float(_zoom["force"]) * feel("camera", "zoom_max", 0.12) * Settings.shake_strength() * _envelope(_zoom, 0.18)
 
 
 func focus_offset() -> Vector2:
