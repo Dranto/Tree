@@ -110,7 +110,8 @@ var _seen_phase := 0
 var _seen_hp := -1.0
 var _hit_cd := 0.0
 var _pieces_sig := ""
-var _pieces_move := ""
+var _pieces_move: Array = []
+var _pieces_geo: Array = []
 var _pieces_fade_done := true
 var _live_clock := 0.0
 
@@ -231,7 +232,7 @@ func _physics_process(delta: float) -> void:
 				p.position = center + out * (max_radius + p.radius + 16.0)
 		"ouverte":
 			gap_open = minf(1.0, gap_open + delta / 1.5)
-			if d < max_radius - 70.0 and (not main.benchmark or main.bench_scene == "boss"):
+			if d < max_radius - 70.0 and (not main.benchmark or (main.bench_scene == "boss" and main.bench_prepared())):
 				_start_fight()
 		"combat":
 			if not is_instance_valid(boss) or boss.is_queued_for_deletion():
@@ -423,6 +424,12 @@ func _build_pieces() -> void:
 	_floor.arena = self
 	_floor.show_behind_parent = true
 	add_child(_floor)
+	# Le sol de l'arène est porté par les carrés du sol en cache (ground.gd › floor_hosts).
+	var g = main.get("ground") if main != null else null
+	if g != null and g.has_method("hosts_floors") and g.hosts_floors():
+		_in_ground = g
+		_floor.visible = false
+		g.add_floor_host(self)
 	_descs = art.arena_pieces(region, self)
 	var layer: Node = main.get("actors_layer") if main != null else null
 	for i in _descs.size():
@@ -460,6 +467,13 @@ func gap_k(ang: float) -> float:
 	var half := 0.42 * gap_open
 	var d := absf(wrapf(ang - art.gate_angle(self), -PI, PI))
 	return clampf((half + 0.03 - d) / 0.08, 0.0, 1.0) * minf(1.0, gap_open * 3.0)
+
+
+## Banc du boss : les pièces et le sol de l'arène ne sont pas encore cuits (main.bench_prepared).
+func bake_pending() -> bool:
+	if not baked or not LieuxBake.enabled or DisplayServer.get_name() == "headless":
+		return false
+	return not (LieuxBake.ready(bake_key(_etat())) and LieuxBake.ready(bake_key("sol_fletri")))
 
 
 ## Jeu cuit d'un état.
@@ -508,9 +522,13 @@ func _sync_pieces() -> void:
 	var fetat := "ravive" if etat == "ravive" and revive_k >= 0.5 else "fletri"
 	_keep_floor_baked(fetat)
 	var fkey := fetat + str(LieuxBake.ready(bake_key("sol_" + fetat)))
+	if _in_ground != null:
+		LieuxBake.touch(bake_key("sol_" + fetat))
 	if fkey != _floor_key:
 		_floor_key = fkey
 		_floor.queue_redraw()
+		if _in_ground != null:
+			_in_ground.refresh_area(_floor_area())
 	var sig := "%s|%s|%d|%d|%d" % [state, etat, int(LieuxBake.ready(bake_key("fletri"))), int(LieuxBake.ready(bake_key("ravive"))), int(revive_k * 20.0)]
 	var redraw := sig != _pieces_sig
 	_pieces_sig = sig
@@ -526,7 +544,7 @@ func _sync_pieces() -> void:
 	if is_instance_valid(boss):
 		hidden.append(boss.position)
 	# Rien n'a bougé (ni le mur, ni le héros, ni le boss) : les pièces restent comme elles sont.
-	var moving := "%.1f|%.3f|%.2f|%.2f|%s|%s" % [radius, gap_open, quake, shiver, str(hidden), str(_pieces_fade_done)]
+	var moving := [snappedf(radius, 0.1), snappedf(gap_open, 0.001), snappedf(quake, 0.01), snappedf(shiver, 0.01), hidden, _pieces_fade_done]
 	if moving == _pieces_move and not redraw:
 		if live_redraw:
 			for pc in pieces:
@@ -535,37 +553,57 @@ func _sync_pieces() -> void:
 		return
 	_pieces_move = moving
 	_pieces_fade_done = true
+	# La place des pièces ne dépend que du mur (rayon, brèche, secousses) : refaite seulement quand il
+	# change ; le héros et le boss qui bougent ne changent que la transparence (~0,3 ms gagnée par image).
+	var geo := [moving[0], moving[1], moving[2], moving[3], redraw]
+	var place: bool = geo != _pieces_geo or quake > 0.0 or shiver > 0.0
+	_pieces_geo = geo
+	var tint := Color(1.0, 0.82, 0.78) if state == "combat" else Color.WHITE
 	for pc in pieces:
 		var d: Dictionary = _descs[pc.i]
-		var ang: float = d["ang"]
-		var dir := Vector2.from_angle(ang)
-		var o := gap_k(ang) if d["ring"] else 0.0
-		var r: float = (radius if d["ring"] else max_radius) * (1.0 + float(_wall[pc.i % _wall.size()][0]) * 0.5) + float(d["out"]) + 34.0 * o
-		pc.position = center + dir * r
-		pc.visible = o < 0.97
 		var sz: float = d["size"]
-		var fl := -1.0 if d["flip"] else 1.0
-		pc.scale = Vector2(fl * sz * (1.0 + 0.12 * o), sz * (1.0 - 0.9 * o))
-		# Les bords de la brèche s'écartent ; le mur tremble aux phases, frissonne aux coups.
-		var side := signf(wrapf(ang - art.gate_angle(self), -PI, PI))
-		var jig := sin(t * 31.0 + pc.i * 1.9) * (0.07 * quake + 0.025 * shiver)
-		pc.rotation = side * 0.35 * o + jig
+		if place:
+			var ang: float = d["ang"]
+			var dir := Vector2.from_angle(ang)
+			var o := gap_k(ang) if d["ring"] else 0.0
+			var r: float = (radius if d["ring"] else max_radius) * (1.0 + float(_wall[pc.i % _wall.size()][0]) * 0.5) + float(d["out"]) + 34.0 * o
+			pc.position = center + dir * r
+			pc.visible = o < 0.97
+			var fl := -1.0 if d["flip"] else 1.0
+			pc.scale = Vector2(fl * sz * (1.0 + 0.12 * o), sz * (1.0 - 0.9 * o))
+			# Les bords de la brèche s'écartent ; le mur tremble aux phases, frissonne aux coups.
+			var side := signf(wrapf(ang - art.gate_angle(self), -PI, PI))
+			var jig := sin(t * 31.0 + pc.i * 1.9) * (0.07 * quake + 0.025 * shiver)
+			pc.rotation = side * 0.35 * o + jig
 		# Une pièce qui cache le héros ou le boss s'estompe.
 		var see := 1.0
-		var box: Rect2 = art.arena_piece_box(region, d["key"])
+		var box: Rect2 = _box_of(d["key"])
 		for h in hidden:
 			var rel: Vector2 = h - pc.position
 			if rel.y < 0.0 and rel.y > box.position.y * sz * 0.85 and absf(rel.x) < box.size.x * 0.4 * sz:
 				see = SEE_THROUGH
-		var tint := Color(1.0, 0.82, 0.78) if state == "combat" else Color.WHITE
 		var alpha := lerpf(pc.modulate.a, see, 0.25) if not frozen else see
 		if absf(alpha - see) > 0.01:
 			_pieces_fade_done = false
 		else:
 			alpha = see
-		pc.modulate = Color(tint, alpha)
+		var m := Color(tint, alpha)
+		if pc.modulate != m:
+			pc.modulate = m
 		if redraw or (live_redraw and pc.i % 3 == 0):
 			pc.queue_redraw()
+
+
+## Boîte d'une pièce (art.arena_piece_box), gardée : _sync_pieces la lit pour chaque pièce à chaque image.
+var _boxes := {}
+
+
+func _box_of(key: String) -> Rect2:
+	var b = _boxes.get(key)
+	if b == null:
+		b = art.arena_piece_box(region, key)
+		_boxes[key] = b
+	return b
 
 
 ## Dessin d'une pièce : image cuite de l'état (fondue depuis la flétrie après la victoire), dessin direct
@@ -581,6 +619,25 @@ func draw_piece(c: CanvasItem, i: int) -> void:
 	elif not LieuxBake.draw(c, bake_key(etat), key):
 		art.arena_piece(c, region, key, etat)
 	art.arena_piece_live(c, region, key, self, i)
+
+
+## Sol porté par les carrés du sol (ground.gd), ou null : calque _floor.
+var _in_ground = null
+
+
+## Rectangle (monde) que couvre le sol cuit de l'arène.
+func _floor_area() -> Rect2:
+	var R := max_radius * 1.06 + 30.0
+	return Rect2(center - Vector2(R, R), Vector2(2.0 * R, 2.0 * R)).grow(8.0)
+
+
+## Dessin du sol dans un carré du sol (ground.gd › FloorOverlay) : l'image cuite seulement (rien tant
+## qu'elle n'est pas prête ; le carré est refait quand elle arrive, voir _sync_pieces).
+func draw_floor_in(c: CanvasItem, tile: Rect2) -> void:
+	if not tile.intersects(_floor_area()):
+		return
+	var etat := "ravive" if state == "vaincue" and revive_k >= 0.5 else "fletri"
+	LieuxBake.draw(c, bake_key("sol_" + etat), "sol", center)
 
 
 func draw_floor(c: CanvasItem) -> void:

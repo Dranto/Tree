@@ -22,6 +22,7 @@ const Regions = preload("res://scripts/regions.gd")
 ## Sol en trois couches (refonte du monde « Paysages d'herbier », vague 1 S) : matière, détails et
 ## pousses du bord de vie dessinés une fois par carré de sol en cache.
 const GroundLayers = preload("res://scripts/world_bake/ground_layers.gd")
+const LieuxBake = preload("res://scripts/world_bake/lieux_bake.gd")
 const Frontieres = preload("res://scripts/world_art/frontieres.gd")
 
 static var _noise_tex: ImageTexture
@@ -274,6 +275,10 @@ func _update_tiles() -> void:
 	if not cached or not is_visible_in_tree():
 		return
 	_frame += 1
+	if not _floor_dirty.is_empty():
+		for area in _floor_dirty:
+			_invalidate(area)
+		_floor_dirty.clear()
 	var vp := get_viewport()
 	var xf := vp.get_final_transform() * get_canvas_transform()
 	var s := xf.get_scale().x
@@ -315,9 +320,18 @@ func _make_tile(key: Vector2i, world: float) -> Dictionary:
 	rect.material = mat
 	vp.add_child(rect)
 	var layer: Node2D = null
+	var af: Node2D = null
 	if layered:
 		layer = GroundLayers.make(self, Rect2(origin, Vector2(world, world)), layer_mat)
 		vp.add_child(layer)
+	# Sols des arènes (boss_arena.gd) : posés dans le carré par-dessus le sol et son calque.
+	if not floor_hosts.is_empty():
+		af = FloorOverlay.new()
+		af.ground = self
+		af.rect = Rect2(origin, Vector2(world, world))
+		af.material = LieuxBake.material()
+		af.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		vp.add_child(af)
 	add_child(vp)
 	tiles_built += 1
 	# Après l'entrée dans l'arbre : le canevas du SubViewport n'existe qu'à ce moment.
@@ -333,7 +347,52 @@ func _make_tile(key: Vector2i, world: float) -> Dictionary:
 		_tile_mat.shader = preload("res://shaders/ground_tile.gdshader")
 	sprite.material = _tile_mat
 	add_child(sprite)
-	return {"vp": vp, "sprite": sprite, "used": _frame, "rect": Rect2(origin, Vector2(world, world)), "layer": layer}
+	return {"vp": vp, "sprite": sprite, "used": _frame, "rect": Rect2(origin, Vector2(world, world)), "layer": layer, "floor": af}
+
+
+## --- Sols des arènes dans les carrés en cache ---
+## Le sol d'une arène (une grande image douce, voir boss_arena.gd › _keep_floor_baked) était un calque
+## de plus par-dessus le sol, rempli à chaque image sur la moitié de l'écran (~2,5 ms en rendu logiciel).
+## Il est maintenant dessiné une fois dans les carrés du sol qu'il touche, par-dessus leur calque : ce
+## que l'écran montrait (sol, puis sol de l'arène) est fait une fois par carré au lieu d'une fois par image.
+## Une arène s'inscrit avec add_floor_host et demande refresh_area quand son sol change.
+var floor_hosts: Array = []
+
+
+class FloorOverlay extends Node2D:
+	var ground
+	var rect: Rect2
+
+	func _draw() -> void:
+		for a in ground.floor_hosts:
+			if is_instance_valid(a):
+				a.draw_floor_in(self, rect)
+
+
+## Vrai : le sol des arènes peut être porté par les carrés en cache.
+func hosts_floors() -> bool:
+	return cached
+
+
+func add_floor_host(arena) -> void:
+	if floor_hosts.has(arena):
+		return
+	floor_hosts.append(arena)
+	# Les carrés déjà faits n'ont pas de calque pour les sols : ils sont refaits.
+	_clear_tiles()
+
+
+## Les carrés qui touchent « area » (monde) sont refaits (au rythme de tile_budget en jeu). Le calque
+## des sols est redessiné tout de suite, le carré rendu à partir de l'image suivante : en Godot 4.7, un
+## rendu demandé dans l'image même d'un changement montre encore l'état d'avant (docs/performances.md).
+var _floor_dirty: Array = []
+
+
+func refresh_area(area: Rect2) -> void:
+	for t in _tiles.values():
+		if t.get("floor") != null and (t["rect"] as Rect2).intersects(area):
+			t["floor"].queue_redraw()
+	_floor_dirty.append(area)
 
 
 func _free_tile(key: Vector2i) -> void:
