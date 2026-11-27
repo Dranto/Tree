@@ -83,6 +83,11 @@ static var atlases := {}
 static var bake_usec := 0
 static var finish_usec := 0
 static var drawn := 0
+## Vrai tant qu'une région demandée n'est pas cuite (banc du boss : main.bench_prepared l'attend).
+static func pending() -> bool:
+	return enabled and (_busy or not _wanted.is_empty())
+
+
 static var fallback := 0
 static var cache_hits := 0
 static var cache_writes := 0
@@ -519,10 +524,14 @@ static func install(flora) -> void:
 
 
 ## Matériau et filtre d'un élément du décor (appelé aussi pour ceux ajoutés après la mise en route).
+## Filtre linéaire sans mipmaps (jalon 13 B) : l'atlas (×1,5, suréchantillonné, déjà lissé) est montré
+## entre 0,53 et 0,83 fois sa taille en 1600×900, et agrandi sur les grands écrans ; le filtre avec
+## mipmaps (trilinéaire) coûtait ~4,5 ms par image au combat de la Mère-Ronce en rendu logiciel, pour un
+## écart d'image à peine visible (traits fins du décor un peu plus nets en petite fenêtre).
 static func prepare(t) -> void:
 	t.set_meta("cuit", true)
 	t.material = material()
-	t.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	t.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 
 
 ## Dessine l'élément depuis l'atlas de sa région (appelé par DecorTree._draw). Faux : dessin direct.
