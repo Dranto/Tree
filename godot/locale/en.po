@@ -8172,17 +8172,17 @@ msgstr ""
 "%s\n"
 "Click to change skill, or drag it onto another slot."
 
-#. scripts/main.gd:1193
+#. scripts/main.gd:1201
 msgid "%s vaincu"
 msgstr "%s defeated"
 
-#. scripts/main.gd:392
+#. scripts/main.gd:399
 #. scripts/save_game.gd:140
 #. scripts/save_game.gd:197
 msgid "aucune sauvegarde"
 msgstr "no save"
 
-#. scripts/main.gd:393
+#. scripts/main.gd:400
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr "Unreadable save (%s): new game."
 
