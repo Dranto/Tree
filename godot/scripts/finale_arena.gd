@@ -124,6 +124,9 @@ func _ready() -> void:
 		add_child(n)
 		if m == "creux":
 			_creux = n
+			# Sa terre opaque cache le sol du monde : ses carrés ne sont pas rendus dessous (ground.gd › covers).
+			if main.get("ground") != null:
+				main.ground.covers.append(n)
 		else:
 			_breche = n
 
