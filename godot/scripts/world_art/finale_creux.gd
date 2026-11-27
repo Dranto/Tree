@@ -26,6 +26,7 @@ extends Node2D
 const O = preload("res://scripts/world_art/outils.gd")
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const LieuxBake = preload("res://scripts/world_bake/lieux_bake.gd")
+const Abords = preload("res://scripts/world_art/finale_abords.gd")
 
 ## Largeur de la lèvre (px du monde) et hauteur de la paroi du fond, au nord.
 const T := 38.0
@@ -39,6 +40,13 @@ const SCALE := 1.0
 const SS := 2
 ## Demi-côté de la terre dessinée autour du creux (px) : l'écran le plus large n'en voit pas le bord.
 const EARTH_HALF := 2600.0
+## Les abords (world_art/finale_abords.gd) : carreaux opaques de TILE px, sur une grille de demi-taille
+## ABORDS_HALF autour du centre du creux. Seuls ceux que la caméra peut montrer pendant le combat (selon
+## la taille de l'écran) sont cuits ; ceux que le creux cache entièrement sont sautés. Un pixel de marge
+## autour de chaque carreau évite les coutures du filtrage.
+const TILE := 256
+const ABORDS_HALF := Vector2(1664.0, 1152.0)
+const TILES_PER_FRAME := 6
 
 ## « breche » ou « creux ».
 var mode := "creux"
@@ -56,6 +64,14 @@ var _bloom := -1.0
 var _state := ""
 var _has := ""
 var _breach_hold
+## Carreaux des abords : Vector2i -> ImageTexture ; mémoire (octets) et durée de cuisson (µs).
+var tiles := {}
+var tile_bytes := 0
+var tiles_usec := 0
+var _tiles_busy := false
+var _tiles_off := false
+var _tiles_want: Array = []
+var _tiles_view := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -66,6 +82,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	tex.clear()
+	tiles.clear()
 	_breach_hold = null
 
 
@@ -85,11 +102,12 @@ func _process(_delta: float) -> void:
 			request("fletri")
 		if want.contains("ravive"):
 			request("ravive")
+		request_tiles()
 		# La floraison finie, l'image flétrie ne sert plus.
 		if b >= 1.0 and tex.has("fletri") and tex.has("ravive"):
 			tex.erase("fletri")
 			_recount()
-		var has := ",".join(tex.keys())
+		var has := ",".join(tex.keys()) + ":%d" % tiles.size()
 		if b != _bloom or has != _has:
 			_bloom = b
 			_has = has
@@ -119,8 +137,7 @@ func _draw() -> void:
 		return
 	var c: Vector2 = arena.center
 	var b := clampf(arena.bloom, 0.0, 1.0)
-	draw_rect(Rect2(c - Vector2.ONE * EARTH_HALF, Vector2.ONE * EARTH_HALF * 2.0), terre(b))
-	_far_roots(self, c, r, b)
+	_draw_abords(c, b)
 	var drew := false
 	if tex.has("fletri") and b < 1.0:
 		_blit("fletri", c, 1.0)
@@ -132,6 +149,32 @@ func _draw() -> void:
 		draw_set_transform(c)
 		paint_cave(self, r, b >= 0.5)
 		draw_set_transform_matrix(Transform2D.IDENTITY)
+
+
+## La terre autour : les carreaux cuits des abords (teintés vers la vie pendant la floraison) et, au-delà
+## de leur grille, la terre unie. Tant qu'ils manquent : la terre unie et ses racines en direct ; sans
+## cuisson du tout : les abords dessinés en direct.
+func _draw_abords(c: Vector2, b: float) -> void:
+	var full := Rect2(c - Vector2.ONE * EARTH_HALF, Vector2.ONE * EARTH_HALF * 2.0)
+	if _tiles_off:
+		draw_rect(full, terre(b))
+		draw_set_transform(c)
+		Abords.paint_all(self, r)
+		draw_set_transform_matrix(Transform2D.IDENTITY)
+		return
+	if tiles_ready():
+		# Seulement la terre hors de la grille (rien sous les carreaux : rendu logiciel = coût au pixel).
+		var g := Rect2(c - ABORDS_HALF, ABORDS_HALF * 2.0)
+		draw_rect(Rect2(full.position, Vector2(full.size.x, g.position.y - full.position.y)), terre(b))
+		draw_rect(Rect2(Vector2(full.position.x, g.end.y), Vector2(full.size.x, full.end.y - g.end.y)), terre(b))
+		draw_rect(Rect2(Vector2(full.position.x, g.position.y), Vector2(g.position.x - full.position.x, g.size.y)), terre(b))
+		draw_rect(Rect2(Vector2(g.end.x, g.position.y), Vector2(full.end.x - g.end.x, g.size.y)), terre(b))
+	else:
+		draw_rect(full, terre(b))
+		_far_roots(self, c, r, b)
+	var mod := Color.WHITE.lerp(Color(1.16, 1.12, 1.0), b)
+	for key in tiles:
+		draw_texture_rect_region(tiles[key], Rect2(c + tile_rect(key).position, Vector2.ONE * TILE), Rect2(1, 1, TILE, TILE), mod)
 
 
 func _blit(key: String, c: Vector2, alpha: float) -> void:
@@ -224,6 +267,120 @@ func _bake(key: String) -> void:
 	queue_redraw()
 
 
+# --- Cuisson des abords ---
+
+## Rectangle d'un carreau (px du monde, centre du creux en (0, 0)).
+static func tile_rect(key: Vector2i) -> Rect2:
+	return Rect2(-ABORDS_HALF + Vector2(key) * TILE, Vector2.ONE * TILE)
+
+
+## Le creux (paroi, sol) cache-t-il tout le carreau ? Alors il ne sert à rien de le cuire.
+static func tile_hidden(key: Vector2i, rr: float) -> bool:
+	var inner := contour(rr, 1.0, 3.0, 0.0, -14.0, 90)
+	var rect := tile_rect(key)
+	for i in 3:
+		for j in 3:
+			if not Geometry2D.is_point_in_polygon(rect.position + rect.size * Vector2(i, j) * 0.5, inner):
+				return false
+	return true
+
+
+## Les carreaux que la caméra peut montrer (le joueur n'importe où dans le creux), les plus proches du
+## puits de lumière (là où l'on arrive) d'abord.
+func wanted_tiles() -> Array:
+	var half := Vector2(800, 450)
+	if is_inside_tree():
+		half = get_viewport().get_visible_rect().size * 0.5
+		# Caméra éloignée (zoom < 1) : elle montre plus loin.
+		var cam := get_viewport().get_camera_2d()
+		if cam != null and cam.zoom.x > 0.0:
+			half /= minf(cam.zoom.x, 1.0)
+	if half == _tiles_view and not _tiles_want.is_empty():
+		return _tiles_want
+	_tiles_view = half
+	var zone := Rect2(-Vector2.ONE * r - half - Vector2(64, 64 + H), Vector2.ONE * r * 2.0 + half * 2.0 + Vector2(128, 128 + H))
+	var out := []
+	var n := Vector2i((ABORDS_HALF * 2.0 / TILE).ceil())
+	for i in n.x:
+		for j in n.y:
+			var key := Vector2i(i, j)
+			if tile_rect(key).intersects(zone) and not tile_hidden(key, r):
+				out.append(key)
+	var land := Vector2(0, r)
+	out.sort_custom(func(a, b): return tile_rect(a).get_center().distance_squared_to(land) < tile_rect(b).get_center().distance_squared_to(land))
+	_tiles_want = out
+	return out
+
+
+func tiles_ready() -> bool:
+	if _tiles_off:
+		return true
+	for key in wanted_tiles():
+		if not tiles.has(key):
+			return false
+	return true
+
+
+func request_tiles() -> void:
+	LieuxBake.configure()
+	if _tiles_busy or _tiles_off:
+		return
+	if not LieuxBake.enabled or not is_inside_tree() or DisplayServer.get_name() == "headless":
+		_tiles_off = true
+		queue_redraw()
+		return
+	var todo := []
+	for key in wanted_tiles():
+		if not tiles.has(key):
+			todo.append(key)
+			if todo.size() >= TILES_PER_FRAME:
+				break
+	if not todo.is_empty():
+		_bake_tiles(todo)
+
+
+func _bake_tiles(keys: Array) -> void:
+	_tiles_busy = true
+	var t0 := Time.get_ticks_usec()
+	var rr := r
+	var tree := get_tree()
+	var vps := []
+	for key in keys:
+		var rect := tile_rect(key).grow(1.0)
+		var vp := SubViewport.new()
+		vp.size = Vector2i((rect.size * SS).ceil())
+		vp.transparent_bg = true
+		vp.disable_3d = true
+		vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+		vp.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+		var p := Painter.new()
+		p.xf = Transform2D(0.0, Vector2(SS, SS), 0.0, -rect.position * SS)
+		p.paint = func(ci): Abords.paint_tile(ci, rect, rr)
+		vp.add_child(p)
+		tree.root.add_child(vp)
+		vps.append(vp)
+	await tree.process_frame
+	await RenderingServer.frame_post_draw
+	for i in keys.size():
+		var vt: ViewportTexture = vps[i].get_texture()
+		var img: Image = vt.get_image() if vt != null else null
+		vps[i].queue_free()
+		if img == null or img.is_empty() or not is_inside_tree():
+			_tiles_off = true
+			continue
+		img.convert(Image.FORMAT_RGB8)
+		if SS > 1:
+			img.resize(img.get_width() / SS, img.get_height() / SS, Image.INTERPOLATE_BILINEAR)
+		tiles[keys[i]] = ImageTexture.create_from_image(img)
+		tile_bytes += img.get_data_size()
+	tiles_usec += Time.get_ticks_usec() - t0
+	_tiles_busy = false
+	if is_inside_tree():
+		queue_redraw()
+		# Les suivants, sans attendre que le creux se montre (la cuisson commence pendant la plongée).
+		request_tiles()
+
+
 # --- Couleurs ---
 
 static func cc(key: String) -> Color:
@@ -281,11 +438,16 @@ static func paint_cave(ci: CanvasItem, rr: float, vive: bool) -> void:
 	_paint_rim(ci, rr, vive)
 	_paint_strata(ci, rr, vive)
 	_paint_wall_light(ci, rr, vive)
+	_paint_wall_fossils(ci, rr, vive)
+	_paint_root_curtain(ci, rr, vive)
 	for pk in POCHES:
 		_paint_poche(ci, rr, str(pk[0]), deg_to_rad(float(pk[1])), vive)
+	_paint_lip_growth(ci, rr, vive)
 	_paint_graine_roots(ci, rr, vive)
 	_paint_floor(ci, rr, vive)
+	_paint_seal(ci, rr, vive)
 	_paint_floor_regions(ci, rr, vive)
+	_paint_foot_rubble(ci, rr, vive)
 	_paint_foot_roots(ci, rr, vive)
 	_paint_taproot(ci, rr, vive)
 
@@ -377,6 +539,116 @@ static func _paint_wall_light(ci: CanvasItem, rr: float, vive: bool) -> void:
 		if side > 0.05:
 			O.poly(ci, PackedVector2Array([wall_pt(rr, a0, 0.0), wall_pt(rr, a1, 0.0), wall_pt(rr, a1, 1.0), wall_pt(rr, a0, 1.0)]), Color(shade, 0.35 * side))
 		O.poly(ci, PackedVector2Array([wall_pt(rr, a0, 0.0), wall_pt(rr, a1, 0.0), wall_pt(rr, a1, 0.22), wall_pt(rr, a0, 0.22)]), Color(shade, 0.28))
+
+
+# --- Ce que la paroi garde entre les poches ---
+
+## Entre les poches, pris dans les strates : os de colosses, coques de graines, spirales fossiles, un
+## éclat de menhir gravé (le même sceau que dehors).
+static func _paint_wall_fossils(ci: CanvasItem, rr: float, vive: bool) -> void:
+	var bone := Art.bc("os").darkened(0.5 if not vive else 0.3)
+	var bpal := {"clair": bone, "ombre": bone.darkened(0.4), "reflet": bone.lightened(0.2)}
+	var spots := [[-178.0, 0.45, "os"], [-152.0, 0.62, "coque"], [-123.0, 0.3, "spirale"], [-97.0, 0.78, "os"],
+		[-80.0, 0.28, "eclat"], [-58.0, 0.6, "spirale"], [-29.0, 0.32, "coque"], [-2.0, 0.5, "os"],
+		[-160.0, 0.2, "spirale"], [-115.0, 0.82, "coque"], [-48.0, 0.84, "os"], [-6.0, 0.8, "spirale"], [-174.0, 0.8, "coque"]]
+	for sp in spots:
+		var a := deg_to_rad(float(sp[0]))
+		var p := wall_pt(rr, a, float(sp[1]))
+		var s := 0.75 + 0.45 * hk(a)
+		O.poly(ci, O.blob(p + Vector2(0, 3), 30.0 * s, 16.0 * s, a * 7.0, 0.2, 18), Color(0.03, 0.02, 0.02, 0.22))
+		match str(sp[2]):
+			"os":
+				var rib := O.curve(p + Vector2(-26, 6) * s, p + Vector2(0, -14) * s, p + Vector2(24, 4) * s, 10)
+				O.brush(ci, rib, 8.0 * s, Ink.encre(), 0.3, 0.6)
+				O.brush(ci, rib, 5.5 * s, bpal["ombre"], 0.3, 0.6)
+				O.brush(ci, Transform2D(0.0, Vector2(-1, -1)) * rib, 2.2 * s, bpal["clair"], 0.3, 0.6)
+				O.part(ci, O.blob(p + Vector2(-30, 8) * s, 7.0 * s, 5.0 * s, a, 0.15, 10), bpal, 1.2, 1.0, 0.4)
+			"coque":
+				var shell := O.blob(p, 20.0 * s, 11.0 * s, a, 0.06, 20, -0.4)
+				var husk := _ecorce(vive)
+				O.part(ci, shell, husk, 1.4, 1.0, 0.5)
+				for j in 4:
+					var u := -0.6 + 0.4 * j
+					ci.draw_line(p + Vector2(-16 * s, u * 8.0 * s).rotated(-0.4), p + Vector2(16 * s, u * 6.0 * s).rotated(-0.4), Color(husk["ombre"], 0.8), 1.2, true)
+			"spirale":
+				var pal: Dictionary = Art.mc("commun", "", "pierre")
+				var dpal := {"clair": pal["clair"].darkened(0.45), "ombre": pal["ombre"].darkened(0.45), "reflet": pal["reflet"].darkened(0.4)}
+				O.part(ci, O.blob(p, 17.0 * s, 13.0 * s, a, 0.1, 18), dpal, 1.3, 1.0, 0.4)
+				var sp2 := PackedVector2Array()
+				for j in 22:
+					var u := j * 0.55
+					sp2.append(p + Vector2(cos(u), sin(u) * 0.8) * (1.0 + j * 0.65) * s)
+				ci.draw_polyline(sp2, Color(dpal["ombre"].darkened(0.3), 0.9), 1.5, true)
+			"eclat":
+				var pal: Dictionary = Art.mc("commun", "", "pierre")
+				var dpal := {"clair": pal["clair"].darkened(0.4), "ombre": pal["ombre"].darkened(0.4), "reflet": pal["reflet"].darkened(0.35)}
+				var frag := PackedVector2Array([p + Vector2(-22, 10) * s, p + Vector2(-16, -18) * s, p + Vector2(4, -24) * s, p + Vector2(10, -6) * s, p + Vector2(24, 2) * s, p + Vector2(18, 12) * s])
+				O.part(ci, frag, dpal, 1.4, 1.0, 0.5)
+				var glyph := Color(Art.bc("braise").darkened(0.55), 0.8) if not vive else Color(Art.mc("commun", "", "seve"), 0.8)
+				var g := PackedVector2Array()
+				for j in 14:
+					var u := j * 0.62
+					g.append(p + Vector2(-2, -4) * s + Vector2(cos(u), sin(u)) * (1.0 + j * 0.6) * s)
+				ci.draw_polyline(g, glyph, 1.4, true)
+
+
+## Un rideau de racines fines qui pendent de la lèvre sur la paroi du fond, de longueurs inégales.
+static func _paint_root_curtain(ci: CanvasItem, rr: float, vive: bool) -> void:
+	var bark := _ecorce(vive)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 919
+	for i in 46:
+		var a := deg_to_rad(rng.randf_range(-176.0, -4.0))
+		var k := hk(a)
+		if k < 0.2:
+			continue
+		var top := wall_pt(rr, a, 1.0) + Vector2(0, 4)
+		var l := H * k * rng.randf_range(0.25, 0.8)
+		var sway := rng.randf_range(-10.0, 10.0)
+		var pts := PackedVector2Array([top, top + Vector2(sway * 0.3, l * 0.35), top + Vector2(sway * 0.8, l * 0.7), top + Vector2(sway, l)])
+		var w := rng.randf_range(1.6, 4.2)
+		O.brush(ci, pts, w + 1.2, Color(Ink.encre(), 0.8), 1.0, 0.0)
+		O.brush(ci, pts, w, bark["ombre"].lightened(0.06), 1.0, 0.0)
+		if w > 3.0:
+			O.brush(ci, Transform2D(0.0, Vector2(-0.6, 0)) * pts, w * 0.35, bark["clair"], 1.0, 0.0)
+		# Radicelles qui s'en détachent.
+		var q := pts[2]
+		ci.draw_polyline(PackedVector2Array([q, q + Vector2(5, 6), q + Vector2(7, 14)]), Color(bark["ombre"], 0.9), 1.0, true)
+
+
+## Sur la lèvre, tout autour : herbe sèche, brindilles de ronce, cailloux ; des tiges mortes pendent
+## sur la paroi du fond. Ravivée : l'herbe reverdit.
+static func _paint_lip_growth(ci: CanvasItem, rr: float, vive: bool) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 313
+	var dry1: Color = Art.mc("ronce", "fletri", "touffe")
+	var dry2: Color = Art.mc("ronce", "fletri", "touffe_2")
+	var live1: Color = Art.mc("commun", "", "seve").darkened(0.35)
+	var live2: Color = Art.mc("commun", "", "seve_sombre")
+	var thorn: Dictionary = Art.mc("ronce", "ravive" if vive else "fletri", "ronce")
+	var peb: Dictionary = Art.mc("commun", "", "pierre")
+	var dim := {"clair": peb["clair"].darkened(0.45), "ombre": peb["ombre"].darkened(0.45), "reflet": peb["reflet"].darkened(0.5)}
+	for i in 72:
+		var a := TAU * i / 72.0 + rng.randf_range(-0.03, 0.03)
+		var q := wall_pt(rr, a, 1.0, 12.0 + rng.randf_range(-3.0, 6.0))
+		if i % 2 == 0:
+			O.tuft(ci, q, rng.randf_range(9.0, 15.0), live1 if vive else dry1, live2 if vive else dry2, i, not vive)
+		elif i % 5 == 1:
+			var to := q + Vector2.from_angle(rng.randf_range(-PI, 0.0)) * rng.randf_range(16.0, 28.0)
+			var pts := O.curve(q, q.lerp(to, 0.5) + Vector2(0, -6), to, 6)
+			O.brush(ci, pts, 3.5, Ink.encre(), 1.0, 0.3)
+			O.brush(ci, pts, 2.2, thorn["ombre"], 1.0, 0.3)
+			for j in [2, 4]:
+				var d := (pts[j + 1] - pts[j - 1]).normalized()
+				O.poly(ci, PackedVector2Array([pts[j] - d * 1.5, pts[j] + d * 1.5, pts[j] + d.orthogonal() * 4.0]), thorn["ombre"])
+		else:
+			O.pebble(ci, q + Vector2(0, 2), rng.randf_range(2.5, 5.0), dim, i)
+		# Une tige morte qui pend sur la paroi.
+		var k := hk(a)
+		if k > 0.35 and i % 3 == 0:
+			var top := wall_pt(rr, a, 1.0, 2.0)
+			var l := rng.randf_range(12.0, 30.0) * k
+			ci.draw_polyline(PackedVector2Array([top, top + Vector2(2, l * 0.5), top + Vector2(-1, l)]), Color(dry2.darkened(0.3) if not vive else live2, 0.9), 1.4, true)
 
 
 # --- Les six poches des strates ---
@@ -705,6 +977,92 @@ static func j_branch(i: int) -> bool:
 	return i % 3 == 0
 
 
+## Le sceau gravé dans le sol : un double cercle brisé et ses glyphes, à peine visibles ; des fentes
+## qui partent du centre, et la tache de la Flétrissure où elle dort (veines noires, braise éteinte).
+## Ravivé : les gravures prennent la sève, la tache s'efface. Tout reste peu contrasté (le combat lit
+## ses annonces par-dessus).
+static func _paint_seal(ci: CanvasItem, rr: float, vive: bool) -> void:
+	var line := Color(cc("fissure"), 0.5) if not vive else Color(Art.mc("commun", "", "seve"), 0.28)
+	var lift := Color(cc("sol_clair").lightened(0.1), 0.18) if not vive else Color(Art.mc("commun", "", "seve_clair"), 0.12)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 707
+	for ring in [0.6, 0.67]:
+		var rad := rr * float(ring)
+		var a := rng.randf() * TAU
+		var end := a + TAU
+		while a < end:
+			var span := rng.randf_range(0.5, 1.3)
+			var stop := minf(a + span, end)
+			ci.draw_arc(Vector2(0, 1.5), rad, a, stop, 48, lift, 2.0, true)
+			ci.draw_arc(Vector2.ZERO, rad, a, stop, 48, line, 2.4, true)
+			a = stop + rng.randf_range(0.06, 0.22)
+	for i in 16:
+		var a := TAU * (i + 0.5) / 16.0
+		var q := Vector2.from_angle(a) * rr * 0.635
+		var t := Vector2.from_angle(a)
+		var n := t.orthogonal()
+		match i % 4:
+			0:
+				var sp := PackedVector2Array()
+				for j in 12:
+					var u := j * 0.7
+					sp.append(q + (t * cos(u) + n * sin(u)) * (1.0 + j * 0.55))
+				ci.draw_polyline(sp, line, 1.8, true)
+			1:
+				ci.draw_line(q - n * 8.0 - t * 6.0, q + n * 8.0 - t * 6.0, line, 2.0, true)
+				ci.draw_line(q - n * 5.0 + t * 4.0, q + n * 5.0 + t * 4.0, line, 2.0, true)
+			2:
+				ci.draw_polyline(PackedVector2Array([q - t * 8.0 - n * 7.0, q + t * 6.0, q - t * 8.0 + n * 7.0]), line, 2.0, true)
+			3:
+				ci.draw_circle(q, 3.0, line)
+				ci.draw_line(q - t * 9.0, q + t * 9.0, line, 1.6, true)
+	# Fentes qui partent du centre.
+	var crack := cc("fissure")
+	for i in 11:
+		var a := TAU * i / 11.0 + rng.randf_range(-0.15, 0.15)
+		var pts := PackedVector2Array([Vector2.from_angle(a) * rng.randf_range(80.0, 120.0)])
+		var dir := Vector2.from_angle(a)
+		for j in rng.randi_range(6, 11):
+			dir = dir.rotated(rng.randf_range(-0.45, 0.45)).lerp(Vector2.from_angle(a), 0.3).normalized()
+			pts.append(pts[pts.size() - 1] + dir * rng.randf_range(22.0, 38.0))
+		O.brush(ci, pts, 4.5, Color(crack, 0.55 if not vive else 0.3), 0.6, 1.0)
+		O.brush(ci, Transform2D(0.0, Vector2(-1, -2)) * pts, 1.4, lift, 0.6, 1.0)
+	if vive:
+		return
+	# La tache de la Flétrissure, et ses veines noires où la braise s'est éteinte.
+	var stain: Color = Art.bc("ronge").darkened(0.3)
+	for i in 4:
+		var k := 1.0 - 0.2 * i
+		O.poly(ci, O.blob(Vector2(0, -20), rr * 0.36 * k, rr * 0.28 * k, 4.0 + i, 0.18, 40), Color(stain, 0.12))
+	for i in 9:
+		var a := TAU * i / 9.0 + 0.3
+		var pts := PackedVector2Array([Vector2.from_angle(a) * 70.0 + Vector2(0, -20)])
+		var dir := Vector2.from_angle(a)
+		for j in rng.randi_range(5, 8):
+			dir = dir.rotated(rng.randf_range(-0.5, 0.5)).lerp(Vector2.from_angle(a), 0.3).normalized()
+			pts.append(pts[pts.size() - 1] + dir * rng.randf_range(18.0, 30.0))
+		O.brush(ci, pts, 6.0, Color(stain, 0.6), 0.4, 1.0)
+		O.brush(ci, pts.slice(0, 4), 1.4, Color(Art.bc("braise").darkened(0.45), 0.5), 0.6, 1.0)
+
+
+## Au pied de la paroi, des éboulis tombés des strates (pas au sud, où l'on arrive), et des os.
+static func _paint_foot_rubble(ci: CanvasItem, rr: float, vive: bool) -> void:
+	var heaps := [-155.0, -118.0, -84.0, -36.0, -8.0, 22.0, 158.0, 186.0, 142.0, 38.0]
+	var strata := _strates(vive)
+	for i in heaps.size():
+		var a := deg_to_rad(float(heaps[i]))
+		var q := Vector2.from_angle(a) * (rr - 30.0)
+		Abords._rubble(ci, q, 0.55 + 0.1 * (i % 3), strata[1 + i % 3], 0.0 if vive else 0.25, 50 + i)
+	var bone := Art.bc("os").darkened(0.45 if not vive else 0.25)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 271
+	for i in 9:
+		var a := rng.randf_range(-PI, PI)
+		if absf(wrapf(a - PI / 2.0, -PI, PI)) < 0.6:
+			continue
+		Abords._bone(ci, Vector2.from_angle(a) * rng.randf_range(rr * 0.7, rr - 50.0), rng.randf() * TAU, rng.randf_range(14.0, 24.0), bone)
+
+
 ## Sous chaque poche, la terre de sa région : éclats morts, puis herbe et fleurs ravivées.
 static func _paint_floor_regions(ci: CanvasItem, rr: float, vive: bool) -> void:
 	for pk in POCHES:
@@ -831,6 +1189,25 @@ static func draw_hanging(ci: CanvasItem, c: Vector2, rr: float, t: float, shake:
 		ci.draw_polyline(pts, col, 2.4 - 0.6 * (i % 2), true)
 		if bloom > 0.0:
 			ci.draw_circle(pts[3], 2.6 * bloom, Color(tipc, 0.8 * bloom))
+
+
+## Braises des veines de la Flétrissure, autour du creux : elles battent, plus fort aux secousses, et
+## des étincelles en montent. Éteintes à mesure que le creux refleurit.
+static func draw_embers(ci: CanvasItem, c: Vector2, rr: float, t: float, shake: float, bloom: float) -> void:
+	var off := 1.0 - clampf(bloom, 0.0, 1.0)
+	if off <= 0.0:
+		return
+	var ember := Art.bc("braise")
+	var hot := Art.bc("braise_coeur")
+	var pts: Array = Abords.glows(rr)
+	for i in pts.size():
+		var q: Vector2 = c + pts[i]
+		var beat := 0.5 + 0.5 * sin(t * (1.3 + 0.17 * (i % 5)) + i * 2.1)
+		var a := (0.1 + 0.12 * beat + 0.25 * shake) * off
+		ci.draw_circle(q, 9.0 + 4.0 * beat, Color(ember, a * 0.6))
+		ci.draw_circle(q, 3.0 + 1.5 * beat, Color(hot, a * 1.6))
+		var f := fposmod(t * 0.35 + i * 0.381, 1.0)
+		ci.draw_circle(q + Vector2(6.0 * sin(t * 1.7 + i), -f * 70.0), 1.6 * (1.0 - f) + 0.6, Color(hot, 0.7 * sin(PI * f) * off))
 
 
 ## Poussière et grains de terre qui tombent de la lèvre après une secousse (since : secondes depuis).
