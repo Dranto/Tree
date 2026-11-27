@@ -22,8 +22,11 @@ Pour l'instant le jeu se présente à Steam avec l'App ID de test **480** (« Sp
    Sur le Steam Deck, le jeu se reconnaît à la variable SteamDeck=1 que Steam pose (GodotSteam 4.24
    n’a plus isSteamRunningOnSteamDeck).
 
-Vérifier sans rien lancer à la main : `Seve.exe --headless -- --steam-probe` (dans un terminal) écrit
-`STEAM-PROBE bibliotheque=oui statut=actif app_id=480`. Sans Steam ouvert, `statut=refusé : …` : normal.
+Vérification rapide, Steam ouvert, dans PowerShell depuis le dossier dézippé :
+`.\Seve.exe --headless --log-file steam.txt -- --steam-probe` puis `type steam.txt`. On doit lire
+`STEAM-PROBE bibliotheque=oui statut=actif app_id=480` et `fonctions manquantes : aucune`.
+Sans Steam ouvert, `statut=refusé : Could not determine Steam client install directory.` : normal,
+le jeu continue sans Steam (c'est ce que vérifie la CI, qui n'a pas de client Steam).
 
 Si l'overlay ne s'ouvre pas : Steam › Paramètres › En jeu › « Activer l'overlay Steam en jeu ».
 Lancé hors de Steam, un jeu n'a parfois pas l'overlay sur certaines machines ; il l'aura une fois
