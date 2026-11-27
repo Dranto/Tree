@@ -187,7 +187,8 @@ func impact_frame(force: float, cibles: Array = [], style := "encre", region_id 
 		region_id = _region_of(at)
 	_frame = {"force": force, "style": style, "seq": seq, "i": 0, "t": 0.0,
 		"min_time": feel("impact_frame", "min_time", 0.03), "region": region_id, "outline": outline, "pos": at,
-		"fresh": true, "hold": hold}
+		"fresh": true, "hold": hold,
+		"per": feel("impact_frame", "frame_time_strong" if strong else "frame_time", 0.09 if strong else 0.06)}
 	_collect(cibles, at, outline)
 	if outline:
 		outline_frames += 1
@@ -364,20 +365,17 @@ func _step_frame(real: float) -> void:
 		_frame["fresh"] = false
 		return
 	_frame["t"] += real
-	if float(_frame.get("hold", 0.0)) > 0.0:
-		var at := int(float(_frame["t"]) / float(_frame["hold"]))
-		if at >= _frame["seq"].size():
-			_end_frame()
-		elif at != int(_frame["i"]):
-			_frame["i"] = at
-			_apply_variant()
-		return
-	var next := int(_frame["i"]) + 1
-	if next >= _frame["seq"].size() and _frame["t"] >= float(_frame["min_time"]):
+	# Chaque image dure « per » secondes réelles : « hold » (dernier coup), sinon frame_time
+	# (frame_time_strong pour les coups très forts). Trop brèves, elles faisaient un simple flash.
+	var per := float(_frame.get("hold", 0.0))
+	if per <= 0.0:
+		per = float(_frame.get("per", 0.06))
+	var at := int(float(_frame["t"]) / maxf(per, 0.001))
+	if at >= _frame["seq"].size():
 		_end_frame()
-		return
-	_frame["i"] = mini(next, _frame["seq"].size() - 1)
-	_apply_variant()
+	elif at != int(_frame["i"]):
+		_frame["i"] = at
+		_apply_variant()
 
 
 func _draw() -> void:
