@@ -5,6 +5,8 @@ extends RefCounted
 ## Réductions des bandes cuites du bord en cours sur un autre fil (identifiants de WorkerThreadPool),
 ## attendues à la fermeture (world_edge.gd › _exit_tree).
 static var resize_tasks: Array = []
+## Vrai en jeu et dans le banc (world_edge.gd › _ready) : la réduction se fait sur un autre fil.
+static var threaded := false
 static var bytes := 0
 static var baked := 0
 static var bake_usec := 0

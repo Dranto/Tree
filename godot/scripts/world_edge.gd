@@ -88,6 +88,9 @@ static func can_bake() -> bool:
 
 func _ready() -> void:
 	configure()
+	# Réduction des bandes cuites sur un autre fil : en jeu et dans le banc seulement (comme le budget des
+	# carrés du sol, main.gd), jamais pendant une capture.
+	BordBake.threaded = main != null and main.get_tree().current_scene == main and (not main.autotest or main.benchmark)
 	_base_layer = Node2D.new()
 	add_child(_base_layer)
 	_decor_layer = Node2D.new()
@@ -564,14 +567,19 @@ class DecorVariant extends Node2D:
 			return
 		Prof.add("world_edge.lecture_cuisson", p0)
 		# La réduction (des dizaines de ms pour une bande) se fait sur un autre fil : l'image reste fluide.
+		# Captures et tests : réduction tout de suite, comme avant, pour que l'image soit prête à la même
+		# image qu'avant (les captures attendent pending() ; un décalage change la phase des animations).
 		var out := Vector2i(maxi(1, size.x / SS), maxi(1, size.y / SS))
-		var task := WorkerThreadPool.add_task(func(): img.resize(out.x, out.y, Image.INTERPOLATE_BILINEAR))
-		BordBake.resize_tasks.append(task)
-		while not WorkerThreadPool.is_task_completed(task) and is_inside_tree():
-			await get_tree().process_frame
-		if BordBake.resize_tasks.has(task):
-			BordBake.resize_tasks.erase(task)
-			WorkerThreadPool.wait_for_task_completion(task)
+		if not BordBake.threaded:
+			img.resize(out.x, out.y, Image.INTERPOLATE_BILINEAR)
+		else:
+			var task := WorkerThreadPool.add_task(func(): img.resize(out.x, out.y, Image.INTERPOLATE_BILINEAR))
+			BordBake.resize_tasks.append(task)
+			while not WorkerThreadPool.is_task_completed(task) and is_inside_tree():
+				await get_tree().process_frame
+			if BordBake.resize_tasks.has(task):
+				BordBake.resize_tasks.erase(task)
+				WorkerThreadPool.wait_for_task_completion(task)
 		# La cuisson n'est finie (pending) qu'avec son image : les captures attendent jusque-là.
 		_finish()
 		if not is_instance_valid(self) or not is_inside_tree():
