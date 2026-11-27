@@ -37,6 +37,10 @@ static func _m(etat: String, key: String):
 	return Art.mc("aube", etat, key)
 
 
+static func mur_variantes() -> int:
+	return MUR_VARIANTES
+
+
 static func keys() -> Array:
 	var out := []
 	for i in MUR_VARIANTES:

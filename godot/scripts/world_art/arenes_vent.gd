@@ -397,12 +397,11 @@ static func live(ci: CanvasItem, a) -> void:
 	var col: Color = Art.ec("vent", "clair")
 	var pulse := 0.5 + 0.5 * sin(a.t * 3.0)
 	var rr: float = a.radius - 14.0
-	# Six rafales : des arcs effilés qui filent le long du mur.
+	# Six rafales : des arcs qui filent le long du mur (traits simples : redessinés à chaque image).
 	for k in 6:
 		var a0: float = a.t * 1.3 + k * TAU / 6.0
 		var pts := PackedVector2Array()
-		for j in 10:
-			var u := j / 9.0
+		for j in 6:
+			var u := j / 5.0
 			pts.append(c + Vector2.from_angle(a0 + u * 0.55) * (rr - 22.0 * sin(PI * u) - (k % 2) * 30.0))
-		O.brush(ci, pts, 4.0, Color(col, 0.35 + 0.2 * pulse), 1.0, 0.0)
-	ci.draw_arc(c, rr, 0.0, TAU, 72, Color(col, 0.12 + 0.12 * pulse), 2.0, true)
+		ci.draw_polyline(pts, Color(col, 0.35 + 0.2 * pulse), 3.0)

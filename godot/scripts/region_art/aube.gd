@@ -305,7 +305,10 @@ static func _geode_open(c: CanvasItem, base: Vector2, h: float, s: float) -> voi
 # --- Arène en décor (vague 3 A2, world_art/arenes_aube.gd) : le cercle de l'Aube ---
 # draw_arena_floor et draw_arena_wall (l'ancien socle) ne servent plus qu'aux comparaisons.
 
-const ArenesAube = preload("res://scripts/world_art/arenes_aube.gd")
+## Chargé à la demande : arenes_aube.gd passe par falaise_outils.gd, qui charge ce fichier (une
+## référence circulaire de preload garderait les deux scripts en vie à la sortie).
+static func _arenes() -> GDScript:
+	return load("res://scripts/world_art/arenes_aube.gd")
 
 
 static func arena_baked(region: String) -> bool:
@@ -314,28 +317,28 @@ static func arena_baked(region: String) -> bool:
 
 ## Repère au nord-ouest (le fond de l'arène, à l'opposé de la brèche, donne sur le vide).
 static func arena_pieces(region: String, a) -> Array:
-	return ArenesAube.pieces(a, arena_ring(a, 40, ArenesAube.MUR_VARIANTES, [["r0", 1.25, 64.0]], 83))
+	return _arenes().pieces(a, arena_ring(a, 40, _arenes().mur_variantes(), [["r0", 1.25, 64.0]], 83))
 
 
 static func arena_piece_keys(region: String) -> Array:
-	return ArenesAube.keys()
+	return _arenes().keys()
 
 
 static func arena_piece_box(region: String, key: String) -> Rect2:
-	return ArenesAube.piece_box(key)
+	return _arenes().piece_box(key)
 
 
 static func arena_piece(ci: CanvasItem, region: String, key: String, etat: String) -> void:
-	ArenesAube.piece(ci, key, etat)
+	_arenes().piece(ci, key, etat)
 
 
 static func arena_piece_live(ci: CanvasItem, region: String, key: String, a, i: int) -> void:
-	ArenesAube.piece_live(ci, key, a, i)
+	_arenes().piece_live(ci, key, a, i)
 
 
 static func arena_floor(ci: CanvasItem, a, etat: String) -> void:
-	ArenesAube.ground(ci, a, etat)
+	_arenes().ground(ci, a, etat)
 
 
 static func arena_live(ci: CanvasItem, a) -> void:
-	ArenesAube.live(ci, a)
+	_arenes().live(ci, a)
