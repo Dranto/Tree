@@ -270,6 +270,46 @@ func _bake(key: String) -> void:
 # --- Cuisson des abords ---
 
 ## Rectangle d'un carreau (px du monde, centre du creux en (0, 0)).
+## Le nœud cache-t-il entièrement « rect » (coordonnées du monde) ? Le sol du monde (ground.gd) ne rend
+## pas ses carrés cachés : sous la graine, la terre opaque du creux couvre tout l'écran, et ces carrés
+## coûtaient ~7 ms par image en rendu logiciel pour rien. Vrai seulement là où quelque chose d'opaque est
+## dessiné à coup sûr : la terre unie (toujours, sauf sur la grille des carreaux une fois ceux-ci prêts),
+## un carreau cuit, ou le creux lui-même (carreaux que le creux cache).
+func covers_rect(rect: Rect2) -> bool:
+	if mode != "creux" or arena == null or not is_visible_in_tree():
+		return false
+	var c: Vector2 = arena.center
+	if not Rect2(c - Vector2.ONE * EARTH_HALF, Vector2.ONE * EARTH_HALF * 2.0).encloses(rect):
+		return false
+	var f := Engine.get_process_frames()
+	if f != _cover_frame:
+		_cover_frame = f
+		_cover_all = _tiles_off or not tiles_ready()
+	if _cover_all:
+		return true
+	# Carreaux prêts : la grille n'a que les carreaux cuits (et le creux au milieu).
+	var rel := Rect2(rect.position - c, rect.size)
+	var lo := Vector2i(((rel.position + ABORDS_HALF) / TILE).floor())
+	var hi := Vector2i(((rel.end + ABORDS_HALF) / TILE).ceil()) - Vector2i.ONE
+	var n := Vector2i((ABORDS_HALF * 2.0 / TILE).ceil())
+	for i in range(maxi(lo.x, 0), mini(hi.x, n.x - 1) + 1):
+		for j in range(maxi(lo.y, 0), mini(hi.y, n.y - 1) + 1):
+			var key := Vector2i(i, j)
+			if tiles.has(key):
+				continue
+			if not _hidden.has(key):
+				_hidden[key] = tile_hidden(key, r)
+			if not _hidden[key]:
+				return false
+	return true
+
+
+var _cover_frame := -1
+var _cover_all := false
+## Carreaux que le creux cache (tile_hidden, gardé : la recherche dans le contour coûte).
+var _hidden := {}
+
+
 static func tile_rect(key: Vector2i) -> Rect2:
 	return Rect2(-ABORDS_HALF + Vector2(key) * TILE, Vector2.ONE * TILE)
 
