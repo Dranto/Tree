@@ -20,6 +20,7 @@
 #
 #   tools/balance.sh --run
 #   BUILDS="fouet" SEEDS="2" tools/balance.sh --run
+#   JOBS=4 TIME=2400 tools/balance.sh --run   # au plus 4 parties à la fois (défaut : nproc)
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # Builds et leur branche, lus dans builds.json.
@@ -104,6 +105,10 @@ if [[ $MODE == run ]]; then
   for b in $BUILDS; do
     for s in $SEEDS; do
       "$ROOT/tools/godot.sh" --headless --fixed-fps 60 -- "--autotest=run:$b" "--build-time=$TIME" "--seed=$s" > "$OUT/$b.$s.log" 2>&1 &
+      # JOBS : parties à la fois (défaut : le nombre de cœurs). Une partie complète joue environ aussi
+      # vite que le temps réel sur un cœur : toutes les lancer d'un coup (21 builds) les ralentit
+      # d'autant et la course dépasse plusieurs heures. Compter TIME / 60 minutes par fournée.
+      while (( $(jobs -rp | wc -l) >= ${JOBS:-$(nproc)} )); do wait -n; done
     done
   done
   wait
