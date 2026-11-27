@@ -13,6 +13,7 @@
 extends Node2D
 
 const Regions = preload("res://scripts/regions.gd")
+const Demo = preload("res://scripts/demo.gd")
 const Prompt = preload("res://scripts/prompt.gd")
 const Lieux = preload("res://scripts/world_art/lieux.gd")
 const LieuxBake = preload("res://scripts/world_bake/lieux_bake.gd")
@@ -343,7 +344,8 @@ func _draw() -> void:
 		_stones_layer.queue_redraw()
 	var or_ := Art.c("butin")
 	var ring_r := RADIUS + 12.0
-	if not lit_now and k <= 0.0:
+	# Démo : pas d'anneau qui invite derrière la haie, dans une région fermée.
+	if not lit_now and k <= 0.0 and Demo.region_open(region):
 		for i in 16:
 			var a0 := TAU * i / 16.0 + t * 0.15
 			draw_arc(Vector2.ZERO, ring_r, a0, a0 + TAU / 16.0 * 0.45, 4, Color(or_, 0.28 + 0.12 * sin(t * 2.0)), Art.TRAIT)

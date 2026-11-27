@@ -1,7 +1,8 @@
 ## Scénario « demo » du banc visuel (runner.gd), joué en démo (Demo.forced = 1, posé par runner.gd
 ## avant la création du jeu) : la ronce épaisse qui ferme les autres régions (au bord du secteur de
-## Ronce et autour de l'oasis), l'arbre avec un nœud que seul le jeu complet ouvre, la carte, puis la
-## fin de la démo : la Mère-Ronce vaincue, le sceau de la graine qui pulse et la ligne dans l'herbe.
+## Ronce et autour de l'oasis), l'arbre avec un nœud que seul le jeu complet ouvre, la carte, l'
+## arène de la Mère-Ronce, le bout de la haie contre le bord du monde, puis la fin de la démo : la
+## Mère-Ronce vaincue, le sceau de la graine qui pulse et la ligne dans l'herbe.
 ## L'arbre : les nœuds hors démo sous une ronce épaisse, de près et en vue d'ensemble.
 ## Joué à 1280x720 et 1280x800 (captures suffixées de la résolution). Jeu figé.
 extends RefCounted
@@ -55,6 +56,13 @@ func run(runner) -> void:
 	await r._shot("demo_carte_" + tag, "carte")
 	main.quest_ui.close()
 	await r._frames(2)
+	# L'arène de la Mère-Ronce (son mur de ronces en décor), vue de l'entrée côté graine.
+	var arena = main.arena
+	var gate: Vector2 = -arena.center.normalized()
+	await _look("demo_arene_" + tag, arena.center + gate * (arena.max_radius + 90.0), 10)
+	# Le bout de la haie : elle rejoint le mur de ronces du bord du monde.
+	var far := Regions.reach(a + h) - 380.0
+	await _look("demo_bord_" + tag, Vector2.from_angle(a + h - 0.06) * far, 10)
 	# Fin de la démo : la Mère-Ronce vaincue (reverdie déjà vue), le sceau bat, la ligne s'écrit.
 	for i in Regions.heart_count("ronce"):
 		Game.flags[Regions.heart_part_flag("ronce", i)] = true
@@ -71,5 +79,6 @@ func _look(shot: String, pos: Vector2, frames := 4) -> void:
 	main.world_edge.ensure(Rect2(pos - Vector2(1500, 1000), Vector2(3000, 2000)))
 	main.hud.banner_time = 0.0
 	await main.world_edge.settle()
+	await main.demo_wall.settle(Rect2(pos - Vector2(1500, 1000), Vector2(3000, 2000)))
 	await r._frames(frames)
 	await r._shot(shot, "jeu")
