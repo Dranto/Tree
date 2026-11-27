@@ -7,7 +7,9 @@
 # Le nom du jeu vient de project.godot (Loc.game_name) : relancer ce script après un changement de nom.
 #   tools/steam-art.sh [fr en]           (langues, « fr en » par défaut)
 #   SHOTS=a,b tools/steam-art.sh fr      (seulement ces captures ; « SHOTS=- » : aucune)
-# Sorties : steam/art/<langue>/ (capsules, logo, icône, succes/) et steam/captures/<langue>/.
+#   DEMO=1 tools/steam-art.sh [fr en]    (captures de la page de la démo, Ronce seule)
+# Sorties : steam/art/<langue>/ (capsules, logo, icône, succes/) et steam/captures/<langue>/ ;
+# avec DEMO=1, seulement steam/captures-demo/<langue>/ (capsules et succès : ceux du jeu complet).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LANGS=("$@")
@@ -21,6 +23,17 @@ run() {   # run RESOLUTION args…
   xvfb-run -a -s "-screen 0 ${res}x24" "$ROOT/tools/godot.sh" --audio-driver Dummy --fixed-fps 60 \
     --resolution "$res" --position 0,0 "$@" 2>&1 | grep -E "VITRINE|CAPSULE|SCRIPT ERROR|^ERROR" | grep -v "leaked at exit" || true
 }
+if [ "${DEMO:-0}" = 1 ]; then
+  for lang in "${LANGS[@]}"; do
+    echo "== démo $lang"
+    mkdir -p "$ROOT/steam/captures-demo/$lang"
+    args=(--out="$ROOT/steam/captures-demo/$lang" --demo)
+    [ -n "${SHOTS:-}" ] && args+=(--shots="$SHOTS")
+    TREE_LANG="$lang" run 1920x1080 res://tools/steam/vitrine.tscn -- "${args[@]}"
+  done
+  echo "Captures de la démo : $ROOT/steam/captures-demo"
+  exit 0
+fi
 # L'illustration et les portraits ne dépendent pas de la langue (aucun texte).
 run 3840x2160 res://tools/steam/vitrine.tscn -- --shots=illustration,succes --out="$WORK"
 [ -f "$WORK/illustration.png" ] || { echo "Illustration absente"; exit 1; }

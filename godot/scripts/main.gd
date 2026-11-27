@@ -1011,7 +1011,7 @@ func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void
 	var s: Dictionary = Game.stats
 	var dmg := base * branch_factor(e, branch)
 	# Un ennemi ébloui (Aube) est plus souvent frappé en critique.
-	var crit: bool = rng.randf() < s["crit"] + hit_crit_bonus + dazzle_of(e)
+	var crit_chance: float = s["crit"] + hit_crit_bonus + dazzle_of(e); moments.crit_chance = crit_chance; var crit: bool = rng.randf() < crit_chance
 	if crit:
 		dmg *= s["crit_mult"] * (1.0 + hit_crit_extra)
 	# Les étincelles du coup prennent la couleur de son élément (charte) : racines, épines de Ronce, lumière d'Aube.

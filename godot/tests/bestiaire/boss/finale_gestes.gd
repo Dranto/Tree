@@ -117,7 +117,7 @@ func _phases(out: String) -> void:
 		var row := 0 if n < 3 else 1
 		var x := 20 + col * (size.x + 10)
 		var y := 70 + row * (size.y + 50)
-		var img: Image = await b.bake(size, func(cc): _scene(cc, Vector2(size.x * 0.5, size.y * 0.8), 62.0, 0.8, tl[1], tl[2], "", [], 0.0, recs), 2, Color("2a2224"))
+		var img: Image = await b.bake(size, func(cc): _scene(cc, Vector2(size.x * 0.5, size.y * 0.8), 46.0, 0.8, tl[1], tl[2], "", [], 0.0, recs), 2, Color("2a2224"))
 		canvas.blend_rect(img, Rect2i(Vector2i.ZERO, size), Vector2i(x, y))
 		labels.append(_label(tl[0], Vector2(x + 10, y + size.y + 6), 22, Art.c("texte")))
 	await _save(canvas, labels, out)
