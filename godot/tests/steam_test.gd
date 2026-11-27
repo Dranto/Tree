@@ -66,8 +66,16 @@ func _run() -> void:
 	check(not bridge.attach(null) and not bridge.active(), "attach(null) laisse le jeu sans Steam")
 
 	print("App ID et succès")
-	var appid := FileAccess.get_file_as_string("res://steam_appid.txt").strip_edges()
-	check(bridge.APP_ID == 480 and appid == str(bridge.APP_ID), "App ID de test 480, le même dans steam_appid.txt (%s)" % appid)
+	var steam_json = JSON.parse_string(FileAccess.get_file_as_string("res://data/steam.json"))
+	check(steam_json is Dictionary and bridge.app_id() == int(steam_json["app_id"]) and bridge.app_id() == 480, "App ID lu dans data/steam.json, 480 en attendant le vrai (%d)" % bridge.app_id())
+	check(not FileAccess.file_exists("res://steam_appid.txt"), "pas de second endroit pour l'App ID (steam_appid.txt)")
+	var Demo = load("res://scripts/demo.gd")
+	Demo.forced = 1
+	check(bridge.app_id() == int(steam_json["demo_app_id"]) and bridge.achievements() == ["BOSS_RONCE"], "démo : App ID de la démo, un seul succès (BOSS_RONCE)")
+	check(bridge.earned({"ronce_boss_vaincu": true, "spore_boss_vaincu": true}) == ["BOSS_RONCE"], "démo : seul le succès de la Mère-Ronce peut se débloquer")
+	Demo.forced = -1
+	check(bridge.missing_api(_fake()).is_empty(), "le faux Steam a toutes les fonctions GodotSteam utilisées (API)")
+	check(bridge.missing_api(null) == bridge.API, "sans Steam, toutes les fonctions manquent")
 	check(bridge.ACHIEVEMENTS == ["BOSS_RONCE", "BOSS_SPORE", "BOSS_VENT", "BOSS_SEVE", "BOSS_AUBE", "BOSS_RACINE", "BOSS_FINALE"], "un succès par boss, noms convenus")
 	var Regions = load("res://scripts/regions.gd")
 	var all_flags := {"finale_vaincue": true}

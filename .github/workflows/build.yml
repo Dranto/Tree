@@ -1,5 +1,7 @@
 # Builds exportés (Windows et Linux, jeu et démo) en artefacts sur chaque PR vers develop.
 # Le build Linux est lancé sous xvfb (tools/export-smoke.sh) : démarrage, 60 s de robot, sortie propre.
+# Les builds embarquent GodotSteam (tools/steam-fetch.sh) ; le job steam-windows vérifie que le build
+# Windows le charge (sans client Steam, l'initialisation est refusée : c'est attendu).
 name: Builds
 
 on:
@@ -42,6 +44,15 @@ jobs:
         with:
           export-templates: "true"
 
+      - name: Cache de GodotSteam
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/godotsteam
+          key: godotsteam-${{ hashFiles('tools/steam-fetch.sh') }}
+
+      - name: Poser GodotSteam
+        run: tools/steam-fetch.sh --list || true; tools/steam-fetch.sh --latest
+
       - name: Exporter (Windows)
         run: tools/export.sh "windows$SUFFIX"
 
@@ -51,20 +62,24 @@ jobs:
       - name: Lancer le build Linux (démarrage + robot 60 s)
         run: |
           bin=$(ls build/linux$SUFFIX/*.x86_64)
-          tools/export-smoke.sh "$bin"
+          ls -la build/windows$SUFFIX build/linux$SUFFIX
+          STEAM_REQUIRED=1 tools/export-smoke.sh "$bin"
 
       - name: Publier le build Windows
         uses: actions/upload-artifact@v4
         with:
           name: seve-windows${{ env.SUFFIX }}
-          path: build/windows${{ env.SUFFIX }}/*.exe
+          # L'exécutable et, à côté, GodotSteam et steam_api64.dll.
+          path: build/windows${{ env.SUFFIX }}/
           if-no-files-found: error
 
       - name: Publier le build Linux
         uses: actions/upload-artifact@v4
         with:
           name: seve-linux${{ env.SUFFIX }}
-          path: build/linux${{ env.SUFFIX }}/*.x86_64
+          path: |
+            build/linux${{ env.SUFFIX }}/
+            !build/linux${{ env.SUFFIX }}/smoke.log
           if-no-files-found: error
 
       - name: Publier le journal du robot
@@ -74,3 +89,33 @@ jobs:
           name: journal-linux${{ env.SUFFIX }}
           path: build/linux${{ env.SUFFIX }}/smoke.log
           if-no-files-found: ignore
+
+  # Le build Windows exporté charge GodotSteam (bibliothèque et steam_api64.dll à côté de l'exe).
+  steam-windows:
+    name: steam windows (${{ matrix.variant }})
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [jeu, demo]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: seve-windows${{ matrix.variant == 'demo' && '-demo' || '' }}
+          path: build
+
+      - name: Charger GodotSteam (-- --steam-probe)
+        shell: pwsh
+        run: |
+          Get-ChildItem build
+          $exe = (Get-ChildItem build -Filter *.exe | Select-Object -First 1).FullName
+          $env:APPDATA = "$PWD\appdata"
+          $p = Start-Process -FilePath $exe -ArgumentList "--headless","--log-file","$PWD\probe.log","--","--steam-probe" `
+            -RedirectStandardOutput out.txt -RedirectStandardError err.txt -PassThru -Wait
+          $log = (Get-Content out.txt, err.txt, probe.log -ErrorAction SilentlyContinue) -join "`n"
+          Write-Output $log
+          if ($log -notmatch "STEAM-PROBE bibliotheque=oui") { Write-Error "GodotSteam ne se charge pas dans le build Windows"; exit 1 }
+          if ($log -notmatch "fonctions manquantes : aucune") { Write-Error "GodotSteam incompatible avec SteamBridge"; exit 1 }
+          Write-Output "OK : GodotSteam chargé dans le build Windows (code $($p.ExitCode))"
