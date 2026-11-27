@@ -218,8 +218,115 @@ func _slot(layer: Node2D, at: Vector2) -> Slot:
 
 func _mesh_variant(t: Tile, veil: bool) -> MeshVariant:
 	var v := MeshVariant.new()
-	Painter.build_field(v.batch, t.side, t.index, _states.duplicate(), veil)
+	var m := _field(t.side, t.index, t.state, veil)
+	v.batch.points = m[0]
+	v.batch.colors = m[1]
+	v.batch.indices = m[2]
 	return v
+
+
+## Fonds et voiles déjà construits (sommets, couleurs, indices), par tuile, état et couche : leur
+## construction coûte des dizaines de ms par tuile ; la préparation du monde (world_preload.gd) les fait
+## d'avance, et une tuile rendue puis refaite ne les recalcule pas. Quelques Mo en tout.
+static var fields := {}
+static var fields_bytes := 0
+
+
+func _field(side: int, i: int, state: String, veil: bool) -> Array:
+	var key := "%d/%d/%s/%d/%s" % [side, i, state, int(veil), Art.mode_daltonien]
+	var m = fields.get(key)
+	if m == null:
+		var b := DrawBatch.new()
+		Painter.build_field(b, side, i, _states.duplicate(), veil)
+		m = [b.points, b.colors, b.indices]
+		fields[key] = m
+		fields_bytes += b.points.size() * 8 + b.colors.size() * 16 + b.indices.size() * 4
+	return m
+
+
+## Préparation du monde : construit le fond et le voile d'une tuile de plus (dans l'état actuel des
+## régions) ; faux quand tout est construit. Le premier appel relit le cache disque (FIELDS_CACHE) ; le
+## dernier l'écrit s'il a fallu construire quelque chose.
+func prepare_fields() -> bool:
+	_sync_states()
+	if not _fields_loaded:
+		_fields_loaded = true
+		_load_fields()
+	for side in 4:
+		for i in Painter.chunk_count():
+			var st := Painter.state_key(side, i, _states)
+			for veil in [false, true]:
+				if not fields.has("%d/%d/%s/%d/%s" % [side, i, st, int(veil), Art.mode_daltonien]):
+					_field(side, i, st, veil)
+					_fields_dirty = true
+					return true
+	if _fields_dirty:
+		_fields_dirty = false
+		_save_fields()
+	return false
+
+
+## Cache disque des fonds et voiles (~1,5 Mo) : leur construction prend des secondes au lancement.
+## L'empreinte suit tout ce dont dépend leur dessin : scripts du bord, des frontières et des couleurs,
+## fichiers des régions et des frontières, mode daltonien.
+const FIELDS_CACHE := "user://bord/"
+const FIELDS_FORMAT := 1
+var _fields_loaded := false
+var _fields_dirty := false
+
+
+static func fields_fingerprint() -> String:
+	var parts := [FIELDS_FORMAT, Art.mode_daltonien, Regions.ids(), Regions.WORLD_HALF]
+	var files := ["res://scripts/world_edge.gd", "res://scripts/world_edge_painter.gd", "res://scripts/art.gd",
+		"res://scripts/regions.gd", "res://scripts/draw_batch.gd", "res://data/world_borders.json"]
+	for dir in ["res://scripts/world_art/", "res://data/regions/", "res://data/borders/"]:
+		var names: PackedStringArray = ResourceLoader.list_directory(dir)
+		names.sort()
+		for f in names:
+			if f.ends_with(".gd") or f.ends_with(".json"):
+				files.append(dir + f)
+	for f in files:
+		parts.append(_file_sig(f))
+	return "%08x" % (hash(parts) & 0xffffffff)
+
+
+## Empreinte d'un fichier : son contenu, ou le fichier compilé d'un export (.remap).
+static func _file_sig(path: String) -> String:
+	if FileAccess.file_exists(path):
+		return FileAccess.get_md5(path)
+	if FileAccess.file_exists(path + ".remap"):
+		var cfg := ConfigFile.new()
+		if cfg.load(path + ".remap") == OK:
+			var p := str(cfg.get_value("remap", "path", ""))
+			if p != "" and FileAccess.file_exists(p):
+				return FileAccess.get_md5(p)
+	return path
+
+
+func _load_fields() -> void:
+	var path := FIELDS_CACHE + "fonds_%s.bin" % fields_fingerprint()
+	if not FileAccess.file_exists(path):
+		return
+	var f := FileAccess.open_compressed(path, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
+	if f == null:
+		return
+	var d = f.get_var()
+	if not d is Dictionary:
+		return
+	for key in d:
+		if not fields.has(key) and d[key] is Array and d[key].size() == 3:
+			fields[key] = d[key]
+			fields_bytes += d[key][0].size() * 8 + d[key][1].size() * 16 + d[key][2].size() * 4
+
+
+func _save_fields() -> void:
+	DirAccess.make_dir_recursive_absolute(FIELDS_CACHE)
+	for old in DirAccess.get_files_at(FIELDS_CACHE):
+		if old.begins_with("fonds_"):
+			DirAccess.remove_absolute(FIELDS_CACHE + old)
+	var f := FileAccess.open_compressed(FIELDS_CACHE + "fonds_%s.bin" % fields_fingerprint(), FileAccess.WRITE, FileAccess.COMPRESSION_ZSTD)
+	if f != null:
+		f.store_var(fields)
 
 
 func _decor_variant(t: Tile, band: int, direct: bool) -> DecorVariant:
@@ -441,15 +548,26 @@ class DecorVariant extends Node2D:
 			prev = pn
 			if from >= list.size():
 				break
-		_finish()
+		var p0 := Prof.t0()
 		var img: Image = vp.get_texture().get_image() if vp.get_texture() != null else null
 		vp.queue_free()
 		if img == null or img.is_empty():
+			_finish()
 			direct = true
 			shown = true
 			queue_redraw()
 			return
-		img.resize(maxi(1, size.x / SS), maxi(1, size.y / SS), Image.INTERPOLATE_BILINEAR)
+		Prof.add("world_edge.lecture_cuisson", p0)
+		# La réduction (des dizaines de ms pour une bande) se fait sur un autre fil : l'image reste fluide.
+		var out := Vector2i(maxi(1, size.x / SS), maxi(1, size.y / SS))
+		var task := WorkerThreadPool.add_task(func(): img.resize(out.x, out.y, Image.INTERPOLATE_BILINEAR))
+		while not WorkerThreadPool.is_task_completed(task):
+			await get_tree().process_frame
+		WorkerThreadPool.wait_for_task_completion(task)
+		# La cuisson n'est finie (pending) qu'avec son image : les captures attendent jusque-là.
+		_finish()
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
 		tex = ImageTexture.create_from_image(img)
 		_bytes = img.get_data_size()
 		BordBake.bytes += _bytes

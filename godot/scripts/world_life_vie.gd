@@ -40,6 +40,8 @@ class Sheet:
 
 static var sheets := {}
 static var _pending := {}
+## Régions gardées toute la partie (cuites d'avance par world_preload.gd).
+static var pinned: Array = []
 static var bake_usec := 0
 static var _scripts := {}
 ## Mode daltonien au moment de la cuisson : s'il change, les atlas sont refaits.
@@ -152,13 +154,14 @@ static func height_of(reg: String, k: String) -> float:
 ## Ne garde que les atlas des régions données (le reste est rendu).
 static func keep(regs: Array) -> void:
 	for r in sheets.keys():
-		if not (r in regs):
+		if not (r in regs) and not (r in pinned):
 			sheets.erase(r)
 
 
 static func clear() -> void:
 	sheets.clear()
 	_pending.clear()
+	pinned = []
 	_scripts.clear()
 
 
