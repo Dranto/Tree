@@ -608,7 +608,9 @@ func use_tint_material() -> void:
 ## Met la teinte du shader à jour (au début de _draw) : mêmes dosages que _color.
 func update_tint() -> void:
 	var m := material as ShaderMaterial
-	if m == null:
+	# Pendant une impact frame, Moments prête au nœud son matériau de silhouette (partagé par tout ce
+	# qui est mis en silhouette) : n'y rien écrire, sa teinte « tint » est une couleur.
+	if m == null or m.shader != BOSS_TINT_SHADER:
 		return
 	var tint := 0.0
 	var col := Art.ec("poison")

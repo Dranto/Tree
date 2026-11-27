@@ -252,3 +252,41 @@ static func draw_arena_wall(c: CanvasItem, a) -> void:
 				c.draw_colored_polygon(Art.ellipse(tip + Vector2(0, 5.0), 2.4, 5.0, 8), Art.ec("racine", "sombre").lightened(0.15))
 			elif alive and j == 0 and i % 3 == 0:
 				c.draw_circle(foot + Vector2(-4, -3), 2.6, Art.ec("seve", "clair"))
+
+
+# --- Arène en décor (vague 3b A2, world_art/arenes_seve.gd) : l'étang du Saule ---
+# draw_arena_floor et draw_arena_wall (l'ancienne ceinture de roseaux) ne servent plus qu'aux comparaisons.
+
+const ArenesSeve = preload("res://scripts/world_art/arenes_seve.gd")
+
+
+static func arena_baked(region: String) -> bool:
+	return true
+
+
+static func arena_pieces(region: String, a) -> Array:
+	return arena_ring(a, 42, ArenesSeve.MUR_VARIANTES, [["r0", 0.0, 78.0]], 67)
+
+
+static func arena_piece_keys(region: String) -> Array:
+	return ArenesSeve.keys()
+
+
+static func arena_piece_box(region: String, key: String) -> Rect2:
+	return ArenesSeve.piece_box(key)
+
+
+static func arena_piece(ci: CanvasItem, region: String, key: String, etat: String) -> void:
+	ArenesSeve.piece(ci, key, etat)
+
+
+static func arena_piece_live(ci: CanvasItem, region: String, key: String, a, i: int) -> void:
+	ArenesSeve.piece_live(ci, key, a, i)
+
+
+static func arena_floor(ci: CanvasItem, a, etat: String) -> void:
+	ArenesSeve.ground(ci, a, etat)
+
+
+static func arena_live(ci: CanvasItem, a) -> void:
+	ArenesSeve.live(ci, a)

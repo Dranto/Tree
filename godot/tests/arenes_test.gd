@@ -1,4 +1,4 @@
-## Test des arènes en décor (refonte du monde, vague 3 A, puis A2) : Roncier, Marais, Vent et Aube.
+## Test des arènes en décor (refonte du monde, vague 3 A, puis 3b A2) : les six régions.
 ##   - le mur est fait de pièces dans le calque trié en profondeur, cuites par lieux_bake (« arene/ ») ;
 ##   - la brèche s'ouvre : les pièces du côté du Cœur rentrent sous terre, les autres restent ;
 ##   - quand le mur se resserre, les pièces suivent le rayon ; les repères restent au fond ;
@@ -7,7 +7,7 @@
 ##   - après la victoire, les pièces se fondent dans leur image ravivée ;
 ##   - une arène ne cuit pas plus d'image que celle du Roncier (budget de lieux_bake partagé) ;
 ##   - Aube : le mur devient parapet du côté du bord du monde, le repère est loin du vide ;
-##   - les autres régions gardent leur ancien mur (vague 3b) ; rien du combat ne change.
+##   - rien du combat ne change.
 ## Lancer : tools/godot.sh --xvfb --audio-driver Dummy --fixed-fps 60 -s res://tests/arenes_test.gd
 extends SceneTree
 
@@ -16,6 +16,8 @@ const Regions = preload("res://scripts/regions.gd")
 
 var failures := 0
 var main
+## Aire moyenne d'une image cuite par région (budget lieux_bake : pas plus que le Roncier).
+var areas := {}
 ## Octets cuits (mur flétri) par région, pour comparer au Roncier.
 var baked_bytes := {}
 
@@ -51,7 +53,7 @@ func _run() -> void:
 	main.spawn_paused = true
 	await _steps(3)
 
-	for reg in ["ronce", "spore", "vent", "aube"]:
+	for reg in ["ronce", "spore", "vent", "seve", "aube", "racine"]:
 		await _region(reg)
 
 	print("Budget : chaque arène au plus comme celle du Roncier")
@@ -75,12 +77,6 @@ func _run() -> void:
 			wrong += 1
 	check(parapets >= 4 and wrong == 0, "parapet bas du côté du vide (%d pièces)" % parapets)
 	check(mark_gap > 300.0, "grande aiguille loin du bord (%.0f px)" % mark_gap)
-
-	print("Autres régions : ancien mur")
-	for reg in ["seve", "racine"]:
-		if main.arenas.has(reg):
-			var a = main.arenas[reg]
-			check(not a.baked and a.pieces.is_empty(), "%s : pas encore en décor (vague 3b)" % reg)
 
 	LieuxBake.clear()
 	main.queue_free()
@@ -115,6 +111,9 @@ func _region(reg: String) -> void:
 	for k in cells:
 		area += cells[k][1].get_area()
 	print("    aire moyenne d'une image : %.0f px²" % (area / cells.size()))
+	areas[reg] = area / cells.size()
+	if reg != "ronce" and areas.has("ronce"):
+		check(areas[reg] <= areas["ronce"] * 1.05, "images pas plus grandes que celles du Roncier (budget lieux_bake)")
 	baked_bytes[reg] = int(LieuxBake.sets[a.bake_key("fletri")]["bytes"])
 
 	# Brèche : ouverte, les pièces du côté du Cœur rentrent, celles d'en face restent.
