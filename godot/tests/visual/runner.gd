@@ -65,6 +65,11 @@ var scenario := ""
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Les captures de mort de boss datent d'avant l'allongement des impact frames : on rejoue
+	# celles-ci à l'ancienne durée (une image par variante), pour que les références restent valables.
+	var imp: Dictionary = Content.feel().get("impact_frame", {})
+	imp["frame_time"] = 0.0
+	imp["frame_time_strong"] = 0.0
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--scenario="):
 			scenario = arg.get_slice("=", 1)
