@@ -20,7 +20,10 @@ for a in "$@"; do
 done
 [ -z "$OUT" ] && { [ -d /mnt/project-files ] && OUT=/mnt/project-files/steam || OUT="$ROOT/steam/out"; }
 mkdir -p "$OUT"
+VITRINE_ARGS=()
 if [ "$DEMO" = 1 ]; then
+  # La démo elle-même (Demo.active) : l'arbre sous la ronce hors de Ronce, le monde fermé.
+  VITRINE_ARGS=(--demo)
   CLIPS=(titre eveil combat arbre coeur boss fin_demo)
   NAME="bande-annonce-demo-$LANG_CODE"
 else
@@ -49,7 +52,7 @@ for c in "${CLIPS[@]}"; do
     echo "== Plan $c"
     TREE_LANG="$LANG_CODE" xvfb-run -a -s "-screen 0 1920x1080x24" "$ROOT/tools/godot.sh" --fixed-fps 30 \
       --resolution 1920x1080 --position 0,0 --write-movie "$WORK/$c.avi" \
-      res://tools/steam/vitrine.tscn -- --clip="$c" > "$WORK/$c.log" 2>&1 || true
+      res://tools/steam/vitrine.tscn -- --clip="$c" "${VITRINE_ARGS[@]}" > "$WORK/$c.log" 2>&1 || true
     grep -E "SCRIPT ERROR" "$WORK/$c.log" | head -5 || true
   fi
   start=$(grep -oE "VITRINE debut [0-9]+" "$WORK/$c.log" | tail -1 | awk '{print $3}')
