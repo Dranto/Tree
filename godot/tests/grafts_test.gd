@@ -154,6 +154,18 @@ func _run() -> void:
 	gp.set_hover_slot(slot)
 	var tip_text := " ".join(gp._detail.get_children().map(func(l): return l.text))
 	check("Projectiles" in tip_text and "Écorce de mûrier" in tip_text, "fiche : aperçu de la greffe tenue (statistiques et greffe remplacée)")
+	await _steps(2)
+	var h_tip: float = gp.size.y
+	gp.held = ""
+	gp.set_hover_slot(-1)
+	gp.set_hover_graft("greffe_ecorce")
+	await _steps(2)
+	check(is_equal_approx(gp.size.y, h_tip), "fiche : le panneau garde la même hauteur au survol (%s / %s)" % [gp.size.y, h_tip])
+	gp.set_hover_graft("")
+	await _steps(2)
+	check(is_equal_approx(gp.size.y, h_tip), "fiche : même hauteur sans rien survoler")
+	gp.held = "greffe_soeurs"
+	gp.set_hover_slot(slot)
 	check(gp.drop_on(slot, "greffe_soeurs") and game.graft_of(slot) == "greffe_soeurs", "glisser-déposer : greffe posée")
 	check(not gp.drop_on(game.crown_size(), "greffe_ecorce") and game.graft_of(slot) == "greffe_soeurs", "déposée sur un emplacement fermé : rien ne change")
 	check(gp.click_slot(slot) and game.graft_of(slot) == "" and game.free_grafts().size() == 2, "clic sur un emplacement occupé : greffe retirée")

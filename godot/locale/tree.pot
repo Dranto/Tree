@@ -8884,61 +8884,61 @@ msgid ""
 "« Nouveau » repart de la graine, « Copier ici » enregistre le build actif."
 msgstr ""
 
-#. scripts/tree_grafts.gd:458
+#. scripts/tree_grafts.gd:471
 msgid "Couronne de greffes"
 msgstr ""
 
-#. scripts/tree_grafts.gd:460
+#. scripts/tree_grafts.gd:473
 msgid "%d trouvée"
 msgid_plural "%d trouvées"
 msgstr[0] ""
 msgstr[1] ""
 
-#. scripts/tree_grafts.gd:481
+#. scripts/tree_grafts.gd:494
 msgid "%s sur un emplacement de la couronne : y poser la greffe."
 msgstr ""
 
-#. scripts/tree_grafts.gd:481
+#. scripts/tree_grafts.gd:494
 msgid "Clique un emplacement de la couronne pour y poser la greffe."
 msgstr ""
 
-#. scripts/tree_grafts.gd:483
+#. scripts/tree_grafts.gd:496
 msgid "%s sur une greffe pour la prendre, puis sur un emplacement libre."
 msgstr ""
 
-#. scripts/tree_grafts.gd:483
+#. scripts/tree_grafts.gd:496
 msgid "Glisse une greffe dans un emplacement libre de la couronne."
 msgstr ""
 
-#. scripts/tree_grafts.gd:485
+#. scripts/tree_grafts.gd:498
 msgid "%s sur un emplacement : retire sa greffe."
 msgstr ""
 
-#. scripts/tree_grafts.gd:485
+#. scripts/tree_grafts.gd:498
 msgid "Clic sur un emplacement : retire sa greffe."
 msgstr ""
 
-#. scripts/tree_grafts.gd:515
+#. scripts/tree_grafts.gd:528
 msgid "Emplacement fermé"
 msgstr ""
 
-#. scripts/tree_grafts.gd:516
+#. scripts/tree_grafts.gd:529
 msgid "Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."
 msgstr ""
 
-#. scripts/tree_grafts.gd:539
+#. scripts/tree_grafts.gd:552
 msgid "Posée ici :"
 msgstr ""
 
-#. scripts/tree_grafts.gd:542
+#. scripts/tree_grafts.gd:555
 msgid "Remplace « %s »."
 msgstr ""
 
-#. scripts/tree_grafts.gd:545
+#. scripts/tree_grafts.gd:558
 msgid "Posée :"
 msgstr ""
 
-#. scripts/tree_grafts.gd:548
+#. scripts/tree_grafts.gd:561
 msgid "Retirée :"
 msgstr ""
 

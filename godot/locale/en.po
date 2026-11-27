@@ -8895,61 +8895,61 @@ msgstr ""
 "Near the seed (rings 1 to %d), unlearning is free. Farther out, it costs essence, taken from the current level (%d in reserve). At a sanctuary, everything is free.\n"
 "“New” starts again from the seed; “Copy here” saves the active build."
 
-#. scripts/tree_grafts.gd:458
+#. scripts/tree_grafts.gd:471
 msgid "Couronne de greffes"
 msgstr "Graft crown"
 
-#. scripts/tree_grafts.gd:460
+#. scripts/tree_grafts.gd:473
 msgid "%d trouvée"
 msgid_plural "%d trouvées"
 msgstr[0] "%d found"
 msgstr[1] "%d found"
 
-#. scripts/tree_grafts.gd:481
+#. scripts/tree_grafts.gd:494
 msgid "%s sur un emplacement de la couronne : y poser la greffe."
 msgstr "%s on a crown slot: set the graft there."
 
-#. scripts/tree_grafts.gd:481
+#. scripts/tree_grafts.gd:494
 msgid "Clique un emplacement de la couronne pour y poser la greffe."
 msgstr "Click a crown slot to set the graft there."
 
-#. scripts/tree_grafts.gd:483
+#. scripts/tree_grafts.gd:496
 msgid "%s sur une greffe pour la prendre, puis sur un emplacement libre."
 msgstr "%s on a graft to pick it up, then on an empty slot."
 
-#. scripts/tree_grafts.gd:483
+#. scripts/tree_grafts.gd:496
 msgid "Glisse une greffe dans un emplacement libre de la couronne."
 msgstr "Drag a graft into an empty crown slot."
 
-#. scripts/tree_grafts.gd:485
+#. scripts/tree_grafts.gd:498
 msgid "%s sur un emplacement : retire sa greffe."
 msgstr "%s on a slot: removes its graft."
 
-#. scripts/tree_grafts.gd:485
+#. scripts/tree_grafts.gd:498
 msgid "Clic sur un emplacement : retire sa greffe."
 msgstr "Click a slot: removes its graft."
 
-#. scripts/tree_grafts.gd:515
+#. scripts/tree_grafts.gd:528
 msgid "Emplacement fermé"
 msgstr "Closed slot"
 
-#. scripts/tree_grafts.gd:516
+#. scripts/tree_grafts.gd:529
 msgid "Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."
 msgstr "It opens when you cleanse a region's Hearts, or defeat its guardian."
 
-#. scripts/tree_grafts.gd:539
+#. scripts/tree_grafts.gd:552
 msgid "Posée ici :"
 msgstr "Set here:"
 
-#. scripts/tree_grafts.gd:542
+#. scripts/tree_grafts.gd:555
 msgid "Remplace « %s »."
 msgstr "Replaces “%s”."
 
-#. scripts/tree_grafts.gd:545
+#. scripts/tree_grafts.gd:558
 msgid "Posée :"
 msgstr "Set:"
 
-#. scripts/tree_grafts.gd:548
+#. scripts/tree_grafts.gd:561
 msgid "Retirée :"
 msgstr "Removed:"
 

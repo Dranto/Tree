@@ -1025,7 +1025,7 @@ func player_hit_enemy(e, base: float, can_explode := true, branch := "") -> void
 	var s: Dictionary = Game.stats
 	var dmg := base * branch_factor(e, branch)
 	# Un ennemi ébloui (Aube) est plus souvent frappé en critique.
-	var crit: bool = rng.randf() < s["crit"] + hit_crit_bonus + dazzle_of(e)
+	var crit_chance: float = s["crit"] + hit_crit_bonus + dazzle_of(e); moments.crit_chance = crit_chance; var crit: bool = rng.randf() < crit_chance
 	if crit:
 		dmg *= s["crit_mult"] * (1.0 + hit_crit_extra)
 	# Les étincelles du coup prennent la couleur de son élément (charte) : racines, épines de Ronce, lumière d'Aube.
@@ -1595,7 +1595,7 @@ func bench_prepared() -> bool:
 	# La finale (finale_arena.gd) lance son combat tout de suite : le banc ne l'attend pas.
 	var busy := false
 	if arena != null and arena.has_method("bake_pending"):
-		busy = arena.bake_pending() or (world_edge != null and world_edge.pending() > 0)
+		busy = arena.bake_pending() or (world_edge != null and world_edge.pending() > 0) or DecorBake.pending()
 	if not busy or _bench_prep_frames >= BENCH_PREP_MAX:
 		_bench_prep_done = true
 		print("BENCHMARK préparation du combat : %d images (cuissons de l'approche)" % _bench_prep_frames)

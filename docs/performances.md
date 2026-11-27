@@ -27,7 +27,7 @@ Options :
 | `--profile` | temps de chaque `_process`, `_physics_process` et `_draw`, à lancer par `tools/perf-profile.sh` |
 | `--bench-scene=coeur` | banc des pics : le siège du Cœur (vagues toutes les 6 s), jusqu'à la purification (40 morts d'un coup, vague de vie) ; 36 s, héros au build du robot du boss |
 | `--bench-scene=zones` | le tour des six régions : le héros marche (220 px/s, `--bench-run=V`) sur un cercle de 1 300 px autour de la graine (`--bench-orbit=R`) et franchit chaque frontière ; Flétris nés comme en jeu ; liste les images de plus de 50 ms (`A-COUP`, avec ce qui a coûté sous `--profile`). `--preparation` lance d'abord l'écran de chargement du jeu (voir « Changements de zone ») |
-| `--bench-scene=boss` | le combat de la Mère-Ronce, 60 s (`--region=<id>` : le boss de cette région, `finale` : la Flétrissure). Le combat commence quand le bord du monde et l’arène sont cuits (au plus 900 images) |
+| `--bench-scene=boss` | le combat de la Mère-Ronce, 60 s (`--region=<id>` : le boss de cette région, `finale` : la Flétrissure). Le combat commence quand le bord du monde, l’arène et le décor en vue sont cuits (au plus 900 images) |
 
 `tools/perf-profile.sh` copie le projet dans un dossier temporaire, y enveloppe chaque fonction
 `_process`, `_physics_process` et `_draw` d'une mesure (`tools/perf_instrument.py`,
