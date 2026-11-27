@@ -1571,7 +1571,7 @@ func bench_prepared() -> bool:
 	# La finale (finale_arena.gd) lance son combat tout de suite : le banc ne l'attend pas.
 	var busy := false
 	if arena != null and arena.has_method("bake_pending"):
-		busy = arena.bake_pending() or (world_edge != null and world_edge.pending() > 0)
+		busy = arena.bake_pending() or (world_edge != null and world_edge.pending() > 0) or DecorBake.pending()
 	if not busy or _bench_prep_frames >= BENCH_PREP_MAX:
 		_bench_prep_done = true
 		print("BENCHMARK préparation du combat : %d images (cuissons de l'approche)" % _bench_prep_frames)

@@ -3,12 +3,12 @@
 ## Rendu par défaut (« -- --decor-direct » revient au dessin direct, pour comparer) : chaque élément du
 ## décor (flora.gd › DecorTree et ses sous-classes, dont les objets de world_art/decor.gd posés par
 ## decor_compose.gd) est dessiné une fois par le code, à ×scale et lissé (suréchantillonné ss fois dans
-## un SubViewport, réduit, mipmaps, alpha prémultiplié), dans **un atlas par région** ; en jeu, il
+## un SubViewport, réduit, alpha prémultiplié), dans **un atlas par région** ; en jeu, il
 ## n'envoie plus qu'un quadrilatère texturé. Un seul matériau pour tout le décor (material()) : les
 ## éléments voisins dans le tri en profondeur partent dans le même appel de rendu.
 ##
 ## Méthode de la cuisson des Flétris (sprite_bake.gd, moteur de créatures A, lu sans le modifier) :
-## SubViewport suréchantillonné, réduction, mipmaps, alpha prémultiplié, cache disque invalidé par une
+## SubViewport suréchantillonné, réduction (sans mipmaps : voir prepare), alpha prémultiplié, cache disque invalidé par une
 ## empreinte des scripts de dessin (SpriteBake._sig). Son bake() est propre aux poses des Flétris :
 ## ici, chaque élément se dessine lui-même (son _draw : lot de triangles, contours, encre de world_art).
 ##
@@ -34,7 +34,7 @@ const SpriteBake = preload("res://scripts/sprite_bake.gd")
 const Regions = preload("res://scripts/regions.gd")
 
 ## À changer quand le format ou la façon de cuire change : invalide tout le cache.
-const FORMAT := 1
+const FORMAT := 2
 ## Rendu par défaut ; « --decor-direct » : dessin direct d'avant (comparaisons, banc).
 static var enabled := true
 ## Pixels de l'atlas par pixel du monde (« --decor-cuisson=S »), suréchantillonnage, variantes.
@@ -45,12 +45,12 @@ static var variants := 3
 static var use_cache := true
 ## Une ligne par région cuite (« --decor-verbeux »).
 static var verbose := false
-## Mémoire des atlas gardés (octets, mipmaps comprises) : au-delà, la région la plus ancienne hors du
+## Mémoire des atlas gardés (octets ; sans mipmaps depuis le jalon 13 B) : au-delà, la région la plus ancienne hors du
 ## champ est rendue et relue du cache si elle revient. Une région du champ n'est jamais rendue (sinon
 ## elle se recuit en boucle) : le plafond peut être dépassé tant qu'elle est en vue.
 ## Enveloppe par atlas (vague 2, 26/11) : ENVELOPE ; 6 régions et l'oasis tiennent sous le plafond.
 static var budget := 128 * 1024 * 1024
-## Taille d'atlas visée par région (octets, mipmaps comprises), vérifiée par tests/decor_test.gd :
+## Taille d'atlas visée par région (octets ; avec mipmaps jusqu’au jalon 13 B, un quart de moins depuis), vérifiée par tests/decor_test.gd :
 ## Roncier 26 Mo (éléments de passage des frontières, vague 3 B), Marais 24 Mo, les quatre autres 18 Mo,
 ## l'oasis 4 Mo (elle en prend 1,9) : 26 + 24 + 4 × 18 + 4 = 126 Mo.
 const ENVELOPE := {"ronce": 26 << 20, "spore": 24 << 20, "commun": 4 << 20, "": 18 << 20}
@@ -83,6 +83,11 @@ static var atlases := {}
 static var bake_usec := 0
 static var finish_usec := 0
 static var drawn := 0
+## Vrai tant qu'une région demandée n'est pas cuite (banc du boss : main.bench_prepared l'attend).
+static func pending() -> bool:
+	return enabled and (_busy or not _wanted.is_empty())
+
+
 static var fallback := 0
 static var cache_hits := 0
 static var cache_writes := 0
@@ -274,7 +279,7 @@ static func _load_cached(region: String, fp: String) -> Atlas:
 	var data := f.get_buffer(int(m["img_size"]))
 	if data.size() != int(m["img_size"]):
 		return null
-	var img := Image.create_from_data(int(m["img_w"]), int(m["img_h"]), true, int(m["img_format"]), data)
+	var img := Image.create_from_data(int(m["img_w"]), int(m["img_h"]), false, int(m["img_format"]), data)
 	var a := Atlas.new()
 	a.region = region
 	a.cells = m["cells"]
@@ -447,7 +452,6 @@ static func bake(host: Node, flora, region: String) -> void:
 		return
 	if ss > 1:
 		img.resize(img.get_width() / ss, img.get_height() / ss, Image.INTERPOLATE_TRILINEAR)
-	img.generate_mipmaps()
 	var a := Atlas.new()
 	a.region = region
 	a.tex = ImageTexture.create_from_image(img)
@@ -519,10 +523,14 @@ static func install(flora) -> void:
 
 
 ## Matériau et filtre d'un élément du décor (appelé aussi pour ceux ajoutés après la mise en route).
+## Filtre linéaire sans mipmaps (jalon 13 B) : l'atlas (×1,5, suréchantillonné, déjà lissé) est montré
+## entre 0,53 et 0,83 fois sa taille en 1600×900, et agrandi sur les grands écrans ; le filtre avec
+## mipmaps (trilinéaire) coûtait ~4,5 ms par image au combat de la Mère-Ronce en rendu logiciel, pour un
+## écart d'image à peine visible (traits fins du décor un peu plus nets en petite fenêtre).
 static func prepare(t) -> void:
 	t.set_meta("cuit", true)
 	t.material = material()
-	t.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	t.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 
 
 ## Dessine l'élément depuis l'atlas de sa région (appelé par DecorTree._draw). Faux : dessin direct.
