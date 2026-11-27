@@ -53,7 +53,7 @@ func _ready() -> void:
 	_bar.add_child(_ticks)
 	_sub = Label.new()
 	_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_sub.add_theme_font_size_override("font_size", UiTheme.fs(16))
+	_sub.add_theme_font_size_override("font_size", UiTheme.fs(18))
 	_sub.add_theme_color_override("font_color", Color(0.85, 0.82, 0.72))
 	box.add_child(_sub)
 
