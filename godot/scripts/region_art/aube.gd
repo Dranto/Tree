@@ -4,7 +4,10 @@
 ##   - Cœur (refonte du monde, vague 2 P5) : une géode fermée, calcaire en strates fendu de braise,
 ##     des pointes de quartz fumé qui percent la croûte, prise dans des racines de pierre ; purifiée,
 ##     elle s'ouvre en deux et montre sa couronne de cristaux de nacre et d'or qui luit ;
-##   - mur de l'arène : un cercle d'aiguilles de verre plantées dans la roche ; brèche du côté du
+##   - arène (vague 3 A2) : en décor cuit (world_art/arenes_aube.gd), des bouquets d'aiguilles de
+##     cristal sur leurs blocs de calcaire autour d'un cadran incrusté de verre, la grande aiguille au
+##     fond, un parapet et une terrasse du côté de la falaise ; l'ancien mur (ci-dessous) ne sert plus
+##     qu'aux comparaisons : un cercle d'aiguilles de verre plantées dans la roche ; brèche du côté du
 ##     Cœur ; pendant le combat la lumière crue y court et les arêtes brûlent ; une fois la Phalène
 ##     vaincue, le verre s'éclaircit et des fleurs d'aube s'ouvrent à son pied.
 ##
@@ -297,3 +300,45 @@ static func _geode_open(c: CanvasItem, base: Vector2, h: float, s: float) -> voi
 			pts.append(q + Vector2.from_angle(TAU * j / 12.0 - PI / 2.0) * r * (1.3 if j % 2 == 0 else 0.6) * Vector2(1.0, 0.8))
 		O.poly(c, pts, _m("ravive", "fleur") if i % 2 == 0 else _m("ravive", "fleur_2"))
 		c.draw_circle(q, r * 0.42, _m("ravive", "fleur_coeur"))
+
+
+# --- Arène en décor (vague 3 A2, world_art/arenes_aube.gd) : le cercle de l'Aube ---
+# draw_arena_floor et draw_arena_wall (l'ancien socle) ne servent plus qu'aux comparaisons.
+
+## Chargé à la demande : arenes_aube.gd passe par falaise_outils.gd, qui charge ce fichier (une
+## référence circulaire de preload garderait les deux scripts en vie à la sortie).
+static func _arenes() -> GDScript:
+	return load("res://scripts/world_art/arenes_aube.gd")
+
+
+static func arena_baked(region: String) -> bool:
+	return true
+
+
+## Repère au nord-ouest (le fond de l'arène, à l'opposé de la brèche, donne sur le vide).
+static func arena_pieces(region: String, a) -> Array:
+	return _arenes().pieces(a, arena_ring(a, 40, _arenes().mur_variantes(), [["r0", 1.25, 64.0]], 83))
+
+
+static func arena_piece_keys(region: String) -> Array:
+	return _arenes().keys()
+
+
+static func arena_piece_box(region: String, key: String) -> Rect2:
+	return _arenes().piece_box(key)
+
+
+static func arena_piece(ci: CanvasItem, region: String, key: String, etat: String) -> void:
+	_arenes().piece(ci, key, etat)
+
+
+static func arena_piece_live(ci: CanvasItem, region: String, key: String, a, i: int) -> void:
+	_arenes().piece_live(ci, key, a, i)
+
+
+static func arena_floor(ci: CanvasItem, a, etat: String) -> void:
+	_arenes().ground(ci, a, etat)
+
+
+static func arena_live(ci: CanvasItem, a) -> void:
+	_arenes().live(ci, a)

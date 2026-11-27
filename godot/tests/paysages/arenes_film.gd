@@ -3,7 +3,7 @@
 ## est purifié, le combat (le mur se referme, phase 2, coups), la mort du boss et l'arène qui refleurit.
 ## N'utilise que des appels qui existent aussi sur develop : le même script tourne sur la base.
 ##   tools/godot.sh --xvfb --fixed-fps 60 --resolution 960x540 -s res://tests/paysages/arenes_film.gd -- --scene=ronce --out=/chemin
-## Scènes : ronce (Roncier), spore (Marais).
+## Scènes : ronce (Roncier), spore (Marais), vent (Plateaux), aube (Falaises) ; toute région du jeu.
 extends SceneTree
 
 var main

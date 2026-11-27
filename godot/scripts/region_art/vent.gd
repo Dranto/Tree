@@ -3,7 +3,9 @@
 ##   - Cœur (refonte du monde, vague 2 P3) : un nid de pierres plates et de racines tordues autour d'un
 ##     œuf d'orage d'ardoise fendu de braise, où courent de petits éclairs ; purifié, l'œuf s'ouvre en un
 ##     bouquet de grandes plumes blanches et d'herbes argentées, qui lâche des plumes dans le vent ;
-##   - mur de l'arène : un muret de pierres sèches ponctué de pierres levées ; brèche du côté du Cœur ;
+##   - arène (vague 3 A2) : en décor cuit (world_art/arenes_vent.gd), un cercle de pierres sèches et de
+##     menhirs hérissé de plumes, l'aire du Harfang au fond ; l'ancien muret (ci-dessous) ne sert plus
+##     qu'aux comparaisons : muret de pierres sèches ponctué de pierres levées ; brèche du côté du Cœur ;
 ##     des runes de braise s'allument pendant le combat ; vaincue, la mousse et l'herbe le gagnent.
 extends "res://scripts/region_art.gd"
 
@@ -221,3 +223,41 @@ static func _low_wall(c: CanvasItem, pts: PackedVector2Array, pts2: PackedVector
 	if pts.size() >= 2:
 		c.draw_polyline(pts2, dark, 11.0)
 		c.draw_polyline(pts, rock, 13.0)
+
+
+# --- Arène en décor (vague 3 A2, world_art/arenes_vent.gd) : l'aire de Vent ---
+# draw_arena_floor et draw_arena_wall (l'ancien muret) ne servent plus qu'aux comparaisons.
+
+const ArenesVent = preload("res://scripts/world_art/arenes_vent.gd")
+
+
+static func arena_baked(region: String) -> bool:
+	return true
+
+
+static func arena_pieces(region: String, a) -> Array:
+	return arena_ring(a, 40, ArenesVent.MUR_VARIANTES, [["r0", 1.25, 70.0]], 67)
+
+
+static func arena_piece_keys(region: String) -> Array:
+	return ArenesVent.keys()
+
+
+static func arena_piece_box(region: String, key: String) -> Rect2:
+	return ArenesVent.piece_box(key)
+
+
+static func arena_piece(ci: CanvasItem, region: String, key: String, etat: String) -> void:
+	ArenesVent.piece(ci, key, etat)
+
+
+static func arena_piece_live(ci: CanvasItem, region: String, key: String, a, i: int) -> void:
+	ArenesVent.piece_live(ci, key, a, i)
+
+
+static func arena_floor(ci: CanvasItem, a, etat: String) -> void:
+	ArenesVent.ground(ci, a, etat)
+
+
+static func arena_live(ci: CanvasItem, a) -> void:
+	ArenesVent.live(ci, a)
