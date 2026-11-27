@@ -228,9 +228,11 @@ func _slot(layer: Node2D, at: Vector2) -> Slot:
 func _mesh_variant(t: Tile, veil: bool) -> MeshVariant:
 	var v := MeshVariant.new()
 	var m := _field(t.side, t.index, t.state, veil)
-	v.batch.points = m[0]
-	v.batch.colors = m[1]
-	v.batch.indices = m[2]
+	# Copies : un tableau partagé entre deux tuiles (le cache, flush puis clear) faisait disparaître des
+	# fonds après une purification (capture bord_vivant_aube) ; la copie ne coûte que quelques ko.
+	v.batch.points = m[0].duplicate()
+	v.batch.colors = m[1].duplicate()
+	v.batch.indices = m[2].duplicate()
 	return v
 
 
