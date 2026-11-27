@@ -51,7 +51,9 @@ func _run() -> void:
 	b = Bake.new(self)
 	BossFinale = load("res://scripts/boss_finale.gd")
 	font = load("res://assets/fonts/CormorantGaramond-Herbier.ttf")
-	if _arg("frames") != "":
+	if _arg("phases") != "":
+		await _phases(_arg("phases"))
+	elif _arg("frames") != "":
 		await _frames(_arg("frames"), float(_arg("fps", "24")))
 	else:
 		await _sheet(_arg("out", "gestes.png"))
@@ -93,6 +95,31 @@ func _sheet(out: String) -> void:
 			var lit: Array = row[1] if col[1] >= 0.0 and col[3] < 0.0 else []
 			var img: Image = await b.bake(TILE, func(cc): _scene(cc, Vector2(TILE.x * 0.5, TILE.y * 0.72), R, 0.8 + ci_ * 0.11, row[4], row[5], row[0], lit, k, recs), 2, Color("2a2224"))
 			canvas.blend_rect(img, Rect2i(Vector2i.ZERO, TILE), Vector2i(230 + ci_ * (TILE.x + 8), y))
+	await _save(canvas, labels, out)
+
+
+## Les trois phases côte à côte, à la même échelle (elle grandit), puis la transformation en cinq temps.
+func _phases(out: String) -> void:
+	var tiles := [["Phase 1", 1, 0.0], ["Phase 2", 2, 0.0], ["Seconde forme", 3, 1.0],
+		["(ignorée)", 3, 0.0], ["Transformation 25 %", 3, 0.25], ["50 %", 3, 0.5], ["75 %", 3, 0.75], ["100 %", 3, 1.0]]
+	var size := Vector2i(520, 620)
+	var w := 20 + 4 * (size.x + 10)
+	var h := 70 + 2 * (size.y + 50)
+	var canvas := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	canvas.fill(Art.c("papier_sombre"))
+	var labels: Array = [_label("La Flétrissure grandit à chaque phase", Vector2(20, 12), 34, Art.c("or"))]
+	var recs := _recs(["", []], -1.0, -1.0, -1.0)
+	for n in tiles.size():
+		var tl: Array = tiles[n]
+		if n == 3:
+			continue
+		var col := n if n < 3 else n - 4
+		var row := 0 if n < 3 else 1
+		var x := 20 + col * (size.x + 10)
+		var y := 70 + row * (size.y + 50)
+		var img: Image = await b.bake(size, func(cc): _scene(cc, Vector2(size.x * 0.5, size.y * 0.8), 62.0, 0.8, tl[1], tl[2], "", [], 0.0, recs), 2, Color("2a2224"))
+		canvas.blend_rect(img, Rect2i(Vector2i.ZERO, size), Vector2i(x, y))
+		labels.append(_label(tl[0], Vector2(x + 10, y + size.y + 6), 22, Art.c("texte")))
 	await _save(canvas, labels, out)
 
 
