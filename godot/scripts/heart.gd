@@ -24,6 +24,7 @@ const Content = preload("res://scripts/content.gd")
 const Regions = preload("res://scripts/regions.gd")
 const EnemyScript = preload("res://scripts/enemy.gd")
 const LieuxBake = preload("res://scripts/world_bake/lieux_bake.gd")
+const Demo = preload("res://scripts/demo.gd")
 
 ## Position de repli sans scène de jeu (main.region_center) : dans la direction de la branche
 ## Ronce de l'arbre (milieu de son secteur), à mi-distance du bord du monde.
@@ -375,6 +376,10 @@ func _draw() -> void:
 		var b := 0.5 + 0.5 * sin(t * TAU / Anim.DUREE["respiration"])
 		draw_circle(center, zone * 0.62, Color(seve, 0.05 + 0.03 * b))
 		draw_arc(center, zone * 0.62, 0.0, TAU, 72, Color(seve, 0.12 + 0.06 * b), Art.TRAIT, true)
+		return
+	# Démo : le Cœur d'une région fermée reste visible derrière la haie, sans sa zone à tenir (son anneau
+	# passait par-dessus la ronce, dans la région de la démo).
+	if not Demo.region_open(region):
 		return
 	var k := clampf(progress / hold_time, 0.0, 1.0)
 	var braise := Art.ec("cendre")

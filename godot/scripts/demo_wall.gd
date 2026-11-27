@@ -19,9 +19,11 @@ const DrawBatch = preload("res://scripts/draw_batch.gd")
 const UiTheme = preload("res://scripts/ui_theme.gd")
 
 ## Longueur d'une tuile le long de la haie (px).
-const CHUNK := 700.0
+const CHUNK := 500.0
 ## Les tuiles à moins de PREPARE px de l'écran sont dessinées d'avance (une par image au plus).
 const PREPARE := 900.0
+## Au-delà de PREPARE + FORGET px de l'écran, l'image cuite d'une tuile est rendue.
+const FORGET := 1500.0
 ## Profondeur du voile sur la région fermée, au-delà de la haie (px).
 const VEIL := 520.0
 ## Battement du sceau et des baies après la fin de la démo (s).
@@ -36,6 +38,8 @@ var main
 ## Tuiles : [pièce, rang, rectangle, nœud ou null].
 var _tiles: Array = []
 var _base: Node2D
+## Les dessins de la haie (Hedge), au-dessus de tous les voiles, triés par leur bas.
+var _hedges: Node2D
 var _glow: Node2D
 var _seal: Node2D
 var t := 0.0
@@ -47,6 +51,9 @@ var line_k := 0.0
 func _ready() -> void:
 	_base = Node2D.new()
 	add_child(_base)
+	_hedges = Node2D.new()
+	_hedges.y_sort_enabled = true
+	add_child(_hedges)
 	_glow = Node2D.new()
 	_glow.visible = false
 	add_child(_glow)
@@ -75,6 +82,7 @@ func _process(delta: float) -> void:
 			var c: Vector2 = main.camera.get_screen_center_position()
 			var reach: Vector2 = view * 0.5 + Vector2(PREPARE, PREPARE)
 			ensure(Rect2(c - reach, reach * 2.0), 1)
+			_pump(Rect2(c - reach, reach * 2.0))
 	line_k = move_toward(line_k, 1.0 if near_seal else 0.0, delta / 1.2)
 	_glow.visible = finished
 	if finished:
@@ -98,6 +106,7 @@ func ensure(area: Rect2, budget := 0) -> void:
 		node.index = tile[1]
 		node.count = tile[2]
 		node.salt = tile[5]
+		node.hedge_layer = _hedges
 		_base.add_child(node)
 		var glow := Tile.new()
 		glow.piece = tile[0]
@@ -110,6 +119,52 @@ func ensure(area: Rect2, budget := 0) -> void:
 		made += 1
 		if budget > 0 and made >= budget:
 			return
+
+
+## Cuit la haie des tuiles proches de l'écran (une cuisson à la fois), rend celle des tuiles lointaines.
+func _pump(area: Rect2) -> void:
+	if not Hedge.WorldEdge.can_bake():
+		return
+	var far := area.grow(FORGET)
+	var busy := false
+	for tile in _tiles:
+		var node = tile[4]
+		if node != null and node.hedge != null and node.hedge.baking:
+			busy = true
+	for tile in _tiles:
+		var node = tile[4]
+		if node == null or node.hedge == null:
+			continue
+		var h: Hedge = node.hedge
+		var r: Rect2 = h.rect
+		if r.intersects(area):
+			if h.tex == null and not busy:
+				h.bake()
+				busy = true
+		elif not r.intersects(far):
+			h.forget()
+
+
+## Cuissons de la haie en cours ou à faire autour de « area » (captures).
+func pending(area: Rect2) -> int:
+	var n := 0
+	if not Hedge.WorldEdge.can_bake():
+		return 0
+	for tile in _tiles:
+		var node = tile[4]
+		if node != null and node.hedge != null and (node.hedge.baking or (node.hedge.tex == null and node.hedge.rect.intersects(area))):
+			n += 1
+	return n
+
+
+## Attend que la haie autour de « area » soit cuite (captures).
+func settle(area: Rect2, max_frames := 120) -> void:
+	var n := 0
+	while pending(area) > 0 and n < max_frames:
+		_pump(area)
+		await get_tree().process_frame
+		n += 1
+	await get_tree().process_frame
 
 
 ## Nombre de tuiles dessinées (tests).
@@ -141,6 +196,9 @@ class Tile extends Node2D:
 	var rng := RandomNumberGenerator.new()
 	var s0 := 0.0
 	var s1 := 0.0
+	## Le dessin de la haie (pas sur la couche de lumière).
+	var hedge: Hedge
+	var hedge_layer: Node2D
 
 	func _ready() -> void:
 		var len := Demo.piece_length(piece)
@@ -178,38 +236,6 @@ class Tile extends Node2D:
 			pts.append(Vector2(s + x * cos(rot) - y * sin(rot), d + x * sin(rot) + y * cos(rot)))
 		poly(pts, col)
 
-	## Trait effilé (repère de la haie), comme world_edge_painter.gd › stroke.
-	func stroke(path: PackedVector2Array, w0: float, w1: float, col: Color, shift := Vector2.ZERO) -> void:
-		var n := path.size()
-		if n < 2:
-			return
-		var left := PackedVector2Array()
-		var right := PackedVector2Array()
-		for i in n:
-			var dir := Vector2.ZERO
-			if i > 0:
-				dir += (path[i] - path[i - 1]).normalized()
-			if i < n - 1:
-				dir += (path[i + 1] - path[i]).normalized()
-			if dir.length_squared() < 0.0001:
-				dir = Vector2.RIGHT
-			var nm := dir.normalized().orthogonal()
-			var w := lerpf(w0, w1, float(i) / (n - 1)) * 0.5
-			left.append(P(path[i].x, path[i].y) + nm * w + shift)
-			right.append(P(path[i].x, path[i].y) - nm * w + shift)
-		right.reverse()
-		left.append_array(right)
-		batch.draw_colored_polygon(left, col)
-
-	func wander(a: Vector2, to: Vector2, n: int, wob: float) -> PackedVector2Array:
-		var out := PackedVector2Array()
-		var nm := (to - a).normalized().orthogonal()
-		var phase := rng.randf() * TAU
-		for i in n + 1:
-			var k := float(i) / n
-			out.append(a.lerp(to, k) + nm * sin(phase + k * 3.4) * wob * sin(k * PI) + nm * rng.randf_range(-wob, wob) * 0.25)
-		return out
-
 	func _paint() -> void:
 		var reach := Demo.wall_value("reach", 150.0)
 		# Voile sur la région fermée : de transparent contre la haie à sombre au loin.
@@ -223,39 +249,13 @@ class Tile extends Node2D:
 				var c1 := Color(dark, band[3])
 				batch.draw_primitive(PackedVector2Array([P(s, band[0]), P(e, band[0]), P(e, band[1]), P(s, band[1])]), PackedColorArray([c0, c0, c1, c1]))
 			s = e
-		var len := s1 - s0
-		# Masses sombres : la haie n'a pas de trou.
-		for k in int(len / 34.0):
-			var u := rng.randf_range(s0 - 20.0, s1 + 20.0)
-			var d := rng.randf_range(10.0, reach)
-			var r := rng.randf_range(38.0, 72.0)
-			blob(u, d, r * 1.3, r, Color(0.075, 0.04, 0.05, 0.92), rng.randf() * PI)
-		# Tiges à épines, couchées dans le sens de la haie, plus serrées contre le côté jouable.
-		for k in int(len / 16.0):
-			var u := rng.randf_range(s0 - 30.0, s1 + 10.0)
-			var d := reach * pow(rng.randf(), 1.4) - 18.0
-			var ang := rng.randf_range(-0.7, 0.7) + (PI if rng.randf() < 0.5 else 0.0)
-			var l := rng.randf_range(110.0, 230.0)
-			var path := wander(Vector2(u, d), Vector2(u, d) + Vector2.from_angle(ang) * l, 6, l * 0.2)
-			# La haie déborde à peine sur le côté jouable.
-			for i in path.size():
-				path[i].y = clampf(path[i].y, -22.0, reach + 50.0)
-			var w0 := rng.randf_range(8.0, 13.0)
-			stroke(path, w0 + 6.0, 4.0, Color(0.03, 0.015, 0.02, 0.75), Vector2(3, 5))
-			stroke(path, w0, w0 * 0.3, Color(0.17, 0.085, 0.1))
-			stroke(path, w0 * 0.4, 1.0, Color(0.3, 0.15, 0.17, 0.8), Vector2(-w0 * 0.18, -w0 * 0.18))
-			for i in range(1, path.size() - 1):
-				var dir := (path[i + 1] - path[i - 1]).normalized()
-				var nm := dir.orthogonal()
-				for sgn in [-1.0, 1.0]:
-					if rng.randf() < 0.75:
-						var base: Vector2 = path[i]
-						var tip: Vector2 = base + (nm * sgn + dir * 0.6).normalized() * rng.randf_range(12.0, 22.0)
-						poly(PackedVector2Array([base - dir * 4.0, base + dir * 4.0, tip]), Color(0.36, 0.19, 0.2))
-			if rng.randf() < 0.3:
-				var tip2: Vector2 = path[path.size() - 1]
-				blob(tip2.x, tip2.y, 5.5, 5.5, Color(0.72, 0.17, 0.2), 0.0, 8)
-				blob(tip2.x - 1.5, tip2.y - 1.5, 1.8, 1.8, Color(1, 0.7, 0.7, 0.7), 0.0, 6)
+		# La haie elle-même : le mur de ronces du bout du monde (world_art/bord.gd), cuit à part.
+		hedge = Hedge.new()
+		hedge.items = Hedge.plan(piece, s0, s1, hash([salt, index]))
+		hedge.rect = Hedge.bounds(hedge.items)
+		# Posée par son bas : les images voisines se recouvrent dans l'ordre de l'écran.
+		hedge.position = Vector2(hedge.rect.position.x, hedge.rect.end.y)
+		hedge_layer.add_child(hedge)
 
 	## Lumière qui bat après la fin de la démo : des baies qui luisent dans la haie.
 	func _paint_glow() -> void:
@@ -267,6 +267,138 @@ class Tile extends Node2D:
 			blob(u, d, 22.0, 22.0, Color(col, 0.1), 0.0, 12)
 			blob(u, d, 9.0, 9.0, Color(col, 0.3), 0.0, 10)
 			blob(u, d, 4.0, 4.0, Color(1.0, 0.8, 0.7, 0.85), 0.0, 8)
+
+
+## La haie dessinée comme le mur de ronces du bout du monde du Roncier (world_art/bord.gd, refonte du
+## monde K) : ronces rampantes côté jouable, fourrés serrés hérissés de tiges, grands arceaux au fond,
+## toujours flétrie (la démo s'arrête là). Cuite une fois en une image (SubViewport suréchantillonné SS
+## fois, réduit ; même méthode que world_edge.gd), rendue quand la caméra s'éloigne, recuite au retour.
+## Sans rendu (--headless) ou avec « -- --bord-direct », dessinée en direct (même dessin).
+class Hedge extends Node2D:
+	const Bord = preload("res://scripts/world_art/bord.gd")
+	const BordBake = preload("res://scripts/world_bake/bord_bake.gd")
+	const WorldEdge = preload("res://scripts/world_edge.gd")
+	const SS := 2
+	## Éléments [y du pied, sorte, pied, graine, hauteur], dans l'ordre de dessin (du haut de l'écran vers le bas).
+	var items: Array = []
+	## Rectangle du dessin (monde) ; le nœud est posé en bas à gauche du rectangle.
+	var rect := Rect2()
+	var tex: Texture2D
+	var baking := false
+	var _bytes := 0
+
+	## Tirage des éléments d'un morceau [s0, s1] de la haie (« d » vers le côté fermé).
+	static func plan(piece: Dictionary, s0: float, s1: float, seed: int) -> Array:
+		var reach := Demo.wall_value("reach", 150.0)
+		var r := RandomNumberGenerator.new()
+		r.seed = seed
+		var out: Array = []
+		var len := s1 - s0
+		# Ronces qui rampent sur le sol, du côté jouable.
+		for k in int(len / 20.0):
+			var q := Demo.wall_at(piece, r.randf_range(s0, s1), r.randf_range(-60.0, 15.0))
+			out.append([q.y, "ronce_rampe", q, r.randi(), 0.0])
+		# Fourrés serrés : la haie n'a pas de trou ; plus hauts vers le côté fermé.
+		for k in int(len / 13.0):
+			var d := r.randf_range(0.0, reach + 40.0)
+			var q := Demo.wall_at(piece, r.randf_range(s0 - 10.0, s1 + 10.0), d)
+			out.append([q.y, "ronce_masse", q, r.randi(), -580.0 + d * 1.5])
+		# Grands arceaux au fond.
+		for k in int(len / 90.0):
+			var d := r.randf_range(reach * 0.5, reach + 90.0)
+			var q := Demo.wall_at(piece, r.randf_range(s0, s1), d)
+			out.append([q.y, "ronce_arceau", q, r.randi(), r.randf_range(110.0, 200.0)])
+		out.sort_custom(func(x, y): return x[0] < y[0])
+		return out
+
+	## Rectangle qui contient tous les éléments (estimation large, monde).
+	static func bounds(list: Array) -> Rect2:
+		var rc := Rect2()
+		var first := true
+		for it in list:
+			var p: Vector2 = it[2]
+			var b: Rect2
+			match it[1]:
+				"ronce_rampe":
+					b = Rect2(p - Vector2(100, 100), Vector2(200, 200))
+				"ronce_masse":
+					var sz: float = 140.0 * (1.0 + float(it[4]) / 1000.0)
+					b = Rect2(p - Vector2(sz * 2.0, sz * 1.7), Vector2(sz * 4.0, sz * 2.5))
+				_:
+					var h: float = it[4]
+					b = Rect2(p - Vector2(h * 1.05, h * 1.1), Vector2(h * 2.1, h * 1.25))
+			rc = b if first else rc.merge(b)
+			first = false
+		return rc.grow(24.0)
+
+	## Dessine les éléments en coordonnées du monde (le transform du dessin est posé par l'appelant).
+	static func paint(ci: CanvasItem, list: Array) -> void:
+		var r := RandomNumberGenerator.new()
+		for it in list:
+			r.seed = it[3]
+			Bord.draw(ci, it[1], it[2], r, "ronce", "fletri", float(it[4]), Vector2.ZERO, float(it[4]) if it[1] == "ronce_arceau" else 1.0e9, 0)
+
+	func _draw() -> void:
+		if tex != null:
+			draw_texture_rect(tex, Rect2(Vector2(0, -rect.size.y), rect.size), false)
+		elif not baking and not WorldEdge.can_bake():
+			draw_set_transform(-rect.position - Vector2(0, rect.size.y))
+			paint(self, items)
+			draw_set_transform_matrix(Transform2D.IDENTITY)
+
+	## Cuit le dessin en une image (une seule image de rendu).
+	func bake() -> void:
+		if baking or tex != null:
+			return
+		baking = true
+		var size := Vector2i(ceili(rect.size.x * SS), ceili(rect.size.y * SS))
+		var vp := SubViewport.new()
+		vp.size = size
+		vp.transparent_bg = true
+		vp.disable_3d = true
+		vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+		var pn := PaintNode.new()
+		pn.hedge = self
+		vp.add_child(pn)
+		add_child(vp)
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		if not is_instance_valid(vp):
+			baking = false
+			return
+		var img: Image = vp.get_texture().get_image() if vp.get_texture() != null else null
+		vp.queue_free()
+		baking = false
+		if img == null or img.is_empty():
+			return
+		img.resize(maxi(1, size.x / SS), maxi(1, size.y / SS), Image.INTERPOLATE_BILINEAR)
+		tex = ImageTexture.create_from_image(img)
+		_bytes = img.get_data_size()
+		BordBake.bytes += _bytes
+		material = BordBake.material()
+		queue_redraw()
+
+	## Rend la mémoire de l'image (recuite si la caméra revient).
+	func forget() -> void:
+		if tex == null:
+			return
+		BordBake.bytes -= _bytes
+		_bytes = 0
+		tex = null
+		queue_redraw()
+
+	func _exit_tree() -> void:
+		forget()
+
+
+## Peint la haie dans le SubViewport de cuisson.
+class PaintNode extends Node2D:
+	var hedge: Hedge
+
+	func _draw() -> void:
+		draw_set_transform(-hedge.rect.position * Hedge.SS, 0.0, Vector2(Hedge.SS, Hedge.SS))
+		Hedge.paint(self, hedge.items)
+
 
 
 ## Le sceau de la graine : un nœud de ronces sur la brèche ; une lumière de sève bat dessous après la
