@@ -72,6 +72,9 @@ var _slow := {}
 var _kick := Vector2.ZERO
 var _zoom := {}
 var _focus := {}
+## Cadrage durable (px écran, réglé par une scène : la Flétrissure qui grandit lève le cadre pour garder
+## sa ramure à l'écran). Ce n'est pas une secousse : il reste même à secousses coupées.
+var frame_bias := Vector2.ZERO
 ## Distorsion du dernier coup en cours (final_blow.gd), ou null.
 var _warp = null
 var _cam_dirty := false
@@ -591,8 +594,8 @@ func _step_camera(real: float) -> void:
 		_zoom = {}
 		_focus = {}
 		active = false
-	if active or _cam_dirty or shake != Vector2.ZERO or cam.offset != Vector2.ZERO:
-		cam.offset = shake + _kick + focus_offset()
+	if active or _cam_dirty or shake != Vector2.ZERO or cam.offset != frame_bias:
+		cam.offset = frame_bias + shake + _kick + focus_offset()
 		var z := zoom_now()
 		if cam.zoom.x != z:
 			cam.zoom = Vector2(z, z)
