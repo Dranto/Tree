@@ -1152,6 +1152,9 @@ func _spawn_gueri(at: Vector2, reg: String, room: int) -> void:
 	var g: Array = cfg.get("gueri", {}).get("group", [1, 2])
 	for i in mini(rng.randi_range(int(g[0]), int(g[1])), room):
 		var q := at + Vector2(rng.randf_range(-34, 34), rng.randf_range(-18, 18))
+		# Le décalage de groupe ne doit pas sortir de la terre ravivée (bord de la tache).
+		if main.ground.life_at(q) <= float(cfg.get("gueri", {}).get("min_life", 0.6)):
+			q = at
 		fauna.append(make_beast(sp, true, q, src))
 
 

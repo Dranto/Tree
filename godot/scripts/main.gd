@@ -1467,7 +1467,19 @@ func _finish_autotest() -> void:
 	await get_tree().create_timer(0.5).timeout
 	await _capture("tree")
 	print("AUTOTEST fini : tués=%d" % Game.kills)
+	# Aucun son en cours à la fermeture : un flux encore lu (AudioStreamPlayback) reste sinon compté
+	# comme « fuite à la sortie » une fois sur trois ou quatre.
+	_stop_all_audio(get_tree().root)
+	await get_tree().create_timer(0.6, true, false, true).timeout   # le fil audio libère les lectures arrêtées
 	get_tree().quit()
+
+
+## Arrête tous les lecteurs audio de l'arbre (fin du robot, avant de quitter).
+func _stop_all_audio(node: Node) -> void:
+	if node is AudioStreamPlayer or node is AudioStreamPlayer2D:
+		node.stop()
+	for c in node.get_children():
+		_stop_all_audio(c)
 
 
 # --- Banc de performance ---

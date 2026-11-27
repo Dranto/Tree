@@ -12,8 +12,19 @@ runs:
     - name: Installer l'écran virtuel et le rendu logiciel
       shell: bash
       run: |
-        sudo apt-get update -q
-        sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1
+        # packages.microsoft.com répond parfois 403 depuis les machines de GitHub (seul dépôt inutile ici) :
+        # on l'écarte, puis on retente une fois si un autre dépôt est indisponible.
+        sudo rm -f /etc/apt/sources.list.d/microsoft*.list /etc/apt/sources.list.d/microsoft*.sources \
+          /etc/apt/sources.list.d/azure*.list /etc/apt/sources.list.d/azure*.sources 2>/dev/null || true
+        for try in 1 2 3; do
+          sudo apt-get update -q && break
+          echo "apt-get update a échoué (essai $try), nouvel essai"; sleep 5
+        done
+        for try in 1 2 3; do
+          sudo apt-get install -yq xvfb libgl1-mesa-dri libglx-mesa0 libegl1 && break
+          echo "apt-get install a échoué (essai $try), nouvel essai"; sleep 5
+        done
+        command -v xvfb-run > /dev/null
 
     - name: Cache de Godot
       if: inputs.export-templates != 'true'
