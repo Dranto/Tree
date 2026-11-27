@@ -170,6 +170,13 @@ var bench_orbit := 900.0
 var bench_run := 0.0
 var _bench_tiles := [0, 0]
 var bench_last_usec := 0
+## Banc du boss : le combat commence quand ce qui se cuit à l'approche de l'arène est prêt (bord du
+## monde, pièces et sol de l'arène). En jeu, le héros y arrive à pied et tout est cuit avant le combat ;
+## le banc, lui, pose le héros dans l'arène dès la première image : sans cette attente, il mesurait la
+## cuisson du bord (images de 40 à 90 ms pendant 5 s) au lieu du combat. Au plus BENCH_PREP_MAX images.
+const BENCH_PREP_MAX := 900
+var _bench_prep_frames := 0
+var _bench_prep_done := false
 var bench_frames: PackedFloat32Array = PackedFloat32Array()
 var bench_cpu := {"process": 0.0, "physics": 0.0, "samples": 0}
 ## Temps de chaque image découpé : scripts et dessins (de process_frame à frame_pre_draw), puis
@@ -414,7 +421,8 @@ func _ready() -> void:
 		_bench_coeur_begin()
 	if benchmark:
 		_benchmark_hide({"sol": ground, "decor": trees_layer, "fleurs": flora, "ennemis": enemies_layer, "sol_ennemis": enemy_ground_layer,
-			"joueur": player, "acteurs": actors_layer, "effets": fx, "ambiance": ambience, "hud": hud_layer, "monde": self})
+			"joueur": player, "acteurs": actors_layer, "effets": fx, "ambiance": ambience, "hud": hud_layer, "monde": self,
+			"bord": world_edge, "vivant": world_fx, "vivant_dessus": world_fx.over, "competences": skill_fx})
 
 
 ## Demande une sauvegarde automatique, regroupée sur une seconde (fonctionne aussi en pause).
@@ -1468,6 +1476,10 @@ func _finish_autotest() -> void:
 ## _physics_process garde 120 Flétris en jeu et rend le joueur invulnérable (pas de mort qui viderait l'écran).
 func _benchmark_frame(delta: float) -> void:
 	var now := Time.get_ticks_usec()
+	if not bench_prepared():
+		_bench_prep_frames += 1
+		bench_last_usec = now
+		return
 	bench_clock += delta
 	if bench_clock > BENCH_WARMUP and bench_frames.is_empty():
 		Prof.reset()
@@ -1549,6 +1561,21 @@ func _finish_benchmark() -> void:
 func _set_direct_to_screen(on: bool) -> void:
 	RenderingServer.viewport_set_render_direct_to_screen(get_viewport().get_viewport_rid(), on)
 
+
+
+## Banc du boss : vrai quand les cuissons de l'approche sont finies (voir BENCH_PREP_MAX). Les autres
+## bancs commencent tout de suite.
+func bench_prepared() -> bool:
+	if _bench_prep_done or bench_scene != "boss":
+		return true
+	# La finale (finale_arena.gd) lance son combat tout de suite : le banc ne l'attend pas.
+	var busy := false
+	if arena != null and arena.has_method("bake_pending"):
+		busy = arena.bake_pending() or (world_edge != null and world_edge.pending() > 0)
+	if not busy or _bench_prep_frames >= BENCH_PREP_MAX:
+		_bench_prep_done = true
+		print("BENCHMARK préparation du combat : %d images (cuissons de l'approche)" % _bench_prep_frames)
+	return _bench_prep_done
 
 
 ## Options du banc et découpage de chaque image (voir bench_seg).

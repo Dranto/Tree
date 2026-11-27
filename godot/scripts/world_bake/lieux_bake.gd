@@ -173,6 +173,14 @@ static func _bake(host: Node, set_key: String, jobs: Array, sc := scale, rogne :
 	bake_usec = Time.get_ticks_usec() - t0
 
 
+## Le jeu sert encore (trim ne le rend pas) : pour une image posée ailleurs une fois pour toutes
+## (sol d'une arène dans les carrés du sol), qui ne passe plus par draw à chaque image.
+static func touch(set_key: String) -> void:
+	var s = sets.get(set_key)
+	if s != null:
+		s["used"] = Time.get_ticks_msec()
+
+
 ## Dessine l'image cuite « key » du jeu « set_key », pied en at, agrandie de k, teinte mod (alpha :
 ## fondu enchaîné). Faux si le jeu n'est pas (encore) cuit : le lieu se dessine alors en direct.
 static func draw(ci: CanvasItem, set_key: String, key: String, at := Vector2.ZERO, k := 1.0, mod := Color.WHITE) -> bool:

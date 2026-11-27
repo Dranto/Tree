@@ -23,10 +23,10 @@ Options :
 | Option | Effet |
 | --- | --- |
 | `--bench-time=S` | durée de la mesure (30 s par défaut) |
-| `--hide=sol,ennemis,…` | cache des calques : la différence de temps donne leur coût. Calques : `sol`, `decor`, `fleurs`, `ennemis`, `joueur`, `acteurs`, `effets`, `ambiance`, `hud`, `monde` |
+| `--hide=sol,ennemis,…` | cache des calques : la différence de temps donne leur coût. Calques : `sol`, `decor`, `fleurs`, `ennemis`, `joueur`, `acteurs`, `effets`, `ambiance`, `hud`, `monde`, `sol_ennemis`, `bord` (bord du monde), `vivant` et `vivant_dessus` (monde vivant), `competences` |
 | `--profile` | temps de chaque `_process`, `_physics_process` et `_draw`, à lancer par `tools/perf-profile.sh` |
 | `--bench-scene=coeur` | banc des pics : le siège du Cœur (vagues toutes les 6 s), jusqu'à la purification (40 morts d'un coup, vague de vie) ; 36 s, héros au build du robot du boss |
-| `--bench-scene=boss` | le combat de la Mère-Ronce, 60 s |
+| `--bench-scene=boss` | le combat de la Mère-Ronce, 60 s (`--region=<id>` : le boss de cette région, `finale` : la Flétrissure). Le combat commence quand le bord du monde et l’arène sont cuits (au plus 900 images) |
 
 `tools/perf-profile.sh` copie le projet dans un dossier temporaire, y enveloppe chaque fonction
 `_process`, `_physics_process` et `_draw` d'une mesure (`tools/perf_instrument.py`,

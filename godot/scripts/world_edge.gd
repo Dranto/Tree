@@ -134,27 +134,45 @@ func ensure(area: Rect2, budget := 0) -> void:
 		_max_baking = 4
 	var made := 0
 	var now := Engine.get_process_frames()
-	for side in 4:
-		for i in Painter.chunk_count():
-			var key := side * 100 + i
-			var near_r := Painter.band_rect(side, i, Painter.NEAR)
-			var far_r := Painter.band_rect(side, i, Painter.FAR)
-			if not near_r.intersects(area) and not far_r.intersects(area):
+	for b in _band_rects():
+		var key: int = b[0]
+		var near_r: Rect2 = b[1]
+		var far_r: Rect2 = b[2]
+		if not near_r.intersects(area) and not far_r.intersects(area):
+			continue
+		var side: int = key / 100
+		var i: int = key % 100
+		var t: Tile = _tiles.get(key)
+		if t == null:
+			if budget > 0 and made >= budget:
 				continue
-			var t: Tile = _tiles.get(key)
-			if t == null:
-				if budget > 0 and made >= budget:
-					continue
-				t = _make_tile(side, i, budget == 0)
-				made += 1
-			t.used = now
-			if t.far == null and far_r.intersects(area):
-				if budget > 0 and made >= budget:
-					continue
-				t.far = _slot(_decor_layer, far_r.position)
-				t.far.push(_decor_variant(t, Painter.FAR, budget == 0), false)
-				made += 1
+			t = _make_tile(side, i, budget == 0)
+			made += 1
+		t.used = now
+		if t.far == null and far_r.intersects(area):
+			if budget > 0 and made >= budget:
+				continue
+			t.far = _slot(_decor_layer, far_r.position)
+			t.far.push(_decor_variant(t, Painter.FAR, budget == 0), false)
+			made += 1
 	_pump()
+
+
+## Rectangles des deux bandes de chaque tuile [clé, proche, lointaine], calculés une fois par taille du
+## monde (ensure les parcourait à chaque image : ~0,3 ms).
+var _rects: Array = []
+var _rects_half := -1.0
+
+
+func _band_rects() -> Array:
+	var h: float = Painter.half()
+	if h != _rects_half:
+		_rects_half = h
+		_rects.clear()
+		for side in 4:
+			for i in Painter.chunk_count():
+				_rects.append([side * 100 + i, Painter.band_rect(side, i, Painter.NEAR), Painter.band_rect(side, i, Painter.FAR)])
+	return _rects
 
 
 ## Nombre de cuissons en attente ou en cours (les captures attendent qu'il retombe à 0).
@@ -266,7 +284,9 @@ func _advance(delta: float) -> void:
 
 ## Au-delà du budget, rend les tuiles qui n'ont pas servi depuis UNUSED_FRAMES images, les plus anciennes d'abord.
 func _trim() -> void:
-	if BordBake.bytes <= BUDGET:
+	# Au-delà du budget, la recherche trie toutes les tuiles : une fois toutes les 30 images suffit
+	# (UNUSED_FRAMES en vaut 240).
+	if BordBake.bytes <= BUDGET or Engine.get_process_frames() % 30 != 0:
 		return
 	var now := Engine.get_process_frames()
 	var keys := _tiles.keys()

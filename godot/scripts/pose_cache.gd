@@ -8,6 +8,11 @@
 ## Une nouvelle pose est dessinée par le moteur à l'image suivante : en attendant, la précédente reste
 ## visible (pas de clignotement). Les poses les moins récentes sont oubliées au-delà de `limit`.
 ## Apparence seulement : rien ici ne touche au jeu.
+##
+## Montrer et cacher passe par le serveur de rendu (`_show`), pas par `visible` : dans Godot 4, un nœud
+## qui redevient visible (lui ou un parent) est redessiné ; chaque retour d'une pose déjà vue refaisait
+## donc tout son dessin (~5 ms), et le retour du cache entier après le piqué du Harfang les refaisait
+## toutes. Les propriétés `visible` restent vraies ; `shown` dit si le cache est montré.
 extends Node2D
 
 const NAME := "PoseCache"  # i18n: non
@@ -28,6 +33,8 @@ var _prev: Node2D = null
 var drawn_count := 0
 ## Palette des poses gardées (Cuisson.epoch) : le mode daltonien change, elles sont redessinées.
 var _epoch := Cuisson.epoch
+## Le cache est montré (voir l'en-tête : `visible` reste vrai).
+var shown := true
 
 
 class Pose extends Node2D:
@@ -54,7 +61,7 @@ static func on(host: Node2D) -> Node2D:
 ## Montre la pose key (la dessine avec drawer(ci) la première fois), placée en xf, teintée de mod.
 func show_pose(key: String, drawer: Callable, xf: Transform2D, mod := Color.WHITE) -> void:
 	_clock += 1
-	visible = true
+	_show(self, true)
 	if _epoch != Cuisson.epoch:
 		_epoch = Cuisson.epoch
 		for k in _nodes:
@@ -75,16 +82,16 @@ func show_pose(key: String, drawer: Callable, xf: Transform2D, mod := Color.WHIT
 	_stamp[key] = _clock
 	n.transform = xf
 	n.modulate = mod
-	n.visible = true
+	_show(n, true)
 	if n != _current:
 		if _prev != null and _prev != n and is_instance_valid(_prev):
-			_prev.visible = false
+			_show(_prev, false)
 		_prev = _current
 		_current = n
 	# L'ancienne pose reste visible tant que la nouvelle n'est pas dessinée ; elle suit la même place.
 	if _prev != null and is_instance_valid(_prev):
 		if (n as Pose).drawn:
-			_prev.visible = false
+			_show(_prev, false)
 			_prev = null
 		else:
 			_prev.transform = xf
@@ -92,15 +99,28 @@ func show_pose(key: String, drawer: Callable, xf: Transform2D, mod := Color.WHIT
 
 
 func hide_all() -> void:
-	visible = false
+	_show(self, false)
+
+
+## Montre ou cache un nœud sans toucher à `visible` (qui le ferait redessiner à son retour).
+func _show(n: CanvasItem, on: bool) -> void:
+	if n == self:
+		if shown == on:
+			return
+		shown = on
+	elif n.has_meta(&"pc_shown") and bool(n.get_meta(&"pc_shown")) == on:
+		return
+	else:
+		n.set_meta(&"pc_shown", on)
+	RenderingServer.canvas_item_set_visible(n.get_canvas_item(), on)
 
 
 func _process(_delta: float) -> void:
 	if _prev != null and is_instance_valid(_prev) and _current != null and (_current as Pose).drawn:
-		_prev.visible = false
+		_show(_prev, false)
 		_prev = null
 	if visible_if.is_valid() and not visible_if.call():
-		visible = false
+		_show(self, false)
 
 
 func size() -> int:
