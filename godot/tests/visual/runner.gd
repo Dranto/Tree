@@ -445,7 +445,7 @@ func _langue_suite(tag: String, deck: bool) -> void:
 	await _frames(30)
 	UiAudit.scan_controls("titre", title)
 	await _shot(prefix + "_titre_" + tag, "titre")
-	title.options.open()
+	title._open_options()   # comme au clavier : le rappel des commandes est caché sous les options
 	for i in 4:
 		title.options.show_tab(i)
 		await _frames(6)
