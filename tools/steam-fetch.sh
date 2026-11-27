@@ -18,8 +18,10 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="$ROOT/godot/addons/godotsteam"
-URL="${GODOTSTEAM_URL:-}"
-SHA256="${GODOTSTEAM_SHA256:-}"
+# Version épinglée : GodotSteam 4.24 (GDExtension pour Godot 4.4 et plus), vérifiée dans les builds
+# exportés par la CI (jalon 13 D, 27/11).
+URL="${GODOTSTEAM_URL:-https://codeberg.org/godotsteam/godotsteam/releases/download/v4.24-gde/godotsteam-4.24-gdextension-plugin-4.4.zip}"
+SHA256="${GODOTSTEAM_SHA256:-d4358888959a03f4df0c71aafbcdca8f34b8cb9d4522aa5c8454f0e9e3debbf7}"
 CACHE="${GODOTSTEAM_CACHE:-$HOME/.cache/godotsteam}"
 
 list_assets() {

@@ -40,10 +40,14 @@ const SAVE_PATH := "user://saves/partie.json"
 const SETTINGS_PATH := "user://settings.cfg"
 const CLOUD_FILES := {SAVE_PATH: "partie.json", SETTINGS_PATH: "settings.cfg"}
 ## Fonctions du singleton GodotSteam appelées par ce fichier (vérifiées par --steam-probe).
-const API := ["steamInitEx", "run_callbacks", "setAchievement", "storeStats", "setRichPresence",  # i18n: non
-	"clearRichPresence", "isCloudEnabledForAccount", "isCloudEnabledForApp", "fileExists", "fileWrite",  # i18n: non
-	"fileRead", "getFileSize", "getFileTimestamp", "isSteamRunningOnSteamDeck", "isSteamInBigPictureMode",  # i18n: non
-	"showFloatingGamepadTextInput", "showGamepadTextInput"]  # i18n: non
+## isSteamRunningOnSteamDeck n'y est pas : GodotSteam 4.24 ne l'a plus ; le Deck se reconnaît alors
+## à la variable SteamDeck=1 que Steam pose sur la console (detect_deck).
+## Nombre d'arguments passés par ce fichier à chaque fonction (la sonde vérifie que GodotSteam les accepte).
+const API := {"steamInitEx": 0, "run_callbacks": 0, "setAchievement": 1, "storeStats": 0,  # i18n: non
+	"setRichPresence": 2, "clearRichPresence": 0, "isCloudEnabledForAccount": 0,  # i18n: non
+	"isCloudEnabledForApp": 0, "fileExists": 1, "fileWrite": 3, "fileRead": 2, "getFileSize": 1,  # i18n: non
+	"getFileTimestamp": 1, "isSteamInBigPictureMode": 0, "showFloatingGamepadTextInput": 5,  # i18n: non
+	"showGamepadTextInput": 5}  # i18n: non  # i18n: non
 ## Mode du clavier flottant du Deck : une seule ligne (EFloatingGamepadTextInputMode).
 const FLOATING_SINGLE_LINE := 0
 
@@ -86,9 +90,25 @@ static func achievements() -> Array:
 	return ACHIEVEMENTS.filter(func(id): return id in demo)
 
 
-## Fonctions de API absentes d'un objet Steam (version de GodotSteam incompatible).
+## Fonctions de API absentes d'un objet Steam, ou qui n'acceptent pas ce nombre d'arguments
+## (version de GodotSteam incompatible).
 static func missing_api(steam) -> Array:
-	return API.filter(func(m): return steam == null or not steam.has_method(m))
+	if steam == null:
+		return API.keys()
+	var sig := {}
+	for m in steam.get_method_list():
+		sig[m["name"]] = m
+	var out: Array = []
+	for name in API:
+		if not steam.has_method(name):
+			out.append(name)
+		elif sig.has(name):
+			var total: int = (sig[name]["args"] as Array).size()
+			var optional: int = (sig[name]["default_args"] as Array).size()
+			var vararg: bool = int(sig[name].get("flags", 0)) & METHOD_FLAG_VARARG != 0
+			if API[name] < total - optional or (API[name] > total and not vararg):
+				out.append("%s (%d arguments, attend %d à %d)" % [name, API[name], total - optional, total])  # i18n: non
+	return out
 
 
 ## « --steam-probe » : bilan pour la CI et pour Antoine, puis sortie.

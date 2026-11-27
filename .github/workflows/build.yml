@@ -51,7 +51,7 @@ jobs:
           key: godotsteam-${{ hashFiles('tools/steam-fetch.sh') }}
 
       - name: Poser GodotSteam
-        run: tools/steam-fetch.sh --list || true; tools/steam-fetch.sh --latest
+        run: tools/steam-fetch.sh
 
       - name: Exporter (Windows)
         run: tools/export.sh "windows$SUFFIX"

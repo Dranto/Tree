@@ -75,7 +75,7 @@ func _run() -> void:
 	check(bridge.earned({"ronce_boss_vaincu": true, "spore_boss_vaincu": true}) == ["BOSS_RONCE"], "démo : seul le succès de la Mère-Ronce peut se débloquer")
 	Demo.forced = -1
 	check(bridge.missing_api(_fake()).is_empty(), "le faux Steam a toutes les fonctions GodotSteam utilisées (API)")
-	check(bridge.missing_api(null) == bridge.API, "sans Steam, toutes les fonctions manquent")
+	check(bridge.missing_api(null) == bridge.API.keys(), "sans Steam, toutes les fonctions manquent")
 	check(bridge.ACHIEVEMENTS == ["BOSS_RONCE", "BOSS_SPORE", "BOSS_VENT", "BOSS_SEVE", "BOSS_AUBE", "BOSS_RACINE", "BOSS_FINALE"], "un succès par boss, noms convenus")
 	var Regions = load("res://scripts/regions.gd")
 	var all_flags := {"finale_vaincue": true}
