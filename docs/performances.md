@@ -106,6 +106,8 @@ processeur sur le fil principal), et le remplissage ~3,5 ns par pixel : un calqu
 | Sol dessiné par carrés de 512 px mis en cache (`ground.gd`, `SubViewport` mis à jour seulement quand le sol change ; `--sol-direct` pour l'ancien chemin) | ~2 à 3 ms | écart de 0,011 % au plus, sous le seuil des tests visuels : références inchangées |
 | Carrés du sol recopiés sans mélange ni lumière (`shaders/ground_tile.gdshader`, `blend_disabled, unshaded`) ; le shader du sol calcule l'appartenance aux régions une seule fois par pixel pour N régions (jalon 7) | ~1 ms (sol : 6,5 → 5,4 ms, mesuré par paires avec `--hide=sol`) | identique |
 | Carrés du sol salis refaits au plus deux par image, les plus proches du centre d'abord (`ground.tile_budget`, en jeu et dans le banc, pas en capture) | pics : 99e centile ~46 → ~42 ms ; moyenne avec la ligne précédente : ~26,3 → ~24,8 ms (4 paires) | identique en capture ; en jeu, un carré lointain peut garder l'ancien sol quelques images |
+| Décor cuit filtré en linéaire, sans mipmaps (`decor_bake.gd › prepare`, jalon 13 B) : le filtre trilinéaire coûte cher en rendu logiciel | ~4,5 ms au combat de la Mère-Ronce (29,0 → 24,4 ms, 3 séries) ; atlas −25 % de mémoire | traits fins du décor un peu plus nets en petite fenêtre ; identique sur grand écran |
+| Sous la graine, les carrés du sol du monde cachés par la terre opaque du creux ne sont ni construits ni montrés (`ground.gd › covers`, `finale_creux.gd › covers_rect`, jalon 13 B) | ~4 ms à la finale (43,6 → 39,7 ms, 3 séries) | identique |
 
 Le rendu direct à l'écran rend l'image illisible par `get_viewport().get_texture()`. Il n'est
 actif que dans le banc, ou en jeu avec l'option `--rendu-direct`, jamais pendant une capture
