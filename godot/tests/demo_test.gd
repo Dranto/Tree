@@ -90,8 +90,15 @@ func _run() -> void:
 	# Les Flétris ne naissent pas derrière la ronce.
 	main.player.position = Vector2.from_angle(Regions.angle_of("ronce") + Regions.half_width() - 0.05) * 1200.0
 	var outside := 0
-	for i in 40:
-		main._spawn_enemy()
+	# Ni tout près du héros : un endroit derrière la ronce ramené contre la haie tombait parfois à
+	# moins de 100 px de lui (robot d'aventure, jalon 13 A).
+	var nearest := INF
+	for spot in [main.player.position, Vector2.from_angle(Regions.angle_of("ronce") + Regions.half_width() - 0.02) * 1000.0, Vector2(40.0, -1000.0)]:
+		main.player.position = spot
+		for i in 40:
+			main._spawn_enemy()
+			nearest = minf(nearest, main.enemies.back().position.distance_to(spot))
+	check(nearest >= 500.0, "les Flétris naissent loin du héros, même contre la haie (au plus près : %.0f px)" % nearest)
 	await _frames(2)
 	for e in main.enemies:
 		if is_instance_valid(e) and not Demo.allowed(e.position, 0.0):
