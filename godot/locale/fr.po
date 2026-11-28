@@ -8208,11 +8208,11 @@ msgstr "Objectif accompli"
 msgid "Secret découvert"
 msgstr "Secret découvert"
 
-#. scripts/heart.gd:283
+#. scripts/heart.gd:284
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
 msgstr "Reviens dans la zone : la flétrissure regagne du terrain"
 
-#. scripts/heart.gd:283
+#. scripts/heart.gd:284
 msgid "Tiens la zone : %d s"
 msgstr "Tiens la zone : %d s"
 
@@ -8246,17 +8246,17 @@ msgstr ""
 "%s\n"
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 
-#. scripts/main.gd:1277
+#. scripts/main.gd:1281
 msgid "%s vaincu"
 msgstr "%s vaincu"
 
-#. scripts/main.gd:416
+#. scripts/main.gd:420
 #. scripts/save_game.gd:150
 #. scripts/save_game.gd:209
 msgid "aucune sauvegarde"
 msgstr "aucune sauvegarde"
 
-#. scripts/main.gd:417
+#. scripts/main.gd:421
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr "Sauvegarde illisible (%s) : nouvelle partie."
 
@@ -9427,34 +9427,34 @@ msgid "M ou Échap : fermer"
 msgstr "M ou Échap : fermer"
 
 #. scripts/world_preload.gd:100
-msgid "Les couleurs"
-msgstr "Les couleurs"
-
-#. scripts/world_preload.gd:326
-msgid "Le monde se prépare…"
-msgstr "Le monde se prépare…"
-
-#. scripts/world_preload.gd:94
-msgid "Les Flétris"
-msgstr "Les Flétris"
-
-#. scripts/world_preload.gd:95
-msgid "Le décor"
-msgstr "Le décor"
-
-#. scripts/world_preload.gd:96
-msgid "Les lieux"
-msgstr "Les lieux"
-
-#. scripts/world_preload.gd:97
 msgid "La faune"
 msgstr "La faune"
 
-#. scripts/world_preload.gd:98
+#. scripts/world_preload.gd:101
 msgid "Le bord du monde"
 msgstr "Le bord du monde"
 
-#. scripts/world_preload.gd:99
+#. scripts/world_preload.gd:102
 msgid "La musique"
 msgstr "La musique"
+
+#. scripts/world_preload.gd:103
+msgid "Les couleurs"
+msgstr "Les couleurs"
+
+#. scripts/world_preload.gd:329
+msgid "Le monde se prépare…"
+msgstr "Le monde se prépare…"
+
+#. scripts/world_preload.gd:97
+msgid "Les Flétris"
+msgstr "Les Flétris"
+
+#. scripts/world_preload.gd:98
+msgid "Le décor"
+msgstr "Le décor"
+
+#. scripts/world_preload.gd:99
+msgid "Les lieux"
+msgstr "Les lieux"
 
