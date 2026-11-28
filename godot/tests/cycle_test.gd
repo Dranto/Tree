@@ -118,7 +118,10 @@ func _run() -> void:
 	check(started == [2], "Game.cycle_started(2) émis une fois (%s)" % str(started))
 	check(game.level == before["level"] and game.xp >= before["xp"] and game.points == before["points"], "niveau, expérience et points gardés (%d/%d, %.1f/%.1f, %d/%d)" % [game.level, before["level"], game.xp, before["xp"], game.points, before["points"]])
 	check(game.allocated_uids() == before["uids"], "arbre gardé (%d nœuds)" % (before["uids"] as Array).size())
-	check(game.graft_inventory == before["inventory"] and game.crown == before["crown"], "greffes et couronne gardées")
+	# Le cycle 2 ouvre un emplacement de plus (cycles.json › crown, greffes de cycle) : la couronne d'avant est intacte devant.
+	var kept_crown: Array = game.crown.slice(0, (before["crown"] as Array).size())
+	var new_slots: Array = game.crown.slice((before["crown"] as Array).size())
+	check(game.graft_inventory == before["inventory"] and kept_crown == before["crown"] and new_slots.all(func(g): return g == ""), "greffes et couronne gardées (%d emplacements, %d nouveaux)" % [game.crown.size(), new_slots.size()])
 	check(game.crown_size() >= crown_before and game.crown_kept == crown_before, "la couronne reste ouverte (%d emplacements)" % game.crown_size())
 	check(game.builds.size() == before["builds"], "builds gardés")
 	for k in ["tuto_deplacement", "plan_arbre", "barre", "couronne_vue", "points_hors_niveau"]:
@@ -204,8 +207,13 @@ func _real_flow(save) -> void:
 	check(game.cycle == 2 and game.level == lvl, "cycle 2, niveau %d gardé" % lvl)
 	check(started == [2], "Game.cycle_started(2) émis après le rechargement (%s)" % str(started))
 	check(m2.player.position.length() < 10.0, "le héros repart de la graine")
-	check(m2.ground.total < life_before, "le sol n'est plus purifié (%.0f → %.0f)" % [life_before, m2.ground.total])
 	check(not game.flags.has("ronce_boss_vaincu") and game.flags.get("cycle_wave", 0) == 2, "boss remis à zéro, vague en attente")
+	# Monde fané (cycle_wave.gd) : la vague de flétrissure montre d'abord le monde ravivé ; une fois
+	# passée, le sol est celui du nouveau cycle.
+	check(m2.cycle_wave.cycle == 2, "vague de flétrissure du cycle 2 en attente au rechargement")
+	m2.cycle_wave.start()
+	m2.cycle_wave.finish()
+	check(m2.ground.total < life_before, "le sol n'est plus purifié (%.0f → %.0f)" % [life_before, m2.ground.total])
 	check(int(save.peek().get("cycle", 0)) == 2, "la sauvegarde est au cycle 2")
 	m2.autosave_enabled = false
 	save.delete_save()

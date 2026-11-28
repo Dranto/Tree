@@ -209,11 +209,23 @@ func crown_size(f = null) -> int:
 	return clampi(n, 0, int(c.get("max", 16)))
 
 
-## Nombre d'emplacements que la couronne peut avoir en fin d'aventure (les autres sont encore fermés).
+## Nombre d'emplacements que la couronne peut avoir en fin d'aventure (les autres sont encore fermés) :
+## au New Game+, ceux gardés des cycles d'avant et ceux que donne le cycle en cours s'y ajoutent.
 func crown_max() -> int:
 	var c := Content.crown()
 	var n := int(c.get("start", 2)) + Regions.ids().size() * (int(c.get("per_region_hearts", 1)) + int(c.get("per_boss", 1))) + int(c.get("finale", 0))
+	n = maxi(n, crown_kept) + int(Cycles.value("crown", 0))
 	return clampi(n, 0, int(c.get("max", 16)))
+
+
+## Emplacements que le cycle suivant ajoutera à la couronne (0 au premier cycle, pour ne rien
+## annoncer du New Game+ avant qu'on l'ait trouvé, et une fois le plafond atteint).
+func crown_next_cycle() -> int:
+	if not Cycles.exalted():
+		return 0
+	var c := Content.crown()
+	var gain := int(Cycles.value("crown", 0, Cycles.current() + 1)) - int(Cycles.value("crown", 0))
+	return clampi(gain, 0, maxi(0, int(c.get("max", 16)) - crown_max()))
 
 
 ## Ajuste la couronne au nombre d'emplacements ouverts (elle ne fait que grandir en jeu).
@@ -239,18 +251,38 @@ func graft_of(slot: int) -> String:
 
 
 ## Tire une greffe à donner pour une source (« elite », « autel »…) : une greffe dont « sources »
-## contient la source, ni possédée ni déjà tombée au sol. "" s'il ne reste rien à donner.
+## contient la source, ni possédée ni déjà tombée au sol, et qu'on peut trouver dans le cycle en cours
+## (greffes de cycle : « min_cycle » de grafts.json). "" s'il ne reste rien à donner.
 func roll_graft(source: String) -> String:
 	var pool: Array = []
 	var all := Content.grafts()
+	var cycle: int = Cycles.current()
 	for id in all:
 		var g = all[id]
-		if g is Dictionary and source in g.get("sources", []) and not graft_inventory.has(id) and not grafts_on_ground.has(id):
+		if g is Dictionary and source in g.get("sources", []) and not graft_inventory.has(id) and not grafts_on_ground.has(id) \
+				and graft_min_cycle(id) <= cycle:
 			pool.append(id)
 	if pool.is_empty():
 		return ""
 	pool.sort()
 	return pool[graft_rng.randi() % pool.size()]
+
+
+## Premier cycle où l'on peut trouver une greffe (1 pour toutes, sauf les greffes de cycle du New Game+).
+func graft_min_cycle(id: String) -> int:
+	return maxi(1, int(Content.grafts().get(id, {}).get("min_cycle", 1)))
+
+
+## Greffe que donne un autel, un secret ou un boss (« source ») dont la greffe prévue est « fixed » :
+## celle-ci tant qu'on ne l'a pas. Au New Game+, quand on l'a déjà (trouvée à un cycle d'avant), une
+## greffe de cycle la remplace si le cycle le prévoit (data/cycles.json › grafts : sources où une
+## greffe de cycle prend la place d'une greffe déjà possédée). "" s'il n'y a rien à donner.
+func reward_graft(fixed: String, source: String) -> String:
+	if fixed != "" and not graft_inventory.has(fixed) and Content.grafts().has(fixed):
+		return fixed
+	if fixed != "" and not source in Cycles.value("grafts", []):
+		return ""
+	return roll_graft(source)
 
 
 ## Pose une greffe possédée dans un emplacement ouvert de la couronne. Si elle était déjà posée

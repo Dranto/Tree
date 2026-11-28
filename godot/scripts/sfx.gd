@@ -1,12 +1,14 @@
 ## Bruitages : un petit parc de lecteurs, des sons générés par le code (tools/gen-sounds.sh),
 ## au plus 3 sons identiques par fenêtre de 50 ms, une variante tirée au hasard (« variants » dans
-## synth.gd) et une légère variation de hauteur. Les grands sons (« duck ») baissent un instant la musique.
+## synth.gd) et une légère variation de hauteur. Un son qui a des notes (pizz, marimba, cloche…) est transposé
+## dans la gamme de la zone où est le héros, sur l'accord qui sonne (harmony.gd) : rien ne sonne faux. Les grands sons (« duck ») baissent un instant la musique.
 ## Un limiteur sur la sortie générale évite la saturation quand tout s'additionne.
 ## Usage : Sfx.play("impact", position_du_monde). Sans position, le son est joué à plein volume.
 extends Node
 
 const Synth = preload("res://scripts/synth.gd")
 const Regions = preload("res://scripts/regions.gd")
+const Harmony = preload("res://scripts/harmony.gd")
 
 const BUS := "Effets" # i18n: non (bus audio)
 const POOL := 16
@@ -25,6 +27,11 @@ var recent: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 ## Nombre de sons réellement lancés (lu par les tests).
 var played := 0
+## Dernier son lancé et sa hauteur (lus par les tests).
+var last_name := ""
+var last_pitch := 1.0
+## Variation de hauteur d'un son qui a des notes (±0,3 % : quelques cents, il reste juste).
+const TONAL_WOBBLE := 0.003
 
 
 func _ready() -> void:
@@ -143,16 +150,35 @@ func play(name: String, pos := Vector2.INF, pitch := 1.0) -> void:
 	list.append(now)
 	recent[name] = list
 	var st = streams[name]
-	p.stream = st[rng.randi() % st.size()] if st is Array else st
+	var variant: int = rng.randi() % st.size() if st is Array else 0
+	p.stream = st[variant] if st is Array else st
 	p.volume_db = gain
-	p.pitch_scale = pitch * rng.randf_range(0.97, 1.03) if pitch != 1.0 else rng.randf_range(0.94, 1.06)
+	p.pitch_scale = pitch_of(name, variant, pitch)
 	p.play()
 	played += 1
+	last_name = name
+	last_pitch = p.pitch_scale
 	var duck := float(Synth.SOUNDS.get(name, {}).get("duck", 0.0))
 	if duck > 0.0:
 		var music = get_node_or_null("/root/Music")
 		if music != null:
 			music.duck(duck * (1.0 if gain > -6.0 else 0.5))
+
+
+## Hauteur de lecture : un son qui a des notes est accordé sur ce qui sonne (gamme de la zone, accord du
+## moment) ; les autres gardent une variation au hasard.
+func pitch_of(name: String, variant := 0, pitch := 1.0) -> float:
+	if Harmony.is_tonal(name):
+		return Harmony.pitch_for(name, harmony(), variant, pitch) * rng.randf_range(1.0 - TONAL_WOBBLE, 1.0 + TONAL_WOBBLE)
+	return pitch * rng.randf_range(0.97, 1.03) if pitch != 1.0 else rng.randf_range(0.94, 1.06)
+
+
+## Ce qui sonne : celui de la musique, ou à défaut la gamme du monde (Ronce).
+func harmony() -> Dictionary:
+	var music = get_node_or_null("/root/Music")
+	if music != null and music.has_method("harmony"):
+		return music.harmony()
+	return Harmony.context(Harmony.region(""))
 
 
 func _free_player() -> AudioStreamPlayer:

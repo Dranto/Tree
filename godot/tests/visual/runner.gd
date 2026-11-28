@@ -21,7 +21,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "paysages", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "vivant", "demo", "bestiaire", "frontieres"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "paysages", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "vivant", "demo", "bestiaire", "frontieres", "cycle"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -36,6 +36,7 @@ const ForetScript = preload("res://tests/visual/foret.gd")
 const FinaleScript = preload("res://tests/visual/finale.gd")
 const BordScript = preload("res://tests/visual/bord.gd")
 const FrontieresScript = preload("res://tests/visual/frontieres.gd")
+const CycleScript = preload("res://tests/visual/cycle.gd")
 const PaysagesScript = preload("res://tests/visual/paysages.gd")
 const DemoScript = preload("res://tests/visual/demo.gd")
 const BestiaireScript = preload("res://tests/visual/bestiaire.gd")
@@ -190,6 +191,8 @@ func _ready() -> void:
 			await _scenario_bestiaire()
 		"frontieres":
 			await FrontieresScript.new().run(self)
+		"cycle":
+			await CycleScript.new().run(self)
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -233,7 +236,8 @@ func _scenario_resolution() -> void:
 	var tag := _res_tag()
 	await _frames(60)
 	await _shot("jeu_" + tag, "jeu")
-	var ids: Array = Content.grafts().keys()
+	# Greffes de la première aventure seulement (les greffes de cycle du New Game+ ne changent pas ces images).
+	var ids: Array = Content.grafts().keys().filter(func(id): return int(Content.grafts()[id].get("min_cycle", 1)) < 2)
 	ids.sort()
 	for g in ids.slice(0, 14):
 		Game.give_graft(g)
@@ -383,7 +387,8 @@ func _langue_suite(tag: String, deck: bool) -> void:
 	main.quest_ui.close()
 	await _frames(2)
 	# Arbre : couronne de greffes (fiche d'une greffe), builds, résumé.
-	var ids: Array = Content.grafts().keys()
+	# Greffes de la première aventure seulement (les greffes de cycle du New Game+ ne changent pas ces images).
+	var ids: Array = Content.grafts().keys().filter(func(id): return int(Content.grafts()[id].get("min_cycle", 1)) < 2)
 	ids.sort()
 	for g in ids.slice(0, 14):
 		Game.give_graft(g)
@@ -491,7 +496,8 @@ func _scenario_manette() -> void:
 	UiAudit.scan_controls("options", main.pause_menu.options)
 	await _shot("manette_options_" + tag)
 	main.pause_menu.close()
-	var ids: Array = Content.grafts().keys()
+	# Greffes de la première aventure seulement (les greffes de cycle du New Game+ ne changent pas ces images).
+	var ids: Array = Content.grafts().keys().filter(func(id): return int(Content.grafts()[id].get("min_cycle", 1)) < 2)
 	ids.sort()
 	for g in ids.slice(0, 6):
 		Game.give_graft(g)

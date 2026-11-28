@@ -373,8 +373,10 @@ func boss_defeated() -> void:
 	# Récompense (« boss › reward » de la région) : points d'arbre, donnés une seule fois, et une greffe au sol.
 	var reward: Dictionary = Content.rewards().get("boss", {}).get(region, {})
 	Game.grant_points(int(reward.get("points", REWARD_POINTS)), "boss", region + "_boss")
-	if str(reward.get("graft", "")) != "":
-		main.drop_graft(center, str(reward["graft"]))
+	# Au New Game+, une greffe de cycle remplace celle du boss si on l'a déjà (Game.reward_graft).
+	var graft := Game.reward_graft(str(reward["graft"]), "boss") if str(reward.get("graft", "")) != "" else ""
+	if graft != "":
+		main.drop_graft(center, graft)
 	for i in 3:
 		main.fx.ring(center, 40.0, max_radius * (0.5 + 0.3 * i), 0.9 + 0.4 * i, Color(0.6, 1.0, 0.55, 0.9), 6.0)
 	# Sortie de l'arène : un éclat de sève sur les bords de l'écran, qui s'éteint doucement.

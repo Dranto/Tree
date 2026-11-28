@@ -9,6 +9,7 @@
       "Phase 2 sur 3 : sève et vent",
       "Seconde forme : les six gardiens à la fois"
     ],
+    "phases_exaltees": ["Phase 1 sur 4 : épines et spores", "Phase 2 sur 4 : sève et vent", "Phase 3 sur 4 : les six gardiens à la fois", "Exaltation : elle ramène le monde à elle"],
     "arena": {"radius": 520.0, "radius_min": 370.0, "radius_collapse": 380.0, "life_color": "seve/clair"},
     "reward": {"points": 3}
   },

@@ -16,7 +16,7 @@ Pour l'instant le jeu se présente à Steam avec l'App ID de test **480** (« Sp
 4. Ce que tu dois voir :
    - dans ta liste d'amis, ton statut « En jeu : Spacewar » (c'est l'App ID 480, normal) ;
    - Maj+Tab ouvre l'overlay Steam par-dessus le jeu.
-5. Ce que tu ne verras **pas** encore : les succès BOSS_* et la présence « Dans la région de Ronce ».
+5. Ce que tu ne verras **pas** encore : les succès BOSS_* et CYCLE_* et la présence « Dans la région de Ronce ».
    Ils n'existent pas dans Spacewar ; ils apparaîtront avec le vrai App ID, une fois créés sur Steamworks.
    Le Steam Cloud de Spacewar n’est pas garanti non plus : à vérifier avec le vrai App ID.
    Sur le Steam Deck, le jeu se reconnaît à la variable SteamDeck=1 que Steam pose (GodotSteam 4.24
@@ -47,8 +47,8 @@ Un seul fichier à changer : **`godot/data/steam.json`**.
 Le jeu transmet cet identifiant à Steam lui-même : **pas** de `steam_appid.txt` à poser ni à livrer.
 
 Ensuite, sur Steamworks (détails dans `steam/mise-en-place.md`) :
-- **Succès** : les 7 de `steam/succes.md` (identifiants exacts BOSS_RONCE … BOSS_FINALE) dans le
-  jeu ; dans la démo, seulement BOSS_RONCE. Puis « Publier ».
+- **Succès** : les 9 de `steam/succes.md` (identifiants exacts BOSS_RONCE … BOSS_FINALE, puis CYCLE_2 et CYCLE_3 du
+  New Game+) dans le jeu ; dans la démo, seulement BOSS_RONCE. Puis « Publier ».
 - **Steam Cloud** : activer, quota 20 Mo / 10 fichiers. Le jeu envoie lui-même `partie.json` et
   `settings.cfg` par l'API : ne pas configurer l'Auto-Cloud.
 - **Présence enrichie** : déposer `steam/rich_presence.vdf`.

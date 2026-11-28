@@ -456,6 +456,9 @@ func _exalt_setup() -> void:
 		exalt_cfg_data = all.get(region, {})
 	phase_limits = phase_limits.duplicate()
 	phase_limits.append(float(exalted_cfg("phase_exaltee", EXALTED_PHASE_AT)))
+	# La barre marque aussi le seuil de la phase exaltée.
+	if arena != null and arena.get("bar") != null:
+		arena.bar.marks = phase_limits
 
 
 ## Réglage « key » du boss pour le cycle en cours (cycles.json › bosses › <région>), default sinon.
