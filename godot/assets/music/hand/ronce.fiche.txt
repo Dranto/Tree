@@ -1,0 +1,20 @@
+# Fiche de repères de ronce.wav (Mère-Ronce, boss de Ronce), morceau d'Antoine (28/11).
+# 160 BPM, la mineur, 4/4 : mesures de 1,5 s, la mesure 1 commence au début du fichier.
+# Analyse du 28/11 (énergie par bande, mesure par mesure, et ressemblance des mesures) :
+#   1-8 intro grave, 9-16 la même avec les charlestons, 17-23 la montée, 24 la mesure avant le drop,
+#   25-38 batterie pleine (phrases de 8 mesures), 39 coupure, 40 relance, 41-56 batterie pleine
+#   (identique à 25-40 sans la coupure), 57-60 la fin (la dernière note qui s'éteint).
+bpm: 160
+mesure: 4/4
+debut: 0.0
+approche: 1-8           # sous l'ambiance du monde, de plus en plus fort à mesure qu'on approche
+approche_boucle: 9-16   # de l'enceinte, puis en boucle tant qu'on n'est pas entré
+intro: 24               # à l'entrée : la dernière mesure avant le drop, pendant que la Mère-Ronce charge
+boucle_1: 25-32         # le drop : le combat (phase 1)
+drop_1: 39-40           # coupure + relance (3 s) : passage en phase 2
+boucle_2: 41-56
+drop_2: 23-24           # fin de la montée + mesure d'avant le drop : passage en phase 3
+boucle_3: 25-32
+drop_3: 39-40           # phase exaltée (New Game+, cycle 2 et plus)
+boucle_4: 41-56
+fin: 57-58              # à sa mort : la dernière note et son écho

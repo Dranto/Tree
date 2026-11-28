@@ -14,8 +14,8 @@
 ## duck(part) pour baisser un instant la musique sous un grand bruitage, follow_boss(arène) à chaque pas.
 ##
 ## Musiques de boss faites à la main (boss_track.gd, assets/music/hand/) : quand le boss du combat en a
-## une, elle joue à la place des couches du code, qui se taisent (HAND_FADE) ; l'ambiance reste baissée
-## comme pour tout boss. Un boss sans morceau garde la couche « boss » du code.
+## une, elle joue seule à la place des couches du code, qui se taisent (HAND_FADE, HAND_WORLD_OUT) ;
+## l'ambiance descend à BED_HAND, à l'approche comme au combat. Un boss sans morceau garde la couche « boss » du code.
 extends Node
 
 const BUS := "Musique" # i18n: non (bus audio)
@@ -52,6 +52,10 @@ const DUCK_RECOVER := 0.7
 const SILENT_DB := -60.0
 ## L'ambiance sonore baisse pendant un combat de boss.
 const BED_BOSS := 0.55
+## Sous un morceau de boss fait à la main (approche comprise), la musique du monde s'est tue quand le
+## morceau a pris HAND_WORLD_OUT de sa part, et l'ambiance ne garde que BED_HAND de son volume.
+const HAND_WORLD_OUT := 0.6
+const BED_HAND := 0.15
 
 var enabled := true
 var started := false
@@ -227,6 +231,13 @@ func follow_boss(arena) -> void:
 		hand.follow(arena)
 
 
+## Approche d'une arène ouverte (null : aucune) : son morceau, s'il a une approche, monte avec
+## « level » (0 → 1) sous la musique du monde, qui s'efface d'autant (boss_track.gd › approach).
+func approach_boss(arena, level: float) -> void:
+	if hand != null and started:
+		hand.approach(arena, level)
+
+
 ## Vrai pendant qu'un morceau de boss fait à la main tient la musique.
 func hand_playing() -> bool:
 	return hand != null and hand.active()
@@ -280,7 +291,13 @@ func _process(delta: float) -> void:
 	combat = move_toward(combat, combat_target, (COMBAT_IN if combat_target > combat else COMBAT_OUT) * delta)
 	heart = move_toward(heart, heart_target, HEART_FADE * delta)
 	boss = move_toward(boss, boss_target, BOSS_FADE * delta)
-	hand_k = move_toward(hand_k, 1.0 if hand_playing() else 0.0, delta / (HAND_FADE if hand_in_key() else HAND_FADE_CLASH))
+	# L'approche d'une arène (boss_track.gd) ne prend que sa part : la musique du monde s'efface avec elle
+	# (vite si le morceau n'est pas dans la gamme de la région : HAND_FADE_CLASH).
+	var hand_want: float = hand.level() if hand != null else 0.0
+	var hand_fade := HAND_FADE if hand_want >= 1.0 or hand_k > hand_want else 1.0
+	if not hand_in_key():
+		hand_fade = minf(hand_fade, HAND_FADE_CLASH)
+	hand_k = move_toward(hand_k, hand_want, delta / hand_fade)
 	duck_gain = move_toward(duck_gain, 1.0, DUCK_RECOVER * delta)
 	_pending_t += delta
 	var others := 0.0
@@ -328,15 +345,18 @@ func layer_gains(players: Dictionary) -> Dictionary:
 func _apply() -> void:
 	if not enabled:
 		return
+	# Le morceau d'un boss passe seul : la musique du monde s'efface plus vite qu'il ne monte.
+	var world_k := cos(clampf(hand_k / HAND_WORLD_OUT, 0.0, 1.0) * PI / 2.0)
+	var bed_k := 1.0 - (1.0 - BED_HAND) * hand_k
 	for id in groups:
 		var g: Dictionary = groups[id]
 		var gains := layer_gains(g["players"])
-		var reg_g := sin(float(g["gain"]) * PI / 2.0) * duck_gain * cos(hand_k * PI / 2.0)
+		var reg_g := sin(float(g["gain"]) * PI / 2.0) * duck_gain * world_k
 		for layer in g["players"]:
 			_set_volume(g["players"][layer], float(gains.get(layer, 0.0)) * reg_g)
 	for id in beds:
 		var g: Dictionary = beds[id]
-		var reg_g := sin(float(g["gain"]) * PI / 2.0) * (1.0 - (1.0 - BED_BOSS) * boss)
+		var reg_g := sin(float(g["gain"]) * PI / 2.0) * minf(1.0 - (1.0 - BED_BOSS) * boss, bed_k)
 		_set_volume(g["players"].get("mort"), cos(mix * PI / 2.0) * reg_g)
 		_set_volume(g["players"].get("vif"), sin(mix * PI / 2.0) * reg_g)
 

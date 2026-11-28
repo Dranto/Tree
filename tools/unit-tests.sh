@@ -35,6 +35,8 @@ TESTS=(
   "boss_eclat|--headless --fixed-fps 60|"
   "boss_track|--headless|"
   "exalte_b1|--headless --fixed-fps 60|--cycle=2"
+  "ronce_musique|--headless --fixed-fps 60|"
+  "ronce_musique@cycle2|--headless --fixed-fps 60|--cycle=2"
   "death|--headless --fixed-fps 60|"
   "deaths|--headless --fixed-fps 60|"
   "cycle_tint|--headless --fixed-fps 60|"

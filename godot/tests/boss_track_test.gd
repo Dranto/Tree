@@ -8,6 +8,8 @@
 ##   - mort du héros : retour au calme (fondu d'une seconde, pas de section « defaite » ici) ;
 ##   - combat suivi de l'extérieur (follow) : phases lues sur boss.phase, victoire sur l'état de l'arène ;
 ##   - boss sans fichier : rien ne joue, la musique du code garde la main ;
+##   - approche (morceau de la Mère-Ronce) : le clip « approche » monte avec le niveau, puis l'entrée
+##     lance l'intro au début de la mesure suivante, sur la même grille ; s'éloigner l'arrête ;
 ##   - le morceau de la Flétrissure (finale) est complet : sections, mesures entières, raccords vérifiés.
 ## Instants des phases tirés au hasard (graine affichée). Lancer :
 ##   tools/godot.sh --headless -s res://tests/boss_track_test.gd
@@ -64,6 +66,7 @@ func _run() -> void:
 	await _scenario_phase_during_intro()
 	await _scenario_defeat()
 	await _scenario_follow()
+	await _scenario_approach()
 
 	print("boss_track_test : ", "OK" if failures == 0 else "%d ÉCHEC(S)" % failures)
 	quit(1 if failures > 0 else 0)
@@ -109,8 +112,8 @@ func _check_finale_data() -> void:
 
 func _check_without_file() -> void:
 	print("Boss sans morceau")
-	check(not BossTrack.has_track("ronce"), "Ronce n'a pas de morceau (musique du code)")
-	check(not track.begin("ronce"), "begin(\"ronce\") ne lance rien")
+	check(not BossTrack.has_track("spore"), "Spore n'a pas de morceau (musique du code)")
+	check(not track.begin("spore"), "begin(\"spore\") ne lance rien")
 	check(not track.active(), "le lecteur reste inactif")
 
 
@@ -357,3 +360,40 @@ func _scenario_follow() -> void:
 	check(track.state == "fondu", "arène libérée (retour au menu) : fondu")
 	await _drain(1.2)
 	check(not track.active(), "puis plus rien ne joue")
+
+
+func _scenario_approach() -> void:
+	print("Approche (morceau de la Mère-Ronce)")
+	track.stop()
+	var rt = BossTrack.new()
+	root.add_child(rt)
+	rt.player.bus = BUS
+	var a := FakeArena.new()
+	a.region = "ronce"
+	a.state = "ouverte"
+	root.add_child(a)
+	rt.approach(a, 0.0)
+	check(not rt.active(), "niveau nul : rien ne joue")
+	rt.approach(a, 0.7)
+	check(rt.state == "approche" and rt.approaching("ronce"), "le héros approche : l'approche commence")
+	await _drain(0.6)
+	check(rt.current_clip() == "approche" and rt.approach_gain > 0.2 and rt.approach_gain <= rt.APPROACH_MAX * 0.7 + 0.001, "le clip « approche » monte vers son niveau (%.2f)" % rt.approach_gain)
+	check(rt.level() == rt.approach_gain, "la musique du monde s'efface d'autant")
+	var bar: float = BossTrack.bar_time(BossTrack.track_data("ronce"))
+	var at: int = rt.enter()
+	var expect: float = rt.grid_t0 + at * bar
+	check(at >= 1 and rt.state == "combat" and rt.requests.back()["clip"] == "intro", "entrée : l'intro est demandée pour la mesure %d" % at)
+	while rt.audio_time() < expect - 0.08:
+		await process_frame
+	check(rt.current_clip() == "approche", "jusqu'à la barre, l'approche continue")
+	while rt.audio_time() < expect + 0.12:
+		await process_frame
+	check(rt.current_clip() == "intro", "au début de la mesure suivante : l'intro (la charge)")
+	rt.stop()
+	rt.approach(a, 0.6)
+	await _drain(0.3)
+	rt.approach(a, 0.0)
+	await _drain(rt.APPROACH_FALL + rt.APPROACH_LINGER + 0.4)
+	check(not rt.active(), "s'éloigner : l'approche s'éteint puis s'arrête")
+	a.free()
+	rt.queue_free()

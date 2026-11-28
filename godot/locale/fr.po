@@ -8020,11 +8020,11 @@ msgstr "Phase 2 sur 3 : les bourgeons éclosent"
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 sur 3 : les ronces se resserrent"
 
-#. scripts/boss_base.gd:515
+#. scripts/boss_base.gd:519
 msgid "Exaltation"
 msgstr "Exaltation"
 
-#. scripts/boss_base.gd:640
+#. scripts/boss_base.gd:644
 msgid "Entravée"
 msgstr "Entravée"
 
@@ -8325,7 +8325,7 @@ msgstr ""
 "%s\n"
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 
-#. scripts/main.gd:1281
+#. scripts/main.gd:1285
 msgid "%s vaincu"
 msgstr "%s vaincu"
 

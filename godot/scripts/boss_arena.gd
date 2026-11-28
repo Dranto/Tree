@@ -264,6 +264,26 @@ func update_bar() -> void:
 var sync = null
 
 
+## Approche (boss_track.gd › approach) : le début du morceau du boss se fait entendre à APPROACH_RANGE px
+## de la zone qui le réveille, et monte jusqu'à elle.
+const APPROACH_RANGE := 1300.0
+## Le long du mur, jusqu'à APPROACH_FULL px dehors, on n'entend plus que l'intro du morceau.
+const APPROACH_FULL := 500.0
+const BossTrackRef = preload("res://scripts/boss_track.gd")
+
+
+## Part du morceau du boss à l'approche (0 → 1, selon la distance du héros) : 0 si l'arène n'est
+## pas ouverte ou si le boss n'a pas d'approche dans son morceau. Lu par main.gd à chaque pas.
+func approach_level() -> float:
+	if state != "ouverte" or main == null or main.player == null:
+		return 0.0
+	var data := BossTrackRef.track_data(region)
+	if data.is_empty() or not data["clips"].has("approche"):
+		return 0.0
+	var d: float = main.player.position.distance_to(center) - max_radius - APPROACH_FULL
+	return smoothstep(0.0, 1.0, 1.0 - clampf(d / APPROACH_RANGE, 0.0, 1.0))
+
+
 ## Vrai pendant que le morceau du boss joue hors combat (la finale : la descente). Lu par boss_track.gd.
 func music_on() -> bool:
 	return in_combat()

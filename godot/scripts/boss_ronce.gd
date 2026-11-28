@@ -16,6 +16,15 @@
 ##     de sa musique, l'étreinte se double d'une racine en son centre (il faut sortir de l'anneau),
 ##     les fouets tournent comme en phase 3, plus d'invocation.
 ##
+## Au rythme de son morceau (ronce.wav d'Antoine, 160 BPM, la mineur ; assets/music/hand/ronce.json) :
+## l'intro monte sous la musique du monde à l'approche de son enceinte, elle charge pendant la
+## dernière mesure avant le drop et frappe sur le drop. Puis elle joue une partition (SCORE) : chaque
+## phase suit sa boucle en phrases de quatre mesures, chaque attaque frappe sur son temps ; par-dessus,
+## la batterie elle-même attaque (DRUMS_POWER) : ses grosses caisses lancent des ondes de ronces, ses
+## caisses claires des épines en spirale, ses charlestons des aiguilles en jet tournant et ses caisses
+## douces de petites racines autour du joueur. Chaque phase en joue plus (plus de percussions suivies,
+## plus de jets, des ondes plus larges), jusqu'à la phase exaltée. Sans morceau, l'ordre de PHASES.
+##
 ## Le socle commun (vie, phases, états, mort, interface d'ennemi) est dans boss_base.gd ; ce
 ## fichier ne décrit que ses attaques et son dessin. Nommée dans data/regions/ronce.json › boss.
 extends BossBase
@@ -59,6 +68,67 @@ const ROOTED_CADENCE := 0.55
 const ROOT_IMMUNITY := 6.0
 const BLEED_STACKS := 5
 
+# --- Partition sur son morceau (boss_sync.gd : horloge audio, ou temps du jeu sans son) ---
+# Une phrase = quatre mesures (16 temps), une attaque par mesure environ, souvent sur la grosse caisse
+# du premier temps ; « coups » : [temps de la phrase, attaque] ; l'annonce part
+# ANNOUNCE_BEATS temps avant (un coup que l'attaque d'avant serre trop est sauté, score_skipped).
+# « ondes » : mesures de la phrase (0-3) où les grosses caisses lancent de vraies ondes (sinon celles
+# de DRUMS_POWER) ; « deluge » : toute la batterie, au plus fort. Les phrases se répètent sur la boucle.
+const SCORE := {
+	1: {"loop": "boucle_1", "phrases": [
+		{"coups": [[0, "volee"], [4, "fouets"], [8, "racines"], [12, "volee"]]},
+		{"coups": [[0, "fouets"], [6, "volee"], [10, "racines"], [13, "volee"]]},
+	]},
+	2: {"loop": "boucle_2", "phrases": [
+		{"coups": [[0, "volee"], [5, "fouets"], [9, "racines"], [12, "volee"]]},
+		{"coups": [[1, "invocation"], [4, "fouets"], [8, "volee"], [12, "racines"]]},
+		{"coups": [[0, "fouets"], [5, "volee"], [9, "racines"], [12, "fouets"]]},
+		{"coups": [[0, "volee"], [4, "racines"], [8, "fouets"], [12, "volee"]], "ondes": [0, 2]},
+	]},
+	3: {"loop": "boucle_3", "phrases": [
+		{"coups": [[0, "fouets"], [4, "volee"], [9, "racines"], [12, "fouets"]]},
+		{"coups": [[1, "invocation"], [4, "fouets"], [8, "volee"], [13, "racines"]], "ondes": [0, 1, 2, 3]},
+	]},
+	4: {"loop": "boucle_4", "phrases": [
+		{"coups": [[0, "etreinte"], [3, "fouets"], [8, "volee"], [13, "racines"]]},
+		{"coups": [[1, "etreinte"], [4, "fouets"], [9, "volee"], [14, "racines"]]},
+		{"coups": [[2, "etreinte"], [5, "fouets"], [9, "volee"], [14, "racines"]]},
+		{"coups": [[2, "etreinte"], [5, "fouets"], [9, "volee"]], "deluge": true},
+	]},
+}
+## Ce que la batterie déclenche, phase par phase (la difficulté monte avec elles) :
+##   ondes : mesures de la phrase où une grosse caisse franche lance une onde de ronces (les autres
+##           grosses caisses, et les douces, un pouls : onde courte qui s'éteint à « pulse » px) ;
+##   roll  : épines par caisse claire (0 : elles ne tirent pas), « roll_grid » : seulement les caisses
+##           sur une double croche multiple (4 : sur les temps, 2 : les croches, 1 : toutes) ;
+##   spark : aiguilles par charleston, « spark_grid » : même filtre ;
+##   prick : petites racines par caisse douce (note fantôme), autour du joueur.
+const DRUMS_POWER := {
+	1: {"ondes": [], "pulse": 200.0, "roll": 1, "roll_grid": 4, "spark": 1, "spark_grid": 2, "prick": 0},
+	2: {"ondes": [0], "pulse": 240.0, "roll": 2, "roll_grid": 4, "spark": 1, "spark_grid": 2, "prick": 1},
+	3: {"ondes": [0, 2], "pulse": 280.0, "roll": 2, "roll_grid": 2, "spark": 2, "spark_grid": 2, "prick": 1},
+	4: {"ondes": [0, 1, 2, 3], "pulse": 320.0, "roll": 3, "roll_grid": 1, "spark": 2, "spark_grid": 1, "prick": 2},
+}
+## Annonce (en temps) de chaque attaque de la partition.
+const ANNOUNCE_BEATS := {"volee": 2, "fouets": 3, "racines": 2, "invocation": 3, "etreinte": 4}
+const MIN_ANNOUNCE := 2.0
+## Sur la partition, elle frappe plus souvent qu'au gré des pauses : chaque coup blesse moins.
+const SCORE_DAMAGE := 0.6
+## Coups de batterie quand le morceau n'en donne pas (une phrase de quatre mesures, doubles croches).
+const DRUMS := {"kick": [[0, 8], [2, 8, 12], [0, 8], [2, 8, 12]], "kick_doux": [[], [], [], []], "caisse": [[4, 12], [4, 12], [4, 12], [4, 10, 12, 14]],
+	"charleston": [[0, 2, 4, 6, 8, 10, 12, 14], [0, 4, 7, 10, 14], [0, 2, 4, 6, 8, 10, 12, 14], [0, 4, 7, 10, 14]], "caisse_douce": [[11, 15], [2, 6], [11, 15], [2, 6]]}
+## Onde de ronces (grosses caisses) : annonce (temps : la bande se ramasse autour d'elle), vitesse,
+## épaisseur, brèches (nombre, ouverture en radians, pas de côté une onde sur deux), dégâts, au plus.
+const WAVE := {"lead": 2.0, "speed": 430.0, "width": 24.0, "gaps": 4, "gap": 0.95, "step": 0.3, "damage": 5.0, "max": 8}
+## Pouls (autres grosses caisses) : annonce (temps), épaisseur, dégâts.
+const PULSE := {"lead": 1.0, "width": 14.0, "damage": 2.0}
+## Épines en spirale (caisses claires) : pas de la spirale (radians par coup), vitesse, rayon, dégâts.
+const ROLL := {"spin": 0.55, "speed": 280.0, "radius": 6.0, "damage": 4.0}
+## Aiguilles (charlestons) : pas du jet, vitesse, rayon, dégâts.
+const SPARK := {"step": 0.42, "speed": 240.0, "radius": 4.0, "damage": 1.5}
+## Petites racines (caisses douces) : annonce (temps), rayon, dégâts, distance au joueur, au plus.
+const PRICK := {"lead": 2.0, "radius": 28.0, "damage": 3.0, "near": 50.0, "far": 100.0, "max": 12, "burst": 0.25}
+
 ## Attaque en cours ("" pendant la pause), son étape ("annonce" ou "frappe") et le temps restant.
 var attack := ""
 var stage := ""
@@ -82,6 +152,37 @@ var whips: Array = []
 var buds: Array = []
 ## Étreintes : {"pos", "gap" (angle de la brèche), "fuse" (avant de jaillir), "hold" (après), "tick"}.
 var embraces: Array = []
+
+## Partition : temps du morceau où commence la boucle de la phase (-1 : pas encore calée), ses coups
+## ({"beat", "kind", "phrase"}), sa batterie ({"beat", "kind", "deluge"}) et sa longueur (temps).
+var score_origin := -1.0
+var score_phase := 0
+var score_hits: Array = []
+var score_drums: Array = []
+var score_len := 32.0
+var _score_last := -INF
+var _drums_done := -INF
+## Temps du morceau où tombe la frappe annoncée (-1 : sans grille) ; racines de la partition : temps
+## de la première et racines posées.
+var _strike_beat := -1.0
+var _roots_beat := -1.0
+var _roots_placed := 0
+var _rooted_skip := false
+## Coups de la partition sautés (l'attaque d'avant débordait) : 0 si elle est bien écrite (tests).
+var score_skipped := 0
+## Attaques de la partition lancées, et coups de batterie joués, par sorte (tests).
+var score_played := 0
+var drums_played: Dictionary = {}
+## Ondes de ronces : {"r", "fuse", "total", "gaps", "hit", "reach", "small"}.
+var waves: Array = []
+var _wave_count := 0
+var _roll_spin := 0.0
+var _spark_angle := 0.0
+## Petites racines des caisses douces : {"pos", "fuse", "total", "burst"}.
+var pricks: Array = []
+var _prick_rng := RandomNumberGenerator.new()
+## Sursaut du corps sur une grosse caisse (0 → 1), -1 : aucun.
+var drum_flash := -1.0
 
 
 ## Nombres du socle (boss_base.gd) : ceux de la Mère-Ronce.
@@ -108,23 +209,51 @@ func _exalt_color() -> Color:
 	return Art.bc("braise")
 
 
+## Ce qu'elle charge sur la dernière mesure avant le drop : la braise de sa rose.
+func _charge_color() -> Color:
+	return Art.bc("braise")
+
+
+## Le drop : le combat part d'un coup, une couronne d'épines jaillit d'elle.
+func _music_resume() -> void:
+	super._music_resume()
+	if Settings.reduce_effects:
+		return
+	for i in 24:
+		var dir := Vector2.from_angle(TAU * i / 24.0 + 0.13)
+		main.fx.mote(anchor + dir * radius * 0.7, dir * 620.0, 0.55, 4.0, Color(Art.ec("epine", "clair"), 0.95))
+
+
 ## Phase du dessin : la phase exaltée garde le dessin de la phase 3 (rose à cœur ouvert).
 func art_phase() -> int:
 	return mini(phase, 3)
 
 
 func _projectiles_step(delta: float) -> void:
+	_place_roots()
 	_update_thorns(delta)
 	_update_roots(delta)
 	_update_embraces(delta)
+	_update_waves(delta)
+	_update_pricks(delta)
+	if drum_flash >= 0.0:
+		drum_flash += delta * 4.0
+		if drum_flash > 1.0:
+			drum_flash = -1.0
 
 
 func _fight_step(delta: float) -> void:
 	var cad := cadence()
+	var scored := _score_ready()
+	if scored:
+		_drums_step()
 	if attack == "":
 		var wanted := phase_for(hp / max_hp)
 		if wanted > phase:
 			_enter_phase(wanted)
+			return
+		if scored:
+			_score_step()
 			return
 		gap -= delta * cad
 		if gap <= 0.0:
@@ -132,7 +261,10 @@ func _fight_step(delta: float) -> void:
 			_begin(order[cycle % order.size()])
 			cycle += 1
 	elif stage == "annonce":
-		timer -= delta * cad
+		if _strike_beat >= 0.0 and on_music_grid():
+			timer = (_strike_beat - beats_now()) * beat_len()
+		else:
+			timer -= delta * cad
 		_announce_step(delta * cad)
 		if timer <= 0.0:
 			_strike()
@@ -145,7 +277,7 @@ func _fight_step(delta: float) -> void:
 
 # --- Attaques ---
 
-func _begin(kind: String) -> void:
+func _begin(kind: String, strike_at := -1.0) -> void:
 	var cfg: Dictionary = PHASES[phase]
 	if kind == "invocation" and minions.size() >= SUMMON["max_alive"]:
 		kind = "volee"
@@ -174,18 +306,45 @@ func _begin(kind: String) -> void:
 		"etreinte":
 			_set_timer(EMBRACE["annonce"])
 			exalted_attacks += 1
-	# Phase exaltée : la frappe tombe sur un temps de la musique.
-	if is_exalted_phase() and kind != "racines":
+	_strike_beat = -1.0
+	if strike_at >= 0.0 and on_music_grid():
+		# Partition : la frappe tombe sur son temps. Les racines : la première jaillit sur lui, puis une
+		# par temps (_place_roots), pendant que l'attaque suivante s'annonce déjà.
+		_strike_beat = strike_at
+		if kind == "racines":
+			_roots_beat = strike_at - float(ANNOUNCE_BEATS["racines"])
+			_roots_placed = 0
+		_set_timer(maxf(0.0, (_strike_beat - beats_now()) * beat_len()))
+	elif is_exalted_phase() and kind != "racines":
+		# Phase exaltée sans partition : la frappe tombe sur un temps de la musique.
 		_set_timer(loop_snap(timer))
 	if kind == "etreinte":
 		var at: Vector2 = main.player.position
-		embraces.append({"pos": at, "gap": _gap_angle(at), "fuse": timer, "total": timer, "hold": EMBRACE["hold"], "tick": 0.0, "flash": -1.0})
+		embraces.append({"pos": at, "gap": _gap_angle(at), "fuse": timer, "total": timer, "hold": EMBRACE["hold"], "tick": 0.0, "flash": -1.0, "sync": _strike_beat >= 0.0})
 
 
 ## La brèche de l'étreinte est tournée à l'opposé de la Mère-Ronce.
 func _gap_angle(at: Vector2) -> float:
 	var away := at - anchor
 	return away.angle() if away.length() > 1.0 else PI * 0.5
+
+
+## Racines de la partition : une par temps sous le joueur, qui jaillit deux temps plus tard (sur un
+## temps) ; elles continuent pendant l'attaque suivante.
+func _place_roots() -> void:
+	if _roots_beat < 0.0:
+		return
+	if not on_music_grid():
+		_roots_beat = -1.0
+		return
+	var lead := float(ANNOUNCE_BEATS["racines"])
+	var n := int(PHASES[phase]["roots"])
+	while _roots_placed < n and beats_now() >= _roots_beat + _roots_placed - 0.001:
+		var fuse := (_roots_beat + _roots_placed + lead - beats_now()) * beat_len()
+		roots.append({"pos": main.player.position, "fuse": maxf(0.05, fuse), "burst": -1.0, "total": maxf(0.05, fuse)})
+		_roots_placed += 1
+	if _roots_placed >= n:
+		_roots_beat = -1.0
 
 
 func _set_timer(v: float) -> void:
@@ -210,6 +369,11 @@ func _plan_whips(count: int) -> void:
 		whips.append(_whip(a - side * 1.2 + PI, a + side * 1.9 + PI))
 
 
+## Entre deux salves : sur la partition, une croche (les salves claquent en croches).
+func _volley_between() -> float:
+	return beat_len() * 0.5 if _strike_beat >= 0.0 and on_music_grid() else VOLLEY["between"]
+
+
 func _whip(from: float, to: float) -> Dictionary:
 	return {"from": from, "to": to, "angle": from, "prev": from}
 
@@ -224,6 +388,8 @@ func _announce_step(delta: float) -> void:
 				if to.length() > 1.0:
 					aim = to.normalized()
 		"racines":
+			if _strike_beat >= 0.0:
+				return
 			root_timer -= delta
 			if roots_left > 0 and root_timer <= 0.0:
 				root_timer = ROOT["every"]
@@ -244,7 +410,7 @@ func _strike() -> void:
 		"volee":
 			volleys_left = PHASES[phase]["volleys"]
 			volley_timer = 0.0
-			_set_timer(VOLLEY["between"] * volleys_left)
+			_set_timer(_volley_between() * volleys_left)
 		"fouets":
 			_set_timer(WHIP["frappe"])
 		"racines":
@@ -265,7 +431,7 @@ func _strike_step(delta: float) -> void:
 		"volee":
 			volley_timer -= delta
 			if volleys_left > 0 and volley_timer <= 0.0:
-				volley_timer = VOLLEY["between"]
+				volley_timer = _volley_between()
 				_fire_volley(volleys_left % 2 == 0)
 				volleys_left -= 1
 		"fouets":
@@ -304,7 +470,7 @@ func _whip_hit(w: Dictionary) -> void:
 	var margin: float = (WHIP["width"] + p.radius) / maxf(d, 1.0)
 	var swept := (rel >= -margin and rel <= span + margin) if span >= 0.0 else (rel <= margin and rel >= span - margin)
 	if swept:
-		p.take_hit(WHIP["damage"] * damage_scale, self)
+		_hurt(WHIP["damage"])
 
 
 func _end_attack() -> void:
@@ -312,6 +478,306 @@ func _end_attack() -> void:
 	stage = ""
 	whips = []
 	gap = PHASES[phase]["gap"]
+	_strike_beat = -1.0
+
+
+## Blesse le joueur ; sur la partition, les coups des attaques blessent à SCORE_DAMAGE (« exact » :
+## dégâts déjà réglés pour la batterie).
+func _hurt(amount: float, exact := false) -> void:
+	if not exact and score_phase == phase and on_music_grid():
+		amount *= SCORE_DAMAGE
+	main.player.take_hit(amount * damage_scale, self)
+
+
+# --- Partition et batterie (avec son morceau) ---
+
+## Elle suit le morceau même enracinée : la musique ne ralentit pas. Enracinée, elle saute un coup
+## de la partition sur deux (_score_step) au lieu d'annoncer plus lentement.
+func on_music_grid() -> bool:
+	return sync != null and sync.running and sync.stage == ""
+
+
+## Vrai quand la partition mène le combat ; la cale sur la boucle de la phase au premier passage.
+func _score_ready() -> bool:
+	if not on_music_grid() or not SCORE.has(phase):
+		return false
+	if score_phase != phase or score_origin < 0.0:
+		_build_score()
+	return true
+
+
+## Pose la partition de la phase : sa boucle commence à la mesure où le combat a repris (resume_bar).
+func _build_score() -> void:
+	score_phase = phase
+	var bb: int = sync.beats
+	var start_bar: int = sync.resume_bar if sync.resume_bar >= 0 else int(floor(sync.bars_now()))
+	score_origin = float(start_bar * bb)
+	var cfg: Dictionary = SCORE[phase]
+	var sec: Dictionary = sync.data.get("sections", {}).get(cfg["loop"], {})
+	var bars := 8
+	if sec.has("mesures"):
+		bars = int(sec["mesures"][1]) - int(sec["mesures"][0]) + 1
+	score_len = float(bars * bb)
+	var drums: Dictionary = sec.get("coups", {})
+	var phrases: Array = cfg["phrases"]
+	var pw: Dictionary = DRUMS_POWER[phase]
+	score_hits = []
+	score_drums = []
+	for i in int(ceil(bars / 4.0)):
+		var ph: Dictionary = phrases[i % phrases.size()]
+		var base := float(i * 4 * bb)
+		for h in ph["coups"]:
+			if float(h[0]) + base < score_len:
+				score_hits.append({"beat": base + float(h[0]), "kind": str(h[1]), "phrase": i})
+		var flood: bool = ph.get("deluge", false)
+		var wave_bars: Array = ph.get("ondes", pw["ondes"])
+		for m in 4:
+			var bar_i: int = i * 4 + m
+			if bar_i >= bars:
+				continue
+			for src in ["kick", "kick_doux", "caisse", "charleston", "caisse_douce"]:
+				var hits: Array = drums[src][bar_i] if drums.has(src) and bar_i < drums[src].size() else DRUMS[src][m]
+				var kind := ""
+				var grid := 1
+				match src:
+					"kick":
+						kind = "onde" if (flood or m in wave_bars) else "pouls"
+					"kick_doux":
+						kind = "pouls"
+					"caisse":
+						kind = "roulement"
+						grid = 1 if flood else int(pw["roll_grid"])
+						if int(pw["roll"]) <= 0 and not flood:
+							continue
+					"charleston":
+						kind = "aiguille"
+						grid = 1 if flood else int(pw["spark_grid"])
+					"caisse_douce":
+						kind = "piqure"
+						if int(pw["prick"]) <= 0 and not flood:
+							continue
+				for six in hits:
+					if int(six) % grid != 0:
+						continue
+					score_drums.append({"beat": float(bar_i * bb) + float(six) / 4.0, "kind": kind, "deluge": flood})
+	score_drums.sort_custom(func(a, b): return a["beat"] < b["beat"])
+	_score_last = beats_now()
+	# Le premier coup de la boucle (le drop) part tout de suite, sans s'annoncer.
+	_drums_done = beats_now() - WAVE["lead"] - 0.01
+
+
+## Charge de la partition de la phase, en projectiles et coups par temps : ce qui doit monter à
+## chaque phase (tests). Une attaque compte quatre, une onde trois pouls.
+func score_weight() -> float:
+	var pw: Dictionary = DRUMS_POWER[phase]
+	var w := 0.0
+	for h in score_hits:
+		w += 4.0
+	for d in score_drums:
+		match d["kind"]:
+			"onde":
+				w += 3.0
+			"pouls":
+				w += 1.0
+			"roulement":
+				w += float(maxi(int(pw["roll"]), 4 if d["deluge"] else 0))
+			"aiguille":
+				w += float(int(pw["spark"]) + (1 if d["deluge"] else 0))
+			"piqure":
+				w += float(maxi(int(pw["prick"]), 1))
+	return w / maxf(1.0, score_len)
+
+
+## Temps absolu (depuis le début du morceau) du prochain coup de la partition après « after ».
+func _next_hit(after: float) -> Dictionary:
+	var loop_i := floorf((after - score_origin) / score_len)
+	for k in 2:
+		var o := score_origin + (loop_i + k) * score_len
+		for h in score_hits:
+			var at: float = o + float(h["beat"])
+			if at > after + 0.001:
+				return {"at": at, "kind": h["kind"], "phrase": h["phrase"]}
+	return {}
+
+
+## Entre deux attaques : attend que l'annonce du prochain coup doive partir, et la lance pour qu'il
+## frappe juste sur son temps. Un coup que l'attaque d'avant a trop serré est sauté.
+func _score_step() -> void:
+	var now := beats_now()
+	var after := maxf(_score_last, now + MIN_ANNOUNCE - 0.25)
+	var nxt := _next_hit(after)
+	if nxt.is_empty():
+		return
+	var kind: String = nxt["kind"]
+	# Bourgeons déjà tous éclos : des racines à la place (elles ne retiennent pas l'attaque suivante).
+	if kind == "invocation" and minions.size() >= SUMMON["max_alive"]:
+		kind = "racines"
+	var lead: float = ANNOUNCE_BEATS.get(kind, 3)
+	var left: float = nxt["at"] - now
+	if left > lead:
+		gap = (left - lead) * beat_len()
+		return
+	var planned := _next_hit(_score_last)
+	if not planned.is_empty() and planned["at"] < nxt["at"] - 0.001:
+		score_skipped += 1
+	_score_last = nxt["at"]
+	if cadence() < 0.999:
+		_rooted_skip = not _rooted_skip
+		if _rooted_skip:
+			return
+	score_played += 1
+	_begin(kind, nxt["at"])
+	cycle += 1
+
+
+## La batterie : ondes, pouls et piqûres s'annoncent avant leur coup, épines et aiguilles partent
+## sur le coup même.
+func _drums_step() -> void:
+	var now := beats_now()
+	var pw: Dictionary = DRUMS_POWER[phase]
+	var loop_i := floorf((_drums_done - score_origin) / score_len)
+	for k in 2:
+		var o := score_origin + (loop_i + k) * score_len
+		for d in score_drums:
+			var at: float = o + float(d["beat"])
+			var lead := 0.0
+			match d["kind"]:
+				"onde":
+					lead = WAVE["lead"]
+				"pouls":
+					lead = PULSE["lead"]
+				"piqure":
+					lead = PRICK["lead"]
+			var start: float = at - lead
+			if start <= _drums_done or start > now:
+				continue
+			var flood: bool = d.get("deluge", false)
+			drums_played[d["kind"]] = int(drums_played.get(d["kind"], 0)) + 1
+			match d["kind"]:
+				"onde":
+					_launch_wave((at - now) * beat_len(), flood)
+				"pouls":
+					_launch_wave((at - now) * beat_len(), false, true)
+				"roulement":
+					_roll(maxi(int(pw["roll"]), 4 if flood else 0))
+				"aiguille":
+					_spark(int(pw["spark"]) + (1 if flood else 0))
+				"piqure":
+					_prick((at - now) * beat_len(), maxi(int(pw["prick"]), 1))
+	_drums_done = now
+
+
+## Une onde de ronces qui partira dans « fuse » s, sur le coup de grosse caisse ; « small » : un pouls.
+func _launch_wave(fuse: float, flood: bool, small := false) -> void:
+	if waves.size() >= WAVE["max"]:
+		return
+	var to: Vector2 = main.player.position - anchor
+	var base := to.angle() if to.length() > 1.0 else PI / 2.0
+	if small:
+		base = _roll_spin + float(_wave_count) * 0.9
+	elif _wave_count % 2 == 1:
+		# Une onde sur deux s'ouvre devant le joueur ; l'autre juste à côté : un pas de côté sur le temps.
+		base += (WAVE["gap"] * 0.5 + WAVE["step"]) * (1.0 if _wave_count % 4 == 1 else -1.0)
+	if flood:
+		base += 0.35 * sin(float(_wave_count))
+	var gaps: Array = []
+	for i in WAVE["gaps"]:
+		gaps.append(base + TAU * i / WAVE["gaps"])
+	var reach := float(DRUMS_POWER[phase]["pulse"]) if small else INF
+	waves.append({"r": radius * 0.9, "fuse": maxf(0.0, fuse), "total": maxf(0.05, fuse), "gaps": gaps, "hit": false, "reach": reach, "small": small})
+	if not small:
+		_wave_count += 1
+
+
+## Une caisse claire : des épines en spirale, une par bras.
+func _roll(arms: int) -> void:
+	if arms <= 0:
+		return
+	_roll_spin += ROLL["spin"]
+	var to: Vector2 = main.player.position - anchor
+	var base := (to.angle() if to.length() > 1.0 else 0.0) + _roll_spin
+	for i in arms:
+		var dir := Vector2.from_angle(base + TAU * i / arms)
+		thorns.append({"pos": anchor + dir * radius * 0.85, "vel": dir * ROLL["speed"], "r": ROLL["radius"], "dmg": ROLL["damage"], "size": 0.7})
+
+
+## Un charleston : une aiguille par jet, le jet tourne d'un pas à chaque coup.
+func _spark(n: int) -> void:
+	_spark_angle += SPARK["step"]
+	for i in n:
+		var dir := Vector2.from_angle(_spark_angle + TAU * i / n)
+		thorns.append({"pos": anchor + dir * radius * 0.8, "vel": dir * SPARK["speed"], "r": SPARK["radius"], "dmg": SPARK["damage"], "size": 0.45})
+
+
+## Une caisse douce : de petites racines pointent autour du joueur, « fuse » s plus tard.
+func _prick(fuse: float, n := 1) -> void:
+	var p: Vector2 = main.player.position
+	var a0 := _prick_rng.randf() * TAU
+	for i in n:
+		if pricks.size() >= PRICK["max"]:
+			return
+		var at := p + Vector2.from_angle(a0 + TAU * i / n) * _prick_rng.randf_range(PRICK["near"], PRICK["far"])
+		pricks.append({"pos": _in_arena(at, PRICK["radius"]), "fuse": maxf(0.05, fuse), "total": maxf(0.05, fuse), "burst": -1.0})
+
+
+func _update_pricks(delta: float) -> void:
+	if pricks.is_empty():
+		return
+	var p = main.player
+	var kept: Array = []
+	for r in pricks:
+		if r["burst"] < 0.0:
+			r["fuse"] -= delta
+			if r["fuse"] <= 0.0:
+				r["burst"] = 0.0
+				if p.position.distance_to(r["pos"]) < PRICK["radius"] + p.radius * 0.5 and p.invuln <= 0.0:
+					_hurt(PRICK["damage"], true)
+		else:
+			r["burst"] += delta
+		if r["burst"] < PRICK["burst"]:
+			kept.append(r)
+	pricks = kept
+
+
+func _in_wave_gap(wv: Dictionary, pos: Vector2, margin: float) -> bool:
+	var to := pos - anchor
+	var d := maxf(to.length(), 1.0)
+	for g in wv["gaps"]:
+		if absf(angle_difference(float(g), to.angle())) < WAVE["gap"] * 0.5 - margin / d:
+			return true
+	return false
+
+
+func _update_waves(delta: float) -> void:
+	if waves.is_empty():
+		return
+	var p = main.player
+	var limit: float = arena.radius + WAVE["width"]
+	var kept: Array = []
+	for wv in waves:
+		if wv["fuse"] > 0.0:
+			wv["fuse"] -= delta
+			if wv["fuse"] <= 0.0:
+				drum_flash = 0.0
+				if not wv["small"]:
+					main.fx.shake(1.5)
+					if not Settings.reduce_effects:
+						main.fx.ring(anchor, radius * 0.5, radius * 1.8, 0.25, Color(Art.bc("braise"), 0.8), 5.0)
+			kept.append(wv)
+			continue
+		var small: bool = wv["small"]
+		var r0: float = wv["r"]
+		var r1: float = r0 + WAVE["speed"] * delta
+		wv["r"] = r1
+		var d: float = p.position.distance_to(anchor)
+		var half: float = (PULSE["width"] if small else WAVE["width"]) * 0.5 + p.radius * 0.6
+		if not wv["hit"] and d > r0 - half and d < r1 + half and r0 < float(wv["reach"]) and not _in_wave_gap(wv, p.position, p.radius * 0.5):
+			if p.invuln <= 0.0:
+				wv["hit"] = true
+				_hurt(PULSE["damage"] if small else WAVE["damage"], true)
+		if r1 < minf(limit, float(wv["reach"]) + 40.0):
+			kept.append(wv)
+	waves = kept
 
 
 func _update_thorns(delta: float) -> void:
@@ -323,8 +789,8 @@ func _update_thorns(delta: float) -> void:
 	for th in thorns:
 		th["pos"] += th["vel"] * delta
 		var pos: Vector2 = th["pos"]
-		if pos.distance_to(p.position) < VOLLEY["radius"] + p.radius and p.invuln <= 0.0:
-			p.take_hit(VOLLEY["damage"] * damage_scale, self)
+		if pos.distance_to(p.position) < float(th.get("r", VOLLEY["radius"])) + p.radius and p.invuln <= 0.0:
+			_hurt(float(th.get("dmg", VOLLEY["damage"])), th.has("dmg"))
 			continue
 		if pos.distance_squared_to(arena.center) < limit * limit:
 			kept.append(th)
@@ -342,7 +808,7 @@ func _update_roots(delta: float) -> void:
 			if r["fuse"] <= 0.0:
 				r["burst"] = 0.0
 				if p.position.distance_to(r["pos"]) < ROOT["radius"] + p.radius * 0.5:
-					p.take_hit(ROOT["damage"] * damage_scale, self)
+					_hurt(ROOT["damage"])
 		else:
 			r["burst"] += delta
 		if r["burst"] < ROOT["burst"]:
@@ -352,6 +818,7 @@ func _update_roots(delta: float) -> void:
 
 func _enter_phase(n: int) -> void:
 	phase = n
+	score_origin = -1.0
 	transition = PHASE_PAUSE
 	cycle = 0
 	gap = 0.3
@@ -384,7 +851,7 @@ func _update_embraces(delta: float) -> void:
 		if e["flash"] >= 0.0:
 			e["flash"] += delta
 		if e["fuse"] > 0.0:
-			e["fuse"] -= delta * cadence()
+			e["fuse"] -= delta * (1.0 if e.get("sync", false) else cadence())
 			if e["fuse"] <= 0.0:
 				e["flash"] = 0.0
 				e["tick"] = EMBRACE["tick"]
@@ -392,7 +859,7 @@ func _update_embraces(delta: float) -> void:
 				main.fx.shake(0.25)
 				Sfx.play("racine", e["pos"])
 				if _on_embrace(e, p.position, p.radius * 0.5) and p.invuln <= 0.0:
-					p.take_hit(EMBRACE["damage"] * damage_scale, self)
+					_hurt(EMBRACE["damage"])
 				# Phase exaltée : une racine jaillit au centre, il faut sortir par la brèche.
 				if is_exalted_phase():
 					roots.append({"pos": e["pos"], "fuse": ROOT["fuse"], "burst": -1.0})
@@ -402,7 +869,7 @@ func _update_embraces(delta: float) -> void:
 			if e["tick"] <= 0.0:
 				e["tick"] = EMBRACE["tick"]
 				if _on_embrace(e, p.position, p.radius * 0.3) and p.invuln <= 0.0:
-					p.take_hit(EMBRACE["wall_damage"] * damage_scale, self)
+					_hurt(EMBRACE["wall_damage"])
 		if e["fuse"] > 0.0 or e["hold"] > 0.0:
 			kept.append(e)
 	embraces = kept
@@ -418,8 +885,17 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 	for th in thorns:
 		var v: Vector2 = th["vel"]
 		var u := clampf((pos - th["pos"]).dot(v) / v.length_squared(), 0.0, 1.5)
-		if (th["pos"] + v * u).distance_to(pos) < VOLLEY["radius"] + margin:
+		if (th["pos"] + v * u).distance_to(pos) < float(th.get("r", VOLLEY["radius"])) + margin:
 			best = minf(best, u)
+	for r in pricks:
+		if r["burst"] < 0.0 and pos.distance_to(r["pos"]) < PRICK["radius"] + margin:
+			best = minf(best, maxf(0.0, r["fuse"]))
+	for wv in waves:
+		var ahead: float = pos.distance_to(anchor) - float(wv["r"])
+		if pos.distance_to(anchor) > float(wv["reach"]) + margin:
+			continue
+		if ahead > -WAVE["width"] - margin and not _in_wave_gap(wv, pos, margin):
+			best = minf(best, maxf(0.0, wv["fuse"]) + maxf(0.0, ahead - margin) / WAVE["speed"])
 	for e in embraces:
 		if _on_embrace(e, pos, margin):
 			best = minf(best, maxf(e["fuse"], 0.0))
@@ -458,6 +934,9 @@ func _clear_attacks() -> void:
 	whips = []
 	buds = []
 	embraces = []
+	waves = []
+	pricks = []
+	_roots_beat = -1.0
 
 
 ## Le robot tourne autour d'elle ; tant que l'arène est large, l'anneau extérieur est hors de portée
@@ -489,6 +968,7 @@ var _life: Node2D
 
 func _ready() -> void:
 	super._ready()
+	_prick_rng.seed = 7311
 	use_tint_material()
 	# Ce qui ne prend ni la cendre ni l'éclair : la vie qui reprend à sa mort, les états.
 	_life = Layer2.new()
@@ -526,6 +1006,13 @@ func _body_xf() -> Transform2D:
 		shift = Vector2(4.0 * sin(t * 30.0), 0)
 	if transition > 0.0:
 		shift += Vector2(sin(t * 50.0), cos(t * 43.0)) * 4.0
+	# Charge sur la musique (boss_base.gd) : elle tremble de plus en plus, se gonfle sur chaque impulsion.
+	shift += charge_jitter()
+	var swell := 0.05 * charge_energy() * charge_pulse() + 0.08 * charge_overflow()
+	# Elle bat la mesure : un sursaut sur chaque grosse caisse de la partition.
+	if drum_flash >= 0.0:
+		swell += 0.05 * (1.0 - drum_flash)
+	s *= 1.0 + swell
 	var sq := Vector2(1.0 + 0.06 * crouch, 1.0 - 0.1 * crouch)
 	return Transform2D(0.0, Vector2(s * facing * sq.x, s * sq.y), 0.0, Vector2(0, radius * FEET) + shift)
 
@@ -616,6 +1103,11 @@ func draw_life(c: CanvasItem) -> void:
 	var glow := exalt_glow()
 	if glow > 0.0:
 		Exalte.aura(c, mid, radius, 1.0, (glow - 0.55) / 0.45, t)
+	# Charge sur la musique : la braise gonfle au cœur de la rose, battue par les impulsions.
+	if charge >= 0.0 and not dead:
+		var e := charge_energy()
+		var pulse := charge_pulse()
+		Ink.halo(c, heart, radius * (0.35 + 0.9 * e + 0.25 * pulse + 0.6 * charge_overflow()), Art.bc("braise"), 0.6 + 1.6 * e + 0.8 * pulse)
 	if statuses.has("saignement"):
 		Art.status(c, "saignement", mid, radius * 0.7, t * 1.25)
 		for i in int(statuses["saignement"]["stacks"]):
@@ -697,10 +1189,17 @@ func draw_marks(c: CanvasItem) -> void:
 			var fade := clampf(e["hold"] / 0.4, 0.0, 1.0)
 			c.draw_arc(e["pos"], EMBRACE["outer"], forme["debut"], forme["fin"], 40, Color(Art.c("danger"), 0.5 * fade), Art.TRAIT_FIN, true)
 			c.draw_arc(e["pos"], EMBRACE["inner"], forme["debut"], forme["fin"], 30, Color(Art.c("danger"), 0.5 * fade), Art.TRAIT_FIN, true)
+	_draw_waves(c)
+	for r in pricks:
+		var pf := {"type": "cercle", "centre": r["pos"], "rayon": PRICK["radius"]}
+		if r["burst"] < 0.0:
+			Art.telegraph(c, pf, 1.0 - clampf(r["fuse"] / maxf(float(r["total"]), 0.01), 0.0, 1.0), -1.0, t)
+		else:
+			Art.telegraph(c, pf, 1.0, clampf(r["burst"] / PRICK["burst"], 0.0, 1.0), t)
 	for r in roots:
 		var forme := {"type": "cercle", "centre": r["pos"], "rayon": ROOT["radius"]}
 		if r["burst"] < 0.0:
-			var k := 1.0 - clampf(r["fuse"] / ROOT["fuse"], 0.0, 1.0)
+			var k := 1.0 - clampf(r["fuse"] / float(r.get("total", ROOT["fuse"])), 0.0, 1.0)
 			Art.telegraph(c, forme, k, -1.0, t)
 			# Le sol se fissure là où la racine va jaillir.
 			var pos: Vector2 = r["pos"]
@@ -720,6 +1219,53 @@ func draw_marks(c: CanvasItem) -> void:
 		Ink.part(c, Transform2D.IDENTITY, gall, O.pal(), 1.6, 1.0, 0.6)
 		if k > 0.5:
 			Ink.ember(c, Transform2D.IDENTITY, Ink.leaf(b + Vector2(-size * 0.3, -size * 0.9), -0.2, size * 0.5, size * 0.25), k)
+
+
+## Ondes de ronces (grosses caisses) : pendant l'annonce, la bande se ramasse autour d'elle en
+## rouge ; partie, une couronne de ronces (tige sombre, épines d'os) qui file vers le mur, ouverte de
+## ses brèches. Les pouls, plus fins, s'éteignent vite.
+func _draw_waves(c: CanvasItem) -> void:
+	if waves.is_empty():
+		return
+	var danger := Art.c("danger")
+	var cane := Art.bc("ronce", "detail").lerp(Art.bc("ronce", "ombre"), 0.4)
+	var bone := Art.bc("os")
+	var half: float = WAVE["gap"] * 0.5
+	for wv in waves:
+		var gaps: Array = wv["gaps"].duplicate()
+		gaps.sort()
+		var fuse: float = wv["fuse"]
+		var k := 1.0 - clampf(fuse / float(wv["total"]), 0.0, 1.0) if fuse > 0.0 else 1.0
+		var small: bool = wv["small"]
+		var r: float = wv["r"] if fuse <= 0.0 else radius * (0.9 + 1.4 * (1.0 - k))
+		var reach: float = minf(arena.radius, float(wv["reach"]))
+		var full_w: float = PULSE["width"] if small else WAVE["width"]
+		var fade := 1.0
+		if fuse <= 0.0:
+			fade = clampf((reach + full_w - r) / (40.0 if small else 80.0), 0.0, 1.0)
+		for i in gaps.size():
+			var a0: float = float(gaps[i]) + half
+			var a1: float = float(gaps[(i + 1) % gaps.size()]) - half
+			if a1 <= a0:
+				a1 += TAU
+			var segs := maxi(4, int((a1 - a0) * (6.0 if small else 12.0)))
+			if fuse > 0.0:
+				c.draw_arc(anchor, r, a0, a1, segs, Color(danger, 0.25 + 0.55 * k), Art.TRAIT * (1.0 + k), true)
+				continue
+			c.draw_arc(anchor, r, a0, a1, segs, Color(Ink.encre(), 0.85 * fade), full_w * 0.7, true)
+			c.draw_arc(anchor, r, a0, a1, segs, Color(cane, fade), full_w * 0.45, true)
+			c.draw_arc(anchor, r + full_w * 0.45, a0, a1, segs, Color(danger, 0.8 * fade), Art.TRAIT_FIN, true)
+			if small:
+				continue
+			# Épines d'os dressées le long de la couronne.
+			var n := int((a1 - a0) * r / 26.0)
+			for j in n:
+				var a := lerpf(a0, a1, (j + 0.5) / float(n))
+				var dir := Vector2.from_angle(a)
+				var foot := anchor + dir * (r - full_w * 0.2)
+				var tip := foot + dir * full_w * 0.9 + Vector2(0, -full_w * 0.5)
+				var side := dir.orthogonal() * 3.5
+				c.draw_colored_polygon(PackedVector2Array([foot + side, tip, foot - side]), Color(bone, fade))
 
 
 ## Forme d'annonce d'une étreinte : l'anneau, sans sa brèche.
@@ -776,13 +1322,15 @@ func draw_overlay(c: CanvasItem) -> void:
 		var pos: Vector2 = th["pos"]
 		var dir: Vector2 = (th["vel"] as Vector2).normalized()
 		var n := dir.orthogonal()
-		c.draw_line(pos - dir * 30.0, pos - dir * 6.0, Color(Art.c("danger"), 0.35), 6.0, true)
-		var tip := pos + dir * 15.0
-		var back := pos - dir * 9.0
-		c.draw_colored_polygon(PackedVector2Array([back + n * 5.5, tip, back]), Art.ec("epine", "clair"))
-		c.draw_colored_polygon(PackedVector2Array([back, tip, back - n * 5.5]), Art.ec("epine").darkened(0.2))
-		Art.outline(c, PackedVector2Array([back + n * 5.5, tip, back - n * 5.5]), Art.ec("epine", "sombre"), 1.2)
-		c.draw_circle(back, 2.5, Art.ec("cendre"))
+		# Épines de la batterie (spirales, aiguilles) : les mêmes, plus petites.
+		var z: float = th.get("size", 1.0)
+		c.draw_line(pos - dir * 30.0 * z, pos - dir * 6.0 * z, Color(Art.c("danger"), 0.35), 6.0 * z, true)
+		var tip := pos + dir * 15.0 * z
+		var back := pos - dir * 9.0 * z
+		c.draw_colored_polygon(PackedVector2Array([back + n * 5.5 * z, tip, back]), Art.ec("epine", "clair"))
+		c.draw_colored_polygon(PackedVector2Array([back, tip, back - n * 5.5 * z]), Art.ec("epine").darkened(0.2))
+		Art.outline(c, PackedVector2Array([back + n * 5.5 * z, tip, back - n * 5.5 * z]), Art.ec("epine", "sombre"), 1.2)
+		c.draw_circle(back, 2.5 * z, Art.ec("cendre"))
 	if attack == "fouets":
 		for w in whips:
 			var a: float = w["angle"]
@@ -804,6 +1352,17 @@ func draw_overlay(c: CanvasItem) -> void:
 	for e in embraces:
 		if e["fuse"] <= 0.0:
 			_draw_embrace(c, e)
+	for r in pricks:
+		if r["burst"] >= 0.0:
+			var kp := clampf(r["burst"] / PRICK["burst"], 0.0, 1.0)
+			var risep := maxf(0.08, sin(kp * PI))
+			for i in 3:
+				var a: float = TAU * i / 3.0 + float(r["pos"].x) * 0.02
+				var foot: Vector2 = r["pos"] + Vector2.from_angle(a) * PRICK["radius"] * 0.35 * Vector2(1.0, 0.6)
+				var tip := foot + Vector2(cos(a) * 6.0, -34.0 * risep)
+				var spike := PackedVector2Array([foot + Vector2(-5, 0), tip, foot + Vector2(5, 0)])
+				Art.outline(c, spike, Art.bc("encre"), Art.TRAIT_FIN)
+				c.draw_colored_polygon(spike, Art.bc("ronce", "detail"))
 	for r in roots:
 		if r["burst"] >= 0.0:
 			var pos: Vector2 = r["pos"]
