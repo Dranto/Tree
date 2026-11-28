@@ -21,6 +21,8 @@ const BED_DIR := "res://assets/ambience/"
 ## Sons du boss reconnus (clé de « boss » → moment du combat).
 ## « exalte » : entrée dans la phase exaltée (cycle 2 et après, point d'accroche « boss_exalte »).
 const BOSS_KEYS := ["eveil", "phase", "mort", "exalte"]
+## Moments qu'un boss peut ne pas avoir (la Flétrissure n'est pas encore exaltée : son de phase à la place).
+const BOSS_OPTIONAL := ["exalte"]
 const SHAPES := ["dot", "glow", "streak", "drop", "chip", "feather"]
 
 
