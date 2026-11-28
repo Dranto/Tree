@@ -426,6 +426,7 @@ func music_waiting() -> bool:
 
 const MusicSynth = preload("res://scripts/music_synth.gd")
 const BossSyncRef = preload("res://scripts/boss_sync.gd")
+const ExalteArt = preload("res://scripts/boss_art/exalte.gd")
 ## Part de vie où commence la phase exaltée, si cycles.json ne la donne pas.
 const EXALTED_PHASE_AT := 0.22
 ## Durée d'un temps de la musique des boss de région (4 par mesure).
@@ -527,6 +528,16 @@ func exalt_glow() -> float:
 		return 0.0
 	var u := fposmod(loop_time() / LOOP_BEAT, 1.0)
 	return 0.55 + 0.45 * pow(1.0 - u, 3.0)
+
+
+## Aura de la phase exaltée, à dessiner par le boss autour de son corps (coordonnées de « ci ») :
+## la couronne de flammes d'encre bordées de braise commune aux boss (boss_art/exalte.gd), qui bat sur
+## les temps de la musique. Rien hors de cette phase.
+func draw_exalt_aura(ci: CanvasItem, at: Vector2, r: float) -> void:
+	var g := exalt_glow()
+	if g <= 0.0:
+		return
+	ExalteArt.aura(ci, at, r, 1.0, (g - 0.55) / 0.45, loop_clock)
 
 
 # --- À écrire dans chaque boss ---

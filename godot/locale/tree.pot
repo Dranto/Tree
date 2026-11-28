@@ -7076,24 +7076,31 @@ msgid "La Phalène de verre"
 msgstr ""
 
 #. data/regions/aube.json › aube › boss › phases
+#. data/regions/aube.json › aube › boss › phases_exaltees
 #. data/regions/racine.json › racine › boss › phases
+#. data/regions/racine.json › racine › boss › phases_exaltees
 #. data/regions/ronce.json › ronce › boss › phases
 #. data/regions/ronce.json › ronce › boss › phases_exaltees
-#. data/regions/seve.json › seve › boss › phases
-#. data/regions/spore.json › spore › boss › phases
-#. … et 3 autres
+#. … et 6 autres
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1}"
 msgstr ""
 
 #. data/regions/aube.json › aube › boss › phases
+#. data/regions/aube.json › aube › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la Phalène brise la lumière"
 msgstr ""
 
 #. data/regions/aube.json › aube › boss › phases
+#. data/regions/aube.json › aube › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la lumière tombe du ciel"
+msgstr ""
+
+#. data/regions/aube.json › aube › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : le vitrail se brise"
 msgstr ""
 
 #. data/regions/aube.json › aube › map_name
@@ -7145,13 +7152,20 @@ msgid "L'Ancien pétrifié"
 msgstr ""
 
 #. data/regions/racine.json › racine › boss › phases
+#. data/regions/racine.json › racine › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la cime se fend"
 msgstr ""
 
 #. data/regions/racine.json › racine › boss › phases
+#. data/regions/racine.json › racine › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la forêt se referme"
+msgstr ""
+
+#. data/regions/racine.json › racine › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : la pierre se fend"
 msgstr ""
 
 #. data/regions/racine.json › racine › map_name
@@ -7272,13 +7286,20 @@ msgid "Le Saule exsangue"
 msgstr ""
 
 #. data/regions/seve.json › seve › boss › phases
+#. data/regions/seve.json › seve › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : l'étang se vide"
 msgstr ""
 
 #. data/regions/seve.json › seve › boss › phases
+#. data/regions/seve.json › seve › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : le Saule boit la vallée"
+msgstr ""
+
+#. data/regions/seve.json › seve › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : le Saule se gorge"
 msgstr ""
 
 #. data/regions/seve.json › seve › map_name
@@ -7899,8 +7920,12 @@ msgstr ""
 msgid "Exaltation"
 msgstr ""
 
-#. scripts/boss_base.gd:626
+#. scripts/boss_base.gd:644
 msgid "Entravée"
+msgstr ""
+
+#. scripts/boss_seve.gd:241
+msgid "Accroché !"
 msgstr ""
 
 #. scripts/boss_vent.gd:140

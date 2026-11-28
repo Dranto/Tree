@@ -1,34 +1,32 @@
-## Film des boss exaltés (NG+, jalon 14 B1) : pour chaque boss, l'entrée dans la phase exaltée puis
-## l'attaque nouvelle jouée deux fois, dans le vrai jeu, au cycle imposé par « --cycle=2 ». Une image
-## sur trois enregistrée. Rien n'est comparé : c'est un outil (GIF assemblés par ffmpeg à la main).
+## Film des boss exaltés (NG+, jalon 14) : pour chaque boss de région, l'entrée dans la phase exaltée
+## puis quelques secondes de cette phase (son attaque nouvelle en tête), joués dans le vrai jeu au cycle
+## imposé (Cycles.forced = 2). Une image sur trois enregistrée. Rien n'est comparé : c'est un outil.
 ##
 ## Lancer : tools/godot.sh --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 \
-##   res://tests/visual/exalte_film.tscn -- --cycle=2 --bosses=ronce,spore,vent --out=DOSSIER
+##   res://tests/visual/exalte_film.tscn -- --bosses=seve,aube,racine --out=DOSSIER
 extends Node
 
 const MainScene = preload("res://scenes/main.tscn")
 const Regions = preload("res://scripts/regions.gd")
 
-## Images de jeu (60 i/s) : entrée dans la phase exaltée, puis au plus LIMIT images d'attaque.
-const ENTRY := 150
-const LIMIT := 900
+const BOSSES := ["ronce", "spore", "vent", "seve", "aube", "racine"]
+## Images de jeu (60 i/s) filmées dans la phase exaltée.
+const LENGTH := 720
 
 var main
 var out_dir := "res://tests/visual/out/exalte_film"
 var shot := 0
-var every := 3
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	var bosses: Array = ["ronce", "spore", "vent"]
+	var bosses: Array = BOSSES.duplicate()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--bosses="):
 			bosses = Array(arg.get_slice("=", 1).split(","))
 		elif arg.begins_with("--out="):
 			out_dir = arg.get_slice("=", 1)
-		elif arg.begins_with("--every="):
-			every = maxi(1, int(arg.get_slice("=", 1)))
+	get_node("/root/Cycles").forced = 2
 	main = MainScene.instantiate()
 	main.autotest = true
 	main.autotest_shots = []
@@ -64,52 +62,29 @@ func _film(id: String) -> void:
 	if not is_instance_valid(arena.get("boss")) or arena.boss.dead:
 		arena._start_fight()
 	var boss = arena.boss
-	await _frames(int(boss.intro / (1.0 / 60.0)) + 5)
-	# Jusqu'à la phase exaltée, sans filmer les phases 2 et 3.
-	for want in [2, 3, 4]:
-		if want - 2 >= boss.phase_limits.size():
-			break
-		boss.hp = boss.max_hp * (float(boss.phase_limits[want - 2]) - 0.01)
-		for i in 600:
-			if boss.phase == want and (want == 4 or boss.transition <= 0.0):
-				break
-			await _frames(1)
-	await _record(id, ENTRY, Callable())
-	# L'attaque nouvelle, deux fois de suite.
-	boss.cycle = 0
-	var seen := 0
-	var was := false
-	var n := 0
-	while seen < 2 and n < LIMIT and is_instance_valid(boss) and not boss.dead:
-		await _record(id, 1, Callable())
-		n += 1
-		var on: bool = boss.attack == boss.EXALTED_ATTACK
-		if was and not on:
-			seen += 1
-		was = on
-	if is_instance_valid(boss):
-		boss.take_damage(boss.hp + 1.0, false)
-	await _record(id, 60, Callable())
-	print("FILM %s : %d images" % [id, shot])
 	await _frames(200)
-
-
-var _frame := 0
-
-
-func _record(id: String, n: int, _cb: Callable) -> void:
-	var p = main.player
-	for f in n:
-		p.invuln = 0.5
+	var at: float = boss.phase_limits[boss.phase_limits.size() - 1]
+	boss.take_damage(boss.hp - boss.max_hp * at + 1.0, false)
+	for f in LENGTH:
+		if not is_instance_valid(boss) or boss.dead:
+			break
+		boss.hp = maxf(boss.hp, boss.max_hp * 0.15)
+		# Le héros tourne lentement autour du boss (sans tirer), touché mais jamais à terre.
+		var a := f / 60.0 * 0.5
+		p.position = arena.center + Vector2(cos(a), sin(a) * 0.8) * 230.0
 		p.hp = Game.stats["max_hp"]
+		p.fire_cd = 1.0
 		await _frames(1)
-		_frame += 1
-		if _frame % every == 0:
+		if f % 3 == 0:
 			await RenderingServer.frame_post_draw
 			var img := get_viewport().get_texture().get_image()
 			img.convert(Image.FORMAT_RGB8)
 			img.save_png(ProjectSettings.globalize_path("%s/%s/%03d.png" % [out_dir, id, shot]))
 			shot += 1
+	if is_instance_valid(boss):
+		boss.take_damage(boss.hp + 1.0, false)
+	await _frames(150)
+	print("FILM %s : %d images" % [id, shot])
 
 
 func _frames(n: int) -> void:
