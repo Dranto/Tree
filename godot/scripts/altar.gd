@@ -163,9 +163,8 @@ func activate() -> void:
 	Game.flags[flag()] = true
 	Game.flags[flag() + "_vu"] = true
 	Game.grant_points(int(data.get("points", 1)), kind, flag())
-	var g := str(data.get("graft", ""))
-	if g == "":
-		g = Game.roll_graft(kind)
+	# La greffe prévue ; au New Game+, une greffe de cycle si on l'a déjà (Game.reward_graft).
+	var g := Game.reward_graft(str(data.get("graft", "")), kind)
 	if g != "" and not Game.has_graft(g):
 		main.drop_graft(position + Vector2(0, 46), g)
 	Sfx.play("coeur", position)

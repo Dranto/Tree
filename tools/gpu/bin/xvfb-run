@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Rendu GPU (machine GPU OVH, docs/gpu-ovh.md) : remplace xvfb-run dans le PATH. L'écran virtuel
+# reste Xvfb (même taille, mêmes options), mais Godot dessine sur la carte NVIDIA grâce à VirtualGL
+# (vglrun, arrière-plan EGL : pas de serveur X sur la carte, plusieurs Godot en parallèle possibles).
+# Toute version de tools/godot.sh en profite, y compris celle d'une autre copie du dépôt (base d'un
+# banc en paires, « avant » d'un film avant/après) : les deux côtés sont rendus de la même façon.
+#
+# Activé par : export PATH="<dépôt>/tools/gpu/bin:$PATH" (fait par le workflow « Rendus GPU »).
+# GPU_CARD=/dev/dri/cardN : la carte à utiliser, si la détection automatique se trompe.
+# GODOT_GPU=0 : rendu logiciel comme avant (tests visuels : leurs références sont en rendu logiciel).
+# Sans carte NVIDIA ou sans vglrun : rendu logiciel, avec un avertissement.
+set -euo pipefail
+self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Le vrai xvfb-run : le premier du PATH qui n'est pas ce script.
+real=""
+IFS=: read -ra dirs <<<"$PATH"
+for d in "${dirs[@]}"; do
+  [ -n "$d" ] || continue
+  [ "$(cd "$d" 2>/dev/null && pwd)" = "$self_dir" ] && continue
+  if [ -x "$d/xvfb-run" ]; then real="$d/xvfb-run"; break; fi
+done
+[ -n "$real" ] || { echo "xvfb-run introuvable (apt install xvfb)" >&2; exit 127; }
+
+# Carte NVIDIA (vendeur 0x10de) : la machine virtuelle d'OVH a aussi une carte VGA émulée.
+# GPU_CARD=/dev/dri/cardN force la carte si la détection se trompe.
+card="${GPU_CARD:-}"
+[ -n "$card" ] || for c in /sys/class/drm/card[0-9]*; do
+  [ -f "$c/device/vendor" ] || continue
+  case "$c" in *-*) continue ;; esac   # card0-HDMI-A-1 & co : des sorties, pas des cartes
+  if [ "$(cat "$c/device/vendor")" = "0x10de" ]; then card="/dev/dri/$(basename "$c")"; break; fi
+done
+
+if [ "${GODOT_GPU:-1}" = "0" ] || [ -z "$card" ] || ! command -v vglrun >/dev/null; then
+  if [ "${GODOT_GPU:-1}" != "0" ]; then
+    echo "Rendu GPU indisponible (carte NVIDIA : ${card:-aucune}, vglrun : $(command -v vglrun || echo absent)) : rendu logiciel" >&2
+  fi
+  exec "$real" "$@"
+fi
+
+# Sépare les options de xvfb-run (certaines prennent une valeur) de la commande à lancer.
+opts=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -s|-n|-f|-e|-p|-w) opts+=("$1" "$2"); shift 2 ;;
+    --) shift; break ;;
+    -*) opts+=("$1"); shift ;;
+    *) break ;;
+  esac
+done
+
+# Les outils exportent LIBGL_ALWAYS_SOFTWARE=1 (rendu logiciel de mesa) : inutile, et il pourrait
+# faire choisir à VirtualGL le périphérique logiciel de mesa au lieu de la carte.
+unset LIBGL_ALWAYS_SOFTWARE GALLIUM_DRIVER
+export VGL_DISPLAY="$card"
+# Sans fenêtre vue par personne : pas de compression ni de transport, seulement la recopie dans Xvfb.
+export VGL_COMPRESS="${VGL_COMPRESS:-proxy}"
+echo "Rendu GPU : $card (VirtualGL)" >&2
+exec "$real" "${opts[@]}" vglrun -d "$card" "$@"
