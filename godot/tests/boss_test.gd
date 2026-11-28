@@ -131,7 +131,11 @@ func _run() -> void:
 				arena.radius, Engine.time_scale, paused])
 		check(shrunk, "en phase 3 l'arène rétrécit")
 	else:
-		await _steps(120)
+		# Les coups automatiques du héros ne doivent pas l'achever pendant l'attente.
+		for i in 120:
+			if is_instance_valid(boss):
+				boss.hp = maxf(boss.hp, boss.max_hp * 0.25)
+			await physics_frame
 		check(arena.radius == arena.max_radius, "en phase 3 l'arène garde sa taille (pas de resserrement dans cette région)")
 	if boss.exalted:
 		print("Cycle exalté")
