@@ -1307,6 +1307,7 @@ func _make_art() -> void:
 				FinaleArt.draw_arm(ci, Transform2D.IDENTITY, i, ARMS, a[0], a[1], a[2], a[3], a[4], plain, pc[1]), FinaleArt.ART)
 	for key in _bakes:
 		_bakes[key].rate = 0.001
+		_bakes[key].trim = true
 	# Le sol (racines, brume) : cuit à chaque changement de phase, de forme ou de mort, sous les annonces.
 	_floor_node = Node2D.new()
 	_floor_node.name = "Sol"  # i18n: non
@@ -1319,6 +1320,7 @@ func _make_art() -> void:
 	_floor_bake = LiveBake.new(self, Rect2(Vector2(-420, -120) * s, Vector2(840, 260) * s), func(ci):
 		FinaleArt.draw_floor_static(ci, Vector2.ZERO, radius, phase, _floor_key[1], _floor_key[2]))
 	_floor_bake.rate = 0.001
+	_floor_bake.trim = true
 
 
 ## Demande la cuisson d'une partie si sa pose a changé (args : ce que son dessin lit).
