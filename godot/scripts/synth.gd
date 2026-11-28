@@ -37,7 +37,7 @@ const VERSION := 3
 const SOUNDS := {
 	# --- Combat : coups, critiques, morts ------------------------------------------------------------------
 	# Tir de base : un « tock » de bois et un souffle bref.
-	"tir": {"peak": 0.34, "verb": 0.06, "room": 0.3, "layers": [
+	"tir": {"peak": 0.34, "verb": 0.06, "room": 0.3, "variants": 3, "layers": [
 		{"wave": NOISE, "dur": 0.06, "att": 0.002, "filter": "bp", "cut": [1800.0, 800.0], "vol": 0.6, "res": 0.45, "decay": 2.2},
 		{"inst": "drum", "f0": 260.0, "f1": 140.0, "dur": 0.07, "vol": 0.36, "noise": 0.3, "cut": 1500.0}]},
 	# Un coup (Ronce et l'oasis) : un claquement de bois, des échardes et un coup sourd.
@@ -110,7 +110,7 @@ const SOUNDS := {
 		{"inst": "choir", "vowel": "a", "f0": 155.6, "notes": [0, 7], "dur": 1.1, "vol": 0.35},
 		{"wave": "grain", "dur": 0.7, "att": 0.15, "density": 90.0, "grain": 0.02, "cut": [700.0, 1800.0], "res": 0.3, "vol": 0.25}]},
 	# Fouet de ronce : la tige fend l'air (souffle qui monte) puis claque sec au bout, avec un pizz grave.
-	"fouet": {"peak": 0.62, "verb": 0.12, "room": 0.4, "layers": [
+	"fouet": {"peak": 0.62, "verb": 0.12, "room": 0.4, "variants": 3, "layers": [
 		{"wave": NOISE, "dur": 0.3, "att": 0.2, "filter": "bp", "cut": [350.0, 2400.0], "res": 0.55, "vol": 0.7, "decay": 3.0},
 		{"wave": "grain", "dur": 0.05, "delay": 0.28, "att": 0.001, "density": 900.0, "grain": 0.004, "cut": 2200.0, "res": 0.4, "vol": 1.0, "decay": 2.5},
 		{"inst": "drum", "f0": 180.0, "f1": 90.0, "dur": 0.12, "delay": 0.28, "noise": 0.4, "cut": 1500.0, "vol": 0.55},
@@ -298,7 +298,7 @@ const SOUNDS := {
 		{"inst": "pluck", "f0": 196.0, "notes": [0, 4, 7, 12, 16], "step": 0.1, "dur": 0.9, "tone": 0.7, "vol": 0.4, "delay": 1.0}]},
 	# --- Sève (vie, eau, régénération) : gouttes, clochettes, eau vive. -------------------------------------
 	# Goutte de sève (attaque) : un ploc et une note de kalimba.
-	"seve_goutte": {"peak": 0.45, "verb": 0.3, "room": 0.5, "layers": [
+	"seve_goutte": {"peak": 0.45, "verb": 0.3, "room": 0.5, "variants": 3, "layers": [
 		{"wave": SINE, "f0": 900.0, "f1": 420.0, "dur": 0.12, "att": 0.002, "vol": 0.7, "decay": 2.0},
 		{"inst": "mallet", "kind": "kalimba", "f0": 622.3, "notes": [0], "step": 0.0, "dur": 0.25, "vol": 0.3}]},
 	# Une pousse : arpège de kalimba (mib lydien) et feuilles qui se déplient.
@@ -364,7 +364,7 @@ const SOUNDS := {
 		{"wave": "grain", "dur": 0.35, "att": 0.005, "density": 140.0, "grain": 0.008, "cut": [1600.0, 700.0], "res": 0.4, "vol": 0.4},
 		{"inst": "mallet", "kind": "marimba", "f0": 130.8, "notes": [0, -2, -5], "step": 0.09, "dur": 0.4, "vol": 0.35}]},
 	# Massue de bois (attaque de Racine) : un coup de tambour, du gravier.
-	"racine_massue": {"peak": 0.75, "verb": 0.2, "room": 0.5, "layers": [
+	"racine_massue": {"peak": 0.75, "verb": 0.2, "room": 0.5, "variants": 3, "layers": [
 		{"inst": "drum", "f0": 150.0, "f1": 45.0, "dur": 0.38, "vol": 0.6, "noise": 0.4, "cut": 800.0},
 		{"wave": NOISE, "dur": 0.22, "att": 0.002, "filter": "lp", "cut": [1400.0, 220.0], "vol": 0.5},
 		{"wave": "grain", "dur": 0.22, "att": 0.01, "density": 140.0, "grain": 0.008, "cut": [1200.0, 500.0], "res": 0.4, "vol": 0.35, "decay": 2.0}]},
@@ -460,7 +460,7 @@ const SOUNDS := {
 		{"inst": "mallet", "kind": "bell", "f0": 233.1, "notes": [0], "step": 0.0, "dur": 2.2, "vol": 0.35, "delay": 1.3}]},
 	# --- Aube (lumière, éclat, cloches) : clair, cristallin. -------------------------------------------------
 	# Rayon (attaque d'Aube) : un verre qui chante bref, une lueur qui passe.
-	"aube_rayon": {"peak": 0.42, "verb": 0.2, "room": 0.5, "layers": [
+	"aube_rayon": {"peak": 0.42, "verb": 0.2, "room": 0.5, "variants": 3, "layers": [
 		{"inst": "tone", "tone": "glass", "f0": 440.0, "notes": [0], "step": 0.0, "dur": 0.18, "vol": 0.4},
 		{"wave": NOISE, "dur": 0.1, "att": 0.02, "filter": "bp", "cut": [900.0, 1800.0], "vol": 0.3, "res": 0.4},
 		{"inst": "mallet", "kind": "glock", "f0": 440.0, "notes": [7], "step": 0.0, "dur": 0.25, "vol": 0.2}]},

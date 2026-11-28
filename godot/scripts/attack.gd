@@ -49,10 +49,12 @@ static func _stats() -> Dictionary:
 	return g.stats if g != null else {}
 
 
+## Son d'une forme d'attaque : dans le groupe « attaque » de Sfx, qui baisse les attaques cumulées qui partent
+## sans cesse (sfx.gd › GROUP_*).
 static func _sfx(id: String) -> void:
 	var s = _node("Sfx")
 	if s != null:
-		s.play(id)
+		s.play(id, Vector2.INF, 1.0, "attaque")
 
 
 static func data() -> Dictionary:

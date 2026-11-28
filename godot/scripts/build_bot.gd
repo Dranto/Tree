@@ -98,6 +98,13 @@ static func from_cmdline():
 	if wanted == "":
 		return null
 	var all := load_all()
+	# « rayon+lames » : deux builds mêlés (cibles alternées, choix réunis, branche du premier), pour mesurer
+	# un build hybride sans l'ajouter à builds.json (ex. le son d'un build Aube + Vent, tools/sons-fatigue.sh).
+	if "+" in wanted:
+		var mixed := _mix(all, wanted.split("+"))
+		if mixed.is_empty():
+			return null
+		all[wanted] = mixed
 	if not all.has(wanted):
 		push_error("Build inconnu « %s » (dans %s : %s)" % [wanted, BUILDS_PATH, ", ".join(all.keys())])
 		return null
@@ -115,6 +122,27 @@ static func from_cmdline():
 	bot.start_level = level if (not is_run or freeze) else 1
 	bot.freeze = is_run and freeze
 	return bot
+
+
+static func _mix(all: Dictionary, names: Array) -> Dictionary:
+	for n in names:
+		if not all.has(n):
+			push_error("Build inconnu « %s » (dans %s : %s)" % [n, BUILDS_PATH, ", ".join(all.keys())])
+			return {}
+	var out := {"name": "+".join(names), "branch": all[names[0]].get("branch", "ronce"), "style": all[names[0]].get("style", "distance"),
+		"opening": [], "targets": [], "choices": {}}
+	for key in ["opening", "targets"]:
+		var lists: Array = names.map(func(n): return all[n].get(key, []))
+		var longest := 0
+		for l in lists:
+			longest = maxi(longest, l.size())
+		for i in longest:
+			for l in lists:
+				if i < l.size() and not l[i] in out[key]:
+					out[key].append(l[i])
+	for n in names:
+		out["choices"].merge(all[n].get("choices", {}))
+	return out
 
 
 static func load_all() -> Dictionary:

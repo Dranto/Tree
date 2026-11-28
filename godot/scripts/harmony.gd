@@ -222,16 +222,50 @@ static func best_shift(notes: Array, ctx: Dictionary, wanted := 0.0) -> int:
 	return best
 
 
+## Transpositions qui gardent un son juste, pour varier un son répété (sfx.gd) : la meilleure (best_shift)
+## d'abord, puis, à au plus VARY_RANGE demi-tons d'elle, celles dont toutes les notes tombent sur l'accord qui
+## sonne (comme best_shift, une note de l'accord compte juste), puis celles dont toutes les notes sont dans la
+## gamme sans frotter à un demi-ton de l'accord ; les plus
+## proches d'abord dans chaque groupe, au plus VARY_COUNT en tout. Un son répété en rafale « marche » ainsi sur
+## les notes justes au lieu de rejouer la même note.
+const VARY_RANGE := 5
+const VARY_COUNT := 3
+
+static func shifts_in_key(notes: Array, ctx: Dictionary, wanted := 0.0) -> Array:
+	var best := best_shift(notes, ctx, wanted)
+	var on_chord: Array = []
+	var in_scale: Array = []
+	for d in range(-VARY_RANGE, VARY_RANGE + 1):
+		var s := best + d
+		if d == 0 or _wrong(notes, s, ctx) > 0:
+			continue
+		var worst := 0.0
+		for n in notes:
+			worst = maxf(worst, note_cost(posmod(int(roundf(float(n[0]))) + s, 12), ctx))
+		if worst <= 0.0001 and not ctx.get("chord", []).is_empty():
+			on_chord.append(s)
+		elif worst <= COST_SCALE + 0.0001:
+			in_scale.append(s)
+	var closer := func(a, b): return absi(a - best) < absi(b - best) or (absi(a - best) == absi(b - best) and a > b)
+	on_chord.sort_custom(closer)
+	in_scale.sort_custom(closer)
+	return ([best] + on_chord + in_scale).slice(0, VARY_COUNT)
+
+
 ## Facteur de vitesse (pitch_scale) qui joue la variante « variant » du son « name » dans la gamme de ce qui
 ## sonne : transposition, plus le retour sur la note tempérée et l'annulation du décalage de la variante.
 ## pitch : hauteur demandée par le jeu (1 = normale). Un son sans note garde « pitch ».
-static func pitch_for(name: String, ctx: Dictionary, variant := 0, pitch := 1.0) -> float:
+## step : rang dans une rafale du même son (0 : la meilleure note ; 1, 2… : les autres notes de shifts_in_key).
+static func pitch_for(name: String, ctx: Dictionary, variant := 0, pitch := 1.0, step := 0) -> float:
 	var notes := notes_of(name)
 	if notes.is_empty():
 		return pitch
 	var wanted := 12.0 * log(maxf(pitch, 0.01)) / log(2.0)
 	var vp := 1.0 + float(VARIANT_PITCH[variant % VARIANT_PITCH.size()])
 	var shift := best_shift(notes, ctx, wanted)
+	if step > 0:
+		var all := shifts_in_key(notes, ctx, wanted)
+		shift = all[step % all.size()]
 	return pow(2.0, (float(shift) - detune_of(notes)) / 12.0) / vp
 
 
