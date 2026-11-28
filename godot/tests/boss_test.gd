@@ -140,15 +140,17 @@ func _run() -> void:
 		boss.hp = minf(boss.hp, boss.max_hp * (at + 0.02))
 		boss.take_damage(boss.max_hp * 0.03, false)
 		# Les coups automatiques du héros ne doivent pas l'achever pendant qu'on regarde.
-		var keep := func() -> void: boss.hp = maxf(boss.hp, boss.max_hp * 0.2)
-		_place(arena.center + Vector2(0, arena.radius - 40.0))
+		var keep := func() -> void:
+			if is_instance_valid(boss):
+				boss.hp = maxf(boss.hp, boss.max_hp * 0.2)
+		_place(arena.center + Vector2(0, arena.radius * 0.6))
 		check(await _until(func(): keep.call(); return boss.phase == 4, 2400), "phase exaltée atteinte")
 		await _steps(2)
 		check(boss.exalted_phase_seen and boss.is_exalted_phase(), "elle est annoncée (BossBase._exalt_announce)")
 		var attack_name: String = boss.get_script().get_script_constant_map()["EXALTED_ATTACK"]
-		check(await _until(func(): keep.call(); return boss.exalted_attacks > 0, 2400), "l'attaque nouvelle « %s » est annoncée" % attack_name)
-		check(await _until(func(): keep.call(); return boss.attack != attack_name, 900), "puis elle se termine")
-		check(not boss.dead, "le boss est toujours debout")
+		check(await _until(func(): keep.call(); return is_instance_valid(boss) and boss.exalted_attacks > 0, 2400), "l'attaque nouvelle « %s » est annoncée" % attack_name)
+		check(await _until(func(): keep.call(); return not is_instance_valid(boss) or boss.attack != attack_name, 900), "puis elle se termine")
+		check(is_instance_valid(boss) and not boss.dead and arena.state == "combat", "le combat continue, le boss est toujours debout")
 	else:
 		check(not boss.exalted and boss.phase_limits.size() == 2, "cycle 1 : ni phase exaltée ni attaque nouvelle")
 	_place(arena.center + Vector2(0, 250))
