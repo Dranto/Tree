@@ -315,13 +315,19 @@ func _begin_cycle() -> bool:
 	var lvl: int = game.level
 	var nodes: int = game.allocated.size()
 	var grafts_before: Array = game.graft_inventory.duplicate()
-	var crown_before: int = game.crown_size(game.flags)
+	var crown_before: int = game.crown_size()
 	check(game.cycle == 1 and not cycles.exalted(), "la sauvegarde est au cycle 1 (cycle %d)" % game.cycle)
 	check(game.flags.get("finale_vaincue", false) and Regions.all_purified(game.flags), "toutes les régions purifiées, finale vaincue")
 	check(game.flags.get("fin_aventure_vue", false), "la fin de l'aventure a été vue")
 	var fruit = main.cycle_fruit
-	check(fruit != null and fruit.ripe() and fruit.grown >= 1.0, "le fruit de la graine est mûr")
+	for i in 240:
+		if fruit.grown >= 1.0:
+			break
+		await physics_frame
+	var we = main.quest_ui.get("world_ending")
+	check(fruit != null and fruit.ripe() and fruit.grown >= 1.0, "le fruit de la graine est mûr (ripe %s, pousse %.2f, fin en cours %s)" % [fruit.ripe(), fruit.grown, we != null and we.active])
 	# Le héros va au fruit et s'y tient (le vrai contact : cycle_fruit.gd › _physics_process).
+	bot.hold = true   # le robot ne bouge pas : le héros se tient sur le fruit
 	main.player.position = fruit.position + Vector2(8.0, 6.0)
 	main.player.hp = float(game.stats.get("max_hp", 100.0))
 	var waited := 0
@@ -343,12 +349,13 @@ func _begin_cycle() -> bool:
 	_started_signals.clear()
 	await _new_main(path)
 	await _frames(6)
+	bot.hold = false
 	print("Cycle %d commencé" % n)
 	check(game.cycle == n and cycles.current() == n and cycles.exalted(), "cycle %d, exalté" % n)
 	check(_started_signals == [n], "Game.cycle_started(%d) émis une fois après le rechargement (%s)" % [n, str(_started_signals)])
 	check(game.level == lvl and game.allocated.size() == nodes, "niveau %d et %d nœuds gardés (niveau %d, %d nœuds)" % [lvl, nodes, game.level, game.allocated.size()])
 	check(_graft_ids({"inventory": game.graft_inventory, "ground": []}) == _graft_ids({"inventory": grafts_before, "ground": []}), "greffes gardées")
-	check(game.crown_size(game.flags) >= crown_before, "couronne gardée (%d emplacements, avant %d)" % [game.crown_size(game.flags), crown_before])
+	check(game.crown_size() >= crown_before, "couronne gardée (%d emplacements, avant %d)" % [game.crown_size(), crown_before])
 	check(not game.flags.get("finale_vaincue", false) and not Regions.all_purified(game.flags) and Regions.hearts_done("ronce", game.flags) == 0, "Cœurs, boss et finale remis à zéro")
 	check(main.player.position.length() < 10.0, "le héros repart de la graine")
 	check(main.finale.state == "fermee", "la brèche de la graine est refermée")
