@@ -19,7 +19,10 @@ const MUSIC_DIR := "res://assets/music/"
 const BED_STATES := {"mort": "dead", "vif": "alive"}
 const BED_DIR := "res://assets/ambience/"
 ## Sons du boss reconnus (clé de « boss » → moment du combat).
-const BOSS_KEYS := ["eveil", "phase", "mort"]
+## « exalte » : entrée dans la phase exaltée (cycle 2 et après, point d'accroche « boss_exalte »).
+const BOSS_KEYS := ["eveil", "phase", "mort", "exalte"]
+## Moments qu'un boss peut ne pas avoir (la Flétrissure n'est pas encore exaltée : son de phase à la place).
+const BOSS_OPTIONAL := ["exalte"]
 ## Toniques d'un morceau de boss fait à la main (« hand_track » : gamme sur laquelle les bruitages s'accordent).
 const HAND_TONICS := ["do", "do#", "ré", "mib", "mi", "fa", "fa#", "sol", "lab", "la", "sib", "si"]
 const SHAPES := ["dot", "glow", "streak", "drop", "chip", "feather"]

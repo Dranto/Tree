@@ -26,6 +26,15 @@ var _pending := 0
 var ready := false
 ## Palette du dernier rendu (Cuisson.epoch) : le mode daltonien change, la texture est refaite tout de suite.
 var _epoch := Cuisson.epoch
+## Affichage par bandes (cuissons rares seulement : corps et bras de la Flétrissure, sol) : après chaque
+## rendu, la texture est relue une fois et découpée en bandes de STRIP pixels, chacune réduite à la partie
+## où ses pixels ne sont pas transparents (± 2 pixels pour le filtrage). Le rendu logiciel paie chaque
+## pixel d'un rectangle affiché, même transparent : le corps et les bras sont vides à ~85 %. Même
+## image ; tant que les bandes du dernier rendu ne sont pas prêtes, la texture entière est affichée.
+var trim := false
+const STRIP := 16
+var _strips: Array = []
+var _strips_at := -1
 
 
 static func available() -> bool:
@@ -84,6 +93,31 @@ func update(new_key, now: float) -> void:
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	if not ready and _pending == 0:
 		_pending = 2
+	if trim:
+		_strips.clear()
+		_strips_at = Engine.get_frames_drawn() + 2
+
+
+## Relit la texture rendue et la découpe en bandes (voir trim) ; une fois par rendu, deux images après
+## la demande (le rendu est fait à la fin de l'image).
+func _make_strips() -> void:
+	_strips_at = -1
+	var img: Image = vp.get_texture().get_image() if vp.get_texture() != null else null
+	if img == null or img.is_empty():
+		return
+	var w := img.get_width()
+	var h := img.get_height()
+	var out := []
+	for y in range(0, h, STRIP):
+		var y0 := maxi(0, y - 2)
+		var y1 := mini(h, y + STRIP + 2)
+		var used := img.get_region(Rect2i(0, y0, w, y1 - y0)).get_used_rect()
+		if used.size.x <= 0:
+			continue
+		var x0 := maxi(0, used.position.x - 2)
+		var x1 := mini(w, used.end.x + 2)
+		out.append(Rect2(x0, y, x1 - x0, mini(STRIP, h - y)))
+	_strips = out
 
 
 ## Affiche la texture dans ci, le repère local du dessin posé en at. tint : couleur pour sprite_tint
@@ -91,7 +125,17 @@ func update(new_key, now: float) -> void:
 func draw(ci: CanvasItem, at := Vector2.ZERO, tint := Color.WHITE) -> void:
 	if vp == null or not ready:
 		return
-	ci.draw_texture_rect(vp.get_texture(), Rect2(at + box.position, box.size), false, tint)
+	if _strips_at >= 0 and Engine.get_frames_drawn() >= _strips_at:
+		_make_strips()
+	if _strips.is_empty() or _strips_at >= 0:
+		ci.draw_texture_rect(vp.get_texture(), Rect2(at + box.position, box.size), false, tint)
+		return
+	# Texels → repère du dessin : la texture entière couvre la boîte (même rapport que ci-dessus).
+	var tex := vp.get_texture()
+	var k := box.size / Vector2(vp.size)
+	var o := at + box.position
+	for r: Rect2 in _strips:
+		ci.draw_texture_rect_region(tex, Rect2(o + r.position * k, r.size * k), r, tint, false, false)
 
 
 func free_viewport() -> void:

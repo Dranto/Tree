@@ -28,10 +28,15 @@ TESTS=(
   "builds|--headless|"
   "cycle|--headless|"
   "boss|--headless --fixed-fps 60|"
+  "boss@seve_cycle2|--headless --fixed-fps 60|--region=seve --cycle=2"
+  "boss@aube_cycle2|--headless --fixed-fps 60|--region=aube --cycle=2"
+  "boss@racine_cycle2|--headless --fixed-fps 60|--region=racine --cycle=2"
   "boss_eclat|--headless --fixed-fps 60|"
   "boss_track|--headless|"
+  "exalte_b1|--headless --fixed-fps 60|--cycle=2"
   "death|--headless --fixed-fps 60|"
   "deaths|--headless --fixed-fps 60|"
+  "cycle_tint|--headless --fixed-fps 60|"
   "cycle_monsters|--headless --fixed-fps 60|"
   "difficulty|--headless|"
   "demo|--headless --fixed-fps 60|"
@@ -57,6 +62,7 @@ TESTS=(
   "falaises|--headless --fixed-fps 60|"
   "feel|--headless|"
   "finale|--headless --fixed-fps 60|"
+  "finale@cycle2|--headless --fixed-fps 60|--cycle=2"
   "finale_creux|--xvfb --audio-driver Dummy --fixed-fps 60|"
   "flow|--headless|"
   "foret|--headless --fixed-fps 60|"
@@ -151,11 +157,13 @@ godot_noise() {
 
 run_one() {
   local name="$1" opts="$2" args="$3"
+  # « test@variante » : le même fichier de test avec d'autres arguments (journal à part).
+  local file="${name%%@*}"
   local data="$OUT/data/$name"
   mkdir -p "$data"
   local t0=$SECONDS code
   # shellcheck disable=SC2086
-  XDG_DATA_HOME="$data" timeout -k 10 "$LIMIT" "$GODOT" $opts -s "res://tests/${name}_test.gd" ${args:+-- $args} \
+  XDG_DATA_HOME="$data" timeout -k 10 "$LIMIT" "$GODOT" $opts -s "res://tests/${file}_test.gd" ${args:+-- $args} \
     >"$OUT/$name.log" 2>&1
   code=$?
   # Une erreur de script fait échouer le test même si son code de sortie est 0.

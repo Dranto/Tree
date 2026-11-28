@@ -79,6 +79,7 @@
     "bar_color": "#f2d06b",
     "reward": {"points": 2, "graft": "greffe_aile_de_verre"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : la Phalène brise la lumière", "Phase 3 sur 3 : la lumière tombe du ciel"],
+    "phases_exaltees": ["Phase 1 sur 4", "Phase 2 sur 4 : la Phalène brise la lumière", "Phase 3 sur 4 : la lumière tombe du ciel", "Phase 4 sur 4 : le vitrail se brise"],
     "arena": {"radius": 460.0, "radius_min": 320.0, "offset": 720.0, "life_color": "#fff4cf"}
   }
 }

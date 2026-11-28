@@ -646,7 +646,9 @@ static func _saignee(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 			for i in 6:
 				var sd := Vector2.from_angle(i * TAU / 6.0 + 0.3)
 				var sn := sd.orthogonal() * 4.0 * (1.0 - bk)
-				ci.draw_colored_polygon(PackedVector2Array([q + sn, q + sd * 30.0 * b, q - sn]), Color(col, 0.9 * (1.0 - bk)))
+				# Triangle dégénéré (début ou fin de l'éclatement) : Godot refuse de le trianguler.
+				if sn.length() > 0.3 and b > 0.02:
+					ci.draw_colored_polygon(PackedVector2Array([q + sn, q + sd * 30.0 * b, q - sn]), Color(col, 0.9 * (1.0 - bk)))
 			for i in 7:
 				var la := i * TAU / 7.0 - PI / 2.0
 				var dq: Vector2 = q + Vector2.from_angle(la) * 24.0 * b + Vector2(0, 14.0 * bk * bk)
@@ -823,7 +825,9 @@ static func _chute(ci: CanvasItem, e: Dictionary, k: float) -> void:
 		return
 	var u := (k - fall) / (1.0 - fall)
 	# Silhouette qui s'efface.
-	ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, 4), 16.0 * (1.0 - u), 9.0 * (1.0 - u), 16), Color(Art.c("decor"), 0.7 * (1.0 - u)))
+	# Elle finit en point : rien à dessiner une fois réduite à rien (triangulation impossible).
+	if u < 0.98:
+		ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, 4), 16.0 * (1.0 - u), 9.0 * (1.0 - u), 16), Color(Art.c("decor"), 0.7 * (1.0 - u)))
 	for i in 10:
 		var la := -PI / 2.0 + (i - 4.5) * 0.35
 		var q := p + Vector2.from_angle(la) * (6.0 + 40.0 * Anim.ease_out(u)) + Vector2(30.0 * u * u + sin(u * 6.0 + i) * 6.0, 10.0 * u)

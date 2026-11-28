@@ -3,7 +3,7 @@
   "regions": {
     "ronce": {
       "_doc": "Ronce (le monde) : musique et ambiance de base (music_synth.gd › DEFAULTS, BED_DEFAULTS) ; ici seulement les sons de son boss.",
-      "boss": {"eveil": "ronce_boss_eveil", "phase": "ronce_boss_phase", "mort": "ronce_boss_mort"},
+      "boss": {"eveil": "ronce_boss_eveil", "phase": "ronce_boss_phase", "mort": "ronce_boss_mort", "exalte": "ronce_boss_phase"},
       "hand_track": {"tonique": "la", "mode": "eolien", "_doc": "Morceau de la Mère-Ronce fait par Antoine : la mineur, 160 BPM. Les bruitages s'accordent dessus pendant qu'il joue (harmony.gd)."}
     },
     "spore": {
@@ -53,7 +53,7 @@
         "dead": {"shape": "glow", "color": "poison/sombre", "alpha": 0.5, "vel": [4.0, -14.0], "sway": [10.0, 3.0], "size": [1.6, 3.4]},
         "alive": {"shape": "glow", "color": "poison/clair", "alpha": 0.9, "vel": [3.0, -22.0], "sway": [14.0, 4.0], "size": [1.4, 3.0]}
       },
-      "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort"}
+      "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort", "exalte": "spore_boss_phase"}
     },
     "vent": {
       "_doc": "Hauts plateaux : quintes ouvertes ; en terre vivante, un arpège vif et une mélodie qui saute haut. Combat au tambour sur cadre ; boss (Harfang) en doubles croches. Ambiance : grand vent, herbes, oiseaux. Des brins d'herbe et des rafales filent vers la droite.",
@@ -93,7 +93,7 @@
         "dead": {"shape": "streak", "color": "vent/sombre", "alpha": 0.45, "vel": [150.0, 10.0], "sway": [20.0, 6.0], "size": [1.0, 1.8], "length": 22.0, "alt": "feather", "alt_ratio": 0.08},
         "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.7, "vel": [170.0, 8.0], "sway": [24.0, 8.0], "size": [1.0, 1.8], "length": 26.0, "alt": "feather", "alt_ratio": 0.08}
       },
-      "boss": {"eveil": "vent_boss_eveil", "phase": "vent_boss_phase", "mort": "vent_boss_mort"}
+      "boss": {"eveil": "vent_boss_eveil", "phase": "vent_boss_phase", "mort": "vent_boss_mort", "exalte": "vent_boss_phase"}
     },
     "seve": {
       "_doc": "Vallée de Sève : accords majeurs amples ; en terre vivante, un arpège de gouttes et une mélodie qui coule par degrés. Combat aux percussions d'eau ; boss (Saule exsangue) en complainte mineure. Ambiance : ruisseau, gouttes, oiseaux. Des gouttes de rosée montent doucement.",
@@ -135,7 +135,7 @@
         "dead": {"shape": "drop", "color": "seve/sombre", "alpha": 0.5, "vel": [1.0, 34.0], "sway": [4.0, 4.0], "size": [1.6, 2.8]},
         "alive": {"shape": "drop", "color": "seve/clair", "alpha": 0.5, "vel": [2.0, 28.0], "sway": [5.0, 4.0], "size": [1.6, 3.0]}
       },
-      "boss": {"eveil": "seve_boss_eveil", "phase": "seve_boss_phase", "mort": "seve_boss_mort"}
+      "boss": {"eveil": "seve_boss_eveil", "phase": "seve_boss_phase", "mort": "seve_boss_mort", "exalte": "seve_boss_phase"}
     },
     "aube": {
       "_doc": "Rivage de l'Aube : quartes et quintes claires, cloches ; en terre vivante, un arpège lumineux. Combat aux percussions de métal ; boss (Phalène de verre) cristallin. Ambiance : vagues, carillons. Des éclats de lumière flottent et montent.",
@@ -176,7 +176,7 @@
         "dead": {"shape": "chip", "color": "#9a9cab", "alpha": 0.4, "vel": [3.0, 10.0], "sway": [6.0, 2.0], "size": [1.2, 2.4]},
         "alive": {"shape": "glow", "color": "#fff0b8", "alpha": 0.9, "vel": [4.0, -16.0], "sway": [10.0, 3.0], "size": [1.2, 3.0]}
       },
-      "boss": {"eveil": "aube_boss_eveil", "phase": "aube_boss_phase", "mort": "aube_boss_mort"}
+      "boss": {"eveil": "aube_boss_eveil", "phase": "aube_boss_phase", "mort": "aube_boss_mort", "exalte": "aube_boss_phase"}
     },
     "racine": {
       "_doc": "Forêt pétrifiée (Racine) : accords bas et ouverts ; en terre vivante, un arpège de bois sourd. Combat aux blocs de bois ; boss aux taïkos et toms, mode phrygien. Ambiance : bois qui grince, coups de pic, oiseaux. Des cendres de bois et des poussières de mousse flottent.",
@@ -225,7 +225,7 @@
         "dead": {"shape": "chip", "color": "#6a5a48", "alpha": 0.55, "vel": [4.0, 12.0], "sway": [8.0, 3.0], "size": [1.4, 2.8]},
         "alive": {"shape": "chip", "color": "#d8c890", "alpha": 0.85, "vel": [5.0, 10.0], "sway": [9.0, 3.0], "size": [1.4, 3.0]}
       },
-      "boss": {"eveil": "racine_boss_eveil", "phase": "racine_boss_phase", "mort": "racine_boss_mort"}
+      "boss": {"eveil": "racine_boss_eveil", "phase": "racine_boss_phase", "mort": "racine_boss_mort", "exalte": "racine_boss_phase"}
     },
     "finale": {
       "hand_track": {"tonique": "ré", "mode": "dorien", "_doc": "breakcore.mp3 (la Flétrissure) : les notes blanches (ré dorien, la mineur), mesuré sur le fichier le 28/11."},
@@ -259,7 +259,7 @@
         "dead": {"shape": "glow", "color": "#5a3a4a", "alpha": 0.45, "vel": [2.0, -10.0], "sway": [8.0, 3.0], "size": [1.4, 3.2]},
         "alive": {"shape": "glow", "color": "#ffe6a8", "alpha": 0.85, "vel": [3.0, -18.0], "sway": [12.0, 4.0], "size": [1.4, 3.4]}
       },
-      "boss": {"eveil": "finale_boss_eveil", "phase": "finale_boss_phase", "mort": "finale_boss_mort"}
+      "boss": {"eveil": "finale_boss_eveil", "phase": "finale_boss_phase", "mort": "finale_boss_mort", "exalte": "finale_boss_phase"}
     },
     "generique": {
       "_doc": "Fin et générique joués dans le monde (world_ending.gd) : seule la couche lumineuse, qui reprend le thème du monde (flûte) sur des accords clairs.",

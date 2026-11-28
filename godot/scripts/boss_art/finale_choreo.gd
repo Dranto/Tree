@@ -52,6 +52,10 @@ const KEYS := {
 	# Rejetons : la griffe racle le sol, à l'opposé du héros (les Flétris sortent derrière elle).
 	"rejetons": {"wind": {"aim": -0.4, "up": 0.35, "el": 0.7, "st": 1.0, "m": 1.1},
 		"hit": {"aim": -0.9, "up": -0.7, "el": -0.3, "st": 1.15, "m": 1.0, "dip": 1.0}},
+	# Reflux (Exaltation) : les six bras s'ouvrent grands, jusqu'au bord de l'île, puis se referment
+	# d'un coup sur elle, poings serrés : elle ramène le monde à elle.
+	"reflux": {"wind": {"aim": -0.2, "up": 0.35, "el": -0.45, "st": 1.3, "m": 1.3},
+		"hit": {"aim": 0.0, "up": -0.15, "el": 1.05, "st": 0.82, "m": 0.85}},
 }
 ## Les attaques combinées : chacun des deux bras joue son propre geste.
 const COMBO := {"tempete": ["rafale", "epines"], "floraison": ["spores", "siphon"], "aurore": ["lumiere", "racines"]}

@@ -25,7 +25,7 @@ Options :
 | `--bench-time=S` | durée de la mesure (30 s par défaut) |
 | `--hide=sol,ennemis,…` | cache des calques : la différence de temps donne leur coût. Calques : `sol`, `decor`, `fleurs`, `ennemis`, `joueur`, `acteurs`, `effets`, `ambiance`, `hud`, `monde`, `sol_ennemis`, `bord` (bord du monde), `vivant` et `vivant_dessus` (monde vivant), `competences` |
 | `--profile` | temps de chaque `_process`, `_physics_process` et `_draw`, à lancer par `tools/perf-profile.sh` |
-| `--bench-scene=coeur` | banc des pics : le siège du Cœur (vagues toutes les 6 s), jusqu'à la purification (40 morts d'un coup, vague de vie) ; 36 s, héros au build du robot du boss |
+| `--bench-scene=coeur` | banc des pics : le siège du Cœur (vagues toutes les 6 s), jusqu'à la purification (40 morts d'un coup, vague de vie) ; 36 s, héros au build du robot du boss. Préparé comme en jeu (écran de chargement `world_preload.gd`), puis le siège attend que le bord du monde et le décor en vue soient cuits (voir « Siège du Cœur et finale ») |
 | `--bench-scene=zones` | le tour des six régions : le héros marche (220 px/s, `--bench-run=V`) sur un cercle de 1 300 px autour de la graine (`--bench-orbit=R`) et franchit chaque frontière ; Flétris nés comme en jeu ; liste les images de plus de 50 ms (`A-COUP`, avec ce qui a coûté sous `--profile`). `--preparation` lance d'abord l'écran de chargement du jeu (voir « Changements de zone ») |
 | `--bench-scene=boss` | le combat de la Mère-Ronce, 60 s (`--region=<id>` : le boss de cette région, `finale` : la Flétrissure). Le combat commence quand le bord du monde, l’arène et le décor en vue sont cuits (au plus 900 images) |
 
@@ -364,3 +364,28 @@ avec son propre `user://` (caches à chaud, sauf la 1re paire, à froid) :
 Ce qui reste au-dessus de 100 ms en rendu logiciel est du rendu (cuisson des bandes du bord, carrés du
 sol), sans pic de script de plus de ~25 ms. `tests/preparation_test.gd` vérifie que tout est cuit après
 le chargement et qu'un tour des régions ne cuit plus ni Flétri, ni lieu, ni fond du bord.
+
+## Siège du Cœur et finale (jalon 14, tâche P, 28/11)
+
+Constat, en paires contre 216e79a (avant les refontes) : siège du Cœur +25 % (99e centile ×2),
+finale +18 %. Outils : recensement des SubViewport rendus à chaque image, tranches de 3 s du banc,
+`--hide`, et une sonde de l'occupation des textures cuites.
+
+- **Finale** : la Flétrissure agrandie (#182) est affichée par 20 textures cuites
+  (`boss_art/live_bake.gd` : corps, trois pièces par bras, sol) transparentes à ~85 % ; en rendu
+  logiciel, chaque pixel d'un rectangle affiché coûte, même transparent (`--hide=acteurs` : −14 ms).
+  `LiveBake.trim` : après chaque rendu, la texture est relue une fois et découpée en bandes de
+  16 px, chacune réduite à sa partie non vide (± 2 px pour le filtrage) ; seules ces bandes sont
+  affichées (`clip_uv` coupé : sinon des coutures d'un pixel). Captures de la finale identiques.
+- **Siège** : le banc posait le héros au Cœur dès la première image et mesurait les cuissons du bord
+  du monde (bandes de 2 680 × 3 000 px pendant ~8 s) et des Flétris cuits à froid (budget de 64 Mo
+  au lieu des 256 Mo du jeu préparé). Il passe maintenant par la préparation du jeu, puis attend 30
+  images sans cuisson (`main.bench_prepared`) avant de lancer le siège.
+- **Purification** : chaque fond et voile du bord dans l'état ravivé (`build_field`) prenait 20 à
+  65 ms sur le fil principal (une image gelée par fond, 20 de suite). Ils sont construits sur un
+  autre fil (`world_edge._restate_step`), et seules les tuiles à moins de 500 px de l'écran sont
+  refaites tout de suite ; les autres le sont quand la caméra en approche.
+- **Reste du siège** : le surcoût restant n'a pas de cause unique. Chaque calque de la refonte
+  coûte 4 à 8 ms par image au Cœur de Ronce (5 séries courtes, `--hide`) : sol en couches, décor
+  cuit, fleurs, monde vivant, bord du monde.
+
