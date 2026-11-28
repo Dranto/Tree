@@ -8172,7 +8172,7 @@ msgstr ""
 "%s\n"
 "Click to change skill, or drag it onto another slot."
 
-#. scripts/main.gd:1215
+#. scripts/main.gd:1221
 msgid "%s vaincu"
 msgstr "%s defeated"
 
