@@ -47,6 +47,11 @@ TAG="${SCENE:+_$SCENE}${REGIONS:+_six}${RESOLUTION:+_$RESOLUTION}"
 OUT="$ROOT/godot/autotest/bench"
 mkdir -p "$OUT"
 export LIBGL_ALWAYS_SOFTWARE=1
+# Machine GPU (tools/gpu/bin/xvfb-run dans le PATH, docs/gpu-ovh.md) : la base et la branche passent
+# toutes deux par la carte, la paire reste juste ; mais ces chiffres ne se comparent qu'entre eux.
+case "$(command -v xvfb-run)" in
+  */tools/gpu/bin/xvfb-run) if [ "${GODOT_GPU:-1}" != 0 ]; then echo "Rendu : carte graphique (machine GPU) ; ne pas comparer aux bancs en rendu logiciel"; fi ;;
+esac
 # L'import plante parfois sur la machine de la CI : tools/import.sh le relance (3 essais).
 "$ROOT/tools/import.sh" "$OUT/import.log"
 if [ -n "$BASE_DIR" ]; then
