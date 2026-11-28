@@ -11,6 +11,9 @@ signal points_granted(n: int, source: String)
 signal graft_found(id: String)
 ## Le build actif vient de changer (switch_build) : index de l'emplacement chargé.
 signal build_switched(index: int)
+## Un nouveau cycle du New Game+ commence (jalon 14) : le joueur a touché le fruit de la graine.
+## Émis une fois la scène de jeu rechargée et prête, Game.cycle déjà au nouveau numéro (voir cycles.gd).
+signal cycle_started(cycle: int)
 
 const SkillTree = preload("res://scripts/skill_tree.gd")
 const Content = preload("res://scripts/content.gd")
@@ -49,6 +52,9 @@ var active_build := 0
 ## Le joueur se tient dans le cercle d'un sanctuaire ravivé (posé par sanctuary.gd) : oublier et
 ## changer de build y sont gratuits (data/respec.json, « free_at_sanctuary »).
 var at_sanctuary := false
+## Cycle du New Game+ (jalon 14) : 1 = première aventure. Sauvegardé ; reset() le remet à 1
+## (nouvelle partie). Lire plutôt Cycles.current(), qui suit aussi « -- --cycle=N ».
+var cycle := 1
 ## Libellés des sources de points hors niveau (annonce du HUD).
 const POINT_SOURCES := {
 	"boss": "Boss vaincu", "coeur": "Cœur purifié", "autel": "Autel ravivé", # i18n
@@ -118,6 +124,7 @@ func reset() -> void:
 	builds = []
 	active_build = 0
 	at_sanctuary = false
+	cycle = 1
 	recompute()
 	tree_changed.emit()
 
