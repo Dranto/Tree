@@ -420,8 +420,9 @@ func music_waiting() -> bool:
 # PHASES[4], et la barre lit « phases_exaltees » dans le fichier de sa région (boss_arena.gd).
 # L'entrée dans la phase exaltée est annoncée (son « exalte » de data/audio.json › <région> › boss,
 # point d'accroche « boss_exalte » ; anneau, lueur, texte) et la reprise tombe sur une mesure de la
-# musique. Les boss de région n'ont pas de morceau fait main : leur musique est la couche « boss » du
-# code (music_synth.gd), boucle de 24 s, mesure de MusicSynth.CHORD_TIME (3 s), temps de 0,75 s.
+# musique. Un boss de région sans morceau fait main suit la couche « boss » du code (music_synth.gd),
+# boucle de 24 s, mesure de MusicSynth.CHORD_TIME (3 s), temps de 0,75 s ; avec son morceau (la
+# Mère-Ronce), la grille de boss_sync.gd, et la phase exaltée a son drop (drop_3).
 # Cycle 1 : rien ne change (exalted faux, mêmes phases, même hasard).
 
 const MusicSynth = preload("res://scripts/music_synth.gd")
@@ -493,6 +494,9 @@ func loop_time() -> float:
 ## Délai allongé pour que ce qui arriverait dans « delay » s tombe sur un temps de la musique (tous
 ## les « grid » temps : 1 = la noire, 4 = la mesure). Jamais plus court que « delay ».
 func loop_snap(delay: float, grid := 1.0) -> float:
+	# Un boss qui a son morceau (boss_sync.gd) tombe sur les temps de celui-ci.
+	if sync != null and sync.running:
+		return maxf(delay, (beat_target(delay, grid, 1.0) - beats_now()) * beat_len())
 	var step := LOOP_BEAT * grid
 	var at := loop_time() + delay
 	return delay + (ceil(at / step - 0.001) * step - at)
@@ -526,7 +530,7 @@ func _exalt_color() -> Color:
 func exalt_glow() -> float:
 	if not is_exalted_phase() or dead:
 		return 0.0
-	var u := fposmod(loop_time() / LOOP_BEAT, 1.0)
+	var u := fposmod(beats_now(), 1.0) if sync != null and sync.running else fposmod(loop_time() / LOOP_BEAT, 1.0)
 	return 0.55 + 0.45 * pow(1.0 - u, 3.0)
 
 

@@ -207,6 +207,13 @@ func follow_boss(arena) -> void:
 		hand.follow(arena)
 
 
+## Approche d'une arène ouverte (null : aucune) : son morceau, s'il a une approche, monte avec
+## « level » (0 → 1) sous la musique du monde, qui s'efface d'autant (boss_track.gd › approach).
+func approach_boss(arena, level: float) -> void:
+	if hand != null and started:
+		hand.approach(arena, level)
+
+
 ## Vrai pendant qu'un morceau de boss fait à la main tient la musique.
 func hand_playing() -> bool:
 	return hand != null and hand.active()
@@ -225,7 +232,9 @@ func _process(delta: float) -> void:
 	combat = move_toward(combat, combat_target, (COMBAT_IN if combat_target > combat else COMBAT_OUT) * delta)
 	heart = move_toward(heart, heart_target, HEART_FADE * delta)
 	boss = move_toward(boss, boss_target, BOSS_FADE * delta)
-	hand_k = move_toward(hand_k, 1.0 if hand_playing() else 0.0, delta / HAND_FADE)
+	# L'approche d'une arène (boss_track.gd) ne prend que sa part : la musique du monde s'efface avec elle.
+	var hand_want: float = hand.level() if hand != null else 0.0
+	hand_k = move_toward(hand_k, hand_want, delta / (HAND_FADE if hand_want >= 1.0 or hand_k > hand_want else 1.0))
 	duck_gain = move_toward(duck_gain, 1.0, DUCK_RECOVER * delta)
 	for id in groups:
 		groups[id]["gain"] = move_toward(groups[id]["gain"], 1.0 if id == region else 0.0, REGION_FADE * delta)

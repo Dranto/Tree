@@ -170,6 +170,8 @@ func _run() -> void:
 	boss = arena.boss
 	check(arena.state == "combat" and boss.hp == boss.max_hp and boss.phase == 1, "la Mère-Ronce revient avec toute sa vie")
 	var points: int = game.points
+	# Avec son morceau (la Mère-Ronce), elle charge jusqu'au drop, invulnérable.
+	await _until(func(): return not boss.music_waiting(), 300)
 	boss.take_damage(boss.max_hp + 1.0, false)
 	check(boss.dead and game.flags.get(arena.region + "_boss_vaincu", false) == true, "boss vaincu : drapeau posé")
 	check(game.points == points + 2, "2 points d'arbre gagnés")

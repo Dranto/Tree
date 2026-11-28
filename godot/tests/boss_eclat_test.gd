@@ -136,6 +136,8 @@ func _run() -> void:
 	arena._start_fight()
 	await _steps(4)
 	var boss = arena.boss
+	# La Mère-Ronce charge jusqu'au drop de son morceau, invulnérable.
+	await _until(func(): return not boss.music_waiting(), 300)
 	boss.take_damage(boss.max_hp * 0.5, false)
 	await _until(func(): return boss.intro <= 0.0 and boss.phase == 2, 300)
 	await _steps(30)

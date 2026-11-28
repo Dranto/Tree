@@ -76,6 +76,18 @@ func start(clip := "intro") -> void:
 	intro_bars = _intro_bars(clip)
 	game_t0 = game_clock
 	resume_bar = intro_bars
+	# Après l'approche (boss_track.gd › enter), la grille reste celle du morceau déjà parti : l'intro
+	# commence à la mesure qui suit l'entrée, le combat une intro plus tard. L'horloge du jeu se cale
+	# sur la même grille.
+	var h = _approach_hand()
+	if h != null:
+		var at: int = h.enter()
+		if at >= 0:
+			intro_clip = "intro"
+			intro_bars = _intro_bars("intro")
+			var now: float = (h.audio_time() - h.grid_t0) / bar
+			game_t0 = game_clock - now * bar
+			resume_bar = at + intro_bars
 	stage = "intro"
 	pending_clip = ""
 	_confirmed = true
@@ -172,6 +184,17 @@ static func robot() -> bool:
 			if a.begins_with("--autotest"):
 				_robot = 1
 	return _robot == 1
+
+
+## Lecteur qui joue l'approche de ce morceau (null : aucune). Hors robots : leur combat suit le temps
+## du jeu depuis l'entrée, comme sans approche.
+func _approach_hand():
+	if robot():
+		return null
+	var music = Engine.get_main_loop().root.get_node_or_null("Music") if Engine.get_main_loop() is SceneTree else null
+	if music == null or music.get("hand") == null:
+		return null
+	return music.hand if music.hand.approaching(region) else null
 
 
 ## Lecteur qui joue ce morceau (null : horloge du jeu).

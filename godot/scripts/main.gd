@@ -546,6 +546,10 @@ func _physics_process(delta: float) -> void:
 		var ma = active_arena()
 		if ma == null and finale != null and finale.music_on():
 			ma = finale
+		if ma == null and not under:
+			# Approche d'une arène ouverte : le début du morceau de son boss monte avec la distance.
+			var near = arenas.get(Regions.region_at(player.position))
+			Music.approach_boss(near, near.approach_level() if near != null else 0.0)
 		Music.follow_boss(ma)
 	autosave_timer -= delta
 	if autosave_timer <= 0.0:
