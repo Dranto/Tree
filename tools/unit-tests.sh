@@ -26,11 +26,18 @@ TESTS=(
   "aube|--headless --fixed-fps 60|"
   "borders|--headless|"
   "builds|--headless|"
+  "cycle|--headless|"
   "boss|--headless --fixed-fps 60|"
+  "boss@seve_cycle2|--headless --fixed-fps 60|--region=seve --cycle=2"
+  "boss@aube_cycle2|--headless --fixed-fps 60|--region=aube --cycle=2"
+  "boss@racine_cycle2|--headless --fixed-fps 60|--region=racine --cycle=2"
   "boss_eclat|--headless --fixed-fps 60|"
   "boss_track|--headless|"
+  "exalte_b1|--headless --fixed-fps 60|--cycle=2"
   "death|--headless --fixed-fps 60|"
   "deaths|--headless --fixed-fps 60|"
+  "cycle_tint|--headless --fixed-fps 60|"
+  "cycle_monsters|--headless --fixed-fps 60|"
   "difficulty|--headless|"
   "demo|--headless --fixed-fps 60|"
   "direct_screen|--xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0|"
@@ -55,6 +62,7 @@ TESTS=(
   "falaises|--headless --fixed-fps 60|"
   "feel|--headless|"
   "finale|--headless --fixed-fps 60|"
+  "finale@cycle2|--headless --fixed-fps 60|--cycle=2"
   "finale_creux|--xvfb --audio-driver Dummy --fixed-fps 60|"
   "flow|--headless|"
   "foret|--headless --fixed-fps 60|"
@@ -98,12 +106,12 @@ TESTS=(
 declare -A WEIGHT=(
   [move]=121 [paysages]=89 [attack]=74 [finale]=74 [sound]=63 [heros]=56 [world_life]=51
   [boss_eclat]=45 [pad]=34 [remains_sprite]=27 [boss_track]=26 [direct_screen]=26 [eclat_skills]=24
-  [decor]=23 [seve]=21 [plateaux]=18 [enemies]=17 [vent]=17 [foret]=16 [demo]=15 [falaises]=15
+  [decor]=23 [seve]=21 [plateaux]=18 [enemies]=17 [cycle_monsters]=20 [vent]=17 [foret]=16 [demo]=15 [falaises]=15
   [flow]=15 [region]=15 [vallee]=15 [sprite_bake]=14 [racine]=14 [tree_ui]=14 [skills]=13
   [world_fx]=12 [boss]=11 [bestiaire]=11 [i18n]=11 [moments]=11 [aube]=10 [death]=10 [grafts]=10
   [marais]=10 [access]=9 [deaths]=9 [migration]=9 [spore]=9 [tree_anim]=9 [difficulty]=7 [feel]=8
   [objectives]=8 [region_engine]=8 [region_ui]=8 [save]=8 [steam]=8 [world]=6 [planner]=5
-  [seve_bestiaire]=5 [boss_dessin]=4 [paysages_proto]=4 [art]=3 [air]=3 [borders]=3 [builds]=3 [draw_batch]=3
+  [seve_bestiaire]=5 [boss_dessin]=4 [paysages_proto]=4 [art]=3 [air]=3 [borders]=3 [builds]=3 [cycle]=6 [draw_batch]=3
   [node_types]=3 [tree_originals]=3 [user_dir]=3 [legibility]=2 [rumble]=2 [world_edge]=2
 )
 # Du plus long au plus court (ordre de lancement).
@@ -148,11 +156,13 @@ godot_noise() {
 
 run_one() {
   local name="$1" opts="$2" args="$3"
+  # « test@variante » : le même fichier de test avec d'autres arguments (journal à part).
+  local file="${name%%@*}"
   local data="$OUT/data/$name"
   mkdir -p "$data"
   local t0=$SECONDS code
   # shellcheck disable=SC2086
-  XDG_DATA_HOME="$data" timeout -k 10 "$LIMIT" "$GODOT" $opts -s "res://tests/${name}_test.gd" ${args:+-- $args} \
+  XDG_DATA_HOME="$data" timeout -k 10 "$LIMIT" "$GODOT" $opts -s "res://tests/${file}_test.gd" ${args:+-- $args} \
     >"$OUT/$name.log" 2>&1
   code=$?
   # Une erreur de script fait échouer le test même si son code de sortie est 0.

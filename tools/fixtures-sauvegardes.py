@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Régénère godot/tests/fixtures/saves/sauvegarde_v1.json … v8.json (test de migration, migration_test.gd).
+"""Régénère godot/tests/fixtures/saves/sauvegarde_v1.json … v9.json (test de migration, migration_test.gd).
 
 Chaque fichier reprend le FORMAT que le jeu écrivait à cette version (voir l'historique de
 godot/scripts/save_game.gd), avec un contenu reconnaissable. Les fichiers sont versionnés dans le dépôt :
@@ -92,6 +92,16 @@ def make():
                                  {}]})
     d["world"]["ground_grafts"] = [[10.0, 10.0, "greffe_tracante"]]
     out[8] = d
+    # v9 (New Game+) : deuxième cycle, couronne gardée du premier ; Cœurs et boss remis à zéro.
+    d = base(9, 85, {"plan_arbre": "ronce:4:3", "tuto_deplacement": True, "couronne_vue": 6, "ronce_coeur1_purifie": True},
+             ["ronce:1:1", "ronce:2:2", "c:ronce-spore:dard:d1"] + CLOUD)
+    d["game"].update({"cycle": 2, "crown_kept": 6})
+    d["tree"].update({"choices": {}, "inventory": ["greffe_ecorce", "greffe_sillage", "greffe_mere"],
+                      "crown": ["greffe_ecorce", "greffe_sillage", "", "", "", "greffe_mere"], "active_build": 0,
+                      "builds": [{"allocated": ["ronce:1:1", "ronce:2:2", "c:ronce-spore:dard:d1"] + CLOUD, "choices": {},
+                                  "crown": ["greffe_ecorce", "greffe_sillage", "", "", "", "greffe_mere"], "plan": "ronce:4:3"}, {}, {}]})
+    d["world"]["ground_grafts"] = []
+    out[9] = d
     return out
 
 

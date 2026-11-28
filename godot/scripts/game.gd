@@ -11,6 +11,9 @@ signal points_granted(n: int, source: String)
 signal graft_found(id: String)
 ## Le build actif vient de changer (switch_build) : index de l'emplacement chargé.
 signal build_switched(index: int)
+## Un nouveau cycle du New Game+ commence (jalon 14) : le joueur a touché le fruit de la graine.
+## Émis une fois la scène de jeu rechargée et prête, Game.cycle déjà au nouveau numéro (voir cycles.gd).
+signal cycle_started(cycle: int)
 
 const SkillTree = preload("res://scripts/skill_tree.gd")
 const Content = preload("res://scripts/content.gd")
@@ -49,6 +52,13 @@ var active_build := 0
 ## Le joueur se tient dans le cercle d'un sanctuaire ravivé (posé par sanctuary.gd) : oublier et
 ## changer de build y sont gratuits (data/respec.json, « free_at_sanctuary »).
 var at_sanctuary := false
+## Cycle du New Game+ (jalon 14) : 1 = première aventure. Sauvegardé ; reset() le remet à 1
+## (nouvelle partie). Lire plutôt Cycles.current(), qui suit aussi « -- --cycle=N ».
+var cycle := 1
+## Emplacements de couronne gagnés aux cycles précédents (jalon 14) : la couronne est gardée d'un
+## cycle à l'autre alors que les drapeaux qui l'ont ouverte (Cœurs, boss, finale) sont remis à zéro.
+## Sauvegardé depuis la version 9.
+var crown_kept := 0
 ## Libellés des sources de points hors niveau (annonce du HUD).
 const POINT_SOURCES := {
 	"boss": "Boss vaincu", "coeur": "Cœur purifié", "autel": "Autel ravivé", # i18n
@@ -118,6 +128,8 @@ func reset() -> void:
 	builds = []
 	active_build = 0
 	at_sanctuary = false
+	cycle = 1
+	crown_kept = 0
 	recompute()
 	tree_changed.emit()
 
@@ -190,6 +202,10 @@ func crown_size(f = null) -> int:
 			n += int(c.get("per_boss", 1))
 	if fl.get("finale_vaincue", false):
 		n += int(c.get("finale", 0))
+	# New Game+ : la couronne gagnée aux cycles d'avant reste ouverte (jalon 14), plus les
+	# emplacements que le cycle donne (data/cycles.json › crown, greffes de cycle).
+	if f == null:
+		n = maxi(n, crown_kept) + int(Cycles.value("crown", 0))
 	return clampi(n, 0, int(c.get("max", 16)))
 
 

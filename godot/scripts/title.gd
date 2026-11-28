@@ -108,10 +108,17 @@ func _ready() -> void:
 func _update_note() -> void:
 	var sum := Flow.save_summary()
 	if not continue_button.disabled and sum.has("level"):
-		continue_button.set("note", tr("niveau %d") % int(sum["level"]))
-		if sum.get("ended", false):
-			# L'aventure est finie (finale gagnée) : la partie continue, librement.
-			continue_button.set("note", tr("niveau %d · fin") % int(sum["level"]))
+		var lv := int(sum["level"])
+		var cy := int(sum.get("cycle", 1))
+		var ended := bool(sum.get("ended", false))
+		# L'aventure est finie (finale gagnée) : la partie continue, librement. New Game+ : le cycle
+		# de l'aventure, à partir du deuxième.
+		var note := tr("niveau %d") % lv
+		if cy >= 2:
+			note = (tr("niveau %d · cycle %d · fin") if ended else tr("niveau %d · cycle %d")) % [lv, cy]
+		elif ended:
+			note = tr("niveau %d · fin") % lv
+		continue_button.set("note", note)
 
 
 func _notification(what: int) -> void:

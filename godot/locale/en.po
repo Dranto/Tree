@@ -6248,6 +6248,18 @@ msgstr "summoner"
 msgid "rapide"
 msgstr "swift"
 
+#. data/difficulty.json › elites › affixes › remanent › name
+msgid "rémanent"
+msgstr "lingering"
+
+#. data/difficulty.json › elites › affixes › siphon › name
+msgid "siphonneur"
+msgstr "siphoning"
+
+#. data/difficulty.json › elites › affixes › voile › name
+msgid "voilé"
+msgstr "veiled"
+
 #. data/difficulty.json › modes › difficile › name
 msgid "Difficile"
 msgstr "Hard"
@@ -6401,11 +6413,13 @@ msgid "La Flétrissure"
 msgstr "The Blight"
 
 #. data/finale.json › boss › phases
+#. data/finale.json › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : sève et vent"
 msgstr "Phase {0} of {1}: sap and wind"
 
 #. data/finale.json › boss › phases
+#. data/finale.json › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : épines et spores"
 msgstr "Phase {0} of {1}: thorns and spores"
@@ -6413,6 +6427,15 @@ msgstr "Phase {0} of {1}: thorns and spores"
 #. data/finale.json › boss › phases
 msgid "Seconde forme : les six gardiens à la fois"
 msgstr "Second form: all six guardians at once"
+
+#. data/finale.json › boss › phases_exaltees
+msgid "Exaltation : elle ramène le monde à elle"
+msgstr "Exaltation: she draws the world back to her"
+
+#. data/finale.json › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : les six gardiens à la fois"
+msgstr "Phase {0} of {1}: all six guardians at once"
 
 #. data/finale.json › credits › head
 msgid "Code, dessins et sons"
@@ -7078,24 +7101,32 @@ msgid "La Phalène de verre"
 msgstr "The Glass Moth"
 
 #. data/regions/aube.json › aube › boss › phases
+#. data/regions/aube.json › aube › boss › phases_exaltees
 #. data/regions/racine.json › racine › boss › phases
+#. data/regions/racine.json › racine › boss › phases_exaltees
 #. data/regions/ronce.json › ronce › boss › phases
-#. data/regions/seve.json › seve › boss › phases
-#. data/regions/spore.json › spore › boss › phases
-#. data/regions/vent.json › vent › boss › phases
+#. data/regions/ronce.json › ronce › boss › phases_exaltees
+#. … et 6 autres
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1}"
 msgstr "Phase {0} of {1}"
 
 #. data/regions/aube.json › aube › boss › phases
+#. data/regions/aube.json › aube › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la Phalène brise la lumière"
 msgstr "Phase {0} of {1}: the Moth shatters the light"
 
 #. data/regions/aube.json › aube › boss › phases
+#. data/regions/aube.json › aube › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la lumière tombe du ciel"
 msgstr "Phase {0} of {1}: light falls from the sky"
+
+#. data/regions/aube.json › aube › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : le vitrail se brise"
+msgstr "Phase {0} of {1}: the stained glass shatters"
 
 #. data/regions/aube.json › aube › map_name
 msgid "Falaises"
@@ -7146,14 +7177,21 @@ msgid "L'Ancien pétrifié"
 msgstr "The Petrified Elder"
 
 #. data/regions/racine.json › racine › boss › phases
+#. data/regions/racine.json › racine › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la cime se fend"
 msgstr "Phase {0} of {1}: the crown splits"
 
 #. data/regions/racine.json › racine › boss › phases
+#. data/regions/racine.json › racine › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la forêt se referme"
 msgstr "Phase {0} of {1}: the forest closes in"
+
+#. data/regions/racine.json › racine › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : la pierre se fend"
+msgstr "Phase {0} of {1}: the stone splits"
 
 #. data/regions/racine.json › racine › map_name
 msgid "Forêt"
@@ -7205,14 +7243,21 @@ msgid "La Mère-Ronce"
 msgstr "The Bramble Mother"
 
 #. data/regions/ronce.json › ronce › boss › phases
+#. data/regions/ronce.json › ronce › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : les bourgeons éclosent"
 msgstr "Phase {0} of {1}: the buds burst open"
 
 #. data/regions/ronce.json › ronce › boss › phases
+#. data/regions/ronce.json › ronce › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : les ronces se resserrent"
 msgstr "Phase {0} of {1}: the brambles close in"
+
+#. data/regions/ronce.json › ronce › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : la rose s'embrase"
+msgstr "Phase {0} of {1}: the rose catches fire"
 
 #. data/regions/ronce.json › ronce › heart › name
 #. scripts/heart.gd:57
@@ -7266,14 +7311,21 @@ msgid "Le Saule exsangue"
 msgstr "The Bloodless Willow"
 
 #. data/regions/seve.json › seve › boss › phases
+#. data/regions/seve.json › seve › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : l'étang se vide"
 msgstr "Phase {0} of {1}: the pond drains"
 
 #. data/regions/seve.json › seve › boss › phases
+#. data/regions/seve.json › seve › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : le Saule boit la vallée"
 msgstr "Phase {0} of {1}: the Willow drinks the valley"
+
+#. data/regions/seve.json › seve › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : le Saule se gorge"
+msgstr "Phase {0} of {1}: the Willow gorges itself"
 
 #. data/regions/seve.json › seve › map_name
 msgid "Vallée"
@@ -7324,14 +7376,21 @@ msgid "L'Amanite-Mère"
 msgstr "The Amanita Mother"
 
 #. data/regions/spore.json › spore › boss › phases
+#. data/regions/spore.json › spore › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : le mycélium se déchaîne"
 msgstr "Phase {0} of {1}: the mycelium runs wild"
 
 #. data/regions/spore.json › spore › boss › phases
+#. data/regions/spore.json › spore › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : les lamelles s'ouvrent"
 msgstr "Phase {0} of {1}: the gills open"
+
+#. data/regions/spore.json › spore › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : les ronds de sorcière"
+msgstr "Phase {0} of {1}: the fairy rings"
 
 #. data/regions/spore.json › spore › map_name
 msgid "Marais"
@@ -7382,14 +7441,21 @@ msgid "Le Harfang de cendre"
 msgstr "The Ash Owl"
 
 #. data/regions/vent.json › vent › boss › phases
+#. data/regions/vent.json › vent › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la tempête se lève"
 msgstr "Phase {0} of {1}: the storm rises"
 
 #. data/regions/vent.json › vent › boss › phases
+#. data/regions/vent.json › vent › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : le Harfang prend son envol"
 msgstr "Phase {0} of {1}: the Owl takes flight"
+
+#. data/regions/vent.json › vent › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : les ailes de braise"
+msgstr "Phase {0} of {1}: wings of embers"
 
 #. data/regions/vent.json › vent › map_name
 msgid "Plateaux"
@@ -7862,24 +7928,32 @@ msgstr "%d attack forms"
 msgid "Synergie possible « %s » : %s"
 msgstr "Possible synergy “%s”: %s"
 
-#. scripts/boss_arena.gd:58
+#. scripts/boss_arena.gd:60
 #. scripts/finale_arena.gd:96
 msgid "Phase 1 sur 3"
 msgstr "Phase 1 of 3"
 
-#. scripts/boss_arena.gd:58
+#. scripts/boss_arena.gd:60
 msgid "Phase 2 sur 3 : les bourgeons éclosent"
 msgstr "Phase 2 of 3: the buds burst open"
 
-#. scripts/boss_arena.gd:58
+#. scripts/boss_arena.gd:60
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 of 3: the brambles close in"
 
-#. scripts/boss_base.gd:505
+#. scripts/boss_base.gd:515
+msgid "Exaltation"
+msgstr "Exaltation"
+
+#. scripts/boss_base.gd:640
 msgid "Entravée"
 msgstr "Snared"
 
-#. scripts/boss_vent.gd:116
+#. scripts/boss_seve.gd:241
+msgid "Accroché !"
+msgstr "Latched!"
+
+#. scripts/boss_vent.gd:140
 #. scripts/enemy_behaviors/glider.gd:70
 msgid "Hors d'atteinte"
 msgstr "Out of reach"
@@ -8055,16 +8129,16 @@ msgid " (%s)"
 msgstr " (%s)"
 
 #. scripts/effects.gd:279
-#. scripts/enemy.gd:254
+#. scripts/enemy.gd:261
 msgid " et "
 msgstr " and "
 
-#. scripts/enemy.gd:254
+#. scripts/enemy.gd:261
 msgctxt "élite : nom puis modificateurs"
 msgid "%s %s"
 msgstr "%s, %s"
 
-#. scripts/enemy.gd:420
+#. scripts/enemy.gd:427
 msgid "Enragé !"
 msgstr "Enraged!"
 
@@ -8088,51 +8162,51 @@ msgstr "Sap −%d"
 msgid "étourdi"
 msgstr "stunned"
 
-#. scripts/game.gd:276
-#. scripts/game.gd:323
+#. scripts/game.gd:292
+#. scripts/game.gd:339
 msgid "Build %d"
 msgstr "Build %d"
 
-#. scripts/game.gd:54
+#. scripts/game.gd:607
+msgid "Dans le jeu complet."
+msgstr "In the full game."
+
+#. scripts/game.gd:619
+msgid "Couvert de cendre : %s"
+msgstr "Covered in ash: %s"
+
+#. scripts/game.gd:619
+msgid "un évènement du monde doit le libérer."
+msgstr "something in the world must free it."
+
+#. scripts/game.gd:630
+msgid "Demande la compétence « %s »."
+msgstr "Requires the “%s” skill."
+
+#. scripts/game.gd:633
+msgid "Incompatible avec « %s »."
+msgstr "Incompatible with “%s”."
+
+#. scripts/game.gd:64
 msgid "Autel ravivé"
 msgstr "Altar revived"
 
-#. scripts/game.gd:54
+#. scripts/game.gd:64
 msgid "Boss vaincu"
 msgstr "Boss defeated"
 
-#. scripts/game.gd:54
+#. scripts/game.gd:64
 #. scripts/region_ui.gd:61
 msgid "Cœur purifié"
 msgstr "Heart cleansed"
 
-#. scripts/game.gd:55
+#. scripts/game.gd:65
 msgid "Objectif accompli"
 msgstr "Goal reached"
 
-#. scripts/game.gd:55
+#. scripts/game.gd:65
 msgid "Secret découvert"
 msgstr "Secret found"
-
-#. scripts/game.gd:591
-msgid "Dans le jeu complet."
-msgstr "In the full game."
-
-#. scripts/game.gd:603
-msgid "Couvert de cendre : %s"
-msgstr "Covered in ash: %s"
-
-#. scripts/game.gd:603
-msgid "un évènement du monde doit le libérer."
-msgstr "something in the world must free it."
-
-#. scripts/game.gd:614
-msgid "Demande la compétence « %s »."
-msgstr "Requires the “%s” skill."
-
-#. scripts/game.gd:617
-msgid "Incompatible avec « %s »."
-msgstr "Incompatible with “%s”."
 
 #. scripts/heart.gd:283
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
@@ -8172,17 +8246,17 @@ msgstr ""
 "%s\n"
 "Click to change skill, or drag it onto another slot."
 
-#. scripts/main.gd:1221
+#. scripts/main.gd:1277
 msgid "%s vaincu"
 msgstr "%s defeated"
 
-#. scripts/main.gd:405
-#. scripts/save_game.gd:140
-#. scripts/save_game.gd:197
+#. scripts/main.gd:416
+#. scripts/save_game.gd:150
+#. scripts/save_game.gd:209
 msgid "aucune sauvegarde"
 msgstr "no save"
 
-#. scripts/main.gd:406
+#. scripts/main.gd:417
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr "Unreadable save (%s): new game."
 
@@ -8489,11 +8563,11 @@ msgstr "of the Seed"
 msgid "sanctuaire %s"
 msgstr "%s sanctuary"
 
-#. scripts/save_game.gd:201
+#. scripts/save_game.gd:213
 msgid "fichier illisible ou d'un autre format"
 msgstr "unreadable file or unknown format"
 
-#. scripts/save_game.gd:205
+#. scripts/save_game.gd:217
 msgid "sauvegarde créée par une version plus récente du jeu (format %d > %d)"
 msgstr "save made by a newer version of the game (format %d > %d)"
 
@@ -8769,27 +8843,35 @@ msgstr "Skill"
 msgid "Nœud notable"
 msgstr "Notable"
 
-#. scripts/title.gd:111
+#. scripts/title.gd:116
 msgid "niveau %d"
 msgstr "level %d"
 
-#. scripts/title.gd:114
+#. scripts/title.gd:118
+msgid "niveau %d · cycle %d"
+msgstr "level %d · cycle %d"
+
+#. scripts/title.gd:118
+msgid "niveau %d · cycle %d · fin"
+msgstr "level %d · cycle %d · ending"
+
+#. scripts/title.gd:120
 msgid "niveau %d · fin"
 msgstr "level %d · ending"
 
-#. scripts/title.gd:151
+#. scripts/title.gd:158
 msgid "PLANCHE I  ·  L'ARBRE DE VIE"
 msgstr "PLATE I  ·  THE TREE OF LIFE"
 
-#. scripts/title.gd:172
+#. scripts/title.gd:179
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
 msgstr "HERBARIUM  OF  THE  WITHERED  LANDS"
 
-#. scripts/title.gd:184
+#. scripts/title.gd:191
 msgid "Un monde désolé reprend vie"
 msgstr "A desolate world comes back to life"
 
-#. scripts/title.gd:185
+#. scripts/title.gd:192
 msgid "au rythme de ton arbre"
 msgstr "as your tree grows"
 

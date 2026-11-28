@@ -148,12 +148,12 @@ func _run() -> void:
 	check(planner.plan.is_empty(), "le plan suit son build")
 	check(game.clear_build(3) and game.build_empty(3) and not game.clear_build(0), "vider un emplacement (pas le build actif)")
 
-	print("Sauvegarde version 8")
+	print("Sauvegarde (builds depuis la version 8)")
 	var uids0: Array = game.allocated_uids()
 	game.copy_build_to(3)
 	game.switch_build(1)
 	var data: Dictionary = save.capture(null)
-	check(int(data["version"]) == 8 and data["tree"]["builds"].size() == game.build_slots() and int(data["tree"]["active_build"]) == 1, "builds et build actif enregistrés")
+	check(int(data["version"]) == save.VERSION and data["tree"]["builds"].size() == game.build_slots() and int(data["tree"]["active_build"]) == 1, "builds et build actif enregistrés")
 	var live: Array = game.allocated_uids()
 	var names: Array = []
 	for i in game.build_slots():
@@ -171,7 +171,7 @@ func _run() -> void:
 	var v7 := {"format": "seve-save", "version": 7, "game": {"level": 5, "points": 0, "flags": {}},
 		"tree": {"allocated": first_uids, "choices": {}, "crown": [], "inventory": []}, "world": {}}
 	var m: Dictionary = save._migrate(JSON.parse_string(JSON.stringify(v7)))
-	check(int(m["version"]) == 8 and m["tree"]["builds"] == [] and int(m["tree"]["active_build"]) == 0, "champs des builds créés")
+	check(int(m["version"]) == save.VERSION and m["tree"]["builds"] == [] and int(m["tree"]["active_build"]) == 0, "champs des builds créés")
 	save.apply(m, null)
 	check(game.active_build == 0 and game.build_info(0)["nodes"] == first_uids.size() and game.build_empty(1), "le build courant devient le premier emplacement")
 

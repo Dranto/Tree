@@ -15,6 +15,11 @@
 ##   - invocation (dès la phase 2) : des Termites (phase 2) puis des Scarabées (phase 3) sortent
 ##                de la roche (pas en rouge : ce n'est pas un coup) ;
 ##   - phase 3 : la forêt se referme (l'arène se resserre, boss_arena.gd) ; plus de racines à la fois.
+## Cycle 2 et après (New Game+, BossBase › cycle exalté) :
+##   - foulee (attaque nouvelle) : il marche sur le joueur : un grand cercle se marque sous lui, le pied
+##              de pierre tombe sur un temps de la musique, puis le suivant là où le joueur est allé
+##              (trois pas, quatre en phase exaltée) : ne pas rester, ne pas revenir sur ses pas ;
+##   - phase 4 exaltée (« la pierre se fend ») : le pieu part en éventail de trois.
 ## L'enracinement ne le tient pas (no_root). Sa mort : l'écorce de pierre se fend et tombe par
 ## plaques, le bois vivant apparaît dessous ; à sa place, une clairière moussue et un jeune chêne
 ## (draw_victory).
@@ -35,7 +40,15 @@ const PHASES := {
 	1: {"gap": 1.3, "order": ["racines", "eboulis", "pieu", "racines", "eboulis", "pieu"], "lines": 3, "stones": 4},
 	2: {"gap": 1.1, "order": ["eboulis", "invocation", "racines", "chute", "pieu", "racines"], "lines": 4, "stones": 5, "minions": 3, "minion": "termite"},
 	3: {"gap": 0.95, "order": ["racines", "pieu", "chute", "eboulis", "invocation", "racines", "pieu"], "lines": 5, "stones": 6, "minions": 2, "minion": "scarabee"},
+	# Phase exaltée (cycle 2 et après seulement).
+	4: {"gap": 0.9, "order": ["foulee", "pieu", "racines", "chute", "foulee", "eboulis", "pieu"], "lines": 5, "stones": 6, "minions": 2, "minion": "scarabee", "steps": 4, "stakes": 3},
 }
+## Attaque nouvelle du cycle exalté (BossBase).
+const EXALTED_ATTACK := "foulee"
+## Foulée : pas (cercles successifs sous le joueur), première annonce, annonce des pas suivants.
+const STRIDE := {"annonce": 1.0, "next": 0.7, "radius": 92.0, "damage": 22.0, "steps": 3}
+## Phase exaltée : écart (radians) entre les pieux de l'éventail.
+const STAKE_FAN := 0.5
 const ROOTS := {"annonce": 1.0, "width": 54.0, "length": 560.0, "spread": 0.42, "damage": 20.0}
 const STONES := {"annonce": 1.1, "radius": 58.0, "spread": 190.0, "damage": 17.0}
 const STAKE := {"annonce": 0.8, "width": 64.0, "length": 600.0, "damage": 26.0, "pierce": 0.7}
@@ -66,6 +79,8 @@ var flash_circles: Array = []
 var flash_aim := Vector2.DOWN
 ## Points de sortie de l'invocation en cours.
 var buds: Array = []
+## Pas de la foulée encore à faire (le premier compris).
+var steps_left := 0
 ## L'enracinement (compétence de Racine) ne le tient pas.
 var no_root := true
 
@@ -99,7 +114,7 @@ func _fight_step(delta: float) -> void:
 			return
 		gap -= delta * cad
 		if gap <= 0.0:
-			var order: Array = PHASES[phase]["order"]
+			var order: Array = exalted_order(PHASES[phase]["order"], EXALTED_ATTACK)
 			_begin(order[cycle % order.size()])
 			cycle += 1
 	else:
@@ -147,6 +162,12 @@ func _begin(kind: String) -> void:
 		"chute":
 			_set_timer(FALL["annonce"])
 			circles = [_in_arena(main.player.position, FALL["radius"] * 0.4)]
+		"foulee":
+			exalted_attacks += 1
+			steps_left = int(cfg.get("steps", STRIDE["steps"]))
+			# Chaque pied tombe sur un temps de la musique.
+			_set_timer(loop_snap(STRIDE["annonce"]))
+			circles = [_in_arena(main.player.position, STRIDE["radius"] * 0.4)]
 		"invocation":
 			_set_timer(SUMMON["annonce"])
 			buds = []
@@ -184,9 +205,21 @@ func _announce_step() -> void:
 			aim = to.normalized()
 
 
+## Directions des pieux : un seul, ou l'éventail de trois en phase exaltée.
+func stake_dirs() -> Array:
+	var n := int(PHASES[phase].get("stakes", 1))
+	var out: Array = []
+	for i in n:
+		out.append(aim.rotated((i - (n - 1) / 2.0) * STAKE_FAN))
+	return out
+
+
 func _strike() -> void:
 	var p = main.player
 	var hit_r: float = p.radius * 0.5
+	if attack == "foulee":
+		_stride_step(p, hit_r)
+		return
 	flash_kind = attack
 	flash_aim = aim
 	flash_lines = lines.duplicate()
@@ -207,8 +240,11 @@ func _strike() -> void:
 				main.fx.ring(c, 8.0, STONES["radius"], 0.3, Color(Art.c("brume"), 0.8), 4.0)
 			main.fx.shake(3.0)
 		"pieu":
-			if in_line(p.position, aim, STAKE["width"], STAKE["length"], hit_r):
-				_hurt_player(STAKE["damage"] * damage_scale, STAKE["pierce"])
+			for d in stake_dirs():
+				if in_line(p.position, d, STAKE["width"], STAKE["length"], hit_r):
+					_hurt_player(STAKE["damage"] * damage_scale, STAKE["pierce"])
+					break
+			flash_lines = stake_dirs()
 			main.fx.shake(4.0)
 		"chute":
 			var c: Vector2 = circles[0]
@@ -228,6 +264,25 @@ func _strike() -> void:
 	_end_attack()
 
 
+## Un pas de la foulée : le pied tombe dans le cercle ; s'il en reste, le suivant se marque sous le
+## joueur (là où il est allé), et tombe sur le temps suivant.
+func _stride_step(p, hit_r: float) -> void:
+	var c: Vector2 = circles[0]
+	if p.position.distance_to(c) < STRIDE["radius"] + hit_r:
+		_hurt_player(STRIDE["damage"] * damage_scale)
+	main.fx.ring(c, 12.0, STRIDE["radius"], 0.35, Color(Art.ec("racine", "clair"), 0.85), 6.0)
+	main.fx.shake(5.0)
+	flash_kind = "foulee"
+	flash_circles = [c]
+	strike_flash = 0.0
+	steps_left -= 1
+	if steps_left > 0:
+		circles = [_in_arena(p.position, STRIDE["radius"] * 0.4)]
+		_set_timer(loop_snap(STRIDE["next"]))
+		return
+	_end_attack()
+
+
 ## Vrai si pos est dans le couloir parti du boss dans la direction d (largeur w, longueur len).
 func in_line(pos: Vector2, d: Vector2, w: float, len: float, margin: float) -> bool:
 	var to := pos - anchor
@@ -242,6 +297,7 @@ func _end_attack() -> void:
 	stage = ""
 	lines = []
 	circles = []
+	steps_left = 0
 	gap = PHASES[phase]["gap"]
 
 
@@ -252,7 +308,8 @@ func _enter_phase(n: int) -> void:
 	gap = 0.3
 	main.fx.ring(anchor, radius, 420.0, 0.7, Color(Art.ec("racine", "clair"), 0.9), 8.0)
 	main.fx.shake(5.0)
-	if n != 2:
+	# Phase 3, ou la phase exaltée atteinte d'un coup : l'arène se resserre (une seule fois).
+	if n >= 3 and not arena.shrinking and arena.radius >= arena.max_radius:
 		arena.start_shrink()
 
 
@@ -272,10 +329,17 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 			# Tant qu'il vise encore, tout le devant est menacé.
 			if timer > stage_time * 0.4:
 				var to := pos - anchor
-				if to.length() < STAKE["length"] and to.normalized().dot(aim) > 0.7:
+				var cone := 0.7 if stake_dirs().size() == 1 else 0.3
+				if to.length() < STAKE["length"] and to.normalized().dot(aim) > cone:
 					best = minf(best, timer)
-			elif in_line(pos, aim, STAKE["width"], STAKE["length"], margin):
-				best = minf(best, timer)
+			else:
+				for d in stake_dirs():
+					if in_line(pos, d, STAKE["width"], STAKE["length"], margin):
+						best = minf(best, timer)
+		"foulee":
+			for c in circles:
+				if pos.distance_to(c) < STRIDE["radius"] + margin:
+					best = minf(best, timer)
 		"chute":
 			for c in circles:
 				if pos.distance_to(c) < FALL["radius"] + margin:
@@ -291,12 +355,17 @@ func _clear_attacks() -> void:
 	lines = []
 	circles = []
 	buds = []
+	steps_left = 0
 	strike_flash = -1.0
 
 
 ## Le robot tourne autour de lui à distance moyenne : les couloirs s'écartent avec la distance.
 func bot_ring(arena_radius: float) -> float:
 	return minf(240.0, arena_radius - 60.0)
+
+
+func _exalt_color() -> Color:
+	return Art.bc("braise")
 
 
 # --- Dessin ---
@@ -353,7 +422,7 @@ func _body_xf() -> Transform2D:
 	var s := lerpf(0.4, 1.0, Anim.ease_out(wake))
 	# La cime tremble avant l'éboulis et la chute ; un tremblement pendant un changement de phase.
 	var shift := Vector2.ZERO
-	if attack in ["eboulis", "chute"]:
+	if attack in ["eboulis", "chute", "foulee"]:
 		shift.x = 3.0 * sin(t * 40.0) * k
 	if transition > 0.0:
 		shift += Vector2(sin(t * 50.0), cos(t * 43.0)) * 3.0
@@ -371,7 +440,10 @@ func _draw() -> void:
 	var xf := _body_xf()
 	var ux := xf * Transform2D(0.0, Vector2.ONE * Ancien.HEIGHT / 100.0, 0.0, Vector2.ZERO)
 	var atlas = BossBake.get_atlas(self, Ancien)
-	_draw_part(atlas, "sol", "p%d" % phase, 0.0, xf, {"phase": phase})
+	draw_exalt_aura(self, xf * Vector2(0, -radius * 0.9), radius * 1.35)
+	# La phase exaltée garde le dessin cuit de la phase 3 (sa lueur est dessinée en direct).
+	var ph := mini(phase, 3)
+	_draw_part(atlas, "sol", "p%d" % ph, 0.0, xf, {"phase": ph})
 	var k := _announce_k()
 	# Le bras du côté du joueur se lève pour le pieu (le bras « devant », côté +x du dessin).
 	var raise: float = k if attack == "pieu" else 0.0
@@ -380,7 +452,7 @@ func _draw() -> void:
 	if dead:
 		_draw_part(atlas, "corps", "mort", die, xf, {"phase": 3, "die": die}, false)
 		return
-	_draw_part(atlas, "corps", "p%d" % phase, fposmod(t / Ancien.LOOP, 1.0), xf, {"phase": phase, "t": fposmod(t, Ancien.LOOP)})
+	_draw_part(atlas, "corps", "p%d" % ph, fposmod(t / Ancien.LOOP, 1.0), xf, {"phase": ph, "t": fposmod(t, Ancien.LOOP)})
 	_arm(ux, 1.0, raise, attack == "pieu")
 	# Yeux de braise, plus vifs pendant une annonce.
 	var ann := 1.0 if stage == "annonce" else 0.0
@@ -466,7 +538,13 @@ func draw_marks(c: CanvasItem) -> void:
 				# L'ombre de la pierre qui tombe grandit au milieu du cercle.
 				c.draw_colored_polygon(Art.ellipse(p, STONES["radius"] * 0.45 * k + 1.0, STONES["radius"] * 0.25 * k + 1.0, 14), Color(Art.c("ombre"), 0.5))
 		"pieu":
-			Art.telegraph(c, {"type": "ligne", "de": anchor + aim * radius * 0.6, "a": anchor + aim * STAKE["length"], "largeur": STAKE["width"]}, k, -1.0, t)
+			for d in stake_dirs():
+				Art.telegraph(c, {"type": "ligne", "de": anchor + d * radius * 0.6, "a": anchor + d * STAKE["length"], "largeur": STAKE["width"]}, k, -1.0, t)
+		"foulee":
+			for p in circles:
+				Art.telegraph(c, {"type": "cercle", "centre": p, "rayon": STRIDE["radius"]}, k, -1.0, t)
+				# L'ombre du pied de pierre qui descend.
+				c.draw_colored_polygon(Art.ellipse(p, STRIDE["radius"] * 0.55 * k + 1.0, STRIDE["radius"] * 0.3 * k + 1.0, 16), Color(Art.c("ombre"), 0.55))
 		"chute":
 			for p in circles:
 				Art.telegraph(c, {"type": "cercle", "centre": p, "rayon": FALL["radius"]}, k, -1.0, t)
@@ -496,13 +574,22 @@ func draw_marks(c: CanvasItem) -> void:
 				Art.telegraph(c, {"type": "cercle", "centre": p, "rayon": STONES["radius"]}, 1.0, f, t)
 				Art.volume(c, Art.ellipse(p, 22.0, 15.0, 10), rock.lightened(0.1), 0.6)
 		"pieu":
-			Art.telegraph(c, {"type": "ligne", "de": anchor + flash_aim * radius * 0.6, "a": anchor + flash_aim * STAKE["length"], "largeur": STAKE["width"]}, 1.0, f, t)
-			# Les pieux plantés tout le long de la ligne.
-			for j in 7:
-				var at: Vector2 = anchor + flash_aim * (radius + 40.0 + j * 72.0)
-				var tip: Vector2 = at + Vector2(0, -38.0 * (1.0 - 0.6 * f))
-				c.draw_colored_polygon(PackedVector2Array([at + Vector2(-8, 0), tip, at + Vector2(8, 0)]), rock.lightened(0.12))
-				c.draw_line(at, tip, Color(Art.ec("saignement", "clair"), 0.7 * (1.0 - f)), 1.5, true)
+			for d in (flash_lines if not flash_lines.is_empty() else [flash_aim]):
+				Art.telegraph(c, {"type": "ligne", "de": anchor + d * radius * 0.6, "a": anchor + d * STAKE["length"], "largeur": STAKE["width"]}, 1.0, f, t)
+				# Les pieux plantés tout le long de la ligne.
+				for j in 7:
+					var at: Vector2 = anchor + d * (radius + 40.0 + j * 72.0)
+					var tip: Vector2 = at + Vector2(0, -38.0 * (1.0 - 0.6 * f))
+					c.draw_colored_polygon(PackedVector2Array([at + Vector2(-8, 0), tip, at + Vector2(8, 0)]), rock.lightened(0.12))
+					c.draw_line(at, tip, Color(Art.ec("saignement", "clair"), 0.7 * (1.0 - f)), 1.5, true)
+		"foulee":
+			for p in flash_circles:
+				Art.telegraph(c, {"type": "cercle", "centre": p, "rayon": STRIDE["radius"]}, 1.0, f, t)
+				# Le pied de pierre posé : une large empreinte et des éclats.
+				Art.volume(c, Art.ellipse(p, 46.0, 26.0, 14), rock.darkened(0.05), 0.6)
+				for j in 5:
+					var q: Vector2 = p + Vector2.from_angle(TAU * j / 5.0 + 0.3) * STRIDE["radius"] * (0.5 + 0.4 * f)
+					c.draw_circle(q, 5.0 * (1.0 - f) + 1.0, rock.lightened(0.1))
 		"chute":
 			for p in flash_circles:
 				Art.telegraph(c, {"type": "cercle", "centre": p, "rayon": FALL["radius"]}, 1.0, f, t)

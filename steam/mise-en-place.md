@@ -20,12 +20,12 @@ sien). Le jeu transmet lui-même l'identifiant à Steam : pas de `steam_appid.tx
 - Tester avec ton compte : `docs/steam.md`.
 
 ## 4. Réglages Steamworks
-- **Succès** : créer les 7 succès de `steam/succes.md` (identifiants exacts), puis « Publier ».
+- **Succès** : créer les 9 succès (7 de boss, CYCLE_2 et CYCLE_3 du New Game+) de `steam/succes.md` (identifiants exacts), puis « Publier ».
 - **Steam Cloud** (Steamworks › Application › Steam Cloud) : activer, quota 20 Mo et 10 fichiers par utilisateur. Le jeu envoie lui-même `partie.json` (sauvegarde) et `settings.cfg` (options) par l'API ; **ne pas** configurer l'Auto-Cloud en plus.
 - **Présence enrichie** : déposer `steam/rich_presence.vdf` (Communauté › Présence enrichie). Les amis voient « Dans la région de Ronce », etc.
 - **Steam Deck** : remplir le questionnaire de compatibilité. Le jeu grossit le texte par défaut sur le Deck et ouvre le clavier de Steam pour renommer un build (bouton « Renommer » à la manette).
 - **Dépôts** (Steamworks › SteamPipe › Dépôts) : un dépôt Windows et un Linux par application (jeu et démo), puis envoyer les builds avec SteamCMD ou l'outil ContentBuilder du SDK.
 
 ## 5. Tester
-- Avec l'App ID 480, Steam montre le jeu comme « Spacewar » : normal. Les succès BOSS_* n'existent pas dans Spacewar, donc rien ne s'affiche ; ils fonctionneront avec le vrai App ID.
+- Avec l'App ID 480, Steam montre le jeu comme « Spacewar » : normal. Les succès BOSS_* et CYCLE_* n'existent pas dans Spacewar, donc rien ne s'affiche ; ils fonctionneront avec le vrai App ID.
 - Tests sans Steam : `tools/unit-tests.sh steam` (faux Steam, pas besoin du client).

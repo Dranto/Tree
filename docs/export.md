@@ -1,6 +1,6 @@
 # Export et builds
 
-Quatre presets dans `godot/export_presets.cfg` : **Windows**, **Linux**, **Windows démo**, **Linux démo** (x86_64, release, PCK embarqué : un seul fichier). La démo porte la fonctionnalité `demo` (`Game.is_demo()`, ou `-- --demo` en test). Version : `application/config/version` dans `project.godot` (0.12.0) ; à garder alignée avec `file_version` / `product_version` des presets Windows.
+Quatre presets dans `godot/export_presets.cfg` : **Windows**, **Linux**, **Windows démo**, **Linux démo** (x86_64, release, PCK embarqué : un seul fichier). La démo porte la fonctionnalité `demo` (`Game.is_demo()`, ou `-- --demo` en test). Version : `application/config/version` dans `project.godot` (0.13.0) ; à garder alignée avec `file_version` / `product_version` des presets Windows.
 
 ## Lancer le build Windows (pour Antoine)
 

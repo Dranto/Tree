@@ -139,7 +139,7 @@ func _baking() -> bool:
 		_vp.add_child(_holder)
 		add_child(_vp)
 		_view = Node2D.new()
-		_view.material = LieuxBake.material()
+		_view.material = LieuxBake.plain_material()
 		_view.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		_view.draw.connect(_draw_view)
 		add_child(_view)

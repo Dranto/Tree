@@ -49,6 +49,69 @@ func _place(pos: Vector2) -> void:
 	main.player.invuln = 1.0e6
 
 
+## Cycle exalté (« -- --cycle=2 ») : l'Exaltation, quatrième phase, suite de la seconde forme sur
+## boucle_3 (pas de drop), avec le reflux et la montée par phrase (boss_finale.gd › MONTEE).
+func _exaltation(finale, boss, per_beat3: float, hits3: float) -> void:
+	print("Exaltation (cycle %d)" % root.get_node("Cycles").current())
+	var at: float = boss.phase_limits[boss.phase_limits.size() - 1]
+	check(boss.phase_limits.size() == 3 and at < 0.33, "une phase de plus sous %d %% de vie (cycles.json › bosses › finale)" % roundi(at * 100.0))
+	var p3_origin: float = boss.score_origin
+	var radius_before: float = finale.radius
+	var keep := func() -> void:
+		main.player.hp = maxf(main.player.hp, 100.0)
+		if is_instance_valid(boss):
+			boss.hp = maxf(boss.hp, boss.max_hp * 0.05)
+	boss.hp = minf(boss.hp, boss.max_hp * (at + 0.01))
+	boss.take_damage(boss.max_hp * 0.02, false)
+	check(await _until(func(): keep.call(); return boss.phase == 4, 900), "sous le seuil : l'Exaltation")
+	await _steps(2)
+	check(boss.exalted_phase_seen and boss.is_exalted_phase(), "elle est annoncée (BossBase._exalt_announce)")
+	check(not boss.music_waiting() and not boss.transforming() and finale.sync.stage == "", "pas de drop ni de transformation : boucle_3 continue")
+	check(finale.radius == radius_before, "l'île garde sa taille")
+	var names: Array = finale.exalted_phase_names
+	check(names.size() == 4 and finale.bar.visible, "la barre nomme la quatrième phase (« %s »)" % [names[3] if names.size() == 4 else ""])
+	check(finale.bar.marks.size() == 3, "la barre marque le seuil de l'Exaltation")
+	check(await _until(func(): keep.call(); return boss.transition <= 0.0 and boss.score_phase == 4, 600), "la reprise tombe sur une mesure du morceau")
+	check(absf(fposmod(boss.beats_now(), finale.sync.beats)) < 0.1 or absf(fposmod(boss.beats_now(), finale.sync.beats) - finale.sync.beats) < 0.1,
+		"reprise sur le premier temps d'une mesure (%.2f)" % boss.beats_now())
+	check(boss.score_origin == p3_origin and boss.score_len == 160.0, "la partition reste calée sur boucle_3 (40 mesures)")
+	var reflux0: int = boss.exalted_attacks
+	var short_seen := 0
+	var long_hits := 0
+	var strikes: Array = []
+	var off_score: Array = []
+	var was: String = boss.stage
+	var max_lvl := 0
+	var lvl_sparks := {}
+	for i in 1800:
+		keep.call()
+		for wv in boss.waves:
+			if wv.get("inward", false) and not wv.has("seen"):
+				wv["seen"] = true
+				if wv.get("small", false):
+					short_seen += 1
+				else:
+					long_hits += 1
+		if boss.stage == "frappe" and was == "annonce":
+			strikes.append(fposmod(boss.beats_now() + 0.5, 1.0) - 0.5)
+			var local := fposmod(boss.beats_now() - boss.score_origin, boss.score_len)
+			if not boss.score_hits.any(func(h): return absf(h["beat"] - local) < 0.1 or absf(h["beat"] - local + boss.score_len) < 0.1):
+				off_score.append(snappedf(local, 0.01))
+		max_lvl = maxi(max_lvl, boss.montee())
+		was = boss.stage
+		await physics_frame
+	check(boss.exalted_attacks - reflux0 >= 3 and long_hits >= 3, "le reflux revient à chaque phrase (%d annoncés, %d anneaux)" % [boss.exalted_attacks - reflux0, long_hits])
+	check(short_seen >= 4, "les grosses caisses douces lancent de petits reflux (%d)" % short_seen)
+	check(strikes.size() >= 4 and strikes.all(func(x): return absf(x) < 0.08) and off_score.is_empty(), "les frappes tombent sur la partition (%s, hors partition : %s)" % [strikes.map(func(x): return snappedf(x, 0.01)), off_score])
+	check(boss.score_skipped == 0, "aucun coup sauté (%d)" % boss.score_skipped)
+	var per_beat4: float = boss.score_weight()
+	var hits4: float = boss.score_hits.size() * 16.0 / boss.score_len
+	check(per_beat4 > per_beat3 and hits4 >= hits3, "plus d'attaques qu'en seconde forme (charge %.1f contre %.1f par temps, %.1f frappes par phrase contre %.1f)" % [per_beat4, per_beat3, hits4, hits3])
+	check(max_lvl == boss.MONTEE["roll"].size() - 1 and boss.deluge, "la densité monte à chaque phrase, jusqu'au déluge (cran %d)" % max_lvl)
+	check(boss.danger_time(boss.anchor + Vector2(finale.radius - 20.0, 0.0)) < INF or not boss.waves.is_empty(), "le robot voit les reflux venir (danger_time)")
+	check(is_instance_valid(boss) and not boss.dead and finale.state == "combat", "le combat continue")
+
+
 func _run() -> void:
 	game = root.get_node("Game")
 	objectives = root.get_node("Objectives")
@@ -260,6 +323,10 @@ func _run() -> void:
 	check(boss.score_len == 160.0 and boss.score_skipped == 0, "seconde forme : la partition suit boucle_3 (40 mesures), aucun coup sauté (%d)" % boss.score_skipped)
 	check(seen.has("lumiere") and seen.has("racines"), "seconde forme : la lumière et les racines (%s)" % ", ".join(seen.keys()))
 	check(seen.has("tempete") and seen.has("floraison") and seen.has("aurore"), "seconde forme : les attaques combinées des six gardiens (%s)" % ", ".join(seen.keys()))
+	if boss.exalted:
+		await _exaltation(finale, boss, per_beat3, hits_per_phrase3)
+	else:
+		check(boss.phase_limits.size() == 2 and boss.phase == 3, "cycle 1 : pas d'Exaltation (deux seuils, la seconde forme est la dernière phase)")
 
 	print("Mort face à la Flétrissure")
 	main.player_died()

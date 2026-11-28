@@ -8,6 +8,7 @@ const TREE_TO_WORLD := 2.1
 
 const Ground = preload("res://scripts/ground.gd")
 const WorldEdge = preload("res://scripts/world_edge.gd")
+const CycleFruit = preload("res://scripts/cycle_fruit.gd")
 const Flora = preload("res://scripts/flora.gd")
 const Fx = preload("res://scripts/fx.gd")
 const WorldFx = preload("res://scripts/world_fx.gd")
@@ -34,6 +35,7 @@ const Content = preload("res://scripts/content.gd")
 ## Menace des ennemis, apparitions et choix de difficulté : res://data/difficulty.json.
 const Difficulty = preload("res://scripts/difficulty.gd")
 const QuestUi = preload("res://scripts/quest_ui.gd")
+const CycleWave = preload("res://scripts/cycle_wave.gd")
 const Sanctuary = preload("res://scripts/sanctuary.gd")
 const LostSap = preload("res://scripts/lost_sap.gd")
 const Altar = preload("res://scripts/altar.gd")
@@ -79,6 +81,8 @@ var tree_ui
 var pause_menu
 ## Objectifs : suivi à l'écran, journal (J), carte (M) et fin de la tranche (quest_ui.gd).
 var quest_ui
+## Monde fané du cycle (cycle_wave.gd) : teinte du cycle et vague de flétrissure.
+var cycle_wave
 var orbs_layer: Node2D
 ## Repère au sol de la destination du clic droit (mode de déplacement « moba »).
 var move_marker: Node2D
@@ -116,6 +120,8 @@ var world_preload = null
 var all_hearts: Array = []
 ## Arène de la finale, sous la graine (finale_arena.gd) : ouverte quand toutes les régions sont purifiées.
 var finale
+## Fruit de la graine du New Game+ (cycle_fruit.gd), après la fin de l'aventure.
+var cycle_fruit
 ## Sanctuaires (sanctuary.gd), points de renaissance ; et sève perdue au sol (lost_sap.gd, ou null).
 var sanctuaries: Array = []
 var lost_sap = null
@@ -377,6 +383,11 @@ func _ready() -> void:
 	if focus_region() == "finale":
 		arena = finale
 	_place_sanctuaries()
+	# New Game+ : le fruit de la graine, après la fin de l'aventure (cycle_fruit.gd).
+	cycle_fruit = CycleFruit.new()
+	cycle_fruit.main = self
+	add_child(cycle_fruit)
+	move_child(cycle_fruit, actors_layer.get_index())
 	var rewards_layer := Node2D.new()
 	add_child(rewards_layer)
 	move_child(rewards_layer, actors_layer.get_index())
@@ -420,6 +431,10 @@ func _ready() -> void:
 	quest_ui = QuestUi.new()
 	quest_ui.main = self
 	add_child(quest_ui)
+	# Monde fané du cycle (New Game+) : teinte du cycle, vague de flétrissure au début d'un cycle.
+	cycle_wave = CycleWave.new()
+	cycle_wave.main = self
+	add_child(cycle_wave)
 	Game.tree_changed.connect(request_autosave)
 	if autotest_boss:
 		arena.autotest_begin()
@@ -439,6 +454,8 @@ func _ready() -> void:
 		world_preload.main = self
 		add_child(world_preload)
 		world_preload.run()
+	# New Game+ : un cycle qui vient de commencer par le fruit de la graine l'annonce (cycles.gd).
+	Cycles.main_ready(self)
 
 
 ## Demande une sauvegarde automatique, regroupée sur une seconde (fonctionne aussi en pause).
@@ -507,6 +524,8 @@ func _sprites_step() -> void:
 			_sprites_region = here
 			for kr in Enemy.Sprites.region_kinds(here):
 				Enemy.Sprites.request(kr[0])
+			for k in _cycle_mix_kinds(here):
+				Enemy.Sprites.request(k)
 	Enemy.Sprites.pump(self)
 
 
@@ -892,11 +911,45 @@ func _pick_kind(pos: Vector2):
 	if not bench_kinds.is_empty():
 		return bench_kinds[rng.randi() % bench_kinds.size()]
 	var reg := region_at(pos)
+	if Cycles.exalted():
+		var mixed := _cycle_mix_kind(reg, pos)
+		if mixed != "":
+			return mixed
 	if region_spawn.has(reg):
 		var regional := _region_kind(reg, pos)
 		if regional != "":
 			return regional
 	return _ordinary_kind()
+
+
+## New Game+ (jalon 14 M) : Flétri d'une autre région mêlé aux habitués. data/cycles.json › mix,
+## par région où naît l'ennemi (« ordinaires » hors région) : « share » des apparitions, sortes
+## tirées selon leurs poids, « min_dist » : distance minimale à la graine par sorte. "" : pas de mélange.
+func _cycle_mix_kind(reg: String, pos: Vector2) -> String:
+	var entry = Cycles.value("mix", {}).get(reg if reg != "" else "ordinaires", null)
+	if not entry is Dictionary or rng.randf() >= float(entry.get("share", 0.0)):
+		return ""
+	var min_dist: Dictionary = entry.get("min_dist", {})
+	var kinds := {}
+	var total := 0.0
+	for k in entry.get("kinds", {}):
+		if pos.length() >= float(min_dist.get(k, 0.0)) and Enemy.KIND_INDEX.has(k):
+			kinds[k] = float(entry["kinds"][k])
+			total += kinds[k]
+	var pick := rng.randf() * total
+	for k in kinds:
+		pick -= kinds[k]
+		if pick <= 0.0:
+			return k
+	return ""
+
+
+## Sortes mêlées aux habitués d'une région au cycle en cours (cuites à l'entrée dans la région).
+func _cycle_mix_kinds(reg: String) -> Array:
+	if not Cycles.exalted():
+		return []
+	var entry = Cycles.value("mix", {}).get(reg if reg != "" else "ordinaires", null)
+	return entry.get("kinds", {}).keys() if entry is Dictionary else []
 
 
 ## Flétri ordinaire tiré selon les poids de « ordinary », parmi les sortes permises à ce niveau
@@ -929,11 +982,14 @@ func _roll_elite(e, pos: Vector2) -> void:
 	if cfg.is_empty() or Game.level < int(cfg.get("min_level", 1)) or not e.can_be_elite():
 		return
 	var chance := lerpf(float(cfg.get("chance", 0.01)), float(cfg.get("chance_far", 0.03)), _region_depth(pos))
+	# New Game+ : data/cycles.json › elites (chance × chance_mult, plus d'élites à la fois, plus de doubles).
+	var cyc: Dictionary = Cycles.value("elites", {})
+	chance *= float(cyc.get("chance_mult", 1.0))
 	if rng.randf() >= chance:
 		return
-	if enemies.filter(func(x): return x.get("elite") == true).size() >= int(cfg.get("max_alive", 2)):
+	if enemies.filter(func(x): return x.get("elite") == true).size() >= int(cyc.get("max_alive", cfg.get("max_alive", 2))):
 		return
-	make_elite(e, rng.randf() < float(cfg.get("two_affixes", 0.0)) and Game.level >= int(cfg.get("two_affixes_level", 1)))
+	make_elite(e, rng.randf() < float(cyc.get("two_affixes", cfg.get("two_affixes", 0.0))) and Game.level >= int(cfg.get("two_affixes_level", 1)))
 
 
 ## Fait d'un ennemi une élite à un ou deux modificateurs tirés selon leurs poids.
