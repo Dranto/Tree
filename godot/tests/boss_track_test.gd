@@ -112,8 +112,8 @@ func _check_finale_data() -> void:
 
 func _check_without_file() -> void:
 	print("Boss sans morceau")
-	check(not BossTrack.has_track("spore"), "Spore n'a pas de morceau (musique du code)")
-	check(not track.begin("spore"), "begin(\"spore\") ne lance rien")
+	check(not BossTrack.has_track("vent"), "Vent n'a pas de morceau (musique du code)")
+	check(not track.begin("vent"), "begin(\"vent\") ne lance rien")
 	check(not track.active(), "le lecteur reste inactif")
 
 

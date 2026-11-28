@@ -29,6 +29,32 @@ func _steps(n: int) -> void:
 		await physics_frame
 
 
+## Retire les tirs de la batterie (Amanite-Mère sur son morceau) et l'invulnérabilité qui suit un coup.
+## Tient la vie du boss à « hold ».
+func _hold(b, hold: float) -> bool:
+	if is_instance_valid(b):
+		b.hp = maxf(b.hp, hold)
+	return true
+
+
+## La vie du boss (_b) est tenue à _keep : le héros (_p), qui frappe de lui-même, ne l'achève pas.
+var _b
+var _p
+var _keep := 0.0
+
+
+func _quiet() -> bool:
+	if is_instance_valid(_b):
+		_b.hp = maxf(_b.hp, _keep)
+		_b.spores = []
+		_b.pricks = []
+		_b.waves = []
+	_p.invuln = 0.0
+	# Le héros ne doit pas tomber (sa mort relancerait le combat) : ce qu'il perd se lit sur _hp0.
+	_p.hp = maxf(_p.hp, 1.0e4)
+	return true
+
+
 func _until(cond: Callable, limit := 900) -> bool:
 	for i in limit:
 		if cond.call():
@@ -89,7 +115,9 @@ func _region(region: String, cycle: int) -> void:
 	check(names.size() == 4, "quatre noms de phase au cycle exalté")
 	# L'attaque nouvelle est annoncée puis frappe (le joueur ne craint rien : vie énorme).
 	var att: String = boss.EXALTED_ATTACK
-	check(await _until(func(): return boss.attack == att, 1800), "« %s » est lancée en phase exaltée" % att)
+	# Le héros frappe de lui-même : la vie du boss est tenue dans la phase exaltée le temps de l'attendre.
+	var keep: float = boss.hp
+	check(await _until(func(): return _hold(boss, keep) and boss.attack == att, 1800), "« %s » est lancée en phase exaltée" % att)
 	check(boss.exalted_attacks >= 1, "le compteur de l'attaque nouvelle monte")
 	var hp0: float = p.hp
 	match region:
@@ -106,20 +134,27 @@ func _region(region: String, cycle: int) -> void:
 			await _steps(2)
 			check(p.hp < hp0, "sur la bande : l'étreinte blesse")
 		"spore":
-			await _until(func(): return boss.stage == "frappe", 300)
-			await _until(func(): return not boss.rings.is_empty(), 120)
+			_b = boss
+			_p = p
+			_keep = keep
+			await _until(func(): return _quiet() and _b.stage == "frappe", 300)
+			await _until(func(): return _quiet() and not _b.rings.is_empty(), 120)
 			var g: Dictionary = boss.rings[0]
 			# Dans la brèche du premier anneau : il passe sans toucher.
 			p.position = boss.anchor + Vector2.from_angle(g["gap"]) * (g["r"] + 120.0)
 			var first: Dictionary = g
-			await _until(func(): return first["r"] > boss.anchor.distance_to(p.position) + 40.0, 300)
+			await _until(func(): return _quiet() and first["r"] > _b.anchor.distance_to(_p.position) + 40.0, 300)
 			check(not first["hit"], "dans la brèche : l'anneau passe sans toucher")
 			# Sur la bande d'un anneau suivant, loin de sa brèche.
-			await _until(func(): return boss.rings.size() >= 2 or boss.ring_gaps.is_empty(), 200)
+			await _until(func(): return _quiet() and (_b.rings.size() >= 2 or _b.ring_gaps.is_empty()), 200)
 			var g2: Dictionary = boss.rings[boss.rings.size() - 1]
 			p.position = boss.anchor + Vector2.from_angle(g2["gap"] + PI) * (g2["r"] + 60.0)
 			p.invuln = 0.0
-			await _until(func(): return g2["hit"] or g2["r"] > boss.anchor.distance_to(p.position) + 40.0, 300)
+			p.hp = 1.0e5
+			hp0 = p.hp
+			# Sur son morceau, la batterie tire aussi : ses spores (et l'invulnérabilité qui suit un coup)
+			# ne doivent pas cacher l'anneau.
+			await _until(func(): return _quiet() and (g2["hit"] or g2["r"] > _b.anchor.distance_to(_p.position) + 40.0), 300)
 			check(g2["hit"] and p.hp < hp0, "sur la bande, hors de la brèche : l'anneau blesse")
 		"vent":
 			await _until(func(): return boss.swoop_step == "vise", 200)
