@@ -85,6 +85,11 @@ func _physics_process(delta: float) -> void:
 	var ready: bool = alive and not b.music_waiting()
 	if alive and b.music_waiting():
 		_waited = true
+	if alive and step == 4:
+		# Le héros frappe de lui-même : la vie reste celle de la phase jusqu'au coup forcé (avant lui,
+		# pour que le coup forcé passe bien sous le seuil).
+		var lo: float = float(b.phase_limits[b.phase - 1]) if b.phase - 1 < b.phase_limits.size() else 0.0
+		b.hp = maxf(b.hp, b.max_hp * (lo + 0.01))
 	match step:
 		1:
 			if Music.hand.state == "approche":
@@ -123,10 +128,6 @@ func _physics_process(delta: float) -> void:
 				get_tree().quit(0)
 	if OS.get_environment("FILM_DEBUG") != "" and Engine.get_physics_frames() % 60 == 0:
 		print("DBG step %d t %.1f enabled %s started %s hand %s level %.2f region %s dist %.0f state %s" % [step, t, Music.enabled, Music.started, Music.hand.state, arena.approach_level(), Regions.region_at(p.position), p.position.distance_to(arena.center), arena.state])
-	if alive and step >= 3:
-		# Le héros frappe de lui-même : la vie reste celle de la phase jusqu'au coup forcé.
-		var lo: float = float(b.phase_limits[b.phase - 1]) if b.phase - 1 < b.phase_limits.size() else 0.0
-		b.hp = maxf(b.hp, b.max_hp * (lo + 0.01))
-		if int(b.phase) != _seen_phase:
-			_seen_phase = int(b.phase)
-			_log("elle entre en phase %d" % _seen_phase)
+	if alive and step >= 3 and int(b.phase) != _seen_phase:
+		_seen_phase = int(b.phase)
+		_log("elle entre en phase %d" % _seen_phase)
