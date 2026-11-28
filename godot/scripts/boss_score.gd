@@ -1,5 +1,6 @@
 ## Partition d'un boss sur son morceau fait à la main (boss_sync.gd) : ce qui frappe sur quel temps.
-## Commun à la Mère-Ronce (boss_ronce.gd) et à l'Amanite-Mère (boss_spore.gd) : chaque boss n'écrit
+## Commun à la Mère-Ronce (boss_ronce.gd), à l'Amanite-Mère (boss_spore.gd) et au Harfang
+## (boss_vent.gd) : chaque boss n'écrit
 ## que sa partition (SCORE, DRUMS_POWER) et la façon dont il joue chaque coup.
 ##
 ## Le boss donne :
@@ -13,7 +14,8 @@
 ##     coups de batterie qui en ont une (onde, pouls, piqure), « fallback » : coups de batterie quand le
 ##     morceau n'en donne pas (une phrase, doubles croches par mesure).
 ## Coups de batterie produits : onde, pouls, roulement (caisse claire), aiguille (charleston), piqure
-## (caisse douce) ; le boss les joue à sa façon (fire). Tests : ronce_musique_test, spore_musique_test.
+## (caisse douce) ; le boss les joue à sa façon (fire). Tests : ronce_musique_test, spore_musique_test,
+## vent_musique_test.
 extends RefCounted
 
 const SOURCES := ["kick", "kick_doux", "caisse", "charleston", "caisse_douce"]

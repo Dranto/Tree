@@ -4,7 +4,8 @@
 ## l'arène le mène (il esquive comme un joueur) ; des coups forcés font passer les phases : phase 1,
 ## drop_1, phase 2, drop_2, phase 3 (et au cycle 2, « -- --cycle=2 » : drop_3, phase exaltée), mort.
 ## Les moments sont imprimés (« FILM »). Rien n'est comparé : c'est un outil. Lancer avec --write-movie.
-## « -- --region=spore » : le même film pour l'Amanite-Mère (tools/amanite-film.sh).
+## « -- --region=spore » : le même film pour l'Amanite-Mère (tools/amanite-film.sh), « -- --region=vent »
+## pour le Harfang (tools/harfang-film.sh).
 extends Node
 
 const MainScene = preload("res://scenes/main.tscn")
@@ -110,7 +111,8 @@ func _physics_process(delta: float) -> void:
 				_mark = t
 				step = 4
 		4:
-			if alive and t - _mark >= float(PHASE_TIME[b.phase]):
+			# En vol (le Harfang), le boss est hors d'atteinte : le coup forcé attend qu'il soit à portée.
+			if alive and t - _mark >= float(PHASE_TIME[b.phase]) and not (b.has_method("airborne") and b.airborne()):
 				if b.phase >= _last_phase:
 					b.take_damage(b.hp + 1.0, false)
 					_log("coup fatal")
