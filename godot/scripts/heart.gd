@@ -249,7 +249,12 @@ func _physics_process(delta: float) -> void:
 		if wave_timer <= 0.0:
 			wave_timer = wave_every
 			_spawn_wave()
-		update_bar(d < zone)
+		# Un seul siège affiché à la fois : celui du Cœur assiégé le plus proche. Un siège laissé en plan
+		# (sa flétrissure regagne du terrain) ne superpose plus sa barre à celle du nouveau (retour du 28/11).
+		if shows_bar():
+			update_bar(d < zone)
+		else:
+			bar.hide_bar()
 		if progress >= hold_time:
 			purify()
 	else:
@@ -260,6 +265,20 @@ func _physics_process(delta: float) -> void:
 				spawn_timer = spawn_every
 				if spawned.size() < idle_max:
 					_spawn(center + Vector2.from_angle(rng.randf() * TAU) * (body_radius + 30.0), idle_kind)
+
+
+## Vrai si ce Cœur porte la barre de siège : il est assiégé et c'est le plus proche du joueur parmi
+## les Cœurs assiégés.
+func shows_bar() -> bool:
+	if state != "siege":
+		return false
+	var p = main.player
+	var mine: float = p.position.distance_squared_to(center)
+	if "all_hearts" in main:
+		for h in main.all_hearts:
+			if h != self and is_instance_valid(h) and h.state == "siege" and p.position.distance_squared_to(h.center) < mine:
+				return false
+	return true
 
 
 ## Le joueur est mort pendant le siège : le Cœur se rendort, tout est à recommencer.

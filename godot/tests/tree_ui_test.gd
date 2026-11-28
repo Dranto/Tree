@@ -68,11 +68,55 @@ func _run() -> void:
 	ui.mouse = ui.size - Vector2(5, 5)
 	await _frames(4)
 	await _shot("infobulle_coin", res)
+	await _wheel_checks(ui)
 	ui.toggle()
 	await _frames(2)
 	check(main.hud.is_visible_in_tree(), "le HUD réapparaît à la fermeture")
 	print("RÉSULTAT ", "ok" if failures == 0 else "%d échec(s)" % failures)
 	quit(1 if failures > 0 else 0)
+
+
+## Molette (retour du premier testeur) : elle zoome sur l'arbre, mais pas sur un panneau posé par-dessus.
+func _wheel_checks(ui) -> void:
+	ui.hover = -1
+	check(await _wheel_zooms(ui, Vector2(ui.size.x * 0.5, ui.size.y * 0.6)), "la molette zoome sur l'arbre")
+	for which in ["summary", "builds"]:
+		if which == "summary":
+			ui.panels.set_summary_visible(true)
+		else:
+			ui.panels.set_builds_visible(true)
+		await _frames(3)
+		var panel: Control = ui.panels.summary_panel if which == "summary" else ui.panels.builds_panel
+		var r := panel.get_global_rect()
+		var any := false
+		for k in [0.15, 0.5, 0.85]:
+			if await _wheel_zooms(ui, r.position + r.size * Vector2(0.5, k)):
+				any = true
+		check(not any, "la molette sur le panneau %s ne zoome pas l'arbre" % which)
+	ui.panels.set_builds_visible(false)
+	ui.panels.set_summary_visible(false)
+	await _frames(2)
+
+
+func _wheel_zooms(ui, canvas_pos: Vector2) -> bool:
+	var z: float = ui.zoom
+	ui._zoom_goal = 0.0
+	var pos: Vector2 = root.get_final_transform() * canvas_pos
+	var mm := InputEventMouseMotion.new()
+	mm.position = pos
+	mm.global_position = pos
+	root.push_input(mm)
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	ev.pressed = true
+	ev.position = pos
+	ev.global_position = pos
+	root.push_input(ev)
+	await _frames(2)
+	var moved: bool = ui._zoom_goal != 0.0 or absf(ui.zoom - z) > 0.0001
+	ui._zoom_goal = 0.0
+	ui.zoom = z
+	return moved
 
 
 func _keystone(game) -> int:

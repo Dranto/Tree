@@ -7924,7 +7924,7 @@ msgstr "Attack: %s"
 #. scripts/attack.gd:1144
 #. scripts/attack.gd:1305
 #. scripts/skill_tree.gd:1042
-#. scripts/tree_ui.gd:957
+#. scripts/tree_ui.gd:967
 msgid "%s : %s"
 msgstr "%s: %s"
 
@@ -8104,8 +8104,8 @@ msgstr "Dodge"
 #. scripts/controls_text.gd:131
 #. scripts/controls_text.gd:147
 #. scripts/settings.gd:86
-#. scripts/tree_ui.gd:2030
-#. scripts/tree_ui.gd:2069
+#. scripts/tree_ui.gd:2040
+#. scripts/tree_ui.gd:2079
 msgid "Arbre de vie"
 msgstr "Tree of Life"
 
@@ -8287,11 +8287,11 @@ msgstr "Requires the “%s” skill."
 msgid "Incompatible avec « %s »."
 msgstr "Incompatible with “%s”."
 
-#. scripts/heart.gd:284
+#. scripts/heart.gd:303
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
 msgstr "Return to the zone: the blight is gaining ground"
 
-#. scripts/heart.gd:284
+#. scripts/heart.gd:303
 msgid "Tiens la zone : %d s"
 msgstr "Hold the ground: %d s"
 
@@ -8514,7 +8514,7 @@ msgid "%s est déjà utilisé : %s."
 msgstr "%s is already used: %s."
 
 #. scripts/options_panel.gd:60
-#. scripts/settings.gd:823
+#. scripts/settings.gd:833
 msgid "Affichage"
 msgstr "Display"
 
@@ -8564,7 +8564,7 @@ msgstr "Secondary skill 4"
 
 #. scripts/options_panel.gd:79
 #. scripts/pause_menu.gd:51
-#. scripts/settings.gd:826
+#. scripts/settings.gd:836
 #. scripts/title.gd:70
 msgid "Options"
 msgstr "Options"
@@ -8679,7 +8679,7 @@ msgid "Tous"
 msgstr "All"
 
 #. scripts/settings.gd:392
-#. scripts/settings.gd:863
+#. scripts/settings.gd:873
 msgid "compétence %d"
 msgstr "skill %d"
 
@@ -8763,105 +8763,101 @@ msgstr "Normal"
 msgid "Très grande"
 msgstr "Very large"
 
-#. scripts/settings.gd:738
+#. scripts/settings.gd:748
 msgid "L'attaque de base part toute seule vers la souris, même sans ennemi."
 msgstr "The basic attack fires on its own toward the mouse, even with no enemy around."
 
-#. scripts/settings.gd:739
+#. scripts/settings.gd:749
 msgid "L'attaque de base part toute seule sur l'ennemi à portée le plus proche du curseur. Sans ennemi à portée, elle ne part pas."
 msgstr "The basic attack fires on its own at the enemy in range nearest the cursor. With no enemy in range, it holds."
 
-#. scripts/settings.gd:747
+#. scripts/settings.gd:757
 msgid "Clic droit : le héros marche jusqu'à l'endroit cliqué (un repère s'affiche au sol) ; clic droit tenu : il suit le curseur. La compétence du clic droit passe sur %s ; Espace reste l'esquive, vers le curseur."
 msgstr "Right click: the hero walks to the clicked spot (a marker shows on the ground); hold right click: the hero follows the cursor. The right-click skill moves to %s; Space stays the dodge, toward the cursor."
 
-#. scripts/settings.gd:749
+#. scripts/settings.gd:759
 msgid "Le héros marche vers la souris et s'arrête quand elle est tout près de lui. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur. L'esquive part vers le curseur."
 msgstr "The hero walks toward the mouse and stops when it is very close. The attack fires on its own; left and right click cast skills toward the cursor. The dodge goes toward the cursor."
 
-#. scripts/settings.gd:750
+#. scripts/settings.gd:760
 msgid "Z Q S D (W A S D en QWERTY) ou les flèches. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur."
 msgstr "W A S D (Z Q S D on AZERTY) or the arrow keys. The attack fires on its own; left and right click cast skills toward the cursor."
 
-#. scripts/settings.gd:823
+#. scripts/settings.gd:833
 msgid "Menu"
 msgstr "Menu"
 
-#. scripts/settings.gd:824
+#. scripts/settings.gd:834
 msgid "Stick D"
 msgstr "R stick"
 
-#. scripts/settings.gd:824
+#. scripts/settings.gd:834
 msgid "Stick G"
 msgstr "L stick"
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:835
 msgid "Carré"
 msgstr "Square"
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:835
 msgid "Croix"
 msgstr "Cross"
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:835
 msgid "Rond"
 msgstr "Circle"
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:835
 msgid "Triangle"
 msgstr "Triangle"
 
-#. scripts/settings.gd:826
+#. scripts/settings.gd:836
 msgid "Partage"
 msgstr "Share"
 
-#. scripts/settings.gd:828
+#. scripts/settings.gd:838
 msgid "Croix bas"
 msgstr "D-pad down"
 
-#. scripts/settings.gd:828
+#. scripts/settings.gd:838
 msgid "Croix gauche"
 msgstr "D-pad left"
 
-#. scripts/settings.gd:828
+#. scripts/settings.gd:838
 msgid "Croix haut"
 msgstr "D-pad up"
 
-#. scripts/settings.gd:829
+#. scripts/settings.gd:839
 msgid "Croix droite"
 msgstr "D-pad right"
 
-#. scripts/settings.gd:829
+#. scripts/settings.gd:839
 msgid "Palette 1"
 msgstr "Paddle 1"
 
-#. scripts/settings.gd:829
+#. scripts/settings.gd:839
 msgid "Palette 2"
 msgstr "Paddle 2"
 
-#. scripts/settings.gd:830
+#. scripts/settings.gd:840
 msgid "Palette 3"
 msgstr "Paddle 3"
 
-#. scripts/settings.gd:830
+#. scripts/settings.gd:840
 msgid "Palette 4"
 msgstr "Paddle 4"
 
-#. scripts/settings.gd:830
+#. scripts/settings.gd:840
 msgid "Stick droit"
 msgstr "Right stick"
 
-#. scripts/settings.gd:830
+#. scripts/settings.gd:840
 msgid "Stick gauche"
 msgstr "Left stick"
 
-#. scripts/settings.gd:831
+#. scripts/settings.gd:841
 msgid "Croix directionnelle"
 msgstr "D-pad"
-
-#. scripts/settings.gd:841
-msgid "Bouton %d"
-msgstr "Button %d"
 
 #. scripts/settings.gd:85
 msgid "Aller à droite"
@@ -8878,6 +8874,10 @@ msgstr "Move up"
 #. scripts/settings.gd:85
 msgid "Reculer"
 msgstr "Move down"
+
+#. scripts/settings.gd:851
+msgid "Bouton %d"
+msgstr "Button %d"
 
 #. scripts/skill_tree.gd:1029
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
@@ -9347,65 +9347,65 @@ msgstr "%s%%"
 msgid "frontière %s"
 msgstr "%s border"
 
-#. scripts/tree_ui.gd:2032
-#. scripts/tree_ui.gd:2070
+#. scripts/tree_ui.gd:2042
+#. scripts/tree_ui.gd:2080
 msgid "%d point(s) à placer  ·  Niveau %d  ·  %d / %d nœuds"
 msgstr "%d point(s) to spend  ·  Level %d  ·  %d / %d nodes"
 
-#. scripts/tree_ui.gd:2034
-#. scripts/tree_ui.gd:2072
+#. scripts/tree_ui.gd:2044
+#. scripts/tree_ui.gd:2082
 msgid "Chaque nœud appris ravive la région du monde située dans sa direction."
 msgstr "Each node you learn revives the part of the world that lies in its direction."
 
-#. scripts/tree_ui.gd:2048
+#. scripts/tree_ui.gd:2058
 msgid "Clic : apprendre (un nœud ou tout un chemin)   ·   Clic droit : oublier   ·   Glisser : se déplacer   ·   Molette : zoom   ·   Tab / Échap : fermer"
 msgstr "Click: learn (one node or a whole path)   ·   Right click: unlearn   ·   Drag: pan   ·   Wheel: zoom   ·   Tab / Esc: close"
 
-#. scripts/tree_ui.gd:2098
+#. scripts/tree_ui.gd:2108
 msgid " · frontière %s et %s · anneau %d"
 msgstr " · %s and %s border · ring %d"
 
-#. scripts/tree_ui.gd:2100
+#. scripts/tree_ui.gd:2110
 msgid " · %s · anneau %d"
 msgstr " · %s · ring %d"
 
-#. scripts/tree_ui.gd:2122
+#. scripts/tree_ui.gd:2132
 msgid "Transforme « %s » : un seul choix"
 msgstr "Transforms “%s”: a single choice"
 
-#. scripts/tree_ui.gd:2124
+#. scripts/tree_ui.gd:2134
 msgid "Un bonus à choisir, modifiable à tout moment"
 msgstr "A bonus to choose, changeable at any time"
 
-#. scripts/tree_ui.gd:2127
+#. scripts/tree_ui.gd:2137
 msgid "› %s : %s"
 msgstr "› %s: %s"
 
-#. scripts/tree_ui.gd:2128
+#. scripts/tree_ui.gd:2138
 msgid "  (choisi)"
 msgstr "  (chosen)"
 
-#. scripts/tree_ui.gd:2130
+#. scripts/tree_ui.gd:2140
 msgid "Clic pour faire ton choix"
 msgstr "Click to make your choice"
 
-#. scripts/tree_ui.gd:2132
+#. scripts/tree_ui.gd:2142
 msgid "Clic pour changer de bonus"
 msgstr "Click to change bonus"
 
-#. scripts/tree_ui.gd:2137
+#. scripts/tree_ui.gd:2147
 msgid "Grappe « %s » : %d / %d nœuds"
 msgstr "Cluster “%s”: %d / %d nodes"
 
-#. scripts/tree_ui.gd:2139
+#. scripts/tree_ui.gd:2149
 msgid "Grappe complète : %s"
 msgstr "Cluster complete: %s"
 
-#. scripts/tree_ui.gd:2154
+#. scripts/tree_ui.gd:2164
 msgid "Résonance de %s : tous les paliers atteints (%d nœuds)"
 msgstr "%s resonance: all tiers reached (%d nodes)"
 
-#. scripts/tree_ui.gd:2156
+#. scripts/tree_ui.gd:2166
 msgid "Résonance de %s : %d / %d nœuds, puis %s"
 msgstr "%s resonance: %d / %d nodes, then %s"
 
@@ -9425,31 +9425,31 @@ msgstr "Mutation"
 msgid "Attaque de base"
 msgstr "Basic attack"
 
-#. scripts/tree_ui.gd:825
+#. scripts/tree_ui.gd:835
 msgid "Une mutation est définitive : oublie ce nœud (clic droit) pour en choisir une autre."
 msgstr "A mutation is final: unlearn this node (right click) to choose another."
 
-#. scripts/tree_ui.gd:835
+#. scripts/tree_ui.gd:845
 msgid "Ce chemin passe par « %s ». %s"
 msgstr "This path goes through “%s”. %s"
 
-#. scripts/tree_ui.gd:906
+#. scripts/tree_ui.gd:916
 msgid "Choisis comment « %s » se transforme. Le choix tient tant que ce nœud reste appris."
 msgstr "Choose how “%s” transforms. The choice holds as long as this node stays learned."
 
-#. scripts/tree_ui.gd:908
+#. scripts/tree_ui.gd:918
 msgid "Choisis un bonus. Tu pourras en changer quand tu veux, sans rien dépenser."
 msgstr "Choose a bonus. You can change it whenever you like, at no cost."
 
-#. scripts/tree_ui.gd:918
+#. scripts/tree_ui.gd:928
 msgid "   (choix actuel)"
 msgstr "   (current choice)"
 
-#. scripts/tree_ui.gd:936
+#. scripts/tree_ui.gd:946
 msgid "Fermer"
 msgstr "Close"
 
-#. scripts/tree_ui.gd:936
+#. scripts/tree_ui.gd:946
 msgid "Plus tard"
 msgstr "Later"
 
