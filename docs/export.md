@@ -4,7 +4,7 @@ Quatre presets dans `godot/export_presets.cfg` : **Windows**, **Linux**, **Windo
 
 ## Lancer le build Windows (pour Antoine)
 
-**Sans rien installer** : sur GitHub, ouvrir la PR ou l'exécution du workflow « Builds », section *Artifacts*, télécharger `seve-windows` (jeu) ou `seve-windows-demo` (démo), dézipper, lancer `Seve.exe` (ou `Seve-demo.exe`). Windows peut afficher « Windows a protégé votre ordinateur » (le fichier n'est pas signé) : *Informations complémentaires* → *Exécuter quand même*.
+**Sans rien installer** : sur GitHub, ouvrir la PR ou l'exécution du workflow « Builds », section *Artifacts*, télécharger `arborescence-windows` (jeu) ou `arborescence-windows-demo` (démo), dézipper, lancer `Arborescence.exe` (ou `Arborescence-demo.exe`). Windows peut afficher « Windows a protégé votre ordinateur » (le fichier n'est pas signé) : *Informations complémentaires* → *Exécuter quand même*.
 
 **Depuis son propre poste** (Godot 4.7 installé) : Projet → Exporter… → preset *Windows* → *Exporter le projet*. Les modèles d'export 4.7 s'installent depuis Éditeur → Gérer les modèles d'export. Ou, sous Linux/macOS/WSL : `tools/export.sh windows`.
 

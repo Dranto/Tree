@@ -68,7 +68,7 @@ jobs:
       - name: Publier le build Windows
         uses: actions/upload-artifact@v4
         with:
-          name: seve-windows${{ env.SUFFIX }}
+          name: arborescence-windows${{ env.SUFFIX }}
           # L'exécutable et, à côté, GodotSteam et steam_api64.dll.
           path: build/windows${{ env.SUFFIX }}/
           if-no-files-found: error
@@ -76,7 +76,7 @@ jobs:
       - name: Publier le build Linux
         uses: actions/upload-artifact@v4
         with:
-          name: seve-linux${{ env.SUFFIX }}
+          name: arborescence-linux${{ env.SUFFIX }}
           path: |
             build/linux${{ env.SUFFIX }}/
             !build/linux${{ env.SUFFIX }}/smoke.log
@@ -103,7 +103,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: seve-windows${{ matrix.variant == 'demo' && '-demo' || '' }}
+          name: arborescence-windows${{ matrix.variant == 'demo' && '-demo' || '' }}
           path: build
 
       - name: Charger GodotSteam (-- --steam-probe)

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Lance un build Linux exporté sous xvfb : démarrage, 60 s de robot (--autotest), sortie propre.
 # Échoue sur un code de sortie non nul, sur une erreur de script, ou si le robot ne va pas au bout.
-#   tools/export-smoke.sh [build/linux/Seve.x86_64]
+#   tools/export-smoke.sh [build/linux/Arborescence.x86_64]
 # Avec GodotSteam à côté du binaire, vérifie d'abord qu'il se charge (-- --steam-probe) ;
 # STEAM_REQUIRED=1 (CI) exige sa présence.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="${1:-$ROOT/build/linux/Seve.x86_64}"
+BIN="${1:-$ROOT/build/linux/Arborescence.x86_64}"
 LOG="$(dirname "$BIN")/smoke.log"
 DIR="$(dirname "$BIN")"
 fail=0

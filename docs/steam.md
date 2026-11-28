@@ -1,7 +1,7 @@
 # Steam : tester avec ton compte, et le jour du vrai App ID
 
-Les builds de la CI (workflow « Builds », artefacts `seve-windows`, `seve-windows-demo`, `seve-linux`,
-`seve-linux-demo`) embarquent **GodotSteam** : à côté de l'exécutable, `libgodotsteam…` et
+Les builds de la CI (workflow « Builds », artefacts `arborescence-windows`, `arborescence-windows-demo`, `arborescence-linux`,
+`arborescence-linux-demo`) embarquent **GodotSteam** : à côté de l'exécutable, `libgodotsteam…` et
 `steam_api64.dll` (Windows) ou `libsteam_api.so` (Linux). Steam reste **facultatif** : sans client
 Steam, ou si ces fichiers manquent, le jeu tourne exactement pareil.
 
@@ -10,9 +10,9 @@ Pour l'instant le jeu se présente à Steam avec l'App ID de test **480** (« Sp
 ## 1. Tester avec ton compte (5 minutes, Windows)
 
 1. Ouvre la page de la PR ou du dernier passage de « Builds » sur develop, onglet *Checks* › *Builds* ›
-   *Artifacts*, et télécharge `seve-windows` (ou `seve-windows-demo`).
+   *Artifacts*, et télécharge `arborescence-windows` (ou `arborescence-windows-demo`).
 2. Dézippe **tout le dossier** (l'exe seul ne suffit pas : la DLL Steam doit rester à côté).
-3. Lance Steam et connecte-toi, puis double-clique sur `Seve.exe`.
+3. Lance Steam et connecte-toi, puis double-clique sur `Arborescence.exe`.
 4. Ce que tu dois voir :
    - dans ta liste d'amis, ton statut « En jeu : Spacewar » (c'est l'App ID 480, normal) ;
    - Maj+Tab ouvre l'overlay Steam par-dessus le jeu.
@@ -23,7 +23,7 @@ Pour l'instant le jeu se présente à Steam avec l'App ID de test **480** (« Sp
    n’a plus isSteamRunningOnSteamDeck).
 
 Vérification rapide, Steam ouvert, dans PowerShell depuis le dossier dézippé :
-`.\Seve.exe --headless --log-file steam.txt -- --steam-probe` puis `type steam.txt`. On doit lire
+`.\Arborescence.exe --headless --log-file steam.txt -- --steam-probe` puis `type steam.txt`. On doit lire
 `STEAM-PROBE bibliotheque=oui statut=actif app_id=480` et `fonctions manquantes : aucune`.
 Sans Steam ouvert, `statut=refusé : Could not determine Steam client install directory.` : normal,
 le jeu continue sans Steam (c'est ce que vérifie la CI, qui n'a pas de client Steam).
