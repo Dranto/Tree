@@ -39,6 +39,8 @@ TESTS=(
   "ronce_musique@cycle2|--headless --fixed-fps 60|--cycle=2"
   "spore_musique|--headless --fixed-fps 60|"
   "spore_musique@cycle2|--headless --fixed-fps 60|--cycle=2"
+  "vent_musique|--headless --fixed-fps 60|"
+  "vent_musique@cycle2|--headless --fixed-fps 60|--cycle=2"
   "death|--headless --fixed-fps 60|"
   "deaths|--headless --fixed-fps 60|"
   "cycle_tint|--headless --fixed-fps 60|"

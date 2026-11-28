@@ -94,7 +94,8 @@
         "dead": {"shape": "streak", "color": "vent/sombre", "alpha": 0.45, "vel": [150.0, 10.0], "sway": [20.0, 6.0], "size": [1.0, 1.8], "length": 22.0, "alt": "feather", "alt_ratio": 0.08},
         "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.7, "vel": [170.0, 8.0], "sway": [24.0, 8.0], "size": [1.0, 1.8], "length": 26.0, "alt": "feather", "alt_ratio": 0.08}
       },
-      "boss": {"eveil": "vent_boss_eveil", "phase": "vent_boss_phase", "mort": "vent_boss_mort", "exalte": "vent_boss_phase"}
+      "boss": {"eveil": "vent_boss_eveil", "phase": "vent_boss_phase", "mort": "vent_boss_mort", "exalte": "vent_boss_phase"},
+      "hand_track": {"tonique": "mi", "mode": "dorien", "_doc": "Morceau du Harfang fait par Antoine (harfang.wav, 160 BPM) : mi, mesuré sur le fichier le 28/11 (mi, si, sol, fa#, la, ré tenus ; une mesure sur deux l'accord passe en mi majeur, sol#). Ni do ni do# ne sonnent : mi dorien (le do# s'entend mieux sur les mesures majeures). Pas le sol mixolydien de la zone (fa# et non fa) : les bruitages s'accordent sur le morceau pendant qu'il joue (harmony.gd)."}
     },
     "seve": {
       "_doc": "Vallée de Sève : accords majeurs amples ; en terre vivante, un arpège de gouttes et une mélodie qui coule par degrés. Combat aux percussions d'eau ; boss (Saule exsangue) en complainte mineure. Ambiance : ruisseau, gouttes, oiseaux. Des gouttes de rosée montent doucement.",

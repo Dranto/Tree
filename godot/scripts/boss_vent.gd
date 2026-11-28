@@ -19,6 +19,16 @@
 ##                temps de sa musique, trois passages par rasante, plus de nuée.
 ## Mort : il replie les ailes et tombe, ses plumes s'envolent en cendre, la sève remonte.
 ##
+## Au rythme de son morceau (harfang.wav d'Antoine, 160 BPM, mi, majeur et mineur alternés ;
+## assets/music/hand/vent.json) : l'intro monte sous la musique du monde à l'approche de son aire, il
+## charge pendant la mesure de coupure et frappe sur le drop. Puis il joue une partition (SCORE,
+## boss_score.gd) : chaque phase suit sa boucle en phrases de quatre mesures, chaque attaque frappe sur
+## son temps (une par mesure environ ; le piqué tombe sur son temps, chaque passage de la rasante aussi) ;
+## par-dessus, la batterie elle-même attaque (DRUMS_POWER) : ses grosses caisses lancent des bourrasques
+## à brèches (ou un souffle court), ses caisses claires des plumes en spirale, ses charlestons du duvet
+## en jet tournant et ses caisses douces des plumes qui tombent du ciel autour du joueur. Chaque phase en
+## joue plus, jusqu'à la phase exaltée. Sans morceau, l'ordre de PHASES.
+##
 ## Le socle commun (vie, phases, états, mort, interface d'ennemi) est dans boss_base.gd ; ce
 ## fichier ne décrit que ses attaques et son dessin. Nommé dans data/regions/vent.json › boss.
 extends BossBase
@@ -29,6 +39,7 @@ const Harfang = preload("res://scripts/creature_art/vent/_harfang.gd")
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const PoseCache = preload("res://scripts/pose_cache.gd")
 const Exalte = preload("res://scripts/boss_art/exalte.gd")
+const BossScore = preload("res://scripts/boss_score.gd")
 
 const RADIUS := 62.0
 const INTRO := 1.6
@@ -64,6 +75,81 @@ const BLEED_STACKS := 5
 ## Altitude du vol stationnaire (en rayons) et de l'envol du piqué (pixels).
 const HOVER := 0.9
 const SKY := 900.0
+
+# --- Partition sur son morceau (boss_score.gd ; boss_sync.gd : horloge audio, ou temps du jeu sans son) ---
+# Une phrase = quatre mesures (16 temps), une attaque par mesure environ, sur la caisse claire (temps 1
+# de la mesure) ; « coups » : [temps de la phrase, attaque] ; l'annonce part ANNOUNCE_BEATS temps
+# avant. « ondes » : mesures de la phrase où les grosses caisses lancent de vraies bourrasques (sinon
+# celles de DRUMS_POWER) ; « deluge » : toute la batterie, au plus fort.
+# Le piqué occupe neuf temps (cinq pour l'envol et l'ombre, quatre posé puis le retour) : rien dans
+# les cinq temps d'avant ni dans les sept d'après. La rasante (premier passage sur son temps, un
+# passage tous les trois temps) en occupe quatre avant et 8,5 après à trois passages.
+const SCORE := {
+	1: {"loop": "boucle_1", "phrases": [
+		{"coups": [[1, "plumes"], [5, "battement"], [9, "plumes"], [13, "plumes"]]},
+		{"coups": [[1, "battement"], [5, "plumes"], [9, "battement"], [13, "plumes"]]},
+	]},
+	2: {"loop": "boucle_2", "phrases": [
+		{"coups": [[1, "battement"], [9, "pique"]]},
+		{"coups": [[1, "nuee"], [5, "plumes"], [9, "battement"], [13, "plumes"]]},
+		{"coups": [[1, "plumes"], [9, "pique"]]},
+		{"coups": [[1, "plumes"], [5, "battement"], [9, "plumes"], [13, "battement"]], "ondes": [0, 2]},
+	]},
+	# Tout le morceau (32 mesures) : la seconde moitié lance plus de bourrasques.
+	3: {"loop": "boucle_3", "phrases": [
+		{"coups": [[1, "plumes"], [9, "pique"]]},
+		{"coups": [[1, "tempete"], [5, "plumes"], [9, "battement"], [13, "plumes"]]},
+		{"coups": [[1, "battement"], [9, "pique"]]},
+		{"coups": [[1, "nuee"], [5, "plumes"], [9, "battement"], [13, "plumes"]]},
+		{"coups": [[1, "plumes"], [9, "pique"]], "ondes": [0, 2]},
+		{"coups": [[1, "battement"], [5, "plumes"], [9, "battement"], [13, "plumes"]], "ondes": [0, 2]},
+		{"coups": [[1, "plumes"], [9, "pique"]], "ondes": [0, 1, 2]},
+		{"coups": [[1, "nuee"], [5, "plumes"], [9, "battement"], [13, "plumes"]], "ondes": [0, 1, 2, 3]},
+	]},
+	4: {"loop": "boucle_4", "phrases": [
+		{"coups": [[2, "rasante"], [13, "plumes"]]},
+		{"coups": [[5, "pique"], [12, "plumes"]]},
+		{"coups": [[1, "battement"], [5, "tempete"], [9, "plumes"], [13, "battement"]]},
+		{"coups": [[2, "rasante"], [13, "plumes"]], "deluge": true},
+	]},
+}
+## Ce que la batterie déclenche, phase par phase (boss_score.gd) : grosses caisses → bourrasques
+## (« ondes » : mesures où elles courent jusqu'au mur ; ailleurs un souffle qui s'éteint à « pulse » px),
+## caisses claires → plumes en spirale (« roll » bras, sur les doubles croches multiples de
+## « roll_grid »), charlestons → duvet en jet tournant (« spark »), caisses douces → plumes qui tombent
+## du ciel autour du joueur (« prick »).
+const DRUMS_POWER := {
+	1: {"ondes": [], "pulse": 200.0, "roll": 1, "roll_grid": 4, "spark": 1, "spark_grid": 2, "prick": 0},
+	2: {"ondes": [0], "pulse": 240.0, "roll": 2, "roll_grid": 4, "spark": 1, "spark_grid": 2, "prick": 1},
+	3: {"ondes": [0], "pulse": 280.0, "roll": 2, "roll_grid": 2, "spark": 2, "spark_grid": 2, "prick": 1},
+	4: {"ondes": [0, 1, 2, 3], "pulse": 320.0, "roll": 3, "roll_grid": 1, "spark": 2, "spark_grid": 1, "prick": 2},
+}
+## Annonce (en temps) de chaque attaque de la partition ; annonce des coups de batterie qui en ont une.
+const ANNOUNCE_BEATS := {"plumes": 2, "battement": 3, "nuee": 3, "tempete": 3, "pique": 5, "rasante": 4}
+const DRUM_LEAD := {"onde": 2.0, "pouls": 1.0, "piqure": 2.0}
+## Piqué sur la partition, en temps : envol, ombre qui suit, ombre figée, chute (l'impact sur le temps),
+## posé, retour.
+const DIVE_BEATS := {"rise": 1.0, "track": 2.0, "lock": 1.5, "fall": 0.5, "ground": 2.5, "back": 1.5}
+## Rasante sur la partition, en temps : envol, visée du premier passage, traversée, visée des suivants
+## (un passage tous les trois temps), retour.
+const SWOOP_BEATS := {"rise": 1.5, "aim": 2.5, "cross": 1.0, "next": 2.0, "back": 1.5}
+## Sur la partition, il frappe plus souvent qu'au gré des pauses : chaque coup blesse moins.
+const SCORE_DAMAGE := 0.6
+## Coups de batterie quand le morceau n'en donne pas (une phrase de quatre mesures, doubles croches).
+const DRUMS := {"kick": [[0], [0], [4], [2]], "kick_doux": [[], [], [], [0]], "caisse": [[4, 10], [4, 10], [4, 10], [4, 7, 10, 13]],
+	"charleston": [[2, 4, 6, 8, 10, 12, 14], [2, 4, 6, 8, 10, 12, 14], [0, 2, 8, 10, 12, 14], [0, 4, 6, 8, 10, 12, 14]], "caisse_douce": [[7, 15], [13], [7], [6, 9]]}
+## Bourrasque de la batterie (grosses caisses) : vitesse, épaisseur, brèches (nombre, ouverture en
+## radians, pas de côté une sur deux), dégâts, au plus.
+const DRUM_WAVE := {"speed": 420.0, "width": 22.0, "gaps": 3, "gap": 1.0, "step": 0.3, "damage": 6.0, "max": 8}
+## Souffle (autres grosses caisses) : épaisseur, dégâts.
+const PULSE := {"width": 12.0, "damage": 2.0}
+## Plumes en spirale (caisses claires) : pas de la spirale (radians par coup), vitesse, rayon, dégâts.
+const PUFF := {"spin": 0.55, "speed": 270.0, "radius": 6.0, "damage": 4.0}
+## Duvet en jet (charlestons) : pas du jet, vitesse, rayon, dégâts.
+const SPARK := {"step": 0.42, "speed": 240.0, "radius": 4.0, "damage": 1.5}
+## Plumes qui tombent du ciel (caisses douces) : rayon, dégâts, distance au joueur, au plus, durée de
+## la plume plantée.
+const PRICK := {"radius": 30.0, "damage": 3.0, "near": 50.0, "far": 110.0, "max": 12, "burst": 0.45}
 
 ## Attaque en cours ("" pendant la pause), son étape ("annonce" ou "frappe") et le temps restant.
 var attack := ""
@@ -102,6 +188,27 @@ var swoop_total := 1.0
 var swirl := 0.0
 var _dodge_text := -10.0
 
+## Partition (boss_score.gd) ; temps du morceau où tombe la frappe annoncée (-1 : sans grille) ;
+## durées (s) des étapes du piqué en cours ; temps des passages de la rasante en cours.
+var score
+var _strike_beat := -1.0
+var dive_len: Dictionary = DIVE.duplicate()
+var swoop_beats: Array = []
+var swoop_cross := 0.34
+var _swap_count := 0
+## Frappes de la partition (temps du morceau où chacune a touché le sol), lues par les tests.
+var strikes: Array = []
+## Bourrasques de la batterie : {"o", "r", "fuse", "total", "gaps", "hit", "reach", "small", "born"}.
+var waves: Array = []
+var _wave_count := 0
+var _roll_spin := 0.0
+var _spark_angle := 0.0
+## Plumes qui tombent du ciel (caisses douces) : {"pos", "fuse", "total", "burst", "a"}.
+var pricks: Array = []
+var _prick_rng := RandomNumberGenerator.new()
+## Sursaut des ailes sur une grosse caisse (0 → 1), -1 : aucun.
+var drum_flash := -1.0
+
 
 func _setup() -> void:
 	body_radius = RADIUS
@@ -116,11 +223,52 @@ func _setup() -> void:
 	root_immunity = ROOT_IMMUNITY
 	max_bleed_stacks = BLEED_STACKS
 	color = Color("4a5058")
+	score = BossScore.new(self, SCORE, DRUMS_POWER, ANNOUNCE_BEATS, DRUM_LEAD, DRUMS)
+	_prick_rng.seed = 7219
 
 
 func _ready() -> void:
 	super._ready()
 	home = anchor
+
+
+## Ce qu'il charge pendant la mesure de coupure d'avant le drop : le vent clair des plateaux.
+func _charge_color() -> Color:
+	return Art.ec("vent", "clair")
+
+
+## Le drop : le combat part d'un coup, ses ailes lâchent une couronne de plumes.
+func _music_resume() -> void:
+	super._music_resume()
+	if Settings.reduce_effects:
+		return
+	for i in 24:
+		var dir := Vector2.from_angle(TAU * i / 24.0 + 0.13)
+		main.fx.mote(anchor + dir * radius * 0.7, dir * 560.0, 0.6, 4.5, Color(Art.ec("vent", "clair") if i % 2 == 0 else Art.ec("cendre", "clair"), 0.95))
+
+
+## Il suit le morceau même enraciné : la musique ne ralentit pas (boss_score.gd saute un coup sur deux).
+func on_music_grid() -> bool:
+	return sync != null and sync.running and sync.stage == ""
+
+
+## Vrai pendant une attaque calée sur la partition.
+func _scored() -> bool:
+	return _strike_beat >= 0.0 and on_music_grid()
+
+
+## Une frappe de la partition touche : son temps est noté (tests).
+func _log_strike() -> void:
+	if _scored():
+		strikes.append(beats_now())
+
+
+## Blesse le joueur ; sur la partition, les coups des attaques blessent à SCORE_DAMAGE (« exact » :
+## dégâts déjà réglés pour la batterie).
+func _hurt(amount: float, exact := false) -> void:
+	if not exact and score.phase == phase and on_music_grid():
+		amount *= SCORE_DAMAGE
+	main.player.take_hit(amount * damage_scale, self)
 
 
 ## En vol (envol, ombre, chute), il est hors d'atteinte : aucun coup direct ne le touche.
@@ -147,6 +295,12 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 func _projectiles_step(delta: float) -> void:
 	_update_feathers(delta)
 	_update_tornadoes(delta)
+	_update_waves(delta)
+	_update_pricks(delta)
+	if drum_flash >= 0.0:
+		drum_flash += delta * 4.0
+		if drum_flash > 1.0:
+			drum_flash = -1.0
 	var p = main.player
 	if push_left > 0.0:
 		push_left -= delta
@@ -163,10 +317,21 @@ func _projectiles_step(delta: float) -> void:
 
 func _fight_step(delta: float) -> void:
 	var cad := cadence()
+	var scored: bool = score.ready()
+	if scored:
+		score.drums_step(_drum)
 	if attack == "":
 		var wanted := phase_for(hp / max_hp)
 		if wanted > phase:
 			_enter_phase(wanted)
+			return
+		if scored:
+			var nxt: Dictionary = score.step(_swap)
+			if nxt.has("wait"):
+				gap = nxt["wait"]
+			elif nxt.has("kind"):
+				_begin(nxt["kind"], nxt["at"])
+				cycle += 1
 			return
 		gap -= delta * cad
 		if gap <= 0.0:
@@ -178,7 +343,10 @@ func _fight_step(delta: float) -> void:
 	elif attack == "rasante":
 		_swoop_step(delta)
 	elif stage == "annonce":
-		timer -= delta * cad
+		if _scored():
+			timer = (_strike_beat - beats_now()) * beat_len()
+		else:
+			timer -= delta * cad
 		_announce_step()
 		if timer <= 0.0:
 			_strike()
@@ -191,11 +359,26 @@ func _fight_step(delta: float) -> void:
 
 # --- Attaques ---
 
-func _begin(kind: String) -> void:
+## Partition : une attaque impossible devient une autre (nuée complète → plumes, tornades encore
+## là → battement) ; quand le cycle glisse la rasante en phase 3, un piqué sur deux devient rasante.
+func _swap(kind: String) -> String:
+	if kind == "nuee" and minions.size() >= SUMMON["max_alive"]:
+		return "plumes"
+	if kind == "tempete" and not tornadoes.is_empty():
+		return "battement"
+	if kind == "pique" and phase == 3 and EXALTED_ATTACK in exalted_order(PHASES[3]["order"], EXALTED_ATTACK):
+		_swap_count += 1
+		if _swap_count % 2 == 0:
+			return EXALTED_ATTACK
+	return kind
+
+
+func _begin(kind: String, strike_at := -1.0) -> void:
 	if kind == "nuee" and minions.size() >= SUMMON["max_alive"]:
 		kind = "plumes"
 	if kind == "tempete" and not tornadoes.is_empty():
 		kind = "battement"
+	_strike_beat = strike_at if strike_at >= 0.0 and on_music_grid() else -1.0
 	attack = kind
 	stage = "annonce"
 	Sfx.play("annonce", anchor)
@@ -209,7 +392,15 @@ func _begin(kind: String) -> void:
 		"pique":
 			stage = "frappe"
 			dive_step = "envol"
-			dive_t = DIVE["rise"]
+			dive_len = DIVE.duplicate()
+			if _strike_beat >= 0.0:
+				# Sur la partition : l'impact tombe sur son temps, les étapes d'avant se partagent l'attente.
+				var bl := beat_len()
+				var pre: float = DIVE_BEATS["rise"] + DIVE_BEATS["track"] + DIVE_BEATS["lock"] + DIVE_BEATS["fall"]
+				var k := clampf((_strike_beat - beats_now()) / pre, 0.2, 1.0)
+				for key in DIVE_BEATS:
+					dive_len[key] = DIVE_BEATS[key] * bl * (k if key in ["rise", "track", "lock", "fall"] else 1.0)
+			dive_t = dive_len["rise"]
 			dive_target = main.player.position
 			radius = 0.0
 		"rasante":
@@ -219,6 +410,13 @@ func _begin(kind: String) -> void:
 			swoop_t = SWOOP["rise"]
 			swoop_left = int(PHASES[phase].get("passes", 2))
 			radius = 0.0
+			swoop_beats = []
+			swoop_cross = SWOOP["cross"]
+			if _strike_beat >= 0.0:
+				# Sur la partition : le premier passage part sur son temps, les suivants tous les trois temps.
+				for i in swoop_left:
+					swoop_beats.append(_strike_beat + i * (SWOOP_BEATS["cross"] + SWOOP_BEATS["next"]))
+				swoop_cross = SWOOP_BEATS["cross"] * beat_len()
 		"nuee":
 			_set_timer(SUMMON["annonce"])
 			nest = []
@@ -233,6 +431,9 @@ func _begin(kind: String) -> void:
 			for i in STORM["count"]:
 				var a: float = base + PI * 0.6 + i * PI * 0.8
 				storm_spots.append(arena.center + Vector2.from_angle(a) * arena.radius * 0.7)
+	if _strike_beat >= 0.0 and stage == "annonce":
+		# Partition : la frappe tombe sur son temps.
+		_set_timer(maxf(0.0, (_strike_beat - beats_now()) * beat_len()))
 
 
 func _set_timer(v: float) -> void:
@@ -250,17 +451,18 @@ func _announce_step() -> void:
 
 func _strike() -> void:
 	stage = "frappe"
+	_log_strike()
 	var p = main.player
 	match attack:
 		"plumes":
 			volleys_left = PHASES[phase]["volleys"]
 			volley_timer = 0.0
-			_set_timer(FEATHER["between"] * volleys_left)
+			_set_timer(_volley_between() * volleys_left)
 		"battement":
 			_set_timer(BEAT["frappe"])
 			main.fx.ring(anchor, radius, BEAT["radius"], 0.35, Color(Art.ec("vent", "clair"), 0.8), 6.0)
 			if p.position.distance_to(anchor) < BEAT["radius"] + p.radius and p.invuln <= 0.0:
-				p.take_hit(BEAT["damage"] * damage_scale, self)
+				_hurt(BEAT["damage"])
 				push_left = BEAT["push_time"]
 		"nuee":
 			var kind := Enemy.kind_index(SUMMON["kind"])
@@ -281,9 +483,14 @@ func _strike_step(delta: float) -> void:
 	if attack == "plumes":
 		volley_timer -= delta
 		if volleys_left > 0 and volley_timer <= 0.0:
-			volley_timer = FEATHER["between"]
+			volley_timer = _volley_between()
 			_fire_volley(volleys_left % 2 == 0)
 			volleys_left -= 1
+
+
+## Entre deux salves de plumes : sur la partition, une croche.
+func _volley_between() -> float:
+	return beat_len() * 0.5 if _scored() else FEATHER["between"]
 
 
 ## Directions des plumes d'une salve (les salves paires sont décalées d'un demi-écart).
@@ -304,13 +511,17 @@ func _fire_volley(offset: bool) -> void:
 ## Le piqué, étape par étape. L'ombre suit le joueur, se fige, puis il tombe dessus.
 func _dive_step(delta: float) -> void:
 	var p = main.player
-	dive_t -= delta * (cadence() if dive_step in ["suit", "fige"] else 1.0)
+	if _scored() and dive_step in ["envol", "suit", "fige", "chute"]:
+		# Sur la partition : le temps restant de l'étape se lit sur le morceau (l'impact sur son temps).
+		dive_t = (_strike_beat - beats_now()) * beat_len() - _dive_after(dive_step)
+	else:
+		dive_t -= delta * (cadence() if dive_step in ["suit", "fige"] and not _scored() else 1.0)
 	match dive_step:
 		"envol":
 			dive_target = p.position
 			if dive_t <= 0.0:
 				dive_step = "suit"
-				dive_t = DIVE["track"]
+				dive_t = dive_len["track"]
 		"suit":
 			# L'ombre suit le joueur, un peu en retard, sans sortir de l'arène.
 			dive_target = dive_target.lerp(p.position, 1.0 - exp(-4.0 * delta))
@@ -318,38 +529,65 @@ func _dive_step(delta: float) -> void:
 			dive_target = arena.center + rel.limit_length(arena.radius - DIVE["radius"] * 0.5)
 			if dive_t <= 0.0:
 				dive_step = "fige"
-				dive_t = DIVE["lock"]
+				dive_t = dive_len["lock"]
 		"fige":
 			if dive_t <= 0.0:
 				dive_step = "chute"
-				dive_t = DIVE["fall"]
+				dive_t = dive_len["fall"]
 				anchor = dive_target
 		"chute":
 			if dive_t <= 0.0:
 				dive_step = "pose"
-				dive_t = DIVE["ground"]
+				dive_t = dive_len["ground"]
 				radius = body_radius
+				_log_strike()
 				main.fx.ring(anchor, 20.0, DIVE["radius"] * 1.3, 0.4, Color(Art.ec("vent", "clair"), 0.9), 6.0)
 				main.fx.shake(0.35)
 				if p.position.distance_to(anchor) < DIVE["radius"] + p.radius * 0.5 and p.invuln <= 0.0:
-					p.take_hit(DIVE["damage"] * damage_scale, self)
+					_hurt(DIVE["damage"])
 		"pose":
 			if dive_t <= 0.0:
 				dive_step = "retour"
-				dive_t = DIVE["back"]
+				dive_t = dive_len["back"]
 		"retour":
-			var k := 1.0 - clampf(dive_t / DIVE["back"], 0.0, 1.0)
+			var k := 1.0 - clampf(dive_t / dive_len["back"], 0.0, 1.0)
 			anchor = anchor.lerp(home, Anim.ease_out(k))
 			if dive_t <= 0.0:
 				anchor = home
 				_end_attack()
 
 
+## Ce qui reste du piqué après l'étape « step », jusqu'à l'impact (s).
+func _dive_after(step: String) -> float:
+	match step:
+		"envol":
+			return dive_len["track"] + dive_len["lock"] + dive_len["fall"]
+		"suit":
+			return dive_len["lock"] + dive_len["fall"]
+		"fige":
+			return dive_len["fall"]
+	return 0.0
+
+
 ## La rasante, étape par étape : envol, puis pour chaque passage une ligne qui suit le joueur et se
 ## fige, et la traversée ; enfin le retour au centre.
 func _swoop_step(delta: float) -> void:
 	var p = main.player
-	swoop_t -= delta * (cadence() if swoop_step == "vise" else 1.0)
+	var grid := _scored() and not swoop_beats.is_empty()
+	var pass_i := int(PHASES[phase].get("passes", 2)) - swoop_left
+	if grid and swoop_step in ["envol", "vise", "rase"] and pass_i < swoop_beats.size():
+		# Sur la partition : chaque passage part sur son temps.
+		var at: float = swoop_beats[pass_i]
+		var bl := beat_len()
+		match swoop_step:
+			"envol":
+				swoop_t = (at - SWOOP_BEATS["aim"] - beats_now()) * bl
+			"vise":
+				swoop_t = (at - beats_now()) * bl
+			"rase":
+				swoop_t = (at + SWOOP_BEATS["cross"] - beats_now()) * bl
+	else:
+		swoop_t -= delta * (cadence() if swoop_step == "vise" and not grid else 1.0)
 	match swoop_step:
 		"envol":
 			if swoop_t <= 0.0:
@@ -359,19 +597,21 @@ func _swoop_step(delta: float) -> void:
 				_swoop_line(p.position)
 			if swoop_t <= 0.0:
 				swoop_step = "rase"
-				swoop_t = SWOOP["cross"]
+				swoop_t = swoop_cross
 				swoop_hit = false
 				anchor = swoop_from
 				Sfx.play("annonce", swoop_from)
+				if pass_i == 0:
+					_log_strike()
 		"rase":
-			var k := 1.0 - clampf(swoop_t / SWOOP["cross"], 0.0, 1.0)
+			var k := 1.0 - clampf(swoop_t / swoop_cross, 0.0, 1.0)
 			var was := anchor
 			anchor = swoop_from.lerp(swoop_to, Anim.ease_in_out(k))
 			if not swoop_hit and p.invuln <= 0.0:
 				var q := Geometry2D.get_closest_point_to_segment(p.position, was, anchor)
 				if q.distance_to(p.position) < SWOOP["width"] * 0.5 + p.radius * 0.5:
 					swoop_hit = true
-					p.take_hit(SWOOP["damage"] * damage_scale, self)
+					_hurt(SWOOP["damage"])
 			if swoop_t <= 0.0:
 				anchor = swoop_to
 				main.fx.ring(swoop_to, 10.0, 90.0, 0.3, Color(Art.ec("vent", "clair"), 0.8), 4.0)
@@ -394,7 +634,10 @@ func _swoop_step(delta: float) -> void:
 func _swoop_aim() -> void:
 	swoop_step = "vise"
 	swoop_t = SWOOP["aim"]
-	if is_exalted_phase():
+	var pass_i := int(PHASES[phase].get("passes", 2)) - swoop_left
+	if _scored() and pass_i < swoop_beats.size():
+		swoop_t = maxf(0.05, (float(swoop_beats[pass_i]) - beats_now()) * beat_len())
+	elif is_exalted_phase():
 		swoop_t = loop_snap(swoop_t)
 	swoop_total = swoop_t
 	_swoop_line(main.player.position)
@@ -426,6 +669,146 @@ func _end_attack() -> void:
 	dive_step = ""
 	radius = body_radius
 	gap = PHASES[phase]["gap"]
+	_strike_beat = -1.0
+	swoop_beats = []
+
+
+# --- Batterie (avec son morceau, boss_score.gd) ---
+
+## Un coup de batterie dont l'annonce part : « fuse » s avant le coup. Dans le ciel (envol, ombre,
+## rasante), il ne lance que les plumes qui tombent autour du joueur.
+func _drum(kind: String, fuse: float, flood: bool) -> void:
+	var pw: Dictionary = DRUMS_POWER[phase]
+	if airborne() and kind != "piqure":
+		return
+	match kind:
+		"onde":
+			_launch_wave(fuse, flood)
+		"pouls":
+			_launch_wave(fuse, false, true)
+		"roulement":
+			_puff(maxi(int(pw["roll"]), 4 if flood else 0))
+		"aiguille":
+			_spark(int(pw["spark"]) + (1 if flood else 0))
+		"piqure":
+			_prick(fuse, maxi(int(pw["prick"]), 1))
+
+
+## Une bourrasque qui partira dans « fuse » s, sur la grosse caisse ; « small » : un souffle court.
+func _launch_wave(fuse: float, flood: bool, small := false) -> void:
+	if waves.size() >= DRUM_WAVE["max"]:
+		return
+	var to: Vector2 = main.player.position - anchor
+	var base := to.angle() if to.length() > 1.0 else PI / 2.0
+	if small:
+		base = _roll_spin + float(_wave_count) * 0.9
+	elif _wave_count % 2 == 1:
+		# Une bourrasque sur deux s'ouvre devant le joueur ; l'autre juste à côté : un pas de côté sur le temps.
+		base += (DRUM_WAVE["gap"] * 0.5 + DRUM_WAVE["step"]) * (1.0 if _wave_count % 4 == 1 else -1.0)
+	if flood:
+		base += 0.35 * sin(float(_wave_count))
+	var gaps: Array = []
+	for i in DRUM_WAVE["gaps"]:
+		gaps.append(base + TAU * i / DRUM_WAVE["gaps"])
+	var reach := float(DRUMS_POWER[phase]["pulse"]) if small else INF
+	waves.append({"o": anchor, "r": radius * 0.9, "fuse": maxf(0.0, fuse), "total": maxf(0.05, fuse), "gaps": gaps, "hit": false, "reach": reach, "small": small, "born": -1.0})
+	if not small:
+		_wave_count += 1
+
+
+## Une caisse claire : une plume par bras, la spirale tourne d'un pas.
+func _puff(arms: int) -> void:
+	if arms <= 0:
+		return
+	_roll_spin += PUFF["spin"]
+	var to: Vector2 = main.player.position - anchor
+	var base := (to.angle() if to.length() > 1.0 else 0.0) + _roll_spin
+	for i in arms:
+		var dir := Vector2.from_angle(base + TAU * i / arms)
+		feathers.append({"pos": anchor + dir * radius * 0.8 + Vector2(0, -RADIUS * HOVER * 0.5), "vel": dir * PUFF["speed"], "r": PUFF["radius"], "dmg": PUFF["damage"]})
+
+
+## Un charleston : un brin de duvet par jet, le jet tourne d'un pas à chaque coup.
+func _spark(n: int) -> void:
+	_spark_angle += SPARK["step"]
+	for i in n:
+		var dir := Vector2.from_angle(_spark_angle + TAU * i / n)
+		feathers.append({"pos": anchor + dir * radius * 0.75 + Vector2(0, -RADIUS * HOVER * 0.5), "vel": dir * SPARK["speed"], "r": SPARK["radius"], "dmg": SPARK["damage"], "down": true})
+
+
+## Une caisse douce : des plumes tombent du ciel autour du joueur et se plantent « fuse » s plus tard.
+func _prick(fuse: float, n := 1) -> void:
+	var p: Vector2 = main.player.position
+	var a0 := _prick_rng.randf() * TAU
+	for i in n:
+		if pricks.size() >= PRICK["max"]:
+			return
+		var at := p + Vector2.from_angle(a0 + TAU * i / n) * _prick_rng.randf_range(PRICK["near"], PRICK["far"])
+		var rel: Vector2 = at - arena.center
+		at = arena.center + rel.limit_length(arena.radius - PRICK["radius"])
+		pricks.append({"pos": at, "fuse": maxf(0.05, fuse), "total": maxf(0.05, fuse), "burst": -1.0, "a": _prick_rng.randf_range(-0.5, 0.5)})
+
+
+func _update_pricks(delta: float) -> void:
+	if pricks.is_empty():
+		return
+	var p = main.player
+	var kept: Array = []
+	for r in pricks:
+		if r["burst"] < 0.0:
+			r["fuse"] -= delta
+			if r["fuse"] <= 0.0:
+				r["burst"] = 0.0
+				if p.position.distance_to(r["pos"]) < PRICK["radius"] + p.radius * 0.5 and p.invuln <= 0.0:
+					_hurt(PRICK["damage"], true)
+		else:
+			r["burst"] += delta
+		if r["burst"] < PRICK["burst"]:
+			kept.append(r)
+	pricks = kept
+
+
+func _in_wave_gap(wv: Dictionary, pos: Vector2, margin: float) -> bool:
+	var to: Vector2 = pos - wv["o"]
+	var d := maxf(to.length(), 1.0)
+	for g in wv["gaps"]:
+		if absf(angle_difference(float(g), to.angle())) < DRUM_WAVE["gap"] * 0.5 - margin / d:
+			return true
+	return false
+
+
+func _update_waves(delta: float) -> void:
+	if waves.is_empty():
+		return
+	var p = main.player
+	var kept: Array = []
+	for wv in waves:
+		var o: Vector2 = wv["o"]
+		if wv["fuse"] > 0.0:
+			wv["fuse"] -= delta
+			if wv["fuse"] <= 0.0:
+				drum_flash = 0.0
+				wv["born"] = t
+				if not wv["small"]:
+					main.fx.shake(1.5)
+					if not Settings.reduce_effects:
+						main.fx.ring(o, radius * 0.5, radius * 1.8, 0.25, Color(Art.ec("vent", "clair"), 0.8), 5.0)
+			kept.append(wv)
+			continue
+		var small: bool = wv["small"]
+		var r0: float = wv["r"]
+		var r1: float = r0 + DRUM_WAVE["speed"] * delta
+		wv["r"] = r1
+		var d: float = p.position.distance_to(o)
+		var half: float = (PULSE["width"] if small else DRUM_WAVE["width"]) * 0.5 + p.radius * 0.6
+		if not wv["hit"] and d > r0 - half and d < r1 + half and r0 < float(wv["reach"]) and not _in_wave_gap(wv, p.position, p.radius * 0.5):
+			if p.invuln <= 0.0:
+				wv["hit"] = true
+				_hurt(PULSE["damage"] if small else DRUM_WAVE["damage"], true)
+		var limit: float = arena.radius + o.distance_to(arena.center) + DRUM_WAVE["width"]
+		if r1 < minf(limit, float(wv["reach"]) + 40.0):
+			kept.append(wv)
+	waves = kept
 
 
 func _update_feathers(delta: float) -> void:
@@ -440,12 +823,20 @@ func _update_feathers(delta: float) -> void:
 			f["vel"] += wind.accel_at(f["pos"]) * delta
 		f["pos"] += f["vel"] * delta
 		var pos: Vector2 = f["pos"]
-		if pos.distance_to(p.position) < FEATHER["radius"] + p.radius and p.invuln <= 0.0:
-			p.take_hit(FEATHER["damage"] * damage_scale, self)
+		if pos.distance_to(p.position) < _feather_radius(f) + p.radius and p.invuln <= 0.0:
+			if f.has("dmg"):
+				_hurt(float(f["dmg"]), true)
+			else:
+				_hurt(FEATHER["damage"])
 			continue
 		if pos.distance_squared_to(arena.center) < limit * limit:
 			kept.append(f)
 	feathers = kept
+
+
+## Rayon d'une plume en vol (salve, ou batterie).
+func _feather_radius(f: Dictionary) -> float:
+	return float(f.get("r", FEATHER["radius"]))
 
 
 ## Tornades : elles errent vers le joueur en ondulant, blessent et repoussent à leur contact.
@@ -471,13 +862,14 @@ func _update_tornadoes(delta: float) -> void:
 				p.position += (to.normalized().orthogonal() + to.normalized() * 0.6).normalized() * STORM["push"] * delta
 			if tw["tick"] <= 0.0 and p.invuln <= 0.0:
 				tw["tick"] = STORM["tick"]
-				p.take_hit(STORM["damage"] * damage_scale, self)
+				_hurt(STORM["damage"])
 		kept.append(tw)
 	tornadoes = kept
 
 
 func _enter_phase(n: int) -> void:
 	phase = n
+	score.reset()
 	transition = PHASE_PAUSE
 	cycle = 0
 	gap = 0.3
@@ -489,8 +881,18 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 	for f in feathers:
 		var v: Vector2 = f["vel"]
 		var u := clampf((pos - f["pos"]).dot(v) / v.length_squared(), 0.0, 1.5)
-		if (f["pos"] + v * u).distance_to(pos) < FEATHER["radius"] + margin:
+		if (f["pos"] + v * u).distance_to(pos) < _feather_radius(f) + margin:
 			best = minf(best, u)
+	for r in pricks:
+		if r["burst"] < 0.0 and pos.distance_to(r["pos"]) < PRICK["radius"] + margin:
+			best = minf(best, maxf(0.0, r["fuse"]))
+	for wv in waves:
+		var dw := pos.distance_to(wv["o"])
+		if dw > float(wv["reach"]) + margin:
+			continue
+		var ahead: float = dw - float(wv["r"])
+		if ahead > -DRUM_WAVE["width"] - margin and not _in_wave_gap(wv, pos, margin):
+			best = minf(best, maxf(0.0, wv["fuse"]) + maxf(0.0, ahead - margin) / DRUM_WAVE["speed"])
 	for tw in tornadoes:
 		if pos.distance_to(tw["pos"]) < STORM["radius"] + margin + 30.0:
 			best = minf(best, 0.0)
@@ -514,14 +916,7 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 			best = minf(best, swoop_t if swoop_step == "vise" else 0.0)
 	if attack == "pique" and dive_step in ["envol", "suit", "fige", "chute"]:
 		if pos.distance_to(dive_target) < DIVE["radius"] + margin:
-			var left := dive_t
-			if dive_step == "envol":
-				left += DIVE["track"] + DIVE["lock"] + DIVE["fall"]
-			elif dive_step == "suit":
-				left += DIVE["lock"] + DIVE["fall"]
-			elif dive_step == "fige":
-				left += DIVE["fall"]
-			best = minf(best, left)
+			best = minf(best, dive_t + _dive_after(dive_step))
 	if radius > 0.0 and d < radius + margin + 20.0:
 		best = minf(best, 0.0)
 	return best
@@ -539,6 +934,10 @@ func _clear_attacks() -> void:
 	push_left = 0.0
 	swirl = 0.0
 	radius = body_radius
+	waves = []
+	pricks = []
+	_strike_beat = -1.0
+	swoop_beats = []
 
 
 ## Le robot reste hors du battement d'ailes.
@@ -691,7 +1090,7 @@ func _draw() -> void:
 	if attack == "pique":
 		match dive_step:
 			"envol":
-				var k := 1.0 - clampf(dive_t / DIVE["rise"], 0.0, 1.0)
+				var k := 1.0 - clampf(dive_t / dive_len["rise"], 0.0, 1.0)
 				alt += SKY * Anim.ease_in(k)
 				fade = 1.0 - Anim.ease_in(k)
 				shadow = 1.0 - k
@@ -699,14 +1098,14 @@ func _draw() -> void:
 				fade = 0.0
 				shadow = 0.0
 			"chute":
-				var k := 1.0 - clampf(dive_t / DIVE["fall"], 0.0, 1.0)
+				var k := 1.0 - clampf(dive_t / dive_len["fall"], 0.0, 1.0)
 				alt = lerpf(SKY, landed_alt, Anim.ease_in(k))
 				fade = k
 				shadow = k
 			"pose":
 				alt = landed_alt
 			"retour":
-				alt = lerpf(landed_alt, hover, 1.0 - clampf(dive_t / DIVE["back"], 0.0, 1.0))
+				alt = lerpf(landed_alt, hover, 1.0 - clampf(dive_t / dive_len["back"], 0.0, 1.0))
 	elif attack == "rasante":
 		match swoop_step:
 			"envol":
@@ -741,8 +1140,15 @@ func _draw() -> void:
 	if attack == "rasante" and swoop_step == "rase" and absf(swoop_to.x - swoop_from.x) > 1.0:
 		facing = signf(swoop_to.x - swoop_from.x)
 	var shift := Vector2.ZERO
-	if transition > 0.0:
+	if transition > 0.0 and charge < 0.0:
 		shift += Vector2(sin(t * 50.0), cos(t * 43.0)) * 4.0
+	# Charge sur la musique (boss_base.gd) : il tremble et se gonfle sur chaque impulsion ; puis il bat
+	# la mesure : un sursaut des ailes sur chaque grosse caisse.
+	shift += charge_jitter()
+	var swell := 0.05 * charge_energy() * charge_pulse() + 0.08 * charge_overflow()
+	if drum_flash >= 0.0:
+		swell += 0.04 * (1.0 - drum_flash)
+	s *= 1.0 + swell
 	var tr: Array = _track()
 	var n: int = TRACKS[tr[0]]
 	var i := clampi(int(tr[1] * n), 0, n - 1)
@@ -777,6 +1183,11 @@ func _draw_over() -> void:
 	var glow := exalt_glow()
 	if glow > 0.0 and modulate.a > 0.3:
 		Exalte.aura(_over, _body_at, r, 1.0, (glow - 0.55) / 0.45, t)
+	# Charge : le vent s'enroule autour de lui, battu par les impulsions.
+	if charge >= 0.0 and not dead:
+		var e := charge_energy()
+		var pulse := charge_pulse()
+		Ink.halo(_over, _body_at, r * (0.35 + 0.9 * e + 0.25 * pulse + 0.6 * charge_overflow()), Art.ec("vent", "clair"), 0.6 + 1.6 * e + 0.8 * pulse)
 	if statuses.has("saignement"):
 		Art.status(_over, "saignement", _body_at, r * 0.7, t * 1.25)
 	if statuses.has("enracine"):
@@ -829,21 +1240,15 @@ func draw_marks(c: CanvasItem) -> void:
 			var circle := {"type": "cercle", "centre": dive_target, "rayon": DIVE["radius"]}
 			match dive_step:
 				"envol", "suit", "fige", "chute":
-					var total: float = DIVE["rise"] + DIVE["track"] + DIVE["lock"] + DIVE["fall"]
-					var left := dive_t
-					if dive_step == "envol":
-						left += DIVE["track"] + DIVE["lock"] + DIVE["fall"]
-					elif dive_step == "suit":
-						left += DIVE["lock"] + DIVE["fall"]
-					elif dive_step == "fige":
-						left += DIVE["fall"]
+					var total: float = dive_len["rise"] + _dive_after("envol")
+					var left := dive_t + _dive_after(dive_step)
 					var k := 1.0 - clampf(left / total, 0.0, 1.0)
 					Art.telegraph(c, circle, k, -1.0, t)
 					# Son ombre grandit à mesure qu'il descend.
 					var sh := 0.35 + 0.65 * k
 					c.draw_colored_polygon(Art.ellipse(dive_target, RADIUS * 1.6 * sh, RADIUS * 0.5 * sh, 20), Color(Art.c("ombre"), 0.25 + 0.3 * k))
 				"pose":
-					var since: float = DIVE["ground"] - dive_t
+					var since: float = dive_len["ground"] - dive_t
 					if since < 0.3:
 						Art.telegraph(c, circle, 1.0, since / 0.3, t)
 		"rasante":
@@ -853,7 +1258,7 @@ func draw_marks(c: CanvasItem) -> void:
 				# Son ombre attend au bout d'où il va surgir.
 				c.draw_colored_polygon(Art.ellipse(swoop_from, RADIUS * 1.1, RADIUS * 0.35, 18), Color(Art.c("ombre"), 0.35))
 			elif swoop_step == "rase":
-				Art.telegraph(c, line, 1.0, 1.0 - clampf(swoop_t / SWOOP["cross"], 0.0, 1.0), t)
+				Art.telegraph(c, line, 1.0, 1.0 - clampf(swoop_t / swoop_cross, 0.0, 1.0), t)
 		"nuee":
 			var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
 			var e := Art.ec("cendre")
@@ -870,6 +1275,10 @@ func draw_marks(c: CanvasItem) -> void:
 	for tw in tornadoes:
 		var fadein := clampf((STORM["life"] - float(tw["life"])) / 0.4, 0.0, 1.0)
 		Art.telegraph(c, {"type": "cercle", "centre": tw["pos"], "rayon": STORM["radius"]}, fadein, -1.0, t)
+	_draw_waves(c)
+	for r in pricks:
+		if r["burst"] < 0.0:
+			Art.telegraph(c, {"type": "cercle", "centre": r["pos"], "rayon": PRICK["radius"]}, 1.0 - clampf(r["fuse"] / maxf(float(r["total"]), 0.01), 0.0, 1.0), -1.0, t)
 
 
 ## Plumes et tornades, au-dessus des personnages, en coordonnées monde.
@@ -878,13 +1287,25 @@ func draw_overlay(c: CanvasItem) -> void:
 	for f in feathers:
 		var pos: Vector2 = f["pos"]
 		var dir: Vector2 = (f["vel"] as Vector2).normalized()
-		var n := dir.orthogonal()
-		c.draw_line(pos - dir * 30.0, pos - dir * 8.0, Color(Art.c("danger"), 0.35), 6.0, true)
-		var pts := PackedVector2Array([pos + dir * 14.0, pos + dir * 5.0 + n * 6.0, pos - dir * 9.0 + n * 5.0, pos - dir * 14.0, pos - dir * 9.0 - n * 5.0, pos + dir * 5.0 - n * 6.0])
+		if f.get("down", false):
+			# Duvet des charlestons : un petit flocon de plume, bordé de rouge.
+			var sp := dir.rotated(t * 9.0)
+			c.draw_line(pos - dir * 14.0, pos - dir * 4.0, Color(Art.c("danger"), 0.3), 3.0, true)
+			for k in 3:
+				var d := sp.rotated(k * PI / 3.0)
+				c.draw_line(pos - d * 5.0, pos + d * 5.0, Art.ec("cendre", "clair"), 1.6, true)
+			c.draw_circle(pos, 2.0, Art.c("danger"))
+			continue
+		var sc := _feather_radius(f) / FEATHER["radius"]
+		var n := dir.orthogonal() * sc
+		var dl := dir * sc
+		c.draw_line(pos - dl * 30.0, pos - dl * 8.0, Color(Art.c("danger"), 0.35), 6.0 * sc, true)
+		var pts := PackedVector2Array([pos + dl * 14.0, pos + dl * 5.0 + n * 6.0, pos - dl * 9.0 + n * 5.0, pos - dl * 14.0, pos - dl * 9.0 - n * 5.0, pos + dl * 5.0 - n * 6.0])
 		Art.volume(c, pts, vane, 0.7)
 		Art.outline(c, pts, Art.c("ennemi_contour"), 1.2)
-		c.draw_line(pos - dir * 15.0, pos + dir * 14.0, Art.ec("epine", "clair").darkened(0.15), 1.8, true)
-		c.draw_circle(pos + dir * 14.0, 2.6, Art.ec("cendre"))
+		c.draw_line(pos - dl * 15.0, pos + dl * 14.0, Art.ec("epine", "clair").darkened(0.15), 1.8, true)
+		c.draw_circle(pos + dl * 14.0, 2.6 * sc, Art.ec("cendre"))
+	_draw_falling(c, vane)
 	for tw in tornadoes:
 		_draw_tornado(c, tw)
 	# Rasante : un sillage de cendre derrière lui pendant la traversée.
@@ -899,6 +1320,66 @@ func draw_overlay(c: CanvasItem) -> void:
 			c.draw_line(q - d.orthogonal() * w, q + d.orthogonal() * w, Color(light, 0.25 * (1.0 - u)), 3.0, true)
 		c.draw_line(swoop_from.lerp(anchor, 0.2), anchor, Color(ash, 0.6), 10.0, true)
 		c.draw_line(swoop_from.lerp(anchor, 0.5), anchor, Color(light, 0.7), 4.0, true)
+
+
+## Plumes des caisses douces : pendant l'annonce, elles tombent du ciel au-dessus de leur cercle ;
+## plantées, elles vibrent un instant dans l'herbe.
+func _draw_falling(c: CanvasItem, vane: Color) -> void:
+	for r in pricks:
+		var at: Vector2 = r["pos"]
+		var k := 1.0 - clampf(float(r["fuse"]) / maxf(float(r["total"]), 0.01), 0.0, 1.0) if r["burst"] < 0.0 else 1.0
+		var tip := at + Vector2(0, -260.0 * (1.0 - Anim.ease_in(k)))
+		var dir := Vector2.from_angle(PI / 2.0 + float(r["a"]) * (1.0 - k) + (0.08 * sin(r["burst"] * 60.0) if r["burst"] >= 0.0 else 0.0))
+		var fade := 1.0 - clampf((float(r["burst"]) - PRICK["burst"] * 0.6) / (PRICK["burst"] * 0.4), 0.0, 1.0) if r["burst"] >= 0.0 else clampf(k * 3.0, 0.0, 1.0)
+		var n := dir.orthogonal()
+		var pts := PackedVector2Array([tip, tip - dir * 9.0 + n * 6.0, tip - dir * 26.0 + n * 5.0, tip - dir * 32.0, tip - dir * 26.0 - n * 5.0, tip - dir * 9.0 - n * 6.0])
+		Art.volume(c, pts, Color(vane, fade), 0.7)
+		Art.outline(c, pts, Color(Art.c("ennemi_contour"), fade), 1.2)
+		c.draw_line(tip, tip - dir * 34.0, Color(Art.ec("epine", "clair").darkened(0.15), fade), 1.6, true)
+
+
+## Bourrasques de la batterie : pendant l'annonce, la bande se ramasse autour de lui en rouge ;
+## parties, une bande de vent clair bordée de rouge, striée de traits qui filent, ouverte de ses
+## brèches (les souffles : un fil qui s'éteint vite).
+func _draw_waves(c: CanvasItem) -> void:
+	if waves.is_empty():
+		return
+	var danger := Art.c("danger")
+	var light := Art.ec("vent", "clair")
+	var dark := Art.ec("vent", "sombre")
+	var half: float = DRUM_WAVE["gap"] * 0.5
+	for wv in waves:
+		var o: Vector2 = wv["o"]
+		var gaps: Array = wv["gaps"].duplicate()
+		gaps.sort()
+		var fuse: float = wv["fuse"]
+		var k := 1.0 - clampf(fuse / float(wv["total"]), 0.0, 1.0) if fuse > 0.0 else 1.0
+		var small: bool = wv["small"]
+		var r: float = wv["r"] if fuse <= 0.0 else body_radius * (0.9 + 1.4 * (1.0 - k))
+		var reach: float = minf(arena.radius + o.distance_to(arena.center), float(wv["reach"]))
+		var w: float = PULSE["width"] if small else DRUM_WAVE["width"]
+		var fade := 1.0
+		if fuse <= 0.0:
+			fade = clampf((reach + w - r) / (40.0 if small else 80.0), 0.0, 1.0)
+		for i in gaps.size():
+			var a0: float = float(gaps[i]) + half
+			var a1: float = float(gaps[(i + 1) % gaps.size()]) - half
+			if a1 <= a0:
+				a1 += TAU
+			var segs := maxi(4, int((a1 - a0) * (6.0 if small else 12.0)))
+			if fuse > 0.0:
+				c.draw_arc(o, r, a0, a1, segs, Color(danger, 0.25 + 0.55 * k), Art.TRAIT * (1.0 + k), true)
+				continue
+			c.draw_arc(o, r, a0, a1, segs, Color(light, 0.35 * fade), w, true)
+			c.draw_arc(o, r + w * 0.5, a0, a1, segs, Color(danger, 0.8 * fade), Art.TRAIT_FIN, true)
+			if small:
+				continue
+			# Traits de vent qui filent le long de la bourrasque.
+			var n := int((a1 - a0) * r / 46.0)
+			for j in n:
+				var a := lerpf(a0, a1, (j + 0.5) / float(n)) + 0.04 * sin(t * 7.0 + j)
+				var len := 0.06 + 0.04 * float(j % 3)
+				c.draw_arc(o, r - w * 0.15 + 4.0 * float(j % 2), a, minf(a + len, a1), 4, Color(dark if j % 3 == 0 else light, 0.85 * fade), 2.0, true)
 
 
 ## Tornade : un entonnoir de traits du vent qui tournent, plus large en haut, avec des débris.
