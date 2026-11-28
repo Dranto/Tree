@@ -81,6 +81,50 @@ func _run() -> void:
 	gp.set_hover_graft(ids[20])
 	await _frames(3)
 	await _shot("greffes_couronne_fin_" + _res())
+
+	# New Game+ (jalon 14 G) : couronne du cycle 2 (16 emplacements et le bourgeon du cycle 3), puis
+	# au plafond (20), avec les greffes de cycle posées et la fiche de l'une d'elles.
+	var cycles = root.get_node("Cycles")
+	var cg: Array = ids.filter(func(id): return game.graft_min_cycle(id) >= 2)
+	var plain: Array = ids.filter(func(id): return game.graft_min_cycle(id) < 2)
+	game.crown_kept = game.crown_size()
+	if ui.visible:
+		ui.toggle()
+		await _frames(3)
+	for n in [2, 6]:
+		cycles.forced = n
+		game._fit_crown()
+		var order: Array = cg + plain
+		for i in game.crown_size():
+			game.place_graft(i, order[i])
+		game.flags["couronne_vue"] = game.crown_size() - 1
+		gp.refresh()
+		ui.toggle()
+		await _frames(3)
+		gp.set_hover_graft(cg[0] if n == 2 else cg[cg.size() - 1])
+		await _frames(3)
+		await _shot("greffes_couronne_cycle%d_%s" % [n, _res()])
+		if n == 2:
+			gp.set_hover_graft("")
+			gp.set_hover_slot(game.crown_max())
+			await _frames(3)
+			await _shot("greffes_couronne_cycle2_bourgeon_" + _res())
+			gp.set_hover_slot(-1)
+		ui.toggle()
+		await _frames(3)
+
+	# Les greffes de cycle au sol, en rang devant le héros (leurs dessins à l'encre de l'herbier).
+	cycles.forced = 2
+	for g in cg:
+		game.graft_inventory.erase(g)
+		if game.crown.has(g):
+			game.crown[game.crown.find(g)] = ""
+	_place(main.player.position + Vector2(0, 160))
+	var at: Vector2 = main.player.position + Vector2(-70.0 * (cg.size() - 1) / 2.0, -240)
+	for i in cg.size():
+		main.drop_graft(at + Vector2(70.0 * i, 0), cg[i])
+	await _physics(40)
+	await _shot("greffes_cycle_sol_" + _res())
 	quit(0)
 
 

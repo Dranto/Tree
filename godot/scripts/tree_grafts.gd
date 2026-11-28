@@ -71,11 +71,23 @@ class CrownView extends Control:
 		mouse_filter = Control.MOUSE_FILTER_STOP
 		custom_minimum_size = Vector2(WIDTH, 150)
 
+	## Au New Game+, la couronne dépasse 16 emplacements (jusqu'à 20) : l'anneau s'ouvre un peu en
+	## hauteur et les médaillons rapetissent pour ne pas se toucher. 1 jusqu'à 16 emplacements.
+	func slot_scale() -> float:
+		return clampf(16.0 / float(maxi(slot_count(), 16)), 0.78, 1.0)
+
+	func slot_count() -> int:
+		return maxi(Game.crown_max() + Game.crown_next_cycle(), 1)
+
+	## Hauteur voulue de l'anneau selon le nombre d'emplacements (150 jusqu'à 16, puis 6 par emplacement).
+	func wanted_height() -> float:
+		return 150.0 + 6.0 * float(maxi(0, slot_count() - 16))
+
 	## Centre de chaque emplacement (ouverts puis fermés), répartis à intervalles égaux le long de
 	## l'ellipse (pas d'angles égaux : ils se serreraient aux deux bouts), le premier en bas.
 	func slot_points() -> Array:
 		var out: Array = []
-		var n: int = maxi(Game.crown_max(), 1)
+		var n: int = maxi(Game.crown_max() + Game.crown_next_cycle(), 1)
 		var c := size / 2.0
 		var rx := size.x / 2.0 - 22.0
 		var ry := size.y / 2.0 - 20.0
@@ -99,7 +111,7 @@ class CrownView extends Control:
 	func slot_at(p: Vector2) -> int:
 		var pts := slot_points()
 		var best := -1
-		var best_d := 19.0
+		var best_d := 19.0 * slot_scale()
 		for i in pts.size():
 			var d: float = p.distance_to(pts[i])
 			if d < best_d:
@@ -110,6 +122,7 @@ class CrownView extends Control:
 	func _draw() -> void:
 		var pts := slot_points()
 		var open: int = Game.crown_size()
+		var k_s := slot_scale()
 		var c := size / 2.0
 		var rx := size.x / 2.0 - 22.0
 		var ry := size.y / 2.0 - 20.0
@@ -129,7 +142,7 @@ class CrownView extends Control:
 		for i in pts.size():
 			var p: Vector2 = pts[i]
 			if i >= open:
-				_draw_bud(p)
+				_draw_bud(p, k_s)
 				continue
 			var gid := Game.graft_of(i)
 			var target: bool = panel.held != "" and panel.hover_slot == i
@@ -137,24 +150,24 @@ class CrownView extends Control:
 			var glow := 0.0
 			if fresh:
 				glow = 0.5 + 0.5 * sin(panel.t * 4.0)
-				draw_circle(p, 19.0 + 3.0 * glow, Color(PLAN, 0.12 + 0.18 * glow))
-			draw_circle(p, 14.5, SLOT_BG if gid != "" else Color(SLOT_BG, 0.75))
+				draw_circle(p, (19.0 + 3.0 * glow) * k_s, Color(PLAN, 0.12 + 0.18 * glow))
+			draw_circle(p, 14.5 * k_s, SLOT_BG if gid != "" else Color(SLOT_BG, 0.75))
 			var ring := PLAN if target else (UiTheme.GOLD if gid != "" else Color(UiTheme.GOLD, 0.55 + 0.4 * glow))
-			draw_arc(p, 14.5, 0.0, TAU, 28, ring, 2.5 if target else 1.6, true)
+			draw_arc(p, 14.5 * k_s, 0.0, TAU, 28, ring, 2.5 if target else 1.6, true)
 			if panel.pad_index == i:
 				# Visé à la manette : un second anneau d'or, plus large.
-				draw_arc(p, 19.5, 0.0, TAU, 32, PLAN, 2.0, true)
+				draw_arc(p, 19.5 * k_s, 0.0, TAU, 32, PLAN, 2.0, true)
 			if gid != "":
 				var g: Dictionary = Content.grafts().get(gid, {})
-				GraftPickup.draw_shape(self, str(g.get("shape", "feuille")), p, 9.0, Color(str(g.get("color", "#f2d06b"))))
+				GraftPickup.draw_shape(self, str(g.get("shape", "feuille")), p, 9.0 * k_s, Color(str(g.get("color", "#f2d06b"))))
 			else:
 				# Emplacement ouvert et vide : une petite croix d'or, comme un écusson qui attend.
-				var s := 4.0
+				var s := 4.0 * k_s
 				var col := Color(UiTheme.GOLD, 0.6)
 				draw_line(p + Vector2(-s, 0), p + Vector2(s, 0), col, 1.5, true)
 				draw_line(p + Vector2(0, -s), p + Vector2(0, s), col, 1.5, true)
 			if panel.hover_slot == i and panel.held == "":
-				draw_arc(p, 17.5, 0.0, TAU, 28, Color(PLAN, 0.7), 1.2, true)
+				draw_arc(p, 17.5 * k_s, 0.0, TAU, 28, Color(PLAN, 0.7), 1.2, true)
 		# Au centre : emplacements occupés sur emplacements ouverts.
 		var f := UiTheme.font(true)
 		var txt := "%d / %d" % [Game.placed_grafts().size(), open]
@@ -170,14 +183,14 @@ class CrownView extends Control:
 				TreeArt.roots(self, pts[slot], float(rcfg.get("size", 34.0)), UiTheme.LEAF, panel._roots[slot] / dur, count, slot)
 
 	## Emplacement encore fermé : un bourgeon clos, cerclé d'un filet pointillé.
-	func _draw_bud(p: Vector2) -> void:
-		draw_circle(p, 10.5, Color(SLOT_BG, 0.85))
+	func _draw_bud(p: Vector2, k_s := 1.0) -> void:
+		draw_circle(p, 10.5 * k_s, Color(SLOT_BG, 0.85))
 		for k in 10:
 			var a := TAU * k / 10.0
-			draw_arc(p, 10.5, a, a + TAU / 20.0, 3, Color(DIM, 0.75), 1.2, true)
+			draw_arc(p, 10.5 * k_s, a, a + TAU / 20.0, 3, Color(DIM, 0.75), 1.2, true)
 		var bud := Color("b58a5a")
-		UiTheme.draw_leaf(self, p + Vector2(0, 5), -PI / 2.0 - 0.3, 11.0, 3.6, bud.lightened(0.2), bud, 1.0)
-		UiTheme.draw_leaf(self, p + Vector2(0, 5), -PI / 2.0 + 0.3, 11.0, 3.6, bud.lightened(0.2), bud.darkened(0.15), 1.0)
+		UiTheme.draw_leaf(self, p + Vector2(0, 5) * k_s, -PI / 2.0 - 0.3, 11.0 * k_s, 3.6 * k_s, bud.lightened(0.2), bud, 1.0)
+		UiTheme.draw_leaf(self, p + Vector2(0, 5) * k_s, -PI / 2.0 + 0.3, 11.0 * k_s, 3.6 * k_s, bud.lightened(0.2), bud.darkened(0.15), 1.0)
 
 	func _gui_input(event: InputEvent) -> void:
 		var mm := event as InputEventMouseMotion
@@ -468,6 +481,7 @@ func refresh() -> void:
 	if held != "" and not Game.has_graft(held):
 		held = ""
 	var open: int = Game.crown_size()
+	crown_view.custom_minimum_size.y = crown_view.wanted_height()
 	_title.text = ("▸ " if folded else "▾ ") + Loc.t("Couronne de greffes")
 	var free: int = Game.free_grafts().size()
 	_count.text = Loc.tn("%d trouvée", "%d trouvées", Game.graft_inventory.size()) % Game.graft_inventory.size()
@@ -526,7 +540,10 @@ func _refresh_detail() -> void:
 	if hover_slot >= open:
 		_hint.visible = false
 		_line(Loc.t("Emplacement fermé"), 16, DIM, true)
-		_line(Loc.t("Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."), 15, DIM)
+		if hover_slot >= Game.crown_max():
+			_line(Loc.t("Il s'ouvre au cycle suivant, en touchant le fruit de la graine."), 15, DIM)
+		else:
+			_line(Loc.t("Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."), 15, DIM)
 		return
 	var id := held if held != "" else hover_graft
 	if id == "" and hover_slot >= 0:
@@ -537,6 +554,9 @@ func _refresh_detail() -> void:
 	if held == "":
 		_hint.visible = false
 	_line(Loc.data(str(g.get("name", id))), 17, UiTheme.GOLD, true)
+	if Game.graft_min_cycle(id) >= 2:
+		# Greffe de cycle (New Game+) : on dit d'où elle vient.
+		_line(Loc.t("Greffe de cycle : on la trouve à partir du cycle %d.") % Game.graft_min_cycle(id), 14, DIM)
 	for e in g.get("effects", []):
 		var text := Effects.describe(e)
 		if text != "":

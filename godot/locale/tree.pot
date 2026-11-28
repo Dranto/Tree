@@ -698,7 +698,7 @@ msgstr ""
 #. data/borders/spore-seve.json › spore-seve › clusters › compost › nodes › c9 › name
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m1 › name
 #. data/borders/spore-seve.json › spore-seve › clusters › mycelium › nodes › m12 › name
-#. … et 4 autres
+#. … et 5 autres
 msgid "Humus"
 msgstr ""
 
@@ -5769,6 +5769,7 @@ msgid "Tu esquives sans cesse, mais tu es plus fragile."
 msgstr ""
 
 #. data/branches/vent.json › vent › clusters › vif › nodes › v5 › effects › text
+#. data/grafts.json › greffe_pepin_aile › effects › text
 #. data/grafts.json › greffe_plume_vive › effects › text
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Chaque esquive tire une salve de ton attaque de base tout autour de toi ({0} traits, au plus toutes les {1} s)."
@@ -6546,6 +6547,19 @@ msgstr ""
 msgid "Un anneau de bois serré, cent ans de patience."
 msgstr ""
 
+#. data/grafts.json › greffe_cerne_passe › desc
+msgid "Un anneau de bois d'une aventure déjà vécue : il encaisse et rend les coups."
+msgstr ""
+
+#. data/grafts.json › greffe_cerne_passe › effects › text
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Quand un coup te touche, une onde d'échardes blesse les ennemis autour de toi (×{0} dégâts, toutes les {1} s au plus)."
+msgstr ""
+
+#. data/grafts.json › greffe_cerne_passe › name
+msgid "Cerne de l'an passé"
+msgstr ""
+
 #. data/grafts.json › greffe_coeur_de_chene › desc
 msgid "Le cœur de l'Ancien pétrifié bat de nouveau, lent et sûr."
 msgstr ""
@@ -6591,6 +6605,26 @@ msgstr ""
 
 #. data/grafts.json › greffe_couronne › name
 msgid "Volée en couronne"
+msgstr ""
+
+#. data/grafts.json › greffe_couronne_automne › desc
+msgid "Les feuilles de trois aventures, tressées : chaque chute lève le vent et la lumière."
+msgstr ""
+
+#. data/grafts.json › greffe_couronne_automne › effects › text
+#. data/grafts.json › greffe_oeil_tempete › effects › text
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Un ennemi vaincu laisse une tornade là où il tombe ({0} % des dégâts et de la durée de la tornade, au plus toutes les {1} s)."
+msgstr ""
+
+#. data/grafts.json › greffe_couronne_automne › effects › text
+#. data/grafts.json › greffe_vitrail › effects › text
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Un ennemi vaincu renvoie un rayon de lumière vers l'ennemi le plus proche ({0} % des dégâts, au plus toutes les {1} s)."
+msgstr ""
+
+#. data/grafts.json › greffe_couronne_automne › name
+msgid "Couronne d'automne"
 msgstr ""
 
 #. data/grafts.json › greffe_couronne_graines › desc
@@ -6650,6 +6684,33 @@ msgstr ""
 msgid "Essaim jumeau"
 msgstr ""
 
+#. data/grafts.json › greffe_fleur_fanee › desc
+msgid "Ce qui a fané pique encore : tes critiques font saigner, tes coups empoisonnent."
+msgstr ""
+
+#. data/grafts.json › greffe_fleur_fanee › effects › text
+#. data/grafts.json › greffe_sang_vif › effects › text
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Chaque coup critique fait saigner la cible ({0} % des dégâts du coup par seconde, {1} s)."
+msgstr ""
+
+#. data/grafts.json › greffe_fleur_fanee › name
+msgid "Fleur fanée"
+msgstr ""
+
+#. data/grafts.json › greffe_fruit_graine › desc
+msgid "Le fruit tombé de la graine, au cycle suivant : chaque victoire te nourrit."
+msgstr ""
+
+#. data/grafts.json › greffe_fruit_graine › effects › text
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Chaque ennemi vaincu te rend {0} % de ta vie maximale (au plus toutes les {1} s)."
+msgstr ""
+
+#. data/grafts.json › greffe_fruit_graine › name
+msgid "Fruit de la graine"
+msgstr ""
+
 #. data/grafts.json › greffe_girouette › desc
 msgid "Chaque victoire relance le vent : ruée et tornade reviennent plus vite."
 msgstr ""
@@ -6689,6 +6750,15 @@ msgstr ""
 
 #. data/grafts.json › greffe_halo › name
 msgid "Halo"
+msgstr ""
+
+#. data/grafts.json › greffe_humus › desc
+msgid "Ce qui tombe nourrit le sol, et le sol retient ceux qui restent."
+msgstr ""
+
+#. data/grafts.json › greffe_humus › effects › text
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Un ennemi vaincu fait jaillir des racines qui immobilisent ses voisins ({0} s, au plus une fois par seconde)."
 msgstr ""
 
 #. data/grafts.json › greffe_lichen › desc
@@ -6758,13 +6828,16 @@ msgstr ""
 msgid "Ce qui tombe sous tes coups se relève en tornade."
 msgstr ""
 
-#. data/grafts.json › greffe_oeil_tempete › effects › text
-#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
-msgid "Un ennemi vaincu laisse une tornade là où il tombe ({0} % des dégâts et de la durée de la tornade, au plus toutes les {1} s)."
-msgstr ""
-
 #. data/grafts.json › greffe_oeil_tempete › name
 msgid "Œil du Harfang"
+msgstr ""
+
+#. data/grafts.json › greffe_pepin_aile › desc
+msgid "Un pépin qui a déjà fait le tour du monde : ton esquive le sème tout autour."
+msgstr ""
+
+#. data/grafts.json › greffe_pepin_aile › name
+msgid "Pépin ailé"
 msgstr ""
 
 #. data/grafts.json › greffe_perle_rosee › desc
@@ -6839,13 +6912,24 @@ msgstr ""
 msgid "Un coup critique te rend {0} % de ta vie maximale (au plus toutes les {1} s)."
 msgstr ""
 
+#. data/grafts.json › greffe_rosee_tardive › desc
+msgid "Une goutte tombée tard, qui brille encore au deuxième passage."
+msgstr ""
+
+#. data/grafts.json › greffe_rosee_tardive › name
+msgid "Rosée d'arrière-saison"
+msgstr ""
+
 #. data/grafts.json › greffe_sang_vif › desc
 msgid "Les coups critiques ouvrent des plaies."
 msgstr ""
 
-#. data/grafts.json › greffe_sang_vif › effects › text
-#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
-msgid "Chaque coup critique fait saigner la cible ({0} % des dégâts du coup par seconde, {1} s)."
+#. data/grafts.json › greffe_seconde_floraison › desc
+msgid "La ronce refleurit au troisième passage : tes attaques s'ouvrent comme des pétales."
+msgstr ""
+
+#. data/grafts.json › greffe_seconde_floraison › name
+msgid "Seconde floraison"
 msgstr ""
 
 #. data/grafts.json › greffe_sentinelle › desc
@@ -7017,11 +7101,6 @@ msgstr ""
 
 #. data/grafts.json › greffe_vitrail › desc
 msgid "Un ennemi vaincu renvoie un rayon vers son voisin."
-msgstr ""
-
-#. data/grafts.json › greffe_vitrail › effects › text
-#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
-msgid "Un ennemi vaincu renvoie un rayon de lumière vers l'ennemi le plus proche ({0} % des dégâts, au plus toutes les {1} s)."
 msgstr ""
 
 #. data/grafts.json › greffe_vitrail › name
@@ -8086,29 +8165,13 @@ msgstr ""
 msgid "étourdi"
 msgstr ""
 
-#. scripts/game.gd:292
-#. scripts/game.gd:339
+#. scripts/game.gd:324
+#. scripts/game.gd:371
 msgid "Build %d"
 msgstr ""
 
-#. scripts/game.gd:607
+#. scripts/game.gd:639
 msgid "Dans le jeu complet."
-msgstr ""
-
-#. scripts/game.gd:619
-msgid "Couvert de cendre : %s"
-msgstr ""
-
-#. scripts/game.gd:619
-msgid "un évènement du monde doit le libérer."
-msgstr ""
-
-#. scripts/game.gd:630
-msgid "Demande la compétence « %s »."
-msgstr ""
-
-#. scripts/game.gd:633
-msgid "Incompatible avec « %s »."
 msgstr ""
 
 #. scripts/game.gd:64
@@ -8130,6 +8193,22 @@ msgstr ""
 
 #. scripts/game.gd:65
 msgid "Secret découvert"
+msgstr ""
+
+#. scripts/game.gd:651
+msgid "Couvert de cendre : %s"
+msgstr ""
+
+#. scripts/game.gd:651
+msgid "un évènement du monde doit le libérer."
+msgstr ""
+
+#. scripts/game.gd:662
+msgid "Demande la compétence « %s »."
+msgstr ""
+
+#. scripts/game.gd:665
+msgid "Incompatible avec « %s »."
 msgstr ""
 
 #. scripts/heart.gd:283
@@ -8892,61 +8971,69 @@ msgid ""
 "« Nouveau » repart de la graine, « Copier ici » enregistre le build actif."
 msgstr ""
 
-#. scripts/tree_grafts.gd:471
+#. scripts/tree_grafts.gd:485
 msgid "Couronne de greffes"
 msgstr ""
 
-#. scripts/tree_grafts.gd:473
+#. scripts/tree_grafts.gd:487
 msgid "%d trouvée"
 msgid_plural "%d trouvées"
 msgstr[0] ""
 msgstr[1] ""
 
-#. scripts/tree_grafts.gd:494
+#. scripts/tree_grafts.gd:508
 msgid "%s sur un emplacement de la couronne : y poser la greffe."
 msgstr ""
 
-#. scripts/tree_grafts.gd:494
+#. scripts/tree_grafts.gd:508
 msgid "Clique un emplacement de la couronne pour y poser la greffe."
 msgstr ""
 
-#. scripts/tree_grafts.gd:496
+#. scripts/tree_grafts.gd:510
 msgid "%s sur une greffe pour la prendre, puis sur un emplacement libre."
 msgstr ""
 
-#. scripts/tree_grafts.gd:496
+#. scripts/tree_grafts.gd:510
 msgid "Glisse une greffe dans un emplacement libre de la couronne."
 msgstr ""
 
-#. scripts/tree_grafts.gd:498
+#. scripts/tree_grafts.gd:512
 msgid "%s sur un emplacement : retire sa greffe."
 msgstr ""
 
-#. scripts/tree_grafts.gd:498
+#. scripts/tree_grafts.gd:512
 msgid "Clic sur un emplacement : retire sa greffe."
 msgstr ""
 
-#. scripts/tree_grafts.gd:528
+#. scripts/tree_grafts.gd:542
 msgid "Emplacement fermé"
 msgstr ""
 
-#. scripts/tree_grafts.gd:529
+#. scripts/tree_grafts.gd:544
+msgid "Il s'ouvre au cycle suivant, en touchant le fruit de la graine."
+msgstr ""
+
+#. scripts/tree_grafts.gd:546
 msgid "Il s'ouvre en purifiant les Cœurs d'une région, ou en vainquant son gardien."
 msgstr ""
 
-#. scripts/tree_grafts.gd:552
+#. scripts/tree_grafts.gd:559
+msgid "Greffe de cycle : on la trouve à partir du cycle %d."
+msgstr ""
+
+#. scripts/tree_grafts.gd:572
 msgid "Posée ici :"
 msgstr ""
 
-#. scripts/tree_grafts.gd:555
+#. scripts/tree_grafts.gd:575
 msgid "Remplace « %s »."
 msgstr ""
 
-#. scripts/tree_grafts.gd:558
+#. scripts/tree_grafts.gd:578
 msgid "Posée :"
 msgstr ""
 
-#. scripts/tree_grafts.gd:561
+#. scripts/tree_grafts.gd:581
 msgid "Retirée :"
 msgstr ""
 
