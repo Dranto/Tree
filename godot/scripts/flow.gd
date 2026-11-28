@@ -58,6 +58,13 @@ func continue_game() -> void:
 	_open(GAME_SCENE)
 
 
+## Recharge la scène de jeu (passage au cycle suivant, Cycles.start_next) : « Continuer » si
+## continue_requested est vrai, sinon l'état de Game tel quel.
+func reload_game() -> void:
+	fresh_game = false
+	_open(GAME_SCENE)
+
+
 func go_title() -> void:
 	_open(TITLE_SCENE)
 
