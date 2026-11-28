@@ -24,7 +24,7 @@ const BOSS_KEYS := ["eveil", "phase", "mort", "exalte"]
 ## Moments qu'un boss peut ne pas avoir (la Flétrissure n'est pas encore exaltée : son de phase à la place).
 const BOSS_OPTIONAL := ["exalte"]
 ## Toniques d'un morceau de boss fait à la main (« hand_track » : gamme sur laquelle les bruitages s'accordent).
-const HAND_TONICS := ["do", "do#", "ré", "mib", "mi", "fa", "fa#", "sol", "lab", "la", "sib", "si"]
+const HAND_TONICS := ["do", "do#", "ré", "mib", "mi", "fa", "fa#", "sol", "lab", "la", "sib", "si"] # i18n: non (noms de notes, données)
 const SHAPES := ["dot", "glow", "streak", "drop", "chip", "feather"]
 
 
