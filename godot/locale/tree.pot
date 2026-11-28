@@ -6411,17 +6411,28 @@ msgid "La Flétrissure"
 msgstr ""
 
 #. data/finale.json › boss › phases
+#. data/finale.json › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : sève et vent"
 msgstr ""
 
 #. data/finale.json › boss › phases
+#. data/finale.json › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : épines et spores"
 msgstr ""
 
 #. data/finale.json › boss › phases
 msgid "Seconde forme : les six gardiens à la fois"
+msgstr ""
+
+#. data/finale.json › boss › phases_exaltees
+msgid "Exaltation : elle ramène le monde à elle"
+msgstr ""
+
+#. data/finale.json › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : les six gardiens à la fois"
 msgstr ""
 
 #. data/finale.json › credits › head
@@ -7928,11 +7939,11 @@ msgstr ""
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr ""
 
-#. scripts/boss_base.gd:512
+#. scripts/boss_base.gd:515
 msgid "Exaltation"
 msgstr ""
 
-#. scripts/boss_base.gd:637
+#. scripts/boss_base.gd:640
 msgid "Entravée"
 msgstr ""
 

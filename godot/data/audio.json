@@ -257,7 +257,7 @@
         "dead": {"shape": "glow", "color": "#5a3a4a", "alpha": 0.45, "vel": [2.0, -10.0], "sway": [8.0, 3.0], "size": [1.4, 3.2]},
         "alive": {"shape": "glow", "color": "#ffe6a8", "alpha": 0.85, "vel": [3.0, -18.0], "sway": [12.0, 4.0], "size": [1.4, 3.4]}
       },
-      "boss": {"eveil": "finale_boss_eveil", "phase": "finale_boss_phase", "mort": "finale_boss_mort"}
+      "boss": {"eveil": "finale_boss_eveil", "phase": "finale_boss_phase", "mort": "finale_boss_mort", "exalte": "finale_boss_phase"}
     },
     "generique": {
       "_doc": "Fin et générique joués dans le monde (world_ending.gd) : seule la couche lumineuse, qui reprend le thème du monde (flûte) sur des accords clairs.",
