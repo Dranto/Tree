@@ -5997,7 +5997,7 @@ msgid "frais"
 msgstr ""
 
 #. data/branches/vent.json › vent › notable › names
-#. scripts/hud.gd:305
+#. scripts/hud.gd:310
 msgid "libre"
 msgstr ""
 
@@ -8053,7 +8053,7 @@ msgstr ""
 
 #. scripts/controls_text.gd:123
 #. scripts/controls_text.gd:8
-#. scripts/settings.gd:490
+#. scripts/settings.gd:491
 msgid "Clic droit"
 msgstr ""
 
@@ -8062,12 +8062,12 @@ msgid "Marcher jusqu'au point cliqué"
 msgstr ""
 
 #. scripts/controls_text.gd:125
-#. scripts/controls_text.gd:141
+#. scripts/controls_text.gd:142
 msgid "Se déplacer"
 msgstr ""
 
 #. scripts/controls_text.gd:126
-#. scripts/settings.gd:120
+#. scripts/settings.gd:121
 #. scripts/settings.gd:53
 msgid "Automatique"
 msgstr ""
@@ -8077,41 +8077,47 @@ msgid "L'attaque de base part toute seule sur l'ennemi visé"
 msgstr ""
 
 #. scripts/controls_text.gd:127
-#. scripts/controls_text.gd:143
+#. scripts/controls_text.gd:144
 #. scripts/options_panel.gd:67
 msgid "Compétence principale 1"
 msgstr ""
 
 #. scripts/controls_text.gd:128
-#. scripts/controls_text.gd:144
+#. scripts/controls_text.gd:145
 #. scripts/options_panel.gd:67
 msgid "Compétence principale 2"
 msgstr ""
 
 #. scripts/controls_text.gd:129
-#. scripts/controls_text.gd:145
+#. scripts/controls_text.gd:146
 msgid "Compétences secondaires"
 msgstr ""
 
 #. scripts/controls_text.gd:130
-#. scripts/controls_text.gd:146
+#. scripts/controls_text.gd:147
 #. scripts/settings.gd:86
 msgid "Esquive"
 msgstr ""
 
 #. scripts/controls_text.gd:131
-#. scripts/controls_text.gd:147
+#. scripts/controls_text.gd:148
 #. scripts/settings.gd:86
 #. scripts/tree_ui.gd:2030
 #. scripts/tree_ui.gd:2069
 msgid "Arbre de vie"
 msgstr ""
 
-#. scripts/controls_text.gd:142
+#. scripts/controls_text.gd:132
+#. scripts/controls_text.gd:150
+#. scripts/settings.gd:86
+msgid "Statistiques (maintenir)"
+msgstr ""
+
+#. scripts/controls_text.gd:143
 msgid "Viser (sinon, la cible la plus proche)"
 msgstr ""
 
-#. scripts/controls_text.gd:148
+#. scripts/controls_text.gd:149
 #. scripts/settings.gd:86
 #. scripts/world_map.gd:170
 #. scripts/world_map.gd:236
@@ -8119,27 +8125,27 @@ msgid "Carte"
 msgstr ""
 
 #. scripts/controls_text.gd:19
-#. scripts/settings.gd:537
+#. scripts/settings.gd:538
 msgid "Ctrl"
 msgstr ""
 
 #. scripts/controls_text.gd:19
-#. scripts/settings.gd:537
+#. scripts/settings.gd:538
 msgid "Entrée"
 msgstr ""
 
 #. scripts/controls_text.gd:19
-#. scripts/settings.gd:537
+#. scripts/settings.gd:538
 msgid "Espace"
 msgstr ""
 
 #. scripts/controls_text.gd:19
-#. scripts/settings.gd:537
+#. scripts/settings.gd:538
 msgid "Maj"
 msgstr ""
 
 #. scripts/controls_text.gd:19
-#. scripts/settings.gd:537
+#. scripts/settings.gd:538
 msgid "Retour arrière"
 msgstr ""
 
@@ -8148,12 +8154,12 @@ msgid "Échap"
 msgstr ""
 
 #. scripts/controls_text.gd:36
-#. scripts/settings.gd:494
+#. scripts/settings.gd:495
 msgid "Souris %d"
 msgstr ""
 
 #. scripts/controls_text.gd:7
-#. scripts/settings.gd:489
+#. scripts/settings.gd:490
 msgid "Clic gauche"
 msgstr ""
 
@@ -8293,25 +8299,25 @@ msgstr ""
 msgid "Tiens la zone : %d s"
 msgstr ""
 
-#. scripts/hud.gd:249
+#. scripts/hud.gd:254
 msgid "Compétence principale %d (%s)"
 msgstr ""
 
-#. scripts/hud.gd:250
+#. scripts/hud.gd:255
 msgid "Compétence secondaire %d (%s)"
 msgstr ""
 
-#. scripts/hud.gd:302
+#. scripts/hud.gd:307
 msgid "verrouillé"
 msgstr ""
 
-#. scripts/hud.gd:348
+#. scripts/hud.gd:353
 msgid ""
 "%s : emplacement libre.\n"
 "Clique pour y placer une compétence acquise, ou glisse-en une dessus."
 msgstr ""
 
-#. scripts/hud.gd:353
+#. scripts/hud.gd:358
 msgid ""
 "%s  (%s)\n"
 "%s\n"
@@ -8507,7 +8513,7 @@ msgid "%s est déjà utilisé : %s."
 msgstr ""
 
 #. scripts/options_panel.gd:60
-#. scripts/settings.gd:823
+#. scripts/settings.gd:824
 msgid "Affichage"
 msgstr ""
 
@@ -8557,7 +8563,7 @@ msgstr ""
 
 #. scripts/options_panel.gd:79
 #. scripts/pause_menu.gd:51
-#. scripts/settings.gd:826
+#. scripts/settings.gd:827
 #. scripts/title.gd:70
 msgid "Options"
 msgstr ""
@@ -8643,23 +8649,23 @@ msgstr ""
 msgid "sauvegarde créée par une version plus récente du jeu (format %d > %d)"
 msgstr ""
 
-#. scripts/settings.gd:120
+#. scripts/settings.gd:121
 msgid "PlayStation (croix, rond…)"
 msgstr ""
 
-#. scripts/settings.gd:120
+#. scripts/settings.gd:121
 msgid "Xbox (A B X Y)"
 msgstr ""
 
-#. scripts/settings.gd:141
+#. scripts/settings.gd:142
 msgid "Clavier (Z Q S D)"
 msgstr ""
 
-#. scripts/settings.gd:141
+#. scripts/settings.gd:142
 msgid "Clic droit (MOBA)"
 msgstr ""
 
-#. scripts/settings.gd:141
+#. scripts/settings.gd:142
 msgid "Suivre le curseur"
 msgstr ""
 
@@ -8671,40 +8677,40 @@ msgstr ""
 msgid "Tous"
 msgstr ""
 
-#. scripts/settings.gd:392
-#. scripts/settings.gd:863
+#. scripts/settings.gd:393
+#. scripts/settings.gd:864
 msgid "compétence %d"
 msgstr ""
 
-#. scripts/settings.gd:394
+#. scripts/settings.gd:395
 msgid "compétence principale 2 (MOBA)"
 msgstr ""
 
-#. scripts/settings.gd:404
+#. scripts/settings.gd:405
 msgid "le menu"
 msgstr ""
 
-#. scripts/settings.gd:477
+#. scripts/settings.gd:478
 msgid "Clic G"
 msgstr ""
 
-#. scripts/settings.gd:478
+#. scripts/settings.gd:479
 msgid "Clic D"
 msgstr ""
 
-#. scripts/settings.gd:479
+#. scripts/settings.gd:480
 msgid "Clic M"
 msgstr ""
 
-#. scripts/settings.gd:491
+#. scripts/settings.gd:492
 msgid "Clic milieu"
 msgstr ""
 
-#. scripts/settings.gd:492
+#. scripts/settings.gd:493
 msgid "Bouton 4"
 msgstr ""
 
-#. scripts/settings.gd:493
+#. scripts/settings.gd:494
 msgid "Bouton 5"
 msgstr ""
 
@@ -8712,23 +8718,23 @@ msgstr ""
 msgid "Vers le curseur"
 msgstr ""
 
-#. scripts/settings.gd:536
+#. scripts/settings.gd:537
 msgid "Flèche bas"
 msgstr ""
 
-#. scripts/settings.gd:536
+#. scripts/settings.gd:537
 msgid "Flèche droite"
 msgstr ""
 
-#. scripts/settings.gd:536
+#. scripts/settings.gd:537
 msgid "Flèche gauche"
 msgstr ""
 
-#. scripts/settings.gd:536
+#. scripts/settings.gd:537
 msgid "Flèche haut"
 msgstr ""
 
-#. scripts/settings.gd:537
+#. scripts/settings.gd:538
 msgid "Tab"
 msgstr ""
 
@@ -8756,103 +8762,103 @@ msgstr ""
 msgid "Très grande"
 msgstr ""
 
-#. scripts/settings.gd:738
+#. scripts/settings.gd:739
 msgid "L'attaque de base part toute seule vers la souris, même sans ennemi."
 msgstr ""
 
-#. scripts/settings.gd:739
+#. scripts/settings.gd:740
 msgid "L'attaque de base part toute seule sur l'ennemi à portée le plus proche du curseur. Sans ennemi à portée, elle ne part pas."
 msgstr ""
 
-#. scripts/settings.gd:747
+#. scripts/settings.gd:748
 msgid "Clic droit : le héros marche jusqu'à l'endroit cliqué (un repère s'affiche au sol) ; clic droit tenu : il suit le curseur. La compétence du clic droit passe sur %s ; Espace reste l'esquive, vers le curseur."
 msgstr ""
 
-#. scripts/settings.gd:749
+#. scripts/settings.gd:750
 msgid "Le héros marche vers la souris et s'arrête quand elle est tout près de lui. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur. L'esquive part vers le curseur."
 msgstr ""
 
-#. scripts/settings.gd:750
+#. scripts/settings.gd:751
 msgid "Z Q S D (W A S D en QWERTY) ou les flèches. L'attaque part toute seule ; clic gauche et clic droit lancent les compétences vers le curseur."
 msgstr ""
 
-#. scripts/settings.gd:823
+#. scripts/settings.gd:824
 msgid "Menu"
 msgstr ""
 
-#. scripts/settings.gd:824
+#. scripts/settings.gd:825
 msgid "Stick D"
 msgstr ""
 
-#. scripts/settings.gd:824
+#. scripts/settings.gd:825
 msgid "Stick G"
 msgstr ""
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:826
 msgid "Carré"
 msgstr ""
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:826
 msgid "Croix"
 msgstr ""
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:826
 msgid "Rond"
 msgstr ""
 
-#. scripts/settings.gd:825
+#. scripts/settings.gd:826
 msgid "Triangle"
 msgstr ""
 
-#. scripts/settings.gd:826
+#. scripts/settings.gd:827
 msgid "Partage"
 msgstr ""
 
-#. scripts/settings.gd:828
+#. scripts/settings.gd:829
 msgid "Croix bas"
 msgstr ""
 
-#. scripts/settings.gd:828
+#. scripts/settings.gd:829
 msgid "Croix gauche"
 msgstr ""
 
-#. scripts/settings.gd:828
+#. scripts/settings.gd:829
 msgid "Croix haut"
 msgstr ""
 
-#. scripts/settings.gd:829
+#. scripts/settings.gd:830
 msgid "Croix droite"
 msgstr ""
 
-#. scripts/settings.gd:829
+#. scripts/settings.gd:830
 msgid "Palette 1"
 msgstr ""
 
-#. scripts/settings.gd:829
+#. scripts/settings.gd:830
 msgid "Palette 2"
 msgstr ""
 
-#. scripts/settings.gd:830
+#. scripts/settings.gd:831
 msgid "Palette 3"
 msgstr ""
 
-#. scripts/settings.gd:830
+#. scripts/settings.gd:831
 msgid "Palette 4"
 msgstr ""
 
-#. scripts/settings.gd:830
+#. scripts/settings.gd:831
 msgid "Stick droit"
 msgstr ""
 
-#. scripts/settings.gd:830
+#. scripts/settings.gd:831
 msgid "Stick gauche"
 msgstr ""
 
-#. scripts/settings.gd:831
+#. scripts/settings.gd:832
 msgid "Croix directionnelle"
 msgstr ""
 
-#. scripts/settings.gd:841
+#. scripts/settings.gd:842
 msgid "Bouton %d"
 msgstr ""
 
@@ -8887,6 +8893,7 @@ msgid "Mutation : %s"
 msgstr ""
 
 #. scripts/skill_tree.gd:40
+#. scripts/stats_card.gd:131
 msgid "Attaque"
 msgstr ""
 
@@ -8913,6 +8920,12 @@ msgstr ""
 #. scripts/skill_tree.gd:572
 #. scripts/tree_ui.gd:39
 msgid "Nœud notable"
+msgstr ""
+
+#. scripts/stats_card.gd:54
+#. scripts/tree_panels.gd:633
+#. scripts/tree_panels.gd:94
+msgid "Statistiques"
 msgstr ""
 
 #. scripts/title.gd:116
@@ -9244,7 +9257,7 @@ msgid "Plan : %d nœuds, %d points. Tu as de quoi le valider."
 msgstr ""
 
 #. scripts/tree_panels.gd:581
-msgid "Résumé du build"
+msgid "Statistiques du build"
 msgstr ""
 
 #. scripts/tree_panels.gd:582
@@ -9280,10 +9293,6 @@ msgstr ""
 msgid "Aucun pour l'instant."
 msgstr ""
 
-#. scripts/tree_panels.gd:633
-msgid "Statistiques"
-msgstr ""
-
 #. scripts/tree_panels.gd:75
 msgid "Rechercher : nom, statistique, effet…"
 msgstr ""
@@ -9302,10 +9311,6 @@ msgstr ""
 
 #. scripts/tree_panels.gd:92
 msgid "Annuler"
-msgstr ""
-
-#. scripts/tree_panels.gd:94
-msgid "Résumé"
 msgstr ""
 
 #. scripts/tree_planner.gd:218

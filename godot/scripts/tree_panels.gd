@@ -91,7 +91,7 @@ func _ready() -> void:
 	_bar_buttons.append(plan_button)
 	undo_button = _button(bar, Loc.key("Annuler"), undo)
 	_bar_buttons.append(undo_button)
-	summary_button = _button(bar, Loc.key("Résumé"), Callable())
+	summary_button = _button(bar, Loc.key("Statistiques"), Callable())
 	summary_button.toggle_mode = true
 	summary_button.toggled.connect(set_summary_visible)
 	_bar_buttons.append(summary_button)
@@ -578,7 +578,7 @@ func _fill_summary() -> void:
 	var with_plan: bool = planner.plan_cost() > 0
 	var later: Dictionary = planner.summary(planner.plan) if with_plan else now
 
-	_text(Loc.t("Résumé du build"), 20, UiTheme.GOLD)
+	_text(Loc.t("Statistiques du build"), 20, UiTheme.GOLD)
 	var head := Loc.t("%d nœuds appris sur %d  ·  %d point(s) à placer") % [now["nodes"], now["total"], now["points"]]
 	_text(head, 15, DIM)
 	if with_plan:

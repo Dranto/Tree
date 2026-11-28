@@ -7,6 +7,7 @@
 ## - « esquive » : au premier Flétri tout proche ou au premier coup reçu ; s'efface à la première esquive.
 ## - « competence » : au premier groupe de Flétris, avec une compétence en main ; s'efface au premier lancer.
 ## - « arbre » : un point à placer et l'Arbre jamais ouvert ; la touche pulse sous le coin, jusqu'à l'ouverture.
+## - « stats » : au niveau 3, la touche des statistiques (à maintenir) sous le coin ; s'efface dès qu'on la tient.
 ## Chaque étape réussie pose « tuto_<étape> » dans Game.flags (sauvegarde) : elle ne revient jamais.
 ## Une étape montrée trop longtemps sans être réussie s'efface aussi (MAX_SHOW) : on ne harcèle pas.
 ## Réglage « Afficher les aides » (Settings.show_hints) : coupe tout.
@@ -17,7 +18,7 @@ const UiTheme = preload("res://scripts/ui_theme.gd")
 const Controls = preload("res://scripts/controls_text.gd")
 const PadGlyphs = preload("res://scripts/pad_glyphs.gd")
 
-const STEPS := ["bouger", "esquive", "competence", "arbre"]
+const STEPS := ["bouger", "esquive", "competence", "arbre", "stats"]
 ## Durée maximale d'affichage d'une étape (s) ; « arbre » attend l'ouverture de l'Arbre.
 const MAX_SHOW := 14.0
 ## Distance de marche qui valide « bouger » (pixels du monde).
@@ -27,6 +28,8 @@ const DODGE_NEAR := 210.0
 ## Au moins GROUP Flétris à moins de GROUP_NEAR : il est temps d'apprendre la compétence.
 const GROUP := 2
 const GROUP_NEAR := 420.0
+## Niveau à partir duquel la touche des statistiques est montrée.
+const STATS_LEVEL := 3
 ## Hauteur du glyphe au-dessus du héros (pixels de l'écran).
 const ABOVE := 86.0
 
@@ -105,6 +108,8 @@ func _validate(p) -> void:
 				break
 	if not done("arbre") and main.tree_ui.visible:
 		finish("arbre")
+	if not done("stats") and Input.is_action_pressed("show_stats"):
+		finish("stats")
 
 
 func _pick(p) -> String:
@@ -118,6 +123,8 @@ func _pick(p) -> String:
 		return "competence"
 	if not done("arbre") and Game.points > 0:
 		return "arbre"
+	if not done("stats") and Game.level >= STATS_LEVEL:
+		return "stats"
 	return ""
 
 
@@ -144,6 +151,8 @@ static func glyph_for(id: String) -> Array:
 				return ["pad", [Settings.pad_code("skill_main_1")]]
 			"arbre":
 				return ["pad", [Settings.pad_code("toggle_tree")]]
+			"stats":
+				return ["pad", [Settings.pad_code("show_stats")]]
 		return []
 	match id:
 		"bouger":
@@ -161,6 +170,8 @@ static func glyph_for(id: String) -> Array:
 			return ["keys", [Settings.binding_name(0)]]
 		"arbre":
 			return ["keys", [Controls.action_label("toggle_tree", true)]]
+		"stats":
+			return ["keys", [Controls.action_label("show_stats", true)]]
 	return []
 
 
@@ -171,7 +182,7 @@ func _draw() -> void:
 	if g.is_empty():
 		return
 	var at: Vector2
-	if step == "arbre":
+	if step == "arbre" or step == "stats":
 		# Sous le coin (niveau, points, touche de l'Arbre).
 		at = Vector2(20.0 + 105.0, 20.0 + 66.0 + 34.0)
 	else:

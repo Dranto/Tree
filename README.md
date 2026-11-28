@@ -19,6 +19,7 @@ L'élément central du jeu est l'**Arbre de vie**, un arbre de compétences géa
 | Esquive | Espace ou Maj (Espace seulement en mode MOBA) |
 | Barre de compétences (6 emplacements) | 2 emplacements « souris » puis 4 secondaires ; commandes réassignables dans les options (touche ou bouton de souris). Clic sur un emplacement : y mettre une compétence acquise qui n'a pas de place |
 | Arbre de vie | Tab ou T (le jeu se met en pause) |
+| Statistiques | C (tenir ; clic du stick gauche à la manette), sans pause |
 | Journal des objectifs | J (le jeu se met en pause) |
 | Carte du monde | M (le jeu se met en pause) |
 
@@ -59,7 +60,7 @@ Outils de l'arbre (barre sous l'en-tête) :
 - **Chemin** : survoler un nœud éloigné montre le chemin le plus court, son coût et les statistiques avant → après. Un clic apprend tout le chemin si les points suffisent.
 - **Mode plan** : tracer un chemin sans dépenser de points, puis « Valider le plan » quand les points sont là. Le plan est sauvegardé avec la partie.
 - **Annuler** (Ctrl+Z) : défait le dernier choix (nœud appris, oublié, ou modification du plan).
-- **Résumé** : statistiques finales, compétences, nœuds clés et nombre de nœuds par branche, plan compris.
+- **Statistiques** (ex-Résumé) : statistiques finales, compétences, nœuds clés et nombre de nœuds par branche, plan compris.
 
 ### Son et musique
 

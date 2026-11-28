@@ -81,11 +81,11 @@ var pause_on_focus_loss := true
 ## (touche physique, comme la barre). Les flèches restent toujours actives pour se déplacer, T pour
 ## l'arbre. La carte garde par défaut la lettre logique (M) quelle que soit la
 ## disposition du clavier ; réassignée, elle prend la touche physique pressée.
-const GAME_ACTIONS := ["move_up", "move_left", "move_down", "move_right", "dash", "toggle_tree", "toggle_map"]
+const GAME_ACTIONS := ["move_up", "move_left", "move_down", "move_right", "dash", "toggle_tree", "toggle_map", "show_stats"]
 const GAME_ACTION_NAMES := {"move_up": "Avancer", "move_left": "Aller à gauche", "move_down": "Reculer", "move_right": "Aller à droite", # i18n
-	"dash": "Esquive", "toggle_tree": "Arbre de vie", "toggle_map": "Carte"} # i18n
+	"dash": "Esquive", "toggle_tree": "Arbre de vie", "toggle_map": "Carte", "show_stats": "Statistiques (maintenir)"} # i18n
 const ACTION_DEFAULTS := {"move_up": KEY_W, "move_left": KEY_A, "move_down": KEY_S, "move_right": KEY_D,
-	"dash": KEY_SPACE, "toggle_tree": KEY_TAB, "toggle_map": KEY_M}
+	"dash": KEY_SPACE, "toggle_tree": KEY_TAB, "toggle_map": KEY_M, "show_stats": KEY_C}
 ## Touches toujours actives en plus (non réassignables, ne gênent pas une réassignation).
 const ACTION_EXTRAS := {"move_up": [KEY_UP], "move_left": [KEY_LEFT], "move_down": [KEY_DOWN], "move_right": [KEY_RIGHT], "toggle_tree": [KEY_T]}
 ## Actions dont la touche par défaut est une lettre logique (et non une position physique).
@@ -106,8 +106,9 @@ const PAD_DPAD := 302
 const PAD_SLOT_DEFAULTS := [PAD_RT, PAD_LT, JOY_BUTTON_X, JOY_BUTTON_Y, JOY_BUTTON_B, JOY_BUTTON_RIGHT_SHOULDER]
 var pad_bindings: Array = PAD_SLOT_DEFAULTS.duplicate()
 ## Commandes du jeu réassignables à la manette (mêmes noms que GAME_ACTIONS).
-const PAD_ACTIONS := ["dash", "toggle_tree", "toggle_map"]
-const PAD_ACTION_DEFAULTS := {"dash": JOY_BUTTON_A, "toggle_tree": JOY_BUTTON_BACK, "toggle_map": JOY_BUTTON_LEFT_SHOULDER}
+const PAD_ACTIONS := ["dash", "toggle_tree", "toggle_map", "show_stats"]
+## Statistiques en jeu : clic du stick gauche, tenu (libre en jeu ; l'arbre le garde pour ses détails).
+const PAD_ACTION_DEFAULTS := {"dash": JOY_BUTTON_A, "toggle_tree": JOY_BUTTON_BACK, "toggle_map": JOY_BUTTON_LEFT_SHOULDER, "show_stats": JOY_BUTTON_LEFT_STICK}
 var pad_actions: Dictionary = PAD_ACTION_DEFAULTS.duplicate()
 ## Boutons qu'on ne peut pas lier : Start ouvre toujours la pause.
 const PAD_RESERVED := [JOY_BUTTON_START]
