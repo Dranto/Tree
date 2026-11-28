@@ -16,7 +16,7 @@
 ## Les budgets mémoire des cuissons sont relevés pour que rien de ce qui est préparé ne soit rendu
 ## puis recuit en jeu (BUDGETS). Ce qui manquerait encore se cuit en jeu comme avant, étalé.
 ##
-## Actif en jeu seulement (pas dans les tests, les robots, les captures ni le banc) ; « -- --preparation »
+## Actif en jeu seulement (pas dans les tests, les robots, les captures ni le banc, sauf celui du siège du Cœur) ; « -- --preparation »
 ## le force (banc « zones » : avant / après), « -- --sans-preparation » le coupe.
 extends CanvasLayer
 
@@ -57,6 +57,9 @@ static func wanted(m) -> bool:
 	if "--sans-preparation" in args or DisplayServer.get_name() == "headless":
 		return false
 	if force or "--preparation" in args:
+		return true
+	# Banc du siège du Cœur : préparé comme en jeu (main.bench_prepared).
+	if m.benchmark and m.bench_scene == "coeur" and m.get_tree().current_scene == m:
 		return true
 	return m.get_tree().current_scene == m and not m.autotest and not m.benchmark
 

@@ -180,6 +180,10 @@ var bench_last_usec := 0
 const BENCH_PREP_MAX := 900
 var _bench_prep_frames := 0
 var _bench_prep_done := false
+## Banc du Cœur : images de suite sans cuisson (voir bench_prepared).
+const BENCH_PREP_CALM := 30
+var _bench_calm := 0
+var _bench_calm_frame := -1
 var bench_frames: PackedFloat32Array = PackedFloat32Array()
 ## À-coups du banc : images de plus de HITCH_MS, avec l'heure, la région et ce qui a coûté (profil).
 const HITCH_MS := 50.0
@@ -1605,18 +1609,31 @@ func _set_direct_to_screen(on: bool) -> void:
 
 
 
-## Banc du boss : vrai quand les cuissons de l'approche sont finies (voir BENCH_PREP_MAX). Les autres
-## bancs commencent tout de suite.
+## Bancs du boss et du Cœur : vrai quand les cuissons de l'approche sont finies (voir BENCH_PREP_MAX). Les
+## autres bancs commencent tout de suite.
+## Le Cœur : la préparation du monde du jeu (world_preload.gd : Flétris de la région, décor, fonds du bord),
+## puis les bandes du bord et le décor en vue. En jeu, l'écran de chargement et la marche jusqu'au Cœur
+## les cuisent ; le banc, qui pose le héros au Cœur dès la première image, mesurait ces cuissons (les 8
+## premières secondes) et les Flétris cuits à froid au lieu du siège.
 func bench_prepared() -> bool:
-	if _bench_prep_done or bench_scene != "boss":
+	if _bench_prep_done or (bench_scene != "boss" and bench_scene != "coeur"):
 		return true
 	# La finale (finale_arena.gd) lance son combat tout de suite : le banc ne l'attend pas.
 	var busy := false
-	if arena != null and arena.has_method("bake_pending"):
+	if bench_scene == "coeur":
+		# Le bord prépare une tuile par image : il est prêt quand rien n'a été mis en cuisson depuis
+		# BENCH_PREP_CALM images.
+		var f := Engine.get_process_frames()
+		if f != _bench_calm_frame:
+			_bench_calm_frame = f
+			busy = (world_preload != null and not world_preload.done) or (world_edge != null and world_edge.pending() > 0) or DecorBake.pending()
+			_bench_calm = 0 if busy else _bench_calm + 1
+		busy = _bench_calm < BENCH_PREP_CALM
+	elif arena != null and arena.has_method("bake_pending"):
 		busy = arena.bake_pending() or (world_edge != null and world_edge.pending() > 0) or DecorBake.pending()
 	if not busy or _bench_prep_frames >= BENCH_PREP_MAX:
 		_bench_prep_done = true
-		print("BENCHMARK préparation du combat : %d images (cuissons de l'approche)" % _bench_prep_frames)
+		print("BENCHMARK préparation du %s : %d images (cuissons de l'approche)" % ["siège" if bench_scene == "coeur" else "combat", _bench_prep_frames])
 	return _bench_prep_done
 
 

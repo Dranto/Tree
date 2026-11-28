@@ -221,7 +221,8 @@ func _physics_process(delta: float) -> void:
 	if state == "purifie":
 		_life_wave_step(delta)
 		return
-	if main.benchmark and main.bench_scene != "coeur":
+	# Banc du Cœur : le siège attend que l'approche soit cuite (main.bench_prepared).
+	if main.benchmark and (main.bench_scene != "coeur" or not main.bench_prepared()):
 		return
 	var p = main.player
 	var to: Vector2 = p.position - center
