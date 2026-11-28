@@ -1,0 +1,208 @@
+# Rendus lourds sur la machine GPU d'OVH (docs/gpu-ovh.md) : films, bandes-annonces, captures,
+# robot d'aventure, bancs pour information. Lancé à la main (ou par tools/gpu-run.sh) avec une
+# commande des outils, par exemple « tools/boss-film.sh rendus/boss ronce,spore ».
+#
+#   1. allumer : rallume la machine (API d'OVH) et attend que son runner (étiquette « gpu ») soit en
+#      ligne. Sans les secrets d'OVH, ou si la machine ne démarre pas (plus de carte libre dans la
+#      région…), le rendu part sur une machine ordinaire de GitHub, en rendu logiciel, comme avant.
+#   2. rendu : lance la commande, publie rendus/ et godot/autotest/ en artefact et sur la branche
+#      ci-rendus/<nom> (un seul commit, réécrit à chaque fois), que les sessions cloud récupèrent avec
+#      tools/gpu-run.sh recuperer <nom> : elles n'atteignent pas le stockage des artefacts.
+#   3. eteindre : remet la machine en réserve (shelve : plus facturée à l'heure) si aucun autre run
+#      de ce workflow n'attend. La machine se remet aussi en réserve seule après 30 minutes sans job.
+#
+# Les tests visuels et les bancs des PR restent sur les machines de GitHub : leurs références et
+# leurs budgets sont ceux du rendu logiciel de ces machines.
+name: Rendus GPU
+
+on:
+  workflow_dispatch:
+    inputs:
+      commande:
+        description: "Commande à lancer depuis la racine du dépôt (écrire les sorties dans rendus/)"
+        type: string
+        required: true
+      nom:
+        description: "Nom du rendu : branche ci-rendus/<nom> et artefact rendus-<nom> (numéro du run par défaut)"
+        type: string
+        default: ""
+      machine:
+        description: "auto : GPU si possible, sinon machine de GitHub ; gpu : GPU ou échec ; cpu : machine de GitHub"
+        type: choice
+        options: [auto, gpu, cpu]
+        default: auto
+      duree:
+        description: "Durée maximale du rendu, en minutes (360 au plus sur une machine de GitHub)"
+        type: number
+        default: 300
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  allumer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      runs_on: ${{ steps.choix.outputs.runs_on }}
+      allume: ${{ steps.choix.outputs.allume }}
+    env:
+      OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
+      OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
+      OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
+      OVH_PROJECT_ID: ${{ secrets.OVH_PROJECT_ID }}
+      OVH_INSTANCE_ID: ${{ secrets.OVH_INSTANCE_ID }}
+      # Facultatif : jeton (lecture de l'administration du dépôt) pour voir si le runner est en ligne.
+      RUNNER_PAT: ${{ secrets.GPU_RUNNER_PAT }}
+      MACHINE: ${{ inputs.machine }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools
+
+      - name: Allumer la machine GPU
+        id: choix
+        shell: bash
+        run: |
+          set -uo pipefail
+          cpu() {
+            echo "Rendu sur une machine de GitHub (logiciel) : $1" | tee -a "$GITHUB_STEP_SUMMARY"
+            [ "$MACHINE" = gpu ] && { echo "machine=gpu demandée : échec"; exit 1; }
+            echo 'runs_on="ubuntu-24.04"' >> "$GITHUB_OUTPUT"
+            echo "allume=$2" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          [ "$MACHINE" = cpu ] && cpu "demandé" non
+          [ -n "$OVH_CONSUMER_KEY" ] || cpu "pas de secrets OVH dans le dépôt" non
+          tools/ovh-gpu.sh start || cpu "la machine GPU n'a pas démarré" oui
+          # Le runner se reconnecte à GitHub une à deux minutes après le démarrage.
+          if [ -n "$RUNNER_PAT" ]; then
+            for i in $(seq 1 40); do
+              st=$(GH_TOKEN="$RUNNER_PAT" gh api "repos/$GITHUB_REPOSITORY/actions/runners" \
+                --jq '[.runners[] | select(any(.labels[]; .name == "gpu")) | .status] | first // "absent"' 2>/dev/null || echo "?")
+              [ "$st" = online ] && break
+              sleep 15
+            done
+            [ "$st" = online ] || cpu "machine allumée mais runner « gpu » hors ligne ($st)" oui
+          else
+            sleep 90
+          fi
+          echo "Rendu sur la machine GPU" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo 'runs_on=["self-hosted","gpu"]' >> "$GITHUB_OUTPUT"
+          echo "allume=oui" >> "$GITHUB_OUTPUT"
+
+  rendu:
+    needs: allumer
+    runs-on: ${{ fromJSON(needs.allumer.outputs.runs_on) }}
+    timeout-minutes: ${{ inputs.duree }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Toute l'histoire : les films avant/après font un worktree d'une version antérieure.
+          fetch-depth: 0
+
+      - uses: ./.github/actions/godot
+
+      - name: Rendu sur la carte
+        if: runner.environment == 'self-hosted'
+        run: |
+          echo "$GITHUB_WORKSPACE/tools/gpu/bin" >> "$GITHUB_PATH"
+          nvidia-smi --query-gpu=name,driver_version --format=csv,noheader | sed 's/^/Carte : /' | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Lancer la commande
+        id: commande
+        shell: bash
+        env:
+          COMMANDE: ${{ inputs.commande }}
+        run: |
+          mkdir -p rendus
+          echo "Commande : \`$COMMANDE\`" >> "$GITHUB_STEP_SUMMARY"
+          start=$(date +%s)
+          set +e
+          bash -c "$COMMANDE" 2>&1 | tee rendus/journal.txt
+          code=${PIPESTATUS[0]}
+          set -e
+          echo "Code de sortie $code en $(( ($(date +%s) - start) / 60 )) min" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Réunir les sorties
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p publie
+          [ -d rendus ] && cp -r rendus publie/
+          [ -d godot/autotest ] && cp -r godot/autotest publie/
+          # Les images numérotées d'un film (000.png, 001.png…) restent sur la machine : on garde les
+          # GIF, MP4, journaux et captures nommées.
+          n=$(find publie -regextype posix-extended -regex '.*/[0-9]+\.png' | wc -l)
+          find publie -regextype posix-extended -regex '.*/[0-9]+\.png' -delete
+          [ "$n" -gt 0 ] && echo "$n images de film (NNN.png) non publiées" >> "$GITHUB_STEP_SUMMARY"
+          du -sh publie | sed 's/^/Taille : /' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Artefact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendus-${{ inputs.nom || github.run_id }}
+          path: publie/
+          if-no-files-found: ignore
+
+      # Les sessions cloud n'atteignent pas le stockage des artefacts : un commit unique, sans
+      # histoire, sur ci-rendus/<nom>. Les fichiers de plus de 95 Mo (limite de GitHub) n'y vont pas.
+      - name: Publier sur ci-rendus/${{ inputs.nom || github.run_id }}
+        if: always()
+        shell: bash
+        env:
+          NOM: ${{ inputs.nom || github.run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d publie ] || exit 0
+          tmp=$(mktemp -d)
+          cp -r publie/. "$tmp/"
+          find "$tmp" -type f -size +95M -print -delete | sed 's/^/Trop gros pour la branche (artefact seulement) : /' >> "$GITHUB_STEP_SUMMARY"
+          cd "$tmp"
+          git init -q -b rendus
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Rendus GPU « $NOM » (run $GITHUB_RUN_ID, $(git -C "$GITHUB_WORKSPACE" rev-parse --short HEAD))" || exit 0
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/ci-rendus/$NOM"
+          rm -rf "$tmp"
+          echo "Récupérer : \`tools/gpu-run.sh recuperer $NOM <dossier>\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Résultat de la commande
+        if: always()
+        run: exit "${{ steps.commande.outputs.code || 1 }}"
+
+  eteindre:
+    needs: [allumer, rendu]
+    if: always() && needs.allumer.outputs.allume == 'oui'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
+      OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
+      OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
+      OVH_PROJECT_ID: ${{ secrets.OVH_PROJECT_ID }}
+      OVH_INSTANCE_ID: ${{ secrets.OVH_INSTANCE_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools
+
+      - name: Remettre la machine en réserve si plus rien n'attend
+        shell: bash
+        run: |
+          autres=0
+          for st in queued in_progress waiting pending requested; do
+            n=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/gpu-rendus.yml/runs?status=$st&per_page=50" \
+              --jq "[.workflow_runs[] | select(.id != $GITHUB_RUN_ID)] | length")
+            autres=$((autres + n))
+          done
+          if [ "$autres" -gt 0 ]; then
+            echo "$autres autre(s) run(s) en attente : la machine reste allumée (le dernier l'éteindra)" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            tools/ovh-gpu.sh stop | tee -a "$GITHUB_STEP_SUMMARY"
+          fi

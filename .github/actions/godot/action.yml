@@ -12,6 +12,12 @@ runs:
     - name: Installer l'écran virtuel et le rendu logiciel
       shell: bash
       run: |
+        # Machine GPU (runner auto-hébergé, docs/gpu-ovh.md) : tout est déjà installé par
+        # tools/gpu/setup.sh, et son utilisateur n'a pas sudo.
+        if [ "${RUNNER_ENVIRONMENT:-}" = self-hosted ]; then
+          command -v xvfb-run > /dev/null && command -v ffmpeg > /dev/null && exit 0
+          echo "Machine auto-hébergée sans xvfb ou ffmpeg : relancer tools/gpu/setup.sh"; exit 1
+        fi
         # packages.microsoft.com répond parfois 403 depuis les machines de GitHub (seul dépôt inutile ici) :
         # on l'écarte, puis on retente une fois si un autre dépôt est indisponible.
         sudo rm -f /etc/apt/sources.list.d/microsoft*.list /etc/apt/sources.list.d/microsoft*.sources \

@@ -84,3 +84,9 @@ rebase à part ou entre dans le lot suivant. Une PR qui reçoit un commit après
 reste ouverte : la remettre dans un lot ou la fusionner à part.
 
 Pas de file de fusion GitHub (merge queue) : elle n'existe que pour les dépôts d'une organisation.
+
+## Rendus lourds sur la machine GPU
+
+Films, bande-annonce, grandes captures et robot d'aventure peuvent tourner sur une instance GPU
+d'OVH allumée à la demande (workflow « Rendus GPU », `tools/gpu-run.sh`) : voir
+[gpu-ovh.md](gpu-ovh.md). Les tests visuels et les bancs des PR restent sur les machines de GitHub.
