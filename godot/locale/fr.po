@@ -7918,11 +7918,11 @@ msgstr "Phase 2 sur 3 : les bourgeons éclosent"
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 sur 3 : les ronces se resserrent"
 
-#. scripts/boss_base.gd:511
+#. scripts/boss_base.gd:512
 msgid "Exaltation"
 msgstr "Exaltation"
 
-#. scripts/boss_base.gd:644
+#. scripts/boss_base.gd:637
 msgid "Entravée"
 msgstr "Entravée"
 
