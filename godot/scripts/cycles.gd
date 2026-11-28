@@ -119,6 +119,9 @@ const KEEP_PREFIXES := ["tuto_"]
 ## Cycle qui vient de commencer par le fruit, en attente de la scène de jeu rechargée (0 sinon) :
 ## Game.cycle_started part quand elle est prête (main_ready).
 var _just_started := 0
+## Crochet des tests : appelé (cycle, données de sauvegarde du monde remis à neuf) à la place de la
+## sauvegarde et du rechargement de la scène de jeu.
+var on_next := Callable()
 
 
 ## Drapeaux gardés pour le cycle suivant.
@@ -166,6 +169,11 @@ func start_next(main) -> int:
 		"ground_grafts": [],
 	}
 	Game.grafts_on_ground = {}
+	if on_next.is_valid():
+		# Le robot d'aventure (tests/aventure_test.gd) recharge la scène lui-même, depuis ces données.
+		_just_started = n
+		on_next.call(n, data)
+		return n
 	if main == null or not main.get("autosave_enabled") or not SaveGame.write(data):
 		# Pas de sauvegarde (tests, robot) : rien n'est rechargé, le signal part tout de suite.
 		(func(): Game.cycle_started.emit(n)).call_deferred()

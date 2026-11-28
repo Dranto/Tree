@@ -19,6 +19,13 @@
 ## --jusqua=<région> (s'arrête après cette région), --continue-on-block, --niveau-max=N (niveau offert
 ## au robot dans la première région, CAP_BASE par défaut), --demo (la démo : Ronce seule, puis sa fin).
 ## Sauvegarde dans user://tests/ : la partie du joueur n'est pas touchée.
+##
+## Cycle 2 (jalon 14 R) : « --cycle=2 » part d'une sauvegarde de fin d'aventure (cycle 1, finale vaincue,
+## fin vue : « --depuis=<chemin> », par défaut tests/fixtures/aventure/fin_cycle1_v<variante>.json, variantes 1 et 2 ; {v} = variante), tient le fruit de
+## la graine comme un joueur, recharge la scène (comme Cycles.start_next) puis rejoue toutes les régions et
+## la finale au cycle 2 (boss exaltés), avec les mêmes détections de blocage. Pour fabriquer cette
+## sauvegarde : tools/aventure.sh --sauver-fin='user://tests/fin_v{v}.json' (un passage du cycle 1 ; {v} =
+## variante, {s} = graine).
 extends SceneTree
 
 
@@ -43,6 +50,8 @@ const CAP_BASE := 20
 const CAP_STEP := 3
 ## Durée maximale de la finale (combat, épilogue et générique compris).
 const FINALE_MAX := 900.0
+## Sauvegarde de fin d'aventure de départ du cycle 2 (voir « --cycle=2 »).
+const END_FIXTURE := "res://tests/fixtures/aventure/fin_cycle1_v{v}.json"
 
 var failures := 0
 ## Niveau offert au robot dans la première région (CAP_BASE, ou « --niveau-max=N »).
@@ -78,6 +87,18 @@ var _boss_total := 0.0
 var _finale_start := -1.0
 var _finale_done := false
 var stopping := false
+## « --sauver-fin=<chemin> » : la sauvegarde de fin d'aventure (cycle 1, finale vaincue) est copiée là.
+var save_end_to := ""
+## « --cycle=N » (N ≥ 2) : le cycle joué ; « --depuis=<chemin> » : la sauvegarde de fin du cycle 1.
+var cycle_n := 1
+var from_path := ""
+var cycles
+var _next_data: Dictionary = {}
+var _next_n := 0
+var _started_signals: Array = []
+## Dernière phase de boss vue (pour le journal des phases, dont la phase exaltée).
+var _boss_phase := 0
+var _boss_phases: Dictionary = {}
 var _wall_start := 0
 
 
@@ -128,6 +149,12 @@ func _args() -> void:
 			cap_base = int(a.trim_prefix("--niveau-max="))
 		elif a == "--continue-on-block":
 			keep_going = true
+		elif a.begins_with("--cycle="):
+			cycle_n = int(a.trim_prefix("--cycle="))
+		elif a.begins_with("--depuis="):
+			from_path = a.trim_prefix("--depuis=")
+		elif a.begins_with("--sauver-fin="):
+			save_end_to = a.trim_prefix("--sauver-fin=")
 
 
 ## Régions jouées : l'ordre demandé (ou ORDER), complété par les autres régions du monde.
@@ -198,9 +225,20 @@ func _run() -> void:
 	if Demo.active() and stop_after == "":
 		stop_after = order[order.size() - 1]
 	bot = load("res://scripts/zone_bot.gd").new("fouet", order[0])
-	await _new_main()
+	cycles = root.get_node("Cycles")
+	if cycle_n >= 2:
+		# Le cycle se choisit par le fruit, pas par « --cycle » (lu aussi par Cycles : on le laisse au jeu).
+		cycles.forced = -1
+		cycles.on_next = _on_next_cycle
+		game.cycle_started.connect(func(n): _started_signals.append(n))
+		if not await _begin_cycle():
+			print("RÉSULTAT : %d échec(s)" % failures)
+			quit(1)
+			return
+	else:
+		await _new_main()
 	obj.completed.connect(_on_completed)
-	print("AVENTURE graine %d : nouvelle partie, régions %s" % [seed_n, " > ".join(order)])
+	print("AVENTURE graine %d : %s, régions %s" % [seed_n, "cycle %d" % game.cycle if cycle_n >= 2 else "nouvelle partie", " > ".join(order)])
 	_start_region()
 
 	while true:
@@ -244,8 +282,92 @@ func _run() -> void:
 	var seconds := (Time.get_ticks_msec() - _wall_start) / 1000
 	print("AVENTURE graine %d : %d s de jeu (%d s de calcul), niveau %d, %d morts, %d reprises" % [seed_n, int(t), seconds, game.level, deaths_before + (main.deaths if main != null and is_instance_valid(main) else 0), reloads])
 	print("RÉSULTAT : " + ("tout est bon" if failures == 0 else "%d échec(s)" % failures))
+	if save_end_to != "" and main != null and is_instance_valid(main) and game.flags.get("finale_vaincue", false):
+		save_end_to = save_end_to.replace("{v}", str(variant)).replace("{s}", str(seed_n))
+		var ok: bool = save.save_now(main, save_end_to)
+		print("AVENTURE : sauvegarde de fin d'aventure %s : %s" % [save_end_to, "écrite" if ok else "ÉCHEC"])
 	save.delete_save(path)
 	quit(1 if failures > 0 else 0)
+
+
+# --- Cycle 2 : de la fin du cycle 1 au fruit, puis au monde remis à neuf ---
+
+## Crochet de Cycles.start_next : le robot garde les données du monde remis à neuf et recharge lui-même.
+func _on_next_cycle(n: int, data: Dictionary) -> void:
+	_next_n = n
+	_next_data = data
+
+
+## La sauvegarde de fin d'aventure est chargée, le héros tient le fruit de la graine, la scène est
+## rechargée au cycle suivant. Faux (et BLOCAGE) si le fruit n'est pas cueilli.
+func _begin_cycle() -> bool:
+	var src := (from_path if from_path != "" else END_FIXTURE).replace("{v}", str(variant if variant in [1, 2] else 2))
+	if not FileAccess.file_exists(src):
+		print("  ÉCHEC pas de sauvegarde de fin d'aventure : %s (la fabriquer avec tools/aventure.sh --sauver-fin=…)" % src)
+		failures += 1
+		return false
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(FileAccess.get_file_as_string(src))
+	f.close()
+	await _new_main(path)
+	print("Fin du cycle 1 (%s)" % src)
+	var lvl: int = game.level
+	var nodes: int = game.allocated.size()
+	var grafts_before: Array = game.graft_inventory.duplicate()
+	var crown_before: int = game.crown_size()
+	check(game.cycle == 1 and not cycles.exalted(), "la sauvegarde est au cycle 1 (cycle %d)" % game.cycle)
+	check(game.flags.get("finale_vaincue", false) and Regions.all_purified(game.flags), "toutes les régions purifiées, finale vaincue")
+	check(game.flags.get("fin_aventure_vue", false), "la fin de l'aventure a été vue")
+	var fruit = main.cycle_fruit
+	for i in 240:
+		if fruit.grown >= 1.0:
+			break
+		await physics_frame
+	var we = main.quest_ui.get("world_ending")
+	check(fruit != null and fruit.ripe() and fruit.grown >= 1.0, "le fruit de la graine est mûr (ripe %s, pousse %.2f, fin en cours %s)" % [fruit.ripe(), fruit.grown, we != null and we.active])
+	# Le héros va au fruit et s'y tient (le vrai contact : cycle_fruit.gd › _physics_process).
+	bot.hold = true   # le robot ne bouge pas : le héros se tient sur le fruit
+	main.player.position = fruit.position + Vector2(8.0, 6.0)
+	main.player.hp = float(game.stats.get("max_hp", 100.0))
+	var waited := 0
+	while _next_n == 0 and waited < 600:
+		await physics_frame
+		waited += 1
+	check(_next_n == 2 or _next_n == game.cycle, "le fruit est cueilli en %.1f s : cycle %d" % [waited / 60.0, _next_n])
+	if _next_n == 0:
+		_block("le fruit n'est pas cueilli après 10 s au contact")
+		return false
+	_boss_phases.clear()
+	var data := _next_data
+	var n := _next_n
+	save.write(data, path)
+	var old = main
+	root.remove_child(old)
+	old.free()
+	game.reset()
+	_started_signals.clear()
+	await _new_main(path)
+	await _frames(6)
+	bot.hold = false
+	print("Cycle %d commencé" % n)
+	check(game.cycle == n and cycles.current() == n and cycles.exalted(), "cycle %d, exalté" % n)
+	check(_started_signals == [n], "Game.cycle_started(%d) émis une fois après le rechargement (%s)" % [n, str(_started_signals)])
+	check(game.level == lvl and game.allocated.size() == nodes, "niveau %d et %d nœuds gardés (niveau %d, %d nœuds)" % [lvl, nodes, game.level, game.allocated.size()])
+	check(_graft_ids({"inventory": game.graft_inventory, "ground": []}) == _graft_ids({"inventory": grafts_before, "ground": []}), "greffes gardées")
+	check(game.crown_size() >= crown_before, "couronne gardée (%d emplacements, avant %d)" % [game.crown_size(), crown_before])
+	check(not game.flags.get("finale_vaincue", false) and not Regions.all_purified(game.flags) and Regions.hearts_done("ronce", game.flags) == 0, "Cœurs, boss et finale remis à zéro")
+	check(main.player.position.length() < 10.0, "le héros repart de la graine")
+	check(main.finale.state == "fermee", "la brèche de la graine est refermée")
+	for r in Regions.ids():
+		check(main.arenas[r].state == "fermee", "arène %s fermée" % r)
+	_coherence("début du cycle %d" % n)
+	deaths_before = 0
+	reloads = 0
+	_epilogue_seen = false
+	_finale_done = false
+	_finale_start = -1.0
+	return true
 
 
 func _on_completed(id: String) -> void:
@@ -273,12 +395,32 @@ func _track() -> void:
 	if _fighting():
 		boss_fight_time += DT
 		_boss_total += DT
+		_log_boss_phase()
 	else:
 		boss_fight_time = 0.0
+		_boss_phase = 0
 	if t >= _log_next:
 		_log_next += 60.0
 		var cur: Dictionary = obj.current(_region()) if idx < order.size() else obj.current()
 		print("AVENTURE %4d s  %-6s niveau %2d  objectif %-16s robot : %-30s vie %d/%d  morts %d  à %d px de la graine" % [int(t), _region() if idx < order.size() else "finale", game.level, cur.get("id", "—"), bot.goal, int(main.player.hp), int(game.stats["max_hp"]), deaths_before + main.deaths, int(main.player.position.length())])
+
+
+## Phases du boss vues pendant le combat (la phase exaltée du cycle 2 en fait partie) : une ligne par phase.
+func _log_boss_phase() -> void:
+	var a = main.active_arena()
+	if a == null or a.get("boss") == null or not is_instance_valid(a.boss):
+		return
+	var ph: int = int(a.boss.get("phase") if a.boss.get("phase") != null else 0)
+	if ph == _boss_phase:
+		return
+	_boss_phase = ph
+	var where: String = _region() if idx < order.size() else "finale"
+	var exalted: bool = a.boss.has_method("is_exalted_phase") and a.boss.is_exalted_phase()
+	print("AVENTURE %4d s  boss %s : phase %d%s (cycle %d)" % [int(t), where, ph, " EXALTÉE" if exalted else "", game.cycle])
+	var seen: Array = _boss_phases.get(where, [])
+	if not ph in seen:
+		seen.append(ph)
+	_boss_phases[where] = seen
 
 
 ## Raison d'un blocage de la région en cours, "" sinon.
@@ -662,5 +804,11 @@ func _final() -> void:
 			print("  %-6s %4d s  niveau %2d → %2d  %2d morts  boss %3d s  %2d reprises  build %s%s" % [r, int(float(rp["fin"]) - float(rp["debut"])), rp["niveau_debut"], rp["niveau_fin"], rp["morts"], int(rp["boss"]), rp["reprises"], rp["build"], "  FORCÉE" if rp["forcee"] else ""])
 	if _finale_start >= 0.0:
 		print("  finale %4d s  %s" % [int(t - _finale_start), "vaincue" if game.flags.get("finale_vaincue", false) else "pas vaincue"])
+	if cycle_n >= 2:
+		var lines: Array = []
+		for r in order + ["finale"]:
+			var seen: Array = _boss_phases.get(r, [])
+			lines.append("%s %s" % [r, "".join(seen.map(func(p): return str(p)))])
+		print("  phases de boss vues (échantillonnées à chaque image ; 4 = phase exaltée) : " + ", ".join(lines))
 	for b in blocks:
 		print("  BLOCAGE : " + b)
