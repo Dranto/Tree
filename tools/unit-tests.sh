@@ -81,6 +81,7 @@ TESTS=(
   "seve|--headless --fixed-fps 60|"
   "skills|--headless|"
   "sound|--headless|"
+  "harmony|--headless|"
   "steam|--headless --fixed-fps 60|"
   "user_dir|--headless|"
   "spore|--headless --fixed-fps 60|"

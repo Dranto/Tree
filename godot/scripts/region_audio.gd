@@ -20,6 +20,8 @@ const BED_STATES := {"mort": "dead", "vif": "alive"}
 const BED_DIR := "res://assets/ambience/"
 ## Sons du boss reconnus (clé de « boss » → moment du combat).
 const BOSS_KEYS := ["eveil", "phase", "mort"]
+## Toniques d'un morceau de boss fait à la main (« hand_track » : gamme sur laquelle les bruitages s'accordent).
+const HAND_TONICS := ["do", "do#", "ré", "mib", "mi", "fa", "fa#", "sol", "lab", "la", "sib", "si"]
 const SHAPES := ["dot", "glow", "streak", "drop", "chip", "feather"]
 
 
@@ -138,6 +140,10 @@ static func validate() -> PackedStringArray:
 				errors.append("%s, ambience › %s : forme « alt » inconnue « %s » (%s)" % [w, state, p.get("alt"), ", ".join(SHAPES)])
 			if p.has("color") and not Regions.color_ok(p["color"]):
 				errors.append("%s, ambience › %s : « color » mal écrite" % [w, state])
+		var ht = a.get("hand_track", null)
+		if ht != null and (not ht is Dictionary or not HAND_TONICS.has(str(ht.get("tonique", ""))) \
+				or not MusicSynth.SCALES.has(str(ht.get("mode", "eolien")))):
+			errors.append("%s, hand_track : {\"tonique\": %s, \"mode\": %s}" % [w, "/".join(HAND_TONICS), "/".join(MusicSynth.SCALES.keys())])
 		var bs = a.get("boss", {})
 		if bs is Dictionary:
 			for k in bs:
@@ -162,6 +168,8 @@ static func _check_music(errors: PackedStringArray, w: String, m: Dictionary) ->
 			errors.append("%s, music : « qualities » : huit couleurs d'accord parmi %s" % [w, ", ".join(MusicSynth.QUALITIES.keys())])
 	if m.has("key") and not (m["key"] is float or m["key"] is int):
 		errors.append("%s, music : « key » (transposition en demi-tons) doit être un nombre" % w)
+	if m.has("mode") and not MusicSynth.SCALES.has(str(m["mode"])):
+		errors.append("%s, music : gamme « mode » inconnue « %s » (%s)" % [w, m["mode"], ", ".join(MusicSynth.SCALES.keys())])
 	if m.has("layers"):
 		if not m["layers"] is Array or m["layers"].is_empty():
 			errors.append("%s, music › layers : une liste de couches" % w)
@@ -170,7 +178,7 @@ static func _check_music(errors: PackedStringArray, w: String, m: Dictionary) ->
 				if not LAYERS.has(str(l)):
 					errors.append("%s, music › layers : couche inconnue « %s » (%s)" % [w, l, ", ".join(LAYERS.keys())])
 	for sec in MusicSynth.DEFAULTS:
-		if sec in ["seed", "roots", "roots_b", "key", "qualities"] or not m.has(sec):
+		if sec in ["seed", "roots", "roots_b", "key", "qualities", "mode"] or not m.has(sec):
 			continue
 		var st = m[sec]
 		if not st is Dictionary:
