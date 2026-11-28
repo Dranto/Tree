@@ -8287,11 +8287,11 @@ msgstr "Requires the “%s” skill."
 msgid "Incompatible avec « %s »."
 msgstr "Incompatible with “%s”."
 
-#. scripts/heart.gd:284
+#. scripts/heart.gd:303
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
 msgstr "Return to the zone: the blight is gaining ground"
 
-#. scripts/heart.gd:284
+#. scripts/heart.gd:303
 msgid "Tiens la zone : %d s"
 msgstr "Hold the ground: %d s"
 

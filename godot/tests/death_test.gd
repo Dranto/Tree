@@ -160,6 +160,19 @@ func _run() -> void:
 	check("reprise" in _death_icons(), "l'écran de mort le montre (flèche de reprise)")
 	check(main.player.position == lisiere.position, "renaissance à la Lisière")
 
+	print("Deux sièges commencés")
+	var list: Array = main.region_hearts[heart.region]
+	var h1 = list[0]
+	var h2 = list[1]
+	_place(h1.center + Vector2(h1.zone * 0.5, 0))
+	await _steps(90)
+	_place(h2.center + Vector2(h2.zone * 0.5, 0))
+	await _steps(90)
+	check(h1.state == "siege" and h2.state == "siege", "le premier siège, laissé en plan, n'est pas encore retombé")
+	check(h2.bar.visible and not h1.bar.visible, "une seule barre de siège : celle du Cœur où l'on est")
+	h1.reset_siege()
+	h2.reset_siege()
+
 	print("Autre sanctuaire visité")
 	_place(main.sanctuary("graine").position + Vector2(0, 10))
 	await _steps(3)

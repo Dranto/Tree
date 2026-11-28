@@ -8285,11 +8285,11 @@ msgstr ""
 msgid "Incompatible avec « %s »."
 msgstr ""
 
-#. scripts/heart.gd:284
+#. scripts/heart.gd:303
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
 msgstr ""
 
-#. scripts/heart.gd:284
+#. scripts/heart.gd:303
 msgid "Tiens la zone : %d s"
 msgstr ""
 
