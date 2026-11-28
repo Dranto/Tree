@@ -33,6 +33,26 @@ if ! command -v nvidia-smi >/dev/null || ! nvidia-smi >/dev/null 2>&1; then
   # Le pilote complet (avec OpenGL et EGL), pas la variante « calcul seul » (--gpgpu) sans OpenGL.
   ubuntu-drivers install
   echo
+  if [ "${AUTO_REBOOT:-0}" = 1 ]; then
+    # Installation sans surveillance (tools/gpu/cloud-init.sh) : relance ce script une fois après
+    # le redémarrage, puis le service s'efface.
+    cat > /etc/systemd/system/arborescence-gpu-suite.service <<UNIT
+[Unit]
+Description=Suite de l'installation de la machine GPU après le pilote
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+Environment=SUDO_USER=${SUDO_USER:-ubuntu}
+ExecStart=/bin/bash -c '$HERE/setup.sh > /var/log/arborescence-gpu-setup.log 2>&1; systemctl disable arborescence-gpu-suite.service'
+[Install]
+WantedBy=multi-user.target
+UNIT
+    systemctl enable arborescence-gpu-suite.service
+    echo "Pilote installé : redémarrage, la suite se fait seule (/var/log/arborescence-gpu-setup.log)"
+    reboot
+    exit 0
+  fi
   echo "Pilote installé : redémarrer (sudo reboot), puis relancer ce script pour la suite."
   exit 0
 fi
