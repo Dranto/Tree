@@ -1,5 +1,5 @@
 ## Test de migration des sauvegardes (jalon 12 G) : un fichier d'exemple par version du format
-## (tests/fixtures/saves/sauvegarde_v1.json … v8.json, faits par tools/fixtures-sauvegardes.py avec le
+## (tests/fixtures/saves/sauvegarde_v1.json … v9.json, faits par tools/fixtures-sauvegardes.py avec le
 ## format que le jeu écrivait alors) se charge sans perte dans le jeu actuel : niveau, expérience,
 ## drapeaux (renommés ou complétés par les migrations), nœuds (chaque point d'un nœud disparu est
 ## rendu), choix, inventaire, couronne, builds, monde (carte de vie, fleurs, greffes au sol, joueur).
@@ -42,7 +42,7 @@ func _run() -> void:
 	main.autosave_enabled = false
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://tests"))
 
-	check(save.VERSION == 8, "le format courant est la version 8 (ajouter un fichier d'exemple et une étape ici s'il change)")
+	check(save.VERSION == 9, "le format courant est la version 9 (ajouter un fichier d'exemple et une étape ici s'il change)")
 	for v in range(1, save.VERSION + 1):
 		await _version(v)
 	await _version_zero_and_gaps()
@@ -141,6 +141,12 @@ func _version(v: int) -> void:
 			same = same and game.crown[i] == saved_crown[i]
 		check(same, "la couronne est reprise telle quelle")
 	check(game.builds.size() == game.build_slots(), "%d emplacements de build" % game.build_slots())
+	# Cycle du New Game+ (version 9) : 1 pour toute partie d'avant.
+	var want_cycle := int(g.get("cycle", 1)) if v >= 9 else 1
+	check(game.cycle == want_cycle and save.peek(PATH).get("cycle", 0) == want_cycle, "cycle %d (partie et résumé du menu)" % want_cycle)
+	check(game.crown_kept == (int(g.get("crown_kept", 0)) if v >= 9 else 0), "couronne gardée des cycles d'avant")
+	if v == 9:
+		check(game.crown_size() >= int(g["crown_kept"]), "la couronne gardée reste ouverte malgré les Cœurs remis à zéro")
 	if v == 8:
 		check(game.active_build == 1 and str(game.builds[0].get("name", "")) == "Épines" and (game.builds[0]["allocated"] as Array) == ["ronce:1:1"], "builds : l'actif et le premier emplacement (nom, nœuds) sont gardés")
 		check(game.builds[0]["crown"][0] == "greffe_mere", "builds : la couronne du premier emplacement est gardée")
@@ -178,6 +184,7 @@ func _version_zero_and_gaps() -> void:
 		{"format": "seve-save", "version": 4, "game": {"level": 5, "flags": []}, "tree": {"allocated": "x"}},
 		{"format": "seve-save", "version": 7, "tree": {"crown": "x", "inventory": 3, "choices": []}, "world": {"flowers": "x"}},
 		{"format": "seve-save", "version": 8, "tree": {"builds": [3, "x", {"allocated": 5}], "active_build": 99}},
+		{"format": "seve-save", "version": 9, "game": {"cycle": -4, "crown_kept": "x"}},
 	]:
 		var f := FileAccess.open(PATH, FileAccess.WRITE)
 		f.store_string(JSON.stringify(case))
@@ -217,6 +224,6 @@ func _snapshot() -> Dictionary:
 		"level": game.level, "xp": snappedf(game.xp, 0.001), "points": game.points, "kills": game.kills,
 		"flags": game.flags.duplicate(true), "uids": game.allocated_uids(), "choices": game.choices.duplicate(),
 		"crown": game.crown.duplicate(), "inventory": game.graft_inventory.duplicate(), "builds": game.builds.duplicate(true),
-		"active": game.active_build, "flowers": main.flora.flowers.size(), "grafts": main.export_ground_grafts().size(),
+		"active": game.active_build, "cycle": game.cycle, "crown_kept": game.crown_kept, "flowers": main.flora.flowers.size(), "grafts": main.export_ground_grafts().size(),
 		"elapsed": snappedf(main.elapsed, 10.0), "pos": main.player.position,
 	}
