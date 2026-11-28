@@ -3,6 +3,7 @@
 ## sauvegarde aller-retour des drapeaux.
 ## Lancer : tools/godot.sh --headless --fixed-fps 60 -s res://tests/boss_test.gd
 ## Une autre région : … -s res://tests/boss_test.gd -- --region=spore (son Cœur et son boss).
+## Cycle exalté (NG+) : … -- --region=seve --cycle=2 (phase exaltée et attaque nouvelle du boss).
 ## Ne lit ni n'écrit la sauvegarde par défaut.
 extends SceneTree
 
@@ -125,6 +126,19 @@ func _run() -> void:
 	else:
 		await _steps(120)
 		check(arena.radius == arena.max_radius, "en phase 3 l'arène garde sa taille (pas de resserrement dans cette région)")
+	if boss.exalted:
+		print("Cycle exalté")
+		var at: float = boss.phase_limits[boss.phase_limits.size() - 1]
+		check(boss.phase_limits.size() == 3, "cycle %d : une phase exaltée de plus (sous %d %% de vie)" % [root.get_node("Cycles").current(), roundi(at * 100.0)])
+		boss.hp = minf(boss.hp, boss.max_hp * (at + 0.02))
+		boss.take_damage(boss.max_hp * 0.03, false)
+		check(await _until(func(): return boss.phase == 4, 2400), "phase exaltée atteinte")
+		check(boss.exalted_phase_seen and boss.is_exalted_phase(), "elle est annoncée (BossBase._exalt_announce)")
+		var attack_name: String = boss.get_script().get_script_constant_map()["EXALTED_ATTACK"]
+		check(await _until(func(): return boss.exalted_attacks > 0, 2400), "l'attaque nouvelle « %s » est annoncée" % attack_name)
+		check(await _until(func(): return boss.attack == "" , 600), "puis elle se termine")
+	else:
+		check(not boss.exalted and boss.phase_limits.size() == 2, "cycle 1 : ni phase exaltée ni attaque nouvelle")
 	_place(arena.center + Vector2(0, 250))
 	await _steps(2)
 

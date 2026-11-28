@@ -529,6 +529,24 @@ func exalt_glow() -> float:
 	return 0.55 + 0.45 * pow(1.0 - u, 3.0)
 
 
+## Aura de la phase exaltée, à dessiner par le boss autour de son corps (coordonnées de « ci ») : un
+## halo de braise qui bat sur les temps et des braises qui montent. Rien hors de cette phase.
+func draw_exalt_aura(ci: CanvasItem, at: Vector2, r: float) -> void:
+	var g := exalt_glow()
+	if g <= 0.0:
+		return
+	var col := _exalt_color()
+	ci.draw_circle(at, r * (1.05 + 0.12 * g), Color(col, 0.07 + 0.08 * g))
+	ci.draw_arc(at, r * (1.0 + 0.18 * g), 0.0, TAU, 40, Color(col, 0.25 + 0.4 * g), 2.0 + 2.0 * g, true)
+	if Settings.reduce_effects:
+		return
+	for i in 7:
+		var u := fposmod(loop_clock * 0.45 + i * 0.37, 1.0)
+		var a := TAU * i / 7.0 + 0.6
+		var p := at + Vector2(cos(a) * r * 0.9, sin(a) * r * 0.35) + Vector2(0, -r * 1.3 * u)
+		ci.draw_circle(p, 2.5 + 2.0 * (1.0 - u), Color(col.lightened(0.3), 0.8 * sin(PI * u)))
+
+
 # --- À écrire dans chaque boss ---
 
 ## Règle les nombres du socle (body_radius, base_hp, phase_limits…).

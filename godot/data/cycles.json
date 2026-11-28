@@ -14,7 +14,11 @@
       "threat_floor": 0.0,
       "mix": {},
       "elites": {},
-      "bosses": {},
+      "bosses": {
+        "seve": {"phase_exaltee": 0.22, "attaque_en_phase_3": false},
+        "aube": {"phase_exaltee": 0.22, "attaque_en_phase_3": false},
+        "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": false}
+      },
       "tint": {},
       "grafts": [],
       "crown": 0
@@ -23,7 +27,11 @@
       "threat_floor": 0.0,
       "mix": {},
       "elites": {},
-      "bosses": {},
+      "bosses": {
+        "seve": {"phase_exaltee": 0.22, "attaque_en_phase_3": true},
+        "aube": {"phase_exaltee": 0.22, "attaque_en_phase_3": true},
+        "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": true}
+      },
       "tint": {},
       "grafts": [],
       "crown": 0

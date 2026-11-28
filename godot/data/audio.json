@@ -134,7 +134,7 @@
         "dead": {"shape": "drop", "color": "seve/sombre", "alpha": 0.5, "vel": [1.0, 34.0], "sway": [4.0, 4.0], "size": [1.6, 2.8]},
         "alive": {"shape": "drop", "color": "seve/clair", "alpha": 0.5, "vel": [2.0, 28.0], "sway": [5.0, 4.0], "size": [1.6, 3.0]}
       },
-      "boss": {"eveil": "seve_boss_eveil", "phase": "seve_boss_phase", "mort": "seve_boss_mort"}
+      "boss": {"eveil": "seve_boss_eveil", "phase": "seve_boss_phase", "mort": "seve_boss_mort", "exalte": "seve_boss_phase"}
     },
     "aube": {
       "_doc": "Rivage de l'Aube : quartes et quintes claires, cloches ; en terre vivante, un arpège lumineux. Combat aux percussions de métal ; boss (Phalène de verre) cristallin. Ambiance : vagues, carillons. Des éclats de lumière flottent et montent.",
@@ -175,7 +175,7 @@
         "dead": {"shape": "chip", "color": "#9a9cab", "alpha": 0.4, "vel": [3.0, 10.0], "sway": [6.0, 2.0], "size": [1.2, 2.4]},
         "alive": {"shape": "glow", "color": "#fff0b8", "alpha": 0.9, "vel": [4.0, -16.0], "sway": [10.0, 3.0], "size": [1.2, 3.0]}
       },
-      "boss": {"eveil": "aube_boss_eveil", "phase": "aube_boss_phase", "mort": "aube_boss_mort"}
+      "boss": {"eveil": "aube_boss_eveil", "phase": "aube_boss_phase", "mort": "aube_boss_mort", "exalte": "aube_boss_phase"}
     },
     "racine": {
       "_doc": "Forêt pétrifiée (Racine) : accords bas et ouverts ; en terre vivante, un arpège de bois sourd. Combat aux blocs de bois ; boss aux taïkos et toms, mode phrygien. Ambiance : bois qui grince, coups de pic, oiseaux. Des cendres de bois et des poussières de mousse flottent.",
@@ -224,7 +224,7 @@
         "dead": {"shape": "chip", "color": "#6a5a48", "alpha": 0.55, "vel": [4.0, 12.0], "sway": [8.0, 3.0], "size": [1.4, 2.8]},
         "alive": {"shape": "chip", "color": "#d8c890", "alpha": 0.85, "vel": [5.0, 10.0], "sway": [9.0, 3.0], "size": [1.4, 3.0]}
       },
-      "boss": {"eveil": "racine_boss_eveil", "phase": "racine_boss_phase", "mort": "racine_boss_mort"}
+      "boss": {"eveil": "racine_boss_eveil", "phase": "racine_boss_phase", "mort": "racine_boss_mort", "exalte": "racine_boss_phase"}
     },
     "finale": {
       "_doc": "Finale sous la graine : accords diminués qui descendent, bourdon grave ; boss (la Flétrissure) aux taïkos et au chœur, sur une version sombre du thème du monde ; après la victoire, la couche lumineuse reprend le thème du monde en grand. Le creux résonne (grondement, gouttes). Sans particules de papillons.",

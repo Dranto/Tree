@@ -14,6 +14,11 @@
 ##   - invocation (dès la phase 2) : des Sangsues de vase sortent de l'étang (pas en rouge : ce n'est
 ##                pas un coup) ;
 ##   - phase 3 : l'étang se vide et l'arène se resserre (boss_arena.gd) ; plus de racines à la fois.
+## Cycle 2 et après (New Game+, BossBase › cycle exalté) :
+##   - liane (attaque nouvelle) : une liane-sangsue vise le joueur (couloir au sol), puis s'accroche
+##                s'il y est resté : tant qu'elle tient, il boit ; s'éloigner assez la rompt ;
+##   - phase 4 exaltée (« le Saule se gorge ») : lianes plus souvent, et son siphon aspire le joueur
+##                vers le tronc pendant qu'il boit.
 ## Sa mort : les rideaux tombent, le tronc se fend et rend l'eau bue ; à sa place, une source claire
 ## et un jeune saule (draw_victory).
 ##
@@ -26,7 +31,16 @@ const PHASES := {
 	1: {"gap": 1.3, "order": ["racines", "graines", "rideau", "racines", "graines"], "roots": 3, "volleys": 2, "seeds": 7},
 	2: {"gap": 1.1, "order": ["graines", "invocation", "racines", "siphon", "rideau"], "roots": 4, "volleys": 2, "seeds": 9, "minions": 2},
 	3: {"gap": 0.9, "order": ["racines", "rideau", "siphon", "graines", "invocation", "racines"], "roots": 5, "volleys": 3, "seeds": 9, "minions": 2},
+	# Phase exaltée (cycle 2 et après seulement).
+	4: {"gap": 0.85, "order": ["liane", "siphon", "racines", "liane", "graines", "rideau"], "roots": 5, "volleys": 3, "seeds": 9, "minions": 2},
 }
+## Attaque nouvelle du cycle exalté (BossBase).
+const EXALTED_ATTACK := "liane"
+## Liane-sangsue : couloir visé (largeur, portée), puis accrochée « duration » s au plus ; elle boit
+## « dps » et se rompt au-delà de « break » px du tronc.
+const VINE := {"annonce": 0.9, "width": 46.0, "range": 430.0, "break": 470.0, "duration": 2.4, "tick": 0.4, "dps": 10.0}
+## Phase exaltée : le siphon tire le joueur vers le tronc (px/s).
+const SIPHON_PULL := 70.0
 const ROOTS := {"annonce": 1.0, "radius": 64.0, "spread": 180.0, "damage": 18.0, "flash": 0.35}
 const CURTAIN := {"annonce": 0.95, "radius": 330.0, "opening": 1.5, "damage": 22.0, "flash": 0.3}
 const SEEDS := {"annonce": 0.85, "between": 0.42, "damage": 12.0, "speed": 290.0, "radius": 10.0, "spread": 0.18}
@@ -57,6 +71,11 @@ var flash_kind := ""
 var _siphon_tick := 0.0
 ## Bourgeons de l'invocation en cours (positions).
 var buds: Array = []
+## Liane accrochée au joueur (attaque « liane ») ; éclair de rupture (0 → 0,35 s, -1 : aucun).
+var vine_on := false
+var _vine_tick := 0.0
+var vine_snap := -1.0
+var vine_snap_at := Vector2.ZERO
 
 
 func _setup() -> void:
@@ -74,6 +93,10 @@ func _setup() -> void:
 
 func _projectiles_step(delta: float) -> void:
 	_update_seeds(delta)
+	if vine_snap >= 0.0:
+		vine_snap += delta
+		if vine_snap > 0.35:
+			vine_snap = -1.0
 	if strike_flash >= 0.0:
 		strike_flash += delta
 		if strike_flash > 0.35:
@@ -91,7 +114,7 @@ func _fight_step(delta: float) -> void:
 			return
 		gap -= delta * cad
 		if gap <= 0.0:
-			var order: Array = PHASES[phase]["order"]
+			var order: Array = exalted_order(PHASES[phase]["order"], EXALTED_ATTACK)
 			_begin(order[cycle % order.size()])
 			cycle += 1
 	elif stage == "annonce":
@@ -147,6 +170,10 @@ func _begin(kind: String) -> void:
 			_set_timer(SEEDS["annonce"])
 		"siphon":
 			_set_timer(SIPHON["annonce"])
+		"liane":
+			exalted_attacks += 1
+			# La liane claque sur un temps de la musique.
+			_set_timer(loop_snap(VINE["annonce"]))
 		"invocation":
 			_set_timer(SUMMON["annonce"])
 			buds = []
@@ -170,7 +197,7 @@ func _in_arena(p: Vector2, margin: float) -> Vector2:
 
 ## Pendant l'annonce, le rideau et les graines suivent le joueur, puis se verrouillent.
 func _announce_step() -> void:
-	if attack in ["rideau", "graines"] and timer > stage_time * 0.4:
+	if attack in ["rideau", "graines", "liane"] and timer > stage_time * 0.4:
 		var to: Vector2 = main.player.position - anchor
 		if to.length() > 1.0:
 			aim = to.normalized()
@@ -205,6 +232,17 @@ func _strike() -> void:
 		"siphon":
 			_siphon_tick = 0.0
 			_set_timer(SIPHON["duration"])
+		"liane":
+			main.fx.shake(3.0)
+			if p.invuln <= 0.0 and in_vine(p.position, p.radius * 0.5):
+				vine_on = true
+				_vine_tick = 0.0
+				_set_timer(VINE["duration"])
+				main.fx.text(p.position + Vector2(0, -60), Loc.t("Accroché !"), Art.ec("saignement", "clair"), 16, 0.7)
+			else:
+				strike_flash = 0.0
+				flash_kind = "liane"
+				_end_attack()
 		"invocation":
 			for b in buds:
 				minions.append(main.spawn_enemy_kind(SUMMON["kind"], b, main.threat(b)))
@@ -229,6 +267,22 @@ func _strike_step(delta: float) -> void:
 				var p = main.player
 				if p.position.distance_to(anchor) < SIPHON["radius"] + p.radius * 0.3:
 					_hurt_player(SIPHON["dps"] * SIPHON["tick"] * damage_scale * 2.0)
+			# Phase exaltée : le siphon aspire vers le tronc (jusqu'au bord du corps).
+			if is_exalted_phase():
+				var p = main.player
+				var to: Vector2 = anchor - p.position
+				if to.length() > radius + p.radius + 10.0 and to.length() < SIPHON["radius"] * 1.6:
+					p.position += to.normalized() * SIPHON_PULL * delta
+		"liane":
+			var p = main.player
+			if p.position.distance_to(anchor) > VINE["break"] or p.hp <= 0.0:
+				_vine_break(p.position)
+				timer = 0.0
+				return
+			_vine_tick -= delta
+			if _vine_tick <= 0.0:
+				_vine_tick = VINE["tick"]
+				_hurt_player(VINE["dps"] * VINE["tick"] * damage_scale)
 
 
 ## Directions des graines d'une salve (les salves paires sont décalées d'un demi-écart).
@@ -241,6 +295,25 @@ func seed_dirs(offset := false) -> Array:
 	return out
 
 
+## Vrai si pos est dans le couloir de la liane (vers « aim », jusqu'à sa portée).
+func in_vine(pos: Vector2, margin: float) -> bool:
+	var to := pos - anchor
+	var along := to.dot(aim)
+	if along < 0.0 or along > VINE["range"] + margin:
+		return false
+	return absf(to.dot(aim.orthogonal())) < VINE["width"] * 0.5 + margin
+
+
+## La liane se rompt (le joueur s'est assez éloigné, ou la fin de l'attaque).
+func _vine_break(at: Vector2) -> void:
+	if not vine_on:
+		return
+	vine_on = false
+	vine_snap = 0.0
+	vine_snap_at = at
+	main.fx.ring(at, 6.0, 40.0, 0.3, Color(Art.ec("seve", "clair"), 0.9), 3.0)
+
+
 func _in_curtain(pos: Vector2, margin: float) -> bool:
 	var to := pos - anchor
 	if to.length() > CURTAIN["radius"] + margin:
@@ -249,6 +322,8 @@ func _in_curtain(pos: Vector2, margin: float) -> bool:
 
 
 func _end_attack() -> void:
+	if vine_on:
+		_vine_break(main.player.position)
 	attack = ""
 	stage = ""
 	gap = PHASES[phase]["gap"]
@@ -277,7 +352,7 @@ func _enter_phase(n: int) -> void:
 	cycle = 0
 	gap = 0.3
 	main.fx.ring(anchor, radius, 420.0, 0.7, Color(Art.ec("seve", "clair"), 0.9), 8.0)
-	if n != 2:
+	if n == 3:
 		arena.start_shrink()
 
 
@@ -309,6 +384,11 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 		"siphon":
 			if d < SIPHON["radius"] + margin:
 				best = minf(best, timer if stage == "annonce" else 0.0)
+		"liane":
+			if stage == "annonce" and in_vine(pos, margin):
+				best = minf(best, timer)
+			elif vine_on and d < VINE["break"]:
+				best = minf(best, 0.0)
 	if d < radius + margin + 20.0:
 		best = minf(best, 0.0)
 	return best
@@ -320,14 +400,22 @@ func _clear_attacks() -> void:
 	seeds = []
 	roots = []
 	buds = []
+	vine_on = false
 
 
 ## Le robot tourne autour de lui, hors du siphon quand il s'annonce.
 func bot_ring(arena_radius: float) -> float:
 	var ring := minf(250.0, arena_radius - 60.0)
 	if attack == "siphon" and arena_radius - 50.0 > SIPHON["radius"] + 40.0:
-		ring = SIPHON["radius"] + 45.0
+		ring = SIPHON["radius"] + (90.0 if is_exalted_phase() else 45.0)
+	# Accroché : s'éloigner au-delà de la rupture si l'arène le permet.
+	if attack == "liane" and arena_radius - 40.0 > VINE["break"] * 0.6:
+		ring = arena_radius - 40.0
 	return ring
+
+
+func _exalt_color() -> Color:
+	return Art.ec("saignement", "clair")
 
 
 # --- Dessin ---
@@ -361,8 +449,13 @@ func pose() -> Dictionary:
 		k = 1.0
 	# Valeurs quantifiées : le corps est cuit une fois par pose (boss_body_cache.gd) ; les rideaux du
 	# siphon s'agitent sur 4 images (« wig », 12 par seconde).
-	return {"t": t, "k": snappedf(k, 0.25) if attack != "invocation" else 0.0, "attack": attack, "stage": stage if attack == "graines" else "", "phase": phase,
-		"die": snappedf(clampf(dying / death_time, 0.0, 1.0), 0.1) if dead else 0.0, "aim": signf(aim.x) if attack == "rideau" else 0.0,
+	# La liane soulève les rideaux du côté visé, comme le rideau ; la phase exaltée garde le dessin de
+	# la phase 3 (sa lueur est dessinée en direct, draw_exalt_aura).
+	var art_attack := "rideau" if attack == "liane" else attack
+	if attack == "liane" and stage == "frappe":
+		k = 1.0
+	return {"t": t, "k": snappedf(k, 0.25) if attack != "invocation" else 0.0, "attack": art_attack, "stage": stage if attack == "graines" else "", "phase": mini(phase, 3),
+		"die": snappedf(clampf(dying / death_time, 0.0, 1.0), 0.1) if dead else 0.0, "aim": signf(aim.x) if attack in ["rideau", "liane"] else 0.0,
 		"hit": 1.0 if hit_flash > 0.0 else 0.0, "poison": poison_time > 0.0,
 		"ash": snappedf(Anim.ease_out(clampf(dying / death_time * 1.4, 0.0, 1.0)), 0.1) if dead else 0.0, "flip": face_left,
 		"wig": int(t * 12.0) % 4 if attack == "siphon" else 0}
@@ -379,6 +472,7 @@ func _draw() -> void:
 	var live := 0.0 if dead else 1.0
 	var b := sin(t * TAU / 3.6) * live
 	var xf := Transform2D(0.0, Vector2(1.0 + 0.01 * b, 1.0 + 0.012 * b), 0.03 * sin(t * TAU / 5.3) * live, Vector2.ZERO)
+	draw_exalt_aura(self, Vector2(0, -h * 0.45), h * 0.62)
 	_cache.paint(self, Art_, h, Vector2(0, radius * 0.35), pose(), xf, frozen or BodyCache.headless())
 
 
@@ -407,6 +501,12 @@ func draw_marks(c: CanvasItem) -> void:
 					var a := TAU * i / 10.0 + t * 0.6
 					var f := fposmod(t * 1.4 + i * 0.37, 1.0)
 					c.draw_circle(anchor + Vector2.from_angle(a) * SIPHON["radius"] * (1.0 - f), 3.0, Color(Art.ec("saignement", "clair"), 0.8 * sin(PI * f)))
+		"liane":
+			if stage == "annonce":
+				Art.telegraph(c, {"type": "ligne", "de": anchor + aim * radius * 0.6, "a": anchor + aim * VINE["range"], "largeur": VINE["width"]}, k, -1.0, t)
+			elif vine_on:
+				# Accroché : le cercle de rupture se dessine au sol (en sortir pour s'en défaire).
+				c.draw_arc(anchor, VINE["break"], 0.0, TAU, 72, Color(Art.c("danger"), 0.35 + 0.25 * sin(t * 8.0)), Art.TRAIT, true)
 		"invocation":
 			var col := Art.ec("seve", "clair")
 			for b in buds:
@@ -421,6 +521,8 @@ func draw_marks(c: CanvasItem) -> void:
 				for j in 3:
 					var a := -PI / 2.0 + (j - 1) * 0.6
 					c.draw_line(p, p + Vector2.from_angle(a) * ROOTS["radius"] * (0.9 - 0.5 * f), Art.c("ennemi").darkened(0.3), 5.0, true)
+		elif flash_kind == "liane":
+			Art.telegraph(c, {"type": "ligne", "de": anchor + aim * radius * 0.6, "a": anchor + aim * VINE["range"], "largeur": VINE["width"]}, 1.0, f, t)
 		elif flash_kind == "rideau":
 			Art.telegraph(c, {"type": "cone", "centre": anchor, "direction": aim.angle(), "ouverture": CURTAIN["opening"], "rayon": CURTAIN["radius"]}, 1.0, f, t)
 
@@ -435,6 +537,31 @@ func draw_overlay(c: CanvasItem) -> void:
 		c.draw_circle(p, rr + 2.0, Art.c("contour"))
 		Art.volume(c, Art.ellipse(p, rr * 1.2, rr * 0.8, 10), husk, 0.8)
 		c.draw_line(p - d * rr * 0.6, p + d * rr * 0.6, Art.ec("saignement", "clair"), 2.0, true)
+	if vine_on and main != null and main.player != null:
+		_draw_vine(c, anchor + Vector2(0, -radius * 0.9), main.player.position + Vector2(0, -14), 1.0)
+	elif vine_snap >= 0.0:
+		# Rompue : le bout se rétracte vers le tronc.
+		var f := vine_snap / 0.35
+		var from := anchor + Vector2(0, -radius * 0.9)
+		_draw_vine(c, from, vine_snap_at.lerp(from, Anim.ease_out(f)), 1.0 - f)
+
+
+## Liane-sangsue tendue du tronc au joueur : encre, bois de sève, gouttes rouges qui remontent vers
+## le tronc (il boit).
+func _draw_vine(c: CanvasItem, from: Vector2, to: Vector2, a: float) -> void:
+	var pts := PackedVector2Array()
+	var n := (to - from).orthogonal().normalized()
+	for i in 13:
+		var u := i / 12.0
+		pts.append(from.lerp(to, u) + n * sin(u * PI * 3.0 + t * 6.0) * 9.0 * sin(PI * u))
+	c.draw_polyline(pts, Color(Art.c("contour"), a), 7.0, true)
+	c.draw_polyline(pts, Color(Art.ec("seve", "sombre").lerp(Art.c("ennemi"), 0.35), a), 4.5, true)
+	if a < 0.99:
+		return
+	for i in 5:
+		var u := 1.0 - fposmod(t * 1.6 + i * 0.2, 1.0)
+		var q := pts[clampi(int(u * 12.0), 0, 12)]
+		c.draw_circle(q, 3.2, Art.ec("saignement", "clair"))
 
 
 ## Le Saule endormi : un saule bas aux rideaux immobiles, au milieu de l'étang.
