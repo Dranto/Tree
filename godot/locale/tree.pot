@@ -6246,6 +6246,18 @@ msgstr ""
 msgid "rapide"
 msgstr ""
 
+#. data/difficulty.json › elites › affixes › remanent › name
+msgid "rémanent"
+msgstr ""
+
+#. data/difficulty.json › elites › affixes › siphon › name
+msgid "siphonneur"
+msgstr ""
+
+#. data/difficulty.json › elites › affixes › voile › name
+msgid "voilé"
+msgstr ""
+
 #. data/difficulty.json › modes › difficile › name
 msgid "Difficile"
 msgstr ""
@@ -8053,16 +8065,16 @@ msgid " (%s)"
 msgstr ""
 
 #. scripts/effects.gd:279
-#. scripts/enemy.gd:254
+#. scripts/enemy.gd:261
 msgid " et "
 msgstr ""
 
-#. scripts/enemy.gd:254
+#. scripts/enemy.gd:261
 msgctxt "élite : nom puis modificateurs"
 msgid "%s %s"
 msgstr ""
 
-#. scripts/enemy.gd:420
+#. scripts/enemy.gd:427
 msgid "Enragé !"
 msgstr ""
 
@@ -8086,49 +8098,49 @@ msgstr ""
 msgid "étourdi"
 msgstr ""
 
-#. scripts/game.gd:276
-#. scripts/game.gd:323
+#. scripts/game.gd:283
+#. scripts/game.gd:330
 msgid "Build %d"
 msgstr ""
 
-#. scripts/game.gd:54
+#. scripts/game.gd:598
+msgid "Dans le jeu complet."
+msgstr ""
+
+#. scripts/game.gd:60
 msgid "Autel ravivé"
 msgstr ""
 
-#. scripts/game.gd:54
+#. scripts/game.gd:60
 msgid "Boss vaincu"
 msgstr ""
 
-#. scripts/game.gd:54
+#. scripts/game.gd:60
 #. scripts/region_ui.gd:61
 msgid "Cœur purifié"
 msgstr ""
 
-#. scripts/game.gd:55
+#. scripts/game.gd:61
 msgid "Objectif accompli"
 msgstr ""
 
-#. scripts/game.gd:55
+#. scripts/game.gd:61
 msgid "Secret découvert"
 msgstr ""
 
-#. scripts/game.gd:591
-msgid "Dans le jeu complet."
-msgstr ""
-
-#. scripts/game.gd:603
+#. scripts/game.gd:610
 msgid "Couvert de cendre : %s"
 msgstr ""
 
-#. scripts/game.gd:603
+#. scripts/game.gd:610
 msgid "un évènement du monde doit le libérer."
 msgstr ""
 
-#. scripts/game.gd:614
+#. scripts/game.gd:621
 msgid "Demande la compétence « %s »."
 msgstr ""
 
-#. scripts/game.gd:617
+#. scripts/game.gd:624
 msgid "Incompatible avec « %s »."
 msgstr ""
 
@@ -8165,7 +8177,7 @@ msgid ""
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 msgstr ""
 
-#. scripts/main.gd:1221
+#. scripts/main.gd:1260
 msgid "%s vaincu"
 msgstr ""
 
