@@ -143,6 +143,7 @@ func _ready() -> void:
 	overlay.above = true
 	main.projectiles_layer.add_child(overlay)
 	_last_phase = phase
+	_exalt_setup()
 	_region_sound("eveil")
 
 
@@ -177,6 +178,7 @@ func _physics_process(delta: float) -> void:
 	if frozen:
 		return
 	position = anchor
+	loop_clock += delta
 	hit_flash -= delta
 	root_immune -= delta
 	if dead:
@@ -190,7 +192,10 @@ func _physics_process(delta: float) -> void:
 		return
 	if phase != _last_phase:
 		_last_phase = phase
-		_region_sound("phase")
+		if is_exalted_phase():
+			_exalt_announce()
+		else:
+			_region_sound("phase")
 		_eclat("phase")
 		main.fx.boss_phase(position, radius)
 		if sync != null:
@@ -406,6 +411,122 @@ func beat_step(interval: float) -> float:
 ## Vrai tant que le boss attend la musique (arrivée, transformation) : invulnérable.
 func music_waiting() -> bool:
 	return sync != null and sync.waiting()
+
+
+# --- Cycle exalté (New Game+, jalon 14) ---
+# À partir du cycle 2 (Cycles.exalted()), chaque boss de région a une attaque nouvelle (nommée dans
+# sa const EXALTED_ATTACK) et une phase « exaltée » de plus, en bas de sa vie : phase_limits gagne une
+# limite (data/cycles.json › cycles › "<n>" › bosses › <région> › phase_exaltee), le boss décrit
+# PHASES[4], et la barre lit « phases_exaltees » dans le fichier de sa région (boss_arena.gd).
+# L'entrée dans la phase exaltée est annoncée (son « exalte » de data/audio.json › <région> › boss,
+# point d'accroche « boss_exalte » ; anneau, lueur, texte) et la reprise tombe sur une mesure de la
+# musique. Les boss de région n'ont pas de morceau fait main : leur musique est la couche « boss » du
+# code (music_synth.gd), boucle de 24 s, mesure de MusicSynth.CHORD_TIME (3 s), temps de 0,75 s.
+# Cycle 1 : rien ne change (exalted faux, mêmes phases, même hasard).
+
+const MusicSynth = preload("res://scripts/music_synth.gd")
+const BossSyncRef = preload("res://scripts/boss_sync.gd")
+## Part de vie où commence la phase exaltée, si cycles.json ne la donne pas.
+const EXALTED_PHASE_AT := 0.22
+## Durée d'un temps de la musique des boss de région (4 par mesure).
+const LOOP_BEAT := MusicSynth.CHORD_TIME / 4.0
+
+## Vrai à partir du cycle 2 : attaque nouvelle et phase exaltée.
+var exalted := false
+## Réglages du boss pour le cycle en cours (cycles.json › bosses › <région>), {} au cycle 1.
+var exalt_cfg_data: Dictionary = {}
+## Vrai une fois la phase exaltée entrée (lu par les tests).
+var exalted_phase_seen := false
+## Fois où l'attaque nouvelle a été annoncée (lu par les tests).
+var exalted_attacks := 0
+## Horloge du combat (temps du jeu, pas physiques) : grille des temps quand la musique ne joue pas.
+var loop_clock := 0.0
+
+
+func _exalt_setup() -> void:
+	var cyc = get_node_or_null("/root/Cycles")
+	# Seuls les boss qui décrivent leur attaque nouvelle (const EXALTED_ATTACK) sont exaltés.
+	exalted = cyc != null and cyc.exalted() and get_script().get_script_constant_map().has("EXALTED_ATTACK")
+	if not exalted:
+		return
+	var all = cyc.value("bosses", {})
+	if all is Dictionary and all.get(region, {}) is Dictionary:
+		exalt_cfg_data = all.get(region, {})
+	phase_limits = phase_limits.duplicate()
+	phase_limits.append(float(exalted_cfg("phase_exaltee", EXALTED_PHASE_AT)))
+
+
+## Réglage « key » du boss pour le cycle en cours (cycles.json › bosses › <région>), default sinon.
+func exalted_cfg(key: String, default = null):
+	return exalt_cfg_data.get(key, default)
+
+
+## Vrai pendant la phase exaltée (la dernière, ajoutée au cycle 2 et après).
+func is_exalted_phase() -> bool:
+	return exalted and phase == phase_limits.size() + 1
+
+
+## Vrai si l'attaque nouvelle entre aussi dans l'ordre de la phase 3 (cycles.json › … › attaque_en_phase_3).
+func exalted_in_phase3() -> bool:
+	return exalted and bool(exalted_cfg("attaque_en_phase_3", false))
+
+
+## Ordre des attaques d'une phase, avec l'attaque nouvelle glissée en phase 3 si le cycle le veut.
+func exalted_order(order: Array, attack_name: String) -> Array:
+	if phase == 3 and exalted_in_phase3() and not attack_name in order:
+		var out := order.duplicate()
+		out.insert(mini(2, out.size()), attack_name)
+		return out
+	return order
+
+
+## Position (s) dans la boucle de musique : l'horloge de la couche « boss » quand elle joue (hors
+## robots), sinon l'horloge du combat (déterministe).
+func loop_time() -> float:
+	var m = get_node_or_null("/root/Music")
+	if m != null and m.started and not BossSyncRef.robot() and m.boss > 0.5:
+		return float(m.clock)
+	return loop_clock
+
+
+## Délai allongé pour que ce qui arriverait dans « delay » s tombe sur un temps de la musique (tous
+## les « grid » temps : 1 = la noire, 4 = la mesure). Jamais plus court que « delay ».
+func loop_snap(delay: float, grid := 1.0) -> float:
+	var step := LOOP_BEAT * grid
+	var at := loop_time() + delay
+	return delay + (ceil(at / step - 0.001) * step - at)
+
+
+## Entrée dans la phase exaltée : annoncée au son, à l'œil et au texte ; la reprise attend la mesure
+## suivante de la musique. Renvoie la pause (s) jusqu'à la reprise.
+func _exalt_announce() -> float:
+	exalted_phase_seen = true
+	var snd := RegionAudio.boss_sound(region, "exalte")
+	_region_sound("exalte" if snd != "" else "phase")
+	transition = loop_snap(maxf(transition, 1.0), 4.0)
+	var col := _exalt_color()
+	main.fx.ring(anchor, radius * 0.6, radius * 7.0, 0.9, Color(col, 0.9), 10.0)
+	main.fx.ring(anchor, radius * 1.2, radius * 4.5, 0.6, Color(Art.c("danger_eclair"), 0.8), 4.0)
+	main.fx.shake(6.0)
+	main.fx.text(anchor + Vector2(0, -radius * 2.6), Loc.t("Exaltation"), col, 26, 1.4)
+	if main.get("screen_fx") != null:
+		main.screen_fx.glow(col, 0.5, 1.2)
+	if main.get("moments") != null:
+		main.moments.zoom_pulse(0.6, 0.5)
+	return transition
+
+
+## Couleur de la phase exaltée (la braise de la Flétrissure qui le gagne), à changer par boss.
+func _exalt_color() -> Color:
+	return Art.ec("saignement", "clair")
+
+
+## Lueur de la phase exaltée (0 → 1, pulsée sur les temps de la musique) ; 0 hors de cette phase.
+func exalt_glow() -> float:
+	if not is_exalted_phase() or dead:
+		return 0.0
+	var u := fposmod(loop_time() / LOOP_BEAT, 1.0)
+	return 0.55 + 0.45 * pow(1.0 - u, 3.0)
 
 
 # --- À écrire dans chaque boss ---

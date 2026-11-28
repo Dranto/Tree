@@ -19,7 +19,8 @@ const MUSIC_DIR := "res://assets/music/"
 const BED_STATES := {"mort": "dead", "vif": "alive"}
 const BED_DIR := "res://assets/ambience/"
 ## Sons du boss reconnus (clé de « boss » → moment du combat).
-const BOSS_KEYS := ["eveil", "phase", "mort"]
+## « exalte » : entrée dans la phase exaltée (cycle 2 et après, point d'accroche « boss_exalte »).
+const BOSS_KEYS := ["eveil", "phase", "mort", "exalte"]
 const SHAPES := ["dot", "glow", "streak", "drop", "chip", "feather"]
 
 
