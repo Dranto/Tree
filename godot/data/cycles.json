@@ -83,6 +83,17 @@
         "two_affixes": 0.45
       },
       "bosses": {
+        "level_hp": {
+          "_doc": "Vie des boss liée au niveau du héros (jalon 14 R2) : vie × (1 + par_niveau × (niveau − depuis)), plafonnée à max ; un réglage par région, « defaut » sinon. Cycle 2 et après seulement (le cycle 1 n'a pas la clé). Cibles grossières mesurées au robot du cycle 2 (au moins 60 s de combat) ; les chiffres fins sont pour l'équilibrage final.",
+          "defaut": {"depuis": 20, "par_niveau": 0.5, "max": 80.0},
+          "ronce": {"depuis": 20, "par_niveau": 0.375, "max": 80.0},
+          "spore": {"depuis": 20, "par_niveau": 0.3, "max": 80.0},
+          "aube": {"depuis": 20, "par_niveau": 0.54, "max": 80.0},
+          "vent": {"depuis": 20, "par_niveau": 1.26, "max": 80.0},
+          "seve": {"depuis": 20, "par_niveau": 1.3, "max": 80.0},
+          "racine": {"depuis": 20, "par_niveau": 0.83, "max": 80.0},
+          "finale": {"depuis": 20, "par_niveau": 0.06, "max": 80.0}
+        },
         "ronce": {"phase_exaltee": 0.22},
         "spore": {"phase_exaltee": 0.22},
         "vent": {"phase_exaltee": 0.22},
@@ -223,6 +234,17 @@
         "two_affixes": 0.6
       },
       "bosses": {
+        "level_hp": {
+          "_doc": "Vie des boss liée au niveau du héros (jalon 14 R2) : vie × (1 + par_niveau × (niveau − depuis)), plafonnée à max ; un réglage par région, « defaut » sinon. Cycle 2 et après seulement (le cycle 1 n'a pas la clé). Cibles grossières mesurées au robot du cycle 2 (au moins 60 s de combat) ; les chiffres fins sont pour l'équilibrage final.",
+          "defaut": {"depuis": 20, "par_niveau": 0.5, "max": 80.0},
+          "ronce": {"depuis": 20, "par_niveau": 0.375, "max": 80.0},
+          "spore": {"depuis": 20, "par_niveau": 0.3, "max": 80.0},
+          "aube": {"depuis": 20, "par_niveau": 0.54, "max": 80.0},
+          "vent": {"depuis": 20, "par_niveau": 1.26, "max": 80.0},
+          "seve": {"depuis": 20, "par_niveau": 1.3, "max": 80.0},
+          "racine": {"depuis": 20, "par_niveau": 0.83, "max": 80.0},
+          "finale": {"depuis": 20, "par_niveau": 0.06, "max": 80.0}
+        },
         "ronce": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
         "spore": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
         "vent": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
