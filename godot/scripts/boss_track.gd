@@ -183,7 +183,7 @@ const APPROACH_FALL := 2.5
 ## Rien à entendre pendant APPROACH_LINGER s : l'approche s'arrête (elle repartira du début).
 const APPROACH_LINGER := 1.5
 ## Volume de l'approche au plus près de l'arène, avant l'entrée (l'intro monte au plein volume).
-const APPROACH_MAX := 0.85
+const APPROACH_MAX := 1.0
 
 
 ## Le héros approche l'arène ouverte d'un boss qui a un clip « approche » : level (0 → 1) selon la

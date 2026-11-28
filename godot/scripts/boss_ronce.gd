@@ -69,30 +69,31 @@ const ROOT_IMMUNITY := 6.0
 const BLEED_STACKS := 5
 
 # --- Partition sur son morceau (boss_sync.gd : horloge audio, ou temps du jeu sans son) ---
-# Une phrase = quatre mesures (16 temps) ; « coups » : [temps de la phrase, attaque] ; l'annonce part
+# Une phrase = quatre mesures (16 temps), une attaque par mesure environ, souvent sur la grosse caisse
+# du premier temps ; « coups » : [temps de la phrase, attaque] ; l'annonce part
 # ANNOUNCE_BEATS temps avant (un coup que l'attaque d'avant serre trop est sauté, score_skipped).
 # « ondes » : mesures de la phrase (0-3) où les grosses caisses lancent de vraies ondes (sinon celles
 # de DRUMS_POWER) ; « deluge » : toute la batterie, au plus fort. Les phrases se répètent sur la boucle.
 const SCORE := {
 	1: {"loop": "boucle_1", "phrases": [
-		{"coups": [[0, "volee"], [8, "racines"]]},
-		{"coups": [[0, "fouets"], [10, "volee"]]},
+		{"coups": [[0, "volee"], [4, "fouets"], [8, "racines"], [12, "volee"]]},
+		{"coups": [[0, "fouets"], [6, "volee"], [10, "racines"], [13, "volee"]]},
 	]},
 	2: {"loop": "boucle_2", "phrases": [
-		{"coups": [[0, "volee"], [6, "fouets"], [12, "racines"]]},
-		{"coups": [[0, "invocation"], [5, "volee"], [11, "fouets"]]},
-		{"coups": [[0, "fouets"], [6, "racines"], [11, "volee"]]},
-		{"coups": [[1, "volee"], [6, "fouets"], [12, "racines"]], "ondes": [0, 2]},
+		{"coups": [[0, "volee"], [5, "fouets"], [9, "racines"], [12, "volee"]]},
+		{"coups": [[1, "invocation"], [4, "fouets"], [8, "volee"], [12, "racines"]]},
+		{"coups": [[0, "fouets"], [5, "volee"], [9, "racines"], [12, "fouets"]]},
+		{"coups": [[0, "volee"], [4, "racines"], [8, "fouets"], [12, "volee"]], "ondes": [0, 2]},
 	]},
 	3: {"loop": "boucle_3", "phrases": [
-		{"coups": [[0, "fouets"], [6, "volee"], [12, "racines"]]},
-		{"coups": [[1, "invocation"], [5, "fouets"], [10, "volee"]], "ondes": [0, 1, 2, 3]},
+		{"coups": [[0, "fouets"], [4, "volee"], [9, "racines"], [12, "fouets"]]},
+		{"coups": [[1, "invocation"], [4, "fouets"], [8, "volee"], [13, "racines"]], "ondes": [0, 1, 2, 3]},
 	]},
 	4: {"loop": "boucle_4", "phrases": [
-		{"coups": [[0, "etreinte"], [5, "fouets"], [11, "volee"]]},
-		{"coups": [[2, "etreinte"], [6, "racines"], [12, "fouets"]]},
-		{"coups": [[2, "volee"], [9, "etreinte"], [14, "fouets"]]},
-		{"coups": [[3, "racines"], [10, "etreinte"]], "deluge": true},
+		{"coups": [[0, "etreinte"], [3, "fouets"], [8, "volee"], [13, "racines"]]},
+		{"coups": [[1, "etreinte"], [4, "fouets"], [9, "volee"], [14, "racines"]]},
+		{"coups": [[2, "etreinte"], [5, "fouets"], [9, "volee"], [14, "racines"]]},
+		{"coups": [[2, "etreinte"], [5, "fouets"], [9, "volee"]], "deluge": true},
 	]},
 }
 ## Ce que la batterie déclenche, phase par phase (la difficulté monte avec elles) :
@@ -103,13 +104,13 @@ const SCORE := {
 ##   spark : aiguilles par charleston, « spark_grid » : même filtre ;
 ##   prick : petites racines par caisse douce (note fantôme), autour du joueur.
 const DRUMS_POWER := {
-	1: {"ondes": [], "pulse": 170.0, "roll": 0, "roll_grid": 4, "spark": 1, "spark_grid": 4, "prick": 0},
-	2: {"ondes": [0], "pulse": 210.0, "roll": 2, "roll_grid": 4, "spark": 1, "spark_grid": 4, "prick": 1},
-	3: {"ondes": [0, 2], "pulse": 260.0, "roll": 2, "roll_grid": 2, "spark": 1, "spark_grid": 2, "prick": 1},
+	1: {"ondes": [], "pulse": 200.0, "roll": 1, "roll_grid": 4, "spark": 1, "spark_grid": 2, "prick": 0},
+	2: {"ondes": [0], "pulse": 240.0, "roll": 2, "roll_grid": 4, "spark": 1, "spark_grid": 2, "prick": 1},
+	3: {"ondes": [0, 2], "pulse": 280.0, "roll": 2, "roll_grid": 2, "spark": 2, "spark_grid": 2, "prick": 1},
 	4: {"ondes": [0, 1, 2, 3], "pulse": 320.0, "roll": 3, "roll_grid": 1, "spark": 2, "spark_grid": 1, "prick": 2},
 }
 ## Annonce (en temps) de chaque attaque de la partition.
-const ANNOUNCE_BEATS := {"volee": 3, "fouets": 3, "racines": 2, "invocation": 3, "etreinte": 4}
+const ANNOUNCE_BEATS := {"volee": 2, "fouets": 3, "racines": 2, "invocation": 3, "etreinte": 4}
 const MIN_ANNOUNCE := 2.0
 ## Sur la partition, elle frappe plus souvent qu'au gré des pauses : chaque coup blesse moins.
 const SCORE_DAMAGE := 0.6
@@ -229,6 +230,7 @@ func art_phase() -> int:
 
 
 func _projectiles_step(delta: float) -> void:
+	_place_roots()
 	_update_thorns(delta)
 	_update_roots(delta)
 	_update_embraces(delta)
@@ -305,14 +307,13 @@ func _begin(kind: String, strike_at := -1.0) -> void:
 			_set_timer(EMBRACE["annonce"])
 			exalted_attacks += 1
 	_strike_beat = -1.0
-	_roots_beat = -1.0
 	if strike_at >= 0.0 and on_music_grid():
-		# Partition : la frappe tombe sur son temps ; les racines, une par temps à partir de lui.
+		# Partition : la frappe tombe sur son temps. Les racines : la première jaillit sur lui, puis une
+		# par temps (_place_roots), pendant que l'attaque suivante s'annonce déjà.
 		_strike_beat = strike_at
 		if kind == "racines":
 			_roots_beat = strike_at - float(ANNOUNCE_BEATS["racines"])
 			_roots_placed = 0
-			_strike_beat = _roots_beat + float(cfg["roots"] - 1) + 0.05
 		_set_timer(maxf(0.0, (_strike_beat - beats_now()) * beat_len()))
 	elif is_exalted_phase() and kind != "racines":
 		# Phase exaltée sans partition : la frappe tombe sur un temps de la musique.
@@ -326,6 +327,24 @@ func _begin(kind: String, strike_at := -1.0) -> void:
 func _gap_angle(at: Vector2) -> float:
 	var away := at - anchor
 	return away.angle() if away.length() > 1.0 else PI * 0.5
+
+
+## Racines de la partition : une par temps sous le joueur, qui jaillit deux temps plus tard (sur un
+## temps) ; elles continuent pendant l'attaque suivante.
+func _place_roots() -> void:
+	if _roots_beat < 0.0:
+		return
+	if not on_music_grid():
+		_roots_beat = -1.0
+		return
+	var lead := float(ANNOUNCE_BEATS["racines"])
+	var n := int(PHASES[phase]["roots"])
+	while _roots_placed < n and beats_now() >= _roots_beat + _roots_placed - 0.001:
+		var fuse := (_roots_beat + _roots_placed + lead - beats_now()) * beat_len()
+		roots.append({"pos": main.player.position, "fuse": maxf(0.05, fuse), "burst": -1.0, "total": maxf(0.05, fuse)})
+		_roots_placed += 1
+	if _roots_placed >= n:
+		_roots_beat = -1.0
 
 
 func _set_timer(v: float) -> void:
@@ -350,9 +369,9 @@ func _plan_whips(count: int) -> void:
 		whips.append(_whip(a - side * 1.2 + PI, a + side * 1.9 + PI))
 
 
-## Entre deux salves : sur la partition, la subdivision du temps la plus proche.
+## Entre deux salves : sur la partition, une croche (les salves claquent en croches).
 func _volley_between() -> float:
-	return beat_step(VOLLEY["between"]) if _strike_beat >= 0.0 and on_music_grid() else VOLLEY["between"]
+	return beat_len() * 0.5 if _strike_beat >= 0.0 and on_music_grid() else VOLLEY["between"]
 
 
 func _whip(from: float, to: float) -> Dictionary:
@@ -369,13 +388,7 @@ func _announce_step(delta: float) -> void:
 				if to.length() > 1.0:
 					aim = to.normalized()
 		"racines":
-			if _roots_beat >= 0.0:
-				# Partition : une racine par temps, qui jaillit deux temps plus tard (sur un temps).
-				var lead := float(ANNOUNCE_BEATS["racines"])
-				while _roots_placed < int(PHASES[phase]["roots"]) and beats_now() >= _roots_beat + _roots_placed - 0.001:
-					var fuse := (_roots_beat + _roots_placed + lead - beats_now()) * beat_len()
-					roots.append({"pos": p.position, "fuse": maxf(0.05, fuse), "burst": -1.0, "total": maxf(0.05, fuse)})
-					_roots_placed += 1
+			if _strike_beat >= 0.0:
 				return
 			root_timer -= delta
 			if roots_left > 0 and root_timer <= 0.0:
@@ -466,7 +479,6 @@ func _end_attack() -> void:
 	whips = []
 	gap = PHASES[phase]["gap"]
 	_strike_beat = -1.0
-	_roots_beat = -1.0
 
 
 ## Blesse le joueur ; sur la partition, les coups des attaques blessent à SCORE_DAMAGE (« exact » :
@@ -597,8 +609,9 @@ func _score_step() -> void:
 	if nxt.is_empty():
 		return
 	var kind: String = nxt["kind"]
+	# Bourgeons déjà tous éclos : des racines à la place (elles ne retiennent pas l'attaque suivante).
 	if kind == "invocation" and minions.size() >= SUMMON["max_alive"]:
-		kind = "volee"
+		kind = "racines"
 	var lead: float = ANNOUNCE_BEATS.get(kind, 3)
 	var left: float = nxt["at"] - now
 	if left > lead:
@@ -923,6 +936,7 @@ func _clear_attacks() -> void:
 	embraces = []
 	waves = []
 	pricks = []
+	_roots_beat = -1.0
 
 
 ## Le robot tourne autour d'elle ; tant que l'arène est large, l'anneau extérieur est hors de portée

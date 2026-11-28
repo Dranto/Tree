@@ -267,6 +267,8 @@ var sync = null
 ## Approche (boss_track.gd › approach) : le début du morceau du boss se fait entendre à APPROACH_RANGE px
 ## de la zone qui le réveille, et monte jusqu'à elle.
 const APPROACH_RANGE := 1300.0
+## Le long du mur, jusqu'à APPROACH_FULL px dehors, on n'entend plus que l'intro du morceau.
+const APPROACH_FULL := 500.0
 const BossTrackRef = preload("res://scripts/boss_track.gd")
 
 
@@ -278,7 +280,7 @@ func approach_level() -> float:
 	var data := BossTrackRef.track_data(region)
 	if data.is_empty() or not data["clips"].has("approche"):
 		return 0.0
-	var d: float = main.player.position.distance_to(center) - (max_radius - 70.0)
+	var d: float = main.player.position.distance_to(center) - max_radius - APPROACH_FULL
 	return smoothstep(0.0, 1.0, 1.0 - clampf(d / APPROACH_RANGE, 0.0, 1.0))
 
 
