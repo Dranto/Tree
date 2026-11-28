@@ -169,6 +169,26 @@ func _run() -> void:
 			flips += 1
 		music._process(0.05)
 	check(flips == 0, "frontière longée : la musique reste sur sa région (aucun va-et-vient)")
+	# Approche de la Mère-Ronce (la mineur) dans Ronce (ré mineur) : le monde se tait vite, puis les
+	# bruitages passent sur la gamme du morceau.
+	var stub := GDScript.new()
+	stub.source_code = "extends Node\nvar boss_id := \"ronce\"\nvar lvl := 0.0\nfunc active() -> bool:\n\treturn true\nfunc level() -> float:\n\treturn lvl\nfunc stop() -> void:\n\tpass\nfunc follow(_a) -> void:\n\tpass\n"
+	stub.reload()
+	var fake_hand: Node = stub.new()
+	var old_hand = music.hand
+	music.hand = fake_hand
+	music.region = ""
+	music.groups = {"": {"players": {}, "gain": 1.0}}
+	check(not music.hand_in_key(), "Mère-Ronce (la mineur) dans Ronce (ré mineur) : gammes différentes")
+	music.hand_k = 0.2
+	var world_k: float = cos(clampf(music.hand_k / music._world_out(), 0.0, 1.0) * PI / 2.0)
+	check(world_k < 0.01, "à l'approche, la musique du monde s'est tue dès que le morceau monte (%.2f)" % world_k)
+	check(music.harmony()["scale"] == Harmony.hand_track("ronce")["scale"], "à l'approche : les bruitages suivent la gamme du morceau")
+	music.hand_k = 0.02
+	check(music.harmony()["scale"] == Harmony.region("")["scale"], "morceau encore à peine audible : la gamme de la région")
+	music.hand = old_hand
+	fake_hand.free()
+	music.hand_k = 0.0
 	music.groups = {}
 	music.region = ""
 	music.started = false

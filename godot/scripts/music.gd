@@ -55,6 +55,10 @@ const BED_BOSS := 0.55
 ## Sous un morceau de boss fait à la main (approche comprise), la musique du monde s'est tue quand le
 ## morceau a pris HAND_WORLD_OUT de sa part, et l'ambiance ne garde que BED_HAND de son volume.
 const HAND_WORLD_OUT := 0.6
+## … et dès HAND_WORLD_OUT_CLASH quand le morceau n'est pas dans la gamme de la région (la Mère-Ronce en
+## la mineur sur le ré mineur de Ronce) : à l'approche de l'arène, les deux gammes ne s'entendent presque
+## pas ensemble, et les bruitages passent sur la gamme du morceau dès qu'il domine (harmony).
+const HAND_WORLD_OUT_CLASH := 0.15
 const BED_HAND := 0.15
 
 var enabled := true
@@ -257,11 +261,16 @@ func heard_region() -> String:
 ## Ce qui sonne en ce moment (harmony.gd › context) : la gamme du morceau de boss fait à la main s'il joue,
 ## sinon la gamme et l'accord de la région qu'on entend. Les bruitages s'y accordent (sfx.gd).
 func harmony() -> Dictionary:
-	if hand_playing():
+	if hand_playing() and hand_k >= _world_out() * 0.5:
 		var h := Harmony.hand_track(str(hand.boss_id))
 		if not h.is_empty():
 			return Harmony.context(h)
 	return Harmony.context(Harmony.region(heard_region()), clock)
+
+
+## Part du morceau de boss à laquelle la musique du monde s'est tue.
+func _world_out() -> float:
+	return HAND_WORLD_OUT if hand_in_key() else HAND_WORLD_OUT_CLASH
 
 
 ## Vrai si le morceau de boss qui joue (ou aucun) est dans la gamme de la région : le fondu reste long.
@@ -346,7 +355,7 @@ func _apply() -> void:
 	if not enabled:
 		return
 	# Le morceau d'un boss passe seul : la musique du monde s'efface plus vite qu'il ne monte.
-	var world_k := cos(clampf(hand_k / HAND_WORLD_OUT, 0.0, 1.0) * PI / 2.0)
+	var world_k := cos(clampf(hand_k / _world_out(), 0.0, 1.0) * PI / 2.0)
 	var bed_k := 1.0 - (1.0 - BED_HAND) * hand_k
 	for id in groups:
 		var g: Dictionary = groups[id]
