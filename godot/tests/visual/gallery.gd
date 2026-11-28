@@ -198,6 +198,16 @@ func _ready_varies() -> void:
 			"invocateur":
 				e.aff_state = "invocateur"
 				e.aff_t = 0.4
+	# Modificateurs du New Game+ (jalon 14) : voilé qui s'annonce, siphonneur qui s'annonce, rémanent au repos.
+	var ng: Array = [["fletri", "voile", 0.3], ["colosse", "siphon", 0.5], ["cendreux", "remanent", 0.0]]
+	for i in ng.size():
+		var e = _enemy(stub, ng[i][0], Vector2(1080 + i * 250, 600), 1.3)
+		e.make_elite([ng[i][1]])
+		if ng[i][2] > 0.0:
+			e.aff_state = ng[i][1]
+			e.aff_t = float(e.ELITES["affixes"][ng[i][1]]["windup"]) * (1.0 - ng[i][2])
+		if ng[i][1] == "voile":
+			e.blink_to = e.position + Vector2(170, 90)
 
 
 func _ready_silhouettes() -> void:
@@ -320,6 +330,7 @@ func _draw() -> void:
 		draw_string(font, Vector2(20, 258), "Boursouflé", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
 		draw_string(font, Vector2(1040, 40), "Boule de cendre, Gardien d'écorce et ses protégés", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
 		draw_string(font, Vector2(20, 380), "Élites : rapide, enragé, cuirassé d'écorce, épineux, invocateur, deux modificateurs", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+		draw_string(font, Vector2(1000, 380), "New Game+ : voilé, siphonneur, rémanent", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
 		return
 	if page == "roncier":
 		for s in RONCIER_STATES.size():

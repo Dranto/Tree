@@ -76,13 +76,20 @@ func _run() -> void:
 	Demo.forced = -1
 	check(bridge.missing_api(_fake()).is_empty(), "le faux Steam a toutes les fonctions GodotSteam utilisées (API)")
 	check(bridge.missing_api(null) == bridge.API.keys(), "sans Steam, toutes les fonctions manquent")
-	check(bridge.ACHIEVEMENTS == ["BOSS_RONCE", "BOSS_SPORE", "BOSS_VENT", "BOSS_SEVE", "BOSS_AUBE", "BOSS_RACINE", "BOSS_FINALE"], "un succès par boss, noms convenus")
+	check(bridge.BOSS_ACHIEVEMENTS == ["BOSS_RONCE", "BOSS_SPORE", "BOSS_VENT", "BOSS_SEVE", "BOSS_AUBE", "BOSS_RACINE", "BOSS_FINALE"], "un succès par boss, noms convenus")
+	check(bridge.ACHIEVEMENTS == bridge.BOSS_ACHIEVEMENTS + ["CYCLE_2", "CYCLE_3"], "plus un succès par cycle fini (CYCLE_2, CYCLE_3)")
 	var Regions = load("res://scripts/regions.gd")
 	var all_flags := {"finale_vaincue": true}
 	for id in ["ronce", "spore", "vent", "seve", "aube", "racine"]:
 		all_flags[Regions.boss_flag(id)] = true
 		check(bridge.boss_achievement(id) in bridge.ACHIEVEMENTS, "région %s : succès %s" % [id, bridge.boss_achievement(id)])
-	check(bridge.earned(all_flags).size() == 7, "tous les boss vaincus : 7 succès")
+	check(bridge.earned(all_flags, 1).size() == 7, "tous les boss vaincus au cycle 1 : 7 succès, aucun de cycle")
+	check(bridge.earned(all_flags, 2).size() == 8 and "CYCLE_2" in bridge.earned(all_flags, 2) and not ("CYCLE_3" in bridge.earned(all_flags, 2)), "Flétrissure vaincue au cycle 2 : CYCLE_2")
+	check("CYCLE_2" in bridge.earned(all_flags, 3) and "CYCLE_3" in bridge.earned(all_flags, 3) and "CYCLE_3" in bridge.earned(all_flags, 5), "cycle 3 fini : CYCLE_2 et CYCLE_3 ; au-delà, rien de plus")
+	check(not ("CYCLE_2" in bridge.earned({"ronce_boss_vaincu": true}, 2)), "cycle 2 en cours, Flétrissure debout : pas de succès de cycle")
+	Demo.forced = 1
+	check(bridge.earned(all_flags, 3) == ["BOSS_RONCE"], "démo : aucun succès de cycle (pas de NG+)")
+	Demo.forced = -1
 	check(bridge.earned({"ronce_coeur_purifie": true, "spore_boss_vaincu": false}).is_empty(), "un Cœur purifié ou un drapeau faux ne débloque rien")
 
 	var f = _fake()
@@ -94,6 +101,17 @@ func _run() -> void:
 	check(f.achievements == ["BOSS_RONCE"] and f.stores == 1, "succès envoyé une fois, identifiant inconnu ignoré")
 	save.apply({"game": {"level": 9, "flags": {"vent_boss_vaincu": true, "finale_vaincue": true, "aube_coeur_purifie": true}}}, null)
 	check("BOSS_VENT" in f.achievements and "BOSS_FINALE" in f.achievements and not ("BOSS_AUBE" in f.achievements), "rattrapage au chargement : boss déjà vaincus débloqués")
+	game.cycle = 2
+	bridge.unlock_finale(root.get_node("Cycles").current())
+	check("CYCLE_2" in f.achievements and not ("CYCLE_3" in f.achievements), "mort de la Flétrissure au cycle 2 : CYCLE_2 envoyé")
+	game.cycle = 3
+	bridge.unlock_finale(root.get_node("Cycles").current())
+	check("CYCLE_3" in f.achievements and f.achievements.count("CYCLE_2") == 1, "au cycle 3 : CYCLE_3, sans renvoyer CYCLE_2")
+	f.achievements.clear()
+	bridge._unlocked.clear()
+	save.apply({"game": {"level": 9, "cycle": 2, "flags": {"finale_vaincue": true}}}, null)
+	check("CYCLE_2" in f.achievements, "rattrapage au chargement d'une sauvegarde de cycle 2 dont la Flétrissure est vaincue")
+	game.cycle = 1
 	var g = _fake()
 	g.init_ok = false
 	check(not bridge.attach(g) and not bridge.active(), "Steam qui refuse l'initialisation : le jeu continue sans")
@@ -206,7 +224,7 @@ func _run() -> void:
 	check("BOSS_" + main.arena.region.to_upper() in f.achievements, "mort de la Mère-Ronce : succès %s" % ("BOSS_" + main.arena.region.to_upper()))
 	if main.get("finale") != null:
 		main.finale.boss_defeated()
-		check("BOSS_FINALE" in f.achievements, "mort de la Flétrissure : succès BOSS_FINALE")
+		check("BOSS_FINALE" in f.achievements and not ("CYCLE_2" in f.achievements), "mort de la Flétrissure : succès BOSS_FINALE (cycle 1 : pas de succès de cycle)")
 	var TreeBuilds = load("res://scripts/tree_builds.gd")
 	var panel = TreeBuilds.new()
 	root.add_child(panel)
