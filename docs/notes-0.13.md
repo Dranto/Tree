@@ -37,14 +37,26 @@ Le son (passe d'Antoine) et le New Game+ viendront après cette version.
 
 ## Points connus (à surveiller, pas des bugs)
 
-- **Équilibrage reporté à la fin** : avec les builds Épines (Ronce) et Saignement, le robot meurt en masse
-  aux sièges des Cœurs (Ronce pour Épines, Aube pour Saignement). Depuis la correction du chemin
-  d'Épines dans l'arbre, les builds de Ronce vont droit à leur nœud clé sans le détour par Racine
-  qui leur donnait 110 PV. Les autres builds passent jusqu'au générique (14 à 17 morts).
+- **Équilibrage reporté à la fin** : les sièges des Cœurs de Ronce et d'Aube sont durs pour les builds
+  Épines et Saignement (le robot y meurt en masse et bloque parfois : Épines au Cœur de Ronce et
+  Saignement au Cœur d'Aube lors des essais du 27/11 ; Saignement au Cœur de Ronce de la démo sur ce build).
+  Depuis la correction du chemin d'Épines dans l'arbre, les builds de Ronce vont droit à leur nœud clé
+  sans le détour par Racine qui leur donnait 110 PV. Les autres builds vont jusqu'à la finale (16 à 23 morts).
 - Siège du Cœur ~+18 % de temps de frame par rapport à avant la refonte (cuissons du bord), non bloquant.
 - Rare : « Invalid polygon data, triangulation failed » vu une fois dans la console de la démo, sans effet visible.
 - Steam : les succès, la présence enrichie et le Cloud ne sont vérifiables qu'avec le vrai App ID.
 
 ## Robot d'aventure sur ce build
 
-ROBOT_RESULTATS
+Robot d'aventure lancé sur ce build le 28/11 (graine 1) :
+
+| Passage | Résultat | Morts | Temps de jeu |
+|---|---|---|---|
+| Jeu complet, variante 1 (Venin-sang → Ancrage) | vert, finale vaincue | 18 | 2714 s |
+| Jeu complet, variante 2 (Fouet → Pieux) | vert, finale vaincue | 16 | 2495 s |
+| Jeu complet, variante 4 (Bois sanglant → Ancrage) | vert, finale vaincue | 23 | 2285 s |
+| Démo, Épines | vert, Mère-Ronce et sceau de la graine | 14 | 1042 s |
+| Démo, Saignement | bloqué au siège du Cœur de Ronce (niveau 22) | 16 | 989 s |
+
+Le blocage de Saignement est l'écart d'équilibrage connu (voir plus haut) : aucune erreur de script,
+aucun avertissement de Godot hors fuites de sortie. Les sauvegardes et reprises (44 par passage complet) retrouvent la partie à l'identique.
