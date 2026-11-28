@@ -1224,6 +1224,9 @@ func _scenario_boss() -> void:
 	arena._start_fight()
 	arena.gap_open = 0.0
 	var boss = arena.boss
+	# Poses figées : la grille de son morceau (charge, invulnérable jusqu'au drop) ne s'en mêle pas.
+	if arena.sync != null:
+		arena.sync.stop()
 	boss.frozen = true
 	boss.intro = 0.0
 	boss.t = 0.6
@@ -1451,6 +1454,9 @@ func _scenario_marais() -> void:
 	arena._start_fight()
 	arena.gap_open = 0.0
 	var boss = arena.boss
+	# Poses figées : la grille de son morceau (charge, invulnérable jusqu'au drop) ne s'en mêle pas.
+	if arena.sync != null:
+		arena.sync.stop()
 	boss.frozen = true
 	boss.intro = 0.0
 	boss.t = 0.6
