@@ -27,7 +27,27 @@ static func threat(level: int, depth: float, hearts: int) -> float:
 		+ float(t.get("per_level", 0.1)) * (level - 1) \
 		+ float(t.get("depth", 0.0)) * clampf(depth, 0.0, 1.0) \
 		+ float(t.get("per_heart", 0.0)) * hearts
+	# New Game+ : un plancher de menace par cycle (data/cycles.json › threat_floor), 0 au cycle 1.
+	v = maxf(v, float(cycle_value("threat_floor", 0.0)))
 	return minf(v, float(t.get("max", 99.0)))
+
+
+## Autoload Cycles (jalon 14), null hors du jeu (outils sans autoloads).
+static func _cycles():
+	var tree := Engine.get_main_loop() as SceneTree
+	return tree.root.get_node_or_null("Cycles") if tree != null else null  # i18n: non
+
+
+## Cycle en cours (1 = première aventure) ; 1 hors du jeu.
+static func cycle_now() -> int:
+	var cycles = _cycles()
+	return int(cycles.current()) if cycles != null else 1
+
+
+## Valeur du cycle en cours (data/cycles.json), « default » hors du jeu.
+static func cycle_value(key: String, default = null):
+	var cycles = _cycles()
+	return cycles.value(key, default) if cycles != null else default
 
 
 ## Facteurs appliqués aux statistiques d'un ennemi de menace p (avant le choix de difficulté).

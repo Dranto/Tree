@@ -520,6 +520,8 @@ func _sprites_step() -> void:
 			_sprites_region = here
 			for kr in Enemy.Sprites.region_kinds(here):
 				Enemy.Sprites.request(kr[0])
+			for k in _cycle_mix_kinds(here):
+				Enemy.Sprites.request(k)
 	Enemy.Sprites.pump(self)
 
 
@@ -905,11 +907,45 @@ func _pick_kind(pos: Vector2):
 	if not bench_kinds.is_empty():
 		return bench_kinds[rng.randi() % bench_kinds.size()]
 	var reg := region_at(pos)
+	if Cycles.exalted():
+		var mixed := _cycle_mix_kind(reg, pos)
+		if mixed != "":
+			return mixed
 	if region_spawn.has(reg):
 		var regional := _region_kind(reg, pos)
 		if regional != "":
 			return regional
 	return _ordinary_kind()
+
+
+## New Game+ (jalon 14 M) : Flétri d'une autre région mêlé aux habitués. data/cycles.json › mix,
+## par région où naît l'ennemi (« ordinaires » hors région) : « share » des apparitions, sortes
+## tirées selon leurs poids, « min_dist » : distance minimale à la graine par sorte. "" : pas de mélange.
+func _cycle_mix_kind(reg: String, pos: Vector2) -> String:
+	var entry = Cycles.value("mix", {}).get(reg if reg != "" else "ordinaires", null)
+	if not entry is Dictionary or rng.randf() >= float(entry.get("share", 0.0)):
+		return ""
+	var min_dist: Dictionary = entry.get("min_dist", {})
+	var kinds := {}
+	var total := 0.0
+	for k in entry.get("kinds", {}):
+		if pos.length() >= float(min_dist.get(k, 0.0)) and Enemy.KIND_INDEX.has(k):
+			kinds[k] = float(entry["kinds"][k])
+			total += kinds[k]
+	var pick := rng.randf() * total
+	for k in kinds:
+		pick -= kinds[k]
+		if pick <= 0.0:
+			return k
+	return ""
+
+
+## Sortes mêlées aux habitués d'une région au cycle en cours (cuites à l'entrée dans la région).
+func _cycle_mix_kinds(reg: String) -> Array:
+	if not Cycles.exalted():
+		return []
+	var entry = Cycles.value("mix", {}).get(reg if reg != "" else "ordinaires", null)
+	return entry.get("kinds", {}).keys() if entry is Dictionary else []
 
 
 ## Flétri ordinaire tiré selon les poids de « ordinary », parmi les sortes permises à ce niveau
@@ -942,11 +978,14 @@ func _roll_elite(e, pos: Vector2) -> void:
 	if cfg.is_empty() or Game.level < int(cfg.get("min_level", 1)) or not e.can_be_elite():
 		return
 	var chance := lerpf(float(cfg.get("chance", 0.01)), float(cfg.get("chance_far", 0.03)), _region_depth(pos))
+	# New Game+ : data/cycles.json › elites (chance × chance_mult, plus d'élites à la fois, plus de doubles).
+	var cyc: Dictionary = Cycles.value("elites", {})
+	chance *= float(cyc.get("chance_mult", 1.0))
 	if rng.randf() >= chance:
 		return
-	if enemies.filter(func(x): return x.get("elite") == true).size() >= int(cfg.get("max_alive", 2)):
+	if enemies.filter(func(x): return x.get("elite") == true).size() >= int(cyc.get("max_alive", cfg.get("max_alive", 2))):
 		return
-	make_elite(e, rng.randf() < float(cfg.get("two_affixes", 0.0)) and Game.level >= int(cfg.get("two_affixes_level", 1)))
+	make_elite(e, rng.randf() < float(cyc.get("two_affixes", cfg.get("two_affixes", 0.0))) and Game.level >= int(cfg.get("two_affixes_level", 1)))
 
 
 ## Fait d'un ennemi une élite à un ou deux modificateurs tirés selon leurs poids.
