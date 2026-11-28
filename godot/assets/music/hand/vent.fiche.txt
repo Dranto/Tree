@@ -1,0 +1,30 @@
+# Fiche de repères d'harfang.wav (le Harfang de cendre, boss de Vent), morceau d'Antoine (28/11).
+# 160 BPM, 4/4 : mesures de 1,5 s, la mesure 1 commence au début du fichier (41 mesures, 61,5 s ; la 41
+# n'est que la queue de la dernière note).
+# Gamme mesurée le 28/11 (notes tenues, batterie écartée) : mi, si, sol, fa#, la, ré ; une mesure sur
+# deux l'accord de mi passe en majeur (sol#). Ni do ni do# : hand_track mi dorien (audio.json › vent),
+# pas le sol mixolydien de la zone (fa# et non fa).
+# Analyse du 28/11 (énergie par bande et coups de batterie, mesure par mesure) :
+#   1-6 nappe seule (mi mineur / mi majeur en alternance), 7 la montée (souffle), 8 coupure : la
+#   batterie se tait, un grand coup grave sur le dernier temps ; 9-23 le groove (phrases de 8 mesures,
+#   grosse caisse cassée, caisse claire sur 2 et en contretemps, charlestons serrés), 24 la même
+#   coupure que la 8, 25-40 le groove encore (25-32 = 33-40), puis le morceau s'arrête net (40) et sa
+#   dernière note s'éteint (41). Une seule matière de boucle : les phases varient par le jeu.
+bpm: 160
+mesure: 4/4
+debut: 0.0
+approche: 1-6           # la nappe, sous l'ambiance du monde, de plus en plus forte à mesure qu'on
+approche_boucle: 3-6    # approche de l'aire, puis en boucle tant qu'on n'est pas entré
+intro: 8                # à l'entrée : la coupure d'avant le drop, pendant qu'il charge
+boucle_1: 9-16          # le drop : le combat (phase 1)
+drop_1: 23-24           # la fin d'une phrase et la coupure (3 s) : passage en phase 2
+boucle_2: 25-40
+drop_2: 7-8             # la montée et la coupure : passage en phase 3
+boucle_3: 9-40          # tout le groove, coupure de la 24 comprise
+drop_3: 23-24           # phase exaltée (New Game+, cycle 2 et plus)
+boucle_4: 25-40
+fin: 40-41              # à sa mort : la dernière mesure, l'arrêt net et la queue
+# Coups de batterie : la caisse claire se lit plus haut que la basse et ses harmoniques (1,5-5 kHz),
+# les charlestons au-dessus de 9 kHz.
+bande_caisse: 1500-5000
+bande_charleston: 9000-16000
