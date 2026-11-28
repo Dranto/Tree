@@ -804,5 +804,11 @@ func _final() -> void:
 			print("  %-6s %4d s  niveau %2d → %2d  %2d morts  boss %3d s  %2d reprises  build %s%s" % [r, int(float(rp["fin"]) - float(rp["debut"])), rp["niveau_debut"], rp["niveau_fin"], rp["morts"], int(rp["boss"]), rp["reprises"], rp["build"], "  FORCÉE" if rp["forcee"] else ""])
 	if _finale_start >= 0.0:
 		print("  finale %4d s  %s" % [int(t - _finale_start), "vaincue" if game.flags.get("finale_vaincue", false) else "pas vaincue"])
+	if cycle_n >= 2:
+		var lines: Array = []
+		for r in order + ["finale"]:
+			var seen: Array = _boss_phases.get(r, [])
+			lines.append("%s %s" % [r, "".join(seen.map(func(p): return str(p)))])
+		print("  phases de boss vues (échantillonnées à chaque image ; 4 = phase exaltée) : " + ", ".join(lines))
 	for b in blocks:
 		print("  BLOCAGE : " + b)
