@@ -60,7 +60,7 @@ Outils de l'arbre (barre sous l'en-tête) :
 - **Chemin** : survoler un nœud éloigné montre le chemin le plus court, son coût et les statistiques avant → après. Un clic apprend tout le chemin si les points suffisent.
 - **Mode plan** : tracer un chemin sans dépenser de points, puis « Valider le plan » quand les points sont là. Le plan est sauvegardé avec la partie.
 - **Annuler** (Ctrl+Z) : défait le dernier choix (nœud appris, oublié, ou modification du plan).
-- **Résumé** : statistiques finales, compétences, nœuds clés et nombre de nœuds par branche, plan compris.
+- **Statistiques** (ex-Résumé) : statistiques finales, compétences, nœuds clés et nombre de nœuds par branche, plan compris.
 
 ### Son et musique
 

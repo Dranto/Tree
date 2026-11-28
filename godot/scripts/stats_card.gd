@@ -2,7 +2,7 @@
 ## « Statistiques » (C par défaut, clic du stick gauche à la manette ; réassignable dans Options →
 ## Commandes), le jeu garde son cours et une fiche posée à gauche donne vie, dégâts, vitesses,
 ## critique, défense, et l'attaque de base avec ses modificateurs cumulés. Aucune pause.
-## Les valeurs viennent de Game.stats, formatées comme la section Statistiques du Résumé de l'arbre
+## Les valeurs viennent de Game.stats, formatées comme la section Statistiques de l'arbre
 ## (TreePlanner.format_stat) ; l'attaque, de Attack.describe. Une valeur au-dessus de la base du
 ## héros est teintée de sa catégorie, sinon elle reste en encre douce.
 extends PanelContainer

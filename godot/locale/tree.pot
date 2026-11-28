@@ -8924,6 +8924,7 @@ msgstr ""
 
 #. scripts/stats_card.gd:54
 #. scripts/tree_panels.gd:633
+#. scripts/tree_panels.gd:94
 msgid "Statistiques"
 msgstr ""
 
@@ -9256,7 +9257,7 @@ msgid "Plan : %d nœuds, %d points. Tu as de quoi le valider."
 msgstr ""
 
 #. scripts/tree_panels.gd:581
-msgid "Résumé du build"
+msgid "Statistiques du build"
 msgstr ""
 
 #. scripts/tree_panels.gd:582
@@ -9310,10 +9311,6 @@ msgstr ""
 
 #. scripts/tree_panels.gd:92
 msgid "Annuler"
-msgstr ""
-
-#. scripts/tree_panels.gd:94
-msgid "Résumé"
 msgstr ""
 
 #. scripts/tree_planner.gd:218

@@ -8931,6 +8931,7 @@ msgstr "Nœud notable"
 
 #. scripts/stats_card.gd:54
 #. scripts/tree_panels.gd:633
+#. scripts/tree_panels.gd:94
 msgid "Statistiques"
 msgstr "Statistiques"
 
@@ -9267,8 +9268,8 @@ msgid "Plan : %d nœuds, %d points. Tu as de quoi le valider."
 msgstr "Plan : %d nœuds, %d points. Tu as de quoi le valider."
 
 #. scripts/tree_panels.gd:581
-msgid "Résumé du build"
-msgstr "Résumé du build"
+msgid "Statistiques du build"
+msgstr "Statistiques du build"
 
 #. scripts/tree_panels.gd:582
 msgid "%d nœuds appris sur %d  ·  %d point(s) à placer"
@@ -9322,10 +9323,6 @@ msgstr "Mode plan"
 #. scripts/tree_panels.gd:92
 msgid "Annuler"
 msgstr "Annuler"
-
-#. scripts/tree_panels.gd:94
-msgid "Résumé"
-msgstr "Résumé"
 
 #. scripts/tree_planner.gd:218
 msgid "nœud oublié"
