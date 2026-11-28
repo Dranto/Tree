@@ -21,7 +21,7 @@ const PIXEL_TOLERANCE := 24
 const MAX_DIFF_RATIO := 0.0005
 
 ## Chaque scénario est une partie lancée dans un processus neuf (l'état global repart de zéro).
-const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "paysages", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "vivant", "demo", "bestiaire", "frontieres", "cycle", "cycle_ui"]
+const SCENARIOS := ["depart", "combat", "resolution", "galerie", "competences", "boss", "roncier", "quetes", "charte", "interactions", "heros", "monde", "attaque", "regions", "marais", "plateaux", "carte5", "falaises", "vallee", "finale", "foret", "bord", "paysages", "menus", "cumul", "manette", "langue", "anglais", "eclat", "reaction", "vivant", "demo", "bestiaire", "frontieres", "cycle", "cycle_ui", "textes", "textes_en"]
 const GalleryScript = preload("res://tests/visual/gallery.gd")
 const CharteScript = preload("res://tests/visual/charte.gd")
 const HerosScript = preload("res://tests/visual/galerie_heros.gd")
@@ -38,6 +38,7 @@ const BordScript = preload("res://tests/visual/bord.gd")
 const FrontieresScript = preload("res://tests/visual/frontieres.gd")
 const CycleScript = preload("res://tests/visual/cycle.gd")
 const CycleUiScript = preload("res://tests/visual/cycle_ui.gd")
+const TextesScript = preload("res://tests/visual/textes.gd")
 const PaysagesScript = preload("res://tests/visual/paysages.gd")
 const DemoScript = preload("res://tests/visual/demo.gd")
 const BestiaireScript = preload("res://tests/visual/bestiaire.gd")
@@ -104,7 +105,7 @@ func _ready() -> void:
 	if scenario == "langue":
 		# Pseudo-langue (jalon 12) : textes allongés de 40 % et accentués, pour voir ce qui déborde.
 		Loc.apply(Loc.PSEUDO)
-	elif scenario == "anglais" or scenario == "cycle_ui":
+	elif scenario == "anglais" or scenario == "cycle_ui" or scenario == "textes_en":
 		# Mêmes écrans en anglais (jalon 12 J, partie 2).
 		Loc.apply("en")
 	if scenario == "carte5":
@@ -196,6 +197,8 @@ func _ready() -> void:
 			await CycleScript.new().run(self)
 		"cycle_ui":
 			await CycleUiScript.new().run(self)
+		"textes", "textes_en":
+			await TextesScript.new().run(self)
 	_finish_audit()
 	get_tree().quit(1 if failures > 0 else 0)
 

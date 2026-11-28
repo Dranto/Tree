@@ -1,0 +1,30 @@
+{
+  "_doc": "Mots-clés colorés des textes (scripts/rich_text.gd, jalon 14.5 T). « categories » : couleur (« color » sur le papier sombre de l'arbre, « color_access » plus tranchée en mode daltonien / contraste), glyphe dessiné par le code (affiché seulement avec un mode d'accessibilité, la couleur ne porte jamais seule l'information), mots en français (fr) et en anglais (en). Un mot s'écrit en minuscules, sans accent obligatoire ailleurs que dans sa forme ; « * » en fin de mot accepte la suite des lettres (« dégât* » : dégât, dégâts). Un mot ne se trouve qu'en début de mot (« survie » n'est pas « vie »). Une expression de plusieurs mots est aussi permise. « ignore » : expressions laissées en texte simple, prioritaires (le nom « Arbre de vie » n'est pas de la vie). Le plus long motif l'emporte. Vérifié par tests/rich_text_test.gd.",
+  "ignore": ["arbre de vie", "tree of life"],
+  "categories": {
+    "degats": {"color": "#f0786a", "color_access": "#ff8f80", "glyph": "pointe",
+      "fr": ["dégât*", "blessure*", "blesse*", "dommage*"],
+      "en": ["damage*", "wound*", "hurts"]},
+    "poison": {"color": "#c08af0", "color_access": "#d9a8ff", "glyph": "goutte",
+      "fr": ["poison*", "empoisonn*", "venin*", "toxi*"],
+      "en": ["poison*", "venom*", "toxic*"]},
+    "vie": {"color": "#78d284", "color_access": "#8cf09a", "glyph": "croix",
+      "fr": ["vie", "soin*", "soign*", "régénération", "régénère*", "guéri*", "vol de vie"],
+      "en": ["life", "health", "heal*", "regeneration", "regenerat*", "lifesteal"]},
+    "vitesse": {"color": "#6ab8f2", "color_access": "#86caff", "glyph": "chevrons",
+      "fr": ["vitesse*", "rapidité", "rapide*", "cadence*"],
+      "en": ["speed*", "haste*", "swift*", "fast*"]},
+    "critique": {"color": "#f2d06b", "color_access": "#ffe38a", "glyph": "etoile",
+      "fr": ["critique*", "crit"],
+      "en": ["critical*", "crit*"]},
+    "saignement": {"color": "#d65a9a", "color_access": "#f07cb4", "glyph": "goutte_creuse",
+      "fr": ["saign*", "hémorragi*"],
+      "en": ["bleed*", "bleeding"]},
+    "defense": {"color": "#d0a068", "color_access": "#e8b87c", "glyph": "ecu",
+      "fr": ["armure*", "écorce*", "défense*", "bouclier*", "résistan*", "protection*"],
+      "en": ["armor*", "armour*", "bark", "defense*", "defence*", "shield*", "resist*"]},
+    "recharge": {"color": "#a4bcd0", "color_access": "#bcd4e8", "glyph": "cycle",
+      "fr": ["recharge*", "rechargement*"],
+      "en": ["cooldown*", "recharge*", "reload*"]}
+  }
+}
