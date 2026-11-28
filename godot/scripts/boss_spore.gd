@@ -13,6 +13,13 @@
 ##                ce n'est pas un coup) ;
 ##   - mycélium (phase 3) : des filaments fendent le sol en lignes vers le joueur, puis jaillissent ;
 ##                l'arène se resserre (boss_arena.gd).
+## Cycle exalté (NG+, à partir du cycle 2, boss_base.gd › Cycle exalté) :
+##   - anneaux (phase exaltée, et phase 3 quand cycles.json le demande) : des ronds de sorcière
+##                partent de son pied l'un après l'autre, un par temps de sa musique, chacun ouvert d'une
+##                brèche (la première face au joueur, les suivantes décalées) : passer par les brèches ;
+##                l'annonce montre la première vague et sa brèche ;
+##   - phase exaltée (sous 22 % de sa vie) : le chapeau s'embrase d'encre, chaque coup tombe sur un
+##                temps, cinq anneaux par vague, plus d'invocation.
 ## Sa mort : le chapeau s'affaisse et se vide de ses spores ; à sa place pousse un cercle de
 ## champignons clairs dans la mousse (draw_victory).
 ##
@@ -24,8 +31,15 @@ const PHASE_LIMITS := [0.66, 0.33]
 const PHASES := {
 	1: {"gap": 1.3, "order": ["nuages", "salve", "onde", "nuages", "salve"], "clouds": 3, "volleys": 2, "spores": 7, "arms": 0},
 	2: {"gap": 1.1, "order": ["salve", "invocation", "nuages", "spirale", "onde"], "clouds": 4, "volleys": 2, "spores": 9, "arms": 2, "minions": 3},
-	3: {"gap": 0.9, "order": ["mycelium", "nuages", "spirale", "onde", "invocation", "salve"], "clouds": 5, "volleys": 3, "spores": 9, "arms": 3, "minions": 4, "lines": 3},
+	3: {"gap": 0.9, "order": ["mycelium", "nuages", "spirale", "onde", "invocation", "salve"], "clouds": 5, "volleys": 3, "spores": 9, "arms": 3, "minions": 4, "lines": 3, "rings": 3},
+	# Phase exaltée (cycle 2 et plus seulement).
+	4: {"gap": 0.8, "order": ["anneaux", "nuages", "salve", "anneaux", "mycelium", "spirale"], "clouds": 4, "volleys": 3, "spores": 11, "arms": 3, "minions": 0, "lines": 4, "rings": 5},
 }
+## Attaque nouvelle du cycle exalté (boss_base.gd › Cycle exalté).
+const EXALTED_ATTACK := "anneaux"
+## Ronds de sorcière : annonce, un anneau par temps (« every » temps de LOOP_BEAT), vitesse, largeur de
+## la bande, brèche (radians), décalage de la brèche d'un anneau au suivant, dégâts.
+const FAIRY := {"annonce": 1.0, "every": 1.0, "speed": 230.0, "width": 34.0, "gap": 1.05, "turn": 0.75, "damage": 16.0}
 const CLOUD := {"annonce": 1.0, "radius": 70.0, "spread": 170.0, "life": 3.2, "dps": 16.0, "tick": 0.5}
 const VOLLEY := {"annonce": 0.85, "between": 0.4, "damage": 12.0, "speed": 300.0, "radius": 9.0, "spread": 0.17}
 const WAVE := {"annonce": 1.05, "radius": 230.0, "radius_p3": 290.0, "damage": 22.0, "flash": 0.3}
@@ -57,6 +71,11 @@ var buds: Array = []
 ## Lignes du mycélium (directions) et éclair de leur frappe.
 var lines: Array = []
 var strike_flash := -1.0
+## Ronds de sorcière : brèches prévues de la vague en cours, et anneaux qui s'étendent
+## {"r", "gap", "hit", "born"}.
+var ring_gaps: Array = []
+var rings: Array = []
+var ring_timer := 0.0
 
 
 func _setup() -> void:
@@ -74,6 +93,7 @@ func _setup() -> void:
 func _projectiles_step(delta: float) -> void:
 	_update_spores(delta)
 	_update_clouds(delta)
+	_update_rings(delta)
 	if strike_flash >= 0.0:
 		strike_flash += delta
 		if strike_flash > WAVE["flash"]:
@@ -91,7 +111,7 @@ func _fight_step(delta: float) -> void:
 			return
 		gap -= delta * cad
 		if gap <= 0.0:
-			var order: Array = PHASES[phase]["order"]
+			var order: Array = exalted_order(PHASES[phase]["order"], EXALTED_ATTACK)
 			_begin(order[cycle % order.size()])
 			cycle += 1
 	elif stage == "annonce":
@@ -126,7 +146,7 @@ func _begin(kind: String) -> void:
 				if i > 0:
 					at = p + Vector2.from_angle(randf() * TAU) * randf_range(0.45, 1.0) * CLOUD["spread"]
 				at = _in_arena(at, CLOUD["radius"] * 0.5)
-				clouds.append({"pos": at, "fuse": CLOUD["annonce"], "life": CLOUD["life"] + (0.8 if phase == 3 else 0.0)})
+				clouds.append({"pos": at, "fuse": CLOUD["annonce"], "life": CLOUD["life"] + (0.8 if phase >= 3 else 0.0)})
 		"salve":
 			_set_timer(VOLLEY["annonce"])
 		"onde":
@@ -147,6 +167,19 @@ func _begin(kind: String) -> void:
 			var n: int = cfg.get("lines", 3)
 			for i in n:
 				lines.append(Vector2.from_angle(aim.angle() + (i - (n - 1) / 2.0) * MYCELIUM["fan"]))
+		"anneaux":
+			_set_timer(FAIRY["annonce"])
+			exalted_attacks += 1
+			# La première brèche fait face au joueur, les suivantes tournent d'un côté puis de l'autre.
+			ring_gaps = []
+			var side := 1.0 if cycle % 2 == 0 else -1.0
+			var a := aim.angle()
+			for i in int(cfg.get("rings", 3)):
+				ring_gaps.append(a)
+				a += side * FAIRY["turn"] * (1.0 if i % 2 == 0 else 0.6)
+	# Phase exaltée : la frappe tombe sur un temps de la musique.
+	if is_exalted_phase() and kind != "nuages":
+		_set_timer(loop_snap(timer))
 
 
 func _set_timer(v: float) -> void:
@@ -191,6 +224,10 @@ func _strike() -> void:
 		"spirale":
 			spiral_clock = 0.0
 			_set_timer(SPIRAL["duration"])
+		"anneaux":
+			# Un anneau tout de suite, puis un par temps de la musique.
+			ring_timer = 0.0
+			_set_timer(LOOP_BEAT * FAIRY["every"] * maxf(0.0, ring_gaps.size() - 1.0) + 0.05)
 		"invocation":
 			var kinds: Array = SUMMON["kinds"]
 			for i in buds.size():
@@ -212,6 +249,12 @@ func _strike() -> void:
 
 func _strike_step(delta: float) -> void:
 	match attack:
+		"anneaux":
+			ring_timer -= delta
+			if not ring_gaps.is_empty() and ring_timer <= 0.0:
+				ring_timer += LOOP_BEAT * FAIRY["every"]
+				rings.append({"r": radius * 0.9, "gap": ring_gaps.pop_front(), "hit": false, "born": t})
+				Sfx.play("nuage", anchor)
 		"salve":
 			volley_timer -= delta
 			if volleys_left > 0 and volley_timer <= 0.0:
@@ -241,7 +284,7 @@ func volley_dirs(offset := false) -> Array:
 
 
 func _wave_radius() -> float:
-	return WAVE["radius_p3"] if phase == 3 else WAVE["radius"]
+	return WAVE["radius_p3"] if phase >= 3 else WAVE["radius"]
 
 
 func _on_line(pos: Vector2, d: Vector2, margin: float) -> bool:
@@ -300,13 +343,37 @@ func _update_clouds(delta: float) -> void:
 			break
 
 
+## Vrai si pos est sur la bande de l'anneau g (hors de sa brèche), à « margin » près.
+func _on_ring(g: Dictionary, pos: Vector2, margin: float) -> bool:
+	var to := pos - anchor
+	if absf(to.length() - g["r"]) > FAIRY["width"] * 0.5 + margin:
+		return false
+	return absf(wrapf(to.angle() - g["gap"], -PI, PI)) > FAIRY["gap"] * 0.5
+
+
+func _update_rings(delta: float) -> void:
+	if rings.is_empty():
+		return
+	var p = main.player
+	var limit: float = arena.radius + anchor.distance_to(arena.center) + FAIRY["width"]
+	var kept: Array = []
+	for g in rings:
+		g["r"] += FAIRY["speed"] * delta
+		if not g["hit"] and _on_ring(g, p.position, p.radius * 0.5) and p.invuln <= 0.0:
+			g["hit"] = true
+			p.take_hit(FAIRY["damage"] * damage_scale, self)
+		if g["r"] < limit:
+			kept.append(g)
+	rings = kept
+
+
 func _enter_phase(n: int) -> void:
 	phase = n
 	transition = PHASE_PAUSE
 	cycle = 0
 	gap = 0.3
 	main.fx.ring(anchor, radius, 420.0, 0.7, Color(Art.ec("poison", "clair"), 0.9), 8.0)
-	if n != 2:
+	if n == 3:
 		arena.start_shrink()
 
 
@@ -341,6 +408,13 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 			for dir in lines:
 				if _on_line(pos, dir, margin):
 					best = minf(best, timer)
+		"anneaux":
+			if stage == "annonce":
+				best = minf(best, timer + maxf(0.0, d - radius) / FAIRY["speed"])
+	for g in rings:
+		var ahead: float = d - g["r"]
+		if ahead > -FAIRY["width"] and absf(wrapf(to.angle() - g["gap"], -PI, PI)) > FAIRY["gap"] * 0.5 - margin / maxf(d, 1.0):
+			best = minf(best, maxf(0.0, ahead) / FAIRY["speed"])
 	if d < radius + margin + 20.0:
 		best = minf(best, 0.0)
 	return best
@@ -353,6 +427,8 @@ func _clear_attacks() -> void:
 	clouds = []
 	buds = []
 	lines = []
+	rings = []
+	ring_gaps = []
 
 
 ## Le robot tourne autour d'elle, hors de l'onde quand elle s'annonce.
@@ -373,6 +449,7 @@ func bot_ring(arena_radius: float) -> float:
 
 const Art_ = preload("res://scripts/creature_art/spore/_amanite_mere.gd")
 const BodyCache = preload("res://scripts/boss_body_cache.gd")
+const Exalte = preload("res://scripts/boss_art/exalte.gd")
 
 ## Tournée vers la gauche (vers la dernière cible visée).
 var face_left := false
@@ -391,12 +468,12 @@ func pose() -> Dictionary:
 	if absf(aim.x) > 0.25:
 		face_left = aim.x < 0.0
 	# Gonflement pendant l'annonce (nuages, onde, spirale), recul juste après l'onde.
-	var swell := 1.0 + (0.1 * Anim.ease_out(k) if attack in ["nuages", "onde", "spirale"] else 0.0)
+	var swell := 1.0 + (0.1 * Anim.ease_out(k) if attack in ["nuages", "onde", "spirale", "anneaux"] else 0.0)
 	if strike_flash >= 0.0:
 		swell *= 1.0 - 0.12 * (1.0 - strike_flash / WAVE["flash"])
 	var lift := (1.0 if phase >= 2 else 0.0) * (1.0 - Anim.ease_out(die)) + 0.7 * Anim.ease_out(k) * float(attack == "spirale")
 	# Valeurs quantifiées : le corps est cuit une fois par pose (boss_body_cache.gd).
-	return {"t": t, "k": snappedf(k, 0.25) if stage == "annonce" and attack in ["nuages", "onde", "spirale", "invocation"] else 0.0, "attack": attack, "phase": phase,
+	return {"t": t, "k": snappedf(k, 0.25) if stage == "annonce" and attack in ["nuages", "onde", "spirale", "invocation", "anneaux"] else 0.0, "attack": attack, "phase": mini(phase, 3),
 		"die": snappedf(die, 0.1), "swell": snappedf(swell, 0.02), "lift": snappedf(lift, 0.25),
 		"hit": 1.0 if hit_flash > 0.0 else 0.0, "poison": poison_time > 0.0,
 		"ash": snappedf(Anim.ease_out(clampf(dying / death_time * 1.4, 0.0, 1.0)), 0.1) if dead else 0.0, "flip": face_left}
@@ -413,6 +490,10 @@ func _draw() -> void:
 	var b := sin(t * TAU / 3.2) * (0.0 if dead else 1.0)
 	var xf := Transform2D(0.0, Vector2(1.0 + 0.018 * b, 1.0 - 0.018 * b), 0.0, Vector2.ZERO)
 	_cache.paint(self, Art_, h, Vector2(0, radius * 0.35), pose(), xf, frozen or BodyCache.headless())
+	# Phase exaltée : couronne de flammes d'encre autour du chapeau, qui bat sur les temps.
+	var glow := exalt_glow()
+	if glow > 0.0:
+		Exalte.aura(self, Vector2(0, -h * 0.55), radius, 1.0, (glow - 0.55) / 0.45, t)
 
 
 ## Annonces au sol, en coordonnées monde (grammaire de Art.telegraph). L'invocation, qui ne blesse
@@ -441,6 +522,10 @@ func draw_marks(c: CanvasItem) -> void:
 			for b in buds:
 				c.draw_arc(b, 30.0 - 12.0 * k, 0.0, TAU, 24, Color(col, 0.35 + 0.5 * k), Art.TRAIT, true)
 				Art.volume_circle(c, b, 6.0 + 8.0 * k, Art.ec("poison", "sombre").lerp(Art.ec("poison"), k), 0.7)
+		"anneaux":
+			# La première vague et sa brèche : l'anneau se remplit depuis son pied jusqu'au bord.
+			if stage == "annonce" and not ring_gaps.is_empty():
+				Art.telegraph(c, _ring_shape(ring_gaps[0], radius * 0.9, _ring_reach()), k, -1.0, t)
 		"mycelium":
 			for d in lines:
 				Art.telegraph(c, {"type": "ligne", "de": anchor + d * radius * 0.6, "a": anchor + d * MYCELIUM["length"], "largeur": MYCELIUM["width"]}, k, -1.0, t)
@@ -460,8 +545,51 @@ func draw_marks(c: CanvasItem) -> void:
 			Art.telegraph(c, {"type": "cercle", "centre": anchor, "rayon": _wave_radius()}, 1.0, f, t)
 
 
+## Portée des ronds de sorcière : jusqu'au bord de l'arène du côté le plus loin.
+func _ring_reach() -> float:
+	return minf(arena.radius + anchor.distance_to(arena.center), 420.0)
+
+
+func _ring_shape(gap_a: float, r0: float, r1: float) -> Dictionary:
+	var half: float = FAIRY["gap"] * 0.5
+	return {"type": "anneau", "centre": anchor, "interieur": r0, "rayon": r1, "debut": gap_a + half, "fin": gap_a + TAU - half}
+
+
+## Un rond de sorcière qui s'étend : bande bordée de rouge, chapeaux de champignons qui y poussent,
+## rien dans la brèche.
+func _draw_ring(c: CanvasItem, g: Dictionary) -> void:
+	var r: float = g["r"]
+	var w: float = FAIRY["width"]
+	var half: float = FAIRY["gap"] * 0.5
+	var a0: float = g["gap"] + half
+	var a1: float = g["gap"] + TAU - half
+	var spore := Art.ec("poison")
+	var clair := Art.ec("poison", "clair")
+	var shape := _ring_shape(g["gap"], r - w * 0.5, r + w * 0.5)
+	c.draw_colored_polygon(Art.telegraph_polygon(shape, 1.0), Color(spore, 0.22))
+	var danger := Color(Art.c("danger"), 0.8)
+	c.draw_arc(anchor, r + w * 0.5, a0, a1, 64, danger, Art.TRAIT, true)
+	c.draw_arc(anchor, r - w * 0.5, a0, a1, 48, Color(danger, 0.45), Art.TRAIT_FIN, true)
+	# Chapeaux : un tous les ~28 px, qui sortent en grandissant.
+	var grow := clampf((t - float(g["born"])) / 0.25, 0.3, 1.0)
+	var n := maxi(6, int((a1 - a0) * r / 28.0))
+	var ink := Art.c("contour")
+	for i in n:
+		var a := lerpf(a0, a1, (i + 0.5) / n)
+		var q := anchor + Vector2.from_angle(a) * (r + w * 0.18 * sin(i * 2.3))
+		var cap := (6.0 + 2.5 * float(i % 3)) * grow
+		c.draw_line(q, q + Vector2(0, -cap * 0.9), ink, 2.4, true)
+		var top := q + Vector2(0, -cap * 0.9)
+		var dome := Art.ellipse(top, cap, cap * 0.55, 12)
+		c.draw_colored_polygon(dome, Art.bc("braise") if i % 5 == 0 else spore)
+		Art.outline(c, dome, ink, 1.4)
+		c.draw_circle(top + Vector2(-cap * 0.3, -cap * 0.15), cap * 0.18, clair)
+
+
 ## Spores en vol et nuages crevés, au-dessus des personnages, en coordonnées monde.
 func draw_overlay(c: CanvasItem) -> void:
+	for g in rings:
+		_draw_ring(c, g)
 	var spore := Art.ec("poison")
 	var clair := Art.ec("poison", "clair")
 	for cl in clouds:

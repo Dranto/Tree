@@ -256,7 +256,7 @@ def code_entries():
 
 # Champs de texte affichés au joueur. Pas encore affichés (à ajouter le jour où ils le seront) :
 # « theme » des grappes, « place » et « blurb » ; objectives.json (titres pour les robots et les tests).
-DATA_TEXT_KEYS = {"name", "text", "names", "desc", "title", "label", "short", "phases",
+DATA_TEXT_KEYS = {"name", "text", "names", "desc", "title", "label", "short", "phases", "phases_exaltees",
                   "requires_text", "head", "map_name", "lines"}
 DATA_SKIP_FILES = {"builds.json", "audio.json", "feel.json", "objectives.json"}
 NUM_RE = re.compile(r"(?<![^\W\d_])(?<![\d{])\d+(?:,\d+)?(?![^\W\d_])(?![\d}])")

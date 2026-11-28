@@ -80,6 +80,7 @@
     "bar_color": "#8a5cd0",
     "reward": {"points": 2, "graft": "greffe_sporange"},
     "phases": ["Phase 1 sur 3", "Phase 2 sur 3 : les lamelles s'ouvrent", "Phase 3 sur 3 : le mycélium se déchaîne"],
+    "phases_exaltees": ["Phase 1 sur 4", "Phase 2 sur 4 : les lamelles s'ouvrent", "Phase 3 sur 4 : le mycélium se déchaîne", "Phase 4 sur 4 : les ronds de sorcière"],
     "arena": {"radius": 440.0, "radius_min": 300.0, "offset": 700.0, "life_color": "poison/clair"}
   },
   "ambience": "marais",

@@ -887,6 +887,9 @@ static func _ember(ci: CanvasItem, p: Vector2, s: float, col: Color) -> void:
 #   {"type": "cercle", "centre": Vector2, "rayon": float}
 #   {"type": "cone", "centre": Vector2, "direction": float (radians), "ouverture": float (radians), "rayon": float}
 #   {"type": "ligne", "de": Vector2, "a": Vector2, "largeur": float}
+#   {"type": "anneau", "centre": Vector2, "interieur": float, "rayon": float, "debut": float, "fin": float}
+#     (bande entre deux cercles, de l'angle « debut » à « fin » en radians, toujours ouverte : la
+#     brèche est le chemin sûr ; elle se remplit de l'intérieur vers l'extérieur)
 const ANNONCE_CLIGNOTE := 0.75   ## à partir de cette progression, le contour clignote
 
 ## Dessine une attaque annoncée. progression : 0 → 1 pendant l'annonce. frappe : -1 tant que le coup
@@ -923,7 +926,7 @@ static func _telegraph_marks(out: PackedVector2Array, forme: Dictionary, full: P
 	var kind := str(forme.get("type", ""))
 	var o: Vector2
 	match kind:
-		"cercle", "cone":
+		"cercle", "cone", "anneau":
 			o = forme["centre"]
 		"ligne":
 			o = forme["de"]
@@ -955,6 +958,17 @@ static func _telegraph_marks(out: PackedVector2Array, forme: Dictionary, full: P
 			dir = v.normalized()
 			reach = v.length()
 			wing = minf(18.0, forme["largeur"] * 0.35)
+		"anneau":
+			# Anneau : des chevrons sur la bande, tournés vers l'extérieur, et rien dans la brèche.
+			var a0: float = forme["debut"]
+			var a1: float = forme["fin"]
+			var mid: float = (float(forme["interieur"]) + float(forme["rayon"])) / 2.0
+			wing = minf(14.0, (float(forme["rayon"]) - float(forme["interieur"])) * 0.4)
+			var count := maxi(2, int(absf(a1 - a0) * mid / 120.0))
+			for i in count:
+				var d := Vector2.from_angle(lerpf(a0, a1, (i + 0.5) / count))
+				_chevron(out, o + d * (mid + wing * (0.2 + 0.4 * fposmod(t * 1.5, 1.0))), d, wing)
+			return
 		_:
 			# Cercle : quatre chevrons sur le bord, tournés vers l'extérieur (la zone éclate).
 			var r: float = forme["rayon"]
@@ -1023,6 +1037,17 @@ static func telegraph_polygon(forme: Dictionary, k: float) -> PackedVector2Array
 			var b: Vector2 = a.lerp(forme["a"], k)
 			var n: Vector2 = (forme["a"] - a).normalized().orthogonal() * forme["largeur"] / 2.0
 			pts.append_array([a + n, b + n, b - n, a - n])
+		"anneau":
+			var o: Vector2 = forme["centre"]
+			var r0: float = forme["interieur"]
+			var r1: float = maxf(r0 + 1.0, lerpf(r0, float(forme["rayon"]), k))
+			var a0: float = forme["debut"]
+			var a1: float = forme["fin"]
+			var n := maxi(6, int(absf(a1 - a0) / TAU * 48.0))
+			for i in n + 1:
+				pts.append(o + Vector2.from_angle(lerpf(a0, a1, float(i) / n)) * r1)
+			for i in n + 1:
+				pts.append(o + Vector2.from_angle(lerpf(a1, a0, float(i) / n)) * r0)
 		_:
 			push_error("Art.telegraph : forme inconnue « %s »" % forme.get("type", ""))
 	return pts
