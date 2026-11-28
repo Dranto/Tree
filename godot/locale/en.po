@@ -7082,8 +7082,8 @@ msgstr "The Glass Moth"
 #. data/regions/racine.json › racine › boss › phases
 #. data/regions/racine.json › racine › boss › phases_exaltees
 #. data/regions/ronce.json › ronce › boss › phases
-#. data/regions/seve.json › seve › boss › phases
-#. … et 3 autres
+#. data/regions/ronce.json › ronce › boss › phases_exaltees
+#. … et 6 autres
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1}"
 msgstr "Phase {0} of {1}"
@@ -7220,14 +7220,21 @@ msgid "La Mère-Ronce"
 msgstr "The Bramble Mother"
 
 #. data/regions/ronce.json › ronce › boss › phases
+#. data/regions/ronce.json › ronce › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : les bourgeons éclosent"
 msgstr "Phase {0} of {1}: the buds burst open"
 
 #. data/regions/ronce.json › ronce › boss › phases
+#. data/regions/ronce.json › ronce › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : les ronces se resserrent"
 msgstr "Phase {0} of {1}: the brambles close in"
+
+#. data/regions/ronce.json › ronce › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : la rose s'embrase"
+msgstr "Phase {0} of {1}: the rose catches fire"
 
 #. data/regions/ronce.json › ronce › heart › name
 #. scripts/heart.gd:57
@@ -7346,14 +7353,21 @@ msgid "L'Amanite-Mère"
 msgstr "The Amanita Mother"
 
 #. data/regions/spore.json › spore › boss › phases
+#. data/regions/spore.json › spore › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : le mycélium se déchaîne"
 msgstr "Phase {0} of {1}: the mycelium runs wild"
 
 #. data/regions/spore.json › spore › boss › phases
+#. data/regions/spore.json › spore › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : les lamelles s'ouvrent"
 msgstr "Phase {0} of {1}: the gills open"
+
+#. data/regions/spore.json › spore › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : les ronds de sorcière"
+msgstr "Phase {0} of {1}: the fairy rings"
 
 #. data/regions/spore.json › spore › map_name
 msgid "Marais"
@@ -7404,14 +7418,21 @@ msgid "Le Harfang de cendre"
 msgstr "The Ash Owl"
 
 #. data/regions/vent.json › vent › boss › phases
+#. data/regions/vent.json › vent › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : la tempête se lève"
 msgstr "Phase {0} of {1}: the storm rises"
 
 #. data/regions/vent.json › vent › boss › phases
+#. data/regions/vent.json › vent › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : le Harfang prend son envol"
 msgstr "Phase {0} of {1}: the Owl takes flight"
+
+#. data/regions/vent.json › vent › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : les ailes de braise"
+msgstr "Phase {0} of {1}: wings of embers"
 
 #. data/regions/vent.json › vent › map_name
 msgid "Plateaux"
@@ -7909,7 +7930,7 @@ msgstr "Snared"
 msgid "Accroché !"
 msgstr "Latched!"
 
-#. scripts/boss_vent.gd:116
+#. scripts/boss_vent.gd:140
 #. scripts/enemy_behaviors/glider.gd:70
 msgid "Hors d'atteinte"
 msgstr "Out of reach"

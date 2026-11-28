@@ -15,6 +15,9 @@
       "mix": {},
       "elites": {},
       "bosses": {
+        "ronce": {"phase_exaltee": 0.22},
+        "spore": {"phase_exaltee": 0.22},
+        "vent": {"phase_exaltee": 0.22},
         "seve": {"phase_exaltee": 0.22, "attaque_en_phase_3": false},
         "aube": {"phase_exaltee": 0.22, "attaque_en_phase_3": false},
         "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": false}
@@ -28,6 +31,9 @@
       "mix": {},
       "elites": {},
       "bosses": {
+        "ronce": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
+        "spore": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
+        "vent": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
         "seve": {"phase_exaltee": 0.22, "attaque_en_phase_3": true},
         "aube": {"phase_exaltee": 0.22, "attaque_en_phase_3": true},
         "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": true}

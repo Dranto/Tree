@@ -8,6 +8,14 @@
 ##   - invocation (dès la phase 2) : des bourgeons éclosent en petits Flétris ;
 ##   - en phase 3, l'arène rétrécit (boss_arena.gd) : plus d'anneau à l'abri des fouets.
 ##
+## Cycle exalté (NG+, à partir du cycle 2, boss_base.gd › Cycle exalté) :
+##   - étreinte (phase exaltée, et phase 3 quand cycles.json le demande) : un anneau de ronces se
+##     referme autour du joueur, ouvert d'une brèche tournée à l'opposé d'elle (anneau au sol qui suit le joueur puis se fige) ; la bande
+##     jaillit, puis reste un moment hérissée et blesse qui la traverse : sortir par la brèche ;
+##   - phase exaltée (sous 22 % de sa vie) : la rose s'embrase d'encre, chaque coup tombe sur un temps
+##     de sa musique, l'étreinte se double d'une racine en son centre (il faut sortir de l'anneau),
+##     les fouets tournent comme en phase 3, plus d'invocation.
+##
 ## Le socle commun (vie, phases, états, mort, interface d'ennemi) est dans boss_base.gd ; ce
 ## fichier ne décrit que ses attaques et son dessin. Nommée dans data/regions/ronce.json › boss.
 extends BossBase
@@ -16,6 +24,7 @@ const Mere = preload("res://scripts/creature_art/ronce/_mere_ronce.gd")
 const O = preload("res://scripts/creature_art/ronce/_outils.gd")
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const BossBake = preload("res://scripts/boss_bake.gd")
+const Exalte = preload("res://scripts/boss_art/exalte.gd")
 
 const RADIUS := 70.0
 const INTRO := 1.4
@@ -32,7 +41,14 @@ const PHASES := {
 	1: {"gap": 1.7, "order": ["volee", "racines", "fouets"], "thorns": 7, "volleys": 1, "roots": 3, "whips": 1, "minions": 0},
 	2: {"gap": 1.3, "order": ["volee", "invocation", "fouets", "racines"], "thorns": 9, "volleys": 2, "roots": 4, "whips": 2, "minions": 4},
 	3: {"gap": 1.0, "order": ["fouets", "volee", "racines", "invocation"], "thorns": 11, "volleys": 3, "roots": 5, "whips": 2, "minions": 5},
+	# Phase exaltée (cycle 2 et plus seulement).
+	4: {"gap": 0.85, "order": ["etreinte", "fouets", "volee", "etreinte", "racines"], "thorns": 13, "volleys": 3, "roots": 6, "whips": 2, "minions": 0},
 }
+## Attaque nouvelle du cycle exalté (boss_base.gd › Cycle exalté).
+const EXALTED_ATTACK := "etreinte"
+## Étreinte : anneau (rayons intérieur et extérieur), brèche (radians), annonce dont la part « lock »
+## finale est figée, dégâts du jaillissement, puis le roncier tient « hold » s et pique tous les « tick ».
+const EMBRACE := {"annonce": 1.25, "lock": 0.45, "inner": 62.0, "outer": 132.0, "gap": 1.1, "damage": 20.0, "flash": 0.3, "hold": 1.8, "tick": 0.5, "wall_damage": 8.0}
 const VOLLEY := {"annonce": 0.9, "between": 0.35, "damage": 14.0, "speed": 360.0, "radius": 8.0, "spread": 0.2}
 const WHIP := {"annonce": 1.1, "frappe": 0.75, "damage": 20.0, "length": 340.0, "width": 22.0}
 const ROOT := {"every": 0.45, "fuse": 0.85, "damage": 18.0, "radius": 64.0, "burst": 0.35}
@@ -64,6 +80,8 @@ var roots: Array = []
 var whips: Array = []
 ## Bourgeons de l'invocation en cours (positions).
 var buds: Array = []
+## Étreintes : {"pos", "gap" (angle de la brèche), "fuse" (avant de jaillir), "hold" (après), "tick"}.
+var embraces: Array = []
 
 
 ## Nombres du socle (boss_base.gd) : ceux de la Mère-Ronce.
@@ -81,9 +99,24 @@ func _setup() -> void:
 	max_bleed_stacks = BLEED_STACKS
 
 
+## Ordre des attaques de la phase en cours (l'étreinte glissée en phase 3 si le cycle le veut).
+func _order() -> Array:
+	return exalted_order(PHASES[phase]["order"], EXALTED_ATTACK)
+
+
+func _exalt_color() -> Color:
+	return Art.bc("braise")
+
+
+## Phase du dessin : la phase exaltée garde le dessin de la phase 3 (rose à cœur ouvert).
+func art_phase() -> int:
+	return mini(phase, 3)
+
+
 func _projectiles_step(delta: float) -> void:
 	_update_thorns(delta)
 	_update_roots(delta)
+	_update_embraces(delta)
 
 
 func _fight_step(delta: float) -> void:
@@ -95,7 +128,7 @@ func _fight_step(delta: float) -> void:
 			return
 		gap -= delta * cad
 		if gap <= 0.0:
-			var order: Array = PHASES[phase]["order"]
+			var order: Array = _order()
 			_begin(order[cycle % order.size()])
 			cycle += 1
 	elif stage == "annonce":
@@ -138,6 +171,21 @@ func _begin(kind: String) -> void:
 			for i in n:
 				var a := aim.angle() + PI + (i - (n - 1) / 2.0) * 0.55
 				buds.append(anchor + Vector2.from_angle(a) * 170.0)
+		"etreinte":
+			_set_timer(EMBRACE["annonce"])
+			exalted_attacks += 1
+	# Phase exaltée : la frappe tombe sur un temps de la musique.
+	if is_exalted_phase() and kind != "racines":
+		_set_timer(loop_snap(timer))
+	if kind == "etreinte":
+		var at: Vector2 = main.player.position
+		embraces.append({"pos": at, "gap": _gap_angle(at), "fuse": timer, "total": timer, "hold": EMBRACE["hold"], "tick": 0.0, "flash": -1.0})
+
+
+## La brèche de l'étreinte est tournée à l'opposé de la Mère-Ronce.
+func _gap_angle(at: Vector2) -> float:
+	var away := at - anchor
+	return away.angle() if away.length() > 1.0 else PI * 0.5
 
 
 func _set_timer(v: float) -> void:
@@ -181,6 +229,13 @@ func _announce_step(delta: float) -> void:
 				root_timer = ROOT["every"]
 				roots_left -= 1
 				roots.append({"pos": p.position, "fuse": ROOT["fuse"], "burst": -1.0})
+		"etreinte":
+			# L'anneau suit le joueur, puis se fige pour la fin de l'annonce.
+			if timer > stage_time * EMBRACE["lock"] and not embraces.is_empty():
+				var e: Dictionary = embraces[embraces.size() - 1]
+				if e["fuse"] > 0.0:
+					e["pos"] = _in_arena(p.position, EMBRACE["inner"])
+					e["gap"] = _gap_angle(e["pos"])
 
 
 func _strike() -> void:
@@ -199,6 +254,9 @@ func _strike() -> void:
 				minions.append(main.spawn_enemy_at(b, 1))
 				main.fx.ring(b, 6.0, 46.0, 0.35, Color(1.0, 0.5, 0.3, 0.8), 3.0)
 			buds = []
+			_end_attack()
+		"etreinte":
+			# L'anneau jaillit de lui-même (son « fuse ») : l'attaque est finie.
 			_end_attack()
 
 
@@ -298,8 +356,56 @@ func _enter_phase(n: int) -> void:
 	cycle = 0
 	gap = 0.3
 	main.fx.ring(anchor, radius, 420.0, 0.7, Color(1.0, 0.45, 0.3, 0.9), 8.0)
-	if n != 2:
+	if n == 3:
 		arena.start_shrink()
+
+
+## Garde un point dans l'arène (à « margin » du bord).
+func _in_arena(p: Vector2, margin: float) -> Vector2:
+	var to: Vector2 = p - arena.center
+	return arena.center + to.limit_length(maxf(40.0, arena.radius - margin))
+
+
+## Vrai si pos est sur la bande de l'étreinte e (hors de la brèche), à « margin » près.
+func _on_embrace(e: Dictionary, pos: Vector2, margin: float) -> bool:
+	var to: Vector2 = pos - e["pos"]
+	var d := to.length()
+	if d < EMBRACE["inner"] - margin or d > EMBRACE["outer"] + margin:
+		return false
+	return absf(wrapf(to.angle() - e["gap"], -PI, PI)) > EMBRACE["gap"] * 0.5
+
+
+func _update_embraces(delta: float) -> void:
+	if embraces.is_empty():
+		return
+	var p = main.player
+	var kept: Array = []
+	for e in embraces:
+		if e["flash"] >= 0.0:
+			e["flash"] += delta
+		if e["fuse"] > 0.0:
+			e["fuse"] -= delta * cadence()
+			if e["fuse"] <= 0.0:
+				e["flash"] = 0.0
+				e["tick"] = EMBRACE["tick"]
+				main.fx.ring(e["pos"], EMBRACE["inner"], EMBRACE["outer"] + 10.0, 0.3, Color(Art.c("danger_eclair"), 0.8), 5.0)
+				main.fx.shake(0.25)
+				Sfx.play("racine", e["pos"])
+				if _on_embrace(e, p.position, p.radius * 0.5) and p.invuln <= 0.0:
+					p.take_hit(EMBRACE["damage"] * damage_scale, self)
+				# Phase exaltée : une racine jaillit au centre, il faut sortir par la brèche.
+				if is_exalted_phase():
+					roots.append({"pos": e["pos"], "fuse": ROOT["fuse"], "burst": -1.0})
+		else:
+			e["hold"] -= delta
+			e["tick"] -= delta
+			if e["tick"] <= 0.0:
+				e["tick"] = EMBRACE["tick"]
+				if _on_embrace(e, p.position, p.radius * 0.3) and p.invuln <= 0.0:
+					p.take_hit(EMBRACE["wall_damage"] * damage_scale, self)
+		if e["fuse"] > 0.0 or e["hold"] > 0.0:
+			kept.append(e)
+	embraces = kept
 
 
 ## Temps avant qu'une attaque annoncée ou en cours touche ce point (INF si rien ne le menace).
@@ -314,6 +420,12 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 		var u := clampf((pos - th["pos"]).dot(v) / v.length_squared(), 0.0, 1.5)
 		if (th["pos"] + v * u).distance_to(pos) < VOLLEY["radius"] + margin:
 			best = minf(best, u)
+	for e in embraces:
+		if _on_embrace(e, pos, margin):
+			best = minf(best, maxf(e["fuse"], 0.0))
+		elif e["fuse"] > 0.0 and is_exalted_phase() and pos.distance_to(e["pos"]) < EMBRACE["inner"]:
+			# Dans l'anneau en phase exaltée : la racine du centre suivra.
+			best = minf(best, e["fuse"] + ROOT["fuse"])
 	var to := pos - anchor
 	var d := to.length()
 	if attack == "volee":
@@ -345,6 +457,7 @@ func _clear_attacks() -> void:
 	roots = []
 	whips = []
 	buds = []
+	embraces = []
 
 
 ## Le robot tourne autour d'elle ; tant que l'arène est large, l'anneau extérieur est hors de portée
@@ -428,13 +541,13 @@ func _draw() -> void:
 	var xf := _body_xf()
 	var ux := xf * Transform2D(0.0, Vector2.ONE * Mere.HEIGHT / 100.0, 0.0, Vector2.ZERO)
 	var atlas = BossBake.get_atlas(self, Mere)
-	var anim := "mort" if dead else "p%d" % phase
+	var anim := "mort" if dead else "p%d" % art_phase()
 	var u := dk if dead else fposmod(t / Mere.LOOP, 1.0)
-	_draw_part(atlas, "sol", "p%d" % phase, 0.0, xf, {"groupe": "sol", "phase": phase})
+	_draw_part(atlas, "sol", "p%d" % art_phase(), 0.0, xf, {"groupe": "sol", "phase": art_phase()})
 	# Lianes au repos derrière elle (une de plus à chaque phase), qui ondulent ; elles rentrent à la mort.
 	if dk < 0.5:
 		_rest_vines(ux, 1.0 - dk * 2.0)
-	var o := {"phase": phase, "t": fposmod(t, Mere.LOOP)}
+	var o := {"phase": art_phase(), "t": fposmod(t, Mere.LOOP)}
 	if dead:
 		o = {"phase": 3, "die": dk}
 	_draw_part(atlas, "corps", anim, u, xf, o, not dead)
@@ -465,8 +578,8 @@ func _draw_part(atlas, group: String, anim: String, u: float, xf: Transform2D, o
 
 ## Les fouets au repos : de longues tiges de ronce qui sortent de derrière elle et ondulent.
 func _rest_vines(ux: Transform2D, k: float) -> void:
-	var rage: float = [0.0, 0.5, 1.0][phase - 1]
-	var n := 2 + phase
+	var rage: float = [0.0, 0.5, 1.0][art_phase() - 1]
+	var n := 2 + art_phase()
 	var cane := Art.bc("ronce", "detail").lerp(Art.bc("ronce", "ombre"), 0.4)
 	var bone := Art.bc("os")
 	for i in n:
@@ -499,6 +612,10 @@ func draw_life(c: CanvasItem) -> void:
 	var ux := xf * Transform2D(0.0, Vector2.ONE * Mere.HEIGHT / 100.0, 0.0, Vector2.ZERO)
 	var heart: Vector2 = ux * Mere.HEART
 	var mid: Vector2 = ux * Vector2(0, -60)
+	# Phase exaltée : couronne de flammes d'encre qui bat sur les temps de sa musique.
+	var glow := exalt_glow()
+	if glow > 0.0:
+		Exalte.aura(c, mid, radius, 1.0, (glow - 0.55) / 0.45, t)
 	if statuses.has("saignement"):
 		Art.status(c, "saignement", mid, radius * 0.7, t * 1.25)
 		for i in int(statuses["saignement"]["stacks"]):
@@ -569,6 +686,17 @@ func draw_marks(c: CanvasItem) -> void:
 					var tang := Vector2.from_angle(a + sgn * PI / 2.0)
 					var out := Vector2.from_angle(a)
 					c.draw_polyline(PackedVector2Array([mid - tang * 10.0 + out * 12.0, mid + tang * 8.0, mid - tang * 10.0 - out * 12.0]), Color(col, 0.6), Art.TRAIT, true)
+	for e in embraces:
+		var forme := _embrace_shape(e)
+		if e["fuse"] > 0.0:
+			Art.telegraph(c, forme, 1.0 - clampf(e["fuse"] / maxf(e["total"], 0.01), 0.0, 1.0), -1.0, t)
+		elif e["flash"] < EMBRACE["flash"]:
+			Art.telegraph(c, forme, 1.0, e["flash"] / EMBRACE["flash"], t)
+		else:
+			# Le roncier tient : son bord reste rouge tant qu'il pique.
+			var fade := clampf(e["hold"] / 0.4, 0.0, 1.0)
+			c.draw_arc(e["pos"], EMBRACE["outer"], forme["debut"], forme["fin"], 40, Color(Art.c("danger"), 0.5 * fade), Art.TRAIT_FIN, true)
+			c.draw_arc(e["pos"], EMBRACE["inner"], forme["debut"], forme["fin"], 30, Color(Art.c("danger"), 0.5 * fade), Art.TRAIT_FIN, true)
 	for r in roots:
 		var forme := {"type": "cercle", "centre": r["pos"], "rayon": ROOT["radius"]}
 		if r["burst"] < 0.0:
@@ -592,6 +720,37 @@ func draw_marks(c: CanvasItem) -> void:
 		Ink.part(c, Transform2D.IDENTITY, gall, O.pal(), 1.6, 1.0, 0.6)
 		if k > 0.5:
 			Ink.ember(c, Transform2D.IDENTITY, Ink.leaf(b + Vector2(-size * 0.3, -size * 0.9), -0.2, size * 0.5, size * 0.25), k)
+
+
+## Forme d'annonce d'une étreinte : l'anneau, sans sa brèche.
+func _embrace_shape(e: Dictionary) -> Dictionary:
+	var half: float = EMBRACE["gap"] * 0.5
+	return {"type": "anneau", "centre": e["pos"], "interieur": EMBRACE["inner"], "rayon": EMBRACE["outer"], "debut": e["gap"] + half, "fin": e["gap"] + TAU - half}
+
+
+## Le roncier d'une étreinte jaillie : des tiges épineuses dressées tout le long de l'anneau, qui
+## sortent d'un coup et rentrent à la fin.
+func _draw_embrace(c: CanvasItem, e: Dictionary) -> void:
+	var rise := clampf(e["flash"] / 0.12, 0.0, 1.0) * clampf(e["hold"] / 0.35, 0.0, 1.0)
+	if rise <= 0.0:
+		return
+	var half: float = EMBRACE["gap"] * 0.5
+	var body := Art.bc("ronce", "detail").lerp(Art.bc("ronce", "ombre"), 0.4)
+	var bone := Art.bc("os")
+	var n := 16
+	for i in n:
+		var a: float = e["gap"] + half + (TAU - 2.0 * half) * (i + 0.5) / n
+		var band: float = lerpf(EMBRACE["inner"], EMBRACE["outer"], 0.3 + 0.4 * float(i % 2))
+		var foot: Vector2 = e["pos"] + Vector2.from_angle(a) * band * Vector2(1.0, 0.85)
+		var h := (34.0 + 16.0 * float((i * 7) % 3)) * rise
+		var tip := foot + Vector2(cos(a) * 8.0, -h)
+		var w := 7.0 + 2.0 * float(i % 2)
+		var spike := PackedVector2Array([foot + Vector2(-w, 0), tip, foot + Vector2(w, 0)])
+		Art.outline(c, spike, Art.bc("encre"), Art.TRAIT)
+		c.draw_colored_polygon(PackedVector2Array([foot + Vector2(-w, 0), tip, foot]), body.lightened(0.2))
+		c.draw_colored_polygon(PackedVector2Array([foot, tip, foot + Vector2(w, 0)]), body.darkened(0.3))
+		var d := (tip - foot).normalized()
+		c.draw_colored_polygon(PackedVector2Array([tip - d * 9.0 + d.orthogonal() * 2.5, tip + d * 3.0, tip - d * 9.0 - d.orthogonal() * 2.5]), bone)
 
 
 ## Fouet (liane épineuse) en coordonnées monde : encre, tige de ronce, épines d'os.
@@ -642,6 +801,9 @@ func draw_overlay(c: CanvasItem) -> void:
 			var tip: Vector2 = pts[12] + d * 18.0
 			var side := d.orthogonal() * 7.0
 			c.draw_colored_polygon(PackedVector2Array([pts[12] + side, tip, pts[12] - side]), Art.bc("os"))
+	for e in embraces:
+		if e["fuse"] <= 0.0:
+			_draw_embrace(c, e)
 	for r in roots:
 		if r["burst"] >= 0.0:
 			var pos: Vector2 = r["pos"]
