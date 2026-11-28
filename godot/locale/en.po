@@ -7930,11 +7930,11 @@ msgstr "Phase 2 of 3: the buds burst open"
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 of 3: the brambles close in"
 
-#. scripts/boss_base.gd:512
+#. scripts/boss_base.gd:516
 msgid "Exaltation"
 msgstr "Exaltation"
 
-#. scripts/boss_base.gd:637
+#. scripts/boss_base.gd:641
 msgid "Entravée"
 msgstr "Snared"
 
@@ -8235,7 +8235,7 @@ msgstr ""
 "%s\n"
 "Click to change skill, or drag it onto another slot."
 
-#. scripts/main.gd:1270
+#. scripts/main.gd:1274
 msgid "%s vaincu"
 msgstr "%s defeated"
 
