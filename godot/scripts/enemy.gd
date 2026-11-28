@@ -121,6 +121,8 @@ var shield_wait := 0.0
 var aff_state := ""
 var aff_t := 0.0
 var aff_cd: Dictionary = {}
+## Voilé : le point où il va reparaître (monde), pendant son annonce.
+var blink_to := Vector2.ZERO
 
 
 static func _index_kinds() -> Dictionary:
@@ -170,7 +172,7 @@ static func validate_kinds() -> PackedStringArray:
 	for id in ELITES.get("excluded", []):
 		if not KIND_INDEX.has(id):
 			errors.append("enemies.json, élites : sorte exclue inconnue « %s »" % id)
-	var known := ["rapide", "enrage", "ecorce", "epines", "invocateur"]
+	var known := ["rapide", "enrage", "ecorce", "epines", "invocateur", "voile", "siphon", "remanent"]
 	for a in ELITES.get("affixes", {}):
 		if not a in known:
 			errors.append("enemies.json, élites : modificateur sans code « %s »" % a)
@@ -234,9 +236,14 @@ func can_be_elite() -> bool:
 ## Modificateurs que cette sorte peut recevoir (le Gardien d'écorce n'a pas de bouclier d'écorce en plus).
 func allowed_affixes() -> Array:
 	var out := []
+	var cycle: int = Difficulty.cycle_now()
 	for a in ELITES.get("affixes", {}):
-		if not a in data.get("no_affix", []):
-			out.append(a)
+		if a in data.get("no_affix", []):
+			continue
+		# Modificateurs du New Game+ (« cycle_min » dans difficulty.json › elites › affixes).
+		if cycle < int(ELITES["affixes"][a].get("cycle_min", 1)):
+			continue
+		out.append(a)
 	return out
 
 
@@ -265,7 +272,7 @@ func make_elite(list: Array) -> void:
 	if "ecorce" in affixes:
 		max_shield = max_hp * float(cfg["ecorce"].get("shield", 0.5))
 		shield = max_shield
-	for a in ["epines", "invocateur"]:
+	for a in ["epines", "invocateur", "voile", "siphon"]:
 		if a in affixes:
 			aff_cd[a] = float(cfg[a]["cooldown"]) * randf_range(0.5, 1.0)
 
@@ -436,6 +443,16 @@ func _elite_step(delta: float, dist: float) -> void:
 				if young.size() >= int(cfg[a].get("max_young", 4)):
 					aff_cd[a] = 1.0
 					continue
+			# Voilé : il ne saute que s'il est loin du héros (et jamais une sorte immobile).
+			if a == "voile":
+				if anchored or dist < float(cfg[a].get("range_min", 260.0)):
+					aff_cd[a] = 1.0
+					continue
+				blink_to = _blink_target()
+			# Siphonneur : le cercle ne s'annonce que si le héros est tout près.
+			if a == "siphon" and dist > float(cfg[a].get("radius", 300.0)) * 1.1:
+				aff_cd[a] = 0.5
+				continue
 			aff_state = a
 			aff_t = float(cfg[a].get("windup", 0.7))
 			aff_cd[a] = float(cfg[a]["cooldown"]) * cd_mult
@@ -455,6 +472,45 @@ func _affix_attack(a: String) -> void:
 			for i in int(c.get("count", 2)):
 				var at := position + Vector2.from_angle(randf() * TAU) * (radius + 16.0)
 				main.spawn_enemy_kind(c["spawn"], at, power, self)
+		"voile":
+			# Il disparaît d'ici et reparaît là où l'annonce l'a marqué (gardé dans le monde).
+			var from := position
+			position = blink_to
+			if main.get("fx") != null:
+				main.fx.ring(from, radius * 0.4, radius * 2.2, 0.35, Art.ec("vent", "clair"), 3.0)
+				main.fx.ring(position, radius * 2.2, radius * 0.4, 0.35, Art.ec("vent"), 3.0)
+		"siphon":
+			# Sève volée à qui reste dans le cercle : le siphonneur se soigne du même coup.
+			var p = main.player
+			if p.position.distance_to(position) < float(c.get("radius", 300.0)) + p.radius:
+				p.take_hit(float(c.get("damage", 9.0)) * damage_scale, null)
+				hp = minf(max_hp, hp + max_hp * float(c.get("heal", 0.12)))
+				if main.get("fx") != null:
+					main.fx.ring(p.position, p.radius, p.radius * 2.6, 0.35, Art.ec("seve"), 3.0)
+					main.fx.ring(position, radius * 2.0, radius, 0.35, Art.ec("seve", "clair"), 3.0)
+
+
+## Voilé : où il reparaîtra, près du héros, dans les limites du monde.
+func _blink_target() -> Vector2:
+	var c: Dictionary = ELITES["affixes"]["voile"]
+	var p = main.player
+	var half: float = float(main.WORLD_HALF) - 40.0
+	var at: Vector2 = p.position + Vector2.from_angle(randf() * TAU) * (float(c.get("distance", 150.0)) + radius)
+	return at.clamp(Vector2(-half, -half), Vector2(half, half))
+
+
+## Rémanent : à sa mort, une poche de cendre s'annonce au sol puis éclate (comme le Boursouflé).
+func _leave_afterblast() -> void:
+	var c: Dictionary = ELITES["affixes"]["remanent"]
+	var b = Blast.new()
+	b.main = main
+	b.position = position
+	b.radius = float(c.get("radius", 130.0))
+	b.delay = float(c.get("delay", 1.1))
+	b.damage = float(c.get("damage", 18.0)) * damage_scale
+	b.enemy_damage = float(c.get("enemy_damage", 30.0)) * power
+	b.color = Art.ec("saignement")
+	main.projectiles_layer.call_deferred("add_child", b)
 
 
 ## Progression de l'annonce d'un modificateur d'élite, de 0 à 1.
@@ -494,6 +550,8 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 	if hp <= 0.0:
 		dead = true
 		_behavior.on_death(self)
+		if "remanent" in affixes:
+			_leave_afterblast()
 		_leave_remains(amount - maxf(before, 0.0), dot)
 		main.on_enemy_killed(self)
 		queue_free()
@@ -982,6 +1040,8 @@ func _draw_attack(f: Vector2) -> void:
 	_behavior.draw_attack(self, k, hit)
 	if elite and aff_state == "epines":
 		Art.telegraph(gc, {"type": "cercle", "centre": Vector2.ZERO, "rayon": radius * 2.8}, affix_ratio(), -1.0, t)
+	elif elite and aff_state == "siphon":
+		Art.telegraph(gc, {"type": "cercle", "centre": Vector2.ZERO, "rayon": float(ELITES["affixes"]["siphon"].get("radius", 300.0))}, affix_ratio(), -1.0, t)
 	elif elite and hit >= 0.0 and behavior in ["chase", "guard", "charger", "bomber"] and "epines" in affixes:
 		Art.telegraph(gc, {"type": "cercle", "centre": Vector2.ZERO, "rayon": radius * 2.8}, 1.0, hit, t)
 
@@ -1044,7 +1104,7 @@ func _draw_collar(ci: CanvasItem) -> void:
 
 
 ## Couleur du signe d'un modificateur : celle de son élément (charte), sinon la sienne.
-const AFFIX_ELEMENT := {"enrage": "cendre", "ecorce": "racine", "epines": "epine", "invocateur": "poison"}
+const AFFIX_ELEMENT := {"enrage": "cendre", "ecorce": "racine", "epines": "epine", "invocateur": "poison", "voile": "vent", "siphon": "seve", "remanent": "saignement"}
 
 func _affix_color(a: String) -> Color:
 	if AFFIX_ELEMENT.has(a):
@@ -1089,6 +1149,32 @@ func _draw_elite_under(f: Vector2) -> void:
 			var q := Vector2.from_angle(a) * ring
 			gc.draw_circle(q, r * 0.16, Color(c, 0.3))
 			gc.draw_arc(q, r * 0.12, 0.0, TAU, 10, Art.ec("poison", "clair"), Art.TRAIT_FIN, true)
+	if "voile" in affixes:
+		# Deux contours de brume qui flottent de part et d'autre ; pendant l'annonce, le point d'arrivée
+		# se resserre (ce n'est pas un coup : pas de rouge).
+		var c := _affix_color("voile")
+		for i in 2:
+			var a := t * 1.3 + i * PI
+			gc.draw_arc(Vector2.from_angle(a) * r * 0.45, r * 1.05, 0.0, TAU, 20, Color(c, 0.28), Art.TRAIT_FIN, true)
+		if aff_state == "voile":
+			var k := affix_ratio()
+			var to := blink_to - position
+			gc.draw_arc(to, r * (2.4 - 1.2 * k), 0.0, TAU, 28, Color(c, 0.35 + 0.5 * k), Art.TRAIT, true)
+			gc.draw_circle(to, r * 0.5 * k, Color(Art.ec("vent", "clair"), 0.25 * k))
+	if "siphon" in affixes:
+		# Filets de sève qui montent vers lui ; le cercle annoncé est dessiné par _draw_attack.
+		var c := _affix_color("siphon")
+		for i in 3:
+			var u := fposmod(t * 0.9 + i / 3.0, 1.0)
+			var d := Vector2.from_angle(i * TAU / 3.0 + 0.6)
+			gc.draw_circle(d * r * (2.0 - 1.1 * u), r * 0.1 * (1.0 - 0.5 * u), Color(c, 0.8 * (1.0 - u * 0.6)))
+	if "remanent" in affixes:
+		# Cercle de cendre en tirets, à la taille de la poche qu'il laissera à sa mort.
+		var c := _affix_color("remanent")
+		var br := float(ELITES["affixes"]["remanent"].get("radius", 130.0))
+		for i in 12:
+			var a := i * TAU / 12.0 - t * 0.25
+			gc.draw_arc(Vector2.ZERO, br, a, a + 0.16, 4, Color(c, 0.3), Art.TRAIT_FIN, true)
 	# Couronne de pointes : la marque des élites (moitié éclairée, moitié dans l'ombre). Une sorte
 	# dessinée porte à la place un collier de sa région et un liseré doré (_draw_collar, sprite_tint).
 	if _art() != null:

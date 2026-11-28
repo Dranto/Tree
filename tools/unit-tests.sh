@@ -36,6 +36,7 @@ TESTS=(
   "exalte_b1|--headless --fixed-fps 60|--cycle=2"
   "death|--headless --fixed-fps 60|"
   "deaths|--headless --fixed-fps 60|"
+  "cycle_monsters|--headless --fixed-fps 60|"
   "difficulty|--headless|"
   "demo|--headless --fixed-fps 60|"
   "direct_screen|--xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0|"
@@ -104,7 +105,7 @@ TESTS=(
 declare -A WEIGHT=(
   [move]=121 [paysages]=89 [attack]=74 [finale]=74 [sound]=63 [heros]=56 [world_life]=51
   [boss_eclat]=45 [pad]=34 [remains_sprite]=27 [boss_track]=26 [direct_screen]=26 [eclat_skills]=24
-  [decor]=23 [seve]=21 [plateaux]=18 [enemies]=17 [vent]=17 [foret]=16 [demo]=15 [falaises]=15
+  [decor]=23 [seve]=21 [plateaux]=18 [enemies]=17 [cycle_monsters]=20 [vent]=17 [foret]=16 [demo]=15 [falaises]=15
   [flow]=15 [region]=15 [vallee]=15 [sprite_bake]=14 [racine]=14 [tree_ui]=14 [skills]=13
   [world_fx]=12 [boss]=11 [bestiaire]=11 [i18n]=11 [moments]=11 [aube]=10 [death]=10 [grafts]=10
   [marais]=10 [access]=9 [deaths]=9 [migration]=9 [spore]=9 [tree_anim]=9 [difficulty]=7 [feel]=8

@@ -1,5 +1,5 @@
 {
-  "_doc": "Cycles du New Game+ (scripts/cycles.gd, autoload « Cycles », jalon 14). Un cycle est une aventure entière ; le cycle 1 est la première aventure, le suivant commence quand le joueur touche le fruit de la graine après la fin. « cycles » : réglages par cycle (\"1\", \"2\", \"3\"…), une clé par système ; Cycles.value(clé, défaut) lit le cycle en cours et, au-delà du dernier cycle décrit, retombe sur le dernier cycle qui donne la clé. « per_cycle_after » : clés numériques qui montent encore d'autant par cycle au-delà (contenu nouveau jusqu'au cycle 3, ensuite seule la menace monte), jusqu'à leur plafond dans « caps ». Chaque système n'écrit que ses clés : threat_floor, mix, elites (monstres de cycle) ; bosses (boss exaltés) ; tint (monde fané) ; grafts, crown (greffes de cycle). Valeurs du cycle 1 neutres : la première aventure ne change pas. Pas d'équilibrage ici avant la fin du projet.",
+  "_doc": "Cycles du New Game+ (scripts/cycles.gd, autoload « Cycles », jalon 14). Un cycle est une aventure entière ; le cycle 1 est la première aventure, le suivant commence quand le joueur touche le fruit de la graine après la fin. « cycles » : réglages par cycle (\"1\", \"2\", \"3\"…), une clé par système ; Cycles.value(clé, défaut) lit le cycle en cours et, au-delà du dernier cycle décrit, retombe sur le dernier cycle qui donne la clé. « per_cycle_after » : clés numériques qui montent encore d'autant par cycle au-delà (contenu nouveau jusqu'au cycle 3, ensuite seule la menace monte), jusqu'à leur plafond dans « caps ». Chaque système n'écrit que ses clés : threat_floor, mix, elites (monstres de cycle) ; bosses (boss exaltés) ; tint (monde fané) ; grafts, crown (greffes de cycle). Valeurs du cycle 1 neutres : la première aventure ne change pas. Pas d'équilibrage ici avant la fin du projet. Monstres de cycle (jalon 14 M) : « threat_floor » = menace minimale de tout Flétri ; « mix » : par région où naît l'ennemi (« ordinaires » hors région), « share » = part des apparitions remplacées par une sorte d'une autre région, tirée selon « kinds » (poids), « min_dist » = distance minimale à la graine par sorte ; « elites » : chance_mult (× la chance d'élite), max_alive, two_affixes. Les 3 modificateurs réservés au NG+ sont dans difficulty.json › elites › affixes (« cycle_min »). Valeurs provisoires : pas d'équilibrage avant la fin du projet.",
   "cycles": {
     "1": {
       "threat_floor": 0.0,
@@ -11,9 +11,77 @@
       "crown": 0
     },
     "2": {
-      "threat_floor": 0.0,
-      "mix": {},
-      "elites": {},
+      "threat_floor": 2.5,
+      "mix": {
+        "ordinaires": {
+          "share": 0.25,
+          "kinds": {
+            "tireur": 0.3,
+            "traine_vase": 0.3,
+            "plongeur": 0.2,
+            "sangsue_vase": 0.2
+          }
+        },
+        "ronce": {
+          "share": 0.3,
+          "kinds": {
+            "scissipore": 0.3,
+            "plongeur": 0.3,
+            "crapaud": 0.2,
+            "termite": 0.2
+          }
+        },
+        "spore": {
+          "share": 0.3,
+          "kinds": {
+            "tireur": 0.25,
+            "souffleur": 0.25,
+            "libellule": 0.25,
+            "mandragore": 0.25
+          }
+        },
+        "vent": {
+          "share": 0.3,
+          "kinds": {
+            "chargeur": 0.25,
+            "scissipore": 0.25,
+            "miroitier": 0.25,
+            "termite": 0.25
+          }
+        },
+        "seve": {
+          "share": 0.3,
+          "kinds": {
+            "tireur": 0.25,
+            "scissipore": 0.25,
+            "luciole": 0.25,
+            "scarabee": 0.25
+          }
+        },
+        "aube": {
+          "share": 0.3,
+          "kinds": {
+            "chargeur": 0.25,
+            "traine_vase": 0.25,
+            "plongeur": 0.25,
+            "mandragore": 0.25
+          }
+        },
+        "racine": {
+          "share": 0.3,
+          "kinds": {
+            "tireur": 0.25,
+            "scissipore": 0.25,
+            "souffleur": 0.25,
+            "prismeur": 0.25
+          }
+        }
+      },
+      "elites": {
+        "chance_mult": 1.6,
+        "max_alive": 3,
+        "two_affixes": 0.45
+      },
       "bosses": {
         "ronce": {"phase_exaltee": 0.22},
         "spore": {"phase_exaltee": 0.22},
@@ -28,9 +96,132 @@
       "crown": 0
     },
     "3": {
-      "threat_floor": 0.0,
-      "mix": {},
-      "elites": {},
+      "threat_floor": 3.5,
+      "mix": {
+        "ordinaires": {
+          "share": 0.35,
+          "kinds": {
+            "tireur": 0.2,
+            "traine_vase": 0.2,
+            "plongeur": 0.2,
+            "sangsue_vase": 0.2,
+            "scarabee": 0.2
+          }
+        },
+        "ronce": {
+          "share": 0.45,
+          "kinds": {
+            "scissipore": 0.2,
+            "plongeur": 0.2,
+            "crapaud": 0.2,
+            "termite": 0.15,
+            "lichen": 0.1,
+            "menhir": 0.15
+          },
+          "min_dist": {
+            "menhir": 1300,
+            "souche": 1300,
+            "quartz": 1300,
+            "tertre": 1300,
+            "lichen": 900
+          }
+        },
+        "spore": {
+          "share": 0.45,
+          "kinds": {
+            "tireur": 0.2,
+            "souffleur": 0.2,
+            "libellule": 0.2,
+            "mandragore": 0.2,
+            "souche": 0.1,
+            "tertre": 0.1
+          },
+          "min_dist": {
+            "menhir": 1300,
+            "souche": 1300,
+            "quartz": 1300,
+            "tertre": 1300,
+            "lichen": 900
+          }
+        },
+        "vent": {
+          "share": 0.45,
+          "kinds": {
+            "chargeur": 0.2,
+            "scissipore": 0.2,
+            "miroitier": 0.2,
+            "termite": 0.15,
+            "lichen": 0.1,
+            "quartz": 0.15
+          },
+          "min_dist": {
+            "menhir": 1300,
+            "souche": 1300,
+            "quartz": 1300,
+            "tertre": 1300,
+            "lichen": 900
+          }
+        },
+        "seve": {
+          "share": 0.45,
+          "kinds": {
+            "tireur": 0.2,
+            "scissipore": 0.2,
+            "luciole": 0.2,
+            "scarabee": 0.15,
+            "menhir": 0.1,
+            "tertre": 0.15
+          },
+          "min_dist": {
+            "menhir": 1300,
+            "souche": 1300,
+            "quartz": 1300,
+            "tertre": 1300,
+            "lichen": 900
+          }
+        },
+        "aube": {
+          "share": 0.45,
+          "kinds": {
+            "chargeur": 0.2,
+            "traine_vase": 0.2,
+            "plongeur": 0.2,
+            "mandragore": 0.15,
+            "souche": 0.1,
+            "lichen": 0.15
+          },
+          "min_dist": {
+            "menhir": 1300,
+            "souche": 1300,
+            "quartz": 1300,
+            "tertre": 1300,
+            "lichen": 900
+          }
+        },
+        "racine": {
+          "share": 0.45,
+          "kinds": {
+            "tireur": 0.2,
+            "scissipore": 0.2,
+            "souffleur": 0.2,
+            "prismeur": 0.15,
+            "quartz": 0.1,
+            "menhir": 0.15
+          },
+          "min_dist": {
+            "menhir": 1300,
+            "souche": 1300,
+            "quartz": 1300,
+            "tertre": 1300,
+            "lichen": 900
+          }
+        }
+      },
+      "elites": {
+        "chance_mult": 2.2,
+        "max_alive": 4,
+        "two_affixes": 0.6
+      },
       "bosses": {
         "ronce": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
         "spore": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
@@ -46,7 +237,7 @@
     }
   },
   "per_cycle_after": {
-    "threat_floor": 0.0
+    "threat_floor": 0.5
   },
   "caps": {
     "threat_floor": 6.0

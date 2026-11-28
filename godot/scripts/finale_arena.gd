@@ -508,7 +508,7 @@ func boss_defeated() -> void:
 	shrink_warn = 0.0
 	main.spawn_paused = false
 	Game.flags[flag] = true
-	SteamBridge.unlock(SteamBridge.boss_achievement("finale"))
+	SteamBridge.unlock_finale(Cycles.current())
 	Game.flags["stat_finale_fin"] = main.elapsed
 	Game.grant_points(reward_points, "boss", "finale_boss")
 	for i in 4:
