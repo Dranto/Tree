@@ -1291,6 +1291,8 @@ func _scenario_boss() -> void:
 	boss._begin("fouets")
 	boss.timer = 0.5
 	await _boss_shot("boss_phase3", spot)
+	# Le héros passé derrière elle : sa silhouette d'encre se lit à travers son corps.
+	await _boss_shot("boss_derriere", arena.center + Vector2(28, -58))
 
 	# Victoire : l'arène refleurit.
 	_clear_enemies([boss])

@@ -137,6 +137,11 @@ const LOW_HP := 0.3
 const HeroLook = preload("res://scripts/hero_look.gd")
 const HeroBake = preload("res://scripts/hero_bake.gd")
 const FLASH_SHADER = preload("res://shaders/hero_flash.gdshader")
+const GHOST_SHADER = preload("res://shaders/hero_ghost.gdshader")
+## Silhouette du héros caché derrière un boss : vitesse du fondu (par seconde) et boîte du dessin
+## du héros (pieds en +radius, tête et arme au-dessus), pour savoir si le corps du boss la couvre.
+const GHOST_FADE := 10.0
+const HERO_BOX := Rect2(-14.0, -52.0, 28.0, 66.0)
 ## Durée de la transition quand la tenue ou l'arme change.
 const MORPH_TIME := 0.7
 var look: Dictionary = {}
@@ -146,6 +151,9 @@ var _side := 1.0
 ## Le héros (matériau de l'éclair du coup reçu) et ce qui se dessine par-dessus (visée, barre de vie).
 var _hero_node: Node2D
 var _over_node: Node2D
+## Le héros redessiné à l'encre ivoire par-dessus les acteurs quand un boss le cache (0 → 1).
+var _ghost_node: Node2D
+var behind := 0.0
 
 
 func _ready() -> void:
@@ -166,6 +174,15 @@ func _ready() -> void:
 	_over_node = _Layer.new()
 	_over_node.drawer = _draw_over
 	add_child(_over_node)
+	# Au-dessus de tous les acteurs triés en profondeur (z 1), sous les impact frames (moments.gd).
+	_ghost_node = _Layer.new()
+	_ghost_node.drawer = _draw_ghost
+	_ghost_node.z_index = 1
+	var gm := ShaderMaterial.new()
+	gm.shader = GHOST_SHADER
+	gm.set_shader_parameter("ink_col", Art.c("texte"))
+	_ghost_node.material = gm
+	add_child(_ghost_node)
 	Game.tree_changed.connect(refresh_look)
 	Game.build_switched.connect(func(_i): refresh_look())
 	get_tree().root.size_changed.connect(_on_window_resized)
@@ -444,6 +461,12 @@ func _process(delta: float) -> void:
 	if _hero_node != null:
 		_hero_node.queue_redraw()
 		_over_node.queue_redraw()
+		var was := behind
+		behind = move_toward(behind, 1.0 if hidden_by_boss() else 0.0, delta * GHOST_FADE)
+		if behind > 0.0 or was > 0.0:
+			_ghost_node.queue_redraw()
+			# Visée et barre de vie restent lisibles par-dessus le boss.
+			_over_node.z_index = 1 if behind > 0.0 else 0
 
 
 ## Couleur des feuilles semées (esquive, coups) : la tenue de la branche dominante.
@@ -917,25 +940,63 @@ func _draw() -> void:
 
 ## Le héros (calque enfant : son matériau porte l'éclair du coup reçu).
 func _draw_hero(ci: Node2D) -> void:
-	# L'élan de l'esquive (traînée, images rémanentes) est dessiné par sa signature (skill_fx.gd).
-	# Au repos (world_fx.gd) : le héros respire, se penche pour semer, regarde une fleur. Dessin seulement.
+	var st := _hero_pose()
+	(ci.material as ShaderMaterial).set_shader_parameter("flash", 0.75 * float(st["hurt"]))
+	_paint_hero(ci, st)
+
+
+## Le héros caché derrière un boss : le même dessin, à l'encre ivoire et en transparence
+## (shaders/hero_ghost.gdshader), par-dessus le corps du boss.
+func _draw_ghost(ci: Node2D) -> void:
+	if behind <= 0.0:
+		return
+	(ci.material as ShaderMaterial).set_shader_parameter("amount", Anim.ease_out(behind))
+	_paint_hero(ci, _hero_pose())
+
+
+## Vrai si le corps d'un boss, dessiné après le héros (plus bas à l'écran), couvre son dessin.
+func hidden_by_boss() -> bool:
+	if main == null or reborn < 1.0:
+		return false
+	var me := Rect2(position + HERO_BOX.position, HERO_BOX.size)
+	for b in main.big_enemies:
+		if not is_instance_valid(b) or not b.visible or b.position.y <= position.y:
+			continue
+		if not b.has_method("cover_rect"):
+			continue
+		var r: Rect2 = b.cover_rect()
+		if Rect2(b.position + r.position, r.size).intersects(me):
+			return true
+	return false
+
+
+## Pose du héros, tourné vers sa visée ; retournement gauche/droite avec un peu d'hystérésis
+## (visée presque verticale : il ne clignote pas).
+func _hero_pose() -> Dictionary:
 	var wfx = main.get("world_fx") if main != null else null
 	var face := facing().angle()
-	if wfx != null and (wfx.breath > 0.0 or wfx.crouch > 0.0):
-		var br: float = wfx.breath * sin(t * 2.1) * 0.022 - wfx.crouch * 0.1
-		# Échelle autour des pieds : le sol ne bouge pas.
-		HeroArt.base = Transform2D(0.0, Vector2(1.0 - br * 0.5, 1.0 + br), 0.0, Vector2(0.0, -radius * br))
 	if wfx != null:
 		face = wfx.facing_angle(face)
 	var st := pose()
-	# Retournement gauche/droite avec un peu d'hystérésis : visée presque verticale, il ne clignote pas.
 	if cos(face) > 0.2:
 		_side = 1.0
 	elif cos(face) < -0.2:
 		_side = -1.0
 	st["side"] = _side
-	(ci.material as ShaderMaterial).set_shader_parameter("flash", 0.75 * float(st["hurt"]))
-	HeroArt.draw(ci, Vector2.ZERO, radius, face, st)
+	st["face"] = face
+	return st
+
+
+## Dessine le héros dans le calque ci (le héros lui-même ou sa silhouette).
+func _paint_hero(ci: Node2D, st: Dictionary) -> void:
+	# L'élan de l'esquive (traînée, images rémanentes) est dessiné par sa signature (skill_fx.gd).
+	# Au repos (world_fx.gd) : le héros respire, se penche pour semer, regarde une fleur. Dessin seulement.
+	var wfx = main.get("world_fx") if main != null else null
+	if wfx != null and (wfx.breath > 0.0 or wfx.crouch > 0.0):
+		var br: float = wfx.breath * sin(t * 2.1) * 0.022 - wfx.crouch * 0.1
+		# Échelle autour des pieds : le sol ne bouge pas.
+		HeroArt.base = Transform2D(0.0, Vector2(1.0 - br * 0.5, 1.0 + br), 0.0, Vector2(0.0, -radius * br))
+	HeroArt.draw(ci, Vector2.ZERO, radius, st["face"], st)
 	HeroArt.base = Transform2D.IDENTITY
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
