@@ -106,3 +106,83 @@ func wave_pending() -> int:
 ## La vague de flétrissure est passée : le drapeau tombe.
 func end_wave() -> void:
 	Game.flags.erase(WAVE_FLAG)
+
+
+# --- Passage au cycle suivant (le fruit de la graine, cycle_fruit.gd) ---
+
+## Drapeaux de l'aventure gardés d'un cycle à l'autre (le reste revient à zéro : Cœurs, boss,
+## sanctuaires, autels, purification, objectifs, sève perdue, fin vue, points des boss et des Cœurs,
+## statistiques de la partie). Clés exactes, puis préfixes.
+const KEEP_FLAGS := ["plan_arbre", "barre", "couronne_vue", "demo_sceau_vu", "points_hors_niveau"]
+const KEEP_PREFIXES := ["tuto_"]
+
+## Cycle qui vient de commencer par le fruit, en attente de la scène de jeu rechargée (0 sinon) :
+## Game.cycle_started part quand elle est prête (main_ready).
+var _just_started := 0
+
+
+## Drapeaux gardés pour le cycle suivant.
+static func kept_flags(flags: Dictionary) -> Dictionary:
+	var out := {}
+	for k in flags:
+		var key := str(k)
+		var keep := KEEP_FLAGS.has(key)
+		for p in KEEP_PREFIXES:
+			keep = keep or key.begins_with(p)
+		if keep:
+			out[k] = flags[k]
+	return out
+
+
+## Passe l'état du jeu (Game) au cycle suivant, sans toucher à la scène : on garde niveau, expérience,
+## points, arbre, builds, greffes et couronne (ses emplacements ouverts restent ouverts, Game.crown_kept),
+## on remet à zéro les drapeaux de l'aventure (voir KEEP_FLAGS) et on note la vague de flétrissure.
+## Renvoie le nouveau cycle.
+func advance_state() -> int:
+	Game.store_active_build()
+	Game.crown_kept = maxi(Game.crown_kept, Game.crown_size(Game.flags))
+	var n := maxi(1, int(Game.cycle)) + 1
+	Game.cycle = n
+	if forced >= 1:
+		forced = n
+	Game.flags = kept_flags(Game.flags)
+	Game.flags[WAVE_FLAG] = n
+	Game.at_sanctuary = false
+	Game.recompute()
+	Game.tree_changed.emit()
+	return n
+
+
+## Le joueur a touché le fruit de la graine : le cycle suivant commence. L'état passe au cycle
+## suivant, la partie est sauvegardée avec un monde remis à neuf (sol non purifié, fleurs et greffes au
+## sol effacées, le héros au pied de la graine, toute sa vie), puis la scène de jeu est rechargée
+## comme pour « Continuer ». Game.cycle_started part quand elle est prête (main_ready).
+func start_next(main) -> int:
+	var n := advance_state()
+	var data: Dictionary = SaveGame.capture(main)
+	data["world"] = {
+		"elapsed": float(main.elapsed) if main != null else 0.0,
+		"player": {"x": 0.0, "y": 0.0, "hp": float(Game.stats.get("max_hp", 100.0))},
+		"ground_grafts": [],
+	}
+	Game.grafts_on_ground = {}
+	if main == null or not main.get("autosave_enabled") or not SaveGame.write(data):
+		# Pas de sauvegarde (tests, robot) : rien n'est rechargé, le signal part tout de suite.
+		(func(): Game.cycle_started.emit(n)).call_deferred()
+		return n
+	_just_started = n
+	# La scène sauvegarde en partant (main._exit_tree) : elle écraserait le monde remis à neuf.
+	main.autosave_enabled = false
+	Flow.continue_requested = true
+	Flow.reload_game()
+	return n
+
+
+## Appelé à la fin du _ready de la scène de jeu (main.gd) : si un cycle vient de commencer par le
+## fruit, Game.cycle_started part à l'image suivante, main prêt et Game.cycle au nouveau numéro.
+func main_ready(_main) -> void:
+	if _just_started <= 0:
+		return
+	var n := _just_started
+	_just_started = 0
+	(func(): Game.cycle_started.emit(n)).call_deferred()

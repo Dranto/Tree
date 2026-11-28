@@ -2,8 +2,9 @@
 ##
 ## Format : un fichier JSON lisible dans user://saves/, versionné.
 ## {
-##   "format": "seve-save", "version": 8, "saved_at": <unix>,
-##   "game":  {"level", "xp", "points", "kills", "flags"},
+##   "format": "seve-save", "version": 9, "saved_at": <unix>,
+##   "game":  {"level", "xp", "points", "kills", "flags",
+##             "cycle", "crown_kept"},             # cycle du New Game+ et couronne gardée (version 9)
 ##   "tree":  {"allocated": [uid, …],            # identifiants stables, pas des index
 ##             "choices": {uid: choix},          # maîtrises et mutations (depuis la version 2)
 ##             "crown": [greffe ou "", …],       # couronne de greffes, un élément par emplacement (version 7)
@@ -34,7 +35,7 @@ const Demo = preload("res://scripts/demo.gd")
 const Regions = preload("res://scripts/regions.gd")
 
 const FORMAT := "seve-save"
-const VERSION := 8
+const VERSION := 9
 const DEFAULT_PATH := "user://saves/partie.json"
 
 ## Dernière erreur de chargement, lisible (vide si tout va bien).
@@ -64,6 +65,8 @@ func peek(path := DEFAULT_PATH) -> Dictionary:
 		"nodes": (t.get("allocated", []) as Array).size(),
 		"play_time": float(w.get("elapsed", 0.0)),
 		"saved_at": int(data.get("saved_at", 0)),
+		# Cycle du New Game+ (1 = première aventure) : l'écran titre le dit à partir du cycle 2.
+		"cycle": maxi(1, int(g.get("cycle", 1))),
 		# L'aventure est finie (la Flétrissure vaincue sous la graine) : l'écran titre le dit.
 		"ended": bool(g.get("flags", {}).get("finale_vaincue", false)) if g.get("flags") is Dictionary else false,
 	}
@@ -91,6 +94,8 @@ func capture(main) -> Dictionary:
 			"points": Game.points,
 			"kills": Game.kills,
 			"flags": Game.flags.duplicate(true),
+			"cycle": Game.cycle,
+			"crown_kept": Game.crown_kept,
 		},
 		"tree": {"allocated": Game.allocated_uids(), "choices": Game.choices.duplicate(), "crown": Game.crown.duplicate(), "inventory": Game.graft_inventory.duplicate(),
 			"builds": Game.builds.duplicate(true), "active_build": Game.active_build},
@@ -99,7 +104,12 @@ func capture(main) -> Dictionary:
 
 
 func save_now(main, path := DEFAULT_PATH) -> bool:
-	var text := JSON.stringify(capture(main), "\t")
+	return write(capture(main), path)
+
+
+## Écrit un dictionnaire de sauvegarde (capture, éventuellement retouchée : voir Cycles.start_next).
+func write(data: Dictionary, path := DEFAULT_PATH) -> bool:
+	var text := JSON.stringify(data, "\t")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
 	var tmp := path + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
@@ -157,6 +167,8 @@ func apply(data: Dictionary, main) -> void:
 	Game.kills = maxi(0, int(g.get("kills", 0)))
 	var flags = g.get("flags", {})
 	Game.flags = flags.duplicate(true) if flags is Dictionary else {}
+	Game.cycle = maxi(1, int(g.get("cycle", 1)))
+	Game.crown_kept = maxi(0, int(g.get("crown_kept", 0)))
 	var t: Dictionary = data.get("tree", {})
 	var uids = t.get("allocated", [])
 	var refunded := Game.restore_allocation(uids if uids is Array else [])
@@ -334,6 +346,14 @@ func _migrate(data: Dictionary) -> Dictionary:
 		data["tree"]["builds"] = []
 		data["tree"]["active_build"] = 0
 		data["version"] = 8
+	# Version 9 (jalon 14, New Game+) : le cycle de l'aventure et la couronne gardée d'un cycle à
+	# l'autre. Une partie d'avant est dans sa première aventure.
+	if int(data["version"]) == 8:
+		if not data.get("game") is Dictionary:
+			data["game"] = {}
+		data["game"]["cycle"] = 1
+		data["game"]["crown_kept"] = 0
+		data["version"] = 9
 	return data
 
 

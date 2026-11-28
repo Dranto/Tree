@@ -8,6 +8,7 @@ const TREE_TO_WORLD := 2.1
 
 const Ground = preload("res://scripts/ground.gd")
 const WorldEdge = preload("res://scripts/world_edge.gd")
+const CycleFruit = preload("res://scripts/cycle_fruit.gd")
 const Flora = preload("res://scripts/flora.gd")
 const Fx = preload("res://scripts/fx.gd")
 const WorldFx = preload("res://scripts/world_fx.gd")
@@ -119,6 +120,8 @@ var world_preload = null
 var all_hearts: Array = []
 ## Arène de la finale, sous la graine (finale_arena.gd) : ouverte quand toutes les régions sont purifiées.
 var finale
+## Fruit de la graine du New Game+ (cycle_fruit.gd), après la fin de l'aventure.
+var cycle_fruit
 ## Sanctuaires (sanctuary.gd), points de renaissance ; et sève perdue au sol (lost_sap.gd, ou null).
 var sanctuaries: Array = []
 var lost_sap = null
@@ -376,6 +379,11 @@ func _ready() -> void:
 	if focus_region() == "finale":
 		arena = finale
 	_place_sanctuaries()
+	# New Game+ : le fruit de la graine, après la fin de l'aventure (cycle_fruit.gd).
+	cycle_fruit = CycleFruit.new()
+	cycle_fruit.main = self
+	add_child(cycle_fruit)
+	move_child(cycle_fruit, actors_layer.get_index())
 	var rewards_layer := Node2D.new()
 	add_child(rewards_layer)
 	move_child(rewards_layer, actors_layer.get_index())
@@ -442,6 +450,8 @@ func _ready() -> void:
 		world_preload.main = self
 		add_child(world_preload)
 		world_preload.run()
+	# New Game+ : un cycle qui vient de commencer par le fruit de la graine l'annonce (cycles.gd).
+	Cycles.main_ready(self)
 
 
 ## Demande une sauvegarde automatique, regroupée sur une seconde (fonctionne aussi en pause).
