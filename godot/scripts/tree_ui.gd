@@ -713,6 +713,10 @@ func _ease_view(delta: float) -> void:
 func _gui_input(event: InputEvent) -> void:
 	var mb := event as InputEventMouseButton
 	if mb:
+		# La molette sur un panneau (Résumé, Builds, greffes…) remonte jusqu'ici même quand le panneau
+		# l'arrête (mouse_force_pass_scroll_events) : elle ne zoome que sur l'arbre lui-même.
+		if mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and not _wheel_on_tree():
+			return
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
 			zoom_smooth(mb.position, 1.15)
 		elif mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
@@ -749,6 +753,12 @@ func _gui_input(event: InputEvent) -> void:
 
 
 # --- États ---
+
+## Vrai si le pointeur est sur l'arbre et non sur un panneau posé par-dessus.
+func _wheel_on_tree() -> bool:
+	var hovered := get_viewport().gui_get_hovered_control()
+	return hovered == null or hovered == self
+
 
 func _state(id: int) -> String:
 	if Game.allocated.has(id):

@@ -77,6 +77,13 @@ func _run() -> void:
 	var had_cfg := FileAccess.file_exists(cfg_path)
 	var backup := FileAccess.get_file_as_string(cfg_path) if had_cfg else ""
 
+	print("Fenêtre : une option (le volume…) ne redimensionne pas une fenêtre agrandie")
+	var DS := DisplayServer
+	check(settings.window_mode_for(false, DS.WINDOW_MODE_MAXIMIZED) == DS.WINDOW_MODE_MAXIMIZED, "hors plein écran, une fenêtre agrandie le reste")
+	check(settings.window_mode_for(false, DS.WINDOW_MODE_WINDOWED) == DS.WINDOW_MODE_WINDOWED, "hors plein écran, une fenêtre normale le reste")
+	check(settings.window_mode_for(false, DS.WINDOW_MODE_FULLSCREEN) == DS.WINDOW_MODE_WINDOWED, "décocher le plein écran revient en fenêtre")
+	check(settings.window_mode_for(true, DS.WINDOW_MODE_MAXIMIZED) == DS.WINDOW_MODE_FULLSCREEN, "cocher le plein écran passe en plein écran")
+	check(settings.window_mode_for(true, DS.WINDOW_MODE_EXCLUSIVE_FULLSCREEN) == DS.WINDOW_MODE_EXCLUSIVE_FULLSCREEN, "un plein écran exclusif est gardé")
 	print("Effets : secousse, éclats, micro-pauses")
 	var cfg := ConfigFile.new()
 	cfg.set_value("gameplay", "shake", 0.3)

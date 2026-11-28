@@ -562,10 +562,20 @@ func apply() -> void:
 	_set_bus("Effets", sfx_volume) # i18n: non
 	_set_bus("Ambiance", ambience_volume) # i18n: non
 	if DisplayServer.get_name() != "headless":
-		var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+		var mode := window_mode_for(fullscreen, DisplayServer.window_get_mode())
 		if DisplayServer.window_get_mode() != mode:
 			DisplayServer.window_set_mode(mode)
 	changed.emit()
+
+
+## Mode de fenêtre voulu par l'option « Plein écran », à partir du mode actuel. Hors plein écran, une
+## fenêtre agrandie (ou réduite) le reste : changer le volume ou une autre option appelle apply(), qui
+## ne doit pas redimensionner la fenêtre (retour du premier testeur, 28/11).
+static func window_mode_for(full: bool, current: int) -> int:
+	var is_full := current == DisplayServer.WINDOW_MODE_FULLSCREEN or current == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+	if full:
+		return current if is_full else DisplayServer.WINDOW_MODE_FULLSCREEN
+	return DisplayServer.WINDOW_MODE_WINDOWED if is_full else current
 
 
 ## Volume d'un bus (s'il existe : Sfx et Music le créent à leur démarrage et rappellent apply()).
