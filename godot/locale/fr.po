@@ -8020,11 +8020,11 @@ msgstr "Phase 2 sur 3 : les bourgeons éclosent"
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 sur 3 : les ronces se resserrent"
 
-#. scripts/boss_base.gd:536
+#. scripts/boss_base.gd:538
 msgid "Exaltation"
 msgstr "Exaltation"
 
-#. scripts/boss_base.gd:661
+#. scripts/boss_base.gd:663
 msgid "Entravée"
 msgstr "Entravée"
 
@@ -8032,7 +8032,7 @@ msgstr "Entravée"
 msgid "Accroché !"
 msgstr "Accroché !"
 
-#. scripts/boss_vent.gd:288
+#. scripts/boss_vent.gd:290
 #. scripts/enemy_behaviors/glider.gd:70
 msgid "Hors d'atteinte"
 msgstr "Hors d'atteinte"
