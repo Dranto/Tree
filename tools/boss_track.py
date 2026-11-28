@@ -26,6 +26,8 @@ Fiche de repères (texte, « clé: valeur », # pour les commentaires), mesures 
   fin: 121-128        # à la mort du boss
   defaite: …          # facultatif : à la mort du héros (sinon fondu d'une seconde)
   fin_fondu: 2        # facultatif : fondu de sortie sur les N dernières mesures de « fin »
+  bande_caisse: 1500-5000  # facultatif : bande (Hz) d'une sorte de coups (kick, caisse, charleston)
+                      # quand celle par défaut (COUPS_BANDES) entend autre chose (un 808, une claque)
 
     tools/boss-track.sh <fichier audio> <fiche> <boss> --coups-seuls
                      ne refait que les coups de batterie des boucles (« coups ») dans <boss>.json.
@@ -77,6 +79,11 @@ def parse_fiche(path):
             if b < a:
                 sys.exit(f"{k} : {v} (fin avant le début)")
             sections[k] = [a, b]
+    # Bandes des coups de batterie propres au morceau (facultatif, Hz) : « bande_kick: 40-80 »…
+    for name in COUPS_BANDES:
+        if "bande_" + name in keys:
+            lo, hi = (float(v) for v in keys["bande_" + name].split("-"))
+            COUPS_BANDES[name] = (lo, hi)
     for need in ("intro", "boucle_1"):
         if need not in sections:
             sys.exit(f"la fiche doit donner « {need} »")

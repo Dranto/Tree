@@ -34,6 +34,7 @@ const O = preload("res://scripts/creature_art/ronce/_outils.gd")
 const Ink = preload("res://scripts/creature_art/ink.gd")
 const BossBake = preload("res://scripts/boss_bake.gd")
 const Exalte = preload("res://scripts/boss_art/exalte.gd")
+const BossScore = preload("res://scripts/boss_score.gd")
 
 const RADIUS := 70.0
 const INTRO := 1.4
@@ -71,7 +72,7 @@ const BLEED_STACKS := 5
 # --- Partition sur son morceau (boss_sync.gd : horloge audio, ou temps du jeu sans son) ---
 # Une phrase = quatre mesures (16 temps), une attaque par mesure environ, souvent sur la grosse caisse
 # du premier temps ; « coups » : [temps de la phrase, attaque] ; l'annonce part
-# ANNOUNCE_BEATS temps avant (un coup que l'attaque d'avant serre trop est sauté, score_skipped).
+# ANNOUNCE_BEATS temps avant (un coup que l'attaque d'avant serre trop est sauté : boss_score.gd › skipped).
 # « ondes » : mesures de la phrase (0-3) où les grosses caisses lancent de vraies ondes (sinon celles
 # de DRUMS_POWER) ; « deluge » : toute la batterie, au plus fort. Les phrases se répètent sur la boucle.
 const SCORE := {
@@ -153,26 +154,13 @@ var buds: Array = []
 ## Étreintes : {"pos", "gap" (angle de la brèche), "fuse" (avant de jaillir), "hold" (après), "tick"}.
 var embraces: Array = []
 
-## Partition : temps du morceau où commence la boucle de la phase (-1 : pas encore calée), ses coups
-## ({"beat", "kind", "phrase"}), sa batterie ({"beat", "kind", "deluge"}) et sa longueur (temps).
-var score_origin := -1.0
-var score_phase := 0
-var score_hits: Array = []
-var score_drums: Array = []
-var score_len := 32.0
-var _score_last := -INF
-var _drums_done := -INF
+## Partition et batterie sur son morceau (boss_score.gd : coups, coups sautés, coups joués).
+var score
 ## Temps du morceau où tombe la frappe annoncée (-1 : sans grille) ; racines de la partition : temps
 ## de la première et racines posées.
 var _strike_beat := -1.0
 var _roots_beat := -1.0
 var _roots_placed := 0
-var _rooted_skip := false
-## Coups de la partition sautés (l'attaque d'avant débordait) : 0 si elle est bien écrite (tests).
-var score_skipped := 0
-## Attaques de la partition lancées, et coups de batterie joués, par sorte (tests).
-var score_played := 0
-var drums_played: Dictionary = {}
 ## Ondes de ronces : {"r", "fuse", "total", "gaps", "hit", "reach", "small"}.
 var waves: Array = []
 var _wave_count := 0
@@ -187,6 +175,8 @@ var drum_flash := -1.0
 
 ## Nombres du socle (boss_base.gd) : ceux de la Mère-Ronce.
 func _setup() -> void:
+	score = BossScore.new(self, SCORE, DRUMS_POWER, ANNOUNCE_BEATS, {"onde": WAVE["lead"], "pouls": PULSE["lead"], "piqure": PRICK["lead"]}, DRUMS)
+	score.min_announce = MIN_ANNOUNCE
 	body_radius = RADIUS
 	intro_time = INTRO
 	death_time = DEATH_TIME
@@ -244,16 +234,21 @@ func _projectiles_step(delta: float) -> void:
 
 func _fight_step(delta: float) -> void:
 	var cad := cadence()
-	var scored := _score_ready()
+	var scored: bool = score.ready()
 	if scored:
-		_drums_step()
+		score.drums_step(_drum)
 	if attack == "":
 		var wanted := phase_for(hp / max_hp)
 		if wanted > phase:
 			_enter_phase(wanted)
 			return
 		if scored:
-			_score_step()
+			var nxt: Dictionary = score.step(_swap)
+			if nxt.has("wait"):
+				gap = nxt["wait"]
+			elif nxt.has("kind"):
+				_begin(nxt["kind"], nxt["at"])
+				cycle += 1
 			return
 		gap -= delta * cad
 		if gap <= 0.0:
@@ -484,7 +479,7 @@ func _end_attack() -> void:
 ## Blesse le joueur ; sur la partition, les coups des attaques blessent à SCORE_DAMAGE (« exact » :
 ## dégâts déjà réglés pour la batterie).
 func _hurt(amount: float, exact := false) -> void:
-	if not exact and score_phase == phase and on_music_grid():
+	if not exact and score.phase == phase and on_music_grid():
 		amount *= SCORE_DAMAGE
 	main.player.take_hit(amount * damage_scale, self)
 
@@ -492,179 +487,34 @@ func _hurt(amount: float, exact := false) -> void:
 # --- Partition et batterie (avec son morceau) ---
 
 ## Elle suit le morceau même enracinée : la musique ne ralentit pas. Enracinée, elle saute un coup
-## de la partition sur deux (_score_step) au lieu d'annoncer plus lentement.
+## de la partition sur deux (boss_score.gd › step) au lieu d'annoncer plus lentement.
 func on_music_grid() -> bool:
 	return sync != null and sync.running and sync.stage == ""
 
 
-## Vrai quand la partition mène le combat ; la cale sur la boucle de la phase au premier passage.
-func _score_ready() -> bool:
-	if not on_music_grid() or not SCORE.has(phase):
-		return false
-	if score_phase != phase or score_origin < 0.0:
-		_build_score()
-	return true
-
-
-## Pose la partition de la phase : sa boucle commence à la mesure où le combat a repris (resume_bar).
-func _build_score() -> void:
-	score_phase = phase
-	var bb: int = sync.beats
-	var start_bar: int = sync.resume_bar if sync.resume_bar >= 0 else int(floor(sync.bars_now()))
-	score_origin = float(start_bar * bb)
-	var cfg: Dictionary = SCORE[phase]
-	var sec: Dictionary = sync.data.get("sections", {}).get(cfg["loop"], {})
-	var bars := 8
-	if sec.has("mesures"):
-		bars = int(sec["mesures"][1]) - int(sec["mesures"][0]) + 1
-	score_len = float(bars * bb)
-	var drums: Dictionary = sec.get("coups", {})
-	var phrases: Array = cfg["phrases"]
-	var pw: Dictionary = DRUMS_POWER[phase]
-	score_hits = []
-	score_drums = []
-	for i in int(ceil(bars / 4.0)):
-		var ph: Dictionary = phrases[i % phrases.size()]
-		var base := float(i * 4 * bb)
-		for h in ph["coups"]:
-			if float(h[0]) + base < score_len:
-				score_hits.append({"beat": base + float(h[0]), "kind": str(h[1]), "phrase": i})
-		var flood: bool = ph.get("deluge", false)
-		var wave_bars: Array = ph.get("ondes", pw["ondes"])
-		for m in 4:
-			var bar_i: int = i * 4 + m
-			if bar_i >= bars:
-				continue
-			for src in ["kick", "kick_doux", "caisse", "charleston", "caisse_douce"]:
-				var hits: Array = drums[src][bar_i] if drums.has(src) and bar_i < drums[src].size() else DRUMS[src][m]
-				var kind := ""
-				var grid := 1
-				match src:
-					"kick":
-						kind = "onde" if (flood or m in wave_bars) else "pouls"
-					"kick_doux":
-						kind = "pouls"
-					"caisse":
-						kind = "roulement"
-						grid = 1 if flood else int(pw["roll_grid"])
-						if int(pw["roll"]) <= 0 and not flood:
-							continue
-					"charleston":
-						kind = "aiguille"
-						grid = 1 if flood else int(pw["spark_grid"])
-					"caisse_douce":
-						kind = "piqure"
-						if int(pw["prick"]) <= 0 and not flood:
-							continue
-				for six in hits:
-					if int(six) % grid != 0:
-						continue
-					score_drums.append({"beat": float(bar_i * bb) + float(six) / 4.0, "kind": kind, "deluge": flood})
-	score_drums.sort_custom(func(a, b): return a["beat"] < b["beat"])
-	_score_last = beats_now()
-	# Le premier coup de la boucle (le drop) part tout de suite, sans s'annoncer.
-	_drums_done = beats_now() - WAVE["lead"] - 0.01
-
-
-## Charge de la partition de la phase, en projectiles et coups par temps : ce qui doit monter à
-## chaque phase (tests). Une attaque compte quatre, une onde trois pouls.
-func score_weight() -> float:
-	var pw: Dictionary = DRUMS_POWER[phase]
-	var w := 0.0
-	for h in score_hits:
-		w += 4.0
-	for d in score_drums:
-		match d["kind"]:
-			"onde":
-				w += 3.0
-			"pouls":
-				w += 1.0
-			"roulement":
-				w += float(maxi(int(pw["roll"]), 4 if d["deluge"] else 0))
-			"aiguille":
-				w += float(int(pw["spark"]) + (1 if d["deluge"] else 0))
-			"piqure":
-				w += float(maxi(int(pw["prick"]), 1))
-	return w / maxf(1.0, score_len)
-
-
-## Temps absolu (depuis le début du morceau) du prochain coup de la partition après « after ».
-func _next_hit(after: float) -> Dictionary:
-	var loop_i := floorf((after - score_origin) / score_len)
-	for k in 2:
-		var o := score_origin + (loop_i + k) * score_len
-		for h in score_hits:
-			var at: float = o + float(h["beat"])
-			if at > after + 0.001:
-				return {"at": at, "kind": h["kind"], "phrase": h["phrase"]}
-	return {}
-
-
-## Entre deux attaques : attend que l'annonce du prochain coup doive partir, et la lance pour qu'il
-## frappe juste sur son temps. Un coup que l'attaque d'avant a trop serré est sauté.
-func _score_step() -> void:
-	var now := beats_now()
-	var after := maxf(_score_last, now + MIN_ANNOUNCE - 0.25)
-	var nxt := _next_hit(after)
-	if nxt.is_empty():
-		return
-	var kind: String = nxt["kind"]
-	# Bourgeons déjà tous éclos : des racines à la place (elles ne retiennent pas l'attaque suivante).
+## Partition : bourgeons déjà tous éclos → des racines à la place (elles ne retiennent pas l'attaque
+## suivante).
+func _swap(kind: String) -> String:
 	if kind == "invocation" and minions.size() >= SUMMON["max_alive"]:
-		kind = "racines"
-	var lead: float = ANNOUNCE_BEATS.get(kind, 3)
-	var left: float = nxt["at"] - now
-	if left > lead:
-		gap = (left - lead) * beat_len()
-		return
-	var planned := _next_hit(_score_last)
-	if not planned.is_empty() and planned["at"] < nxt["at"] - 0.001:
-		score_skipped += 1
-	_score_last = nxt["at"]
-	if cadence() < 0.999:
-		_rooted_skip = not _rooted_skip
-		if _rooted_skip:
-			return
-	score_played += 1
-	_begin(kind, nxt["at"])
-	cycle += 1
+		return "racines"
+	return kind
 
 
-## La batterie : ondes, pouls et piqûres s'annoncent avant leur coup, épines et aiguilles partent
-## sur le coup même.
-func _drums_step() -> void:
-	var now := beats_now()
+## Un coup de batterie dont l'annonce part (boss_score.gd) : « fuse » s avant le coup. Ondes, pouls
+## et piqûres s'annoncent ; épines et aiguilles partent sur le coup même.
+func _drum(kind: String, fuse: float, flood: bool) -> void:
 	var pw: Dictionary = DRUMS_POWER[phase]
-	var loop_i := floorf((_drums_done - score_origin) / score_len)
-	for k in 2:
-		var o := score_origin + (loop_i + k) * score_len
-		for d in score_drums:
-			var at: float = o + float(d["beat"])
-			var lead := 0.0
-			match d["kind"]:
-				"onde":
-					lead = WAVE["lead"]
-				"pouls":
-					lead = PULSE["lead"]
-				"piqure":
-					lead = PRICK["lead"]
-			var start: float = at - lead
-			if start <= _drums_done or start > now:
-				continue
-			var flood: bool = d.get("deluge", false)
-			drums_played[d["kind"]] = int(drums_played.get(d["kind"], 0)) + 1
-			match d["kind"]:
-				"onde":
-					_launch_wave((at - now) * beat_len(), flood)
-				"pouls":
-					_launch_wave((at - now) * beat_len(), false, true)
-				"roulement":
-					_roll(maxi(int(pw["roll"]), 4 if flood else 0))
-				"aiguille":
-					_spark(int(pw["spark"]) + (1 if flood else 0))
-				"piqure":
-					_prick((at - now) * beat_len(), maxi(int(pw["prick"]), 1))
-	_drums_done = now
+	match kind:
+		"onde":
+			_launch_wave(fuse, flood)
+		"pouls":
+			_launch_wave(fuse, false, true)
+		"roulement":
+			_roll(maxi(int(pw["roll"]), 4 if flood else 0))
+		"aiguille":
+			_spark(int(pw["spark"]) + (1 if flood else 0))
+		"piqure":
+			_prick(fuse, maxi(int(pw["prick"]), 1))
 
 
 ## Une onde de ronces qui partira dans « fuse » s, sur le coup de grosse caisse ; « small » : un pouls.
@@ -818,7 +668,7 @@ func _update_roots(delta: float) -> void:
 
 func _enter_phase(n: int) -> void:
 	phase = n
-	score_origin = -1.0
+	score.reset()
 	transition = PHASE_PAUSE
 	cycle = 0
 	gap = 0.3

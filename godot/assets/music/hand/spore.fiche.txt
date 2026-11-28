@@ -1,0 +1,29 @@
+# Fiche de repères d'amanitemere.wav (Amanite-Mère, boss de Spore), morceau d'Antoine (28/11).
+# 165 BPM, 4/4 : mesures de 1,4545 s, la mesure 1 commence au début du fichier (52 mesures, 75,6 s).
+# Gamme mesurée le 28/11 (notes tenues, batterie et glissés du 808 écartés) : la, si, do#, mi, fa#, sol#
+# (le ré ne sonne jamais) → la majeur / fa# mineur : intro sur fa# et la, puis quinte à vide la-mi,
+# mélodie do# si la. Ce n'est pas le fa# phrygien de Spore (sol# et non sol) : hand_track la ionien.
+# Analyse du 28/11 (énergie par bande et coups de batterie, mesure par mesure) :
+#   1-8 nappe seule (fa#, la), 9-16 le 808 et la quinte, sans batterie (fill de charlestons à la fin
+#   de 16), 17-32 batterie pleine (A), 33-48 batterie pleine plus lourde, mélodie do# si la (B),
+#   49-52 la fin (la dernière note qui s'éteint). Pas de coupure dans le morceau : chaque changement
+#   de phase rejoue la coupure 15-16 (808 seul, fill), comme le tout premier drop.
+bpm: 165
+mesure: 4/4
+debut: 0.0
+approche: 1-8           # sous l'ambiance du monde, de plus en plus fort à mesure qu'on approche
+approche_boucle: 9-16   # de l'enceinte, puis en boucle tant qu'on n'est pas entré
+intro: 16               # à l'entrée : la dernière mesure avant le drop (le fill), pendant qu'elle charge
+boucle_1: 17-32         # le drop : le combat (phase 1, partie A)
+drop_1: 15-16           # le 808 seul et le fill (2,9 s) : passage en phase 2
+boucle_2: 33-48         # partie B, plus lourde
+drop_2: 15-16           # passage en phase 3
+boucle_3: 17-48         # A puis B, 32 mesures
+drop_3: 15-16           # phase exaltée (New Game+, cycle 2 et plus)
+boucle_4: 33-48
+fin: 49-52              # à sa mort : la dernière note qui s'éteint
+# Coups de batterie : le 808 tient 30-110 Hz et sa quinte 180-400 Hz ; la grosse caisse se lit plus
+# bas, la caisse claire (une claque) plus haut, les charlestons au-dessus de 8 kHz.
+bande_kick: 40-80
+bande_caisse: 1500-5000
+bande_charleston: 8000-14000
