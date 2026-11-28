@@ -3,7 +3,7 @@
   "regions": {
     "ronce": {
       "_doc": "Ronce (le monde) : musique et ambiance de base (music_synth.gd › DEFAULTS, BED_DEFAULTS) ; ici seulement les sons de son boss.",
-      "boss": {"eveil": "ronce_boss_eveil", "phase": "ronce_boss_phase", "mort": "ronce_boss_mort"}
+      "boss": {"eveil": "ronce_boss_eveil", "phase": "ronce_boss_phase", "mort": "ronce_boss_mort", "exalte": "ronce_boss_phase"}
     },
     "spore": {
       "_doc": "Marais de spores : accords bas et suspendus ; en terre vivante, un arpège de bois mou et une flûte paresseuse. Combat aux percussions d'eau ; boss (Amanite-Mère) qui rampe par demi-tons. Ambiance : bulles, gouttes, grenouilles. Les spores montent comme des bulles.",
@@ -52,7 +52,7 @@
         "dead": {"shape": "glow", "color": "poison/sombre", "alpha": 0.5, "vel": [4.0, -14.0], "sway": [10.0, 3.0], "size": [1.6, 3.4]},
         "alive": {"shape": "glow", "color": "poison/clair", "alpha": 0.9, "vel": [3.0, -22.0], "sway": [14.0, 4.0], "size": [1.4, 3.0]}
       },
-      "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort"}
+      "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort", "exalte": "spore_boss_phase"}
     },
     "vent": {
       "_doc": "Hauts plateaux : quintes ouvertes ; en terre vivante, un arpège vif et une mélodie qui saute haut. Combat au tambour sur cadre ; boss (Harfang) en doubles croches. Ambiance : grand vent, herbes, oiseaux. Des brins d'herbe et des rafales filent vers la droite.",
@@ -92,7 +92,7 @@
         "dead": {"shape": "streak", "color": "vent/sombre", "alpha": 0.45, "vel": [150.0, 10.0], "sway": [20.0, 6.0], "size": [1.0, 1.8], "length": 22.0, "alt": "feather", "alt_ratio": 0.08},
         "alive": {"shape": "streak", "color": "vent/clair", "alpha": 0.7, "vel": [170.0, 8.0], "sway": [24.0, 8.0], "size": [1.0, 1.8], "length": 26.0, "alt": "feather", "alt_ratio": 0.08}
       },
-      "boss": {"eveil": "vent_boss_eveil", "phase": "vent_boss_phase", "mort": "vent_boss_mort"}
+      "boss": {"eveil": "vent_boss_eveil", "phase": "vent_boss_phase", "mort": "vent_boss_mort", "exalte": "vent_boss_phase"}
     },
     "seve": {
       "_doc": "Vallée de Sève : accords majeurs amples ; en terre vivante, un arpège de gouttes et une mélodie qui coule par degrés. Combat aux percussions d'eau ; boss (Saule exsangue) en complainte mineure. Ambiance : ruisseau, gouttes, oiseaux. Des gouttes de rosée montent doucement.",

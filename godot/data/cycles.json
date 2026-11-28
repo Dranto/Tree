@@ -14,7 +14,11 @@
       "threat_floor": 0.0,
       "mix": {},
       "elites": {},
-      "bosses": {},
+      "bosses": {
+        "ronce": {"phase_exaltee": 0.22},
+        "spore": {"phase_exaltee": 0.22},
+        "vent": {"phase_exaltee": 0.22}
+      },
       "tint": {},
       "grafts": [],
       "crown": 0
@@ -23,7 +27,11 @@
       "threat_floor": 0.0,
       "mix": {},
       "elites": {},
-      "bosses": {},
+      "bosses": {
+        "ronce": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
+        "spore": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
+        "vent": {"phase_exaltee": 0.25, "attaque_en_phase_3": true}
+      },
       "tint": {},
       "grafts": [],
       "crown": 0
