@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Exporte le jeu (Godot 4.7) : modèles d'export téléchargés une fois puis mis en cache, comme tools/godot.sh.
-#   tools/export.sh windows          # build/windows/Seve.exe
-#   tools/export.sh linux            # build/linux/Seve.x86_64
-#   tools/export.sh windows-demo     # build/windows-demo/Seve-demo.exe (fonctionnalité « demo »)
-#   tools/export.sh linux-demo       # build/linux-demo/Seve-demo.x86_64
+#   tools/export.sh windows          # build/windows/Arborescence.exe
+#   tools/export.sh linux            # build/linux/Arborescence.x86_64
+#   tools/export.sh windows-demo     # build/windows-demo/Arborescence-demo.exe (fonctionnalité « demo »)
+#   tools/export.sh linux-demo       # build/linux-demo/Arborescence-demo.x86_64
 #   tools/export.sh all              # les quatre
 #   tools/export.sh --icon           # régénère l'icône (PNG, ICO) et l'écran de démarrage (godot/assets/icon/)
 #   tools/export.sh --templates      # installe seulement les modèles
