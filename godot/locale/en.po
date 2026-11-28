@@ -8020,11 +8020,11 @@ msgstr "Phase 2 of 3: the buds burst open"
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 of 3: the brambles close in"
 
-#. scripts/boss_base.gd:519
+#. scripts/boss_base.gd:536
 msgid "Exaltation"
 msgstr "Exaltation"
 
-#. scripts/boss_base.gd:644
+#. scripts/boss_base.gd:661
 msgid "Entravée"
 msgstr "Snared"
 
