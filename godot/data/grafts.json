@@ -1,5 +1,5 @@
 {
-  "_doc": "Greffes de Ronce et de Spore : objets trouvés dans le monde, à poser dans un emplacement de greffe de l'Arbre de vie. « sources » : d'où elles peuvent venir (autel, boss, secret, elite) ; une greffe fixée par data/rewards.json vient de cet endroit précis. « shape » : dessin de la greffe au sol et dans l'inventaire (feuille, epine, racine, fleur, coeur).",
+  "_doc": "Greffes de Ronce et de Spore : objets trouvés dans le monde, à poser dans un emplacement de greffe de l'Arbre de vie. « sources » : d'où elles peuvent venir (autel, boss, secret, elite) ; une greffe fixée par data/rewards.json vient de cet endroit précis. « shape » : dessin de la greffe au sol et dans l'inventaire (feuille, epine, racine, fleur, coeur ; fruit, fanee, cerne, pepin pour les greffes de cycle). « min_cycle » (facultatif) : premier cycle du New Game+ où on peut la trouver (greffes de cycle, jalon 14), jamais tirée avant ; au New Game+, un autel, un secret ou un boss dont la greffe prévue est déjà possédée donne à la place une greffe de cycle de la même source (data/cycles.json › grafts).",
   "greffe_soeurs": {
     "name": "Épines sœurs",
     "desc": "Chaque tir lance deux graines de plus, un peu moins fortes.",
@@ -421,5 +421,85 @@
   "greffe_racine_profonde": {"name": "Racine profonde", "desc": "Une racine qui plonge sous la roche, plus vieille que la forêt.", "sources": ["secret"], "shape": "racine", "color": "#6f8a3e", "effects": [{"stat": "armor_cap", "op": "add", "value": 0.04}, {"stat": "max_hp", "op": "inc", "value": 0.12}, {"stat": "root_duration", "op": "inc", "value": 0.15}]},
   "greffe_coeur_de_chene": {"name": "Cœur de chêne", "desc": "Le cœur de l'Ancien pétrifié bat de nouveau, lent et sûr.", "sources": ["boss"], "shape": "coeur", "color": "#8a6a3a", "effects": [{"stat": "armor", "op": "add", "value": 0.06}, {"stat": "damage", "op": "inc", "value": 0.12}, {"on": "hurt", "do": "heal", "value": 0.02, "cooldown": 1, "text": "Quand un coup te touche, tu récupères 2 % de ta vie maximale (au plus une fois par seconde)."}]},
   "greffe_pieu_double": {"name": "Pieu double", "desc": "Chaque pieu en appelle un autre.", "sources": ["elite"], "shape": "epine", "color": "#9a7446", "effects": [{"skill_mod": "pieux", "param": "count", "op": "add", "value": 2, "text": "Pieux : +2 pieux."}]},
-  "greffe_ecorce_dure": {"name": "Écorce dure", "desc": "Le bouclier d'écorce s'épaissit d'une couche de liège.", "sources": ["elite"], "shape": "feuille", "color": "#b08a5a", "effects": [{"skill_mod": "ecorce", "param": "shield", "op": "more", "value": 1.3, "text": "Bouclier d'écorce : bouclier ×1,3."}]}
+  "greffe_ecorce_dure": {"name": "Écorce dure", "desc": "Le bouclier d'écorce s'épaissit d'une couche de liège.", "sources": ["elite"], "shape": "feuille", "color": "#b08a5a", "effects": [{"skill_mod": "ecorce", "param": "shield", "op": "more", "value": 1.3, "text": "Bouclier d'écorce : bouclier ×1,3."}]},
+  "greffe_fruit_graine": {
+    "name": "Fruit de la graine",
+    "desc": "Le fruit tombé de la graine, au cycle suivant : chaque victoire te nourrit.",
+    "sources": ["boss"], "min_cycle": 2, "shape": "fruit", "color": "#d9763a",
+    "effects": [
+      {"on": "kill", "do": "heal", "value": 0.015, "cooldown": 0.3,
+       "text": "Chaque ennemi vaincu te rend 1,5 % de ta vie maximale (au plus toutes les 0,3 s)."},
+      {"stat": "damage", "op": "inc", "value": 0.1}
+    ]
+  },
+  "greffe_fleur_fanee": {
+    "name": "Fleur fanée",
+    "desc": "Ce qui a fané pique encore : tes critiques font saigner, tes coups empoisonnent.",
+    "sources": ["elite"], "min_cycle": 2, "shape": "fanee", "color": "#9a7aa8",
+    "effects": [
+      {"on": "crit", "do": "apply_status", "status": "saignement", "value": 0.4, "scale": "base", "duration": 3,
+       "text": "Chaque coup critique fait saigner la cible (40 % des dégâts du coup par seconde, 3 s)."},
+      {"attack_mod": "poison", "value": 0.08}
+    ]
+  },
+  "greffe_cerne_passe": {
+    "name": "Cerne de l'an passé",
+    "desc": "Un anneau de bois d'une aventure déjà vécue : il encaisse et rend les coups.",
+    "sources": ["autel"], "min_cycle": 2, "shape": "cerne", "color": "#b08a5a",
+    "effects": [
+      {"stat": "armor", "op": "add", "value": 0.05},
+      {"stat": "max_hp", "op": "inc", "value": 0.1},
+      {"on": "hurt", "do": "burst", "radius": 120, "factor": 1.0, "color": "#b08a5a", "cooldown": 1.5,
+       "text": "Quand un coup te touche, une onde d'échardes blesse les ennemis autour de toi (×1 dégâts, toutes les 1,5 s au plus)."}
+    ]
+  },
+  "greffe_pepin_aile": {
+    "name": "Pépin ailé",
+    "desc": "Un pépin qui a déjà fait le tour du monde : ton esquive le sème tout autour.",
+    "sources": ["autel"], "min_cycle": 2, "shape": "pepin", "color": "#c9b06a",
+    "effects": [
+      {"on": "dash", "do": "attack_salvo", "count": 6, "cooldown": 0.8,
+       "text": "Chaque esquive tire une salve de ton attaque de base tout autour de toi (6 traits, au plus toutes les 0,8 s)."},
+      {"stat": "move_speed", "op": "inc", "value": 0.05}
+    ]
+  },
+  "greffe_humus": {
+    "name": "Humus",
+    "desc": "Ce qui tombe nourrit le sol, et le sol retient ceux qui restent.",
+    "sources": ["elite"], "min_cycle": 2, "shape": "racine", "color": "#6a5a3a",
+    "effects": [
+      {"on": "kill", "do": "status_area", "at": "enemy", "status": "enracine", "value": 1, "duration": 1.2, "radius": 110, "color": "#6a5a3a", "cooldown": 1.0,
+       "text": "Un ennemi vaincu fait jaillir des racines qui immobilisent ses voisins (1,2 s, au plus une fois par seconde)."},
+      {"stat": "root_duration", "op": "inc", "value": 0.15}
+    ]
+  },
+  "greffe_rosee_tardive": {
+    "name": "Rosée d'arrière-saison",
+    "desc": "Une goutte tombée tard, qui brille encore au deuxième passage.",
+    "sources": ["secret"], "min_cycle": 2, "shape": "pepin", "color": "#8ab8c8",
+    "effects": [
+      {"attack_mod": "rosee", "value": 0.01},
+      {"attack_mod": "eclat", "value": 0.3}
+    ]
+  },
+  "greffe_seconde_floraison": {
+    "name": "Seconde floraison",
+    "desc": "La ronce refleurit au troisième passage : tes attaques s'ouvrent comme des pétales.",
+    "sources": ["autel", "elite"], "min_cycle": 3, "shape": "fanee", "color": "#e08aa0",
+    "effects": [
+      {"attack_mod": "volee", "value": 6},
+      {"attack_mod": "refraction", "value": 1}
+    ]
+  },
+  "greffe_couronne_automne": {
+    "name": "Couronne d'automne",
+    "desc": "Les feuilles de trois aventures, tressées : chaque chute lève le vent et la lumière.",
+    "sources": ["boss"], "min_cycle": 3, "shape": "fruit", "color": "#c0603a",
+    "effects": [
+      {"on": "kill", "do": "ray", "factor": 0.5, "reach": 260, "cooldown": 0.6,
+       "text": "Un ennemi vaincu renvoie un rayon de lumière vers l'ennemi le plus proche (50 % des dégâts, au plus toutes les 0,6 s)."},
+      {"on": "kill", "do": "tornado", "at": "enemy", "factor": 0.4, "cooldown": 3,
+       "text": "Un ennemi vaincu laisse une tornade là où il tombe (40 % des dégâts et de la durée de la tornade, au plus toutes les 3 s)."}
+    ]
+  }
 }

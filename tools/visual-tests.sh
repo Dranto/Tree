@@ -13,6 +13,9 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/godot/tests/visual/out"
 SEED=1234
+# Les références sont rendues en logiciel (mesa, machine de la CI) : même sur la machine GPU
+# (docs/gpu-ovh.md), les tests visuels gardent ce rendu, sinon toutes les captures différeraient.
+export GODOT_GPU=0
 # Scénarios : « nom » ou « nom:LARGEURxHAUTEUR » (résolution de la fenêtre, 1600x900 par défaut).
 # Seul le premier est joué si TEST_ONLY est défini (ex. TEST_ONLY=galerie tools/visual-tests.sh).
 SCENARIOS=(depart combat galerie competences boss roncier resolution:1280x720 resolution:1920x1080 resolution:2560x1440 resolution:3440x1440 quetes:1280x720 quetes:1920x1080 quetes:2560x1440 quetes:3440x1440 charte:2560x1440 interactions heros:2560x1440 monde attaque regions marais plateaux carte5:1280x720 carte5:1920x1080 falaises vallee finale foret bord paysages menus:1280x720 menus:3440x1440 cumul manette:1280x800 langue:1280x720 langue:1280x800 langue:3440x1440 anglais:1280x720 anglais:1280x800 anglais:3440x1440 eclat reaction vivant demo:1280x720 demo:1280x800 bestiaire:2560x1440 frontieres cycle)

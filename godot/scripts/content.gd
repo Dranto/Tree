@@ -34,6 +34,9 @@ const ACTIONS := {
 }
 ## Sources possibles d'une greffe (champ « sources » de grafts.json).
 const GRAFT_SOURCES := ["autel", "boss", "secret", "elite", "quete"]
+## Dessins possibles d'une greffe (champ « shape » de grafts.json, GraftPickup.draw_shape) ; les quatre
+## derniers sont ceux des greffes de cycle du New Game+.
+const GRAFT_SHAPES := ["feuille", "epine", "racine", "fleur", "coeur", "fruit", "fanee", "cerne", "pepin"]
 
 static var _cache: Dictionary = {}
 
@@ -238,6 +241,10 @@ static func validate(keystones_per_branch := -1) -> PackedStringArray:
 		for src in g.get("sources", []):
 			if not src in GRAFT_SOURCES:
 				errors.append("%s : source inconnue « %s » (attendu : %s)" % [gw, src, ", ".join(GRAFT_SOURCES)])
+		if g.has("min_cycle") and not ((g["min_cycle"] is float or g["min_cycle"] is int) and int(g["min_cycle"]) >= 1 and float(g["min_cycle"]) == float(int(g["min_cycle"]))):
+			errors.append(gw + " : « min_cycle » doit être un entier ≥ 1 (premier cycle où on la trouve)")
+		if not str(g.get("shape", "feuille")) in GRAFT_SHAPES:
+			errors.append("%s : forme inconnue « %s » (attendu : %s)" % [gw, g.get("shape"), ", ".join(GRAFT_SHAPES)])
 	_check_rewards(errors)
 	var seen_keys := {}
 	var ids: Array = t.get("branches", [])

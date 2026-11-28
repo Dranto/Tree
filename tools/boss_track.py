@@ -13,6 +13,9 @@ Fiche de repères (texte, « clé: valeur », # pour les commentaires), mesures 
   bpm: 180
   mesure: 4/4
   debut: 0.026        # secondes : premier temps de la mesure 1
+  approche: 1-8       # facultatif : joué sous l'ambiance du monde à l'approche de l'arène (le volume
+  approche_boucle: 9-16 # monte avec la distance), puis approche_boucle en boucle ; à l'entrée, l'intro
+                      # part à la mesure suivante (boss_track.gd › approach)
   intro: 1-16         # jouée une fois à l'arrivée (descente, invocation) ; le combat part à boucle_1
   intro_court: 9-16   # facultatif : intro des essais suivants (après une mort)
   boucle_1: 17-32     # phase 1 (tourne en boucle)
@@ -51,7 +54,7 @@ RATE = 44100
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, "godot", "assets", "music", "hand")
 ENTRY_FADE_MS = 3.0
-SECTION_RE = re.compile(r"^(intro|intro_court|boucle_\d+|drop_\d+|fin|defaite)$")
+SECTION_RE = re.compile(r"^(approche|approche_boucle|intro|intro_court|boucle_\d+|drop_\d+|fin|defaite)$")
 
 
 def parse_fiche(path):
@@ -69,7 +72,8 @@ def parse_fiche(path):
     sections = {}
     for k, v in keys.items():
         if SECTION_RE.match(k):
-            a, b = (int(x) for x in v.split("-"))
+            parts = v.split("-")
+            a, b = int(parts[0]), int(parts[-1])
             if b < a:
                 sys.exit(f"{k} : {v} (fin avant le début)")
             sections[k] = [a, b]
@@ -219,7 +223,7 @@ def main(argv):
     # 1. Chaque section, coupée aux mesures exactes, raccords préparés.
     for name, (a, b) in sections.items():
         s, e = at(a), at(b + 1)
-        loop = name.startswith("boucle")
+        loop = name.startswith("boucle") or name == "approche_boucle"
         if e > len(x) and not (name in ("fin", "defaite") and e - len(x) < bar * 0.02):
             sys.exit(f"{name} : {a}-{b} dépasse la fin du fichier ({(len(x) - debut * RATE) / bar:.2f} mesures)")
         clip = np.zeros((e - s, 2), dtype=np.float32)
@@ -270,6 +274,8 @@ def main(argv):
         n_loop += 1
     if "intro_court" in sections:
         clips["intro_court"] = ["intro_court", "boucle_1"]
+    if "approche_boucle" in sections:
+        clips["approche"] = (["approche"] if "approche" in sections else []) + ["approche_boucle"]
     for k in ("fin", "defaite"):
         if k in sections:
             clips[k] = [k]
@@ -289,7 +295,7 @@ def main(argv):
         if d != 0:
             sys.exit(f"{cname} : l'ogg relu est décalé de {d} échantillons")
         bars = [sections[p][1] - sections[p][0] + 1 for p in parts]
-        loop = parts[-1].startswith("boucle")
+        loop = parts[-1].startswith("boucle") or parts[-1] == "approche_boucle"
         info = {"fichier": f"{boss}/{cname}.ogg", "sections": parts, "mesures": sum(bars),
                 "boucle": loop, "echantillons": frames, "decalage_ech": d}
         if loop:

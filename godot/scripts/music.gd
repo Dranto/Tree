@@ -14,8 +14,8 @@
 ## duck(part) pour baisser un instant la musique sous un grand bruitage, follow_boss(arène) à chaque pas.
 ##
 ## Musiques de boss faites à la main (boss_track.gd, assets/music/hand/) : quand le boss du combat en a
-## une, elle joue à la place des couches du code, qui se taisent (HAND_FADE) ; l'ambiance reste baissée
-## comme pour tout boss. Un boss sans morceau garde la couche « boss » du code.
+## une, elle joue seule à la place des couches du code, qui se taisent (HAND_FADE, HAND_WORLD_OUT) ;
+## l'ambiance descend à BED_HAND, à l'approche comme au combat. Un boss sans morceau garde la couche « boss » du code.
 extends Node
 
 const BUS := "Musique" # i18n: non (bus audio)
@@ -23,10 +23,18 @@ const AMB_BUS := "Ambiance" # i18n: non (bus audio)
 const SfxScript = preload("res://scripts/sfx.gd")
 const BossTrack = preload("res://scripts/boss_track.gd")
 const RegionAudio = preload("res://scripts/region_audio.gd")
+const Harmony = preload("res://scripts/harmony.gd")
 ## Durée des couches de musique (music_synth.gd › LOOP) ; les nappes d'ambiance bouclent sur 12 s.
 const LOOP := 24.0
 ## Vitesses des fondus (part du mélange par seconde).
 const REGION_FADE := 0.5
+## Changement de région : chaque région a sa gamme, donc les deux musiques ne se chevauchent presque pas.
+## L'ancienne s'éteint d'abord (REGION_OUT, part par seconde) ; la nouvelle ne monte qu'une fois l'ancienne
+## sous REGION_OVERLAP (-16 dB environ). Une région n'est prise qu'après REGION_HOLD s de suite (on longe une
+## frontière sans que la musique hésite).
+const REGION_OUT := 1.0
+const REGION_OVERLAP := 0.1
+const REGION_HOLD := 0.8
 const MIX_FADE := 0.5
 const COMBAT_IN := 1.2
 const COMBAT_OUT := 0.25
@@ -37,10 +45,17 @@ const BOSS_FADE := 0.8
 ## Fondu croisé (s) entre la musique du monde (couches du code) et un morceau de boss fait à la main :
 ## le monde s'efface pendant que le morceau monte (boss_track.gd › FADE_IN), sans rupture.
 const HAND_FADE := 3.0
+## … mais quand le morceau n'est pas dans la gamme de la région, le monde s'efface en HAND_FADE_CLASH s
+## (les deux gammes ne s'entendent presque pas ensemble).
+const HAND_FADE_CLASH := 0.8
 const DUCK_RECOVER := 0.7
 const SILENT_DB := -60.0
 ## L'ambiance sonore baisse pendant un combat de boss.
 const BED_BOSS := 0.55
+## Sous un morceau de boss fait à la main (approche comprise), la musique du monde s'est tue quand le
+## morceau a pris HAND_WORLD_OUT de sa part, et l'ambiance ne garde que BED_HAND de son volume.
+const HAND_WORLD_OUT := 0.6
+const BED_HAND := 0.15
 
 var enabled := true
 var started := false
@@ -58,6 +73,9 @@ var _combat_hold := 0.0
 ## Région dont on entend la musique ("" : le monde) et région de l'ambiance.
 var region := ""
 var bed_region := ""
+## Région demandée par le jeu, pas encore prise (REGION_HOLD), et depuis combien de temps.
+var _pending := ""
+var _pending_t := 0.0
 ## Groupes de couches : id ("" : le monde) -> {"players": {couche: AudioStreamPlayer}, "gain": 0 à 1}.
 var groups: Dictionary = {}
 ## Nappes d'ambiance : id -> {"players": {"mort": …, "vif": …}, "gain": 0 à 1}.
@@ -179,7 +197,13 @@ func _all_players() -> Array:
 ## reg : région où se trouve le joueur ("" : hors région, musique du monde).
 func set_mood(vie: float, reg := "") -> void:
 	target = smoothstep(0.15, 0.6, clampf(vie, 0.0, 1.0))
-	region = reg if reg != "" and enabled and _ensure_group(reg) else ""
+	var want := reg if reg != "" and enabled and _ensure_group(reg) else ""
+	if want != _pending:
+		_pending = want
+		_pending_t = 0.0
+	# Premier appel (rien ne joue encore) : la région est prise tout de suite.
+	if want == region or _pending_t >= REGION_HOLD or not started:
+		region = want
 	bed_region = reg if reg != "" and enabled and _ensure_bed(reg) else ""
 
 
@@ -207,9 +231,51 @@ func follow_boss(arena) -> void:
 		hand.follow(arena)
 
 
+## Approche d'une arène ouverte (null : aucune) : son morceau, s'il a une approche, monte avec
+## « level » (0 → 1) sous la musique du monde, qui s'efface d'autant (boss_track.gd › approach).
+func approach_boss(arena, level: float) -> void:
+	if hand != null and started:
+		hand.approach(arena, level)
+
+
 ## Vrai pendant qu'un morceau de boss fait à la main tient la musique.
 func hand_playing() -> bool:
 	return hand != null and hand.active()
+
+
+## Région dont on entend le plus la musique ("" : le monde).
+func heard_region() -> String:
+	var best := region
+	var g := -1.0
+	for id in groups:
+		if float(groups[id]["gain"]) > g:
+			g = float(groups[id]["gain"])
+			best = id
+	return best if g > 0.0 else region
+
+
+## Ce qui sonne en ce moment (harmony.gd › context) : la gamme du morceau de boss fait à la main s'il joue,
+## sinon la gamme et l'accord de la région qu'on entend. Les bruitages s'y accordent (sfx.gd).
+func harmony() -> Dictionary:
+	if hand_playing():
+		var h := Harmony.hand_track(str(hand.boss_id))
+		if not h.is_empty():
+			return Harmony.context(h)
+	return Harmony.context(Harmony.region(heard_region()), clock)
+
+
+## Vrai si le morceau de boss qui joue (ou aucun) est dans la gamme de la région : le fondu reste long.
+func hand_in_key() -> bool:
+	if hand == null or str(hand.boss_id) == "":
+		return true
+	var h := Harmony.hand_track(str(hand.boss_id))
+	if h.is_empty():
+		return true
+	var mine: Array = Harmony.region(region)["scale"].duplicate()
+	var theirs: Array = h["scale"].duplicate()
+	mine.sort()
+	theirs.sort()
+	return mine == theirs
 
 
 ## Baisse brève de la musique (part de 0 à 1) sous un grand bruitage (mort d'un boss, Cœur purifié…).
@@ -225,10 +291,24 @@ func _process(delta: float) -> void:
 	combat = move_toward(combat, combat_target, (COMBAT_IN if combat_target > combat else COMBAT_OUT) * delta)
 	heart = move_toward(heart, heart_target, HEART_FADE * delta)
 	boss = move_toward(boss, boss_target, BOSS_FADE * delta)
-	hand_k = move_toward(hand_k, 1.0 if hand_playing() else 0.0, delta / HAND_FADE)
+	# L'approche d'une arène (boss_track.gd) ne prend que sa part : la musique du monde s'efface avec elle
+	# (vite si le morceau n'est pas dans la gamme de la région : HAND_FADE_CLASH).
+	var hand_want: float = hand.level() if hand != null else 0.0
+	var hand_fade := HAND_FADE if hand_want >= 1.0 or hand_k > hand_want else 1.0
+	if not hand_in_key():
+		hand_fade = minf(hand_fade, HAND_FADE_CLASH)
+	hand_k = move_toward(hand_k, hand_want, delta / hand_fade)
 	duck_gain = move_toward(duck_gain, 1.0, DUCK_RECOVER * delta)
+	_pending_t += delta
+	var others := 0.0
 	for id in groups:
-		groups[id]["gain"] = move_toward(groups[id]["gain"], 1.0 if id == region else 0.0, REGION_FADE * delta)
+		if id != region:
+			others = maxf(others, float(groups[id]["gain"]))
+	for id in groups:
+		if id != region:
+			groups[id]["gain"] = move_toward(groups[id]["gain"], 0.0, REGION_OUT * delta)
+		elif others <= REGION_OVERLAP:
+			groups[id]["gain"] = move_toward(groups[id]["gain"], 1.0, REGION_FADE * delta)
 	for id in beds:
 		beds[id]["gain"] = move_toward(beds[id]["gain"], 1.0 if id == bed_region else 0.0, REGION_FADE * delta)
 	_tick_clock(delta)
@@ -265,15 +345,18 @@ func layer_gains(players: Dictionary) -> Dictionary:
 func _apply() -> void:
 	if not enabled:
 		return
+	# Le morceau d'un boss passe seul : la musique du monde s'efface plus vite qu'il ne monte.
+	var world_k := cos(clampf(hand_k / HAND_WORLD_OUT, 0.0, 1.0) * PI / 2.0)
+	var bed_k := 1.0 - (1.0 - BED_HAND) * hand_k
 	for id in groups:
 		var g: Dictionary = groups[id]
 		var gains := layer_gains(g["players"])
-		var reg_g := sin(float(g["gain"]) * PI / 2.0) * duck_gain * cos(hand_k * PI / 2.0)
+		var reg_g := sin(float(g["gain"]) * PI / 2.0) * duck_gain * world_k
 		for layer in g["players"]:
 			_set_volume(g["players"][layer], float(gains.get(layer, 0.0)) * reg_g)
 	for id in beds:
 		var g: Dictionary = beds[id]
-		var reg_g := sin(float(g["gain"]) * PI / 2.0) * (1.0 - (1.0 - BED_BOSS) * boss)
+		var reg_g := sin(float(g["gain"]) * PI / 2.0) * minf(1.0 - (1.0 - BED_BOSS) * boss, bed_k)
 		_set_volume(g["players"].get("mort"), cos(mix * PI / 2.0) * reg_g)
 		_set_volume(g["players"].get("vif"), sin(mix * PI / 2.0) * reg_g)
 

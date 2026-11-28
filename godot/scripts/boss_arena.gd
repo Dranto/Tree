@@ -264,6 +264,26 @@ func update_bar() -> void:
 var sync = null
 
 
+## Approche (boss_track.gd › approach) : le début du morceau du boss se fait entendre à APPROACH_RANGE px
+## de la zone qui le réveille, et monte jusqu'à elle.
+const APPROACH_RANGE := 1300.0
+## Le long du mur, jusqu'à APPROACH_FULL px dehors, on n'entend plus que l'intro du morceau.
+const APPROACH_FULL := 500.0
+const BossTrackRef = preload("res://scripts/boss_track.gd")
+
+
+## Part du morceau du boss à l'approche (0 → 1, selon la distance du héros) : 0 si l'arène n'est
+## pas ouverte ou si le boss n'a pas d'approche dans son morceau. Lu par main.gd à chaque pas.
+func approach_level() -> float:
+	if state != "ouverte" or main == null or main.player == null:
+		return 0.0
+	var data := BossTrackRef.track_data(region)
+	if data.is_empty() or not data["clips"].has("approche"):
+		return 0.0
+	var d: float = main.player.position.distance_to(center) - max_radius - APPROACH_FULL
+	return smoothstep(0.0, 1.0, 1.0 - clampf(d / APPROACH_RANGE, 0.0, 1.0))
+
+
 ## Vrai pendant que le morceau du boss joue hors combat (la finale : la descente). Lu par boss_track.gd.
 func music_on() -> bool:
 	return in_combat()
@@ -353,8 +373,10 @@ func boss_defeated() -> void:
 	# Récompense (« boss › reward » de la région) : points d'arbre, donnés une seule fois, et une greffe au sol.
 	var reward: Dictionary = Content.rewards().get("boss", {}).get(region, {})
 	Game.grant_points(int(reward.get("points", REWARD_POINTS)), "boss", region + "_boss")
-	if str(reward.get("graft", "")) != "":
-		main.drop_graft(center, str(reward["graft"]))
+	# Au New Game+, une greffe de cycle remplace celle du boss si on l'a déjà (Game.reward_graft).
+	var graft := Game.reward_graft(str(reward["graft"]), "boss") if str(reward.get("graft", "")) != "" else ""
+	if graft != "":
+		main.drop_graft(center, graft)
 	for i in 3:
 		main.fx.ring(center, 40.0, max_radius * (0.5 + 0.3 * i), 0.9 + 0.4 * i, Color(0.6, 1.0, 0.55, 0.9), 6.0)
 	# Sortie de l'arène : un éclat de sève sur les bords de l'écran, qui s'éteint doucement.

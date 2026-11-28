@@ -1,5 +1,5 @@
 {
-  "_doc": "Cycles du New Game+ (scripts/cycles.gd, autoload « Cycles », jalon 14). Un cycle est une aventure entière ; le cycle 1 est la première aventure, le suivant commence quand le joueur touche le fruit de la graine après la fin. « cycles » : réglages par cycle (\"1\", \"2\", \"3\"…), une clé par système ; Cycles.value(clé, défaut) lit le cycle en cours et, au-delà du dernier cycle décrit, retombe sur le dernier cycle qui donne la clé. « per_cycle_after » : clés numériques qui montent encore d'autant par cycle au-delà (contenu nouveau jusqu'au cycle 3, ensuite seule la menace monte), jusqu'à leur plafond dans « caps ». Chaque système n'écrit que ses clés : threat_floor, mix, elites (monstres de cycle) ; bosses (boss exaltés) ; tint (monde fané) ; grafts, crown (greffes de cycle). Valeurs du cycle 1 neutres : la première aventure ne change pas. Pas d'équilibrage ici avant la fin du projet. Monstres de cycle (jalon 14 M) : « threat_floor » = menace minimale de tout Flétri ; « mix » : par région où naît l'ennemi (« ordinaires » hors région), « share » = part des apparitions remplacées par une sorte d'une autre région, tirée selon « kinds » (poids), « min_dist » = distance minimale à la graine par sorte ; « elites » : chance_mult (× la chance d'élite), max_alive, two_affixes. Les 3 modificateurs réservés au NG+ sont dans difficulty.json › elites › affixes (« cycle_min »). Valeurs provisoires : pas d'équilibrage avant la fin du projet.",
+  "_doc": "Cycles du New Game+ (scripts/cycles.gd, autoload « Cycles », jalon 14). Un cycle est une aventure entière ; le cycle 1 est la première aventure, le suivant commence quand le joueur touche le fruit de la graine après la fin. « cycles » : réglages par cycle (\"1\", \"2\", \"3\"…), une clé par système ; Cycles.value(clé, défaut) lit le cycle en cours et, au-delà du dernier cycle décrit, retombe sur le dernier cycle qui donne la clé. « per_cycle_after » : clés numériques qui montent encore d'autant par cycle au-delà (contenu nouveau jusqu'au cycle 3, ensuite seule la menace monte), jusqu'à leur plafond dans « caps ». Chaque système n'écrit que ses clés : threat_floor, mix, elites (monstres de cycle) ; bosses (boss exaltés) ; tint (monde fané) ; grafts, crown (greffes de cycle : « grafts » = sources — autel, secret, boss — où une greffe de cycle remplace la greffe prévue quand on l'a déjà, les greffes de cycle portent « min_cycle » dans grafts.json ; « crown » = emplacements de couronne en plus, un par cycle terminé, plafonné par crown.json › max). Valeurs du cycle 1 neutres : la première aventure ne change pas. Pas d'équilibrage ici avant la fin du projet. Monstres de cycle (jalon 14 M) : « threat_floor » = menace minimale de tout Flétri ; « mix » : par région où naît l'ennemi (« ordinaires » hors région), « share » = part des apparitions remplacées par une sorte d'une autre région, tirée selon « kinds » (poids), « min_dist » = distance minimale à la graine par sorte ; « elites » : chance_mult (× la chance d'élite), max_alive, two_affixes. Les 3 modificateurs réservés au NG+ sont dans difficulty.json › elites › affixes (« cycle_min »). Valeurs provisoires : pas d'équilibrage avant la fin du projet.",
   "cycles": {
     "1": {
       "threat_floor": 0.0,
@@ -103,8 +103,8 @@
         "finale": {"phase_exaltee": 0.15, "attaque_en_phase_3": false}
       },
       "tint": {"dark": 0.12, "grey": 0.3, "ink": 0.3, "ash": 0.1, "ash_color": "#8a8478"},
-      "grafts": [],
-      "crown": 0
+      "grafts": ["autel", "secret", "boss"],
+      "crown": 1
     },
     "3": {
       "threat_floor": 3.5,
@@ -254,14 +254,16 @@
         "finale": {"phase_exaltee": 0.18, "attaque_en_phase_3": true}
       },
       "tint": {"dark": 0.2, "grey": 0.45, "ink": 0.45, "ash": 0.18, "ash_color": "#7d7468"},
-      "grafts": [],
-      "crown": 0
+      "grafts": ["autel", "secret", "boss"],
+      "crown": 2
     }
   },
   "per_cycle_after": {
-    "threat_floor": 0.5
+    "threat_floor": 0.5,
+    "crown": 1
   },
   "caps": {
-    "threat_floor": 6.0
+    "threat_floor": 6.0,
+    "crown": 5
   }
 }

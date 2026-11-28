@@ -1,19 +1,19 @@
 {
 	"beds": {
-		"res://assets/ambience/aube_mort.wav": 7167238,
-		"res://assets/ambience/aube_vif.wav": 1655548454,
-		"res://assets/ambience/finale_mort.wav": 2621272648,
-		"res://assets/ambience/finale_vif.wav": 1336874356,
-		"res://assets/ambience/mort.wav": 322744508,
-		"res://assets/ambience/racine_mort.wav": 1890140560,
-		"res://assets/ambience/racine_vif.wav": 4185591269,
-		"res://assets/ambience/seve_mort.wav": 904429869,
-		"res://assets/ambience/seve_vif.wav": 195264156,
-		"res://assets/ambience/spore_mort.wav": 2592195254,
-		"res://assets/ambience/spore_vif.wav": 3966270099,
-		"res://assets/ambience/vent_mort.wav": 2442915248,
-		"res://assets/ambience/vent_vif.wav": 1519486099,
-		"res://assets/ambience/vif.wav": 629978020
+		"res://assets/ambience/aube_mort.wav": 1269318874,
+		"res://assets/ambience/aube_vif.wav": 3377284932,
+		"res://assets/ambience/finale_mort.wav": 2866586260,
+		"res://assets/ambience/finale_vif.wav": 3624249320,
+		"res://assets/ambience/mort.wav": 853643754,
+		"res://assets/ambience/racine_mort.wav": 3436010940,
+		"res://assets/ambience/racine_vif.wav": 2141985413,
+		"res://assets/ambience/seve_mort.wav": 3281884413,
+		"res://assets/ambience/seve_vif.wav": 2739394909,
+		"res://assets/ambience/spore_mort.wav": 103441167,
+		"res://assets/ambience/spore_vif.wav": 2328862148,
+		"res://assets/ambience/vent_mort.wav": 1158287739,
+		"res://assets/ambience/vent_vif.wav": 695561560,
+		"res://assets/ambience/vif.wav": 3350304262
 	},
 	"music": {
 		"res://assets/music/aube_boss.wav": 2166741467,

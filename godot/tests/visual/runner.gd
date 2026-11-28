@@ -236,7 +236,8 @@ func _scenario_resolution() -> void:
 	var tag := _res_tag()
 	await _frames(60)
 	await _shot("jeu_" + tag, "jeu")
-	var ids: Array = Content.grafts().keys()
+	# Greffes de la première aventure seulement (les greffes de cycle du New Game+ ne changent pas ces images).
+	var ids: Array = Content.grafts().keys().filter(func(id): return int(Content.grafts()[id].get("min_cycle", 1)) < 2)
 	ids.sort()
 	for g in ids.slice(0, 14):
 		Game.give_graft(g)
@@ -386,7 +387,8 @@ func _langue_suite(tag: String, deck: bool) -> void:
 	main.quest_ui.close()
 	await _frames(2)
 	# Arbre : couronne de greffes (fiche d'une greffe), builds, résumé.
-	var ids: Array = Content.grafts().keys()
+	# Greffes de la première aventure seulement (les greffes de cycle du New Game+ ne changent pas ces images).
+	var ids: Array = Content.grafts().keys().filter(func(id): return int(Content.grafts()[id].get("min_cycle", 1)) < 2)
 	ids.sort()
 	for g in ids.slice(0, 14):
 		Game.give_graft(g)
@@ -494,7 +496,8 @@ func _scenario_manette() -> void:
 	UiAudit.scan_controls("options", main.pause_menu.options)
 	await _shot("manette_options_" + tag)
 	main.pause_menu.close()
-	var ids: Array = Content.grafts().keys()
+	# Greffes de la première aventure seulement (les greffes de cycle du New Game+ ne changent pas ces images).
+	var ids: Array = Content.grafts().keys().filter(func(id): return int(Content.grafts()[id].get("min_cycle", 1)) < 2)
 	ids.sort()
 	for g in ids.slice(0, 6):
 		Game.give_graft(g)
@@ -1227,6 +1230,9 @@ func _scenario_boss() -> void:
 	arena._start_fight()
 	arena.gap_open = 0.0
 	var boss = arena.boss
+	# Poses figées : la grille de son morceau (charge, invulnérable jusqu'au drop) ne s'en mêle pas.
+	if arena.sync != null:
+		arena.sync.stop()
 	boss.frozen = true
 	boss.intro = 0.0
 	boss.t = 0.6
@@ -1454,6 +1460,9 @@ func _scenario_marais() -> void:
 	arena._start_fight()
 	arena.gap_open = 0.0
 	var boss = arena.boss
+	# Poses figées : la grille de son morceau (charge, invulnérable jusqu'au drop) ne s'en mêle pas.
+	if arena.sync != null:
+		arena.sync.stop()
 	boss.frozen = true
 	boss.intro = 0.0
 	boss.t = 0.6
