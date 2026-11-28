@@ -90,7 +90,7 @@
         "aube": {"phase_exaltee": 0.22, "attaque_en_phase_3": false},
         "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": false}
       },
-      "tint": {},
+      "tint": {"dark": 0.12, "grey": 0.3, "ink": 0.3, "ash": 0.1, "ash_color": "#8a8478"},
       "grafts": [],
       "crown": 0
     },
@@ -229,7 +229,7 @@
         "aube": {"phase_exaltee": 0.22, "attaque_en_phase_3": true},
         "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": true}
       },
-      "tint": {},
+      "tint": {"dark": 0.2, "grey": 0.45, "ink": 0.45, "ash": 0.18, "ash_color": "#7d7468"},
       "grafts": [],
       "crown": 0
     }

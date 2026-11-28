@@ -348,7 +348,7 @@ func _make_tile(key: Vector2i, world: float) -> Dictionary:
 		af = FloorOverlay.new()
 		af.ground = self
 		af.rect = Rect2(origin, Vector2(world, world))
-		af.material = LieuxBake.material()
+		af.material = LieuxBake.plain_material()
 		af.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		vp.add_child(af)
 	add_child(vp)
@@ -584,7 +584,9 @@ func ratio() -> float:
 ## Carte de vie encodée en PNG (pour la sauvegarde).
 func export_map() -> PackedByteArray:
 	finish_waves()
-	return Image.create_from_data(RES, RES, false, Image.FORMAT_R8, data).save_png_to_buffer()
+	# Pendant une vague de flétrissure (cycle_wave.gd) : la carte d'après la vague.
+	var src := wither_target if wither_target.size() == RES * RES else data
+	return Image.create_from_data(RES, RES, false, Image.FORMAT_R8, src).save_png_to_buffer()
 
 
 ## Restaure une carte de vie sauvegardée, redimensionnée si la résolution a changé.
@@ -609,3 +611,55 @@ func import_map(png: PackedByteArray) -> bool:
 			t["layer"].queue_redraw()
 	painted.emit(Vector2.ZERO, INF)
 	return true
+
+
+# --- Vague de flétrissure du début d'un cycle (New Game+, jalon 14 W, cycle_wave.gd) ---
+
+## Carte visée par la vague en cours (vide sinon) : la sauvegarde l'écrit à la place de la carte
+## montrée, si bien qu'une partie quittée pendant la vague reprend dans l'état d'après.
+var wither_target := PackedByteArray()
+
+
+## Toute la terre ravivée d'un coup (le monde tel que la fin l'a laissé) ; « target » : la carte que la
+## vague rendra en passant.
+func wither_begin(target: PackedByteArray) -> void:
+	wither_target = target
+	var full := PackedByteArray()
+	full.resize(RES * RES)
+	full.fill(255)
+	import_map(Image.create_from_data(RES, RES, false, Image.FORMAT_R8, full).save_png_to_buffer())
+
+
+## Le front de la vague passe de r_in (exclu) à r_out (inclus) autour de « center » : chaque texel de
+## l'anneau reprend sa valeur dans la carte visée.
+func wither_ring(center: Vector2, r_in: float, r_out: float) -> void:
+	if wither_target.size() != RES * RES:
+		return
+	var c := _to_map(center)
+	var k := RES / SIZE
+	var ri := maxf(r_in, 0.0) * k
+	var ro := r_out * k
+	var in2 := ri * ri if r_in > 0.0 else -1.0
+	var out2 := ro * ro
+	for y in range(maxi(0, int(c.y - ro) - 1), mini(RES, int(c.y + ro) + 2)):
+		var dy := y + 0.5 - c.y
+		for x in range(maxi(0, int(c.x - ro) - 1), mini(RES, int(c.x + ro) + 2)):
+			var dx := x + 0.5 - c.x
+			var d2 := dx * dx + dy * dy
+			if d2 <= in2 or d2 > out2:
+				continue
+			var i := y * RES + x
+			var old: int = data[i]
+			var nv: int = wither_target[i]
+			if nv != old:
+				data[i] = nv
+				total_bytes += nv - old
+				dirty = true
+				_dirty_rect = Rect2i(x, y, 1, 1) if not _dirty_rect.has_area() else _dirty_rect.expand(Vector2i(x, y)).expand(Vector2i(x + 1, y + 1))
+
+
+## Fin de la vague : la carte visée partout.
+func wither_end() -> void:
+	if wither_target.size() == RES * RES:
+		wither_ring(Vector2.ZERO, -1.0, SIZE * 2.0)
+	wither_target = PackedByteArray()

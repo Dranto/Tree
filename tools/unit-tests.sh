@@ -36,6 +36,7 @@ TESTS=(
   "exalte_b1|--headless --fixed-fps 60|--cycle=2"
   "death|--headless --fixed-fps 60|"
   "deaths|--headless --fixed-fps 60|"
+  "cycle_tint|--headless --fixed-fps 60|"
   "cycle_monsters|--headless --fixed-fps 60|"
   "difficulty|--headless|"
   "demo|--headless --fixed-fps 60|"
