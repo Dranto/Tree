@@ -100,6 +100,8 @@ var _started_signals: Array = []
 var _boss_phase := 0
 var _boss_phases: Dictionary = {}
 var _wall_start := 0
+## Sonde de mesure d'équilibrage (tests/balance_probe.gd) : ne change rien au jeu.
+var probe = load("res://tests/balance_probe.gd").new()
 
 
 func check(cond: bool, what: String) -> void:
@@ -208,6 +210,7 @@ func _start_region() -> void:
 	_stuck_pos = Vector2.INF
 	report[r] = {"debut": t, "niveau_debut": game.level, "build": bot.builder.name, "reprises": 0,
 		"boss": 0.0, "forcee": false}
+	probe.begin_region(r, bot.builder.name)
 	print("AVENTURE %4d s  région %d/%d : %s, build « %s », niveau %d" % [int(t), idx + 1, order.size(), r, bot.builder.name, game.level])
 
 
@@ -390,6 +393,8 @@ var _demo_outside := 0
 
 
 func _track() -> void:
+	if not paused:
+		probe.step(main, DT, game, t)
 	if Demo.active() and not Demo.allowed(main.player.position, 0.0) and not finale_holds_player():
 		_demo_outside += 1
 	if _fighting():
@@ -521,6 +526,9 @@ func _finish_region() -> void:
 	rep["morts"] = deaths_before + main.deaths - _region_start_deaths
 	rep["boss"] = _boss_total
 	print("AVENTURE %4d s  région %s finie en %d s, niveau %d → %d, %d morts, combats de boss %d s%s" % [int(t), r, int(t - float(rep["debut"])), rep["niveau_debut"], game.level, rep["morts"], int(_boss_total), " (FORCÉE)" if rep["forcee"] else ""])
+	probe.end_region()
+	for line in probe.report(game):
+		print("PARTIEL " + line)
 	await _reload("région %s purifiée" % r)
 	idx += 1
 	if stop_after != "" and r == stop_after:
@@ -540,6 +548,7 @@ func _begin_finale() -> void:
 	_stuck_pos = Vector2.INF
 	bot.finale = true
 	bot.goal = ""
+	probe.begin_region("finale", "finale")
 	var f = main.get("finale")
 	if f == null:
 		print("AVENTURE : pas de finale dans ce jeu (main.finale absent) : l'aventure s'arrête au dernier boss")
@@ -813,5 +822,7 @@ func _final() -> void:
 			var seen: Array = _boss_phases.get(r, [])
 			lines.append("%s %s" % [r, "".join(seen.map(func(p): return str(p)))])
 		print("  phases de boss vues (échantillonnées à chaque image ; 4 = phase exaltée) : " + ", ".join(lines))
+	for line in probe.report(game):
+		print(line)
 	for b in blocks:
 		print("  BLOCAGE : " + b)
