@@ -8032,7 +8032,7 @@ msgstr "Entravée"
 msgid "Accroché !"
 msgstr "Accroché !"
 
-#. scripts/boss_vent.gd:140
+#. scripts/boss_vent.gd:288
 #. scripts/enemy_behaviors/glider.gd:70
 msgid "Hors d'atteinte"
 msgstr "Hors d'atteinte"
