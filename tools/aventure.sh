@@ -20,6 +20,9 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SEEDS=${SEEDS:-"1"}
 VARIANTES=${VARIANTES:-"0 1"}
+# Délai par passage (secondes) : 2 h suffisent pour deux passages ; cinq en parallèle sur 4 cœurs
+# en demandent plus (jalon 13 A : coupés vers 1700 s de jeu au bout de 2 h).
+LIMIT=${LIMIT:-7200}
 OUT="$ROOT/godot/autotest/aventure"
 rm -rf "$OUT"; mkdir -p "$OUT"
 
@@ -32,7 +35,7 @@ for a in "${extra[@]}"; do [[ "$a" == --autotest=aventure* ]] && has_auto=1; don
 
 for s in $SEEDS; do
   for v in $VARIANTES; do
-    timeout 7200 "$ROOT/tools/godot.sh" --headless --fixed-fps 60 -s res://tests/aventure_test.gd -- \
+    timeout "$LIMIT" "$ROOT/tools/godot.sh" --headless --fixed-fps 60 -s res://tests/aventure_test.gd -- \
       "--seed=$s" "--variante=$v" "${extra[@]}" > "$OUT/graine-$s-variante-$v.log" 2>&1 &
   done
 done

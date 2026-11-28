@@ -862,14 +862,20 @@ func hearts_purified() -> int:
 
 func _spawn_enemy() -> void:
 	var pos := Vector2.ZERO
+	# Démo : un endroit derrière la ronce est ramené contre la haie, ce qui peut tomber tout près du
+	# héros (vu à 94 px, jalon 13 A). Faute d'endroit libre, on garde le plus éloigné du héros.
+	var fallback := Vector2.INF
+	var tries := 8 if demo_wall != null else 4
 	# La vie repousse les Flétris : on évite de les faire naître en terre ravivée.
-	for attempt in 4:
+	for attempt in tries:
 		var a := rng.randf() * TAU
 		pos = player.position + Vector2.from_angle(a) * rng.randf_range(760.0, 980.0)
 		pos = pos.clamp(Vector2(-WORLD_HALF, -WORLD_HALF), Vector2(WORLD_HALF, WORLD_HALF))
 		if demo_wall != null and not Demo.allowed(pos, 30.0):
-			# Démo : derrière la ronce, on tire un autre endroit (au dernier essai, contre la haie).
-			pos = Demo.keep_inside(pos, 30.0)
+			var inside := Demo.keep_inside(pos, 30.0)
+			if fallback == Vector2.INF or inside.distance_squared_to(player.position) > fallback.distance_squared_to(player.position):
+				fallback = inside
+			pos = fallback
 			continue
 		if ground.life_at(pos) < 0.5:
 			break
