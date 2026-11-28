@@ -169,6 +169,24 @@ func _run() -> void:
 			flips += 1
 		music._process(0.05)
 	check(flips == 0, "frontière longée : la musique reste sur sa région (aucun va-et-vient)")
+	# Combat de boss : l'ambiance sonore se tait tout à fait.
+	var bed_players := {}
+	for st in ["mort", "vif"]:
+		bed_players[st] = AudioStreamPlayer.new()
+		music.add_child(bed_players[st])
+	music.beds = {"": {"players": bed_players, "gain": 1.0}}
+	music.bed_region = ""
+	music.set_boss(true)
+	for i in 30:
+		music._process(0.1)
+	check(bed_players["mort"].volume_db <= -60.0 and bed_players["vif"].volume_db <= -60.0, "combat de boss : plus aucune ambiance, la musique du boss et les bruitages seuls")
+	music.set_boss(false)
+	for i in 30:
+		music._process(0.1)
+	check(bed_players["mort"].volume_db > -60.0 or bed_players["vif"].volume_db > -60.0, "après le combat, l'ambiance revient")
+	music.beds = {}
+	for st in bed_players:
+		bed_players[st].free()
 	# Approche de la Mère-Ronce (la mineur) dans Ronce (ré mineur) : le monde se tait vite, puis les
 	# bruitages passent sur la gamme du morceau.
 	var stub := GDScript.new()
