@@ -118,7 +118,10 @@ func _run() -> void:
 	check(started == [2], "Game.cycle_started(2) émis une fois (%s)" % str(started))
 	check(game.level == before["level"] and game.xp >= before["xp"] and game.points == before["points"], "niveau, expérience et points gardés (%d/%d, %.1f/%.1f, %d/%d)" % [game.level, before["level"], game.xp, before["xp"], game.points, before["points"]])
 	check(game.allocated_uids() == before["uids"], "arbre gardé (%d nœuds)" % (before["uids"] as Array).size())
-	check(game.graft_inventory == before["inventory"] and game.crown == before["crown"], "greffes et couronne gardées")
+	# Le cycle 2 ouvre un emplacement de plus (cycles.json › crown, greffes de cycle) : la couronne d'avant est intacte devant.
+	var kept_crown: Array = game.crown.slice(0, (before["crown"] as Array).size())
+	var new_slots: Array = game.crown.slice((before["crown"] as Array).size())
+	check(game.graft_inventory == before["inventory"] and kept_crown == before["crown"] and new_slots.all(func(g): return g == ""), "greffes et couronne gardées (%d emplacements, %d nouveaux)" % [game.crown.size(), new_slots.size()])
 	check(game.crown_size() >= crown_before and game.crown_kept == crown_before, "la couronne reste ouverte (%d emplacements)" % game.crown_size())
 	check(game.builds.size() == before["builds"], "builds gardés")
 	for k in ["tuto_deplacement", "plan_arbre", "barre", "couronne_vue", "points_hors_niveau"]:
