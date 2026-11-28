@@ -352,7 +352,8 @@ func _enter_phase(n: int) -> void:
 	cycle = 0
 	gap = 0.3
 	main.fx.ring(anchor, radius, 420.0, 0.7, Color(Art.ec("seve", "clair"), 0.9), 8.0)
-	if n == 3:
+	# Phase 3, ou la phase exaltée atteinte d'un coup : l'arène se resserre (une seule fois).
+	if n >= 3 and not arena.shrinking and arena.radius >= arena.max_radius:
 		arena.start_shrink()
 
 

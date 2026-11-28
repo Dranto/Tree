@@ -9,7 +9,7 @@ extends SceneTree
 
 
 ## Régions dont le boss resserre l'arène en phase 3 (arena.start_shrink).
-const SHRINKING_REGIONS := ["ronce", "spore", "seve"]
+const SHRINKING_REGIONS := ["ronce", "spore", "seve", "racine"]
 
 var failures := 0
 var main
@@ -105,19 +105,26 @@ func _run() -> void:
 	check(burst > 0.0 and not boss.is_bleeding() and boss.hp == hp_before, "la Saignée fait éclater son saignement (burst_bleed, comme les autres ennemis)")
 	check(boss.burst_bleed(1.0) == 0.0, "sans saignement, rien n'éclate")
 	boss.apply_status("enracine", 1.0, 2.0)
-	check(boss.statuses.has("enracine"), "l'enracinement la ralentit")
+	if boss.get("no_root") == true:
+		check(not boss.statuses.has("enracine"), "l'enracinement ne le tient pas (no_root, l'Ancien)")
+	else:
+		check(boss.statuses.has("enracine"), "l'enracinement la ralentit")
 	_place(arena.center + Vector2(0, 420))
 	check(await _until(func(): return boss.attack != "" and boss.stage == "annonce"), "une attaque est annoncée avant de frapper")
 	boss.take_damage(boss.max_hp * 0.4, false)
 	check(await _until(func(): return boss.phase == 2), "sous 66 % de vie : phase 2")
 	boss.take_damage(boss.max_hp * 0.3, false)
-	check(await _until(func(): return boss.phase == 3), "sous 33 % de vie : phase 3")
+	check(await _until(func(): return boss.phase >= 3), "sous 33 % de vie : phase 3")
 	# Seuls les boss dont la phase 3 appelle arena.start_shrink resserrent l'arène : Ronce, Spore et
 	# Sève. Le Harfang (tempête) et la Phalène (pluie de lumière) gardent leur arène entière.
 	if arena.region in SHRINKING_REGIONS:
 		# Large marge (40 s de jeu) : l'annonce du resserrement dure 1,6 s et le ralenti du boss, le gel
 		# d'impact ou une pause peuvent retarder la suite ; seul compte que le mur finisse par avancer.
-		var shrunk: bool = await _until(func(): return arena.radius < arena.max_radius, 2400)
+		# Au cycle exalté, il reste en phase 3 (au-dessus de la phase exaltée) pendant l'attente.
+		var shrunk: bool = await _until(func():
+			if boss.exalted:
+				boss.hp = maxf(boss.hp, boss.max_hp * 0.25)
+			return arena.radius < arena.max_radius, 2400)
 		if not shrunk:
 			print("  diagnostic : état=%s phase=%d rétrécit=%s annonce=%.2f rayon=%.1f time_scale=%.2f en pause=%s" % [
 				arena.state, int(boss.phase) if is_instance_valid(boss) else -1, arena.shrinking, arena.shrink_warn,
@@ -132,11 +139,16 @@ func _run() -> void:
 		check(boss.phase_limits.size() == 3, "cycle %d : une phase exaltée de plus (sous %d %% de vie)" % [root.get_node("Cycles").current(), roundi(at * 100.0)])
 		boss.hp = minf(boss.hp, boss.max_hp * (at + 0.02))
 		boss.take_damage(boss.max_hp * 0.03, false)
-		check(await _until(func(): return boss.phase == 4, 2400), "phase exaltée atteinte")
+		# Les coups automatiques du héros ne doivent pas l'achever pendant qu'on regarde.
+		var keep := func() -> void: boss.hp = maxf(boss.hp, boss.max_hp * 0.2)
+		_place(arena.center + Vector2(0, arena.radius - 40.0))
+		check(await _until(func(): keep.call(); return boss.phase == 4, 2400), "phase exaltée atteinte")
+		await _steps(2)
 		check(boss.exalted_phase_seen and boss.is_exalted_phase(), "elle est annoncée (BossBase._exalt_announce)")
 		var attack_name: String = boss.get_script().get_script_constant_map()["EXALTED_ATTACK"]
-		check(await _until(func(): return boss.exalted_attacks > 0, 2400), "l'attaque nouvelle « %s » est annoncée" % attack_name)
-		check(await _until(func(): return boss.attack == "" , 600), "puis elle se termine")
+		check(await _until(func(): keep.call(); return boss.exalted_attacks > 0, 2400), "l'attaque nouvelle « %s » est annoncée" % attack_name)
+		check(await _until(func(): keep.call(); return boss.attack != attack_name, 900), "puis elle se termine")
+		check(not boss.dead, "le boss est toujours debout")
 	else:
 		check(not boss.exalted and boss.phase_limits.size() == 2, "cycle 1 : ni phase exaltée ni attaque nouvelle")
 	_place(arena.center + Vector2(0, 250))
