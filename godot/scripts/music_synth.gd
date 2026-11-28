@@ -34,7 +34,7 @@ const EIGHTH := CHORD_TIME / 8.0
 const SIXTEENTH := CHORD_TIME / 16.0
 ## Version des formules (empreinte des pistes) : à changer quand le rendu change.
 const VERSION := 6
-const BED_VERSION := 3
+const BED_VERSION := 4
 
 ## Fichier (couche) → section de réglages.
 const LAYERS := {"sombre": "dark", "lumineux": "bright", "combat": "combat", "coeur": "heart", "boss": "boss"}
@@ -57,6 +57,16 @@ const MODES := {
 	"bell": [[0.5, 1.0, 1.19, 1.5, 2.0], [0.45, 1.0, 0.45, 0.3, 0.22], [0.5, 0.8, 1.2, 1.6, 2.4]],
 }
 
+## Gammes des régions (« mode ») : degrés en demi-tons depuis la tonique. Les bruitages s'y accordent (harmony.gd).
+const SCALES := {
+	"ionien": [0, 2, 4, 5, 7, 9, 11],
+	"dorien": [0, 2, 3, 5, 7, 9, 10],
+	"phrygien": [0, 1, 3, 5, 7, 8, 10],
+	"lydien": [0, 2, 4, 6, 7, 9, 11],
+	"mixolydien": [0, 2, 4, 5, 7, 9, 10],
+	"eolien": [0, 2, 3, 5, 7, 8, 10],
+}
+
 ## Thème de Ronce (le monde) : ré mineur. A : ré, si bémol, fa, la ; B : do, sol, si bémol, la.
 ## motif : [croche de départ (0 à 31), note de l'accord (0 = fondamentale, 1, 2… puis l'octave), durée en
 ## croches, altération facultative en demi-tons]. motif_b (vide : variation tirée de motif) joue en B.
@@ -65,6 +75,8 @@ const DEFAULTS := {
 	"roots": [0, -4, -9, -5],
 	"roots_b": [-2, -7, -4, -5],
 	"key": 0,
+	## Gamme de la région sur la tonique « key » (harmony.gd › MODES) : les bruitages s'y accordent.
+	"mode": "eolien",
 	"qualities": ["m", "M", "M", "M", "M", "m", "M", "7"],
 	"dark": {"chord": [0, 7, 12, 15], "pad": 0.5, "pad_lp": 650.0, "drone": 0.3, "bell": 0.3, "bell_ratio": 3.5, "texture": 0.12, "verb": 0.5,
 		"strings": 0.35, "piano": 0.22, "sweep": 0.5, "pad_tone": "saw"},
@@ -1066,7 +1078,12 @@ static func _event(out: PackedFloat32Array, kind: String, t0: float, vol: float,
 				var s := svf.process(1.0 if fposmod(ph, 1.0) < 0.1 else 0.0)
 				out[(i0 + i) % n] += s * sin(PI * k) * vol * 0.4
 		"chime":
-			_bell(out, t0, rng.randf_range(1400.0, 2600.0), vol, 2.0, 3.5, 1.2)
+			# Avec « f0 » et « notes » (dans la gamme de la région), le carillon tinte juste ; sans, au hasard.
+			var f := rng.randf_range(1400.0, 2600.0)
+			if ev.has("f0"):
+				var cn: Array = ev.get("notes", [0])
+				f = float(ev["f0"]) * pow(2.0, float(cn[rng.randi() % cn.size()]) / 12.0)
+			_bell(out, t0, f, vol, 2.0, 3.5, 1.2)
 		"knock":
 			_hit(out, t0, 0.12, 300.0, 240.0, vol, 1.0, 0.3, 1200.0, rng)
 		"rustle":

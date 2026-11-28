@@ -23,10 +23,18 @@ const AMB_BUS := "Ambiance" # i18n: non (bus audio)
 const SfxScript = preload("res://scripts/sfx.gd")
 const BossTrack = preload("res://scripts/boss_track.gd")
 const RegionAudio = preload("res://scripts/region_audio.gd")
+const Harmony = preload("res://scripts/harmony.gd")
 ## Durée des couches de musique (music_synth.gd › LOOP) ; les nappes d'ambiance bouclent sur 12 s.
 const LOOP := 24.0
 ## Vitesses des fondus (part du mélange par seconde).
 const REGION_FADE := 0.5
+## Changement de région : chaque région a sa gamme, donc les deux musiques ne se chevauchent presque pas.
+## L'ancienne s'éteint d'abord (REGION_OUT, part par seconde) ; la nouvelle ne monte qu'une fois l'ancienne
+## sous REGION_OVERLAP (-16 dB environ). Une région n'est prise qu'après REGION_HOLD s de suite (on longe une
+## frontière sans que la musique hésite).
+const REGION_OUT := 1.0
+const REGION_OVERLAP := 0.1
+const REGION_HOLD := 0.8
 const MIX_FADE := 0.5
 const COMBAT_IN := 1.2
 const COMBAT_OUT := 0.25
@@ -37,6 +45,9 @@ const BOSS_FADE := 0.8
 ## Fondu croisé (s) entre la musique du monde (couches du code) et un morceau de boss fait à la main :
 ## le monde s'efface pendant que le morceau monte (boss_track.gd › FADE_IN), sans rupture.
 const HAND_FADE := 3.0
+## … mais quand le morceau n'est pas dans la gamme de la région, le monde s'efface en HAND_FADE_CLASH s
+## (les deux gammes ne s'entendent presque pas ensemble).
+const HAND_FADE_CLASH := 0.8
 const DUCK_RECOVER := 0.7
 const SILENT_DB := -60.0
 ## L'ambiance sonore baisse pendant un combat de boss.
@@ -58,6 +69,9 @@ var _combat_hold := 0.0
 ## Région dont on entend la musique ("" : le monde) et région de l'ambiance.
 var region := ""
 var bed_region := ""
+## Région demandée par le jeu, pas encore prise (REGION_HOLD), et depuis combien de temps.
+var _pending := ""
+var _pending_t := 0.0
 ## Groupes de couches : id ("" : le monde) -> {"players": {couche: AudioStreamPlayer}, "gain": 0 à 1}.
 var groups: Dictionary = {}
 ## Nappes d'ambiance : id -> {"players": {"mort": …, "vif": …}, "gain": 0 à 1}.
@@ -179,7 +193,13 @@ func _all_players() -> Array:
 ## reg : région où se trouve le joueur ("" : hors région, musique du monde).
 func set_mood(vie: float, reg := "") -> void:
 	target = smoothstep(0.15, 0.6, clampf(vie, 0.0, 1.0))
-	region = reg if reg != "" and enabled and _ensure_group(reg) else ""
+	var want := reg if reg != "" and enabled and _ensure_group(reg) else ""
+	if want != _pending:
+		_pending = want
+		_pending_t = 0.0
+	# Premier appel (rien ne joue encore) : la région est prise tout de suite.
+	if want == region or _pending_t >= REGION_HOLD or not started:
+		region = want
 	bed_region = reg if reg != "" and enabled and _ensure_bed(reg) else ""
 
 
@@ -212,6 +232,41 @@ func hand_playing() -> bool:
 	return hand != null and hand.active()
 
 
+## Région dont on entend le plus la musique ("" : le monde).
+func heard_region() -> String:
+	var best := region
+	var g := -1.0
+	for id in groups:
+		if float(groups[id]["gain"]) > g:
+			g = float(groups[id]["gain"])
+			best = id
+	return best if g > 0.0 else region
+
+
+## Ce qui sonne en ce moment (harmony.gd › context) : la gamme du morceau de boss fait à la main s'il joue,
+## sinon la gamme et l'accord de la région qu'on entend. Les bruitages s'y accordent (sfx.gd).
+func harmony() -> Dictionary:
+	if hand_playing():
+		var h := Harmony.hand_track(str(hand.boss_id))
+		if not h.is_empty():
+			return Harmony.context(h)
+	return Harmony.context(Harmony.region(heard_region()), clock)
+
+
+## Vrai si le morceau de boss qui joue (ou aucun) est dans la gamme de la région : le fondu reste long.
+func hand_in_key() -> bool:
+	if hand == null or str(hand.boss_id) == "":
+		return true
+	var h := Harmony.hand_track(str(hand.boss_id))
+	if h.is_empty():
+		return true
+	var mine: Array = Harmony.region(region)["scale"].duplicate()
+	var theirs: Array = h["scale"].duplicate()
+	mine.sort()
+	theirs.sort()
+	return mine == theirs
+
+
 ## Baisse brève de la musique (part de 0 à 1) sous un grand bruitage (mort d'un boss, Cœur purifié…).
 func duck(amount: float) -> void:
 	duck_gain = minf(duck_gain, 1.0 - clampf(amount, 0.0, 1.0) * 0.7)
@@ -225,10 +280,18 @@ func _process(delta: float) -> void:
 	combat = move_toward(combat, combat_target, (COMBAT_IN if combat_target > combat else COMBAT_OUT) * delta)
 	heart = move_toward(heart, heart_target, HEART_FADE * delta)
 	boss = move_toward(boss, boss_target, BOSS_FADE * delta)
-	hand_k = move_toward(hand_k, 1.0 if hand_playing() else 0.0, delta / HAND_FADE)
+	hand_k = move_toward(hand_k, 1.0 if hand_playing() else 0.0, delta / (HAND_FADE if hand_in_key() else HAND_FADE_CLASH))
 	duck_gain = move_toward(duck_gain, 1.0, DUCK_RECOVER * delta)
+	_pending_t += delta
+	var others := 0.0
 	for id in groups:
-		groups[id]["gain"] = move_toward(groups[id]["gain"], 1.0 if id == region else 0.0, REGION_FADE * delta)
+		if id != region:
+			others = maxf(others, float(groups[id]["gain"]))
+	for id in groups:
+		if id != region:
+			groups[id]["gain"] = move_toward(groups[id]["gain"], 0.0, REGION_OUT * delta)
+		elif others <= REGION_OVERLAP:
+			groups[id]["gain"] = move_toward(groups[id]["gain"], 1.0, REGION_FADE * delta)
 	for id in beds:
 		beds[id]["gain"] = move_toward(beds[id]["gain"], 1.0 if id == bed_region else 0.0, REGION_FADE * delta)
 	_tick_clock(delta)

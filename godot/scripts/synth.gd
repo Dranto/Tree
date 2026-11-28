@@ -231,14 +231,14 @@ const SOUNDS := {
 		{"wave": "grain", "dur": 0.6, "att": 0.01, "density": 40.0, "grain": 0.04, "cut": [600.0, 250.0], "res": 0.85, "vol": 0.5},
 		{"inst": "mallet", "kind": "marimba", "f0": 185.0, "notes": [12, 7, 1, 0], "step": 0.07, "dur": 0.5, "vol": 0.45},
 		{"inst": "drum", "f0": 90.0, "f1": 35.0, "dur": 0.6, "vol": 0.54, "noise": 0.3, "cut": 600.0}]},
-	# L'Amanite meurt : elle se vide en bulles, puis le marimba passe en fa# majeur.
+	# L'Amanite meurt : elle se vide en bulles, puis le marimba s'ouvre sur ré majeur (dans la gamme du marais, fa# phrygien).
 	"spore_boss_mort": {"peak": 0.85, "verb": 0.6, "room": 0.95, "duck": 0.7, "layers": [
 		{"wave": NOISE, "dur": 1.4, "att": 0.002, "filter": "lp", "cut": [1600.0, 120.0], "vol": 0.5, "res": 0.3},
 		{"wave": "grain", "dur": 1.4, "att": 0.01, "density": 30.0, "grain": 0.05, "cut": [500.0, 250.0], "res": 0.85, "vol": 0.45},
 		{"inst": "drum", "f0": 70.0, "f1": 28.0, "dur": 1.2, "vol": 0.6, "noise": 0.3, "cut": 500.0},
 		{"inst": "tone", "tone": "cello", "f0": 92.5, "notes": [7, 1, 0], "step": 0.3, "dur": 0.6, "vol": 0.35},
-		{"inst": "mallet", "kind": "marimba", "f0": 185.0, "notes": [0, 4, 7, 12, 16], "step": 0.12, "dur": 0.8, "vol": 0.4, "delay": 0.9},
-		{"inst": "bow", "f0": 92.5, "notes": [0, 4, 7], "dur": 1.4, "att": 0.4, "cut": 1000.0, "vol": 0.3, "delay": 0.9}]},
+		{"inst": "mallet", "kind": "marimba", "f0": 146.8, "notes": [0, 4, 7, 12, 16], "step": 0.12, "dur": 0.8, "vol": 0.4, "delay": 0.9},
+		{"inst": "bow", "f0": 73.4, "notes": [0, 4, 7], "dur": 1.4, "att": 0.4, "cut": 1000.0, "vol": 0.3, "delay": 0.9}]},
 	# --- Vent (vitesse, projectiles, mobilité) : souffles et sifflements clairs. -----------------------------
 	# Lame de vent : un souffle tranchant et une corde de harpe pincée.
 	"vent_lame": {"peak": 0.45, "verb": 0.1, "room": 0.4, "layers": [
@@ -379,14 +379,14 @@ const SOUNDS := {
 		{"inst": "drum", "f0": 100.0, "f1": 32.0, "dur": 0.4, "vol": 0.6, "noise": 0.4, "cut": 500.0, "notes": [0, -2, -5], "step": 0.12},
 		{"wave": "grain", "dur": 0.5, "att": 0.01, "density": 140.0, "grain": 0.01, "cut": [1200.0, 400.0], "res": 0.4, "vol": 0.4},
 		{"inst": "mallet", "kind": "marimba", "f0": 130.8, "notes": [3, 0], "step": 0.12, "dur": 0.5, "vol": 0.4}]},
-	# Le boss de Racine s'effondre : la pierre gronde, puis le marimba et les cordes en do majeur.
+	# Le boss de Racine s'effondre : la pierre gronde, puis le marimba et les cordes s'ouvrent sur mib majeur (dans do dorien).
 	"racine_boss_mort": {"peak": 0.88, "verb": 0.6, "room": 0.95, "duck": 0.7, "layers": [
 		{"wave": NOISE, "dur": 2.0, "att": 0.03, "filter": "lp", "cut": [1400.0, 80.0], "vol": 0.6, "trem": [0.4, 5.0]},
 		{"inst": "drum", "f0": 90.0, "f1": 26.0, "dur": 1.4, "vol": 0.6, "noise": 0.4, "cut": 400.0},
 		{"wave": "grain", "dur": 1.0, "att": 0.01, "density": 90.0, "grain": 0.015, "cut": [1000.0, 300.0], "res": 0.4, "vol": 0.4},
 		{"inst": "tone", "tone": "cello", "f0": 65.4, "notes": [7, 3, 0], "step": 0.3, "dur": 0.6, "vol": 0.35},
-		{"inst": "mallet", "kind": "marimba", "f0": 130.8, "notes": [0, 4, 7, 12, 16], "step": 0.12, "dur": 0.8, "vol": 0.4, "delay": 0.9},
-		{"inst": "bow", "f0": 65.4, "notes": [0, 4, 7, 12], "dur": 1.4, "att": 0.4, "cut": 1000.0, "vol": 0.3, "delay": 0.9}]},
+		{"inst": "mallet", "kind": "marimba", "f0": 155.6, "notes": [0, 4, 7, 12, 16], "step": 0.12, "dur": 0.8, "vol": 0.4, "delay": 0.9},
+		{"inst": "bow", "f0": 77.8, "notes": [0, 4, 7, 12], "dur": 1.4, "att": 0.4, "cut": 1000.0, "vol": 0.3, "delay": 0.9}]},
 	# Termite touché : un clic de chitine sèche.
 	"racine_termite_hit": {"peak": 0.4, "verb": 0.05, "room": 0.3, "layers": [
 		{"inst": "drum", "f0": 900.0, "f1": 600.0, "dur": 0.04, "vol": 0.42, "noise": 0.6, "cut": 1800.0},
