@@ -35,6 +35,7 @@ class Capsule extends Node2D:
 	var size_px := Vector2(920, 430)
 	var spec: Dictionary = {}
 	var mode := "capsule"   # capsule, logo, icone
+	var numeral := ""   # médaille d'un succès de cycle : « II », « III » sur un cartouche d'or
 	var _vig: ImageTexture
 
 	func _draw() -> void:
@@ -94,6 +95,30 @@ class Capsule extends Node2D:
 		draw_arc(c, r * 0.96, 0, TAU, 64, Color(UiTheme.GOLD, 0.5), r * 0.025, true)
 		for k in 4:
 			UiTheme.draw_diamond(self, c + Vector2.from_angle(PI * 0.25 + PI * 0.5 * k) * r * 0.95, r * 0.05, UiTheme.GOLD)
+		if numeral != "":
+			_cycle_plate(c, r)
+
+	## Cartouche du cycle (succès CYCLE_N) : un bandeau d'or au bas de la médaille, le chiffre romain
+	## du cycle en encre (lisible à 64 px), un losange de chaque côté. Sans texte à traduire.
+	func _cycle_plate(c: Vector2, r: float) -> void:
+		var font := UiTheme.display(700, 0)
+		var fs := int(r * 0.5)
+		var sz := font.get_string_size(numeral, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+		var h := r * 0.36
+		var w := maxf(sz.x + r * 0.34, r * 0.62)
+		var top := c.y + r * 0.5
+		var plate := Rect2(c.x - w * 0.5, top, w, h)
+		# Bandeau aux bouts en pointe (comme les rubans de l'Herbier), filet sombre autour.
+		var tip := h * 0.4
+		var poly := PackedVector2Array([plate.position + Vector2(-tip, h * 0.5), plate.position,
+			plate.position + Vector2(w, 0), plate.position + Vector2(w + tip, h * 0.5),
+			plate.position + Vector2(w, h), plate.position + Vector2(0, h)])
+		draw_colored_polygon(poly, UiTheme.GOLD)
+		var ring := poly.duplicate()
+		ring.append(poly[0])
+		draw_polyline(ring, SHADE, r * 0.025, true)
+		var base := Vector2(c.x - sz.x * 0.5, top + (h + font.get_ascent(fs) - font.get_descent(fs)) * 0.5)
+		draw_string(font, base, numeral, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, SHADE)
 
 	func _hgrad(x0: float, x1: float, a: Color, b: Color) -> void:
 		var h := size_px.y
@@ -202,6 +227,8 @@ func _ready() -> void:
 		var m := Capsule.new()
 		m.mode = "medaille"
 		m.size_px = Vector2(256, 256)
+		if id.begins_with("CYCLE_"):
+			m.numeral = "I".repeat(int(id.trim_prefix("CYCLE_")))
 		m.art = ImageTexture.create_from_image(Image.load_from_file(illus.get_base_dir().path_join(f)))
 		var med := await _render(m, Vector2i(256, 256), false)
 		med.convert(Image.FORMAT_RGB8)

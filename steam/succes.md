@@ -22,5 +22,6 @@ Seul `BOSS_RONCE` existe dans la démo (pas de New Game+ dans la démo : ni `CYC
 
 Icônes : 64×64 px, `steam/art/fr/succes/<API Name>.png` (débloqué) et `<API Name>_gris.png` (verrouillé), le boss dans une médaille d'or ; refaites par `tools/steam-art.sh` (tâche H).
 
-**À faire pour `CYCLE_2` et `CYCLE_3`** : leurs icônes (`steam/art/fr/succes/CYCLE_2.png`, `CYCLE_2_gris.png`, idem `CYCLE_3`) n'existent pas
-encore ; `tools/steam-art.sh` ne sait faire que les médailles de boss. Steamworks les demande à la création des succès.
+Icônes de `CYCLE_2` et `CYCLE_3` : la Flétrissure endormie sous la graine dans le monde fané de ce cycle
+(vitrine `--shots=succes_cycle -- --cycle=N`), dans la même médaille d'or, avec un cartouche d'or « II » ou « III »
+(sans texte à traduire, identiques en FR et EN).
