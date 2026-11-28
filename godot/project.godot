@@ -19,6 +19,7 @@ boot_splash/show_image=true
 UserDirMigration="*res://scripts/user_dir_migration.gd"
 SteamBridge="*res://scripts/steam_bridge.gd"
 Game="*res://scripts/game.gd"
+Cycles="*res://scripts/cycles.gd"
 SaveGame="*res://scripts/save_game.gd"
 Settings="*res://scripts/settings.gd"
 Rumble="*res://scripts/rumble.gd"
