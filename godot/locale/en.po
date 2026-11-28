@@ -6248,6 +6248,18 @@ msgstr "summoner"
 msgid "rapide"
 msgstr "swift"
 
+#. data/difficulty.json › elites › affixes › remanent › name
+msgid "rémanent"
+msgstr "lingering"
+
+#. data/difficulty.json › elites › affixes › siphon › name
+msgid "siphonneur"
+msgstr "siphoning"
+
+#. data/difficulty.json › elites › affixes › voile › name
+msgid "voilé"
+msgstr "veiled"
+
 #. data/difficulty.json › modes › difficile › name
 msgid "Difficile"
 msgstr "Hard"
@@ -8055,16 +8067,16 @@ msgid " (%s)"
 msgstr " (%s)"
 
 #. scripts/effects.gd:279
-#. scripts/enemy.gd:254
+#. scripts/enemy.gd:261
 msgid " et "
 msgstr " and "
 
-#. scripts/enemy.gd:254
+#. scripts/enemy.gd:261
 msgctxt "élite : nom puis modificateurs"
 msgid "%s %s"
 msgstr "%s, %s"
 
-#. scripts/enemy.gd:420
+#. scripts/enemy.gd:427
 msgid "Enragé !"
 msgstr "Enraged!"
 
@@ -8172,7 +8184,7 @@ msgstr ""
 "%s\n"
 "Click to change skill, or drag it onto another slot."
 
-#. scripts/main.gd:1231
+#. scripts/main.gd:1270
 msgid "%s vaincu"
 msgstr "%s defeated"
 
