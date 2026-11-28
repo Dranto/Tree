@@ -20,7 +20,7 @@ const SHOTS := ["ronce_combat", "ronce_boss", "ronce_coeur", "vague", "arbre", "
 const DEMO_SHOTS := ["ronce_combat", "ronce_eveil", "ronce_coeur", "ronce_boss", "ronce_chute", "arbre", "couronne"]
 const Demo = preload("res://scripts/demo.gd")
 ## Illustration des capsules (sans interface), à prendre en 3840x2160 : « --shots=illustration ».
-const ART := ["illustration", "succes"]
+const ART := ["illustration", "succes", "succes_cycle"]
 ## Succès Steam (un par boss, steam/succes.md) : région du boss, « finale » pour la Flétrissure.
 const ACHIEVEMENTS := {"BOSS_RONCE": "ronce", "BOSS_SPORE": "spore", "BOSS_VENT": "vent", "BOSS_SEVE": "seve",
 	"BOSS_AUBE": "aube", "BOSS_RACINE": "racine", "BOSS_FINALE": "finale"}
@@ -72,7 +72,7 @@ func _ready() -> void:
 			printerr("VITRINE capture inconnue : ", s)
 			continue
 		# Portraits des boss : partie neuve, sans build (rien n'est visé ni marqué).
-		await _boot("" if s in ["succes", "ronce_eveil"] else "fouet")
+		await _boot("" if s in ["succes", "succes_cycle", "ronce_eveil"] else "fouet")
 		await call("_shot_" + str(s))
 		main.queue_free()
 		await _frames(2)
@@ -216,6 +216,19 @@ func _shot_succes() -> void:
 		await _frames(8)
 		await _save_square("succes_" + ach)
 		_clear_bosses()
+
+
+## Portrait des succès du New Game+ (CYCLE_2, CYCLE_3) : la Flétrissure endormie sous la graine, dans
+## le monde fané du cycle lancé par « -- --cycle=N » (N = 2 ou 3) : succes_CYCLE_<N>.png.
+func _shot_succes_cycle() -> void:
+	main.hud.visible = false
+	main.player.visible = false
+	var n: int = Cycles.current()
+	if n < 2:
+		printerr("VITRINE succes_cycle demande -- --cycle=2 ou 3")
+		return
+	_portrait = "CYCLE_%d" % n
+	await _replay(load("res://tests/visual/finale.gd"), "finale_arene", "")
 
 
 var _portrait := ""

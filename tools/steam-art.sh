@@ -3,6 +3,7 @@
 #   1. godot/tools/steam/vitrine.tscn met en scène le jeu en milieu de partie et prend
 #      l'illustration 3840x2160 (sans interface), les portraits des boss (icônes des succès)
 #      et les 8 captures 1920x1080 de la page ;
+#      (et, rejouée avec « -- --cycle=2 » puis 3, la Flétrissure fanée des succès CYCLE_2/CYCLE_3) ;
 #   2. godot/tools/steam/steam_art.tscn en tire les capsules, le logo, l'icône et les succès.
 # Le nom du jeu vient de project.godot (Loc.game_name) : relancer ce script après un changement de nom.
 #   tools/steam-art.sh [fr en]           (langues, « fr en » par défaut)
@@ -37,6 +38,11 @@ fi
 # L'illustration et les portraits ne dépendent pas de la langue (aucun texte).
 run 3840x2160 res://tools/steam/vitrine.tscn -- --shots=illustration,succes --out="$WORK"
 [ -f "$WORK/illustration.png" ] || { echo "Illustration absente"; exit 1; }
+# Succès du New Game+ (CYCLE_2, CYCLE_3) : la Flétrissure dans le monde fané de ce cycle.
+for n in 2 3; do
+  run 3840x2160 res://tools/steam/vitrine.tscn -- --shots=succes_cycle --out="$WORK" --cycle=$n
+  [ -f "$WORK/succes_CYCLE_$n.png" ] || { echo "Portrait du succès CYCLE_$n absent"; exit 1; }
+done
 for lang in "${LANGS[@]}"; do
   echo "== $lang"
   if [ "${SHOTS:-}" != "-" ]; then
