@@ -4,6 +4,7 @@
 ## l'arène le mène (il esquive comme un joueur) ; des coups forcés font passer les phases : phase 1,
 ## drop_1, phase 2, drop_2, phase 3 (et au cycle 2, « -- --cycle=2 » : drop_3, phase exaltée), mort.
 ## Les moments sont imprimés (« FILM »). Rien n'est comparé : c'est un outil. Lancer avec --write-movie.
+## « -- --region=spore » : le même film pour l'Amanite-Mère (tools/amanite-film.sh).
 extends Node
 
 const MainScene = preload("res://scenes/main.tscn")
@@ -49,8 +50,12 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	main.spawn_timer = 1.0e9
-	arena = main.arenas["ronce"]
-	for h in main.region_hearts["ronce"]:
+	var region := "ronce"
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--region="):
+			region = a.substr(9)
+	arena = main.arenas[region]
+	for h in main.region_hearts[region]:
 		Game.flags[h.flag] = true
 	Game.level = 8
 	var out: Vector2 = (arena.entrance() - arena.center).normalized()

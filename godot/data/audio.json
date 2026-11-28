@@ -52,7 +52,8 @@
         "dead": {"shape": "glow", "color": "poison/sombre", "alpha": 0.5, "vel": [4.0, -14.0], "sway": [10.0, 3.0], "size": [1.6, 3.4]},
         "alive": {"shape": "glow", "color": "poison/clair", "alpha": 0.9, "vel": [3.0, -22.0], "sway": [14.0, 4.0], "size": [1.4, 3.0]}
       },
-      "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort", "exalte": "spore_boss_phase"}
+      "boss": {"eveil": "spore_boss_eveil", "phase": "spore_boss_phase", "mort": "spore_boss_mort", "exalte": "spore_boss_phase"},
+      "hand_track": {"tonique": "la", "mode": "ionien", "_doc": "Morceau de l'Amanite-Mère fait par Antoine (amanitemere.wav, 165 BPM) : la majeur / fa# mineur, mesuré sur le fichier le 28/11 (la, si, do#, mi, fa#, sol# ; le ré ne sonne jamais). Pas le fa# phrygien de la zone (sol# et non sol) : les bruitages s'accordent sur le morceau pendant qu'il joue (harmony.gd)."}
     },
     "vent": {
       "_doc": "Hauts plateaux : quintes ouvertes ; en terre vivante, un arpège vif et une mélodie qui saute haut. Combat au tambour sur cadre ; boss (Harfang) en doubles croches. Ambiance : grand vent, herbes, oiseaux. Des brins d'herbe et des rafales filent vers la droite.",
