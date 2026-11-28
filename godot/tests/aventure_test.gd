@@ -21,7 +21,7 @@
 ## Sauvegarde dans user://tests/ : la partie du joueur n'est pas touchée.
 ##
 ## Cycle 2 (jalon 14 R) : « --cycle=2 » part d'une sauvegarde de fin d'aventure (cycle 1, finale vaincue,
-## fin vue : « --depuis=<chemin> », par défaut tests/fixtures/aventure/fin_cycle1.json), tient le fruit de
+## fin vue : « --depuis=<chemin> », par défaut tests/fixtures/aventure/fin_cycle1_v<variante>.json, variantes 1 et 2 ; {v} = variante), tient le fruit de
 ## la graine comme un joueur, recharge la scène (comme Cycles.start_next) puis rejoue toutes les régions et
 ## la finale au cycle 2 (boss exaltés), avec les mêmes détections de blocage. Pour fabriquer cette
 ## sauvegarde : tools/aventure.sh --sauver-fin='user://tests/fin_v{v}.json' (un passage du cycle 1 ; {v} =
@@ -51,7 +51,7 @@ const CAP_STEP := 3
 ## Durée maximale de la finale (combat, épilogue et générique compris).
 const FINALE_MAX := 900.0
 ## Sauvegarde de fin d'aventure de départ du cycle 2 (voir « --cycle=2 »).
-const END_FIXTURE := "res://tests/fixtures/aventure/fin_cycle1.json"
+const END_FIXTURE := "res://tests/fixtures/aventure/fin_cycle1_v{v}.json"
 
 var failures := 0
 ## Niveau offert au robot dans la première région (CAP_BASE, ou « --niveau-max=N »).
@@ -301,7 +301,7 @@ func _on_next_cycle(n: int, data: Dictionary) -> void:
 ## La sauvegarde de fin d'aventure est chargée, le héros tient le fruit de la graine, la scène est
 ## rechargée au cycle suivant. Faux (et BLOCAGE) si le fruit n'est pas cueilli.
 func _begin_cycle() -> bool:
-	var src := from_path if from_path != "" else END_FIXTURE
+	var src := (from_path if from_path != "" else END_FIXTURE).replace("{v}", str(variant if variant in [1, 2] else 2))
 	if not FileAccess.file_exists(src):
 		print("  ÉCHEC pas de sauvegarde de fin d'aventure : %s (la fabriquer avec tools/aventure.sh --sauver-fin=…)" % src)
 		failures += 1
