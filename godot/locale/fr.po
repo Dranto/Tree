@@ -8088,51 +8088,51 @@ msgstr "Sève −%d"
 msgid "étourdi"
 msgstr "étourdi"
 
-#. scripts/game.gd:276
-#. scripts/game.gd:323
+#. scripts/game.gd:292
+#. scripts/game.gd:339
 msgid "Build %d"
 msgstr "Build %d"
 
-#. scripts/game.gd:54
+#. scripts/game.gd:607
+msgid "Dans le jeu complet."
+msgstr "Dans le jeu complet."
+
+#. scripts/game.gd:619
+msgid "Couvert de cendre : %s"
+msgstr "Couvert de cendre : %s"
+
+#. scripts/game.gd:619
+msgid "un évènement du monde doit le libérer."
+msgstr "un évènement du monde doit le libérer."
+
+#. scripts/game.gd:630
+msgid "Demande la compétence « %s »."
+msgstr "Demande la compétence « %s »."
+
+#. scripts/game.gd:633
+msgid "Incompatible avec « %s »."
+msgstr "Incompatible avec « %s »."
+
+#. scripts/game.gd:64
 msgid "Autel ravivé"
 msgstr "Autel ravivé"
 
-#. scripts/game.gd:54
+#. scripts/game.gd:64
 msgid "Boss vaincu"
 msgstr "Boss vaincu"
 
-#. scripts/game.gd:54
+#. scripts/game.gd:64
 #. scripts/region_ui.gd:61
 msgid "Cœur purifié"
 msgstr "Cœur purifié"
 
-#. scripts/game.gd:55
+#. scripts/game.gd:65
 msgid "Objectif accompli"
 msgstr "Objectif accompli"
 
-#. scripts/game.gd:55
+#. scripts/game.gd:65
 msgid "Secret découvert"
 msgstr "Secret découvert"
-
-#. scripts/game.gd:591
-msgid "Dans le jeu complet."
-msgstr "Dans le jeu complet."
-
-#. scripts/game.gd:603
-msgid "Couvert de cendre : %s"
-msgstr "Couvert de cendre : %s"
-
-#. scripts/game.gd:603
-msgid "un évènement du monde doit le libérer."
-msgstr "un évènement du monde doit le libérer."
-
-#. scripts/game.gd:614
-msgid "Demande la compétence « %s »."
-msgstr "Demande la compétence « %s »."
-
-#. scripts/game.gd:617
-msgid "Incompatible avec « %s »."
-msgstr "Incompatible avec « %s »."
 
 #. scripts/heart.gd:283
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
@@ -8172,17 +8172,17 @@ msgstr ""
 "%s\n"
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 
-#. scripts/main.gd:1221
+#. scripts/main.gd:1231
 msgid "%s vaincu"
 msgstr "%s vaincu"
 
-#. scripts/main.gd:405
-#. scripts/save_game.gd:140
-#. scripts/save_game.gd:197
+#. scripts/main.gd:413
+#. scripts/save_game.gd:150
+#. scripts/save_game.gd:209
 msgid "aucune sauvegarde"
 msgstr "aucune sauvegarde"
 
-#. scripts/main.gd:406
+#. scripts/main.gd:414
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr "Sauvegarde illisible (%s) : nouvelle partie."
 
@@ -8489,11 +8489,11 @@ msgstr "de la Graine"
 msgid "sanctuaire %s"
 msgstr "sanctuaire %s"
 
-#. scripts/save_game.gd:201
+#. scripts/save_game.gd:213
 msgid "fichier illisible ou d'un autre format"
 msgstr "fichier illisible ou d'un autre format"
 
-#. scripts/save_game.gd:205
+#. scripts/save_game.gd:217
 msgid "sauvegarde créée par une version plus récente du jeu (format %d > %d)"
 msgstr "sauvegarde créée par une version plus récente du jeu (format %d > %d)"
 
@@ -8769,27 +8769,35 @@ msgstr "Compétence"
 msgid "Nœud notable"
 msgstr "Nœud notable"
 
-#. scripts/title.gd:111
+#. scripts/title.gd:116
 msgid "niveau %d"
 msgstr "niveau %d"
 
-#. scripts/title.gd:114
+#. scripts/title.gd:118
+msgid "niveau %d · cycle %d"
+msgstr "niveau %d · cycle %d"
+
+#. scripts/title.gd:118
+msgid "niveau %d · cycle %d · fin"
+msgstr "niveau %d · cycle %d · fin"
+
+#. scripts/title.gd:120
 msgid "niveau %d · fin"
 msgstr "niveau %d · fin"
 
-#. scripts/title.gd:151
+#. scripts/title.gd:158
 msgid "PLANCHE I  ·  L'ARBRE DE VIE"
 msgstr "PLANCHE I  ·  L'ARBRE DE VIE"
 
-#. scripts/title.gd:172
+#. scripts/title.gd:179
 msgid "HERBIER  DES  TERRES  FLÉTRIES"
 msgstr "HERBIER  DES  TERRES  FLÉTRIES"
 
-#. scripts/title.gd:184
+#. scripts/title.gd:191
 msgid "Un monde désolé reprend vie"
 msgstr "Un monde désolé reprend vie"
 
-#. scripts/title.gd:185
+#. scripts/title.gd:192
 msgid "au rythme de ton arbre"
 msgstr "au rythme de ton arbre"
 
