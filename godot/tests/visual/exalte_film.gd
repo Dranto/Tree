@@ -4,6 +4,7 @@
 ##
 ## Lancer : tools/godot.sh --xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 \
 ##   res://tests/visual/exalte_film.tscn -- --bosses=seve,aube,racine --out=DOSSIER
+## La Flétrissure : --bosses=finale (seconde forme, puis l'Exaltation et sa montée).
 extends Node
 
 const MainScene = preload("res://scenes/main.tscn")
@@ -43,13 +44,14 @@ func _ready() -> void:
 
 
 func _film(id: String) -> void:
-	var arena = main.arenas.get(id)
+	var arena = main.finale if id == "finale" else main.arenas.get(id)
 	if arena == null:
 		printerr("FILM boss inconnu : ", id)
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("%s/%s" % [out_dir, id]))
 	shot = 0
-	Game.flags[Regions.heart_flag(id)] = true
+	if id != "finale":
+		Game.flags[Regions.heart_flag(id)] = true
 	for e in main.enemies:
 		if is_instance_valid(e):
 			e.queue_free()
@@ -59,16 +61,33 @@ func _film(id: String) -> void:
 	p.reset_physics_interpolation()
 	main.camera.reset_smoothing()
 	await _frames(2)
+	if id == "finale":
+		arena.descend()
+		await _frames(2)
+		p.position = arena.center + Vector2(0, 200)
+		await _frames(5)
 	if not is_instance_valid(arena.get("boss")) or arena.boss.dead:
 		arena._start_fight()
 	var boss = arena.boss
 	await _frames(200)
+	var length := LENGTH
+	if id == "finale":
+		# Seconde forme d'abord (sa transformation dure le drop), puis l'Exaltation, filmée plus longtemps
+		# pour voir la montée (un cran par phrase de quatre mesures).
+		while boss.music_waiting():
+			await _frames(1)
+		boss.take_damage(boss.hp - boss.max_hp * 0.3, false)
+		for f in 900:
+			if boss.phase >= 3 and not boss.music_waiting() and not boss.transforming():
+				break
+			await _frames(1)
+		length = 1500
 	var at: float = boss.phase_limits[boss.phase_limits.size() - 1]
 	boss.take_damage(boss.hp - boss.max_hp * at + 1.0, false)
-	for f in LENGTH:
+	for f in length:
 		if not is_instance_valid(boss) or boss.dead:
 			break
-		boss.hp = maxf(boss.hp, boss.max_hp * 0.15)
+		boss.hp = maxf(boss.hp, boss.max_hp * minf(0.15, at * 0.6))
 		# Le héros tourne lentement autour du boss (sans tirer), touché mais jamais à terre.
 		var a := f / 60.0 * 0.5
 		p.position = arena.center + Vector2(cos(a), sin(a) * 0.8) * 230.0

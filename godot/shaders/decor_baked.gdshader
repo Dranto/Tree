@@ -7,9 +7,12 @@ render_mode blend_premul_alpha;
 
 // Monde vivant (tâche V) : balancement et lueur du décor ; événements du monde (vague 2 E).
 #include "res://shaders/decor_sway.gdshaderinc"
+// Monde fané du cycle (New Game+, jalon 14 W).
+#include "res://shaders/cycle_tint.gdshaderinc"
 
 // Couleur du sommet (le COLOR de fragment() est déjà multiplié par la texture).
 varying vec4 vcol;
+varying vec2 vworld;
 
 void vertex() {
 	VERTEX += decor_sway(VERTEX, MODEL_MATRIX);
@@ -18,8 +21,9 @@ void vertex() {
 	COLOR.rgb = ev;
 	COLOR.rgb *= decor_light(VERTEX, MODEL_MATRIX);
 	vcol = COLOR;
+	vworld = cycle_tint_world(VERTEX, MODEL_MATRIX);
 }
 
 void fragment() {
-	COLOR = texture(TEXTURE, UV) * vec4(vcol.rgb * vcol.a, vcol.a);
+	COLOR = cycle_tint_premul(texture(TEXTURE, UV) * vec4(vcol.rgb * vcol.a, vcol.a), vworld);
 }

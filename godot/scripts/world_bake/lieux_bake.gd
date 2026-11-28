@@ -42,6 +42,7 @@ static var bytes := 0
 static var bake_usec := 0
 static var baked := 0
 static var _material: ShaderMaterial
+static var _plain: ShaderMaterial
 static var _configured := false
 
 
@@ -66,11 +67,22 @@ static func configure() -> void:
 			enabled = false
 
 
+## Matériau des lieux montrés dans le monde : étalonné pour le monde fané du cycle (jalon 14 W).
 static func material() -> ShaderMaterial:
 	if _material == null:
 		_material = ShaderMaterial.new()
 		_material.shader = load("res://shaders/lieux_baked.gdshader")
+		_material.set_shader_parameter("cycle_graded", true)
 	return _material
+
+
+## Même matériau sans la teinte du cycle : sol des arènes peint dans les carrés du sol (étalonnés à leur
+## affichage), poses cuites des créatures (pose_cache.gd).
+static func plain_material() -> ShaderMaterial:
+	if _plain == null:
+		_plain = ShaderMaterial.new()
+		_plain.shader = load("res://shaders/lieux_baked.gdshader")
+	return _plain
 
 
 ## Prépare un nœud qui dessine des lieux cuits (matériau en alpha prémultiplié, filtre avec mipmaps).

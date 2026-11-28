@@ -130,8 +130,8 @@ static func _tornade(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -
 		var c := p + Vector2(sin(spin * 0.5 + q * 2.4) * r * 0.12, -q * r * 1.05 * appear)
 		# Les anneaux apparaissent l'un après l'autre, du pied vers le sommet.
 		var al := (0.55 + 0.3 * q) * a * clampf(appear * rings * 1.2 - i, 0.0, 1.0)
-		if al <= 0.0:
-			continue
+		if al <= 0.0 or h < 0.5:
+			continue   # ellipse écrasée (début de l'apparition) : Godot refuse de la trianguler
 		ci.draw_colored_polygon(Art.ellipse(c, w, h, 18), Color(col, 0.16 * al))
 		var s0 := spin + q * 1.3
 		ci.draw_arc(c, w, s0, s0 + 2.4, 12, Color(clair, al), Art.TRAIT_FIN + 1.0 - q, true)

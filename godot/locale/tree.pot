@@ -6411,17 +6411,28 @@ msgid "La Flétrissure"
 msgstr ""
 
 #. data/finale.json › boss › phases
+#. data/finale.json › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : sève et vent"
 msgstr ""
 
 #. data/finale.json › boss › phases
+#. data/finale.json › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : épines et spores"
 msgstr ""
 
 #. data/finale.json › boss › phases
 msgid "Seconde forme : les six gardiens à la fois"
+msgstr ""
+
+#. data/finale.json › boss › phases_exaltees
+msgid "Exaltation : elle ramène le monde à elle"
+msgstr ""
+
+#. data/finale.json › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : les six gardiens à la fois"
 msgstr ""
 
 #. data/finale.json › credits › head
@@ -7928,11 +7939,11 @@ msgstr ""
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr ""
 
-#. scripts/boss_base.gd:516
+#. scripts/boss_base.gd:519
 msgid "Exaltation"
 msgstr ""
 
-#. scripts/boss_base.gd:641
+#. scripts/boss_base.gd:644
 msgid "Entravée"
 msgstr ""
 
@@ -8195,11 +8206,11 @@ msgstr ""
 msgid "Secret découvert"
 msgstr ""
 
-#. scripts/heart.gd:283
+#. scripts/heart.gd:284
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
 msgstr ""
 
-#. scripts/heart.gd:283
+#. scripts/heart.gd:284
 msgid "Tiens la zone : %d s"
 msgstr ""
 
@@ -8228,17 +8239,17 @@ msgid ""
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 msgstr ""
 
-#. scripts/main.gd:1274
+#. scripts/main.gd:1285
 msgid "%s vaincu"
 msgstr ""
 
-#. scripts/main.gd:413
+#. scripts/main.gd:420
 #. scripts/save_game.gd:150
 #. scripts/save_game.gd:209
 msgid "aucune sauvegarde"
 msgstr ""
 
-#. scripts/main.gd:414
+#. scripts/main.gd:421
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr ""
 
@@ -9405,34 +9416,34 @@ msgid "M ou Échap : fermer"
 msgstr ""
 
 #. scripts/world_preload.gd:100
-msgid "Les couleurs"
-msgstr ""
-
-#. scripts/world_preload.gd:326
-msgid "Le monde se prépare…"
-msgstr ""
-
-#. scripts/world_preload.gd:94
-msgid "Les Flétris"
-msgstr ""
-
-#. scripts/world_preload.gd:95
-msgid "Le décor"
-msgstr ""
-
-#. scripts/world_preload.gd:96
-msgid "Les lieux"
-msgstr ""
-
-#. scripts/world_preload.gd:97
 msgid "La faune"
 msgstr ""
 
-#. scripts/world_preload.gd:98
+#. scripts/world_preload.gd:101
 msgid "Le bord du monde"
 msgstr ""
 
-#. scripts/world_preload.gd:99
+#. scripts/world_preload.gd:102
 msgid "La musique"
+msgstr ""
+
+#. scripts/world_preload.gd:103
+msgid "Les couleurs"
+msgstr ""
+
+#. scripts/world_preload.gd:329
+msgid "Le monde se prépare…"
+msgstr ""
+
+#. scripts/world_preload.gd:97
+msgid "Les Flétris"
+msgstr ""
+
+#. scripts/world_preload.gd:98
+msgid "Le décor"
+msgstr ""
+
+#. scripts/world_preload.gd:99
+msgid "Les lieux"
 msgstr ""
 

@@ -204,8 +204,13 @@ func _real_flow(save) -> void:
 	check(game.cycle == 2 and game.level == lvl, "cycle 2, niveau %d gardé" % lvl)
 	check(started == [2], "Game.cycle_started(2) émis après le rechargement (%s)" % str(started))
 	check(m2.player.position.length() < 10.0, "le héros repart de la graine")
-	check(m2.ground.total < life_before, "le sol n'est plus purifié (%.0f → %.0f)" % [life_before, m2.ground.total])
 	check(not game.flags.has("ronce_boss_vaincu") and game.flags.get("cycle_wave", 0) == 2, "boss remis à zéro, vague en attente")
+	# Monde fané (cycle_wave.gd) : la vague de flétrissure montre d'abord le monde ravivé ; une fois
+	# passée, le sol est celui du nouveau cycle.
+	check(m2.cycle_wave.cycle == 2, "vague de flétrissure du cycle 2 en attente au rechargement")
+	m2.cycle_wave.start()
+	m2.cycle_wave.finish()
+	check(m2.ground.total < life_before, "le sol n'est plus purifié (%.0f → %.0f)" % [life_before, m2.ground.total])
 	check(int(save.peek().get("cycle", 0)) == 2, "la sauvegarde est au cycle 2")
 	m2.autosave_enabled = false
 	save.delete_save()

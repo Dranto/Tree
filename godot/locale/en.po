@@ -6413,11 +6413,13 @@ msgid "La Flétrissure"
 msgstr "The Blight"
 
 #. data/finale.json › boss › phases
+#. data/finale.json › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : sève et vent"
 msgstr "Phase {0} of {1}: sap and wind"
 
 #. data/finale.json › boss › phases
+#. data/finale.json › boss › phases_exaltees
 #. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
 msgid "Phase {0} sur {1} : épines et spores"
 msgstr "Phase {0} of {1}: thorns and spores"
@@ -6425,6 +6427,15 @@ msgstr "Phase {0} of {1}: thorns and spores"
 #. data/finale.json › boss › phases
 msgid "Seconde forme : les six gardiens à la fois"
 msgstr "Second form: all six guardians at once"
+
+#. data/finale.json › boss › phases_exaltees
+msgid "Exaltation : elle ramène le monde à elle"
+msgstr "Exaltation: she draws the world back to her"
+
+#. data/finale.json › boss › phases_exaltees
+#. {0}, {1}… : nombres du texte d'origine, remis au format de la langue.
+msgid "Phase {0} sur {1} : les six gardiens à la fois"
+msgstr "Phase {0} of {1}: all six guardians at once"
 
 #. data/finale.json › credits › head
 msgid "Code, dessins et sons"
@@ -7930,11 +7941,11 @@ msgstr "Phase 2 of 3: the buds burst open"
 msgid "Phase 3 sur 3 : les ronces se resserrent"
 msgstr "Phase 3 of 3: the brambles close in"
 
-#. scripts/boss_base.gd:516
+#. scripts/boss_base.gd:519
 msgid "Exaltation"
 msgstr "Exaltation"
 
-#. scripts/boss_base.gd:641
+#. scripts/boss_base.gd:644
 msgid "Entravée"
 msgstr "Snared"
 
@@ -8197,11 +8208,11 @@ msgstr "Goal reached"
 msgid "Secret découvert"
 msgstr "Secret found"
 
-#. scripts/heart.gd:283
+#. scripts/heart.gd:284
 msgid "Reviens dans la zone : la flétrissure regagne du terrain"
 msgstr "Return to the zone: the blight is gaining ground"
 
-#. scripts/heart.gd:283
+#. scripts/heart.gd:284
 msgid "Tiens la zone : %d s"
 msgstr "Hold the ground: %d s"
 
@@ -8235,17 +8246,17 @@ msgstr ""
 "%s\n"
 "Click to change skill, or drag it onto another slot."
 
-#. scripts/main.gd:1274
+#. scripts/main.gd:1285
 msgid "%s vaincu"
 msgstr "%s defeated"
 
-#. scripts/main.gd:413
+#. scripts/main.gd:420
 #. scripts/save_game.gd:150
 #. scripts/save_game.gd:209
 msgid "aucune sauvegarde"
 msgstr "no save"
 
-#. scripts/main.gd:414
+#. scripts/main.gd:421
 msgid "Sauvegarde illisible (%s) : nouvelle partie."
 msgstr "Unreadable save (%s): new game."
 
@@ -9416,34 +9427,34 @@ msgid "M ou Échap : fermer"
 msgstr "M or Esc: close"
 
 #. scripts/world_preload.gd:100
-msgid "Les couleurs"
-msgstr "The colours"
-
-#. scripts/world_preload.gd:326
-msgid "Le monde se prépare…"
-msgstr "The world is getting ready…"
-
-#. scripts/world_preload.gd:94
-msgid "Les Flétris"
-msgstr "The Witherlings"
-
-#. scripts/world_preload.gd:95
-msgid "Le décor"
-msgstr "The scenery"
-
-#. scripts/world_preload.gd:96
-msgid "Les lieux"
-msgstr "The landmarks"
-
-#. scripts/world_preload.gd:97
 msgid "La faune"
 msgstr "The wildlife"
 
-#. scripts/world_preload.gd:98
+#. scripts/world_preload.gd:101
 msgid "Le bord du monde"
 msgstr "The edge of the world"
 
-#. scripts/world_preload.gd:99
+#. scripts/world_preload.gd:102
 msgid "La musique"
 msgstr "The music"
+
+#. scripts/world_preload.gd:103
+msgid "Les couleurs"
+msgstr "The colours"
+
+#. scripts/world_preload.gd:329
+msgid "Le monde se prépare…"
+msgstr "The world is getting ready…"
+
+#. scripts/world_preload.gd:97
+msgid "Les Flétris"
+msgstr "The Witherlings"
+
+#. scripts/world_preload.gd:98
+msgid "Le décor"
+msgstr "The scenery"
+
+#. scripts/world_preload.gd:99
+msgid "Les lieux"
+msgstr "The landmarks"
 

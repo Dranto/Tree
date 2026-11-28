@@ -34,6 +34,17 @@
 ## ses piqûres de racines sur les caisses douces, jusqu'au déluge du sommet de la phase 3.
 ## Elle bat la mesure de tout son corps. Sans morceau, elle reprend l'ordre de PHASES.
 ##
+## Cycle exalté (New Game+, à partir du cycle 2) : une phase de plus, « l'Exaltation », en bas de sa
+## vie (data/cycles.json › bosses › finale › phase_exaltee). Pas de nouveau drop ni de nouveau son :
+## boucle_3 continue, la partition reste calée sur ses mesures, et elle frappe plus fort sur les
+## percussions discrètes (POWER[4], MONTEE : un cran de plus à chaque phrase de quatre mesures,
+## jusqu'au déluge). Attaque nouvelle (EXALTED_ATTACK) :
+##   - reflux : elle aspire le monde ; un anneau de cendre part du bord de l'île et revient vers elle,
+##              percé de brèches (une pas loin du joueur : un pas de côté) ; ses grosses caisses douces
+##              lancent de petits reflux, qui meurent à mi-chemin. Croisés avec les ondes qui partent
+##              d'elle, ils tressent un filet à traverser sur le temps.
+## Au cycle 3 (attaque_en_phase_3), le reflux entre aussi dans la partition de la seconde forme.
+##
 ## Le socle (vie, phases, états, mort, interface d'ennemi) est dans boss_base.gd.
 extends BossBase
 
@@ -54,7 +65,17 @@ const PHASES := {
 	1: {"gap": 1.25, "order": ["epines", "spores", "epines", "spores"], "volleys": 2, "thorns": 9, "clouds": 3},
 	2: {"gap": 1.05, "order": ["siphon", "rafale", "spores", "rejetons", "epines", "rafale"], "volleys": 2, "thorns": 11, "clouds": 4, "minions": 2},
 	3: {"gap": 0.95, "order": ["tempete", "lumiere", "floraison", "racines", "aurore", "rafale", "rejetons", "tempete", "siphon", "floraison", "epines", "aurore"], "volleys": 3, "thorns": 11, "clouds": 4, "minions": 2, "rays": 5},
+	# Exaltation (cycle 2 et après) : la seconde forme, avec le reflux.
+	4: {"gap": 0.85, "order": ["reflux", "tempete", "aurore", "floraison", "reflux", "lumiere", "tempete", "racines", "reflux", "floraison", "aurore", "rejetons"], "volleys": 3, "thorns": 11, "clouds": 4, "minions": 2, "rays": 5},
 }
+## L'attaque nouvelle du cycle exalté (BossBase : phase exaltée, compteur exalted_attacks).
+const EXALTED_ATTACK := "reflux"
+## Reflux : anneau qui part du bord de l'île vers elle. Annonce (s, hors partition : sur la partition,
+## ANNOUNCE_BEATS), vitesse, épaisseur, brèches (nombre, ouverture en radians, pas de côté demandé au
+## joueur au-delà du bord de la brèche), dégâts ; petit reflux (grosses caisses douces de la phase
+## exaltée) : portée depuis le bord, épaisseur, dégâts.
+const REFLUX := {"annonce": 1.2, "speed": 330.0, "width": 30.0, "gaps": 3, "gap": 1.0, "step": 0.35, "damage": 9.0,
+	"short_reach": 150.0, "short_width": 16.0, "short_damage": 3.0}
 ## La transformation en seconde forme : durée (invulnérable), et part de cette durée où le corps
 ## se défait (le manteau et la couronne tombent, le cœur s'ouvre).
 const TRANSFORM := {"time": 3.6, "morph": 0.7}
@@ -132,7 +153,18 @@ const SCORE := {
 		{"coups": [[0, "lumiere"], [4, "spores"], [8, "aurore"], [13, "lumiere"]]},
 		{"coups": [[0, "siphon"], [8, "tempete"], [12, "aurore"], [14, "spores"]]},
 	]},
-}
+	# Exaltation : boucle_3 continue (pas de drop) ; un reflux par phrase, plus serré ensuite.
+	4: {"loop": "boucle_3", "phrases": [
+		{"coups": [[0, "reflux"], [3, "tempete"], [7, "floraison"], [10, "aurore"], [14, "reflux"]]},
+		{"coups": [[0, "aurore"], [4, "reflux"], [7, "tempete"], [11, "floraison"], [14, "lumiere"]]},
+		{"coups": [[0, "tempete"], [4, "floraison"], [7, "reflux"], [10, "aurore"], [14, "lumiere"]]},
+		{"coups": [[0, "reflux"], [3, "racines"], [7, "tempete"], [11, "floraison"], [14, "rejetons"]]},
+		{"coups": [[0, "tempete"], [4, "reflux"], [7, "aurore"], [11, "floraison"], [14, "reflux"]]},
+	]},}
+## Montée de l'Exaltation : à chaque phrase de quatre mesures depuis son début, un cran de plus
+## (jusqu'au dernier) ; ce qui s'ajoute par cran à POWER[4] : bras des roulements, jets d'étincelles,
+## piqûres par coup. Au dernier cran, chaque phrase est un déluge.
+const MONTEE := {"roll": [0, 1, 1, 2], "spark": [0, 0, 1, 1], "prick": [0, 1, 1, 2]}
 ## Toute la batterie frappe, et plus fort à chaque phase. Pour chaque coup relevé dans le morceau :
 ## grosse caisse franche → onde de choc sur les mesures « ondes » (de la phase, ou de la phrase),
 ## pouls (petite onde courte) ailleurs ; grosse caisse douce → pouls ; caisse claire → roulement ;
@@ -142,9 +174,10 @@ const POWER := {
 	1: {"ondes": [0], "roll": 2, "spark": 1, "prick": 1, "pulse": 200.0},
 	2: {"ondes": [0, 2], "roll": 3, "spark": 2, "prick": 2, "pulse": 260.0},
 	3: {"ondes": [0, 1, 2, 3], "roll": 4, "spark": 3, "prick": 3, "pulse": 320.0},
+	4: {"ondes": [0, 1, 2, 3], "roll": 4, "spark": 3, "prick": 3, "pulse": 360.0},
 }
 ## Annonce (en temps) de chaque attaque de la partition, et la plus courte admise.
-const ANNOUNCE_BEATS := {"epines": 3, "spores": 3, "siphon": 3, "rafale": 3, "tempete": 4, "lumiere": 3, "aurore": 3, "floraison": 3, "racines": 2, "rejetons": 3}
+const ANNOUNCE_BEATS := {"epines": 3, "spores": 3, "siphon": 3, "rafale": 3, "tempete": 4, "lumiere": 3, "aurore": 3, "floraison": 3, "racines": 2, "rejetons": 3, "reflux": 3}
 ## Sur la partition, elle frappe plus souvent qu'au gré des pauses : chaque coup blesse moins.
 const SCORE_DAMAGE := 0.6
 const MIN_ANNOUNCE := 2.0  # (1,75 admis : la fin d’une attaque tombe à une image près)
@@ -240,6 +273,11 @@ var _spark_angle := 0.0
 var _prick_rng := RandomNumberGenerator.new()
 ## Éclair du corps sur un coup de batterie (0 → 1), -1 : aucun.
 var drum_flash := -1.0
+## Exaltation : temps du morceau où commence sa partition (départ de la montée, -1 avant), début de
+## la boucle de la seconde forme (l'Exaltation reste calée dessus), reflux lancés (tests).
+var exalt_beat := -1.0
+var _p3_origin := -1.0
+var reflux_count := 0
 
 
 func _setup() -> void:
@@ -295,6 +333,9 @@ func _fight_step(delta: float) -> void:
 		_drums_step()
 	if attack == "":
 		var wanted := phase_for(hp / max_hp)
+		# L'Exaltation suit toujours la seconde forme (sa transformation sur le drop d'abord).
+		if wanted > 3 and phase < 3:
+			wanted = 3
 		if wanted > phase:
 			_enter_phase(wanted)
 			return
@@ -346,6 +387,8 @@ func take_damage(amount: float, crit: bool, dot := false) -> void:
 	if transforming():
 		return
 	super.take_damage(amount, crit, dot)
+	if bench_hold > 0.0 and not dead:
+		hp = maxf(hp, max_hp * bench_hold * 0.9)
 
 
 func transforming() -> bool:
@@ -385,6 +428,13 @@ func _build_score() -> void:
 	var bb: int = sync.beats
 	var start_bar: int = sync.resume_bar if sync.resume_bar >= 0 else int(floor(sync.bars_now()))
 	score_origin = float(start_bar * bb)
+	if phase == 3:
+		_p3_origin = score_origin
+	elif phase == 4:
+		# Pas de drop : boucle_3 continue, la partition reste calée sur ses mesures.
+		if _p3_origin >= 0.0:
+			score_origin = _p3_origin
+		exalt_beat = beats_now()
 	var cfg: Dictionary = SCORE[phase]
 	var sec: Dictionary = sync.data.get("sections", {}).get(cfg["loop"], {})
 	var bars := 16
@@ -400,7 +450,11 @@ func _build_score() -> void:
 		var base := float(i * 4 * bb)
 		for h in ph["coups"]:
 			if float(h[0]) + base < score_len:
-				score_hits.append({"beat": base + float(h[0]), "kind": str(h[1]), "phrase": i})
+				var kind := str(h[1])
+				# Cycle 3 : le reflux entre dans la seconde forme, à la place des spores.
+				if phase == 3 and kind == "spores" and exalted_in_phase3():
+					kind = EXALTED_ATTACK
+				score_hits.append({"beat": base + float(h[0]), "kind": kind, "phrase": i})
 		var pw: Dictionary = POWER[phase]
 		var flood: bool = ph.get("deluge", false)
 		var wave_bars: Array = ph.get("ondes", pw["ondes"])
@@ -415,7 +469,7 @@ func _build_score() -> void:
 					"kick":
 						kind = "onde" if (flood or m in wave_bars) else "pouls"
 					"kick_doux":
-						kind = "pouls"
+						kind = "reflux_court" if phase == 4 else "pouls"
 					"caisse":
 						kind = "roulement"
 					"charleston":
@@ -436,12 +490,12 @@ func score_weight() -> float:
 	var pw: Dictionary = POWER[phase]
 	var w := 0.0
 	for h in score_hits:
-		w += 8.0 if COMBO_ARMS.has(h["kind"]) else 4.0
+		w += 8.0 if COMBO_ARMS.has(h["kind"]) or h["kind"] == EXALTED_ATTACK else 4.0
 	for d in score_drums:
 		match d["kind"]:
 			"onde":
 				w += 3.0
-			"pouls":
+			"pouls", "reflux_court":
 				w += 1.0
 			"roulement":
 				w += float(ROLL["arms_deluge"] if d["deluge"] else pw["roll"])
@@ -474,7 +528,7 @@ func _score_step() -> void:
 		return
 	var lead: float = ANNOUNCE_BEATS.get(nxt["kind"], 3)
 	var left: float = nxt["at"] - now
-	deluge = SCORE[phase]["phrases"][int(nxt["phrase"]) % SCORE[phase]["phrases"].size()].get("deluge", false)
+	deluge = SCORE[phase]["phrases"][int(nxt["phrase"]) % SCORE[phase]["phrases"].size()].get("deluge", false) or montee() >= MONTEE["roll"].size() - 1
 	if left > lead:
 		gap = (left - lead) * beat_len()
 		return
@@ -502,24 +556,28 @@ func _drums_step() -> void:
 			match d["kind"]:
 				"onde":
 					lead = WAVE["lead"]
-				"pouls":
+				"pouls", "reflux_court":
 					lead = PULSE["lead"]
 				"piqure":
 					lead = PRICK["lead"]
 			var start: float = at - lead
 			if start <= _drums_done or start > now:
 				continue
+			var lvl := montee()
+			var flood: bool = d.get("deluge", false) or lvl >= MONTEE["roll"].size() - 1
 			match d["kind"]:
 				"onde":
-					_launch_wave((at - now) * beat_len(), d.get("deluge", false))
+					_launch_wave((at - now) * beat_len(), flood)
 				"pouls":
 					_launch_wave((at - now) * beat_len(), false, true)
+				"reflux_court":
+					_launch_reflux((at - now) * beat_len(), true)
 				"roulement":
-					_roll(ROLL["arms_deluge"] if d.get("deluge", false) else int(POWER[phase]["roll"]))
+					_roll(maxi(ROLL["arms_deluge"] if flood else 0, int(POWER[phase]["roll"]) + int(MONTEE["roll"][lvl])))
 				"etincelle":
-					_spark(3 if d.get("deluge", false) else int(POWER[phase]["spark"]))
+					_spark(maxi(3 if flood else 0, int(POWER[phase]["spark"]) + int(MONTEE["spark"][lvl])))
 				"piqure":
-					_prick((at - now) * beat_len(), int(POWER[phase]["prick"]))
+					_prick((at - now) * beat_len(), int(POWER[phase]["prick"]) + int(MONTEE["prick"][lvl]))
 	_drums_done = now
 
 
@@ -549,6 +607,38 @@ func _launch_wave(fuse: float, flood: bool, small := false) -> void:
 		gaps.append(base + TAU * i / n)
 	waves.append({"r": radius * 0.9, "fuse": maxf(0.0, fuse), "total": maxf(0.05, fuse), "gaps": gaps, "hit": false, "reach": INF, "small": false})
 	_wave_count += 1
+
+
+## Cran de la montée de l'Exaltation (0 → MONTEE › roll.size() - 1) : une phrase de quatre mesures
+## par cran depuis le début de sa partition ; 0 hors de l'Exaltation.
+func montee() -> int:
+	if phase != 4 or exalt_beat < 0.0 or sync == null:
+		return 0
+	var phrase: float = 4.0 * sync.beats
+	return clampi(int(floor((beats_now() - exalt_beat) / phrase)), 0, MONTEE["roll"].size() - 1)
+
+
+## Un reflux qui partira du bord de l'île dans « fuse » secondes et reviendra vers elle ; « short » :
+## le petit reflux d'une grosse caisse douce, qui meurt à REFLUX › short_reach du bord.
+func _launch_reflux(fuse: float, short: bool) -> void:
+	if short and waves.size() >= WAVE["max"]:
+		return
+	var n: int = REFLUX["gaps"]
+	var to: Vector2 = main.player.position - anchor
+	var base := to.angle() if to.length() > 1.0 else PI / 2.0
+	if short:
+		base += _roll_spin + float(reflux_count) * 1.1
+	else:
+		# La brèche la plus proche s'ouvre à côté du joueur, d'un côté puis de l'autre : un pas de côté.
+		base += (REFLUX["gap"] * 0.5 + REFLUX["step"]) * (1.0 if reflux_count % 2 == 0 else -1.0)
+	var gaps: Array = []
+	for i in n:
+		gaps.append(base + TAU * i / n)
+	var edge: float = arena.radius - REFLUX["width"] * 0.5
+	var stop: float = edge - REFLUX["short_reach"] if short else radius * 0.9
+	waves.append({"r": edge, "fuse": maxf(0.0, fuse), "total": maxf(0.05, fuse), "gaps": gaps, "hit": false,
+		"reach": stop, "small": short, "inward": true, "gap_w": REFLUX["gap"]})
+	reflux_count += 1
 
 
 ## Un coup de caisse claire : des épines en spirale, une par bras.
@@ -607,8 +697,9 @@ func _update_pricks(delta: float) -> void:
 func _in_wave_gap(wv: Dictionary, pos: Vector2, margin: float) -> bool:
 	var to := pos - anchor
 	var d := maxf(to.length(), 1.0)
+	var gap_w: float = wv.get("gap_w", WAVE["gap"])
 	for g in wv["gaps"]:
-		if absf(angle_difference(float(g), to.angle())) < WAVE["gap"] * 0.5 - margin / d:
+		if absf(angle_difference(float(g), to.angle())) < gap_w * 0.5 - margin / d:
 			return true
 	return false
 
@@ -625,11 +716,17 @@ func _update_waves(delta: float) -> void:
 			if wv["fuse"] <= 0.0:
 				drum_flash = 0.0
 				main.fx.shake(2.5)
-				if not Settings.reduce_effects:
+				if wv.get("inward", false):
+					wv["r"] = minf(float(wv["r"]), arena.radius - REFLUX["width"] * 0.5)
+				elif not Settings.reduce_effects:
 					main.fx.ring(anchor, radius * 0.5, radius * 2.0, 0.25, Color(Art.ec("cendre", "clair"), 0.9), 6.0)
 			kept.append(wv)
 			continue
 		var small: bool = wv.get("small", false)
+		if wv.get("inward", false):
+			if _reflux_step(wv, delta, p):
+				kept.append(wv)
+			continue
 		var r0: float = wv["r"]
 		var r1: float = r0 + WAVE["speed"] * delta
 		wv["r"] = r1
@@ -642,6 +739,21 @@ func _update_waves(delta: float) -> void:
 		if r1 < minf(limit, float(wv.get("reach", INF)) + 40.0):
 			kept.append(wv)
 	waves = kept
+
+
+## Un pas d'un reflux parti : il revient du bord vers elle ; faux quand il s'est éteint.
+func _reflux_step(wv: Dictionary, delta: float, p) -> bool:
+	var small: bool = wv.get("small", false)
+	var r0: float = wv["r"]
+	var r1: float = r0 - REFLUX["speed"] * delta
+	wv["r"] = r1
+	var d: float = p.position.distance_to(anchor)
+	var half: float = (REFLUX["short_width"] if small else REFLUX["width"]) * 0.5 + p.radius * 0.6
+	if not wv["hit"] and d < r0 + half and d > r1 - half and not _in_wave_gap(wv, p.position, p.radius * 0.5):
+		if p.invuln <= 0.0:
+			wv["hit"] = true
+			_hurt_player((REFLUX["short_damage"] if small else REFLUX["damage"]) * damage_scale)
+	return r1 > float(wv["reach"]) - 30.0
 
 
 # --- Attaques ---
@@ -699,6 +811,9 @@ func _begin(kind: String, strike_at := -1.0) -> void:
 				if at.distance_to(arena.center) > arena.radius - ROOTS["radius"] * 0.5:
 					break
 				roots.append({"pos": at, "fuse": ROOTS["annonce"] + ROOTS["step"] * i, "burst": -1.0, "i": i})
+		"reflux":
+			_set_timer(REFLUX["annonce"])
+			exalted_attacks += 1
 		"rejetons":
 			_set_timer(SPROUTS["annonce"])
 			buds = []
@@ -707,6 +822,9 @@ func _begin(kind: String, strike_at := -1.0) -> void:
 				var a := aim.angle() + PI + (i - (n - 1) / 2.0) * 0.8
 				buds.append(_in_arena(anchor + Vector2.from_angle(a) * 180.0, 60.0))
 	_sync_announce(strike_at)
+	if kind == "reflux":
+		# L'anneau se marque au bord de l'île pendant l'annonce et part sur la frappe.
+		_launch_reflux(timer, false)
 
 
 ## L'annonce qui vient d'être posée tombe sur la grille du morceau : la frappe sur le temps que donne
@@ -810,6 +928,10 @@ func _strike() -> void:
 				_set_timer(beat_step(ROOTS["step"]) * maxi(1, roots.size()))
 			else:
 				_set_timer(ROOTS["step"] * maxi(1, roots.size()) + 0.1)
+		"reflux":
+			main.fx.shake(4.0)
+			drum_flash = 0.0
+			_end_attack()
 		"rejetons":
 			for b in buds:
 				minions.append(main.spawn_enemy_kind(SPROUTS["kind"], b, main.threat(b)))
@@ -943,6 +1065,9 @@ func _enter_phase(n: int) -> void:
 	transition = PHASE_PAUSE
 	cycle = 0
 	gap = 0.3
+	if n > 3:
+		# L'Exaltation (cycle 2 et après) : pas de transformation ni de drop, BossBase l'annonce.
+		return
 	var arm_col := Art.ec(ARMS[(n - 1) * 2]["element"], "clair")
 	main.fx.ring(anchor, radius, 460.0, 0.8, Color(arm_col, 0.9), 8.0)
 	main.fx.shake(6.0)
@@ -989,6 +1114,12 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 		if r["burst"] < 0.0 and pos.distance_to(r["pos"]) < PRICK["radius"] + margin:
 			best = minf(best, maxf(0.0, r["fuse"]))
 	for wv in waves:
+		if wv.get("inward", false):
+			var half_w: float = (REFLUX["short_width"] if wv.get("small", false) else REFLUX["width"]) * 0.5
+			var inside: float = float(wv["r"]) - d
+			if d > float(wv["reach"]) - margin and inside > -half_w - margin and not _in_wave_gap(wv, pos, margin):
+				best = minf(best, maxf(0.0, wv["fuse"]) + maxf(0.0, inside - margin) / REFLUX["speed"])
+			continue
 		var ahead: float = d - float(wv["r"])
 		if d > float(wv.get("reach", INF)) + margin:
 			continue
@@ -1114,6 +1245,8 @@ static func gesture_arms(kind: String) -> Array:
 		return COMBO_ARMS[kind]
 	if kind == "rejetons":
 		return [5]
+	if kind == EXALTED_ATTACK:
+		return [0, 1, 2, 3, 4, 5]
 	for i in ARMS.size():
 		if ARMS[i]["trait"] == kind:
 			return [i]
@@ -1227,22 +1360,25 @@ func _draw() -> void:
 				lit = int(beats_now()) % ARMS.size()
 		var h := heart_off()
 		at = Transform2D(0.0, Vector2(sw, 2.0 - sw), 0.0, h - h * sw)
-	_pose = [phase, _announce_k(), lit, die, _wake_k(), lit2, form_k(), _facing_step()]
+	# L'Exaltation garde le dessin de la seconde forme (pas de nouvelles cuissons).
+	var ph := mini(phase, 3)
+	_pose = [ph, _announce_k(), lit, die, _wake_k(), lit2, form_k(), _facing_step()]
 	_anim = {} if dead or transforming() else _gesture_step()
 	_anim["art"] = _art_now()
 	_frame_bias()
 	if _layers.is_empty():
 		draw_set_transform_matrix(at)
-		draw_colossus(self, Vector2.ZERO, radius, t, phase, _pose[1], lit, die, _pose[4], _color, lit2, _pose[6], _pose[7], _anim)
+		draw_colossus(self, Vector2.ZERO, radius, t, ph, _pose[1], lit, die, _pose[4], _color, lit2, _pose[6], _pose[7], _anim)
 		draw_set_transform_matrix(Transform2D.IDENTITY)
 		if charging:
 			_draw_charge_front(self)
+		_draw_exalt(self)
 		return
 	# Les parties fixes (corps, chaque bras) sont recuites quand leur pose change ; le reste vit à chaque image.
-	_bake_part("corps", [phase, snappedf(die, 0.05), snappedf(_pose[4], 0.1), snappedf(_pose[6], 0.05)])
+	_bake_part("corps", [ph, snappedf(die, 0.05), snappedf(_pose[4], 0.1), snappedf(_pose[6], 0.05)])
 	for i in ARMS.size():
 		var on := FinaleArt.arm_on(i, _pose[1], lit, lit2, _pose[6])
-		var key := [phase >= int(ARMS[i]["phase"]), snappedf(on, 0.25), snappedf(die, 0.05), snappedf(_pose[4], 0.1), snappedf(_pose[6], 0.05)]
+		var key := [ph >= int(ARMS[i]["phase"]), snappedf(on, 0.25), snappedf(die, 0.05), snappedf(_pose[4], 0.1), snappedf(_pose[6], 0.05)]
 		for part in [i, "f%d" % i, "m%d" % i]:
 			_bake_part(part, key)
 	var ready := true
@@ -1291,7 +1427,8 @@ func _make_art() -> void:
 	_front.name = "ChargeDevant"  # i18n: non
 	_front.draw.connect(func():
 		if sync != null and music_waiting() and charge >= 0.0:
-			_draw_charge_front(_front))
+			_draw_charge_front(_front)
+		_draw_exalt(_front))
 	add_child(_front)
 	var plain := func(c): return c
 	_bakes["corps"] = LiveBake.new(self, FinaleArt.body_box(), func(ci):
@@ -1307,6 +1444,7 @@ func _make_art() -> void:
 				FinaleArt.draw_arm(ci, Transform2D.IDENTITY, i, ARMS, a[0], a[1], a[2], a[3], a[4], plain, pc[1]), FinaleArt.ART)
 	for key in _bakes:
 		_bakes[key].rate = 0.001
+		_bakes[key].trim = true
 	# Le sol (racines, brume) : cuit à chaque changement de phase, de forme ou de mort, sous les annonces.
 	_floor_node = Node2D.new()
 	_floor_node.name = "Sol"  # i18n: non
@@ -1317,8 +1455,9 @@ func _make_art() -> void:
 	marks.add_child(_floor_node)
 	var s := radius / 100.0
 	_floor_bake = LiveBake.new(self, Rect2(Vector2(-420, -120) * s, Vector2(840, 260) * s), func(ci):
-		FinaleArt.draw_floor_static(ci, Vector2.ZERO, radius, phase, _floor_key[1], _floor_key[2]))
+		FinaleArt.draw_floor_static(ci, Vector2.ZERO, radius, mini(phase, 3), _floor_key[1], _floor_key[2]))
 	_floor_bake.rate = 0.001
+	_floor_bake.trim = true
 
 
 ## Demande la cuisson d'une partie si sa pose a changé (args : ce que son dessin lit).
@@ -1402,6 +1541,17 @@ func _ready() -> void:
 	_die_rng.seed = 2323
 	_prick_rng.seed = 4141
 	_make_art()
+	# Banc d'une phase (« -- --bench-scene=boss --region=finale --boss-hp=0.3 ») : elle entre en combat
+	# avec cette part de vie, et n'en perd plus au-dessous de 90 % de cette part (le banc mesure la phase).
+	if main.get("benchmark"):
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--boss-hp="):
+				bench_hold = clampf(float(a.substr(10)), 0.01, 1.0)
+				hp = max_hp * bench_hold
+
+
+## Banc d'une phase : part de vie gardée (0 : rien de gardé).
+var bench_hold := 0.0
 
 
 func _dying_step(_delta: float) -> void:
@@ -1692,16 +1842,17 @@ static func draw_colossus(ci: CanvasItem, c: Vector2, r: float, t: float, phase:
 func draw_marks(c: CanvasItem) -> void:
 	var k := _announce_k()
 	var fdie := clampf(dying / death_time, 0.0, 1.0) if dead else 0.0
+	var ph := mini(phase, 3)
 	if _floor_bake != null:
-		_floor_key = [phase, snappedf(form_k(), 0.05), snappedf(fdie, 0.05)]
+		_floor_key = [ph, snappedf(form_k(), 0.05), snappedf(fdie, 0.05)]
 		_floor_bake.update(_floor_key, t)
 		_floor_node.queue_redraw()
 		if _floor_bake.ready:
-			FinaleArt.draw_floor_live(c, anchor, radius, t, phase, fdie, form_k())
+			FinaleArt.draw_floor_live(c, anchor, radius, t, ph, fdie, form_k())
 		else:
-			draw_floor(c, anchor, radius, t, phase, fdie, form_k())
+			draw_floor(c, anchor, radius, t, ph, fdie, form_k())
 	else:
-		draw_floor(c, anchor, radius, t, phase, fdie, form_k())
+		draw_floor(c, anchor, radius, t, ph, fdie, form_k())
 	# Nuages de spores posés : violets, bulles qui montent, bord rouge (toujours dangereux).
 	for cl in clouds:
 		var pos: Vector2 = cl["pos"]
@@ -1792,6 +1943,54 @@ func draw_marks(c: CanvasItem) -> void:
 				Art.telegraph(c, {"type": "cone", "centre": anchor, "direction": float(a), "ouverture": LIGHT["opening"], "rayon": arena.radius}, 1.0, f, t)
 
 
+## Reflux : pendant l'annonce, le bord de l'île se marque en rouge (de plus en plus vif) et les brèches
+## s'y éclairent ; puis l'anneau de cendre bordé de rouge revient vers elle, des braises aspirées
+## devant lui. Les petits reflux, plus fins, s'effacent à mi-chemin.
+func _draw_reflux(c: CanvasItem, wv: Dictionary, danger: Color, ash: Color, pale: Color) -> void:
+	var gaps: Array = wv["gaps"].duplicate()
+	gaps.sort()
+	var half: float = float(wv.get("gap_w", REFLUX["gap"])) * 0.5
+	var small: bool = wv.get("small", false)
+	var fuse: float = wv["fuse"]
+	var k := 1.0 - clampf(fuse / float(wv["total"]), 0.0, 1.0) if fuse > 0.0 else 1.0
+	var edge: float = arena.radius - REFLUX["width"] * 0.5
+	var r: float = wv["r"] if fuse <= 0.0 else edge
+	var full_w: float = REFLUX["short_width"] if small else REFLUX["width"]
+	var stop: float = wv["reach"]
+	var fade := 1.0
+	if fuse <= 0.0:
+		fade = clampf((r - stop + 30.0) / (50.0 if small else 90.0), 0.0, 1.0)
+	if not small:
+		# Couloirs des brèches, du bord vers elle.
+		for g in gaps:
+			var dir := Vector2.from_angle(float(g))
+			c.draw_line(anchor + dir * maxf(stop, radius), anchor + dir * r, Color(pale, (0.10 + 0.12 * k) * fade), full_w * 1.4, true)
+	for i in gaps.size():
+		var a0: float = float(gaps[i]) + half
+		var a1: float = float(gaps[(i + 1) % gaps.size()]) - half
+		if a1 <= a0:
+			a1 += TAU
+		var segs := maxi(6, int((a1 - a0) * (8.0 if small else 16.0)))
+		if fuse > 0.0:
+			c.draw_arc(anchor, r, a0, a1, segs, Color(danger, 0.2 + 0.6 * k), Art.TRAIT * (1.0 + 1.5 * k), true)
+			continue
+		var w := full_w
+		c.draw_arc(anchor, r, a0, a1, segs, Color(ash, 0.85 * fade), w, true)
+		c.draw_arc(anchor, r - w * 0.5, a0, a1, segs, Color(danger, 0.9 * fade), Art.TRAIT, true)
+		c.draw_arc(anchor, r + w * 0.5, a0, a1, segs, Color(danger, 0.9 * fade), Art.TRAIT, true)
+		if small:
+			continue
+		# Braises aspirées devant l'anneau, vers elle.
+		var n := int((a1 - a0) * 2.0)
+		for j in n:
+			var a := lerpf(a0, a1, (j + 0.5) / float(n))
+			var dir := Vector2.from_angle(a)
+			var lag := fposmod(t * 3.0 + j * 0.37, 1.0)
+			c.draw_line(anchor + dir * (r - w * 0.6 - 4.0), anchor + dir * (r - w * 0.6 - 14.0 - 16.0 * lag), Color(danger, 0.7 * fade * (1.0 - lag)), 2.0, true)
+		for e in [a0, a1]:
+			c.draw_circle(anchor + Vector2.from_angle(e) * r, w * 0.4, Color(danger, 0.8 * fade))
+
+
 ## Ondes de choc : avant de partir, l'anneau se ramasse autour d'elle et les brèches s'éclairent
 ## en couloirs jusqu'au mur ; puis un anneau de cendre bordé de rouge (danger) court vers le mur.
 func _draw_waves(c: CanvasItem) -> void:
@@ -1802,6 +2001,9 @@ func _draw_waves(c: CanvasItem) -> void:
 	var pale := Art.ec("cendre", "clair")
 	var half: float = WAVE["gap"] * 0.5
 	for wv in waves:
+		if wv.get("inward", false):
+			_draw_reflux(c, wv, danger, ash, pale)
+			continue
 		var gaps: Array = wv["gaps"].duplicate()
 		gaps.sort()
 		var fuse: float = wv["fuse"]
@@ -1898,6 +2100,34 @@ static func draw_sleeper(a: Node2D) -> void:
 ## Après la victoire : une pousse de l'Arbre de vie, ses six feuilles aux couleurs des régions.
 static func draw_victory(a: Node2D) -> void:
 	FinaleArt.draw_victory(a, a.center, a.t, ARMS)
+
+
+# --- Exaltation (cycle 2 et après) ---
+
+## Sur le morceau, l'annonce de l'Exaltation tient jusqu'à une mesure du morceau (et non de la musique
+## des boss de région) : « grid » temps du morceau.
+func loop_snap(delay: float, grid := 1.0) -> float:
+	if not on_music_grid():
+		return super.loop_snap(delay, grid)
+	var bl := beat_len()
+	var now := beats_now()
+	var at: float = ceil((now + delay / bl) / grid - 0.001) * grid
+	return (at - now) * bl
+
+
+## Sa lueur bat sur les temps du morceau, plus fort à chaque cran de la montée.
+func exalt_glow() -> float:
+	if not is_exalted_phase() or dead:
+		return 0.0
+	var u := fposmod(beats_now(), 1.0) if on_music_grid() else fposmod(loop_time() / LOOP_BEAT, 1.0)
+	return 0.55 + 0.45 * pow(1.0 - u, 3.0)
+
+
+## L'aura de la phase exaltée (boss_art/exalte.gd), autour de son cœur, devant elle.
+func _draw_exalt(ci: CanvasItem) -> void:
+	if not is_exalted_phase() or dead:
+		return
+	draw_exalt_aura(ci, heart_off(), radius * _art_now() * (0.62 + 0.04 * montee()))
 
 
 ## Le retour de la batterie : elle se dresse d'un coup, une onde dans les couleurs des bras éveillés.
