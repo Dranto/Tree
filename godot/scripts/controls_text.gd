@@ -13,7 +13,7 @@ const MOUSE_NAMES := {
 ## encore leurs évènements, mais doit déjà les annoncer.
 const DEFAULT_KEYS := {
 	"move_up": KEY_W, "move_left": KEY_A, "move_down": KEY_S, "move_right": KEY_D,
-	"toggle_tree": KEY_TAB, "dash": KEY_SPACE,
+	"toggle_tree": KEY_TAB, "dash": KEY_SPACE, "show_stats": KEY_C,
 }
 ## Noms français des touches que Godot nomme en anglais.
 const KEY_FR := {KEY_SPACE: "Espace", KEY_SHIFT: "Maj", KEY_ESCAPE: "Échap", KEY_ENTER: "Entrée", KEY_BACKSPACE: "Retour arrière", KEY_CTRL: "Ctrl"} # i18n
@@ -129,6 +129,7 @@ static func reminder_rows() -> Array:
 	rows.append([secondary_keys(), Loc.t("Compétences secondaires")])
 	rows.append([action_label("dash"), Loc.t("Esquive")])
 	rows.append([action_label("toggle_tree"), Loc.t("Arbre de vie")])
+	rows.append([action_label("show_stats"), Loc.t("Statistiques (maintenir)")])
 	return rows
 
 
@@ -146,4 +147,5 @@ static func pad_rows() -> Array:
 		[Settings.pad_name_of(Settings.pad_actions["dash"]), Loc.t("Esquive")],
 		[Settings.pad_name_of(Settings.pad_actions["toggle_tree"]), Loc.t("Arbre de vie")],
 		[Settings.pad_name_of(Settings.pad_actions["toggle_map"]), Loc.t("Carte")],
+		[Settings.pad_name_of(Settings.pad_actions["show_stats"]), Loc.t("Statistiques (maintenir)")],
 	]

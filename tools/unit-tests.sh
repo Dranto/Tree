@@ -20,6 +20,7 @@ LIMIT="${LIMIT:-600}"   # secondes au plus par test
 # nom|options de Godot (avant -s)|arguments du test (après --)
 TESTS=(
   "access|--headless|"
+  "stats|--headless --fixed-fps 60|"
   "air|--headless|"
   "art|--headless|"
   "attack|--headless --fixed-fps 60|"
@@ -117,7 +118,7 @@ declare -A WEIGHT=(
   [decor]=23 [seve]=21 [plateaux]=18 [enemies]=17 [cycle_monsters]=20 [vent]=17 [foret]=16 [demo]=15 [falaises]=15
   [flow]=15 [region]=15 [vallee]=15 [sprite_bake]=14 [racine]=14 [tree_ui]=14 [skills]=13
   [world_fx]=12 [boss]=11 [bestiaire]=11 [i18n]=11 [moments]=11 [aube]=10 [death]=10 [grafts]=10
-  [marais]=10 [access]=9 [deaths]=9 [migration]=9 [spore]=9 [tree_anim]=9 [difficulty]=7 [feel]=8
+  [marais]=10 [access]=9 [stats]=8 [deaths]=9 [migration]=9 [spore]=9 [tree_anim]=9 [difficulty]=7 [feel]=8
   [objectives]=8 [region_engine]=8 [region_ui]=8 [save]=8 [steam]=8 [world]=6 [planner]=5
   [seve_bestiaire]=5 [boss_dessin]=4 [paysages_proto]=4 [art]=3 [air]=3 [borders]=3 [builds]=3 [cycle]=6 [cycle_grafts]=6 [draw_batch]=3
   [node_types]=3 [tree_originals]=3 [user_dir]=3 [legibility]=2 [rumble]=2 [world_edge]=2

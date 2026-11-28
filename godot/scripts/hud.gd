@@ -31,6 +31,8 @@ var banner_kind := "info"
 var banner_queue: Array = []
 ## Tutoriel discret : glyphes de touches qui apparaissent au bon moment (tutorial_glyphs.gd).
 var glyphs
+## Fiche des statistiques, visible tant qu'on tient la touche (stats_card.gd).
+var stats_card
 
 var _labels := {}
 var _corner
@@ -46,6 +48,7 @@ var death_screen
 const Widgets = preload("res://scripts/hud_widgets.gd")
 const Controls = preload("res://scripts/controls_text.gd")
 const Glyphs = preload("res://scripts/tutorial_glyphs.gd")
+const StatsCard = preload("res://scripts/stats_card.gd")
 
 
 func _ready() -> void:
@@ -59,6 +62,8 @@ func _ready() -> void:
 	glyphs = Glyphs.new()
 	glyphs.main = main
 	add_child(glyphs)
+	stats_card = StatsCard.new()
+	add_child(stats_card)
 	death_screen = DeathScreen.new()
 	death_screen.main = main
 	add_child(death_screen)
