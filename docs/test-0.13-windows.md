@@ -5,10 +5,10 @@ Note chaque souci avec l'heure et ce que tu faisais ; une capture (Win+Maj+S) ai
 
 ## 0. Télécharger (2 min)
 
-Artefacts du build 0.13.0 : ARTEFACTS_LIEN
+Artefacts du build 0.13.0 : [run Builds 0.13.0 sur develop](https://github.com/Dranto/Tree/actions/runs/46144100017) (connecté à GitHub, liens directs ci-dessous ; gardés jusqu'au 26/02/2027).
 
-- `arborescence-windows-demo` : la démo (Ronce seule).
-- `arborescence-windows` : le jeu complet.
+- Démo Windows : [arborescence-windows-demo](https://github.com/Dranto/Tree/actions/runs/46144100017/artifacts/15262817900) (55 Mo)
+- Jeu complet Windows : [arborescence-windows](https://github.com/Dranto/Tree/actions/runs/46144100017/artifacts/15263370353) (58 Mo)
 
 Dézippe **tout le dossier** de chaque artefact (l'exe a besoin des fichiers Steam à côté).
 Si Windows SmartScreen bloque : « Informations complémentaires » › « Exécuter quand même » (le jeu n'est pas signé).
