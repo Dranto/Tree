@@ -101,6 +101,36 @@ func _run() -> void:
 		("" if bad.is_empty() else " : %d cas, sons %s" % [bad.size(), ", ".join(_names(bad))]))
 	check(worst <= MAX_SHIFT, "transposition d'au plus %d demi-tons (%d)" % [MAX_SHIFT, worst])
 
+	# Un son répété en rafale marche sur les notes de l'accord (sfx.gd) : chaque note essayée reste dans la gamme.
+	var vary_bad: Array = []
+	var varied := 0
+	var cases := 0
+	for name in Synth.SOUNDS:
+		var notes := Harmony.notes_of(name)
+		if notes.is_empty():
+			continue
+		for ctx in contexts:
+			var all := Harmony.shifts_in_key(notes, ctx[1])
+			cases += 1
+			varied += 1 if all.size() >= 2 else 0
+			if all[0] != Harmony.best_shift(notes, ctx[1]):
+				vary_bad.append("%s sur %s : la première note n'est pas la meilleure" % [name, ctx[0]])
+			for s in all.slice(1):
+				var rub := false
+				for n in notes:
+					rub = rub or Harmony.note_cost(posmod(int(roundf(float(n[0]))) + s, 12), ctx[1]) > Harmony.COST_SCALE
+				if absi(s - all[0]) > Harmony.VARY_RANGE or Harmony._wrong(notes, s, ctx[1]) > 0 or rub:
+					vary_bad.append("%s sur %s (%+d)" % [name, ctx[0], s])
+	check(vary_bad.is_empty(), "rafale : chaque note de la marche est dans la gamme de la zone ou sur l'accord, sans frotter" + ("" if vary_bad.is_empty() else " : " + ", ".join(vary_bad.slice(0, 6))))
+	check(varied >= int(cases * 0.5), "rafale : la plupart des sons à notes ont au moins deux notes justes où aller (%d sur %d)" % [varied, cases])
+	# Les sons des attaques les plus fréquentes : une autre note juste sur presque tous les accords (pas sur
+	# les accords de passage chromatiques, où seule la meilleure note est juste).
+	for name in ["aube_rayon", "impact@aube", "impact@vent", "critique", "seve_goutte"]:
+		var ok := 0
+		for ctx in contexts:
+			ok += 1 if Harmony.shifts_in_key(Harmony.notes_of(name), ctx[1]).size() >= 2 else 0
+		check(ok >= int(contexts.size() * 0.85), "%s : répété, il change de note sur presque tous les accords (%d sur %d)" % [name, ok, contexts.size()])
+
 	var ronce := Harmony.context(Harmony.region(""), 0.1)
 	check(absf(Harmony.pitch_for("critique", ronce) - 1.0) < 0.001, "un son en ré mineur dans Ronce, sur ré mineur : joué tel quel")
 	var p1 := Harmony.pitch_for("critique", ronce, 1)

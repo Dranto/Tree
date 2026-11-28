@@ -142,22 +142,59 @@ func _run() -> void:
 		sfx.players.append(p)
 	sfx.played = 0
 	sfx.recent.clear()
+	sfx.calm = false
 	for i in 6:
 		sfx.play("impact")
-	check(sfx.played == 3, "3 impacts identiques au plus par 50 ms (obtenu %d)" % sfx.played)
+	check(sfx.played == 3, "sans les limites de lassitude : 3 impacts identiques au plus par 50 ms (obtenu %d)" % sfx.played)
+	sfx.calm = true
+	_reset_sfx(sfx)
+	for i in 6:
+		sfx.play("impact")
+	check(sfx.played == 1, "six coups dans la même image : un seul son (obtenu %d)" % sfx.played)
 	sfx.play("mort")
-	check(sfx.played == 4, "un autre son n'est pas limité")
+	check(sfx.played == 2, "un autre son n'est pas limité")
 	sfx.play("inconnu")
-	check(sfx.played == 4, "son inconnu ignoré")
+	check(sfx.played == 2, "son inconnu ignoré")
 	var far := Node2D.new()
 	root.add_child(far)
 	sfx.listener = far
 	far.global_position = Vector2.ZERO
-	sfx.recent.clear()
+	_reset_sfx(sfx)
 	sfx.play("impact", Vector2(5000, 0))
-	check(sfx.played == 4, "son trop lointain non joué")
+	check(sfx.played == 0, "son trop lointain non joué")
 	sfx.play("impact", Vector2(100, 0))
-	check(sfx.played == 5, "son proche joué")
+	check(sfx.played == 1, "son proche joué")
+	sfx.listener = null
+	# Lassitude : 30 demandes par seconde pendant 2 s (une image sur deux).
+	_reset_sfx(sfx)
+	var gains: Array = []
+	var variants := {}
+	var repeats := 0
+	var last_variant := -1
+	var most := 0
+	sfx.streams["impact"] = Synth.variant_names("impact").map(func(f): return sfx.get_script().load_wav("res://assets/sounds/%s.wav" % f))
+	for i in 60:
+		sfx.clock_msec = i * 33.0
+		var before: int = sfx.played
+		sfx.play("impact")
+		if sfx.played > before:
+			gains.append(sfx.last_gain)
+			var v: int = sfx.memo["impact"]["variant"]
+			variants[v] = true
+			repeats += 1 if v == last_variant else 0
+			last_variant = v
+		var now: float = sfx.clock_msec
+		most = maxi(most, sfx.voices.get("impact", []).filter(func(t): return t > now).size())
+	check(most <= sfx.MAX_VOICES, "au plus %d voix d'un même son à la fois (%d)" % [sfx.MAX_VOICES, most])
+	check(gains.size() < 60, "rafale : des coups trop serrés sont tus (%d joués sur 60)" % gains.size())
+	check(gains[0] == 0.0 and gains[-1] <= -4.5 and gains[-1] >= -sfx.DENSITY_MAX_DB - sfx.CROWD_MAX_DB, "rafale : le son baisse quand il revient sans cesse (%.1f dB → %.1f dB)" % [gains[0], gains[-1]])
+	check(variants.size() == 3 and repeats == 0, "rafale : les trois variantes tournent, jamais deux fois la même de suite")
+	_reset_sfx(sfx)
+	sfx.clock_msec = 5000.0
+	sfx.play("impact")
+	check(sfx.last_gain == 0.0, "après un silence, le son revient à plein volume")
+	check(not sfx.is_tamed("annonce") and not sfx.is_tamed("ronce_boss_eveil") and not sfx.is_tamed("clic") and sfx.is_tamed("impact@aube"),
+		"signaux, boss et interface hors des limites de lassitude")
 	# Versions régionales : un coup dans le marais prend la voix du marais, dans l'oasis la voix commune.
 	sfx.streams["impact@spore"] = sfx.streams["impact"]
 	var Regions = load("res://scripts/regions.gd")
@@ -289,3 +326,15 @@ func _run() -> void:
 
 	print("ÉCHECS : %d" % failures if failures > 0 else "Tout est bon.")
 	quit(1 if failures > 0 else 0)
+
+
+func _reset_sfx(sfx) -> void:
+	sfx.played = 0
+	sfx.recent.clear()
+	sfx.voices.clear()
+	sfx.starts.clear()
+	sfx.crowd.clear()
+	sfx.memo.clear()
+	sfx.clock_msec = 0.0
+	for p in sfx.players:
+		p.stop()
