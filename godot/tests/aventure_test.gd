@@ -711,6 +711,9 @@ func _reload(why: String) -> void:
 				# finale_ouverte se déduit des régions purifiées : l'arène la pose dès sa première image.
 				if f == "finale_ouverte" and Regions.all_purified(after["flags"]):
 					continue
+				# Autel découvert dans les images qui suivent le chargement (le héros est à côté) : pas un défaut.
+				if f.begins_with("autel_") and f.ends_with("_vu"):
+					continue
 				if not before["flags"].has(f):
 					diff.append("%s ajouté" % f)
 		elif k == "ground" and _same_ground(before[k], after[k]):

@@ -801,6 +801,8 @@ static func _bloom(ci: CanvasItem, e: Dictionary, k: float, on_ground: bool) -> 
 		var la := i * TAU / petals - PI / 2.0 + fly * 1.2
 		var dist := 22.0 * o + r * 0.85 * Anim.ease_out(fly)
 		var q := p + Vector2.from_angle(la) * dist + Vector2(0, 30.0 * fly * fly)
+		if 13.0 * o * (1.0 - 0.4 * fly) < 0.8:
+			continue   # pétale trop petit : Godot refuse de trianguler une feuille écrasée
 		var pl := HeroArt.leaf_pts(q, 13.0 * o * (1.0 - 0.4 * fly), la + fly * 5.0 * (1.0 if i % 2 == 0 else -1.0))
 		var pc := seve.lerp(clair, 0.35 if i % 2 == 0 else 0.0)
 		ci.draw_colored_polygon(pl, Color(pc, 1.0 - fly))
@@ -1021,7 +1023,8 @@ static func _esquive(ci: CanvasItem, e: Dictionary, on_ground: bool) -> void:
 			var n := span.orthogonal().normalized()
 			var w := 9.0 * trail_k * (1.0 - fade)
 			var a := 0.5 * (1.0 - fade)
-			ci.draw_colored_polygon(PackedVector2Array([tail, to + n * w, to + d * w * 0.6, to - n * w]), Color(seve, a * 0.55))
+			if w > 0.5 and tail.distance_to(to) > 2.0:   # sinon quadrilatère dégénéré, refusé par Godot
+				ci.draw_colored_polygon(PackedVector2Array([tail, to + n * w, to + d * w * 0.6, to - n * w]), Color(seve, a * 0.55))
 			ci.draw_line(tail, to, Color(clair, a), maxf(2.5 * (1.0 - fade), 1.0), true)
 			# Trois filets de vitesse de part et d'autre.
 			for j in 3:

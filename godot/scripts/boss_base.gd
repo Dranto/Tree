@@ -131,7 +131,7 @@ func _ready() -> void:
 	_charge_rng.seed = CHARGE_SEED
 	anchor = position
 	# Le choix de difficulté des options (Facile / Normal / Difficile) vaut aussi pour les boss.
-	max_hp = (base_hp + hp_per_level * Game.level) * Difficulty.boss_hp_factor(region) * Difficulty.hp_mult()
+	max_hp = (base_hp + hp_per_level * Game.level) * Difficulty.boss_hp_factor(region) * Difficulty.hp_mult() * level_hp_mult()
 	hp = max_hp
 	damage_scale = (1.0 + damage_per_level * (Game.level - 1)) * Difficulty.damage_mult()
 	xp_value = 40.0 + 12.0 * Game.level
@@ -459,6 +459,23 @@ func _exalt_setup() -> void:
 	# La barre marque aussi le seuil de la phase exaltée.
 	if arena != null and arena.get("bar") != null:
 		arena.bar.marks = phase_limits
+
+
+## Vie liée au niveau du héros (jalon 14 R2, cycle 2 et après) : 1 + par_niveau × (niveau − depuis), au plus
+## « max » (data/cycles.json › bosses › level_hp › <région>, « defaut » sinon). 1 au cycle 1 : la clé n'y est pas.
+func level_hp_mult() -> float:
+	var cyc = get_node_or_null("/root/Cycles")
+	if cyc == null:
+		return 1.0
+	var all = cyc.value("bosses", {})
+	var lh = all.get("level_hp", {}) if all is Dictionary else {}
+	if not lh is Dictionary:
+		return 1.0
+	var cfg = lh.get(region, lh.get("defaut", {}))
+	if not cfg is Dictionary or cfg.is_empty():
+		return 1.0
+	var m := 1.0 + float(cfg.get("par_niveau", 0.0)) * maxf(0.0, float(Game.level) - float(cfg.get("depuis", 20.0)))
+	return minf(m, float(cfg.get("max", 80.0)))
 
 
 ## Réglage « key » du boss pour le cycle en cours (cycles.json › bosses › <région>), default sinon.

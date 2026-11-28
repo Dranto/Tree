@@ -100,6 +100,14 @@ func _region(region: String, cycle: int) -> void:
 	if not is_instance_valid(boss):
 		return
 	check(boss.exalted == (cycle >= 2), "exalté seulement à partir du cycle 2")
+	# Vie liée au niveau du héros (jalon 14 R2) : au cycle 2 seulement, et seulement au-dessus de « depuis ».
+	var level_before: int = game.level
+	game.level = 45
+	var lm: float = boss.level_hp_mult()
+	check((lm > 3.0) if cycle >= 2 else (lm == 1.0), "vie liée au niveau : ×%.1f au niveau 45 (cycle %d)" % [lm, cycle])
+	game.level = 10
+	check(boss.level_hp_mult() == 1.0, "vie liée au niveau : rien sous le niveau 20")
+	game.level = level_before
 	check(boss.phase_limits.size() == (3 if cycle >= 2 else 2), "une phase de plus au cycle 2")
 	if cycle < 2:
 		boss.take_damage(boss.max_hp * 2.0, false)
