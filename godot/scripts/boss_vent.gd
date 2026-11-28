@@ -212,6 +212,8 @@ var drum_flash := -1.0
 
 func _setup() -> void:
 	body_radius = RADIUS
+	# Corps à l'écran (héros caché derrière : player.gd) : ailes déployées au-dessus de lui.
+	cover = Vector2(3.0, 4.0)
 	intro_time = INTRO
 	death_time = DEATH_TIME
 	base_hp = BASE_HP

@@ -282,6 +282,8 @@ var reflux_count := 0
 
 func _setup() -> void:
 	body_radius = BODY_RADIUS
+	# Corps à l'écran (héros caché derrière : player.gd) : bras et armes de la Flétrissure.
+	cover = Vector2(2.8, 3.2)
 	intro_time = 1.8
 	death_time = 2.4
 	base_hp = BASE_HP

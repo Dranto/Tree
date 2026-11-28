@@ -86,6 +86,8 @@ var sweep_hit := false
 
 func _setup() -> void:
 	body_radius = RADIUS
+	# Corps à l'écran (héros caché derrière : player.gd) : ailes de verre.
+	cover = Vector2(2.2, 3.0)
 	intro_time = INTRO
 	death_time = DEATH_TIME
 	base_hp = BASE_HP

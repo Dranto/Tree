@@ -46,6 +46,8 @@ var phase_limits: Array = [0.66, 0.33]
 var rooted_cadence := 0.55
 var root_immunity := 6.0
 var max_bleed_stacks := 5
+## Corps à l'écran, en rayons : demi-largeur et hauteur au-dessus des pieds (cover_rect).
+var cover := Vector2(1.7, 2.5)
 
 var main
 var arena
@@ -745,6 +747,15 @@ func _color(base: Color) -> Color:
 	if dead:
 		c = c.lerp(FletriArt.ash_color(), Anim.ease_out(clampf(dying / death_time * 1.4, 0.0, 1.0)))
 	return c
+
+
+# --- Héros caché derrière le boss (player.gd › hidden_by_boss) ---
+
+## Boîte de son corps à l'écran (repère du boss, pieds en 0) : quand le héros, plus haut à l'écran,
+## y est en partie, il est dessiné par-dessus en silhouette d'encre. Large plutôt que juste : sur
+## un héros visible, la silhouette se confond avec son propre trait.
+func cover_rect() -> Rect2:
+	return Rect2(-cover.x * radius, -cover.y * radius, 2.0 * cover.x * radius, cover.y * radius)
 
 
 # --- Boss cuits en sprites (« Bestiaire d'herbier », boss_bake.gd) ---

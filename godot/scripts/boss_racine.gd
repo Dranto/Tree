@@ -87,6 +87,8 @@ var no_root := true
 
 func _setup() -> void:
 	body_radius = 78.0
+	# Corps à l'écran (héros caché derrière : player.gd) : cime de pierre.
+	cover = Vector2(1.7, 2.8)
 	intro_time = 1.5
 	death_time = 2.0
 	base_hp = BASE_HP

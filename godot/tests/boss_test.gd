@@ -109,6 +109,16 @@ func _run() -> void:
 		check(not boss.statuses.has("enracine"), "l'enracinement ne le tient pas (no_root, l'Ancien)")
 	else:
 		check(boss.statuses.has("enracine"), "l'enracinement la ralentit")
+	# Héros caché derrière le boss (plus haut à l'écran, dans son corps) : silhouette d'encre par-dessus.
+	var pl = main.player
+	_place(boss.position + Vector2(boss.radius * 0.3, -boss.radius))
+	check(pl.hidden_by_boss(), "derrière le boss, le héros est repéré comme caché")
+	check(await _until(func(): return pl.behind >= 1.0, 30), "sa silhouette d'encre apparaît en un instant")
+	_place(boss.position + Vector2(0, boss.radius * 0.6))
+	check(not pl.hidden_by_boss(), "devant le boss (plus bas à l'écran), il n'est pas caché")
+	_place(boss.position + Vector2(boss.radius * (boss.cover.x + 1.0) + 20.0, -boss.radius))
+	check(not pl.hidden_by_boss(), "à côté du boss, hors de son corps, il n'est pas caché")
+	check(await _until(func(): return pl.behind <= 0.0, 30), "la silhouette s'efface quand il ressort")
 	_place(arena.center + Vector2(0, 420))
 	check(await _until(func(): return boss.attack != "" and boss.stage == "annonce"), "une attaque est annoncée avant de frapper")
 	boss.take_damage(boss.max_hp * 0.4, false)
