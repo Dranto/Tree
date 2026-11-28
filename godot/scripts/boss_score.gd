@@ -1,6 +1,6 @@
 ## Partition d'un boss sur son morceau fait à la main (boss_sync.gd) : ce qui frappe sur quel temps.
-## Écrit pour l'Amanite-Mère à partir de la partition de la Mère-Ronce (boss_ronce.gd › SCORE,
-## DRUMS_POWER), pour que les boss suivants la reprennent sans la recopier.
+## Commun à la Mère-Ronce (boss_ronce.gd) et à l'Amanite-Mère (boss_spore.gd) : chaque boss n'écrit
+## que sa partition (SCORE, DRUMS_POWER) et la façon dont il joue chaque coup.
 ##
 ## Le boss donne :
 ##   - « score » : par phase, {"loop": section du morceau, "phrases": [{"coups": [[temps, attaque]…],

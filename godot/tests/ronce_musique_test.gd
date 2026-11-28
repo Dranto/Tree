@@ -152,11 +152,12 @@ func _fight(cycle: int) -> void:
 func _play_phase(boss, ph: int, weights: Dictionary) -> void:
 	var sync = boss.sync
 	await _steps(2)
-	check(boss.score_phase == ph, "phase %d : la partition mène le combat" % ph)
+	var sc = boss.score
+	check(sc.phase == ph, "phase %d : la partition mène le combat" % ph)
 	var loop: String = boss.SCORE[ph]["loop"]
 	var sec: Dictionary = sync.data["sections"][loop]
 	var bars: int = int(sec["mesures"][1]) - int(sec["mesures"][0]) + 1
-	check(boss.score_len == bars * 4.0, "phase %d : la partition suit %s (%d mesures)" % [ph, loop, bars])
+	check(sc.length == bars * 4.0, "phase %d : la partition suit %s (%d mesures)" % [ph, loop, bars])
 	# Percussions retenues par la phase (DRUMS_POWER) : toutes ont une attaque.
 	var pw: Dictionary = boss.DRUMS_POWER[ph]
 	var want := 0
@@ -176,11 +177,11 @@ func _play_phase(boss, ph: int, weights: Dictionary) -> void:
 			for six in sec["coups"][src][m]:
 				if int(six) % g == 0:
 					want += 1
-	check(boss.score_drums.size() == want, "phase %d : chaque percussion retenue attaque (%d attaques, %d coups)" % [ph, boss.score_drums.size(), want])
-	weights[ph] = boss.score_weight()
-	var skipped0: int = boss.score_skipped
-	var played0: int = boss.score_played
-	var drums0: Dictionary = boss.drums_played.duplicate()
+	check(sc.drums.size() == want, "phase %d : chaque percussion retenue attaque (%d attaques, %d coups)" % [ph, sc.drums.size(), want])
+	weights[ph] = sc.weight()
+	var skipped0: int = sc.skipped
+	var played0: int = sc.played
+	var drums0: Dictionary = sc.drums_played.duplicate()
 	var off: Array = []
 	var was: String = boss.stage
 	var frames := int(bars * sync.bar * 60.0)
@@ -192,14 +193,14 @@ func _play_phase(boss, ph: int, weights: Dictionary) -> void:
 		if boss.phase != ph:
 			break
 		if boss.stage == "frappe" and was == "annonce" and boss.attack != "racines":
-			var local := fposmod(boss.beats_now() - boss.score_origin, boss.score_len)
-			if not boss.score_hits.any(func(h): return absf(h["beat"] - local) < 0.1 or absf(h["beat"] - local + boss.score_len) < 0.1):
+			var local := fposmod(boss.beats_now() - sc.origin, sc.length)
+			if not sc.hits.any(func(h): return absf(h["beat"] - local) < 0.1 or absf(h["beat"] - local + sc.length) < 0.1):
 				off.append(snappedf(local, 0.01))
 		was = boss.stage
 		await physics_frame
-	check(off.is_empty() and boss.score_skipped == skipped0, "phase %d : chaque frappe sur un coup de la partition, aucun sauté (hors partition : %s, sautés : %d)" % [ph, off, boss.score_skipped - skipped0])
-	check(boss.score_played - played0 >= boss.score_hits.size() - 1, "phase %d : la partition joue (%d attaques sur %d coups)" % [ph, boss.score_played - played0, boss.score_hits.size()])
+	check(off.is_empty() and sc.skipped == skipped0, "phase %d : chaque frappe sur un coup de la partition, aucun sauté (hors partition : %s, sautés : %d)" % [ph, off, sc.skipped - skipped0])
+	check(sc.played - played0 >= sc.hits.size() - 1, "phase %d : la partition joue (%d attaques sur %d coups)" % [ph, sc.played - played0, sc.hits.size()])
 	var played := {}
-	for k in boss.drums_played:
-		played[k] = int(boss.drums_played[k]) - int(drums0.get(k, 0))
+	for k in sc.drums_played:
+		played[k] = int(sc.drums_played[k]) - int(drums0.get(k, 0))
 	check(played.get("pouls", 0) + played.get("onde", 0) > 0 and played.get("aiguille", 0) > 0, "phase %d : la batterie attaque (%s)" % [ph, played])
