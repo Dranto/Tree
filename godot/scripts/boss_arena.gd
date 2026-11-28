@@ -55,6 +55,8 @@ var flag := "ronce_boss_vaincu"
 var boss_script: GDScript
 var boss_name := "La Mère-Ronce" # i18n
 var bar_color := Color("c84b44")
+## Noms des phases au cycle 2 et après (boss › phases_exaltees, une de plus) ; vide : phase_names.
+var exalted_phase_names: Array = []
 var phase_names: Array = ["Phase 1 sur 3", "Phase 2 sur 3 : les bourgeons éclosent", "Phase 3 sur 3 : les ronces se resserrent"] # i18n
 ## Rayon de l'arène, rayon final quand elle se resserre, et distance entre le Cœur et son centre
 ## (vers l'extérieur du monde).
@@ -142,6 +144,8 @@ func configure(id: String) -> void:
 	boss_name = str(b.get("name", boss_name))
 	bar_color = Regions.color(b.get("bar_color", "#c84b44"))
 	phase_names = b.get("phases", phase_names)
+	# Cycle 2 et après : une phase exaltée de plus (BossBase.is_exalted_phase), noms à part.
+	exalted_phase_names = b.get("phases_exaltees", [])
 	var ar: Dictionary = b.get("arena", {})
 	max_radius = float(ar.get("radius", max_radius))
 	min_radius = float(ar.get("radius_min", min_radius))
@@ -252,7 +256,8 @@ func _physics_process(delta: float) -> void:
 
 
 func update_bar() -> void:
-	bar.show_bar(Loc.data(boss_name), boss.hp / boss.max_hp, Loc.data(str(phase_names[mini(boss.phase, phase_names.size()) - 1])), bar_color)
+	var names: Array = exalted_phase_names if boss.exalted and not exalted_phase_names.is_empty() else phase_names
+	bar.show_bar(Loc.data(boss_name), boss.hp / boss.max_hp, Loc.data(str(names[mini(boss.phase, names.size()) - 1])), bar_color)
 
 
 ## Combat calé sur le morceau du boss (boss_sync.gd), s'il en a un ; null sinon.

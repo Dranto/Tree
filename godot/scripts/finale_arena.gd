@@ -94,6 +94,8 @@ func configure(_id: String) -> void:
 	boss_name = str(b.get("name", "La Flétrissure")) # i18n
 	bar_color = Regions.color(b.get("bar_color", "cendre"))
 	phase_names = b.get("phases", ["Phase 1 sur 3", "Phase 2 sur 3", "Phase 3 sur 3"]) # i18n
+	# Cycle 2 et après : l'Exaltation, une phase de plus (boss_finale.gd › EXALTED_ATTACK).
+	exalted_phase_names = b.get("phases_exaltees", [])
 	reward_points = int(b.get("reward", {}).get("points", 3))
 	var ar: Dictionary = b.get("arena", {})
 	max_radius = float(ar.get("radius", 520.0))

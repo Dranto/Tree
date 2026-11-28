@@ -31,6 +31,9 @@ const BordBake = preload("res://scripts/world_bake/bord_bake.gd")
 const PREPARE := 1100.0
 ## Durée (s) du reverdissement du bord.
 const LIFE_TIME := 3.0
+## À la purification, les tuiles à moins de RESTATE_REACH px de l'écran sont refaites tout de suite (une à
+## la fois) ; les autres quand la caméra en approche (une tuile se refait en ~1 s : la marche en fait 220 px).
+const RESTATE_REACH := 500.0
 ## Marge de la carte du monde, en part du monde : le bord y est montré sur cette profondeur.
 const MAP_MARGIN := 0.09
 ## Résolution de cuisson de chaque bande (pixels de l'image par pixel du monde) et suréchantillonnage.
@@ -107,6 +110,8 @@ func _exit_tree() -> void:
 	for task in BordBake.resize_tasks:
 		WorkerThreadPool.wait_for_task_completion(task)
 	BordBake.resize_tasks.clear()
+	if _field_task >= 0:
+		_field_done()
 	for key in _tiles.keys():
 		_free_tile(key)
 	_queue.clear()
@@ -404,20 +409,81 @@ func _tile_center(key: int) -> Vector2:
 	return Painter.band_rect(key / 100, key % 100, Painter.NEAR).get_center()
 
 
-## Une étape des tuiles à refaire : un fond (ou un voile) construit par image, puis la tuile refaite.
+## Les deux bandes d'une tuile (coordonnées du monde).
+func _tile_rect(key: int) -> Rect2:
+	return Painter.band_rect(key / 100, key % 100, Painter.NEAR).merge(Painter.band_rect(key / 100, key % 100, Painter.FAR))
+
+
+## Ce que montre l'écran (coordonnées du monde), agrandi de margin px.
+func _view_rect(margin: float) -> Rect2:
+	var view := get_viewport().get_visible_rect().size
+	var c := Vector2.ZERO
+	if main != null and main.get("camera") != null:
+		c = main.camera.get_screen_center_position()
+		var z: Vector2 = main.camera.zoom
+		if z.x > 0.0:
+			view /= minf(z.x, 1.0)
+	return Rect2(c - view * 0.5, view).grow(margin)
+
+
+## Une étape des tuiles à refaire : un fond (ou un voile) construit à la fois, puis la tuile refaite.
+## La construction (20 à 65 ms par fond en rendu logiciel, de quoi geler l'image à la purification)
+## se fait sur un autre fil : elle ne lit que des données déjà chargées et remplit son propre lot.
 func _restate_step() -> void:
+	if _field_task >= 0:
+		if not WorkerThreadPool.is_task_completed(_field_task):
+			return
+		_field_done()
 	if _restate.is_empty():
 		return
-	var key: int = _restate[0]
+	# La plus proche des tuiles à refaire qui sont en vue (à RESTATE_REACH px de l'écran près) ; les
+	# autres gardent leur image jusqu'à ce que la caméra en approche.
+	var at := -1
+	var view := _view_rect(RESTATE_REACH)
+	for j in _restate.size():
+		var tj: Tile = _tiles.get(_restate[j])
+		if tj == null or view.intersects(_tile_rect(_restate[j])):
+			at = j
+			break
+	if at < 0:
+		return
+	var key: int = _restate[at]
 	var t: Tile = _tiles.get(key)
+	if t == null:
+		_restate.remove_at(at)
+		return
 	if t != null:
 		var st := Painter.state_key(t.side, t.index, _states)
 		for veil in [false, true]:
-			if not fields.has("%d/%d/%s/%d/%s" % [t.side, t.index, st, int(veil), Art.mode_daltonien]):
-				_field(t.side, t.index, st, veil)
+			var fk := "%d/%d/%s/%d/%s" % [t.side, t.index, st, int(veil), Art.mode_daltonien]
+			if not fields.has(fk):
+				var b := DrawBatch.new()
+				var side := t.side
+				var index := t.index
+				var states := _states.duplicate()
+				_field_task_key = fk
+				_field_task_batch = b
+				_field_task = WorkerThreadPool.add_task(func(): Painter.build_field(b, side, index, states, veil))
 				return
-	_restate.pop_front()
+	_restate.remove_at(at)
 	_restate_tile(key)
+
+
+## Construction d'un fond sur un autre fil (_restate_step) : tâche, clé du fond, lot rempli.
+var _field_task := -1
+var _field_task_key := ""
+var _field_task_batch: DrawBatch
+
+
+## La construction est finie (ou attendue) : le fond rejoint le cache.
+func _field_done() -> void:
+	WorkerThreadPool.wait_for_task_completion(_field_task)
+	_field_task = -1
+	var b := _field_task_batch
+	_field_task_batch = null
+	if not fields.has(_field_task_key):
+		fields[_field_task_key] = [b.points, b.colors, b.indices]
+		fields_bytes += b.points.size() * 8 + b.colors.size() * 16 + b.indices.size() * 4
 
 
 ## Refait une tuile dans l'état actuel des régions (fondu de l'ancienne image vers la nouvelle).

@@ -9,6 +9,11 @@
 ##              (couloirs au sol), deux salves décalées en phase 3 ;
 ##   - nuée (dès la phase 2) : des Lucioles flétries naissent autour d'elle (pas un coup : pas de rouge) ;
 ##   - pluie (phase 3) : des colonnes de lumière tombent du ciel autour du joueur (cercles au sol).
+## Cycle 2 et après (New Game+, BossBase › cycle exalté) :
+##   - balayage (attaque nouvelle) : un rayon de lumière part d'elle et balaie un grand arc (le cône
+##               annoncé), d'un bord à l'autre : passer derrière elle, ou hors de l'arc ;
+##   - phase 4 exaltée (« le vitrail se brise ») : le balayage revient aussitôt en sens inverse, et ses
+##               salves de rayons sont plus fournies.
 ## Mort : ses ailes se fendent et tombent en éclats, la lumière d'aube remonte.
 ##
 ## Le socle commun (vie, phases, états, mort, interface d'ennemi) est dans boss_base.gd ; ce
@@ -34,7 +39,13 @@ const PHASES := {
 	1: {"gap": 1.6, "order": ["ecailles", "eclair", "ecailles"], "scales": 7, "volleys": 1, "beams": 3, "salvos": 1, "minions": 0, "pillars": 3},
 	2: {"gap": 1.3, "order": ["ecailles", "rayons", "nuee", "eclair"], "scales": 9, "volleys": 2, "beams": 4, "salvos": 1, "minions": 4, "pillars": 3},
 	3: {"gap": 1.0, "order": ["pluie", "rayons", "ecailles", "eclair", "pluie", "nuee"], "scales": 11, "volleys": 2, "beams": 5, "salvos": 2, "minions": 4, "pillars": 5},
+	# Phase exaltée (cycle 2 et après seulement).
+	4: {"gap": 0.9, "order": ["balayage", "pluie", "rayons", "balayage", "ecailles", "eclair", "nuee"], "scales": 11, "volleys": 2, "beams": 6, "salvos": 2, "minions": 4, "pillars": 5, "sweeps": 2},
 }
+## Attaque nouvelle du cycle exalté (BossBase).
+const EXALTED_ATTACK := "balayage"
+## Balayage : arc couvert (radians), durée d'un passage, largeur du rayon.
+const SWEEP := {"annonce": 1.05, "frappe": 0.9, "arc": 2.2, "width": 30.0, "damage": 16.0}
 const SCALE := {"annonce": 0.9, "between": 0.38, "damage": 12.0, "speed": 360.0, "radius": 8.0, "spread": 0.2}
 const FLASH := {"annonce": 1.2, "frappe": 0.35, "range": 330.0, "cone": 1.3, "damage": 14.0, "dazzle": 2.2}
 const BEAM := {"annonce": 1.15, "frappe": 0.4, "width": 34.0, "damage": 18.0}
@@ -66,6 +77,11 @@ var salvos_left := 0
 var pillars: Array = []
 ## Petits de la nuée annoncés (positions).
 var nest: Array = []
+## Balayage : angles de départ et d'arrivée du passage en cours, passages restants, déjà touché.
+var sweep_from := 0.0
+var sweep_to := 0.0
+var sweeps_left := 0
+var sweep_hit := false
 
 
 func _setup() -> void:
@@ -96,7 +112,7 @@ func _fight_step(delta: float) -> void:
 			return
 		gap -= delta * cad
 		if gap <= 0.0:
-			var order: Array = PHASES[phase]["order"]
+			var order: Array = exalted_order(PHASES[phase]["order"], EXALTED_ATTACK)
 			_begin(order[cycle % order.size()])
 			cycle += 1
 	elif stage == "annonce":
@@ -139,6 +155,15 @@ func _begin(kind: String) -> void:
 		"pluie":
 			_set_timer(RAIN["annonce"])
 			pillars = rain_spots(main.player.position, PHASES[phase]["pillars"])
+		"balayage":
+			exalted_attacks += 1
+			# Le rayon part sur un temps de la musique ; il va d'un bord de l'arc à l'autre, en
+			# alternant le sens d'une fois sur l'autre.
+			_set_timer(loop_snap(SWEEP["annonce"]))
+			var side := 1.0 if cycle % 2 == 0 else -1.0
+			sweep_from = aim.angle() - side * SWEEP["arc"] * 0.5
+			sweep_to = aim.angle() + side * SWEEP["arc"] * 0.5
+			sweeps_left = int(PHASES[phase].get("sweeps", 1))
 
 
 func _set_timer(v: float) -> void:
@@ -216,6 +241,11 @@ func _strike() -> void:
 				main.fx.ring(b, 6.0, 40.0, 0.35, Color(A.pal("lumiere"), 0.8), 3.0)
 			nest = []
 			_end_attack()
+		"balayage":
+			_set_timer(SWEEP["frappe"])
+			sweep_hit = false
+			main.fx.shake(0.2)
+			main.fx.ring(anchor, radius, radius * 3.0, 0.3, Color(A.pal("lumiere_clair"), 0.8), 5.0)
 		"pluie":
 			_set_timer(RAIN["frappe"])
 			main.fx.shake(0.2)
@@ -227,7 +257,19 @@ func _strike() -> void:
 					break
 
 
+## Direction du rayon du balayage à cet instant de la frappe.
+func sweep_dir() -> Vector2:
+	var k := 1.0 - clampf(timer / maxf(stage_time, 0.001), 0.0, 1.0)
+	return Vector2.from_angle(lerp_angle(sweep_from, sweep_to, Anim.ease_in_out(k)))
+
+
 func _strike_step(delta: float) -> void:
+	if attack == "balayage":
+		var p = main.player
+		if not sweep_hit and p.invuln <= 0.0 and in_beam(sweep_dir(), p.position, p.radius * 0.5):
+			sweep_hit = true
+			p.take_hit(SWEEP["damage"] * damage_scale, self)
+		return
 	if attack == "ecailles":
 		volley_timer -= delta
 		if volleys_left > 0 and volley_timer <= 0.0:
@@ -238,6 +280,16 @@ func _strike_step(delta: float) -> void:
 
 ## Fin d'une frappe : une autre salve de rayons (phase 3), sinon la pause.
 func _after_strike() -> void:
+	if attack == "balayage":
+		sweeps_left -= 1
+		if sweeps_left > 0:
+			# Phase exaltée : le rayon repart aussitôt dans l'autre sens.
+			var a := sweep_from
+			sweep_from = sweep_to
+			sweep_to = a
+			_set_timer(SWEEP["frappe"])
+			sweep_hit = false
+			return
 	if attack == "rayons":
 		salvos_left -= 1
 		if salvos_left > 0:
@@ -256,6 +308,19 @@ func in_flash(pos: Vector2, r: float) -> bool:
 		return true
 	var half: float = FLASH["cone"] / 2.0 + asin(clampf(r / d, 0.0, 1.0))
 	return absf(angle_difference(aim.angle(), to.angle())) <= half
+
+
+## Vrai si un cercle (pos, r) est dans l'arc du balayage (jusqu'au mur de l'arène).
+func in_sweep(pos: Vector2, r: float) -> bool:
+	var to: Vector2 = pos - anchor
+	var d := to.length()
+	if d > beam_length() + r:
+		return false
+	if d < radius + r:
+		return true
+	var mid := lerp_angle(sweep_from, sweep_to, 0.5)
+	var half: float = absf(angle_difference(sweep_from, sweep_to)) * 0.5 + asin(clampf(r / d, 0.0, 1.0))
+	return absf(angle_difference(mid, to.angle())) <= half
 
 
 ## Vrai si un cercle (pos, r) est dans le couloir du rayon de direction d (jusqu'au mur de l'arène).
@@ -293,6 +358,7 @@ func _end_attack() -> void:
 	beams = []
 	pillars = []
 	salvos_left = 0
+	sweeps_left = 0
 	gap = PHASES[phase]["gap"]
 
 
@@ -355,6 +421,9 @@ func danger_time(pos: Vector2, margin := 26.0) -> float:
 				for c in pillars:
 					if pos.distance_to(c) < RAIN["radius"] + margin:
 						best = minf(best, timer)
+		"balayage":
+			if in_sweep(pos, margin):
+				best = minf(best, timer if stage == "annonce" else 0.0)
 	if radius > 0.0 and d < radius + margin + 20.0:
 		best = minf(best, 0.0)
 	return best
@@ -368,6 +437,7 @@ func _clear_attacks() -> void:
 	pillars = []
 	nest = []
 	salvos_left = 0
+	sweeps_left = 0
 
 
 ## Le robot recule hors de portée de l'éclair quand elle l'annonce.
@@ -376,6 +446,10 @@ func bot_ring(arena_radius: float) -> float:
 	if attack == "eclair":
 		ring = minf(FLASH["range"] + 50.0, arena_radius - 50.0)
 	return ring
+
+
+func _exalt_color() -> Color:
+	return A.pal("lumiere_clair").lerp(Art.ec("saignement", "clair"), 0.45)
 
 
 # --- Dessin ---
@@ -425,6 +499,9 @@ func _track() -> Array:
 			return ["rayons", k] if ann else ["rayons_f", k]
 		"pluie":
 			return ["pluie", k] if ann else ["pluie_f", k]
+		"balayage":
+			# Mêmes poses que les rayons (ailes ouvertes, lumière qui monte puis s'éteint).
+			return ["rayons", k] if ann else ["rayons_f", k]
 		"ecailles":
 			if ann:
 				return ["ecailles", k]
@@ -436,7 +513,7 @@ func _track() -> Array:
 
 ## Pose du dessin (clés de _phalene.gd) pour l'image u d'une animation.
 func pose_at(track: String, u: float) -> Dictionary:
-	var rage: float = [0.0, 0.5, 1.0][phase - 1]
+	var rage: float = [0.0, 0.5, 1.0][mini(phase, 3) - 1]
 	var o := {"rage": rage, "alt": 0.0, "beat": 0.15, "open": 1.0, "t": u}
 	var tremble := sin(u * 40.0) * u
 	match track:
@@ -496,6 +573,7 @@ func _draw() -> void:
 	var s := lerpf(0.35, 1.0, Anim.ease_out(wake)) * (1.0 - 0.15 * Anim.ease_in(dk))
 	modulate.a = 1.0 - Anim.ease_in(clampf((dk - 0.6) / 0.4, 0.0, 1.0))
 	draw_colored_polygon(Art.ellipse(feet, r * 1.9 * s, r * 0.6 * s, 24), Color(Art.c("ombre"), 0.35))
+	draw_exalt_aura(self, Vector2(0, -(BODY_Y + r * 0.1 * sin(t * 2.0)) * s), r * 1.5 * s)
 	if main != null and main.player != null:
 		var dx: float = main.player.position.x - position.x
 		if absf(dx) > TURN_MARGIN:
@@ -510,7 +588,7 @@ func _draw() -> void:
 	var o := pose_at(tr[0], u)
 	o["look"] = 0.25
 	# Retourné par le nœud (comme les sprites des Flétris) : une seule pose cuite pour les deux sens.
-	var key := "%s/%d/%d" % [tr[0], i, phase]
+	var key := "%s/%d/%d" % [tr[0], i, mini(phase, 3)]
 	var mod := _tint()
 	if hit_flash > 0.0 and not dead:
 		mod = mod * HIT_TINT
@@ -600,6 +678,20 @@ func draw_marks(c: CanvasItem) -> void:
 			for b in nest:
 				c.draw_arc(b, 26.0, 0.0, TAU, 24, Color(A.pal("lumiere"), 0.25 + 0.4 * k), Art.TRAIT, true)
 				c.draw_circle(b, 26.0 * k, Color(A.pal("lumiere"), 0.12))
+		"balayage":
+			var cone := {"type": "cone", "centre": anchor, "direction": lerp_angle(sweep_from, sweep_to, 0.5), "ouverture": absf(angle_difference(sweep_from, sweep_to)), "rayon": beam_length()}
+			if stage == "annonce":
+				var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
+				Art.telegraph(c, cone, k, -1.0, t)
+				# Le bord où le rayon partira, plus marqué, et une flèche du sens.
+				var d0 := Vector2.from_angle(sweep_from)
+				c.draw_line(anchor + d0 * radius, anchor + d0 * beam_length(), Color(Art.c("danger"), 0.4 + 0.5 * k), 3.0, true)
+				var mid := lerp_angle(sweep_from, sweep_to, 0.5)
+				var r := beam_length() * 0.55
+				c.draw_arc(anchor, r, sweep_from, sweep_from + angle_difference(sweep_from, mid), 16, Color(Art.c("danger"), 0.35 + 0.4 * k), 2.0, true)
+			else:
+				# Reste affiché pendant le passage (et le retour en phase exaltée).
+				Art.telegraph(c, cone, 1.0, -1.0, t)
 		"pluie":
 			for p in pillars:
 				var circle := {"type": "cercle", "centre": p, "rayon": RAIN["radius"]}
@@ -632,6 +724,13 @@ func draw_overlay(c: CanvasItem) -> void:
 			var b: Vector2 = anchor + d * ln
 			c.draw_line(a, b, Color(A.pal("lumiere"), 0.6 * (1.0 - k)), BEAM["width"] * (1.0 - 0.4 * k), true)
 			c.draw_line(a, b, Color(A.pal("lumiere_clair"), 0.95 * (1.0 - k)), BEAM["width"] * 0.35, true)
+	if attack == "balayage" and stage == "frappe":
+		var d := sweep_dir()
+		var a: Vector2 = anchor + d * radius * 0.6 + Vector2(0, -BODY_Y)
+		var b: Vector2 = anchor + d * beam_length()
+		c.draw_line(a, b, Color(A.pal("lumiere"), 0.65), SWEEP["width"], true)
+		c.draw_line(a, b, Color(A.pal("lumiere_clair"), 0.95), SWEEP["width"] * 0.35, true)
+		c.draw_circle(b, SWEEP["width"] * 0.6, Color(A.pal("lumiere_clair"), 0.7))
 	if attack == "pluie" and stage == "frappe":
 		var k := 1.0 - clampf(timer / stage_time, 0.0, 1.0)
 		for p in pillars:
