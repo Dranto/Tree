@@ -121,6 +121,8 @@ func _physics_process(delta: float) -> void:
 			if t - _mark >= END_AFTER:
 				_log("fin du film")
 				get_tree().quit(0)
+	if OS.get_environment("FILM_DEBUG") != "" and Engine.get_physics_frames() % 60 == 0:
+		print("DBG step %d t %.1f enabled %s started %s hand %s level %.2f region %s dist %.0f state %s" % [step, t, Music.enabled, Music.started, Music.hand.state, arena.approach_level(), Regions.region_at(p.position), p.position.distance_to(arena.center), arena.state])
 	if alive and step >= 3:
 		# Le héros frappe de lui-même : la vie reste celle de la phase jusqu'au coup forcé.
 		var lo: float = float(b.phase_limits[b.phase - 1]) if b.phase - 1 < b.phase_limits.size() else 0.0
