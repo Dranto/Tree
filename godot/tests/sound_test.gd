@@ -125,7 +125,11 @@ func _run() -> void:
 	check(MusicSynth.fingerprint("sombre", {}) == MusicSynth.fingerprint("sombre", {"dark": {}}), "sans réglage : la musique de Ronce")
 	for id in ["ronce", "spore", "vent", "seve", "aube", "racine", "finale"]:
 		for key in RegionAudio.BOSS_KEYS:
-			check(Synth.SOUNDS.has(RegionAudio.boss_sound(id, key)), "%s : un son de boss « %s »" % [id, key])
+			# « exalte » (NG+) est facultatif : sans lui, la phase exaltée joue le son « phase ».
+			var snd := RegionAudio.boss_sound(id, key)
+			if key == "exalte" and snd == "":
+				continue
+			check(Synth.SOUNDS.has(snd), "%s : un son de boss « %s »" % [id, key])
 	check(RegionAudio.validate().is_empty(), "réglages de son et d'ambiance valides : %s" % [RegionAudio.validate()])
 
 	print("Sfx")

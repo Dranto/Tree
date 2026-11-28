@@ -29,6 +29,7 @@ TESTS=(
   "boss|--headless --fixed-fps 60|"
   "boss_eclat|--headless --fixed-fps 60|"
   "boss_track|--headless|"
+  "exalte_b1|--headless --fixed-fps 60|--cycle=2"
   "death|--headless --fixed-fps 60|"
   "deaths|--headless --fixed-fps 60|"
   "difficulty|--headless|"
