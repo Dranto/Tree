@@ -127,8 +127,11 @@ func run(runner) -> void:
 	boss.timer = 0.5
 	await _shot_at("harfang_tempete", pos, arena.center)
 	_clear([boss])
-	# Sur son morceau, la partition a pu le lancer dans un piqué (en vol, hors d'atteinte) : posé d'abord.
+	# Sur son morceau, la partition a pu le lancer dans un piqué (en vol, hors d'atteinte) et la phase
+	# forcée attend son drop (invulnérable) : posé et hors de la musique d'abord.
 	boss._clear_attacks()
+	if boss.sync != null:
+		boss.sync.stop()
 	boss.anchor = arena.center
 	boss.position = arena.center
 	boss.take_damage(boss.max_hp * 2.0, false)
