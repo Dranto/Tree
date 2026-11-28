@@ -6246,6 +6246,18 @@ msgstr ""
 msgid "rapide"
 msgstr ""
 
+#. data/difficulty.json › elites › affixes › remanent › name
+msgid "rémanent"
+msgstr ""
+
+#. data/difficulty.json › elites › affixes › siphon › name
+msgid "siphonneur"
+msgstr ""
+
+#. data/difficulty.json › elites › affixes › voile › name
+msgid "voilé"
+msgstr ""
+
 #. data/difficulty.json › modes › difficile › name
 msgid "Difficile"
 msgstr ""
@@ -8104,16 +8116,16 @@ msgid " (%s)"
 msgstr ""
 
 #. scripts/effects.gd:279
-#. scripts/enemy.gd:254
+#. scripts/enemy.gd:261
 msgid " et "
 msgstr ""
 
-#. scripts/enemy.gd:254
+#. scripts/enemy.gd:261
 msgctxt "élite : nom puis modificateurs"
 msgid "%s %s"
 msgstr ""
 
-#. scripts/enemy.gd:420
+#. scripts/enemy.gd:427
 msgid "Enragé !"
 msgstr ""
 
@@ -8216,7 +8228,7 @@ msgid ""
 "Clique pour changer de compétence, ou glisse-la sur un autre emplacement."
 msgstr ""
 
-#. scripts/main.gd:1231
+#. scripts/main.gd:1270
 msgid "%s vaincu"
 msgstr ""
 
