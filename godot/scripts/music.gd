@@ -15,7 +15,7 @@
 ##
 ## Musiques de boss faites à la main (boss_track.gd, assets/music/hand/) : quand le boss du combat en a
 ## une, elle joue seule à la place des couches du code, qui se taisent (HAND_FADE, HAND_WORLD_OUT) ;
-## l'ambiance descend à BED_HAND, à l'approche comme au combat. Un boss sans morceau garde la couche « boss » du code.
+## l'ambiance descend à BED_HAND à l'approche, et se tait au combat (BED_BOSS). Un boss sans morceau garde la couche « boss » du code.
 extends Node
 
 const BUS := "Musique" # i18n: non (bus audio)
@@ -50,8 +50,9 @@ const HAND_FADE := 3.0
 const HAND_FADE_CLASH := 0.8
 const DUCK_RECOVER := 0.7
 const SILENT_DB := -60.0
-## L'ambiance sonore baisse pendant un combat de boss.
-const BED_BOSS := 0.55
+## Pendant un combat de boss (finale comprise), l'ambiance sonore se tait tout à fait : seuls restent la
+## musique du boss et les bruitages (choix d'Antoine, 28/11).
+const BED_BOSS := 0.0
 ## Sous un morceau de boss fait à la main (approche comprise), la musique du monde s'est tue quand le
 ## morceau a pris HAND_WORLD_OUT de sa part, et l'ambiance ne garde que BED_HAND de son volume.
 const HAND_WORLD_OUT := 0.6
