@@ -560,7 +560,7 @@ func _refresh_detail() -> void:
 	for e in g.get("effects", []):
 		var text := Effects.describe(e)
 		if text != "":
-			_line("• " + text, 15, UiTheme.INK)
+			_line("• " + text, 15, UiTheme.INK, false, true)
 	var planner = ui.panels.planner if ui != null and ui.panels != null else null
 	if planner == null:
 		return
@@ -582,7 +582,7 @@ func _refresh_detail() -> void:
 	if not changes.is_empty():
 		_line(title, 15, DIM)
 		for c in changes.slice(0, 4):
-			_line("   " + str(c["text"]), 15, PLAN)
+			_line("   " + str(c["text"]), 15, PLAN, false, true)
 	_fit_detail.call_deferred()
 
 
@@ -598,9 +598,9 @@ func _fit_detail() -> void:
 			return
 		var shrunk := false
 		for l in _detail.get_children():
-			var fs: int = (l as Label).get_theme_font_size("font_size")
+			var fs: int = (l as Control).get_theme_font_size("font_size")
 			if fs > MIN_FONT:
-				(l as Label).add_theme_font_size_override("font_size", fs - 1)
+				(l as Control).add_theme_font_size_override("font_size", fs - 1)
 				shrunk = true
 		if not shrunk:
 			return
@@ -608,7 +608,17 @@ func _fit_detail() -> void:
 		_detail.size = Vector2(WIDTH, DETAIL_H)
 
 
-func _line(text: String, fs: int, col: Color, bold := false) -> void:
+## Une ligne de la fiche. rich : mots-clés colorés (RichText), pour les effets et les statistiques.
+func _line(text: String, fs: int, col: Color, bold := false, rich := false) -> void:
+	if rich:
+		var r := RichLabel.new()
+		r.text = text
+		r.color = col
+		r.bold = bold
+		r.wrap_width = WIDTH
+		r.add_theme_font_size_override("font_size", fs)
+		_detail.add_child(r)
+		return
 	var l := Label.new()
 	l.text = text
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
