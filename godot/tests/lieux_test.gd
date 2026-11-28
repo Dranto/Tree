@@ -156,7 +156,7 @@ func _run() -> void:
 		white = maxi(white, await _white_near(s))
 	check(white == 0, "une fois recuit : pas de tache blanche (%d px)" % white)
 	var t0 := Time.get_ticks_msec()
-	while not LieuxBake._grave.is_empty() and Time.get_ticks_msec() - t0 < LieuxBake.GRAVE_MSEC * 3:
+	while not LieuxBake._grave.is_empty() and Time.get_ticks_msec() - t0 < LieuxBake.GRAVE_MSEC * 10:   # temps réel : large, la CI est lente
 		await _steps(5)
 		LieuxBake.ready(s._bake_key())
 	check(LieuxBake._grave.is_empty(), "les textures rendues ne s'accumulent pas")

@@ -295,9 +295,15 @@ func _update_tiles() -> void:
 	for ty in range(lo.y, hi.y + 1):
 		for tx in range(lo.x, hi.x + 1):
 			var key := Vector2i(tx, ty)
+			var hidden := _covered(Rect2(Vector2(key) * world, Vector2(world, world)))
 			if not _tiles.has(key):
+				if hidden:
+					continue
 				_tiles[key] = _make_tile(key, world)
-			_tiles[key]["used"] = _frame
+			var t: Dictionary = _tiles[key]
+			t["used"] = _frame
+			if t["sprite"].visible == hidden:
+				t["sprite"].visible = not hidden
 	_refresh_dirty(view.get_center())
 	var keep := (hi.x - lo.x + 1) * (hi.y - lo.y + 1) + TILE_SPARE
 	if _tiles.size() > keep:
@@ -305,6 +311,19 @@ func _update_tiles() -> void:
 		old.sort_custom(func(a, b): return _tiles[a]["used"] < _tiles[b]["used"])
 		for i in _tiles.size() - keep:
 			_free_tile(old[i])
+
+
+## Ce qui cache le sol (jalon 13 B) : nœuds qui ont covers_rect(rect monde) -> bool, vrai s'ils dessinent
+## de l'opaque sur tout le rectangle (la terre du creux de la finale, world_art/finale_creux.gd). Un
+## carré entièrement caché n'est ni construit ni montré : sous la graine, ~7 ms par image en rendu logiciel.
+var covers: Array = []
+
+
+func _covered(rect: Rect2) -> bool:
+	for c in covers:
+		if is_instance_valid(c) and c.covers_rect(rect):
+			return true
+	return false
 
 
 ## Un carré : le shader du sol dessiné une fois dans une texture, montrée par un sprite posé au même

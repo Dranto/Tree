@@ -18,11 +18,19 @@
 ##   - Steam Deck : is_deck() (échelle de texte par défaut, settings.gd) et clavier virtuel pour
 ##     renommer un build (tree_builds.gd › show_keyboard / ask_text).
 ##
-## App ID : APP_ID ici et godot/steam_appid.txt (même valeur). 480 = « Spacewar », l'App ID de test
-## de Valve, en attendant celui du jeu.
+## App ID : un seul endroit, res://data/steam.json (« app_id » pour le jeu, « demo_app_id » pour la
+## démo). 480 = « Spacewar », l'App ID de test de Valve, en attendant ceux du jeu. Il est transmis à
+## l'API Steam par la variable SteamAppId : pas besoin de steam_appid.txt à côté de l'exécutable.
+##
+## Vérification d'un build exporté : « -- --steam-probe » écrit l'état de Steam et la liste des
+## fonctions GodotSteam utilisées ici qui manqueraient, puis quitte (tools/export-smoke.sh, CI).
 extends Node
 
-const APP_ID := 480
+const Content = preload("res://scripts/content.gd")
+const Demo = preload("res://scripts/demo.gd")
+
+## App ID de test de Valve, si data/steam.json manque.
+const TEST_APP_ID := 480
 ## Identifiants des succès, à créer à l'identique sur Steamworks (textes : steam/succes.md).
 const ACHIEVEMENTS := ["BOSS_RONCE", "BOSS_SPORE", "BOSS_VENT", "BOSS_SEVE", "BOSS_AUBE", "BOSS_RACINE", "BOSS_FINALE"]
 ## Drapeau d'aventure de la Flétrissure vaincue (Objectives.FINALE_WON).
@@ -31,6 +39,15 @@ const FINALE_FLAG := "finale_vaincue"
 const SAVE_PATH := "user://saves/partie.json"
 const SETTINGS_PATH := "user://settings.cfg"
 const CLOUD_FILES := {SAVE_PATH: "partie.json", SETTINGS_PATH: "settings.cfg"}
+## Fonctions du singleton GodotSteam appelées par ce fichier (vérifiées par --steam-probe).
+## isSteamRunningOnSteamDeck n'y est pas : GodotSteam 4.24 ne l'a plus ; le Deck se reconnaît alors
+## à la variable SteamDeck=1 que Steam pose sur la console (detect_deck).
+## Nombre d'arguments passés par ce fichier à chaque fonction (la sonde vérifie que GodotSteam les accepte).
+const API := {"steamInitEx": 0, "run_callbacks": 0, "setAchievement": 1, "storeStats": 0,  # i18n: non
+	"setRichPresence": 2, "clearRichPresence": 0, "isCloudEnabledForAccount": 0,  # i18n: non
+	"isCloudEnabledForApp": 0, "fileExists": 1, "fileWrite": 3, "fileRead": 2, "getFileSize": 1,  # i18n: non
+	"getFileTimestamp": 1, "isSteamInBigPictureMode": 0, "showFloatingGamepadTextInput": 5,  # i18n: non
+	"showGamepadTextInput": 5}  # i18n: non  # i18n: non
 ## Mode du clavier flottant du Deck : une seule ligne (EFloatingGamepadTextInputMode).
 const FLOATING_SINGLE_LINE := 0
 
@@ -47,12 +64,72 @@ var status := "inactif"
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	# Les tests et la CI ne cherchent pas Steam (--no-steam) ; sinon on tente, sans rien exiger.
-	if "--no-steam" in OS.get_cmdline_user_args() or not Engine.has_singleton("Steam"):
+	var args := OS.get_cmdline_user_args()
+	# « --no-steam » ignore Steam ; sinon on tente, sans rien exiger.
+	if "--no-steam" in args or not Engine.has_singleton("Steam"):
 		status = "absent"
 		set_process(false)
-		return
-	_start(Engine.get_singleton("Steam"))
+	else:
+		_start(Engine.get_singleton("Steam"))
+	if "--steam-probe" in args:
+		_probe.call_deferred()
+
+
+## Identifiant Steam de ce build : celui de la démo dans un build démo, sinon celui du jeu.
+static func app_id() -> int:
+	var d := Content._load("steam")
+	var id = d.get("demo_app_id" if Demo.active() else "app_id", d.get("app_id", TEST_APP_ID))
+	return int(id) if int(id) > 0 else TEST_APP_ID
+
+
+## Succès de ce build : un par boss, seulement celui de la Mère-Ronce dans la démo.
+static func achievements() -> Array:
+	if not Demo.active():
+		return ACHIEVEMENTS
+	var demo = Content._load("steam").get("demo_achievements", ["BOSS_RONCE"])
+	return ACHIEVEMENTS.filter(func(id): return id in demo)
+
+
+## Fonctions de API absentes d'un objet Steam, ou qui n'acceptent pas ce nombre d'arguments
+## (version de GodotSteam incompatible).
+static func missing_api(steam) -> Array:
+	if steam == null:
+		return API.keys()
+	var sig := {}
+	for m in steam.get_method_list():
+		sig[m["name"]] = m
+	var out: Array = []
+	for name in API:
+		if not steam.has_method(name):
+			out.append(name)
+		elif sig.has(name):
+			var total: int = (sig[name]["args"] as Array).size()
+			var optional: int = (sig[name]["default_args"] as Array).size()
+			var vararg: bool = int(sig[name].get("flags", 0)) & METHOD_FLAG_VARARG != 0
+			if API[name] < total - optional or (API[name] > total and not vararg):
+				out.append("%s (%d arguments, attend %d à %d)" % [name, API[name], total - optional, total])  # i18n: non
+	return out
+
+
+## « --steam-probe » : bilan pour la CI et pour Antoine, puis sortie.
+func _probe() -> void:
+	var lib := Engine.has_singleton("Steam")
+	print("STEAM-PROBE bibliotheque=%s statut=%s app_id=%d demo=%s" % ["oui" if lib else "non", status, app_id(), Demo.active()])  # i18n: non
+	if lib:
+		var steam = Engine.get_singleton("Steam")
+		if steam.has_method("get_godotsteam_version"):
+			print("STEAM-PROBE GodotSteam %s" % str(steam.get_godotsteam_version()))  # i18n: non
+		var miss := missing_api(steam)
+		print("STEAM-PROBE fonctions manquantes : %s" % (", ".join(miss) if not miss.is_empty() else "aucune"))  # i18n: non
+		if not miss.is_empty():
+			# Noms voisins, pour retrouver une fonction renommée par GodotSteam.
+			var names: Array = []
+			for m in steam.get_method_list():
+				var n: String = m["name"]
+				if n.containsn("deck") or n.containsn("version") or n.containsn("bigpicture"):  # i18n: non
+					names.append(n)
+			print("STEAM-PROBE fonctions voisines : %s" % ", ".join(names))  # i18n: non
+	get_tree().quit(0)
 
 
 func _process(_delta: float) -> void:
@@ -74,8 +151,9 @@ func attach(steam) -> bool:
 
 func _start(steam) -> bool:
 	# Lu par l'API Steam au démarrage, comme steam_appid.txt (lancement hors du client Steam).
-	OS.set_environment("SteamAppId", str(APP_ID))  # i18n: non
-	OS.set_environment("SteamGameId", str(APP_ID))  # i18n: non
+	var id := app_id()
+	OS.set_environment("SteamAppId", str(id))  # i18n: non
+	OS.set_environment("SteamGameId", str(id))  # i18n: non
 	var res = steam.steamInitEx() if steam.has_method("steamInitEx") else steam.steamInit()  # i18n: non
 	var ok := false
 	if res is Dictionary:
@@ -90,7 +168,7 @@ func _start(steam) -> bool:
 		return false
 	_steam = steam
 	set_process(true)
-	print("Steam : actif (App ID %d)." % APP_ID)
+	print("Steam : actif (App ID %d)." % id)
 	if _steam.has_signal("gamepad_text_input_dismissed"):
 		_steam.connect("gamepad_text_input_dismissed", _on_text_dismissed)
 	cloud_pull()
@@ -110,17 +188,17 @@ static func boss_achievement(region: String) -> String:
 
 ## Débloque un succès. Sans effet sans Steam ou pour un identifiant inconnu.
 func unlock(id: String) -> void:
-	if _steam == null or not (id in ACHIEVEMENTS) or _unlocked.has(id):
+	if _steam == null or not (id in achievements()) or _unlocked.has(id):
 		return
 	_unlocked[id] = true
 	_steam.setAchievement(id)
 	_steam.storeStats()
 
 
-## Succès mérités d'après les drapeaux d'aventure (boss vaincus), dans l'ordre de ACHIEVEMENTS.
+## Succès mérités d'après les drapeaux d'aventure (boss vaincus), dans l'ordre de achievements().
 static func earned(flags: Dictionary) -> Array:
 	var out: Array = []
-	for id in ACHIEVEMENTS:
+	for id in achievements():
 		var region: String = id.trim_prefix("BOSS_").to_lower()
 		var flag: String = FINALE_FLAG if region == "finale" else region + "_boss_vaincu"
 		if bool(flags.get(flag, false)):

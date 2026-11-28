@@ -30,6 +30,10 @@ const COLUMNS := 8
 const CELL := 36.0
 ## Rangées de la grille visibles sans défiler.
 const ROWS_VISIBLE := 4
+## Hauteur fixe de la fiche (et de la consigne) : le panneau ne grandit ni ne rétrécit au survol ;
+## le texte, lui, rapetisse pour s'y tenir (jamais sous MIN_FONT).
+const DETAIL_H := 176.0
+const MIN_FONT := 11
 ## Drapeau de Game.flags : nombre d'emplacements déjà vus (les suivants luisent).
 const SEEN_FLAG := "couronne_vue"
 
@@ -50,6 +54,7 @@ var _count: Label
 var _scroll: ScrollContainer
 var _grid: GridContainer
 var _detail: VBoxContainer
+var _detail_frame: Control
 var _hint: Label
 var _seen := 0
 ## Jalon Éclat G : racines qui poussent de l'emplacement où l'on vient de poser une greffe
@@ -326,17 +331,25 @@ func _ready() -> void:
 	_grid.add_theme_constant_override("v_separation", 2)
 	_grid.mouse_filter = Control.MOUSE_FILTER_PASS
 	_scroll.add_child(_grid)
+	_detail_frame = Control.new()
+	_detail_frame.custom_minimum_size = Vector2(WIDTH, DETAIL_H)
+	_detail_frame.clip_contents = true
+	_detail_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(_detail_frame)
 	_detail = VBoxContainer.new()
 	_detail.add_theme_constant_override("separation", 1)
-	_detail.custom_minimum_size = Vector2(WIDTH, 0)
+	_detail.position = Vector2.ZERO
+	_detail.size = Vector2(WIDTH, DETAIL_H)
 	_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(_detail)
+	_detail_frame.add_child(_detail)
 	_hint = Label.new()
 	_hint.add_theme_font_size_override("font_size", 15)
 	_hint.add_theme_color_override("font_color", DIM)
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hint.position = Vector2.ZERO
+	_hint.size = Vector2(WIDTH, DETAIL_H)
 	_hint.custom_minimum_size = Vector2(WIDTH, 0)
-	box.add_child(_hint)
+	_detail_frame.add_child(_hint)
 	Game.tree_changed.connect(refresh)
 	Settings.device_changed.connect(refresh)
 	if ui != null and ui.has_signal("toggled"):
@@ -474,7 +487,7 @@ func refresh() -> void:
 	var rows := ceili(float(count) / COLUMNS)
 	_scroll.custom_minimum_size = Vector2(COLUMNS * (CELL + 2.0), minf(rows, ROWS_VISIBLE) * (CELL + 2.0))
 	_scroll.visible = not folded
-	_detail.visible = not folded
+	_detail_frame.visible = not folded
 	var pad := Settings.pad_active()
 	var a_name := Settings.pad_name_of(JOY_BUTTON_A)
 	if held != "":
@@ -550,6 +563,29 @@ func _refresh_detail() -> void:
 		_line(title, 15, DIM)
 		for c in changes.slice(0, 4):
 			_line("   " + str(c["text"]), 15, PLAN)
+	_fit_detail.call_deferred()
+
+
+## Fait tenir la fiche dans DETAIL_H : si elle déborde, tous ses textes rapetissent d'un cran à la fois.
+func _fit_detail() -> void:
+	if _detail == null or not is_inside_tree():
+		return
+	for _step in 8:
+		var h := 0.0
+		for l in _detail.get_children():
+			h += (l as Control).get_combined_minimum_size().y + 1.0
+		if h <= DETAIL_H:
+			return
+		var shrunk := false
+		for l in _detail.get_children():
+			var fs: int = (l as Label).get_theme_font_size("font_size")
+			if fs > MIN_FONT:
+				(l as Label).add_theme_font_size_override("font_size", fs - 1)
+				shrunk = true
+		if not shrunk:
+			return
+		_detail.reset_size()
+		_detail.size = Vector2(WIDTH, DETAIL_H)
 
 
 func _line(text: String, fs: int, col: Color, bold := false) -> void:

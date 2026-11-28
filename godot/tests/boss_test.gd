@@ -114,7 +114,14 @@ func _run() -> void:
 	# Seuls les boss dont la phase 3 appelle arena.start_shrink resserrent l'arène : Ronce, Spore et
 	# Sève. Le Harfang (tempête) et la Phalène (pluie de lumière) gardent leur arène entière.
 	if arena.region in SHRINKING_REGIONS:
-		check(await _until(func(): return arena.radius < arena.max_radius), "en phase 3 l'arène rétrécit")
+		# Large marge (40 s de jeu) : l'annonce du resserrement dure 1,6 s et le ralenti du boss, le gel
+		# d'impact ou une pause peuvent retarder la suite ; seul compte que le mur finisse par avancer.
+		var shrunk: bool = await _until(func(): return arena.radius < arena.max_radius, 2400)
+		if not shrunk:
+			print("  diagnostic : état=%s phase=%d rétrécit=%s annonce=%.2f rayon=%.1f time_scale=%.2f en pause=%s" % [
+				arena.state, int(boss.phase) if is_instance_valid(boss) else -1, arena.shrinking, arena.shrink_warn,
+				arena.radius, Engine.time_scale, paused])
+		check(shrunk, "en phase 3 l'arène rétrécit")
 	else:
 		await _steps(120)
 		check(arena.radius == arena.max_radius, "en phase 3 l'arène garde sa taille (pas de resserrement dans cette région)")

@@ -170,7 +170,8 @@ Radeon RX 460 / Intel Iris Xe.*
 | `icone_communaute_184x184.png` | Icône de la communauté |
 | `succes/BOSS_*.png`, `succes/BOSS_*_gris.png` | Icônes des succès (débloqué / verrouillé), voir `steam/succes.md` |
 | `steam/captures/<langue>/*.png` | Captures d'écran (1920×1080, au moins 5) |
-| bande-annonce `.mp4` (fichiers du projet, `steam/`) | Bandes-annonces (la démo a la sienne) |
+| `steam/captures-demo/<langue>/*.png` | Captures de la page de la démo (Ronce seule, `DEMO=1 tools/steam-art.sh`) |
+| bande-annonce `.mp4` (fichiers du projet, `captures/jalon13-E/`) | Bandes-annonces (la démo a la sienne, `--demo`) |
 
 Les capsules de la version anglaise ne diffèrent que si le nom du jeu change d'une langue à l'autre
 (Steam permet une capsule par langue ; sinon, ne déposer que `fr/`).

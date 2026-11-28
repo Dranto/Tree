@@ -65,6 +65,12 @@ var scenario := ""
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Les captures de mort de boss datent d'avant l'allongement des impact frames : on rejoue
+	# celles-ci à l'ancienne durée (une image par variante), pour que les références restent valables.
+	var imp: Dictionary = Content.feel().get("impact_frame", {})
+	imp["frame_time"] = 0.0
+	imp["frame_time_strong"] = 0.0
+	imp["crit_ref"] = 1.0  # critiques lourds : impact frame systématique, comme quand les références ont été prises
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--scenario="):
 			scenario = arg.get_slice("=", 1)
@@ -439,7 +445,7 @@ func _langue_suite(tag: String, deck: bool) -> void:
 	await _frames(30)
 	UiAudit.scan_controls("titre", title)
 	await _shot(prefix + "_titre_" + tag, "titre")
-	title.options.open()
+	title._open_options()   # comme au clavier : le rappel des commandes est caché sous les options
 	for i in 4:
 		title.options.show_tab(i)
 		await _frames(6)
