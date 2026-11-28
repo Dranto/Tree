@@ -34,6 +34,7 @@ const Content = preload("res://scripts/content.gd")
 ## Menace des ennemis, apparitions et choix de difficulté : res://data/difficulty.json.
 const Difficulty = preload("res://scripts/difficulty.gd")
 const QuestUi = preload("res://scripts/quest_ui.gd")
+const CycleWave = preload("res://scripts/cycle_wave.gd")
 const Sanctuary = preload("res://scripts/sanctuary.gd")
 const LostSap = preload("res://scripts/lost_sap.gd")
 const Altar = preload("res://scripts/altar.gd")
@@ -79,6 +80,8 @@ var tree_ui
 var pause_menu
 ## Objectifs : suivi à l'écran, journal (J), carte (M) et fin de la tranche (quest_ui.gd).
 var quest_ui
+## Monde fané du cycle (cycle_wave.gd) : teinte du cycle et vague de flétrissure.
+var cycle_wave
 var orbs_layer: Node2D
 ## Repère au sol de la destination du clic droit (mode de déplacement « moba »).
 var move_marker: Node2D
@@ -416,6 +419,10 @@ func _ready() -> void:
 	quest_ui = QuestUi.new()
 	quest_ui.main = self
 	add_child(quest_ui)
+	# Monde fané du cycle (New Game+) : teinte du cycle, vague de flétrissure au début d'un cycle.
+	cycle_wave = CycleWave.new()
+	cycle_wave.main = self
+	add_child(cycle_wave)
 	Game.tree_changed.connect(request_autosave)
 	if autotest_boss:
 		arena.autotest_begin()

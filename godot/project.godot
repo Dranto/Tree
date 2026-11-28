@@ -51,3 +51,22 @@ locale/fallback="fr"
 
 common/physics_ticks_per_second=60
 common/physics_interpolation=true
+
+[shader_globals]
+
+cycle_tint_from={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+cycle_tint_to={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+cycle_tint_wave={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 1)
+}
+cycle_tint_ash={
+"type": "vec3",
+"value": Vector3(0.5, 0.5, 0.5)
+}

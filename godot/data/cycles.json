@@ -15,7 +15,7 @@
       "mix": {},
       "elites": {},
       "bosses": {},
-      "tint": {},
+      "tint": {"dark": 0.12, "grey": 0.3, "ink": 0.3, "ash": 0.1, "ash_color": "#8a8478"},
       "grafts": [],
       "crown": 0
     },
@@ -24,7 +24,7 @@
       "mix": {},
       "elites": {},
       "bosses": {},
-      "tint": {},
+      "tint": {"dark": 0.2, "grey": 0.45, "ink": 0.45, "ash": 0.18, "ash_color": "#7d7468"},
       "grafts": [],
       "crown": 0
     }

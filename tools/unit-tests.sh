@@ -31,6 +31,7 @@ TESTS=(
   "boss_track|--headless|"
   "death|--headless --fixed-fps 60|"
   "deaths|--headless --fixed-fps 60|"
+  "cycle_tint|--headless --fixed-fps 60|"
   "difficulty|--headless|"
   "demo|--headless --fixed-fps 60|"
   "direct_screen|--xvfb --audio-driver Dummy --fixed-fps 60 --resolution 1600x900 --position 0,0|"
