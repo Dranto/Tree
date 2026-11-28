@@ -32,7 +32,11 @@ const Demo = preload("res://scripts/demo.gd")
 ## App ID de test de Valve, si data/steam.json manque.
 const TEST_APP_ID := 480
 ## Identifiants des succès, à créer à l'identique sur Steamworks (textes : steam/succes.md).
-const ACHIEVEMENTS := ["BOSS_RONCE", "BOSS_SPORE", "BOSS_VENT", "BOSS_SEVE", "BOSS_AUBE", "BOSS_RACINE", "BOSS_FINALE"]
+const BOSS_ACHIEVEMENTS := ["BOSS_RONCE", "BOSS_SPORE", "BOSS_VENT", "BOSS_SEVE", "BOSS_AUBE", "BOSS_RACINE", "BOSS_FINALE"]
+## Succès du New Game+ (jalon 14 S) : finir le cycle N, c'est vaincre la Flétrissure pendant ce cycle.
+## Pas de succès au-delà du cycle 3 (contenu nouveau jusque-là) : finir le cycle 4 compte pour CYCLE_3.
+const CYCLE_ACHIEVEMENTS := {2: "CYCLE_2", 3: "CYCLE_3"}
+const ACHIEVEMENTS := BOSS_ACHIEVEMENTS + ["CYCLE_2", "CYCLE_3"]
 ## Drapeau d'aventure de la Flétrissure vaincue (Objectives.FINALE_WON).
 const FINALE_FLAG := "finale_vaincue"
 ## Fichiers suivis par Steam Cloud : chemin local → nom dans le Cloud.
@@ -82,7 +86,8 @@ static func app_id() -> int:
 	return int(id) if int(id) > 0 else TEST_APP_ID
 
 
-## Succès de ce build : un par boss, seulement celui de la Mère-Ronce dans la démo.
+## Succès de ce build : un par boss et un par cycle fini du NG+ ; dans la démo (sans NG+), seulement
+## celui de la Mère-Ronce.
 static func achievements() -> Array:
 	if not Demo.active():
 		return ACHIEVEMENTS
@@ -186,6 +191,23 @@ static func boss_achievement(region: String) -> String:
 	return "BOSS_" + region.to_upper()
 
 
+## Succès des cycles finis quand la Flétrissure meurt au cycle « cycle » : CYCLE_2 au cycle 2,
+## CYCLE_2 et CYCLE_3 au cycle 3 et au-delà. Vide au cycle 1 (la première fin a BOSS_FINALE).
+static func cycle_achievements(cycle: int) -> Array:
+	var out: Array = []
+	for n in CYCLE_ACHIEVEMENTS:
+		if cycle >= n:
+			out.append(CYCLE_ACHIEVEMENTS[n])
+	return out
+
+
+## La Flétrissure vient de mourir : BOSS_FINALE et, au NG+, le succès du cycle fini.
+func unlock_finale(cycle: int) -> void:
+	unlock(boss_achievement("finale"))
+	for id in cycle_achievements(cycle):
+		unlock(id)
+
+
 ## Débloque un succès. Sans effet sans Steam ou pour un identifiant inconnu.
 func unlock(id: String) -> void:
 	if _steam == null or not (id in achievements()) or _unlocked.has(id):
@@ -195,10 +217,17 @@ func unlock(id: String) -> void:
 	_steam.storeStats()
 
 
-## Succès mérités d'après les drapeaux d'aventure (boss vaincus), dans l'ordre de achievements().
-static func earned(flags: Dictionary) -> Array:
+## Succès mérités d'après les drapeaux d'aventure (boss vaincus) et le cycle en cours (« cycle » ;
+## Cycles.current() par défaut), dans l'ordre de achievements(). Les drapeaux d'aventure reviennent à
+## zéro à chaque cycle : la Flétrissure vaincue au cycle N a fini le cycle N.
+static func earned(flags: Dictionary, cycle := -1) -> Array:
 	var out: Array = []
+	var n: int = cycle if cycle >= 1 else Cycles.current()
 	for id in achievements():
+		if id.begins_with("CYCLE_"):
+			if bool(flags.get(FINALE_FLAG, false)) and id in cycle_achievements(n):
+				out.append(id)
+			continue
 		var region: String = id.trim_prefix("BOSS_").to_lower()
 		var flag: String = FINALE_FLAG if region == "finale" else region + "_boss_vaincu"
 		if bool(flags.get(flag, false)):

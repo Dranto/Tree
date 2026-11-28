@@ -823,7 +823,9 @@ static func _chute(ci: CanvasItem, e: Dictionary, k: float) -> void:
 		return
 	var u := (k - fall) / (1.0 - fall)
 	# Silhouette qui s'efface.
-	ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, 4), 16.0 * (1.0 - u), 9.0 * (1.0 - u), 16), Color(Art.c("decor"), 0.7 * (1.0 - u)))
+	# Elle finit en point : rien à dessiner une fois réduite à rien (triangulation impossible).
+	if u < 0.98:
+		ci.draw_colored_polygon(Art.ellipse(p + Vector2(0, 4), 16.0 * (1.0 - u), 9.0 * (1.0 - u), 16), Color(Art.c("decor"), 0.7 * (1.0 - u)))
 	for i in 10:
 		var la := -PI / 2.0 + (i - 4.5) * 0.35
 		var q := p + Vector2.from_angle(la) * (6.0 + 40.0 * Anim.ease_out(u)) + Vector2(30.0 * u * u + sin(u * 6.0 + i) * 6.0, 10.0 * u)

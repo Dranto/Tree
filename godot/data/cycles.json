@@ -82,7 +82,14 @@
         "max_alive": 3,
         "two_affixes": 0.45
       },
-      "bosses": {},
+      "bosses": {
+        "ronce": {"phase_exaltee": 0.22},
+        "spore": {"phase_exaltee": 0.22},
+        "vent": {"phase_exaltee": 0.22},
+        "seve": {"phase_exaltee": 0.22, "attaque_en_phase_3": false},
+        "aube": {"phase_exaltee": 0.22, "attaque_en_phase_3": false},
+        "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": false}
+      },
       "tint": {"dark": 0.12, "grey": 0.3, "ink": 0.3, "ash": 0.1, "ash_color": "#8a8478"},
       "grafts": [],
       "crown": 0
@@ -214,7 +221,14 @@
         "max_alive": 4,
         "two_affixes": 0.6
       },
-      "bosses": {},
+      "bosses": {
+        "ronce": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
+        "spore": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
+        "vent": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
+        "seve": {"phase_exaltee": 0.22, "attaque_en_phase_3": true},
+        "aube": {"phase_exaltee": 0.22, "attaque_en_phase_3": true},
+        "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": true}
+      },
       "tint": {"dark": 0.2, "grey": 0.45, "ink": 0.45, "ash": 0.18, "ash_color": "#7d7468"},
       "grafts": [],
       "crown": 0
