@@ -127,6 +127,10 @@ func run(runner) -> void:
 	boss.timer = 0.5
 	await _shot_at("harfang_tempete", pos, arena.center)
 	_clear([boss])
+	# Sur son morceau, la partition a pu le lancer dans un piqué (en vol, hors d'atteinte) : posé d'abord.
+	boss._clear_attacks()
+	boss.anchor = arena.center
+	boss.position = arena.center
 	boss.take_damage(boss.max_hp * 2.0, false)
 	boss.dying = boss.DEATH_TIME * 0.55
 	main.fx.rings = []
