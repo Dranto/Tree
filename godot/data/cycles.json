@@ -20,7 +20,8 @@
         "vent": {"phase_exaltee": 0.22},
         "seve": {"phase_exaltee": 0.22, "attaque_en_phase_3": false},
         "aube": {"phase_exaltee": 0.22, "attaque_en_phase_3": false},
-        "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": false}
+        "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": false},
+        "finale": {"phase_exaltee": 0.15, "attaque_en_phase_3": false}
       },
       "tint": {},
       "grafts": [],
@@ -36,7 +37,8 @@
         "vent": {"phase_exaltee": 0.25, "attaque_en_phase_3": true},
         "seve": {"phase_exaltee": 0.22, "attaque_en_phase_3": true},
         "aube": {"phase_exaltee": 0.22, "attaque_en_phase_3": true},
-        "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": true}
+        "racine": {"phase_exaltee": 0.22, "attaque_en_phase_3": true},
+        "finale": {"phase_exaltee": 0.18, "attaque_en_phase_3": true}
       },
       "tint": {},
       "grafts": [],
